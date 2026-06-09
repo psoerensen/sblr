@@ -1,9 +1,12 @@
-# Exploratory benchmark workflow. Requires external qgg data and currently uses
-# machine-specific paths; it is not intended to run during package checks.
+# Exploratory benchmark workflow. Requires external qgg data and is not
+# intended to run during package checks.
+#
+# Set SBLR_EXAMPLE_DATA_DIR before running this workflow, or edit the fallback
+# path below to point to a local directory for the example data.
 
 library(qgg)
 
-data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
+data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR", unset = "path/to/example/data")
 dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
 
 files <- c("bed", "bim", "fam", "pheno", "covar")
@@ -18,22 +21,22 @@ for (f in files) {
 
 Glist <- gprep(
  study = "Example",
- bedfiles = "C:/Users/au223366/Documents/GitHub/examples/human/human.bed",
- bimfiles = "C:/Users/au223366/Documents/GitHub/examples/human/human.bim",
- famfiles = "C:/Users/au223366/Documents/GitHub/examples/human/human.fam"
+ bedfiles = file.path(data_dir, "human.bed"),
+ bimfiles = file.path(data_dir, "human.bim"),
+ famfiles = file.path(data_dir, "human.fam")
 )
 
 rsids <- gfilter(Glist = Glist, excludeMAF = 0.05, excludeMISS = 0.05,
                  excludeCGAT = TRUE, excludeINDEL = TRUE, excludeDUPS = TRUE, excludeHWE = 1e-12,
                  excludeMHC = FALSE)
 
-ldfiles <- "C:/Users/au223366/Documents/GitHub/examples/human/human.ld"
+ldfiles <- file.path(data_dir, "human.ld")
 Glist <- gprep(Glist, task = "sparseld", msize = 1000, rsids = rsids, ldfiles = ldfiles,
                overwrite = TRUE)
-saveRDS(Glist, file = "C:/Users/au223366/Documents/GitHub/examples/human/Glist_sparseLD_1k.RDS",
+saveRDS(Glist, file = file.path(data_dir, "Glist_sparseLD_1k.RDS"),
         compress = FALSE)
 
-Glist <- readRDS(file = "C:/Users/au223366/Documents/GitHub/examples/human/Glist_sparseLD_1k.RDS")
+Glist <- readRDS(file = file.path(data_dir, "Glist_sparseLD_1k.RDS"))
 
 B <- getLD(Glist, chr=1)
 ld <- getSparseLD(Glist=Glist, chr=1)
@@ -49,7 +52,7 @@ system.time(out <- sparseLD_stream_CSR(
  cls = seq_along(Glist$rsids[[chr]]),
  af = Glist$af[[chr]],
  out_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   sprintf("ld_chr%d", chr)
  ),
  pos_bp = Glist$pos[[chr]],
@@ -77,7 +80,7 @@ for (k in seq_len(nrow(bench_mkl))) {
  RhpcBLASctl::omp_set_num_threads(bench_mkl$omp_threads[k])
 
  prefix <- file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   sprintf(
    "ld_chr%d_blas%d_omp%d_b%d",
    chr,
@@ -114,7 +117,7 @@ bench_mkl[order(bench_mkl$elapsed), ]
 
 csr <- sparseLD_read_CSR(
  prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   sprintf("ld_chr%d", chr)
  ),
  one_based = TRUE
