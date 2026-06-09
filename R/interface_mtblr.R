@@ -1,6 +1,12 @@
+#' Fit Scalable Bayesian Linear Regression Models
+#'
+#' Fits scalable Bayesian linear regression models for multiple traits using
+#' summary statistics and sparse linkage disequilibrium matrices.
+#'
+#' @return A list containing posterior summaries and fitted model components.
+#' @useDynLib sblr, .registration = TRUE
 #' @export
-# Multiple trait BLR using summary statistics and sparse LD provided in Glist
-embr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
+sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
                   b=NULL,h2=NULL, pi=0.001, models=NULL, pimodels=NULL,
                   vg=NULL, vb=NULL, ve=NULL,
                   ssb_prior=NULL, sse_prior=NULL,

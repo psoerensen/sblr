@@ -343,17 +343,17 @@ for (i in 1:nt) {
 
 
 
-system.time(MT1 <- embr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
+system.time(MT1 <- sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
                         sets = NULL, model = NULL, algorithm="default",
                         h2 = h2, pi = pi, updateB =TRUE, updatePi = TRUE,
                         method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE))
 
-system.time(MT2 <- embr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
+system.time(MT2 <- sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
                         sets = NULL, model = NULL, algorithm="cpg_arma",
                         h2 = h2, pi = pi, updateB =TRUE, updatePi = TRUE,
                         method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE))
 
-system.time(MT3 <- embr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
+system.time(MT3 <- sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
                         sets = NULL, model = NULL, algorithm="cpg_omp",
                         h2 = h2, pi = pi, updateB =TRUE, updateE =TRUE, updatePi = TRUE,
                         method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE))
@@ -445,12 +445,12 @@ for (rep in 1:nrep) {
  # ---------------------------------------------------------------------------
 
  mt_models <- list(
-  MT1 = embr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
+  MT1 = sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
               sets = NULL, model = NULL, algorithm="default",
               h2 = h2, pi = pi, updateB =TRUE, updatePi = TRUE,
               method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE),
 
-  MT2 = embr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
+  MT2 = sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
              sets = NULL, model = NULL, algorithm="cpg_arma",
              h2 = h2, pi = pi, updateB = TRUE, updatePi = TRUE,
              method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE)
