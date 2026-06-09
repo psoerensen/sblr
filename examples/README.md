@@ -8,6 +8,11 @@ Some scripts may download external data, require local paths to be edited, run
 long benchmarks, call experimental functions, or contain development-only
 diagnostics. Review a script and its dependencies before running it.
 
+## Clean Workflows
+
+- `workflows/basic_sblr_summary_stats.R`: Concise template showing the intended
+  high-level `sblr()` workflow using summary statistics and LD-derived matrices.
+
 ## Current Scripts
 
 - `Evaluation_mtblr_revised.R`: Exploratory workflow and benchmark for
