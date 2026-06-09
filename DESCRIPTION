@@ -1,0 +1,16 @@
+Package: sblr
+Type: Package
+Title: Experimental Bayesian Genomic Prediction
+Version: 0.1.0
+Authors@R: person("Peter", "Sørensen", email = "peter.sorensen@r-qgg.org",
+    role = c("aut", "cre"))
+Description: Experimental methods for Bayesian genomic prediction using
+    genome-wide association study summary statistics, sparse linkage
+    disequilibrium matrices, and PLINK BED genotype files. Includes
+    multi-trait and annotation-informed prior models intended for research
+    and method development.
+License: GPL-3
+Imports: Rcpp (>= 1.0.13)
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 7.3.3
+Encoding: UTF-8
