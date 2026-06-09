@@ -3361,10 +3361,10 @@ for (a in colnames(sim$annot)) {
 
 
 
-// =============================================================================
- // R-side helper snippets
-// =============================================================================
- /*
+# =============================================================================
+# R-side helper snippets
+# =============================================================================
+# The helper definitions below are executable R code.
  # Convert overlapping binary annotations to one primary class for this comparison.
  # This is only one possible encoding. For SBayesRC-like comparison, you need
  # one annotation_class per marker.
