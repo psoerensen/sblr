@@ -1,6 +1,10 @@
 # Development notebook containing annotation-aware wrapper prototypes,
 # simulations, and benchmarks. It is not intended to run during package checks.
 #
+# Set SBLR_EXAMPLE_DATA_DIR before running this notebook, or edit the fallback
+# path below to point to a local directory containing the example data.
+data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR", unset = "path/to/example/data")
+#
 # =============================================================================
 # Generic R interface for annotation-aware CSR STBLR samplers
 # =============================================================================
@@ -2740,7 +2744,7 @@ derive_marker_priors_from_fit <- function(
 library(qgg)
 library(sblr)
 
-Glist <- readRDS(file = "C:/Users/au223366/Documents/GitHub/examples/human/Glist_sparseLD_1k.RDS")
+Glist <- readRDS(file = file.path(data_dir, "Glist_sparseLD_1k.RDS"))
 
 chr <- 1
 rsids <- Glist$rsidsLD[[chr]]
@@ -2813,7 +2817,7 @@ system.time(out <- sparseLD_stream_CSR(
  n = Glist$n,
  cls = list(cls),
  out_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   "ld_test"
  ),
  rows = NULL,
@@ -2828,7 +2832,7 @@ system.time(out <- sparseLD_stream_CSR(
 
 
 ld <- sparseLD_read_CSR(file.path(
- "C:/Users/au223366/Documents/GitHub/examples/human",
+ data_dir,
  "ld_test"), one_based = TRUE)
 
 
@@ -2885,7 +2889,7 @@ system.time(fitSTA <- stblr_cpg_omp_csr_prior(
  rebuild_r_before_updateE = FALSE,
 
  ld_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   "ld_test"
  ),
 
@@ -2934,7 +2938,7 @@ system.time(fitST <- stblr_cpg_omp_csr(
  #ld_values = ld$values,
  #ld_col_idx_one_based = TRUE,
  ld_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   "ld_test"
  ),
  B = vb,
@@ -3078,7 +3082,7 @@ system.time(fitSTA_EB <- stblr_cpg_omp_csr_prior(
  rebuild_r_before_updateE = FALSE,
 
  ld_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   "ld_test"
  ),
 
@@ -3156,7 +3160,7 @@ system.time(fitSTA_annot <- stblr_cpg_omp_csr_annot(
  rebuild_r_before_updateE = FALSE,
 
  ld_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   "ld_test"
  ),
 
@@ -3488,7 +3492,7 @@ format_stblr_fit_sbayesrc <- function(
 #   r_init = stats$wy,
 #   use_r_init = FALSE,
 #   rebuild_r_before_updateE = FALSE,
-#   ld_prefix = file.path("C:/Users/au223366/Documents/GitHub/examples/human", "ld_test"),
+#   ld_prefix = file.path(data_dir, "ld_test"),
 #   B = vb,
 #   E = ve,
 #   ssb_prior = ssb_prior_list,
@@ -3616,7 +3620,7 @@ fitSRC <- stblr_cpg_omp_csr_sbayesrc(
  rebuild_r_before_updateE = FALSE,
 
  ld_prefix = file.path(
-  "C:/Users/au223366/Documents/GitHub/examples/human",
+  data_dir,
   "ld_test"
  ),
 
