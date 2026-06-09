@@ -1,3 +1,6 @@
+# Development notebook for BED readers, sparse LD utilities, and sampler
+# comparisons. Requires external qgg data and machine-specific paths.
+
 library(qgg)
 library(sblr)
 

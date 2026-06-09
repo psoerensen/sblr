@@ -1,3 +1,6 @@
+# Exploratory benchmark workflow. Requires external qgg data and currently uses
+# machine-specific paths; it is not intended to run during package checks.
+
 library(qgg)
 
 data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"

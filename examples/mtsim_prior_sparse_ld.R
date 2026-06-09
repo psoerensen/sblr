@@ -1,3 +1,6 @@
+# Development notebook containing annotation-aware wrapper prototypes,
+# simulations, and benchmarks. It is not intended to run during package checks.
+#
 # =============================================================================
 # Generic R interface for annotation-aware CSR STBLR samplers
 # =============================================================================

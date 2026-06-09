@@ -1,3 +1,6 @@
+# Development notebook containing candidate R wrappers, simulations, and
+# benchmarks. It is not intended to run during package checks.
+#
 # Simplified R interface for individual-level BED STBLR marker sampler.
 #
 # This version reduces duplication by separating the wrapper into small helpers:
