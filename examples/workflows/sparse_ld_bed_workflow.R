@@ -1,4 +1,4 @@
-# Core sparse-LD and PLINK BED workflow
+# Summary-statistics / sparse-LD and individual-level BED BLR workflow
 #
 # Set SBLR_EXAMPLE_DATA_DIR to a directory containing the qgdata example files.
 # Set SBLR_RUN_HEAVY_EXAMPLES=true to run the benchmark-scale computations.
@@ -113,7 +113,9 @@ if (run_heavy) {
  )
 }
 
-# Compute BED sufficient statistics with bed_xtx_xty() --------------------
+# Summary-statistics / sparse-LD BLR models ================================
+
+# Compute summary statistics from BED with bed_xtx_xty() ------------------
 
 # Runtime-heavy benchmark.
 if (run_heavy) {
@@ -150,7 +152,7 @@ if (run_heavy) {
  ld <- sparseLD_read_CSR(ld_prefix, one_based = FALSE)
 }
 
-# Fit ST-BLR from summary statistics with stblr_csr() ----------------------
+# Fit summary-statistics / sparse-LD BLR with stblr_csr() -----------------
 
 # Runtime-heavy benchmark.
 if (run_heavy) {
@@ -170,11 +172,11 @@ if (run_heavy) {
  )
 }
 
-# Fit ST-BLR directly from BED markers with stblr_bed_marker() -------------
+# Individual-level BED BLR models =========================================
 
-# Runtime-heavy benchmark.
+# Scheduled individual-level BED sampler, single chain.
 if (run_heavy) {
- fit_bed <- stblr_bed_marker(
+ fit_bed_sched_single <- stblr_bed_marker(
   Glist = Glist,
   y = y,
   chr = chr,
@@ -195,6 +197,6 @@ if (run_heavy) {
 
 if (run_heavy) {
  plot(sim$B[, 1], fit_csr$dm[, 1], xlab = "True effect", ylab = "CSR PIP")
- plot(sim$B[, 1], fit_bed$dm[, 1], xlab = "True effect", ylab = "BED PIP")
- plot(fit_csr$bm[, 1], fit_bed$bm[, 1], xlab = "CSR effect", ylab = "BED effect")
+ plot(sim$B[, 1], fit_bed_sched_single$dm[, 1], xlab = "True effect", ylab = "BED PIP")
+ plot(fit_csr$bm[, 1], fit_bed_sched_single$bm[, 1], xlab = "CSR effect", ylab = "BED effect")
 }
