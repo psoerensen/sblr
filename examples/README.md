@@ -12,6 +12,9 @@ diagnostics. Review a script and its dependencies before running it.
 
 - `workflows/basic_sblr_summary_stats.R`: Concise template showing the intended
   high-level `sblr()` workflow using summary statistics and LD-derived matrices.
+- `workflows/sparse_ld_bed_workflow.R`: Core PLINK BED and sparse-LD workflow
+  covering qgg data preparation, simulation, BED sufficient statistics,
+  disk-backed CSR LD, and ST-BLR fits from summary statistics and BED markers.
 
 ## Current Scripts
 

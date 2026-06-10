@@ -1,3 +1,27 @@
+#' Simulate Multi-Trait Phenotypes
+#'
+#' Simulates multi-trait phenotypes and marker effects from a supplied genotype
+#' matrix or a qgg genotype list.
+#'
+#' @param Glist Optional qgg genotype list.
+#' @param chr,rsids,ids Optional chromosome, marker, and individual selections.
+#' @param causal_rsids Markers eligible to be sampled as causal.
+#' @param W Optional genotype matrix.
+#' @param n,m Simulated sample and marker counts when `W` is omitted.
+#' @param nt Number of traits.
+#' @param n_shared,n_specific Numbers of shared and trait-specific causal
+#'   markers.
+#' @param h2 Trait heritabilities.
+#' @param rg,re Genetic-effect and residual correlation specifications.
+#' @param effect_sd Standard deviation used to simulate marker effects.
+#' @param maf_min,maf_max Minor-allele-frequency range when simulating `W`.
+#' @param standardize_W Standardize marker columns before simulation.
+#' @param seed Optional simulation seed.
+#' @param exact_shared_cor Force the sampled shared effects to have exactly
+#'   correlation `rg`.
+#' @return A list containing phenotypes, marker effects, genetic values,
+#'   residuals, and simulation metadata.
+#' @export
 mtsim <- function(
   Glist = NULL,
   chr = NULL,
