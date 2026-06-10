@@ -10,62 +10,7 @@ library(sblr)
 
 # Data setup ---------------------------------------------------------------
 
-data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR", unset = "path/to/example/data")
-glist_file <- file.path(data_dir, "Glist_sparseLD_1k.RDS")
-run_heavy <- identical(Sys.getenv("SBLR_RUN_HEAVY_EXAMPLES"), "true")
-
-# Interactive data download and Glist preparation. The qgdata URLs are kept
-# unchanged so this block can be run directly when preparing the example data.
-if (interactive() && !file.exists(glist_file)) {
- dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
- files <- c("bed", "bim", "fam", "pheno", "covar")
-
- for (f in files) {
-  url <- sprintf(
-   "https://github.com/psoerensen/qgdata/raw/main/simulated_human_data/human.%s",
-   f
-  )
-  download.file(
-   url,
-   destfile = file.path(data_dir, paste0("human.", f)),
-   mode = "wb"
-  )
- }
-
- Glist <- gprep(
-  study = "Example",
-  bedfiles = file.path(data_dir, "human.bed"),
-  bimfiles = file.path(data_dir, "human.bim"),
-  famfiles = file.path(data_dir, "human.fam")
- )
- rsids <- gfilter(
-  Glist = Glist,
-  excludeMAF = 0.05,
-  excludeMISS = 0.05,
-  excludeCGAT = TRUE,
-  excludeINDEL = TRUE,
-  excludeDUPS = TRUE,
-  excludeHWE = 1e-12,
-  excludeMHC = FALSE
- )
- Glist <- gprep(
-  Glist,
-  task = "sparseld",
-  msize = 1000,
-  rsids = rsids,
-  ldfiles = file.path(data_dir, "human.ld"),
-  overwrite = TRUE
- )
- saveRDS(Glist, file = glist_file, compress = FALSE)
-}
-
-if (!file.exists(glist_file)) {
- stop(
-  "Example Glist not found. Set SBLR_EXAMPLE_DATA_DIR and run the ",
-  "interactive data setup block first."
- )
-}
-
+data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
 # Prepare Glist and sparse LD ----------------------------------------------
 
 Glist <- readRDS(file = file.path(data_dir, "Glist_sparseLD_1k.RDS"))
@@ -104,22 +49,19 @@ stat_qgg <- glma(
 )
 
 # Runtime-heavy benchmark.
-if (run_heavy) {
- fit_qgg <- gbayes(
+fit_qgg <- gbayes(
   stat = stat_qgg,
   Glist = Glist,
   method = "bayesC",
   nit = 1000
- )
-}
+)
 
 # Summary-statistics / sparse-LD BLR models ================================
 
 # Compute summary statistics from BED with bed_xtx_xty() ------------------
 
 # Runtime-heavy benchmark.
-if (run_heavy) {
- stats <- bed_xtx_xty(
+stats <- bed_xtx_xty(
   bed_file = Glist$bedfiles[chr],
   n = Glist$n,
   cls = cls,
@@ -127,14 +69,12 @@ if (run_heavy) {
   y = y,
   scale = TRUE,
   nthreads = 4
- )
-}
+)
 
 # Stream sparse LD with sparseLD_stream_CSR() ------------------------------
 
 # Runtime-heavy benchmark. This writes disk-backed CSR files at ld_prefix.
-if (run_heavy) {
- sparseLD_stream_CSR(
+sparseLD_stream_CSR(
   bed_files = Glist$bedfiles[chr],
   n = Glist$n,
   cls = list(cls),
@@ -147,16 +87,14 @@ if (run_heavy) {
   r2_threshold = 0.001,
   block_size = 1024,
   nthreads = 4
- )
+)
 
- ld <- sparseLD_read_CSR(ld_prefix, one_based = FALSE)
-}
+ld <- sparseLD_read_CSR(ld_prefix, one_based = FALSE)
 
 # Fit summary-statistics / sparse-LD BLR with stblr_csr() -----------------
 
 # Runtime-heavy benchmark.
-if (run_heavy) {
- fit_csr <- stblr_csr(
+fit_csr <- stblr_csr(
   stats = stats,
   ld_prefix = ld_prefix,
   n = Glist$n,
@@ -169,14 +107,12 @@ if (run_heavy) {
   ncores = 3,
   seed = 10,
   scheduled = FALSE
- )
-}
+)
 
 # Individual-level BED BLR models =========================================
 
 # Scheduled individual-level BED sampler, single chain.
-if (run_heavy) {
- fit_bed_sched_single <- stblr_bed_marker(
+fit_bed_sched_single <- stblr_bed_marker(
   Glist = Glist,
   y = y,
   chr = chr,
@@ -190,13 +126,10 @@ if (run_heavy) {
   ncores = 3,
   seed = 10,
   scheduled = TRUE
- )
-}
+)
 
 # Simple diagnostic plots --------------------------------------------------
 
-if (run_heavy) {
- plot(sim$B[, 1], fit_csr$dm[, 1], xlab = "True effect", ylab = "CSR PIP")
- plot(sim$B[, 1], fit_bed_sched_single$dm[, 1], xlab = "True effect", ylab = "BED PIP")
- plot(fit_csr$bm[, 1], fit_bed_sched_single$bm[, 1], xlab = "CSR effect", ylab = "BED effect")
-}
+plot(sim$B[, 1], fit_csr$dm[, 1], xlab = "True effect", ylab = "CSR PIP")
+plot(sim$B[, 1], fit_bed_sched_single$dm[, 1], xlab = "True effect", ylab = "BED PIP")
+plot(fit_csr$bm[, 1], fit_bed_sched_single$bm[, 1], xlab = "CSR effect", ylab = "BED effect")
