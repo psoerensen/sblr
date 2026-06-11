@@ -2,62 +2,599 @@
 title: "Annotation-Informed Models"
 ---
 
-This note will compare annotation-informed prior families and clearly separate
-fixed, group, directly learned, empirical-Bayes, and SBayesRC-style models.
+Annotation-informed Bayesian linear regression uses external marker
+annotations to structure priors over marker inclusion, effect variance, or
+mixture-component membership. The likelihood still comes from phenotype
+summary statistics and LD. Annotations change how prior probability and scale
+are distributed across markers before and during posterior sampling.
 
-<!-- Primary draft source: drafts/annotation_informed_priors_stblr_mtblr.qmd.
-Primary workflow source: ../../examples/workflows/annotation_based_models.R.
-Later: retain complete derivations and implementation sketches in appendices. -->
+In `sblr`, the polished annotation workflows build on the CSR ST-BLR data
+contract:
+
+```text
+stats + disk-backed sparse LD + aligned marker annotations
+    -> fixed, learned, group, or SBayesRC-style annotation prior
+    -> posterior marker effects, inclusion probabilities, and diagnostics
+```
+
+This note explains the implemented public wrappers and places them within the
+broader empirical-Bayes and multi-trait framework preserved in the archived
+annotation draft. Full marker-update derivations and implementation sketches
+belong in [Technical annotation priors](technical_annotation_priors.qmd);
+full stick-breaking details belong in
+[Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd).
 
 ## Why Annotations Inform Priors
 
-<!-- Later: reuse the annotation draft motivation. -->
+Markers are not exchangeable with respect to existing biological knowledge.
+They may lie in coding regions, regulatory regions, QTL intervals, conserved
+sequence, tissue-specific chromatin states, or other externally defined sets.
+Annotation-informed models ask whether that information should alter a
+marker's prior probability of being active or the expected scale of an active
+effect.
+
+For marker \(i\) and trait \(t\), useful prior quantities include:
+
+$$
+\pi_{it} = P(d_{it}=1),
+\qquad
+v_{b,it} = \operatorname{Var}(b_{it}\mid d_{it}=1),
+$$
+
+and, for mixture models, component probabilities
+\(\pi_{itc}=P(c_{it}=c)\). In proposed multi-trait extensions, annotations
+could additionally influence marker-specific sharing-model probabilities or
+effect covariance matrices.
+
+Annotation information can enter at different stages:
+
+- **fixed/external:** marker-specific priors are supplied before fitting;
+- **empirical Bayes:** priors are estimated from an earlier genomic or
+  annotation-level analysis, then treated as fixed;
+- **direct learned:** annotation coefficients are updated inside the genomic
+  sampler;
+- **grouped:** markers share parameters within one mutually exclusive group;
+- **mixture-based:** annotations determine probabilities of null and active
+  effect-size components.
+
+These approaches answer different questions and propagate different amounts
+of uncertainty. None makes annotation membership causal by itself.
 
 ## Annotation Matrix, Overlap, Centering, and Marker Ordering
 
-<!-- Later: combine overlapping-annotation theory with workflow alignment rules. -->
+Let \(A\) be an \(m \times K\) annotation matrix:
+
+$$
+A =
+\begin{bmatrix}
+A_{11} & \cdots & A_{1K}\\
+\vdots &        & \vdots\\
+A_{m1} & \cdots & A_{mK}
+\end{bmatrix},
+$$
+
+where rows are markers and columns are annotations. Binary entries can encode
+set membership, while continuous columns can encode scores or measurements.
+Annotations may overlap: a marker can belong to several biological categories
+simultaneously.
+
+Overlap is scientifically useful but complicates interpretation. A direct sum
+over each annotation double-counts markers in multiple sets and is not a
+strict variance partition. Conditional annotation models instead use the
+whole row \(A_i\) to estimate the contribution of one annotation while
+accounting for the others. Strongly correlated annotation columns can still
+make individual coefficients weakly identified.
+
+All public annotation wrappers prepare `A` with the package's annotation
+matrix helper. It:
+
+- requires one row per model marker;
+- reorders named rows to marker names when all names are available;
+- rejects non-finite values;
+- can add an intercept column;
+- can standardize non-binary columns;
+- optionally centers and standardizes binary columns.
+
+Row order remains a hard correctness condition:
+
+```text
+row i of A
+    = row i of stats$wy and stats$ww
+    = row/column i of sparse LD
+    = row i of fit$bm and fit$dm
+```
+
+The workflow makes this explicit:
+
+```r
+marker_id <- Glist$rsidsLD[[chr]]
+A <- sim$annot
+rownames(A) <- marker_id
+stopifnot(nrow(A) == length(marker_id),
+          identical(rownames(A), marker_id))
+```
+
+Preparation of `stats`, sparse LD, and marker order is described in
+[Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd).
+
+Centering has a statistical role beyond numerical convenience. If
+\(z_{it}=A_i\eta_t\), a centered predictor is
+
+$$
+z_{it}^{\mathrm{centered}}
+=
+A_i\eta_t-\frac{1}{m}\sum_{j=1}^m A_j\eta_t.
+$$
+
+Combining a centered annotation predictor with a global prior tends to
+redistribute prior mass across markers rather than allowing annotations to
+change the overall sparsity or variance scale without constraint.
 
 ## Plain/Global Prior Baseline
 
-<!-- Later: establish the non-annotation comparison model. -->
+The baseline BayesC-style sparse prior gives markers a common active
+probability and active-effect variance:
+
+$$
+d_{it}\sim\operatorname{Bernoulli}(\pi_t),
+\qquad
+b_{it}\mid d_{it}=1\sim N(0,v_{b,t}),
+\qquad
+b_{it}\mid d_{it}=0=0.
+$$
+
+Equivalently,
+
+$$
+b_{it}\sim(1-\pi_t)\delta_0+\pi_tN(0,v_{b,t}).
+$$
+
+This is the comparison model for annotation-aware priors. If annotations have
+no effect, fixed marker priors reduce to common values, learned annotation
+coefficients remain near zero, all group parameters become similar, and
+SBayesRC component probabilities do not vary meaningfully by annotation
+profile.
+
+Annotation models should therefore be compared with a plain CSR fit using
+compatible markers, LD, priors, and MCMC settings. Differences should not be
+attributed to annotations when the underlying data preparation or global
+architecture changed at the same time.
 
 ## Fixed Marker-Specific Priors
 
-<!-- Later: explain stblr_csr_prior_annot() and derived priors. -->
+`stblr_csr_prior_annot()` fits CSR ST-BLR using fixed marker-specific inclusion
+probabilities, fixed variance multipliers, or both. It supports two routes:
 
-## Group Priors
+1. supply `fixed_pi_marker` and `fixed_vb_multiplier` directly; or
+2. supply `A` with fixed coefficients `beta_pi` and `beta_vb`, from which the
+   wrapper constructs marker-specific priors.
 
-<!-- Later: explain mutually exclusive group priors and their limitations. -->
+For fixed annotation coefficients, the implemented construction centers the
+annotation linear predictors:
+
+$$
+\ell^{\pi}_{it}
+=
+A_i\beta_{\pi,t}
+-\frac{1}{m}\sum_j A_j\beta_{\pi,t},
+$$
+
+then computes
+
+$$
+\pi_{it}
+=
+\operatorname{logit}^{-1}
+\left\{\operatorname{logit}(\pi_t)+\ell^\pi_{it}\right\},
+$$
+
+bounded to `pi_min` and `pi_max`. The variance multiplier is
+
+$$
+\lambda_{it}
+=
+\exp\left(
+A_i\beta_{v,t}-\frac{1}{m}\sum_j A_j\beta_{v,t}
+\right),
+$$
+
+bounded to `vb_multiplier_min` and `vb_multiplier_max`, with
+\(v_{b,it}=v_{b,t}\lambda_{it}\).
+
+The direct route is illustrated by the annotation workflow:
+
+```r
+fit_fixed <- stblr_csr_prior_annot(
+  stats = stats,
+  ld_prefix = ld_prefix,
+  A = A,
+  fixed_pi_marker = sim$pi_marker,
+  fixed_vb_multiplier = sim$vb_multiplier,
+  use_pi_marker = TRUE,
+  use_vb_multiplier = TRUE
+)
+```
+
+Fixed priors are appropriate when prior values come from external biological
+knowledge, an independent study, cross-fitted estimates, or a deliberately
+separate empirical-Bayes stage. They are also the simplest way to test whether
+the sampler responds sensibly to known marker-specific prior structure.
+
+The key limitation is uncertainty: once supplied, these values are treated as
+fixed during the genomic fit. If they were estimated from the same data, the
+final posterior does not automatically propagate that first-stage
+uncertainty.
 
 ## Direct Learned Annotation Effects
 
-<!-- Later: explain stblr_csr_learn_annot() and uncertainty propagation. -->
+`stblr_csr_learn_annot()` learns annotation effects while fitting marker
+effects. For each trait, it maintains annotation coefficient vectors
+\(\eta_{\pi,t}\) and \(\eta_{v,t}\). The implemented marker-specific prior is
+conceptually
+
+$$
+\operatorname{logit}(\pi_{it})
+=
+\operatorname{logit}(\pi_t)
++\operatorname{center}_i(A_i\eta_{\pi,t}),
+$$
+
+and
+
+$$
+v_{b,it}
+=
+v_{b,t}
+\exp\{\operatorname{center}_i(A_i\eta_{v,t})\}.
+$$
+
+In the second expression, the exponential term is a multiplier of the global
+effect variance. The implementation caps probabilities and multipliers:
+
+$$
+\pi_{it}\in[\pi_{\min},\pi_{\max}],
+\qquad
+\frac{v_{b,it}}{v_{b,t}}
+\in[\lambda_{\min},\lambda_{\max}].
+$$
+
+The sampler alternates between marker updates under current marker-specific
+priors and annotation-coefficient updates. At intervals controlled by
+`annot_update_every`, random-walk proposals perturb \(\eta_{\pi,t}\) or
+\(\eta_{v,t}\). The inclusion-coefficient target uses current inclusion
+states, while the variance-coefficient target uses current active effects.
+Gaussian shrinkage scales `sigma_eta_pi` and `sigma_eta_vb` regularize the
+coefficients; proposal scales `rw_sd_eta_pi` and `rw_sd_eta_vb` control
+Metropolis movement.
+
+```r
+fit_learned <- stblr_csr_learn_annot(
+  stats = stats,
+  ld_prefix = ld_prefix,
+  A = A,
+  learn_pi_annot = TRUE,
+  learn_vb_annot = TRUE,
+  rw_sd_eta_pi = 0.02,
+  rw_sd_eta_vb = 0.02,
+  annot_update_every = 10
+)
+```
+
+The fit reports posterior annotation coefficients as `eta_pi` and `eta_vb`.
+They should be interpreted jointly with annotation scaling, coefficient
+shrinkage, bounds, proposal behavior, marker-level posterior summaries, and
+convergence diagnostics.
+
+Use the learned model when annotation effects are genuinely part of the
+inferential target and there is enough information to estimate them. It is
+more coherent than treating same-data estimates as fixed, but also more
+demanding: overlapping annotations, weak signals, poor proposal scales, and
+short chains can produce unstable or poorly mixed coefficient estimates.
+
+## Group Priors
+
+`stblr_csr_group_annot()` assigns every marker to exactly one group and gives
+each group trait-specific prior parameters. If \(g(i)\) is marker \(i\)'s
+group index, the prior is
+
+$$
+d_{it}\sim\operatorname{Bernoulli}(\pi_{g(i),t}),
+\qquad
+b_{it}\mid d_{it}=1
+\sim N\left(0,v_{b,t}\lambda_{g(i),t}\right).
+$$
+
+The R wrapper accepts a length-\(m\) `group` vector, optionally named by
+marker. It converts group labels into an internal zero-based `group_index`,
+records group names and sizes, initializes `group_pi` and
+`group_vb_multiplier`, and returns group-level posterior summaries including
+included-marker counts.
+
+```r
+group <- ifelse(A[, "Anno1"] != 0, "annotated", "background")
+names(group) <- rownames(A)
+
+fit_group <- stblr_csr_group_annot(
+  stats = stats,
+  ld_prefix = ld_prefix,
+  group = group,
+  group_pi_init = c(0.002, 0.001),
+  group_vb_multiplier_init = c(1.1, 1.0),
+  updatePi = TRUE,
+  updateGroupVb = TRUE
+)
+```
+
+Group inclusion probabilities have group-specific beta-prior controls.
+Variance multipliers can be updated and optionally normalized. Small groups
+need especially strong regularization because their inclusion counts and
+variance estimates are noisy.
+
+Group priors are useful when categories are naturally mutually exclusive or
+when a simple, auditable model is preferred. They are also a practical
+simplification of overlapping annotations: define a deterministic hierarchy
+or a small set of combined categories, then fit one group per marker. That
+simplification discards overlap structure and makes results depend on the
+assignment rule. When overlap itself is scientifically important, learned
+matrix-based or SBayesRC-style models are usually more appropriate.
 
 ## SBayesRC-Style Overlapping-Annotation Mixture Priors
 
-<!-- Later: introduce probit stick-breaking and expected gamma. -->
+`stblr_csr_sbayesrc_generic()` replaces a single active-effect distribution
+with multiple variance components. Let
+
+$$
+\gamma=(\gamma_1,\ldots,\gamma_C),
+\qquad
+\gamma_1=0,\quad \gamma_c>0\text{ for }c>1,
+$$
+
+where the zero component is null and active components scale the marker-effect
+variance. A common workflow choice is
+`gamma = c(0, 0.01, 0.1, 1)`.
+
+For marker \(i\), annotations determine component probabilities through a
+generalized probit stick-breaking construction. Let
+
+$$
+\eta_i=A_i\alpha,
+\qquad
+p_{ij}=\Phi(\eta_{ij}),
+$$
+
+for \(C-1\) stick-breaking steps. Then
+
+$$
+\begin{aligned}
+\pi_{i1} &= 1-p_{i1},\\
+\pi_{i2} &= p_{i1}(1-p_{i2}),\\
+&\ \vdots\\
+\pi_{iC} &= \prod_{j=1}^{C-1}p_{ij}.
+\end{aligned}
+$$
+
+The probabilities are non-negative and sum to one. Marker \(i\)'s expected
+gamma multiplier is
+
+$$
+E(\gamma_i\mid A_i,\alpha)
+=
+\sum_{c=1}^C\pi_{ic}\gamma_c.
+$$
+
+`make_sbayesrc_alpha_init()` creates deterministic initial values. It
+distributes the initial active probability across non-null components,
+converts those marginal probabilities into conditional stick-breaking
+probabilities, and, when an all-ones intercept exists, encodes the baseline in
+that intercept row of `alpha_init`. Other coefficients begin at zero unless
+supplied.
+
+```r
+fit_sbayesrc <- stblr_csr_sbayesrc_generic(
+  stats = stats,
+  ld_prefix = ld_prefix,
+  A = A,
+  gamma = c(0, 0.01, 0.1, 1),
+  updateAlpha = TRUE,
+  alpha_update_every = 10
+)
+```
+
+The fit contains annotation coefficients `alpha`, annotation-effect variances
+`sigmaSqAlpha`, marker component probabilities `comp_prob`, and component
+counts `ncomp`.
+
+The exported diagnostic helpers convert fitted coefficients into compact,
+deterministic summaries:
+
+- `sbayesrc_annotation_pi(alpha, gamma)` applies stick-breaking to each
+  annotation coefficient row;
+- `sbayesrc_annotation_gamma_mean(alpha, gamma)` returns expected gamma per
+  annotation row;
+- `sbayesrc_marker_pi(A, alpha, gamma)` applies stick-breaking to
+  \(A\alpha\), returning marker-level component probabilities;
+- `sbayesrc_marker_gamma_mean(A, alpha, gamma)` returns expected gamma per
+  marker.
+
+Annotation-row diagnostics isolate one coefficient row and are not the same as
+marker-level predictions under overlapping annotation profiles. For biological
+interpretation, inspect both, and compare marker expected gamma with posterior
+inclusion probabilities without assuming they should be identical.
+
+Use the SBayesRC-style model when annotations may overlap and the scientific
+question concerns how annotations shift probability among null, small,
+moderate, and larger effect components. It is more expressive than a binary
+active/null model and correspondingly needs careful prior, mixing, and
+identifiability diagnostics.
+
+## Annotation Workflow
+
+The current workflow connects simulation, CSR preparation, four models, and
+compact diagnostics:
+
+```text
+mtsim_annotation()
+    -> summarize_annotation_signal()
+    -> bed_xtx_xty() + sparseLD_stream_CSR()
+    -> align A with stats and sparse LD
+    -> stblr_csr_prior_annot()
+    -> stblr_csr_learn_annot()
+    -> stblr_csr_group_annot()
+    -> stblr_csr_sbayesrc_generic()
+    -> compact fit, annotation, and expected-gamma summaries
+```
+
+`mtsim_annotation()` simulates phenotypes, marker effects, overlapping
+annotations, enriched causal-marker sampling, and marker-specific prior
+values. It supports known-truth checks but does not represent a real-data
+validation by itself.
+
+`summarize_annotation_signal(sim)` reports annotation sizes, causal counts,
+and causal rates. With a fit, it can add trait-specific mean posterior
+inclusion and mean absolute posterior effect summaries. These summaries are
+descriptive: annotation overlap and LD mean they are not additive variance
+partitions.
+
+The workflow then constructs `stats` and `ld_prefix` from the same BED marker
+order, verifies `A`, and fits all four prior families. Full marker matrices
+remain available in fit objects, while compact summaries prevent
+marker-scale output from flooding the console. See
+[Workflows and outputs](workflows_and_outputs.qmd) for reporting patterns.
 
 ## Empirical-Bayes Annotation Workflows
 
-<!-- Later: preserve staged workflows and cross-fitting discussion. -->
+The archived annotation draft describes a broader staged strategy:
 
-## Fixed Versus Learned Versus Empirical-Bayes Comparison
+$$
+\text{genomic STBLR/MTBLR}
+\rightarrow
+\text{marker-level posterior summaries}
+\rightarrow
+\text{annotation-level model}
+\rightarrow
+\text{annotation-informed priors}
+\rightarrow
+\text{next genomic fit}.
+$$
 
-<!-- Later: add a comparison table covering uncertainty and assumptions. -->
+First-stage summaries can include posterior means \(\widehat b_{it}\),
+posterior inclusion probabilities \(\widehat{dm}_{it}\), residual scores, and
+set-specific genomic variance contributions. For an annotation set \(S_k\), a
+smoothed inclusion estimate is
+
+$$
+\widehat\pi_{k,t}
+=
+\frac{\alpha+\sum_{i\in S_k}\widehat{dm}_{it}}
+{2\alpha+|S_k|}.
+$$
+
+An effect-scale estimate can use the estimated set contribution
+
+$$
+\widehat V_{G,k,t}
+=
+\frac{1}{n}\sum_{i\in S_k}
+\widehat b_{it}(wy_{it}-r_{it})
+$$
+
+and divide by an effective number of active markers,
+
+$$
+m^{\mathrm{eff}}_{k,t}
+=
+\sum_{i\in S_k}\widehat{dm}_{it},
+\qquad
+\widehat\sigma^2_{b,k,t}
+=
+\frac{\widehat V_{G,k,t}}
+{\max(m^{\mathrm{eff}}_{k,t},c)}.
+$$
+
+For overlapping annotations, marker-level responses such as
+\(\widehat{dm}_{it}\), \(\widehat b_{it}^2\), or estimated variance
+contributions can be regressed jointly on \(A\). The resulting coefficients
+can construct marker-specific priors on logit or log scales.
+
+This strategy preserves useful technical ideas for prior learning,
+annotation-level STBLR/MTBLR, multi-trait sharing priors, and warm starts.
+However, it is not identical to the four implemented direct workflow
+wrappers. When the same data estimate priors and evaluate the final model,
+uncertainty can be understated. Sample splitting, chromosome-wise
+cross-fitting, external estimates, or a fully hierarchical model are more
+conservative alternatives.
+
+## Choosing an Annotation Model
+
+| Model | Use when | Main advantage | Main caution |
+|---|---|---|---|
+| Fixed marker-specific prior | Reliable external, cross-fitted, or deliberately staged priors already exist; or a known-prior simulation is being checked. | Stable and auditable; simplest marker-specific model. | Treats prior values as known and does not propagate their estimation uncertainty. |
+| Learned annotation coefficients | Inclusion or effect-scale annotation effects are inferential targets and sufficient signal exists to estimate them. | Learns annotation effects jointly with marker effects. | Requires careful shrinkage, proposal tuning, bounds, and convergence assessment. |
+| Group prior | Markers belong to one meaningful category each, or a simple mutually exclusive approximation is acceptable. | Easy to interpret and computationally direct. | Discards or arbitrarily resolves overlapping annotations; small groups are unstable. |
+| SBayesRC-style mixture prior | Overlapping annotations should shift probability among null and multiple active-effect scales. | Flexible effect-size architecture with marker-level mixture probabilities. | More parameters and more difficult identifiability and mixing diagnostics. |
+| Empirical-Bayes staged prior | First-stage genomic evidence should inform later fits or proposed MTBLR extensions. | Flexible bridge between posterior summaries and future priors. | Same-data reuse can be optimistic; many draft components remain research-stage. |
+
+Start with the simplest model that matches the scientific question. More
+expressive annotation models do not automatically produce more reliable
+biological conclusions.
 
 ## Regularization, Caps, Shrinkage, and Overfitting
 
-<!-- Later: reuse the corresponding annotation-draft cautions. -->
+Annotation-informed priors can become aggressive because probabilities and
+variance scales enter marker updates repeatedly. The following controls are
+part of the model, not merely numerical safeguards:
+
+- center annotation linear predictors around their marker average;
+- standardize continuous annotations so coefficient scales are comparable;
+- decide deliberately whether binary annotations should remain 0/1 or be
+  centered and standardized;
+- shrink annotation coefficients toward zero;
+- bound marker inclusion probabilities away from zero and one;
+- cap variance multipliers to avoid extreme marker scales;
+- use pseudo-counts and shrinkage for small annotation sets;
+- inspect correlated annotation columns and unstable coefficient directions;
+- use cross-fitting or external estimates for formal empirical-Bayes
+  inference.
+
+The default bounds in current wrappers are intentionally broad and are not
+scientific defaults for every analysis. Sensitivity to bounds, prior scales,
+annotation preprocessing, and LD construction should be reported.
 
 ## Interpretation and Causal Limits
 
-<!-- Later: preserve all causal-hypothesis and inference-limit material. -->
+Annotation-informed models estimate how annotation structure relates to prior
+architecture and posterior genomic evidence under the fitted model. They can
+identify annotations associated with higher posterior inclusion, different
+effect scales, or different mixture-component probabilities. They can support
+biological prioritization and generate hypotheses.
+
+They do **not** prove that an annotation, gene, tissue, or regulatory mechanism
+causes a phenotype. Apparent enrichment can reflect:
+
+- LD between annotated and causal markers;
+- marker density and annotation size;
+- correlated or overlapping annotations;
+- phenotype architecture and model misspecification;
+- sparse-LD approximation and marker filtering;
+- winner's curse or reuse of the same data to estimate and evaluate priors.
+
+Genetic sharing across traits is also not causal direction. Colocalization,
+Mendelian randomization, functional experiments, and external replication ask
+different questions and require their own assumptions.
+
+Row alignment is essential: a misordered annotation matrix produces a
+well-formed but biologically meaningless prior. Short demonstration chains are
+only execution examples. Real analyses need longer chains, convergence and
+proposal diagnostics, sensitivity analysis, posterior predictive checks, and
+clear documentation of annotation preprocessing and prior construction.
 
 ## Related Notes and Sources
 
+- [Model overview](model_overview.qmd)
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
 - [Workflows and outputs](workflows_and_outputs.qmd)
 - [Multi-trait models](multi_trait_models.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
 - [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
-
+- [Archived annotation-prior draft](drafts/annotation_informed_priors_stblr_mtblr.qmd)
