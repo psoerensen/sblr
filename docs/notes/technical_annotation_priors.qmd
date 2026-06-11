@@ -1,0 +1,68 @@
+---
+title: "Technical Appendix: Annotation Priors"
+---
+
+This appendix will preserve the detailed derivations, implementations,
+uncertainty considerations, and proposed extensions for annotation-informed
+STBLR and MTBLR priors.
+
+<!-- Primary source: drafts/annotation_informed_priors_stblr_mtblr.qmd.
+Migrate all mapped equations, R implementations, C++ sketches, assumptions,
+and cautions except SBayesRC-specific material, which has its own appendix. -->
+
+## Annotation-Level Posterior Summaries and Overlap
+
+<!-- Later: migrate set summaries, overlap handling, and implementations. -->
+
+## PIP Enrichment and Variance Attribution
+
+<!-- Later: preserve full enrichment and attribution derivations. -->
+
+## Empirical-Bayes Inclusion and Variance Priors
+
+<!-- Later: migrate staged prior-learning equations and uncertainty caveats. -->
+
+## Marker-Specific Prior Scale Construction
+
+<!-- Later: preserve overlapping-annotation scale construction. -->
+
+## Full STBLR Marker-Update Derivation With Marker-Specific Priors
+
+<!-- Later: migrate the complete derivation and implementation sketch. -->
+
+## Annotation-Specific MTBLR Covariance and Sharing-Model Priors
+
+<!-- Later: preserve all MTBLR prior equations and R implementations. -->
+
+## Annotation-Level STBLR/MTBLR as a Prior-Learning Stage
+
+<!-- Later: migrate empirical-Bayes annotation-level model material. -->
+
+## Direct Hierarchical Annotation Models
+
+<!-- Later: preserve direct-model definitions and hierarchical interpretation. -->
+
+## Fixed Versus Jointly Updated Annotation Coefficients
+
+<!-- Later: preserve fixed and sampling-update alternatives. -->
+
+## Proposed C++ Changes and Sparse Annotation Representation
+
+<!-- Later: retain design sketches, clearly labeled as proposed. -->
+
+## Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty
+
+<!-- Later: preserve all regularization and overfitting cautions. -->
+
+## Warm-Started Regional MTBLR
+
+<!-- Later: retain as proposed/experimental unless a stable wrapper exists. -->
+
+## Related Notes and Sources
+
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Multi-trait models](multi_trait_models.qmd)
+- [Workflows and outputs](workflows_and_outputs.qmd)
+- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
+- [Archived annotation-prior draft](drafts/annotation_informed_priors_stblr_mtblr.qmd)
+

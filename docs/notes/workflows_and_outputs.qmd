@@ -1,0 +1,65 @@
+---
+title: "Workflows and Outputs"
+---
+
+This note will connect model choices to executable workflows and explain
+compact posterior summaries while retaining full marker-scale outputs in fit
+objects.
+
+<!-- Later: use both workflow scripts as coequal executable architecture
+sources. Reuse staged-workflow material from the annotation draft, clearly
+labeling experimental proposals. -->
+
+## Workflow Decision Table
+
+<!-- Later: map data, traits, priors, and estimation choices to workflows. -->
+
+## Workflow Scripts as Executable Architecture Documents
+
+<!-- Later: explain scripts versus conceptual notes, help, and tests. -->
+
+## BED-Direct and Summary-Statistics CSR Workflow Index
+
+<!-- Later: link rather than duplicate sparse_ld_and_bed_workflows.qmd. -->
+
+## Annotation-Model Comparison Workflow
+
+<!-- Later: preserve the four-model sequence from annotation_based_models.R. -->
+
+## MCMC Settings: Demonstration Versus Real Analysis
+
+<!-- Later: preserve explicit chain-length and diagnostic cautions. -->
+
+## Fit Object Structure
+
+<!-- Later: document common and model-specific fit components. -->
+
+## Compact Fit Summaries
+
+<!-- Later: reuse compact_fit_summary() concepts from the annotation workflow. -->
+
+## Top-Marker Summaries
+
+<!-- Later: reuse top_marker_summary() concepts without printing full matrices. -->
+
+## Annotation-Level Summaries
+
+<!-- Later: reuse annotation_model_summary() and summarize_annotation_signal(). -->
+
+## SBayesRC Prior-Architecture Diagnostics
+
+<!-- Later: reuse expected-gamma diagnostics and link their derivation. -->
+
+## Convergence, Posterior Predictive Checks, and Reproducibility
+
+<!-- Later: preserve workflow cautions and define minimum reporting needs. -->
+
+## Related Notes and Sources
+
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Complete sparse-LD/BED workflow](../../examples/workflows/sparse_ld_bed_workflow.R)
+- [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
+- [Technical annotation priors](technical_annotation_priors.qmd)
+- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
+

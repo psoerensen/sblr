@@ -1,0 +1,55 @@
+---
+title: "Technical Appendix: SBayesRC Annotation Priors"
+---
+
+This appendix will explain the implemented SBayesRC-style annotation prior,
+generalized probit stick-breaking construction, and diagnostic helpers in full
+mathematical detail.
+
+<!-- Sources to integrate later: relevant mixture/direct-model concepts from
+drafts/annotation_informed_priors_stblr_mtblr.qmd, current public helper
+contracts, and diagnostics in ../../examples/workflows/annotation_based_models.R. -->
+
+## Mixture Components and Gamma Multipliers
+
+<!-- Later: define gamma components and interpretation. -->
+
+## Annotation Coefficient Matrix `alpha`
+
+<!-- Later: define dimensions, names, and coefficient interpretation. -->
+
+## Generalized Probit Stick-Breaking Probabilities
+
+<!-- Later: preserve the complete probability construction and validation. -->
+
+## Marker Predictors \(A\alpha\)
+
+<!-- Later: explain annotation-to-marker probability mapping. -->
+
+## Annotation- and Marker-Level Expected Gamma
+
+<!-- Later: derive expected gamma and interpretation limits. -->
+
+## Initialization With `make_sbayesrc_alpha_init()`
+
+<!-- Later: document deterministic initialization and component weights. -->
+
+## Fit Outputs: `alpha`, `sigmaSqAlpha`, `comp_prob`, and `ncomp`
+
+<!-- Later: describe dimensions, names, and posterior interpretation. -->
+
+## Diagnostic Helper Contracts and Compact Summaries
+
+<!-- Later: document annotation/marker pi and expected-gamma helpers. -->
+
+## Interpretation and Limits
+
+<!-- Later: preserve uncertainty, prior-architecture, and causal cautions. -->
+
+## Related Notes and Sources
+
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Workflows and outputs](workflows_and_outputs.qmd)
+- [Technical annotation priors](technical_annotation_priors.qmd)
+- [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
+

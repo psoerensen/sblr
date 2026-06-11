@@ -1,0 +1,63 @@
+---
+title: "Annotation-Informed Models"
+---
+
+This note will compare annotation-informed prior families and clearly separate
+fixed, group, directly learned, empirical-Bayes, and SBayesRC-style models.
+
+<!-- Primary draft source: drafts/annotation_informed_priors_stblr_mtblr.qmd.
+Primary workflow source: ../../examples/workflows/annotation_based_models.R.
+Later: retain complete derivations and implementation sketches in appendices. -->
+
+## Why Annotations Inform Priors
+
+<!-- Later: reuse the annotation draft motivation. -->
+
+## Annotation Matrix, Overlap, Centering, and Marker Ordering
+
+<!-- Later: combine overlapping-annotation theory with workflow alignment rules. -->
+
+## Plain/Global Prior Baseline
+
+<!-- Later: establish the non-annotation comparison model. -->
+
+## Fixed Marker-Specific Priors
+
+<!-- Later: explain stblr_csr_prior_annot() and derived priors. -->
+
+## Group Priors
+
+<!-- Later: explain mutually exclusive group priors and their limitations. -->
+
+## Direct Learned Annotation Effects
+
+<!-- Later: explain stblr_csr_learn_annot() and uncertainty propagation. -->
+
+## SBayesRC-Style Overlapping-Annotation Mixture Priors
+
+<!-- Later: introduce probit stick-breaking and expected gamma. -->
+
+## Empirical-Bayes Annotation Workflows
+
+<!-- Later: preserve staged workflows and cross-fitting discussion. -->
+
+## Fixed Versus Learned Versus Empirical-Bayes Comparison
+
+<!-- Later: add a comparison table covering uncertainty and assumptions. -->
+
+## Regularization, Caps, Shrinkage, and Overfitting
+
+<!-- Later: reuse the corresponding annotation-draft cautions. -->
+
+## Interpretation and Causal Limits
+
+<!-- Later: preserve all causal-hypothesis and inference-limit material. -->
+
+## Related Notes and Sources
+
+- [Workflows and outputs](workflows_and_outputs.qmd)
+- [Multi-trait models](multi_trait_models.qmd)
+- [Technical annotation priors](technical_annotation_priors.qmd)
+- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
+- [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
+

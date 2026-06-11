@@ -1,0 +1,51 @@
+---
+title: "Multi-Trait Models"
+---
+
+This note will explain joint multi-trait modeling, covariance structures,
+trait-sharing models, and sample-overlap requirements.
+
+<!-- Later: reuse all high-level material from drafts/sblr_theory.qmd and the
+annotation draft's MTBLR sections. Keep full overlap and annotation-prior
+derivations in the linked appendices. -->
+
+## Why Model Traits Jointly
+
+<!-- Later: explain joint information sharing and its limits. -->
+
+## Effect Vectors and Covariance Matrices
+
+<!-- Later: define b_i, B, E, and posterior covariance outputs. -->
+
+## Trait-Sharing Model Space
+
+<!-- Later: explain sharing patterns such as 000 through 111. -->
+
+## Residual Covariance and Cross-Trait Sufficient Statistics
+
+<!-- Later: introduce SSY and Nmat without shortening the appendix derivation. -->
+
+## Full Versus Partial Sample Overlap
+
+<!-- Later: summarize both assumptions from drafts/sblr_theory.qmd. -->
+
+## Annotation-Informed MTBLR Concepts
+
+<!-- Later: summarize annotation-specific covariance and sharing priors. -->
+
+## Current Implementation Status and Proposed Extensions
+
+<!-- Later: distinguish public functionality from research proposals. -->
+
+## Interpretation: Sharing Is Not Causal Direction
+
+<!-- Later: preserve causal-interpretation cautions from the annotation draft. -->
+
+## Related Notes
+
+- [Model overview](model_overview.qmd)
+- [Data representations](data_representations.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Technical multi-trait overlap](technical_multitrait_overlap.qmd)
+- [Technical annotation priors](technical_annotation_priors.qmd)
+

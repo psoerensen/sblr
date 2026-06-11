@@ -1,0 +1,51 @@
+---
+title: "sblr Notes"
+---
+
+These notes provide a readable path through the `sblr` data representations,
+model families, workflows, and technical derivations. The package and these
+notes are experimental.
+
+<!-- Later: adapt concise motivation from drafts/sblr_theory.qmd and
+drafts/annotation_informed_priors_stblr_mtblr.qmd. Preserve detailed material
+in the linked technical appendices. -->
+
+## What `sblr` Is and Its Experimental Status
+
+<!-- Later: summarize package scope and research-snapshot status. -->
+
+## Four Documentation Axes: Data, Traits, Priors, Estimation
+
+<!-- Later: insert the classification framework from NOTE_STRATEGY.md. -->
+
+## Choose a Workflow
+
+<!-- Later: link decisions to sparse_ld_and_bed_workflows.qmd and
+workflows_and_outputs.qmd. -->
+
+## Choose a Model
+
+<!-- Later: summarize the model comparison matrix from model_overview.qmd. -->
+
+## Main Notes Versus Technical Appendices
+
+<!-- Later: explain the definition/interpretation/full-derivation pattern. -->
+
+## Runtime, Convergence, and Reproducibility Cautions
+
+<!-- Later: preserve cautions from both workflows and the annotation draft. -->
+
+## Public API and Example-Script Links
+
+<!-- Later: link current public wrappers and complete workflow scripts. -->
+
+## Related Notes
+
+- [Model overview](model_overview.qmd)
+- [Data representations](data_representations.qmd)
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
+- [Single-trait models](single_trait_models.qmd)
+- [Multi-trait models](multi_trait_models.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Workflows and outputs](workflows_and_outputs.qmd)
+

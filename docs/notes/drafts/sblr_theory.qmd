@@ -1,0 +1,295 @@
+## Theory: Constructing Cross-Trait Summary-Statistic Matrices (SSY and Nmat)
+
+### Overview
+
+In multivariate Bayesian linear regression using *summary statistics*, the
+likelihood depends on cross-trait quantities of the form
+
+$$
+\mathrm{SSY}_{t_1,t_2}
+\;=\;
+\sum_{i=1}^{N_{t_1,t_2}}
+y_{i t_1} \, y_{i t_2},
+$$
+
+where \(y_{i t}\) denotes the phenotype of individual \(i\) for trait \(t\),
+and \(N_{t_1,t_2}\) is the number of individuals jointly observed for traits
+\(t_1\) and \(t_2\).  
+In the univariate case this reduces to the usual
+sum of squares \(\mathrm{SSY}_t = \sum_i y_{it}^2\), but in the multivariate
+case the full matrix
+
+$$
+\mathrm{SSY} = \bigl[\mathrm{SSY}_{t_1,t_2}\bigr]_{t_1,t_2=1}^{n_t}
+$$
+
+is required to estimate or sample from a *residual covariance matrix*
+\(E\) or its inverse.
+
+When individual-level data are unavailable, we must reconstruct or approximate
+SSY and the effective sample-overlap matrix \(N\) from summary statistics,
+phenotypic variances, and (estimated or assumed) phenotypic correlations.
+This section describes the statistical foundations of these reconstructed
+matrices and how the helper functions
+`build_SSY_full_overlap()`, `build_Nmat_full()`, and `build_Nmat_frac()`
+implement them.
+
+---
+
+## Phenotypic Variance From Summary Statistics
+
+For trait \(t\), let
+
+- \(yy_t = \sum_i y_{it}^2\) (the univariate summary statistic),
+- \(n_t\) be the number of individuals with observations for trait \(t\).
+
+The empirical phenotypic variance is approximated by
+
+$$
+\widehat{\mathrm{Var}}(y_t)
+\approx
+\frac{yy_t}{n_t}.
+$$
+
+This is valid when phenotypes have been centered (or approximately centered),
+a standard preprocessing step in GWAS pipelines.
+
+We collect these into a diagonal variance vector:
+
+$$
+\hat{\sigma}^2_y = \left( \frac{yy_t}{n_t} \right)_{t=1}^{n_t}.
+$$
+
+---
+
+## Phenotypic Covariance From Correlation Information
+
+If we know (or estimate) the phenotypic correlation matrix
+
+$$
+R_y = \bigl[r_{t_1,t_2}\bigr],
+$$
+
+then the corresponding phenotypic covariance matrix is
+
+$$
+\widehat{\mathrm{Cov}}(y)
+=
+\bigl[ r_{t_1,t_2}
+      \,\sqrt{\widehat{\mathrm{Var}}(y_{t_1})
+              \widehat{\mathrm{Var}}(y_{t_2})}
+\bigr].
+$$
+
+This step is essential: correlation matrices contain *standardized* information,
+and we rescale them back to covariance units using the variance estimates
+derived from summary statistics.
+
+---
+
+## The Sample-Overlap Matrix \(N\)
+
+For two traits \(t_1\) and \(t_2\), define
+
+$$
+N_{t_1,t_2}
+=
+\text{number of individuals observed for both traits}.
+$$
+
+### Full-overlap assumption
+
+When the two traits originate from the same biobank or cohort,
+the overlap is often close to the size of the *smaller* sample:
+
+$$
+N^{\text{full}}_{t_1,t_2} = \min(n_{t_1}, n_{t_2}).
+$$
+
+This defines the function `build_Nmat_full()`.
+
+### Fractional-overlap assumption
+
+In meta-analysis or multi-cohort settings, sample overlap may be *partial*.
+We then model
+
+$$
+N^{\text{frac}}_{t_1,t_2}
+=
+p_{t_1,t_2} \,\min(n_{t_1}, n_{t_2}),
+$$
+
+where \(p_{t_1,t_2} \in [0,1]\) is a user-supplied overlap proportion.
+This defines `build_Nmat_frac()`.
+
+The diagonal entries satisfy \(N_{t,t} = n_t\).
+
+---
+
+## Reconstructing the Cross-Trait SSY Matrix
+
+The cross-product between two traits is defined as
+
+$$
+\mathrm{SSY}_{t_1,t_2}
+=
+\sum_{i=1}^{N_{t_1,t_2}}
+y_{i t_1} \, y_{i t_2}.
+$$
+
+Under the assumption of independence across individuals and using the covariance
+identity
+
+$$
+\mathbb{E}[y_{t_1} y_{t_2}]
+=
+\mathrm{Cov}(y_{t_1},y_{t_2}),
+$$
+
+we obtain the summary-statistic approximation
+
+$$
+\mathrm{SSY}_{t_1,t_2}
+\;\approx\;
+N_{t_1,t_2}
+\cdot
+\widehat{\mathrm{Cov}}(y_{t_1}, y_{t_2}).
+$$
+
+This is the key identity used by `build_SSY_full_overlap()`:
+
+- it constructs the covariance matrix using \(R_y\) and the variance estimates,
+- multiplies by the appropriate overlap counts \(N_{t_1,t_2}\),
+- and forces the diagonals to match the observed univariate summary statistics:
+  \(\mathrm{SSY}_{t,t} = yy_t\).
+
+Thus, the reconstructed SSY matrix is:
+
+$$
+\widehat{\mathrm{SSY}}
+=
+N \odot \widehat{\mathrm{Cov}}(y),
+$$
+
+where \(\odot\) denotes elementwise multiplication.
+
+---
+
+## Why SSY and Nmat Are Needed in Multivariate BLR
+
+In a multivariate Bayesian linear regression model
+
+$$
+y = Xb + e,
+\quad
+e \sim \mathcal{N}(0, E \otimes I),
+$$
+
+the full residual covariance sampler for \(E\) requires access to the cross-trait
+quantities
+
+$$
+\sum_i e_{i t_1} e_{i t_2},
+$$
+
+which, after substituting \(e = y - Xb\), depend on the observed SSY matrix,
+the cross-products involving \(X\), and the current posterior draw of \(b\).
+
+When individual-level data are unavailable, the only way to compute
+these cross-trait sums is through a reconstruction of SSY and Nmat from
+summary statistics.  
+Without these matrices, the sampler must be restricted to *diagonal*
+residual variances (the usual summary-statistic assumption).
+
+The functions provided here therefore enable *full multivariate residual
+variance estimation* in summary-statistic MTBLR when a phenotypic correlation
+matrix or sample-overlap information is available.
+
+---
+
+## Summary
+
+- `build_Nmat_full()` constructs a full-overlap sample-overlap matrix  
+  \(N_{t_1,t_2} = \min(n_{t_1},n_{t_2})\).
+
+- `build_Nmat_frac()` generalizes this using overlap fractions  
+  \(N_{t_1,t_2} = p_{t_1,t_2}\min(n_{t_1},n_{t_2})\).
+
+- `build_SSY_full_overlap()` combines variances, phenotypic correlations,
+  and overlap counts to reconstruct:
+
+  $$
+  \widehat{\mathrm{SSY}} = N \odot \widehat{\mathrm{Cov}}(y).
+  $$
+
+- These matrices provide the necessary inputs for a full sampler of the
+  residual covariance matrix \(E\) when only summary statistics are available.
+
+
+## 5.1 Deriving SSY from first principles
+
+Let \(Y_t\) be an \(n_t\)-dimensional vector of observations for trait \(t\).  
+If samples overlap partially, define the set of shared individuals:
+
+$$
+\mathcal{I}_{ts} = \text{indices of individuals with both }y_t\text{ and }y_s.
+$$
+
+Then:
+
+$$
+\mathrm{SSY}_{ts}
+=
+\sum_{i \in \mathcal{I}_{ts}} y_{ti} y_{si}.
+$$
+
+If we assume:
+
+1. random missingness independent of trait values, and  
+2. covariance structure homogeneous across individuals, i.e.
+
+   $$
+   \mathrm{Cov}(y_t, y_s) = \sigma_{ts}
+   $$
+
+then the expectation becomes:
+
+$$
+\mathbb{E}[\mathrm{SSY}_{ts}]
+  = |\mathcal{I}_{ts}| \, \sigma_{ts}.
+$$
+
+If we approximate the overlap size as:
+
+$$
+|\mathcal{I}_{ts}| \approx N_{ts},
+$$
+
+then:
+
+$$
+\mathrm{SSY}_{ts}
+\approx N_{ts} \, \sigma_{ts}.
+$$
+
+Estimating \(\sigma_{ts}\) by:
+
+$$
+\widehat{\sigma}_{ts}
+= R_{y,ts}
+  \sqrt{
+    \widehat{\mathrm{Var}}(y_t)\,
+    \widehat{\mathrm{Var}}(y_s)
+  }
+$$
+
+yields the final approximation:
+
+$$
+\mathrm{SSY}
+\approx
+N \odot \widehat{\mathrm{Cov}}(y).
+$$
+
+This provides a principled summary‑statistic reconstruction of  
+\(Y^\top Y\) suitable for multi‑trait Bayesian models.

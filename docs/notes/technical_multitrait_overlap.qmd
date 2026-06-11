@@ -1,0 +1,49 @@
+---
+title: "Technical Appendix: Multi-Trait Sample Overlap"
+---
+
+This appendix will preserve the complete derivation of cross-trait `SSY` and
+sample-overlap matrices used by multi-trait summary-statistic models.
+
+<!-- Primary source: drafts/sblr_theory.qmd. Migrate every equation,
+assumption, caveat, and first-principles step. Consolidate repeated prose only
+after completeness is verified. -->
+
+## Cross-Trait `SSY` Definition
+
+<!-- Later: migrate the overview and definitions. -->
+
+## Phenotypic Variance From Summary Statistics
+
+<!-- Later: migrate the full section and centering assumptions. -->
+
+## Covariance Reconstruction From \(R_y\)
+
+<!-- Later: migrate covariance rescaling from correlation information. -->
+
+## Full-Overlap and Fractional-Overlap \(N\)
+
+<!-- Later: preserve both overlap constructions and diagonal constraints. -->
+
+## Reconstruction \(\widehat{SSY}=N\odot\widehat{\operatorname{Cov}}(y)\)
+
+<!-- Later: preserve the reconstruction equations and interpretation. -->
+
+## Why Full Residual Covariance Estimation Requires `SSY` and \(N\)
+
+<!-- Later: preserve the diagonal-only limitation and rationale. -->
+
+## First-Principles Derivation and Assumptions
+
+<!-- Later: migrate "5.1 Deriving SSY from first principles" in full. -->
+
+## Limitations, Missingness, and Sensitivity Analysis
+
+<!-- Later: preserve random-missingness, homogeneity, and overlap caveats. -->
+
+## Related Notes
+
+- [Data representations](data_representations.qmd)
+- [Multi-trait models](multi_trait_models.qmd)
+- [Archived theory draft](drafts/sblr_theory.qmd)
+

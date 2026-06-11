@@ -1,0 +1,48 @@
+---
+title: "Single-Trait Models"
+---
+
+This note will explain single-trait BLR/ST-BLR models, prior interpretation,
+and the distinction between direct BED and summary-statistics CSR fitting.
+
+<!-- Later: reuse concise material from annotation-draft sections "Using
+marker-specific prior variances in STBLR" and "Modified STBLR marker update";
+preserve full derivations in technical_annotation_priors.qmd. -->
+
+## Single-Trait BLR Model
+
+<!-- Later: define scalar marker effects and residual variance. -->
+
+## Global BayesC-Style Prior
+
+<!-- Later: define global pi, effect variance, and spike-and-slab behavior. -->
+
+## Individual-Level BED Workflow
+
+<!-- Later: link the direct path in sparse_ld_and_bed_workflows.qmd. -->
+
+## Summary-Statistics CSR Workflow
+
+<!-- Later: link the derived path and define the model inputs. -->
+
+## Scheduled Sparse Updates and Runtime Controls
+
+<!-- Later: document controls and label implementation-sensitive behavior. -->
+
+## Posterior Outputs and Diagnostics
+
+<!-- Later: explain bm, dm, vbs, vgs, ves, and compact diagnostics. -->
+
+## Transition From Plain to Annotation-Informed Priors
+
+<!-- Later: introduce fixed marker-specific priors without duplicating the
+annotation note. -->
+
+## Related Notes
+
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Technical summary statistics](technical_summary_statistics.qmd)
+- [Technical sparse-LD CSR](technical_sparse_ld_csr.qmd)
+- [Technical annotation priors](technical_annotation_priors.qmd)
+

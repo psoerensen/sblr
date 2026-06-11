@@ -1,0 +1,49 @@
+---
+title: "Model Overview"
+---
+
+This note will define the common Bayesian linear regression model and show how
+the implemented and proposed `sblr` model families differ.
+
+<!-- Later: reuse high-level material from the annotation draft sections
+"Motivation", "Summary-statistic residual notation", and "Direct
+annotation-aware STBLR and MTBLR as hierarchical models". -->
+
+## Common Model: \(y = Xb + e\)
+
+<!-- Later: insert the defining model and notation. -->
+
+## Summary-Statistic Form: `wy`, `ww`, LD, and Residual Score `r`
+
+<!-- Later: summarize the residual notation; retain full algebra in
+technical_summary_statistics.qmd. -->
+
+## Sparse Mixture Priors and Posterior Inclusion Probabilities
+
+<!-- Later: define BayesC-style spike-and-slab priors, bm, and dm. -->
+
+## Single-Trait, Parallel ST-BLR, and Joint MTBLR
+
+<!-- Later: distinguish parallel single-trait fits from joint multi-trait fits. -->
+
+## Global Versus Marker-, Group-, and Annotation-Specific Priors
+
+<!-- Later: summarize prior families without collapsing their differences. -->
+
+## Implemented Models Versus Proposed Extensions
+
+<!-- Later: label current wrappers and research-stage ideas explicitly. -->
+
+## Model Comparison Matrix
+
+<!-- Later: compare data, trait, prior, and estimation axes. -->
+
+## Related Notes
+
+- [Single-trait models](single_trait_models.qmd)
+- [Multi-trait models](multi_trait_models.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Technical summary statistics](technical_summary_statistics.qmd)
+- [Technical annotation priors](technical_annotation_priors.qmd)
+- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
+

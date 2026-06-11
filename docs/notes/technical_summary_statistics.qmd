@@ -1,0 +1,45 @@
+---
+title: "Technical Appendix: Summary Statistics"
+---
+
+This appendix will preserve the full algebra connecting individual-level
+models to summary-statistic residual calculations and derived genomic
+quantities.
+
+<!-- Source sections to migrate later from
+drafts/annotation_informed_priors_stblr_mtblr.qmd:
+"Summary-statistic residual notation", "Set-specific genomic variance
+decomposition", and "Combining effect size and inclusion probability",
+including equations and R implementations. -->
+
+## Summary-Statistic Notation: `wy`, `ww`, LD, and `r`
+
+<!-- Later: insert complete notation and assumptions. -->
+
+## Identity \(X^\top Xb = wy-r\)
+
+<!-- Later: preserve the complete derivation. -->
+
+## Genomic Variance and Covariance From Residual Scores
+
+<!-- Later: insert full formulas and numerical assumptions. -->
+
+## Set-Specific and Weighted Genomic Variance Contributions
+
+<!-- Later: preserve decompositions and overlapping-set caveats. -->
+
+## Assumptions and Numerical Caveats
+
+<!-- Later: list centering, scaling, approximation, and finite-sample issues. -->
+
+## R Helper Implementations and Package Status
+
+<!-- Later: retain helper code while labeling public/internal/proposed status. -->
+
+## Related Notes
+
+- [Data representations](data_representations.qmd)
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
+- [Single-trait models](single_trait_models.qmd)
+- [Technical sparse-LD CSR](technical_sparse_ld_csr.qmd)
+

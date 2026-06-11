@@ -1,0 +1,64 @@
+---
+title: "Sparse-LD and BED Workflows"
+---
+
+This note will explain the central bridge from a shared BED genotype source to
+direct individual-level fitting and BED-derived summary-statistics CSR fitting.
+
+<!-- Primary source: ../../examples/workflows/sparse_ld_bed_workflow.R.
+Later: reuse its sequencing, comments, validation steps, and BED-versus-CSR
+comparison logic without copying the complete runtime-heavy workflow. -->
+
+## One Genotype Source, Two Fitting Paths
+
+<!-- Later: add a data-flow diagram for direct BED and derived CSR paths. -->
+
+## Selecting Samples and Markers From a BED-Backed `Glist`
+
+<!-- Later: insert setup and marker-selection contracts from the workflow. -->
+
+## Simulating or Supplying Aligned Phenotypes
+
+<!-- Later: explain phenotype alignment and scaling choices. -->
+
+## Path A: Direct Individual-Level Fitting With `stblr_bed_marker()`
+
+<!-- Later: insert a compact direct-BED workflow excerpt. -->
+
+## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `bed_xtx_xty()`
+
+<!-- Later: insert sufficient-statistic handoff and validation. -->
+
+## Path B, Step 2: Streaming Sparse LD With `sparseLD_stream_CSR()`
+
+<!-- Later: insert disk-prefix, threshold, distance, and blocking choices. -->
+
+## Inspecting and Validating CSR Files With `sparseLD_read_CSR()`
+
+<!-- Later: insert compact validation checks from the workflow. -->
+
+## Path B, Step 3: Fitting Summary-Statistics BLR With `stblr_csr()`
+
+<!-- Later: insert a compact CSR-fitting excerpt and input contract. -->
+
+## Comparing BED-Direct and CSR Posterior Outputs
+
+<!-- Later: preserve the workflow comparison logic and approximation caveats. -->
+
+## Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds
+
+<!-- Later: collect cross-layer invariants and common failure modes. -->
+
+## Runtime, Disk, Reproducibility, and Convergence Cautions
+
+<!-- Later: preserve heavy-example guards and real-analysis cautions. -->
+
+## Related Notes and Sources
+
+- [Data representations](data_representations.qmd)
+- [Single-trait models](single_trait_models.qmd)
+- [Workflows and outputs](workflows_and_outputs.qmd)
+- [Technical summary statistics](technical_summary_statistics.qmd)
+- [Technical sparse-LD CSR](technical_sparse_ld_csr.qmd)
+- [Complete sparse-LD/BED workflow](../../examples/workflows/sparse_ld_bed_workflow.R)
+

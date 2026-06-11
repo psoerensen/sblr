@@ -1,0 +1,48 @@
+---
+title: "Data Representations"
+---
+
+This note will explain the inputs consumed by each workflow, the contracts
+between representations, and how individual-level BED data become sufficient
+statistics and sparse LD.
+
+<!-- Later: reuse practical motivation from drafts/sblr_theory.qmd, residual
+notation from drafts/annotation_informed_priors_stblr_mtblr.qmd, and input
+contracts from both workflow scripts. -->
+
+## Individual-Level PLINK BED Representation
+
+<!-- Later: explain BED-backed Glist inputs, sample rows, and marker selection. -->
+
+## Dense Summary-Statistic Representation
+
+<!-- Later: define the dense summary-statistic inputs used by sblr(). -->
+
+## Disk-Backed CSR Sparse-LD Representation
+
+<!-- Later: summarize CSR at user level; preserve storage detail in
+technical_sparse_ld_csr.qmd. -->
+
+## Sufficient Statistics: `wy`, `ww`, and `yy`
+
+<!-- Later: connect bed_xtx_xty() outputs to model inputs. -->
+
+## Multi-Trait Cross-Products, Sample Overlap, and `SSY`
+
+<!-- Later: reuse the SSY/Nmat overview from drafts/sblr_theory.qmd. -->
+
+## Marker Ordering and Annotation Alignment
+
+<!-- Later: preserve ordering contracts from both workflow scripts. -->
+
+## Representation-Specific Limitations and Validation Checks
+
+<!-- Later: document exact versus reconstructed quantities and validation. -->
+
+## Related Notes
+
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
+- [Technical summary statistics](technical_summary_statistics.qmd)
+- [Technical multi-trait overlap](technical_multitrait_overlap.qmd)
+- [Technical sparse-LD CSR](technical_sparse_ld_csr.qmd)
+
