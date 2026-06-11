@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Documentation for the experimental sblr R package.">
+  <title>sblr documentation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #f6f8fa;
+      --surface: #ffffff;
+      --text: #1f2328;
+      --muted: #59636e;
+      --accent: #0969da;
+      --border: #d0d7de;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      line-height: 1.6;
+    }
+
+    main {
+      width: min(900px, calc(100% - 2rem));
+      margin: 4rem auto;
+    }
+
+    header,
+    section {
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+      font-size: clamp(2.5rem, 8vw, 4.5rem);
+      line-height: 1;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 1.35rem;
+    }
+
+    .lead {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 1.15rem;
+    }
+
+    .notice {
+      padding: 1rem 1.25rem;
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .card p {
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>sblr</h1>
+      <p class="lead">
+        Scalable Bayesian Linear Regression for genomic prediction and
+        variable selection using individual-level genotypes, GWAS summary
+        statistics, sparse LD matrices, and annotation-informed priors.
+      </p>
+    </header>
+
+    <aside class="notice">
+      <strong>Research snapshot.</strong>
+      The package and its documentation are under active development. APIs,
+      workflows, and recommendations may change.
+    </aside>
+
+    <section>
+      <h2>Documentation</h2>
+      <div class="grid">
+        <article class="card">
+          <h2>Model notes</h2>
+          <p>
+            Read the developing note series covering data representations,
+            sparse-LD workflows, model families, and annotation-informed
+            priors.
+          </p>
+          <a href="https://github.com/psoerensen/sblr/blob/master/docs/notes/index.qmd">
+            Browse note sources on GitHub
+          </a>
+        </article>
+
+        <article class="card">
+          <h2>Theory draft</h2>
+          <p>
+            Read the currently rendered theory draft. Detailed material is
+            being reorganized into the note series without removing technical
+            depth.
+          </p>
+          <a href="sblr_theory.html">Open the rendered theory draft</a>
+        </article>
+
+        <article class="card">
+          <h2>Repository</h2>
+          <p>
+            Inspect package source, public wrappers, workflow examples, and
+            current development status.
+          </p>
+          <a href="https://github.com/psoerensen/sblr">Open GitHub repository</a>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Start with a workflow</h2>
+      <p>
+        The repository includes practical workflows for converting PLINK BED
+        data to sufficient statistics and sparse CSR LD, fitting
+        summary-statistics models, and comparing annotation-informed priors.
+      </p>
+      <a href="https://github.com/psoerensen/sblr/tree/master/examples/workflows">
+        Browse workflow examples on GitHub
+      </a>
+    </section>
+  </main>
+</body>
+</html>
