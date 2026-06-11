@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 ^AGENTS\.md$
 ^Read-and-delete-me$
+^docs$
+^examples$
