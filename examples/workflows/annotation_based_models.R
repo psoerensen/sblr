@@ -1,8 +1,8 @@
 # Annotation-based ST-BLR workflow
 #
-# Fixed-prior and learned annotation models are runnable through package
-# wrappers. Group annotation and SBayesRC-style wrappers remain development
-# prototypes, so those sections are commented future workflows.
+# Fixed-prior, learned annotation, and group annotation models are runnable
+# through package wrappers. The SBayesRC-style wrapper remains a development
+# prototype, so that section is a commented future workflow.
 #
 # The MCMC settings shown here are demonstration settings. Real analyses need
 # longer chains and appropriate convergence and posterior predictive checks.
@@ -145,27 +145,30 @@ fit_learn_annot <- stblr_csr_learn_annot(
  seed = 10
 )
 
-# Future workflow: group annotation model --------------------------------
+# Group annotation model --------------------------------------------------
 
-# model = "group" uses group-level priors. group is a length-m marker group
-# vector whose entries correspond to the markers in stats and the sparse LD.
-#
-# group <- ifelse(A[, "every_tenth"] == 1, "every_tenth", "other")
-#
-# fit_group <- stblr_csr_annotation(
-#  stats = stats,
-#  ld_prefix = ld_prefix,
-#  model = "group",
-#  group = group,
-#  n = Glist$n,
-#  updatePi = TRUE,
-#  updateGroupVb = TRUE,
-#  nit = 1000,
-#  nburn = 100,
-#  nthin = 1,
-#  ncores = 3,
-#  seed = 10
-# )
+# group is a length-m marker group vector in the same order as stats and the
+# sparse LD. These are conservative demonstration settings. Real analyses
+# require longer chains, convergence checks, and posterior diagnostics.
+group <- ifelse(A[, "every_tenth"] == 1, "annotated", "background")
+names(group) <- rownames(A)
+
+fit_group_annot <- stblr_csr_group_annot(
+ stats = stats,
+ ld_prefix = ld_prefix,
+ group = group,
+ n = Glist$n,
+ group_names = c("annotated", "background"),
+ group_pi_init = c(0.002, 0.001),
+ group_vb_multiplier_init = c(1.1, 1.0),
+ updatePi = TRUE,
+ updateGroupVb = TRUE,
+ nit = 1000,
+ nburn = 100,
+ nthin = 1,
+ ncores = 3,
+ seed = 10
+)
 
 # Future workflow: SBayesRC-style annotation model ------------------------
 
@@ -199,11 +202,15 @@ fit_learn_annot$dm
 fit_learn_annot$eta_pi
 fit_learn_annot$eta_vb
 
+# Group-annotation posterior summaries:
+fit_group_annot$bm
+fit_group_annot$dm
+fit_group_annot$group_pi
+fit_group_annot$group_vb_multiplier
+
 # Future wrapper posterior summaries:
-# fit_group$group_pi
-# fit_group$group_vb_multiplier
 # fit_sbayesrc$ncomp
 # fit_sbayesrc$alpha
 #
 # Future convenience wrappers are intended to be:
-# stblr_csr_group_annot() and stblr_csr_sbayesrc_generic().
+# stblr_csr_sbayesrc_generic().
