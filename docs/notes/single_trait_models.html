@@ -104,6 +104,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -154,14 +183,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#single-trait-blr-model" id="toc-single-trait-blr-model" class="nav-link active" data-scroll-target="#single-trait-blr-model"><span class="header-section-number">1</span> Single-Trait BLR Model</a></li>
-  <li><a href="#global-bayesc-style-prior" id="toc-global-bayesc-style-prior" class="nav-link" data-scroll-target="#global-bayesc-style-prior"><span class="header-section-number">2</span> Global BayesC-Style Prior</a></li>
-  <li><a href="#individual-level-bed-workflow" id="toc-individual-level-bed-workflow" class="nav-link" data-scroll-target="#individual-level-bed-workflow"><span class="header-section-number">3</span> Individual-Level BED Workflow</a></li>
-  <li><a href="#summary-statistics-csr-workflow" id="toc-summary-statistics-csr-workflow" class="nav-link" data-scroll-target="#summary-statistics-csr-workflow"><span class="header-section-number">4</span> Summary-Statistics CSR Workflow</a></li>
-  <li><a href="#scheduled-sparse-updates-and-runtime-controls" id="toc-scheduled-sparse-updates-and-runtime-controls" class="nav-link" data-scroll-target="#scheduled-sparse-updates-and-runtime-controls"><span class="header-section-number">5</span> Scheduled Sparse Updates and Runtime Controls</a></li>
-  <li><a href="#posterior-outputs-and-diagnostics" id="toc-posterior-outputs-and-diagnostics" class="nav-link" data-scroll-target="#posterior-outputs-and-diagnostics"><span class="header-section-number">6</span> Posterior Outputs and Diagnostics</a></li>
-  <li><a href="#transition-from-plain-to-annotation-informed-priors" id="toc-transition-from-plain-to-annotation-informed-priors" class="nav-link" data-scroll-target="#transition-from-plain-to-annotation-informed-priors"><span class="header-section-number">7</span> Transition From Plain to Annotation-Informed Priors</a></li>
-  <li><a href="#related-notes" id="toc-related-notes" class="nav-link" data-scroll-target="#related-notes"><span class="header-section-number">8</span> Related Notes</a></li>
+  <li><a href="#single-trait-regression-model" id="toc-single-trait-regression-model" class="nav-link active" data-scroll-target="#single-trait-regression-model"><span class="header-section-number">1</span> Single-Trait Regression Model</a></li>
+  <li><a href="#summary-statistics-representation" id="toc-summary-statistics-representation" class="nav-link" data-scroll-target="#summary-statistics-representation"><span class="header-section-number">2</span> Summary-Statistics Representation</a></li>
+  <li><a href="#global-bayesc-style-sparse-prior" id="toc-global-bayesc-style-sparse-prior" class="nav-link" data-scroll-target="#global-bayesc-style-sparse-prior"><span class="header-section-number">3</span> Global BayesC-Style Sparse Prior</a>
+  <ul class="collapse">
+  <li><a href="#marker-inclusion-update" id="toc-marker-inclusion-update" class="nav-link" data-scroll-target="#marker-inclusion-update"><span class="header-section-number">3.1</span> Marker Inclusion Update</a></li>
+  </ul></li>
+  <li><a href="#two-fitted-representations" id="toc-two-fitted-representations" class="nav-link" data-scroll-target="#two-fitted-representations"><span class="header-section-number">4</span> Two Fitted Representations</a>
+  <ul class="collapse">
+  <li><a href="#individual-level-bed-stblr_bed_marker" id="toc-individual-level-bed-stblr_bed_marker" class="nav-link" data-scroll-target="#individual-level-bed-stblr_bed_marker"><span class="header-section-number">4.1</span> Individual-Level BED: <code>stblr_bed_marker()</code></a></li>
+  <li><a href="#summary-statistics-and-csr-ld-stblr_csr" id="toc-summary-statistics-and-csr-ld-stblr_csr" class="nav-link" data-scroll-target="#summary-statistics-and-csr-ld-stblr_csr"><span class="header-section-number">4.2</span> Summary Statistics and CSR LD: <code>stblr_csr()</code></a></li>
+  </ul></li>
+  <li><a href="#scheduled-sparse-updates-and-runtime-controls" id="toc-scheduled-sparse-updates-and-runtime-controls" class="nav-link" data-scroll-target="#scheduled-sparse-updates-and-runtime-controls"><span class="header-section-number">5</span> Scheduled Sparse Updates and Runtime Controls</a>
+  <ul class="collapse">
+  <li><a href="#common-scheduling-controls" id="toc-common-scheduling-controls" class="nav-link" data-scroll-target="#common-scheduling-controls"><span class="header-section-number">5.1</span> Common Scheduling Controls</a></li>
+  <li><a href="#csr-ld-neighbor-wake-up" id="toc-csr-ld-neighbor-wake-up" class="nav-link" data-scroll-target="#csr-ld-neighbor-wake-up"><span class="header-section-number">5.2</span> CSR LD-Neighbor Wake-Up</a></li>
+  </ul></li>
+  <li><a href="#variance-updates-and-interpretation" id="toc-variance-updates-and-interpretation" class="nav-link" data-scroll-target="#variance-updates-and-interpretation"><span class="header-section-number">6</span> Variance Updates and Interpretation</a></li>
+  <li><a href="#posterior-outputs-and-diagnostics" id="toc-posterior-outputs-and-diagnostics" class="nav-link" data-scroll-target="#posterior-outputs-and-diagnostics"><span class="header-section-number">7</span> Posterior Outputs and Diagnostics</a></li>
+  <li><a href="#transition-to-annotation-informed-priors" id="toc-transition-to-annotation-informed-priors" class="nav-link" data-scroll-target="#transition-to-annotation-informed-priors"><span class="header-section-number">8</span> Transition to Annotation-Informed Priors</a>
+  <ul class="collapse">
+  <li><a href="#fixed-marker-specific-priors" id="toc-fixed-marker-specific-priors" class="nav-link" data-scroll-target="#fixed-marker-specific-priors"><span class="header-section-number">8.1</span> Fixed Marker-Specific Priors</a></li>
+  <li><a href="#learned-group-and-mixture-priors" id="toc-learned-group-and-mixture-priors" class="nav-link" data-scroll-target="#learned-group-and-mixture-priors"><span class="header-section-number">8.2</span> Learned, Group, and Mixture Priors</a></li>
+  </ul></li>
+  <li><a href="#practical-model-choice-summary" id="toc-practical-model-choice-summary" class="nav-link" data-scroll-target="#practical-model-choice-summary"><span class="header-section-number">9</span> Practical Model-Choice Summary</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">10</span> Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="single_trait_models.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -200,60 +246,404 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This note is under active development. Some sections are structured outlines that will be expanded over time.</p>
-</div>
-</div>
-<p>This note will explain single-trait BLR/ST-BLR models, prior interpretation, and the distinction between direct BED and summary-statistics CSR fitting.</p>
-<!-- Later: reuse concise material from annotation-draft sections "Using
-marker-specific prior variances in STBLR" and "Modified STBLR marker update";
-preserve full derivations in technical_annotation_priors.qmd. -->
-<section id="single-trait-blr-model" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="single-trait-blr-model"><span class="header-section-number">1</span> Single-Trait BLR Model</h2>
-<!-- Later: define scalar marker effects and residual variance. -->
+<p>The single-trait Bayesian linear regression (ST-BLR) layer is the common statistical foundation for the direct BED, summary-statistics CSR, scheduled sparse-update, and annotation-informed workflows in <code>sblr</code>. These interfaces use different data representations and prior refinements, but they share the same basic objective: estimate sparse marker effects for one phenotype while accounting for linkage disequilibrium (LD).</p>
+<p>This note defines that core model, explains the quantities used by marker updates, and distinguishes statistical prior choices from computational scheduling controls. Data preparation and complete workflows are covered in <a href="data_representations.html">Data representations</a> and <a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
+<section id="single-trait-regression-model" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="single-trait-regression-model"><span class="header-section-number">1</span> Single-Trait Regression Model</h2>
+<p>For (n) individuals and (m) markers, let (y) be an (n)-vector of phenotypes and (X) an (n m) genotype matrix. The single-trait linear model is</p>
+<p><span class="math display">\[
+y = Xb + e,
+\]</span></p>
+<p>where</p>
+<ul>
+<li>(b=(b_1,,b_m)^) contains marker effects;</li>
+<li>(eN(0,v_e I_n)) is residual variation;</li>
+<li>(v_e) is the residual variance; and</li>
+<li>the genetic value (g=Xb) has variance (v_g).</li>
+</ul>
+<p>When genotypes and phenotypes are centered, a realized genetic-variance quantity can be written as</p>
+<p><span class="math display">\[
+v_g(b)
+=
+\frac{1}{n}b^\top X^\top Xb.
+\]</span></p>
+<p>This is distinct from the active marker-effect prior variance (v_b). Informally, (v_b) controls the scale of nonzero effects before seeing the data, while (v_g) describes the aggregate variation generated by all marker effects and LD.</p>
+<p>Although several ST-BLR wrappers accept multiple phenotype columns, their basic marker updates remain trait-specific. Running these updates for several traits is not automatically equivalent to a joint multi-trait model with effect or residual covariance. See <a href="multi_trait_models.html">Multi-trait models</a> for that distinction.</p>
 </section>
-<section id="global-bayesc-style-prior" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="global-bayesc-style-prior"><span class="header-section-number">2</span> Global BayesC-Style Prior</h2>
-<!-- Later: define global pi, effect variance, and spike-and-slab behavior. -->
+<section id="summary-statistics-representation" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="summary-statistics-representation"><span class="header-section-number">2</span> Summary-Statistics Representation</h2>
+<p>The Gaussian regression calculations can be expressed using cross-products:</p>
+<p><span class="math display">\[
+wy = X^\top y,
+\qquad
+XX = X^\top X,
+\qquad
+yy = y^\top y.
+\]</span></p>
+<p>Let</p>
+<p><span class="math display">\[
+w_i = x_i^\top x_i
+\]</span></p>
+<p>be marker (i)’s diagonal genotype cross-product. The marker-scale residual score vector is</p>
+<p><span class="math display">\[
+r = X^\top(y-Xb)=wy-XXb.
+\]</span></p>
+<p>For marker (i), the partial residual score that adds its current effect back is</p>
+<p><span class="math display">\[
+s_i = r_i + w_i b_i.
+\]</span></p>
+<p>These quantities contain the information needed for a single-marker update: <code>wy</code> connects markers to the phenotype, (XX) propagates effect changes through LD, (w_i) controls the conditional precision, and <code>yy</code> contributes to residual-variance calculations and initialization. If (b_i) changes by (b_i), the residual score can be updated without revisiting individual-level observations:</p>
+<p><span class="math display">\[
+r_{\mathrm{new}}
+=
+r_{\mathrm{old}}-XX_{\cdot i}\Delta b_i.
+\]</span></p>
+<p><code>stblr_csr()</code> uses <code>stats$wy</code>, <code>stats$ww</code>, <code>stats$yy</code>, sample size (n), and a disk-backed sparse approximation to (XX). The complete sufficient- statistic and sparse-storage contracts are described in <a href="technical_summary_statistics.html">Technical summary statistics</a> and <a href="technical_sparse_ld_csr.html">Technical sparse LD and CSR</a>.</p>
 </section>
-<section id="individual-level-bed-workflow" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="individual-level-bed-workflow"><span class="header-section-number">3</span> Individual-Level BED Workflow</h2>
-<!-- Later: link the direct path in sparse_ld_and_bed_workflows.qmd. -->
+<section id="global-bayesc-style-sparse-prior" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="global-bayesc-style-sparse-prior"><span class="header-section-number">3</span> Global BayesC-Style Sparse Prior</h2>
+<p>The baseline ST-BLR prior represents every marker as either null or active. Introduce an inclusion indicator</p>
+<p><span class="math display">\[
+d_i\sim\operatorname{Bernoulli}(\pi),
+\]</span></p>
+<p>and write</p>
+<p><span class="math display">\[
+b_i=d_i\alpha_i,
+\qquad
+\alpha_i\mid d_i=1\sim N(0,v_b).
+\]</span></p>
+<p>Equivalently,</p>
+<p><span class="math display">\[
+b_i\sim(1-\pi)\delta_0+\pi N(0,v_b),
+\]</span></p>
+<p>where (_0) is a point mass at zero. The global parameters have different roles:</p>
+<ul>
+<li>() is the prior probability that a marker is active;</li>
+<li>(v_b) is the prior variance of an active marker effect;</li>
+<li>(v_e) is the residual variance;</li>
+<li>(v_g) is the genetic variance generated by the fitted marker effects.</li>
+</ul>
+<p>The wrapper argument <code>pi_marker</code> is a backward-compatible initial active probability. Current wrappers separate related roles through <code>pi_init</code>, <code>pi_vb_init</code>, <code>pi_prior_mean</code>, and beta-prior controls. In particular, the initial active-effect variance is scaled from the initial heritability and expected number of active markers:</p>
+<p><span class="math display">\[
+v_b^{(0)}
+\approx
+\frac{v_y h^2}{m\pi_{\mathrm{vb}}},
+\]</span></p>
+<p>where (v_y) is the phenotype variance and (<em>{}) corresponds to <code>pi_vb_init</code>. This is an initialization and prior-scale choice, not a statement that exactly (m</em>{}) markers are causal.</p>
+<section id="marker-inclusion-update" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="marker-inclusion-update"><span class="header-section-number">3.1</span> Marker Inclusion Update</h3>
+<p>Under the global prior, the marginal log Bayes factor for marker (i) can be written as</p>
+<p><span class="math display">\[
+\log BF_i
+=
+\frac{1}{2}\log\left(\frac{v_e}{v_e+w_i v_b}\right)
++
+\frac{1}{2}
+\frac{s_i^2v_b}{v_e(v_e+w_i v_b)}.
+\]</span></p>
+<p>Combining this evidence with the prior odds gives</p>
+<p><span class="math display">\[
+P(d_i=1\mid -)
+=
+\frac{\pi BF_i}{(1-\pi)+\pi BF_i}.
+\]</span></p>
+<p>Conditional on inclusion, the marker effect has Gaussian full conditional</p>
+<p><span class="math display">\[
+b_i\mid d_i=1,-
+\sim
+N\left(
+\frac{s_i}{w_i+v_e/v_b},
+\frac{v_e}{w_i+v_e/v_b}
+\right).
+\]</span></p>
+<p>If excluded, (b_i=0). Repeated MCMC updates produce the posterior inclusion probability (PIP)</p>
+<p><span class="math display">\[
+\operatorname{PIP}_i
+=
+P(d_i=1\mid y,X,\text{prior}),
+\]</span></p>
+<p>and posterior mean effect</p>
+<p><span class="math display">\[
+\widehat b_i=E(b_i\mid y,X,\text{prior}).
+\]</span></p>
+<p>In fit objects these are generally returned as rows of <code>dm</code> and <code>bm</code>. PIPs quantify posterior evidence under the chosen data representation, LD, prior, and sampler. They are not probabilities that a marker is biologically causal.</p>
 </section>
-<section id="summary-statistics-csr-workflow" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="summary-statistics-csr-workflow"><span class="header-section-number">4</span> Summary-Statistics CSR Workflow</h2>
-<!-- Later: link the derived path and define the model inputs. -->
+</section>
+<section id="two-fitted-representations" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="two-fitted-representations"><span class="header-section-number">4</span> Two Fitted Representations</h2>
+<section id="individual-level-bed-stblr_bed_marker" class="level3" data-number="4.1">
+<h3 data-number="4.1" class="anchored" data-anchor-id="individual-level-bed-stblr_bed_marker"><span class="header-section-number">4.1</span> Individual-Level BED: <code>stblr_bed_marker()</code></h3>
+<p><code>stblr_bed_marker()</code> fits ST-BLR directly from PLINK BED markers referenced by a qgg <code>Glist</code>. It reads selected genotype columns during sampling and maintains individual-level residual information. A short illustrative call is:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>fit_bed <span class="ot">&lt;-</span> <span class="fu">stblr_bed_marker</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> <span class="dv">1</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> cls,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> <span class="fl">0.001</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">h2 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This path is appropriate when individual-level genotypes remain available and repeated BED access is acceptable. The statistical inputs include the phenotype, selected samples and markers, allele frequencies, and genotype scaling choice. A separately materialized LD matrix is not required because LD is present in the observed genotype columns.</p>
+</section>
+<section id="summary-statistics-and-csr-ld-stblr_csr" class="level3" data-number="4.2">
+<h3 data-number="4.2" class="anchored" data-anchor-id="summary-statistics-and-csr-ld-stblr_csr"><span class="header-section-number">4.2</span> Summary Statistics and CSR LD: <code>stblr_csr()</code></h3>
+<p><code>stblr_csr()</code> fits the same broad global-prior ST-BLR family using BED-derived or otherwise compatible sufficient statistics and disk-backed sparse LD:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> n,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> <span class="fl">0.001</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">h2 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Here <code>stats$wy</code>, <code>stats$ww</code>, and <code>stats$yy</code> replace repeated phenotype and diagonal genotype calculations, while <code>ld_prefix</code> supplies retained off-diagonal LD relationships. The CSR representation makes large sparse-LD analyses possible without loading dense (XX) into memory.</p>
+<p>The two paths target closely related single-trait sparse-regression models when samples, markers, scaling, priors, and likelihood information are matched. They are not expected to produce identical Monte Carlo output. Thresholded sparse LD approximates the full genotype cross-products, and the implementations can differ in residual maintenance, update order, scheduling, floating-point behavior, and initialization. Finite MCMC variation adds further differences.</p>
+<p>Use BED-versus-CSR agreement as an integration and sensitivity diagnostic. Compare broad posterior patterns, PIP rankings, effects, and variance summaries rather than expecting equality of individual draws.</p>
+</section>
 </section>
 <section id="scheduled-sparse-updates-and-runtime-controls" class="level2" data-number="5">
 <h2 data-number="5" class="anchored" data-anchor-id="scheduled-sparse-updates-and-runtime-controls"><span class="header-section-number">5</span> Scheduled Sparse Updates and Runtime Controls</h2>
-<!-- Later: document controls and label implementation-sensitive behavior. -->
+<p>Most markers in a sparse model spend substantial time in the null state. Updating every null marker on every iteration can dominate runtime. Scheduled samplers reduce this work by revisiting low-priority null markers less often while retaining mechanisms that periodically reconsider them.</p>
+<p>These settings are <strong>computational controls, not definitions of a different prior</strong>. They do not replace the BayesC-style (), (v_b), or (v_e) parameters. They do, however, change the update schedule and can affect finite-run behavior, mixing, and approximation quality. Aggressive skipping therefore requires convergence and sensitivity checks.</p>
+<section id="common-scheduling-controls" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="common-scheduling-controls"><span class="header-section-number">5.1</span> Common Scheduling Controls</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Control</th>
+<th>High-level role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>scheduled</code></td>
+<td>Selects the scheduled sampler path where supported.</td>
+</tr>
+<tr class="even">
+<td><code>full_sweep_every</code></td>
+<td>Forces periodic reconsideration of all markers rather than only scheduled or active candidates.</td>
+</tr>
+<tr class="odd">
+<td><code>null_skip_base</code></td>
+<td>Sets a baseline interval for revisiting low-probability null markers in scheduled samplers.</td>
+</tr>
+<tr class="even">
+<td><code>null_skip_max</code></td>
+<td>Caps adaptive null-marker skip intervals.</td>
+</tr>
+<tr class="odd">
+<td><code>candidate_threshold</code></td>
+<td>Treats markers with sufficiently large current inclusion probability as candidates for more frequent updates.</td>
+</tr>
+<tr class="even">
+<td><code>candidate_lifetime</code></td>
+<td>Keeps candidates active for a number of scheduled sweeps after they were last considered interesting.</td>
+</tr>
+<tr class="odd">
+<td><code>skip_nulls_burnin_only</code></td>
+<td>Restricts null-marker skipping to burn-in when <code>TRUE</code>, so retained sampling uses the less aggressive post-burn-in schedule.</td>
+</tr>
+</tbody>
+</table>
+<p>The BED non-scheduled sparse path also exposes <code>null_update_prob</code>, which controls probabilistic revisiting of null markers. BED samplers use <code>rebuild_every</code> to periodically rebuild individual-level residual state.</p>
 </section>
-<section id="posterior-outputs-and-diagnostics" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="posterior-outputs-and-diagnostics"><span class="header-section-number">6</span> Posterior Outputs and Diagnostics</h2>
-<!-- Later: explain bm, dm, vbs, vgs, ves, and compact diagnostics. -->
-</section>
-<section id="transition-from-plain-to-annotation-informed-priors" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="transition-from-plain-to-annotation-informed-priors"><span class="header-section-number">7</span> Transition From Plain to Annotation-Informed Priors</h2>
-<!-- Later: introduce fixed marker-specific priors without duplicating the
-annotation note. -->
-</section>
-<section id="related-notes" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="related-notes"><span class="header-section-number">8</span> Related Notes</h2>
+<section id="csr-ld-neighbor-wake-up" class="level3" data-number="5.2">
+<h3 data-number="5.2" class="anchored" data-anchor-id="csr-ld-neighbor-wake-up"><span class="header-section-number">5.2</span> CSR LD-Neighbor Wake-Up</h3>
+<p>The scheduled CSR sampler additionally exposes:</p>
 <ul>
-<li><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
-<li><a href="../notes/annotation_informed_models.html">Annotation-informed models</a></li>
-<li><a href="../notes/technical_summary_statistics.html">Technical summary statistics</a></li>
-<li><a href="../notes/technical_sparse_ld_csr.html">Technical sparse-LD CSR</a></li>
-<li><a href="../notes/technical_annotation_priors.html">Technical annotation priors</a></li>
+<li><code>wakeup_ld_neighbors</code>, which allows a marker update to reschedule retained LD neighbors;</li>
+<li><code>wakeup_diff_threshold</code>, which requires a sufficiently large effect change before triggering neighbor wake-up; and</li>
+<li><code>wakeup_max_neighbors</code>, which can cap the number of neighbors rescheduled.</li>
+</ul>
+<p>The motivation is that changing one marker’s effect changes the residual scores of correlated markers. Waking LD neighbors lets the schedule respond to that local change without immediately performing a complete sweep.</p>
+<p>For validation, compare scheduled and unscheduled runs under matched priors and data, inspect sensitivity to full-sweep frequency and skip settings, and use sufficiently long retained sampling. Runtime improvement alone does not establish that posterior exploration is adequate.</p>
+</section>
+</section>
+<section id="variance-updates-and-interpretation" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="variance-updates-and-interpretation"><span class="header-section-number">6</span> Variance Updates and Interpretation</h2>
+<p>The public wrappers initialize marker-effect and residual variance structures from phenotype variance, <code>h2</code>, marker count, and inclusion-prior controls. During sampling, <code>updateB</code>, <code>updateE</code>, and <code>updatePi</code> determine whether the corresponding quantities are updated. The degrees-of-freedom controls <code>nub</code> and <code>nue</code> and associated scale matrices define their priors.</p>
+<p>For one trait, covariance matrices reduce conceptually to scalar variance quantities, although formatted fits may retain matrix-shaped summaries for consistency with multi-trait code. Distinguish:</p>
+<ul>
+<li>the active marker-effect variance (v_b);</li>
+<li>aggregate genetic variance (v_g);</li>
+<li>residual variance (v_e); and</li>
+<li>their MCMC traces and posterior summaries.</li>
+</ul>
+<p>Initial <code>h2</code> helps set starting and prior scales. It is not guaranteed to equal the posterior or realized heritability. In simulations, differences can arise from finite data, realized architecture, shrinkage, sparse LD, and Monte Carlo variation.</p>
+</section>
+<section id="posterior-outputs-and-diagnostics" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="posterior-outputs-and-diagnostics"><span class="header-section-number">7</span> Posterior Outputs and Diagnostics</h2>
+<p>Formatted ST-BLR fits are named lists. Components depend on the wrapper and sampler path, so inspect <code>names(fit)</code> and <code>fit$input</code> before interpreting them.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Single-trait interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>bm</code></td>
+<td>Posterior mean marker effects.</td>
+</tr>
+<tr class="even">
+<td><code>dm</code></td>
+<td>Posterior inclusion probabilities or retained inclusion summaries.</td>
+</tr>
+<tr class="odd">
+<td><code>b</code></td>
+<td>Current or returned marker-effect state, when returned.</td>
+</tr>
+<tr class="even">
+<td><code>d</code></td>
+<td>Current or returned inclusion state, when returned.</td>
+</tr>
+<tr class="odd">
+<td><code>r</code></td>
+<td>Marker-scale residual score state, when returned.</td>
+</tr>
+<tr class="even">
+<td><code>vbs</code></td>
+<td>Retained trace of active marker-effect variance.</td>
+</tr>
+<tr class="odd">
+<td><code>vgs</code></td>
+<td>Retained trace of genetic variance.</td>
+</tr>
+<tr class="even">
+<td><code>ves</code></td>
+<td>Retained trace of residual variance.</td>
+</tr>
+<tr class="odd">
+<td><code>pi</code></td>
+<td>Final or current inclusion-probability summary, when returned.</td>
+</tr>
+<tr class="even">
+<td><code>pim</code></td>
+<td>Posterior mean inclusion-probability summary, when returned.</td>
+</tr>
+<tr class="odd">
+<td><code>input</code></td>
+<td>Resolved data, prior, scheduling, and MCMC settings recorded by the wrapper.</td>
+</tr>
+</tbody>
+</table>
+<p>Depending on the implementation, fits can also contain <code>vb</code>, <code>vg</code>, <code>ve</code>, covariance summaries, LD-versus-linkage-equilibrium variance traces, or sampler diagnostics. Use model-specific help for their exact contract.</p>
+<p>Compact reporting is preferable to printing complete marker matrices:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">pip_sum =</span> <span class="fu">sum</span>(fit<span class="sc">$</span>dm[, <span class="dv">1</span>]),</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_abs_bm =</span> <span class="fu">mean</span>(<span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>])),</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_vb =</span> <span class="fu">mean</span>(fit<span class="sc">$</span>vbs[, <span class="dv">1</span>]),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_vg =</span> <span class="fu">mean</span>(fit<span class="sc">$</span>vgs[, <span class="dv">1</span>]),</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_ve =</span> <span class="fu">mean</span>(fit<span class="sc">$</span>ves[, <span class="dv">1</span>])</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Useful checks include trace behavior, repeated-chain agreement, sensitivity to priors and scheduling, posterior predictive behavior, top-marker stability, and BED-versus-CSR comparisons where both representations are available. Short workflow chains demonstrate integration; they are not sufficient for final inference. See <a href="workflows_and_outputs.html">Workflows and outputs</a> for reporting guidance.</p>
+</section>
+<section id="transition-to-annotation-informed-priors" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="transition-to-annotation-informed-priors"><span class="header-section-number">8</span> Transition to Annotation-Informed Priors</h2>
+<p>The plain ST-BLR model gives all markers a common active probability () and active-effect variance (v_b). Annotation-informed extensions retain the same regression likelihood and marker-update logic while changing how prior mass or effect scale varies across markers.</p>
+<section id="fixed-marker-specific-priors" class="level3" data-number="8.1">
+<h3 data-number="8.1" class="anchored" data-anchor-id="fixed-marker-specific-priors"><span class="header-section-number">8.1</span> Fixed Marker-Specific Priors</h3>
+<p><code>stblr_csr_prior_annot()</code> can replace the global values with fixed marker-specific inclusion probabilities (_i), variance multipliers, or both:</p>
+<p><span class="math display">\[
+b_i
+\sim
+(1-\pi_i)\delta_0
++
+\pi_iN(0,v_b\lambda_i).
+\]</span></p>
+<p>In the marker update, (_i) replaces the global prior inclusion probability and (v_b_i) replaces the global active-effect variance.</p>
+</section>
+<section id="learned-group-and-mixture-priors" class="level3" data-number="8.2">
+<h3 data-number="8.2" class="anchored" data-anchor-id="learned-group-and-mixture-priors"><span class="header-section-number">8.2</span> Learned, Group, and Mixture Priors</h3>
+<ul>
+<li><code>stblr_csr_learn_annot()</code> learns annotation effects on marker-specific inclusion probabilities and optionally variance multipliers.</li>
+<li><code>stblr_csr_group_annot()</code> gives mutually exclusive marker groups their own inclusion probabilities and variance multipliers.</li>
+<li><code>stblr_csr_sbayesrc_generic()</code> uses an <strong>SBayesRC-style annotation-dependent BayesR prior</strong>, assigning annotation-dependent probabilities to an exact-null component and multiple active variance components.</li>
+</ul>
+<p>The SBayesRC-style wrapper is closely aligned with the published SBayesRC prior family but is not an exact reproduction of GCTB SBayesRC as exposed by default. Its default gamma grid and CSR sparse-LD likelihood differ; users can supply the published gamma grid explicitly when that prior grid is desired.</p>
+<p>These extensions change the prior architecture, unlike sparse-update scheduling controls. Their definitions, assumptions, diagnostics, and interpretation cautions are developed in <a href="annotation_informed_models.html">Annotation-informed models</a> and <a href="technical_annotation_priors.html">Technical annotation priors</a>.</p>
+</section>
+</section>
+<section id="practical-model-choice-summary" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="practical-model-choice-summary"><span class="header-section-number">9</span> Practical Model-Choice Summary</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Need</th>
+<th>Principal interface</th>
+<th>Main consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Fit directly from available individual-level BED genotypes</td>
+<td><code>stblr_bed_marker()</code></td>
+<td>Repeated BED access; no separately prepared sparse LD required.</td>
+</tr>
+<tr class="even">
+<td>Reuse sufficient statistics and disk-backed sparse LD</td>
+<td><code>stblr_csr()</code></td>
+<td>LD approximation, marker alignment, and compatible cross-products are explicit inputs.</td>
+</tr>
+<tr class="odd">
+<td>Reduce time spent repeatedly updating unlikely null markers</td>
+<td>Scheduled BED or CSR path</td>
+<td>Computational schedule must be validated for mixing and sensitivity.</td>
+</tr>
+<tr class="even">
+<td>Supply fixed marker-specific prior information</td>
+<td><code>stblr_csr_prior_annot()</code></td>
+<td>Prior values are treated as fixed during fitting.</td>
+</tr>
+<tr class="odd">
+<td>Learn annotation effects during fitting</td>
+<td><code>stblr_csr_learn_annot()</code></td>
+<td>Additional parameters require regularization and convergence checks.</td>
+</tr>
+<tr class="even">
+<td>Use mutually exclusive category priors</td>
+<td><code>stblr_csr_group_annot()</code></td>
+<td>Group assignment simplifies or discards overlap.</td>
+</tr>
+<tr class="odd">
+<td>Use annotation-dependent null and multiple active components</td>
+<td><code>stblr_csr_sbayesrc_generic()</code></td>
+<td>SBayesRC-style prior is more expressive and diagnostically demanding.</td>
+</tr>
+</tbody>
+</table>
+<p>Whichever path is used, marker order, phenotype preprocessing, scaling, priors, MCMC settings, and computational controls should be recorded with the fit.</p>
+</section>
+<section id="related-notes-and-sources" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">10</span> Related Notes and Sources</h2>
+<ul>
+<li><a href="model_overview.html">Model overview</a></li>
+<li><a href="data_representations.html">Data representations</a></li>
+<li><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
+<li><a href="annotation_informed_models.html">Annotation-informed models</a></li>
+<li><a href="workflows_and_outputs.html">Workflows and outputs</a></li>
+<li><a href="technical_summary_statistics.html">Technical summary statistics</a></li>
+<li><a href="technical_sparse_ld_csr.html">Technical sparse LD and CSR</a></li>
+<li><a href="technical_annotation_priors.html">Technical annotation priors</a></li>
+<li><a href="https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R">Complete sparse-LD/BED workflow on GitHub</a></li>
 </ul>
 
 
@@ -712,58 +1102,460 @@ annotation note. -->
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Single-Trait Models"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">status:</span><span class="co"> "Draft"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>This note is under active development. Some sections are structured outlines that will be expanded over time.</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>This note will explain single-trait BLR/ST-BLR models, prior interpretation,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>and the distinction between direct BED and summary-statistics CSR fitting.</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: reuse concise material from annotation-draft sections "Using</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">marker-specific prior variances in STBLR" and "Modified STBLR marker update";</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">preserve full derivations in technical_annotation_priors.qmd. --&gt;</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">## Single-Trait BLR Model</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: define scalar marker effects and residual variance. --&gt;</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">## Global BayesC-Style Prior</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: define global pi, effect variance, and spike-and-slab behavior. --&gt;</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="fu">## Individual-Level BED Workflow</span></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: link the direct path in sparse_ld_and_bed_workflows.qmd. --&gt;</span></span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="fu">## Summary-Statistics CSR Workflow</span></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: link the derived path and define the model inputs. --&gt;</span></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="fu">## Scheduled Sparse Updates and Runtime Controls</span></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document controls and label implementation-sensitive behavior. --&gt;</span></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="fu">## Posterior Outputs and Diagnostics</span></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: explain bm, dm, vbs, vgs, ves, and compact diagnostics. --&gt;</span></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="fu">## Transition From Plain to Annotation-Informed Priors</span></span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: introduce fixed marker-specific priors without duplicating the</span></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co">annotation note. --&gt;</span></span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span></span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span></span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.qmd)</span></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical sparse-LD CSR</span><span class="co">](technical_sparse_ld_csr.qmd)</span></span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.qmd)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Single-Trait Models"</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>The single-trait Bayesian linear regression (ST-BLR) layer is the common</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>statistical foundation for the direct BED, summary-statistics CSR, scheduled</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>sparse-update, and annotation-informed workflows in <span class="in">`sblr`</span>. These interfaces</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>use different data representations and prior refinements, but they share the</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>same basic objective: estimate sparse marker effects for one phenotype while</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>accounting for linkage disequilibrium (LD).</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>This note defines that core model, explains the quantities used by marker</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>updates, and distinguishes statistical prior choices from computational</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>scheduling controls. Data preparation and complete workflows are covered in</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.html)</span> and</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span>.</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## Single-Trait Regression Model</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>For <span class="sc">\(</span>n<span class="sc">\)</span> individuals and <span class="sc">\(</span>m<span class="sc">\)</span> markers, let <span class="sc">\(</span>y<span class="sc">\)</span> be an <span class="sc">\(</span>n<span class="sc">\)</span>-vector of</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>phenotypes and <span class="sc">\(</span>X<span class="sc">\)</span> an <span class="sc">\(</span>n \times m<span class="sc">\)</span> genotype matrix. The single-trait</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>linear model is</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>y = Xb + e,</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>where</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>b=(b_1,\ldots,b_m)^\top<span class="sc">\)</span> contains marker effects;</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>e\sim N(0,v_e I_n)<span class="sc">\)</span> is residual variation;</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>v_e<span class="sc">\)</span> is the residual variance; and</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the genetic value <span class="sc">\(</span>g=Xb<span class="sc">\)</span> has variance <span class="sc">\(</span>v_g<span class="sc">\)</span>.</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>When genotypes and phenotypes are centered, a realized genetic-variance</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>quantity can be written as</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>v_g(b)</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>\frac{1}{n}b^\top X^\top Xb.</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>This is distinct from the active marker-effect prior variance <span class="sc">\(</span>v_b<span class="sc">\)</span>.</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>Informally, <span class="sc">\(</span>v_b<span class="sc">\)</span> controls the scale of nonzero effects before seeing the</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>data, while <span class="sc">\(</span>v_g<span class="sc">\)</span> describes the aggregate variation generated by all marker</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>effects and LD.</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>Although several ST-BLR wrappers accept multiple phenotype columns, their</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>basic marker updates remain trait-specific. Running these updates for several</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>traits is not automatically equivalent to a joint multi-trait model with</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>effect or residual covariance. See <span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.html)</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>for that distinction.</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="fu">## Summary-Statistics Representation</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>The Gaussian regression calculations can be expressed using cross-products:</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>wy = X^\top y,</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>XX = X^\top X,</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>yy = y^\top y.</span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>Let</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>w_i = x_i^\top x_i</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>be marker <span class="sc">\(</span>i<span class="sc">\)</span>'s diagonal genotype cross-product. The marker-scale residual</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>score vector is</span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>r = X^\top(y-Xb)=wy-XXb.</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>For marker <span class="sc">\(</span>i<span class="sc">\)</span>, the partial residual score that adds its current effect back</span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>is</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>s_i = r_i + w_i b_i.</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>These quantities contain the information needed for a single-marker update:</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a><span class="in">`wy`</span> connects markers to the phenotype, <span class="sc">\(</span>XX<span class="sc">\)</span> propagates effect changes</span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>through LD, <span class="sc">\(</span>w_i<span class="sc">\)</span> controls the conditional precision, and <span class="in">`yy`</span> contributes</span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>to residual-variance calculations and initialization. If <span class="sc">\(</span>b_i<span class="sc">\)</span> changes by</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\Delta b_i<span class="sc">\)</span>, the residual score can be updated without revisiting</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>individual-level observations:</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>r_{\mathrm{new}}</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>r_{\mathrm{old}}-XX_{\cdot i}\Delta b_i.</span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> uses <span class="in">`stats$wy`</span>, <span class="in">`stats$ww`</span>, <span class="in">`stats$yy`</span>, sample size <span class="sc">\(</span>n<span class="sc">\)</span>, and</span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>a disk-backed sparse approximation to <span class="sc">\(</span>XX<span class="sc">\)</span>. The complete sufficient-</span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>statistic and sparse-storage contracts are described in</span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.html)</span> and</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.html)</span>.</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a><span class="fu">## Global BayesC-Style Sparse Prior</span></span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>The baseline ST-BLR prior represents every marker as either null or active.</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>Introduce an inclusion indicator</span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>d_i\sim\operatorname{Bernoulli}(\pi),</span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>and write</span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a>b_i=d_i\alpha_i,</span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>\alpha_i\mid d_i=1\sim N(0,v_b).</span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>Equivalently,</span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>b_i\sim(1-\pi)\delta_0+\pi N(0,v_b),</span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\delta_0<span class="sc">\)</span> is a point mass at zero. The global parameters have</span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>different roles:</span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\pi<span class="sc">\)</span> is the prior probability that a marker is active;</span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>v_b<span class="sc">\)</span> is the prior variance of an active marker effect;</span>
+<span id="cb4-134"><a href="#cb4-134" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>v_e<span class="sc">\)</span> is the residual variance;</span>
+<span id="cb4-135"><a href="#cb4-135" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>v_g<span class="sc">\)</span> is the genetic variance generated by the fitted marker effects.</span>
+<span id="cb4-136"><a href="#cb4-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-137"><a href="#cb4-137" aria-hidden="true" tabindex="-1"></a>The wrapper argument <span class="in">`pi_marker`</span> is a backward-compatible initial active</span>
+<span id="cb4-138"><a href="#cb4-138" aria-hidden="true" tabindex="-1"></a>probability. Current wrappers separate related roles through <span class="in">`pi_init`</span>,</span>
+<span id="cb4-139"><a href="#cb4-139" aria-hidden="true" tabindex="-1"></a><span class="in">`pi_vb_init`</span>, <span class="in">`pi_prior_mean`</span>, and beta-prior controls. In particular, the</span>
+<span id="cb4-140"><a href="#cb4-140" aria-hidden="true" tabindex="-1"></a>initial active-effect variance is scaled from the initial heritability and</span>
+<span id="cb4-141"><a href="#cb4-141" aria-hidden="true" tabindex="-1"></a>expected number of active markers:</span>
+<span id="cb4-142"><a href="#cb4-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-143"><a href="#cb4-143" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-144"><a href="#cb4-144" aria-hidden="true" tabindex="-1"></a>v_b^{(0)}</span>
+<span id="cb4-145"><a href="#cb4-145" aria-hidden="true" tabindex="-1"></a>\approx</span>
+<span id="cb4-146"><a href="#cb4-146" aria-hidden="true" tabindex="-1"></a>\frac{v_y h^2}{m\pi_{\mathrm{vb}}},</span>
+<span id="cb4-147"><a href="#cb4-147" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-148"><a href="#cb4-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-149"><a href="#cb4-149" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>v_y<span class="sc">\)</span> is the phenotype variance and</span>
+<span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\pi_{\mathrm{vb}}<span class="sc">\)</span> corresponds to <span class="in">`pi_vb_init`</span>. This is an initialization</span>
+<span id="cb4-151"><a href="#cb4-151" aria-hidden="true" tabindex="-1"></a>and prior-scale choice, not a statement that exactly <span class="sc">\(</span>m\pi_{\mathrm{vb}}<span class="sc">\)</span></span>
+<span id="cb4-152"><a href="#cb4-152" aria-hidden="true" tabindex="-1"></a>markers are causal.</span>
+<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-154"><a href="#cb4-154" aria-hidden="true" tabindex="-1"></a><span class="fu">### Marker Inclusion Update</span></span>
+<span id="cb4-155"><a href="#cb4-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-156"><a href="#cb4-156" aria-hidden="true" tabindex="-1"></a>Under the global prior, the marginal log Bayes factor for marker <span class="sc">\(</span>i<span class="sc">\)</span> can be</span>
+<span id="cb4-157"><a href="#cb4-157" aria-hidden="true" tabindex="-1"></a>written as</span>
+<span id="cb4-158"><a href="#cb4-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-159"><a href="#cb4-159" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-160"><a href="#cb4-160" aria-hidden="true" tabindex="-1"></a>\log BF_i</span>
+<span id="cb4-161"><a href="#cb4-161" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-162"><a href="#cb4-162" aria-hidden="true" tabindex="-1"></a>\frac{1}{2}\log\left(\frac{v_e}{v_e+w_i v_b}\right)</span>
+<span id="cb4-163"><a href="#cb4-163" aria-hidden="true" tabindex="-1"></a>+</span>
+<span id="cb4-164"><a href="#cb4-164" aria-hidden="true" tabindex="-1"></a>\frac{1}{2}</span>
+<span id="cb4-165"><a href="#cb4-165" aria-hidden="true" tabindex="-1"></a>\frac{s_i^2v_b}{v_e(v_e+w_i v_b)}.</span>
+<span id="cb4-166"><a href="#cb4-166" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-167"><a href="#cb4-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-168"><a href="#cb4-168" aria-hidden="true" tabindex="-1"></a>Combining this evidence with the prior odds gives</span>
+<span id="cb4-169"><a href="#cb4-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-170"><a href="#cb4-170" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-171"><a href="#cb4-171" aria-hidden="true" tabindex="-1"></a>P(d_i=1\mid -)</span>
+<span id="cb4-172"><a href="#cb4-172" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-173"><a href="#cb4-173" aria-hidden="true" tabindex="-1"></a>\frac{\pi BF_i}{(1-\pi)+\pi BF_i}.</span>
+<span id="cb4-174"><a href="#cb4-174" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-175"><a href="#cb4-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-176"><a href="#cb4-176" aria-hidden="true" tabindex="-1"></a>Conditional on inclusion, the marker effect has Gaussian full conditional</span>
+<span id="cb4-177"><a href="#cb4-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-178"><a href="#cb4-178" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-179"><a href="#cb4-179" aria-hidden="true" tabindex="-1"></a>b_i\mid d_i=1,-</span>
+<span id="cb4-180"><a href="#cb4-180" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb4-181"><a href="#cb4-181" aria-hidden="true" tabindex="-1"></a>N\left(</span>
+<span id="cb4-182"><a href="#cb4-182" aria-hidden="true" tabindex="-1"></a>\frac{s_i}{w_i+v_e/v_b},</span>
+<span id="cb4-183"><a href="#cb4-183" aria-hidden="true" tabindex="-1"></a>\frac{v_e}{w_i+v_e/v_b}</span>
+<span id="cb4-184"><a href="#cb4-184" aria-hidden="true" tabindex="-1"></a>\right).</span>
+<span id="cb4-185"><a href="#cb4-185" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-186"><a href="#cb4-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-187"><a href="#cb4-187" aria-hidden="true" tabindex="-1"></a>If excluded, <span class="sc">\(</span>b_i=0<span class="sc">\)</span>. Repeated MCMC updates produce the posterior inclusion</span>
+<span id="cb4-188"><a href="#cb4-188" aria-hidden="true" tabindex="-1"></a>probability (PIP)</span>
+<span id="cb4-189"><a href="#cb4-189" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-190"><a href="#cb4-190" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-191"><a href="#cb4-191" aria-hidden="true" tabindex="-1"></a>\operatorname{PIP}_i</span>
+<span id="cb4-192"><a href="#cb4-192" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-193"><a href="#cb4-193" aria-hidden="true" tabindex="-1"></a>P(d_i=1\mid y,X,\text{prior}),</span>
+<span id="cb4-194"><a href="#cb4-194" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-195"><a href="#cb4-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-196"><a href="#cb4-196" aria-hidden="true" tabindex="-1"></a>and posterior mean effect</span>
+<span id="cb4-197"><a href="#cb4-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-198"><a href="#cb4-198" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-199"><a href="#cb4-199" aria-hidden="true" tabindex="-1"></a>\widehat b_i=E(b_i\mid y,X,\text{prior}).</span>
+<span id="cb4-200"><a href="#cb4-200" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-201"><a href="#cb4-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-202"><a href="#cb4-202" aria-hidden="true" tabindex="-1"></a>In fit objects these are generally returned as rows of <span class="in">`dm`</span> and <span class="in">`bm`</span>.</span>
+<span id="cb4-203"><a href="#cb4-203" aria-hidden="true" tabindex="-1"></a>PIPs quantify posterior evidence under the chosen data representation, LD,</span>
+<span id="cb4-204"><a href="#cb4-204" aria-hidden="true" tabindex="-1"></a>prior, and sampler. They are not probabilities that a marker is biologically</span>
+<span id="cb4-205"><a href="#cb4-205" aria-hidden="true" tabindex="-1"></a>causal.</span>
+<span id="cb4-206"><a href="#cb4-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-207"><a href="#cb4-207" aria-hidden="true" tabindex="-1"></a><span class="fu">## Two Fitted Representations</span></span>
+<span id="cb4-208"><a href="#cb4-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-209"><a href="#cb4-209" aria-hidden="true" tabindex="-1"></a><span class="fu">### Individual-Level BED: `stblr_bed_marker()`</span></span>
+<span id="cb4-210"><a href="#cb4-210" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-211"><a href="#cb4-211" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_bed_marker()`</span> fits ST-BLR directly from PLINK BED markers referenced by</span>
+<span id="cb4-212"><a href="#cb4-212" aria-hidden="true" tabindex="-1"></a>a qgg <span class="in">`Glist`</span>. It reads selected genotype columns during sampling and maintains</span>
+<span id="cb4-213"><a href="#cb4-213" aria-hidden="true" tabindex="-1"></a>individual-level residual information. A short illustrative call is:</span>
+<span id="cb4-214"><a href="#cb4-214" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-215"><a href="#cb4-215" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb4-216"><a href="#cb4-216" aria-hidden="true" tabindex="-1"></a>fit_bed <span class="ot">&lt;-</span> <span class="fu">stblr_bed_marker</span>(</span>
+<span id="cb4-217"><a href="#cb4-217" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb4-218"><a href="#cb4-218" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
+<span id="cb4-219"><a href="#cb4-219" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> <span class="dv">1</span>,</span>
+<span id="cb4-220"><a href="#cb4-220" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> cls,</span>
+<span id="cb4-221"><a href="#cb4-221" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> <span class="fl">0.001</span>,</span>
+<span id="cb4-222"><a href="#cb4-222" aria-hidden="true" tabindex="-1"></a>  <span class="at">h2 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb4-223"><a href="#cb4-223" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-224"><a href="#cb4-224" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-225"><a href="#cb4-225" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span></span>
+<span id="cb4-226"><a href="#cb4-226" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-227"><a href="#cb4-227" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-228"><a href="#cb4-228" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-229"><a href="#cb4-229" aria-hidden="true" tabindex="-1"></a>This path is appropriate when individual-level genotypes remain available and</span>
+<span id="cb4-230"><a href="#cb4-230" aria-hidden="true" tabindex="-1"></a>repeated BED access is acceptable. The statistical inputs include the</span>
+<span id="cb4-231"><a href="#cb4-231" aria-hidden="true" tabindex="-1"></a>phenotype, selected samples and markers, allele frequencies, and genotype</span>
+<span id="cb4-232"><a href="#cb4-232" aria-hidden="true" tabindex="-1"></a>scaling choice. A separately materialized LD matrix is not required because</span>
+<span id="cb4-233"><a href="#cb4-233" aria-hidden="true" tabindex="-1"></a>LD is present in the observed genotype columns.</span>
+<span id="cb4-234"><a href="#cb4-234" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-235"><a href="#cb4-235" aria-hidden="true" tabindex="-1"></a><span class="fu">### Summary Statistics and CSR LD: `stblr_csr()`</span></span>
+<span id="cb4-236"><a href="#cb4-236" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-237"><a href="#cb4-237" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> fits the same broad global-prior ST-BLR family using BED-derived</span>
+<span id="cb4-238"><a href="#cb4-238" aria-hidden="true" tabindex="-1"></a>or otherwise compatible sufficient statistics and disk-backed sparse LD:</span>
+<span id="cb4-239"><a href="#cb4-239" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb4-241"><a href="#cb4-241" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb4-242"><a href="#cb4-242" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb4-243"><a href="#cb4-243" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb4-244"><a href="#cb4-244" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> n,</span>
+<span id="cb4-245"><a href="#cb4-245" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> <span class="fl">0.001</span>,</span>
+<span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a>  <span class="at">h2 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span></span>
+<span id="cb4-250"><a href="#cb4-250" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-251"><a href="#cb4-251" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-252"><a href="#cb4-252" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-253"><a href="#cb4-253" aria-hidden="true" tabindex="-1"></a>Here <span class="in">`stats$wy`</span>, <span class="in">`stats$ww`</span>, and <span class="in">`stats$yy`</span> replace repeated phenotype and</span>
+<span id="cb4-254"><a href="#cb4-254" aria-hidden="true" tabindex="-1"></a>diagonal genotype calculations, while <span class="in">`ld_prefix`</span> supplies retained</span>
+<span id="cb4-255"><a href="#cb4-255" aria-hidden="true" tabindex="-1"></a>off-diagonal LD relationships. The CSR representation makes large sparse-LD</span>
+<span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a>analyses possible without loading dense <span class="sc">\(</span>XX<span class="sc">\)</span> into memory.</span>
+<span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a>The two paths target closely related single-trait sparse-regression models</span>
+<span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a>when samples, markers, scaling, priors, and likelihood information are</span>
+<span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a>matched. They are not expected to produce identical Monte Carlo output.</span>
+<span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a>Thresholded sparse LD approximates the full genotype cross-products, and the</span>
+<span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a>implementations can differ in residual maintenance, update order, scheduling,</span>
+<span id="cb4-263"><a href="#cb4-263" aria-hidden="true" tabindex="-1"></a>floating-point behavior, and initialization. Finite MCMC variation adds</span>
+<span id="cb4-264"><a href="#cb4-264" aria-hidden="true" tabindex="-1"></a>further differences.</span>
+<span id="cb4-265"><a href="#cb4-265" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-266"><a href="#cb4-266" aria-hidden="true" tabindex="-1"></a>Use BED-versus-CSR agreement as an integration and sensitivity diagnostic.</span>
+<span id="cb4-267"><a href="#cb4-267" aria-hidden="true" tabindex="-1"></a>Compare broad posterior patterns, PIP rankings, effects, and variance</span>
+<span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a>summaries rather than expecting equality of individual draws.</span>
+<span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a><span class="fu">## Scheduled Sparse Updates and Runtime Controls</span></span>
+<span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a>Most markers in a sparse model spend substantial time in the null state.</span>
+<span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a>Updating every null marker on every iteration can dominate runtime. Scheduled</span>
+<span id="cb4-274"><a href="#cb4-274" aria-hidden="true" tabindex="-1"></a>samplers reduce this work by revisiting low-priority null markers less often</span>
+<span id="cb4-275"><a href="#cb4-275" aria-hidden="true" tabindex="-1"></a>while retaining mechanisms that periodically reconsider them.</span>
+<span id="cb4-276"><a href="#cb4-276" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-277"><a href="#cb4-277" aria-hidden="true" tabindex="-1"></a>These settings are **computational controls, not definitions of a different</span>
+<span id="cb4-278"><a href="#cb4-278" aria-hidden="true" tabindex="-1"></a>prior**. They do not replace the BayesC-style <span class="sc">\(</span>\pi<span class="sc">\)</span>, <span class="sc">\(</span>v_b<span class="sc">\)</span>, or <span class="sc">\(</span>v_e<span class="sc">\)</span></span>
+<span id="cb4-279"><a href="#cb4-279" aria-hidden="true" tabindex="-1"></a>parameters. They do, however, change the update schedule and can affect</span>
+<span id="cb4-280"><a href="#cb4-280" aria-hidden="true" tabindex="-1"></a>finite-run behavior, mixing, and approximation quality. Aggressive skipping</span>
+<span id="cb4-281"><a href="#cb4-281" aria-hidden="true" tabindex="-1"></a>therefore requires convergence and sensitivity checks.</span>
+<span id="cb4-282"><a href="#cb4-282" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-283"><a href="#cb4-283" aria-hidden="true" tabindex="-1"></a><span class="fu">### Common Scheduling Controls</span></span>
+<span id="cb4-284"><a href="#cb4-284" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-285"><a href="#cb4-285" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Control <span class="pp">|</span> High-level role <span class="pp">|</span></span>
+<span id="cb4-286"><a href="#cb4-286" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb4-287"><a href="#cb4-287" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`scheduled`</span> <span class="pp">|</span> Selects the scheduled sampler path where supported. <span class="pp">|</span></span>
+<span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`full_sweep_every`</span> <span class="pp">|</span> Forces periodic reconsideration of all markers rather than only scheduled or active candidates. <span class="pp">|</span></span>
+<span id="cb4-289"><a href="#cb4-289" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`null_skip_base`</span> <span class="pp">|</span> Sets a baseline interval for revisiting low-probability null markers in scheduled samplers. <span class="pp">|</span></span>
+<span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`null_skip_max`</span> <span class="pp">|</span> Caps adaptive null-marker skip intervals. <span class="pp">|</span></span>
+<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`candidate_threshold`</span> <span class="pp">|</span> Treats markers with sufficiently large current inclusion probability as candidates for more frequent updates. <span class="pp">|</span></span>
+<span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`candidate_lifetime`</span> <span class="pp">|</span> Keeps candidates active for a number of scheduled sweeps after they were last considered interesting. <span class="pp">|</span></span>
+<span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`skip_nulls_burnin_only`</span> <span class="pp">|</span> Restricts null-marker skipping to burn-in when <span class="in">`TRUE`</span>, so retained sampling uses the less aggressive post-burn-in schedule. <span class="pp">|</span></span>
+<span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-295"><a href="#cb4-295" aria-hidden="true" tabindex="-1"></a>The BED non-scheduled sparse path also exposes <span class="in">`null_update_prob`</span>, which</span>
+<span id="cb4-296"><a href="#cb4-296" aria-hidden="true" tabindex="-1"></a>controls probabilistic revisiting of null markers. BED samplers use</span>
+<span id="cb4-297"><a href="#cb4-297" aria-hidden="true" tabindex="-1"></a><span class="in">`rebuild_every`</span> to periodically rebuild individual-level residual state.</span>
+<span id="cb4-298"><a href="#cb4-298" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-299"><a href="#cb4-299" aria-hidden="true" tabindex="-1"></a><span class="fu">### CSR LD-Neighbor Wake-Up</span></span>
+<span id="cb4-300"><a href="#cb4-300" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-301"><a href="#cb4-301" aria-hidden="true" tabindex="-1"></a>The scheduled CSR sampler additionally exposes:</span>
+<span id="cb4-302"><a href="#cb4-302" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-303"><a href="#cb4-303" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`wakeup_ld_neighbors`</span>, which allows a marker update to reschedule retained</span>
+<span id="cb4-304"><a href="#cb4-304" aria-hidden="true" tabindex="-1"></a>  LD neighbors;</span>
+<span id="cb4-305"><a href="#cb4-305" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`wakeup_diff_threshold`</span>, which requires a sufficiently large effect change</span>
+<span id="cb4-306"><a href="#cb4-306" aria-hidden="true" tabindex="-1"></a>  before triggering neighbor wake-up; and</span>
+<span id="cb4-307"><a href="#cb4-307" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`wakeup_max_neighbors`</span>, which can cap the number of neighbors rescheduled.</span>
+<span id="cb4-308"><a href="#cb4-308" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-309"><a href="#cb4-309" aria-hidden="true" tabindex="-1"></a>The motivation is that changing one marker's effect changes the residual</span>
+<span id="cb4-310"><a href="#cb4-310" aria-hidden="true" tabindex="-1"></a>scores of correlated markers. Waking LD neighbors lets the schedule respond</span>
+<span id="cb4-311"><a href="#cb4-311" aria-hidden="true" tabindex="-1"></a>to that local change without immediately performing a complete sweep.</span>
+<span id="cb4-312"><a href="#cb4-312" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-313"><a href="#cb4-313" aria-hidden="true" tabindex="-1"></a>For validation, compare scheduled and unscheduled runs under matched priors</span>
+<span id="cb4-314"><a href="#cb4-314" aria-hidden="true" tabindex="-1"></a>and data, inspect sensitivity to full-sweep frequency and skip settings, and</span>
+<span id="cb4-315"><a href="#cb4-315" aria-hidden="true" tabindex="-1"></a>use sufficiently long retained sampling. Runtime improvement alone does not</span>
+<span id="cb4-316"><a href="#cb4-316" aria-hidden="true" tabindex="-1"></a>establish that posterior exploration is adequate.</span>
+<span id="cb4-317"><a href="#cb4-317" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-318"><a href="#cb4-318" aria-hidden="true" tabindex="-1"></a><span class="fu">## Variance Updates and Interpretation</span></span>
+<span id="cb4-319"><a href="#cb4-319" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-320"><a href="#cb4-320" aria-hidden="true" tabindex="-1"></a>The public wrappers initialize marker-effect and residual variance structures</span>
+<span id="cb4-321"><a href="#cb4-321" aria-hidden="true" tabindex="-1"></a>from phenotype variance, <span class="in">`h2`</span>, marker count, and inclusion-prior controls.</span>
+<span id="cb4-322"><a href="#cb4-322" aria-hidden="true" tabindex="-1"></a>During sampling, <span class="in">`updateB`</span>, <span class="in">`updateE`</span>, and <span class="in">`updatePi`</span> determine whether the</span>
+<span id="cb4-323"><a href="#cb4-323" aria-hidden="true" tabindex="-1"></a>corresponding quantities are updated. The degrees-of-freedom controls <span class="in">`nub`</span></span>
+<span id="cb4-324"><a href="#cb4-324" aria-hidden="true" tabindex="-1"></a>and <span class="in">`nue`</span> and associated scale matrices define their priors.</span>
+<span id="cb4-325"><a href="#cb4-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-326"><a href="#cb4-326" aria-hidden="true" tabindex="-1"></a>For one trait, covariance matrices reduce conceptually to scalar variance</span>
+<span id="cb4-327"><a href="#cb4-327" aria-hidden="true" tabindex="-1"></a>quantities, although formatted fits may retain matrix-shaped summaries for</span>
+<span id="cb4-328"><a href="#cb4-328" aria-hidden="true" tabindex="-1"></a>consistency with multi-trait code. Distinguish:</span>
+<span id="cb4-329"><a href="#cb4-329" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-330"><a href="#cb4-330" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the active marker-effect variance <span class="sc">\(</span>v_b<span class="sc">\)</span>;</span>
+<span id="cb4-331"><a href="#cb4-331" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>aggregate genetic variance <span class="sc">\(</span>v_g<span class="sc">\)</span>;</span>
+<span id="cb4-332"><a href="#cb4-332" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>residual variance <span class="sc">\(</span>v_e<span class="sc">\)</span>; and</span>
+<span id="cb4-333"><a href="#cb4-333" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>their MCMC traces and posterior summaries.</span>
+<span id="cb4-334"><a href="#cb4-334" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-335"><a href="#cb4-335" aria-hidden="true" tabindex="-1"></a>Initial <span class="in">`h2`</span> helps set starting and prior scales. It is not guaranteed to equal</span>
+<span id="cb4-336"><a href="#cb4-336" aria-hidden="true" tabindex="-1"></a>the posterior or realized heritability. In simulations, differences can arise</span>
+<span id="cb4-337"><a href="#cb4-337" aria-hidden="true" tabindex="-1"></a>from finite data, realized architecture, shrinkage, sparse LD, and Monte Carlo</span>
+<span id="cb4-338"><a href="#cb4-338" aria-hidden="true" tabindex="-1"></a>variation.</span>
+<span id="cb4-339"><a href="#cb4-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-340"><a href="#cb4-340" aria-hidden="true" tabindex="-1"></a><span class="fu">## Posterior Outputs and Diagnostics</span></span>
+<span id="cb4-341"><a href="#cb4-341" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-342"><a href="#cb4-342" aria-hidden="true" tabindex="-1"></a>Formatted ST-BLR fits are named lists. Components depend on the wrapper and</span>
+<span id="cb4-343"><a href="#cb4-343" aria-hidden="true" tabindex="-1"></a>sampler path, so inspect <span class="in">`names(fit)`</span> and <span class="in">`fit$input`</span> before interpreting them.</span>
+<span id="cb4-344"><a href="#cb4-344" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-345"><a href="#cb4-345" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Component <span class="pp">|</span> Single-trait interpretation <span class="pp">|</span></span>
+<span id="cb4-346"><a href="#cb4-346" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb4-347"><a href="#cb4-347" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`bm`</span> <span class="pp">|</span> Posterior mean marker effects. <span class="pp">|</span></span>
+<span id="cb4-348"><a href="#cb4-348" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`dm`</span> <span class="pp">|</span> Posterior inclusion probabilities or retained inclusion summaries. <span class="pp">|</span></span>
+<span id="cb4-349"><a href="#cb4-349" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`b`</span> <span class="pp">|</span> Current or returned marker-effect state, when returned. <span class="pp">|</span></span>
+<span id="cb4-350"><a href="#cb4-350" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`d`</span> <span class="pp">|</span> Current or returned inclusion state, when returned. <span class="pp">|</span></span>
+<span id="cb4-351"><a href="#cb4-351" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`r`</span> <span class="pp">|</span> Marker-scale residual score state, when returned. <span class="pp">|</span></span>
+<span id="cb4-352"><a href="#cb4-352" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`vbs`</span> <span class="pp">|</span> Retained trace of active marker-effect variance. <span class="pp">|</span></span>
+<span id="cb4-353"><a href="#cb4-353" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`vgs`</span> <span class="pp">|</span> Retained trace of genetic variance. <span class="pp">|</span></span>
+<span id="cb4-354"><a href="#cb4-354" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`ves`</span> <span class="pp">|</span> Retained trace of residual variance. <span class="pp">|</span></span>
+<span id="cb4-355"><a href="#cb4-355" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`pi`</span> <span class="pp">|</span> Final or current inclusion-probability summary, when returned. <span class="pp">|</span></span>
+<span id="cb4-356"><a href="#cb4-356" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`pim`</span> <span class="pp">|</span> Posterior mean inclusion-probability summary, when returned. <span class="pp">|</span></span>
+<span id="cb4-357"><a href="#cb4-357" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`input`</span> <span class="pp">|</span> Resolved data, prior, scheduling, and MCMC settings recorded by the wrapper. <span class="pp">|</span></span>
+<span id="cb4-358"><a href="#cb4-358" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-359"><a href="#cb4-359" aria-hidden="true" tabindex="-1"></a>Depending on the implementation, fits can also contain <span class="in">`vb`</span>, <span class="in">`vg`</span>, <span class="in">`ve`</span>,</span>
+<span id="cb4-360"><a href="#cb4-360" aria-hidden="true" tabindex="-1"></a>covariance summaries, LD-versus-linkage-equilibrium variance traces, or</span>
+<span id="cb4-361"><a href="#cb4-361" aria-hidden="true" tabindex="-1"></a>sampler diagnostics. Use model-specific help for their exact contract.</span>
+<span id="cb4-362"><a href="#cb4-362" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-363"><a href="#cb4-363" aria-hidden="true" tabindex="-1"></a>Compact reporting is preferable to printing complete marker matrices:</span>
+<span id="cb4-364"><a href="#cb4-364" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-365"><a href="#cb4-365" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb4-366"><a href="#cb4-366" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb4-367"><a href="#cb4-367" aria-hidden="true" tabindex="-1"></a>  <span class="at">pip_sum =</span> <span class="fu">sum</span>(fit<span class="sc">$</span>dm[, <span class="dv">1</span>]),</span>
+<span id="cb4-368"><a href="#cb4-368" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_abs_bm =</span> <span class="fu">mean</span>(<span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>])),</span>
+<span id="cb4-369"><a href="#cb4-369" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_vb =</span> <span class="fu">mean</span>(fit<span class="sc">$</span>vbs[, <span class="dv">1</span>]),</span>
+<span id="cb4-370"><a href="#cb4-370" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_vg =</span> <span class="fu">mean</span>(fit<span class="sc">$</span>vgs[, <span class="dv">1</span>]),</span>
+<span id="cb4-371"><a href="#cb4-371" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_ve =</span> <span class="fu">mean</span>(fit<span class="sc">$</span>ves[, <span class="dv">1</span>])</span>
+<span id="cb4-372"><a href="#cb4-372" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-373"><a href="#cb4-373" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-374"><a href="#cb4-374" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-375"><a href="#cb4-375" aria-hidden="true" tabindex="-1"></a>Useful checks include trace behavior, repeated-chain agreement, sensitivity to</span>
+<span id="cb4-376"><a href="#cb4-376" aria-hidden="true" tabindex="-1"></a>priors and scheduling, posterior predictive behavior, top-marker stability,</span>
+<span id="cb4-377"><a href="#cb4-377" aria-hidden="true" tabindex="-1"></a>and BED-versus-CSR comparisons where both representations are available.</span>
+<span id="cb4-378"><a href="#cb4-378" aria-hidden="true" tabindex="-1"></a>Short workflow chains demonstrate integration; they are not sufficient for</span>
+<span id="cb4-379"><a href="#cb4-379" aria-hidden="true" tabindex="-1"></a>final inference. See <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.html)</span> for</span>
+<span id="cb4-380"><a href="#cb4-380" aria-hidden="true" tabindex="-1"></a>reporting guidance.</span>
+<span id="cb4-381"><a href="#cb4-381" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-382"><a href="#cb4-382" aria-hidden="true" tabindex="-1"></a><span class="fu">## Transition to Annotation-Informed Priors</span></span>
+<span id="cb4-383"><a href="#cb4-383" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-384"><a href="#cb4-384" aria-hidden="true" tabindex="-1"></a>The plain ST-BLR model gives all markers a common active probability <span class="sc">\(</span>\pi<span class="sc">\)</span></span>
+<span id="cb4-385"><a href="#cb4-385" aria-hidden="true" tabindex="-1"></a>and active-effect variance <span class="sc">\(</span>v_b<span class="sc">\)</span>. Annotation-informed extensions retain the</span>
+<span id="cb4-386"><a href="#cb4-386" aria-hidden="true" tabindex="-1"></a>same regression likelihood and marker-update logic while changing how prior</span>
+<span id="cb4-387"><a href="#cb4-387" aria-hidden="true" tabindex="-1"></a>mass or effect scale varies across markers.</span>
+<span id="cb4-388"><a href="#cb4-388" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-389"><a href="#cb4-389" aria-hidden="true" tabindex="-1"></a><span class="fu">### Fixed Marker-Specific Priors</span></span>
+<span id="cb4-390"><a href="#cb4-390" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-391"><a href="#cb4-391" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr_prior_annot()`</span> can replace the global values with fixed</span>
+<span id="cb4-392"><a href="#cb4-392" aria-hidden="true" tabindex="-1"></a>marker-specific inclusion probabilities <span class="sc">\(</span>\pi_i<span class="sc">\)</span>, variance multipliers, or</span>
+<span id="cb4-393"><a href="#cb4-393" aria-hidden="true" tabindex="-1"></a>both:</span>
+<span id="cb4-394"><a href="#cb4-394" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-395"><a href="#cb4-395" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-396"><a href="#cb4-396" aria-hidden="true" tabindex="-1"></a>b_i</span>
+<span id="cb4-397"><a href="#cb4-397" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb4-398"><a href="#cb4-398" aria-hidden="true" tabindex="-1"></a>(1-\pi_i)\delta_0</span>
+<span id="cb4-399"><a href="#cb4-399" aria-hidden="true" tabindex="-1"></a>+</span>
+<span id="cb4-400"><a href="#cb4-400" aria-hidden="true" tabindex="-1"></a>\pi_iN(0,v_b\lambda_i).</span>
+<span id="cb4-401"><a href="#cb4-401" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-402"><a href="#cb4-402" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-403"><a href="#cb4-403" aria-hidden="true" tabindex="-1"></a>In the marker update, <span class="sc">\(</span>\pi_i<span class="sc">\)</span> replaces the global prior inclusion</span>
+<span id="cb4-404"><a href="#cb4-404" aria-hidden="true" tabindex="-1"></a>probability and <span class="sc">\(</span>v_b\lambda_i<span class="sc">\)</span> replaces the global active-effect variance.</span>
+<span id="cb4-405"><a href="#cb4-405" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-406"><a href="#cb4-406" aria-hidden="true" tabindex="-1"></a><span class="fu">### Learned, Group, and Mixture Priors</span></span>
+<span id="cb4-407"><a href="#cb4-407" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-408"><a href="#cb4-408" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_csr_learn_annot()`</span> learns annotation effects on marker-specific</span>
+<span id="cb4-409"><a href="#cb4-409" aria-hidden="true" tabindex="-1"></a>  inclusion probabilities and optionally variance multipliers.</span>
+<span id="cb4-410"><a href="#cb4-410" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_csr_group_annot()`</span> gives mutually exclusive marker groups their own</span>
+<span id="cb4-411"><a href="#cb4-411" aria-hidden="true" tabindex="-1"></a>  inclusion probabilities and variance multipliers.</span>
+<span id="cb4-412"><a href="#cb4-412" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_csr_sbayesrc_generic()`</span> uses an **SBayesRC-style</span>
+<span id="cb4-413"><a href="#cb4-413" aria-hidden="true" tabindex="-1"></a>  annotation-dependent BayesR prior**, assigning annotation-dependent</span>
+<span id="cb4-414"><a href="#cb4-414" aria-hidden="true" tabindex="-1"></a>  probabilities to an exact-null component and multiple active variance</span>
+<span id="cb4-415"><a href="#cb4-415" aria-hidden="true" tabindex="-1"></a>  components.</span>
+<span id="cb4-416"><a href="#cb4-416" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-417"><a href="#cb4-417" aria-hidden="true" tabindex="-1"></a>The SBayesRC-style wrapper is closely aligned with the published SBayesRC</span>
+<span id="cb4-418"><a href="#cb4-418" aria-hidden="true" tabindex="-1"></a>prior family but is not an exact reproduction of GCTB SBayesRC as exposed by</span>
+<span id="cb4-419"><a href="#cb4-419" aria-hidden="true" tabindex="-1"></a>default. Its default gamma grid and CSR sparse-LD likelihood differ; users can</span>
+<span id="cb4-420"><a href="#cb4-420" aria-hidden="true" tabindex="-1"></a>supply the published gamma grid explicitly when that prior grid is desired.</span>
+<span id="cb4-421"><a href="#cb4-421" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-422"><a href="#cb4-422" aria-hidden="true" tabindex="-1"></a>These extensions change the prior architecture, unlike sparse-update</span>
+<span id="cb4-423"><a href="#cb4-423" aria-hidden="true" tabindex="-1"></a>scheduling controls. Their definitions, assumptions, diagnostics, and</span>
+<span id="cb4-424"><a href="#cb4-424" aria-hidden="true" tabindex="-1"></a>interpretation cautions are developed in</span>
+<span id="cb4-425"><a href="#cb4-425" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span> and</span>
+<span id="cb4-426"><a href="#cb4-426" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.html)</span>.</span>
+<span id="cb4-427"><a href="#cb4-427" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-428"><a href="#cb4-428" aria-hidden="true" tabindex="-1"></a><span class="fu">## Practical Model-Choice Summary</span></span>
+<span id="cb4-429"><a href="#cb4-429" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-430"><a href="#cb4-430" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Need <span class="pp">|</span> Principal interface <span class="pp">|</span> Main consideration <span class="pp">|</span></span>
+<span id="cb4-431"><a href="#cb4-431" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb4-432"><a href="#cb4-432" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fit directly from available individual-level BED genotypes <span class="pp">|</span> <span class="in">`stblr_bed_marker()`</span> <span class="pp">|</span> Repeated BED access; no separately prepared sparse LD required. <span class="pp">|</span></span>
+<span id="cb4-433"><a href="#cb4-433" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Reuse sufficient statistics and disk-backed sparse LD <span class="pp">|</span> <span class="in">`stblr_csr()`</span> <span class="pp">|</span> LD approximation, marker alignment, and compatible cross-products are explicit inputs. <span class="pp">|</span></span>
+<span id="cb4-434"><a href="#cb4-434" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Reduce time spent repeatedly updating unlikely null markers <span class="pp">|</span> Scheduled BED or CSR path <span class="pp">|</span> Computational schedule must be validated for mixing and sensitivity. <span class="pp">|</span></span>
+<span id="cb4-435"><a href="#cb4-435" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Supply fixed marker-specific prior information <span class="pp">|</span> <span class="in">`stblr_csr_prior_annot()`</span> <span class="pp">|</span> Prior values are treated as fixed during fitting. <span class="pp">|</span></span>
+<span id="cb4-436"><a href="#cb4-436" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Learn annotation effects during fitting <span class="pp">|</span> <span class="in">`stblr_csr_learn_annot()`</span> <span class="pp">|</span> Additional parameters require regularization and convergence checks. <span class="pp">|</span></span>
+<span id="cb4-437"><a href="#cb4-437" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Use mutually exclusive category priors <span class="pp">|</span> <span class="in">`stblr_csr_group_annot()`</span> <span class="pp">|</span> Group assignment simplifies or discards overlap. <span class="pp">|</span></span>
+<span id="cb4-438"><a href="#cb4-438" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Use annotation-dependent null and multiple active components <span class="pp">|</span> <span class="in">`stblr_csr_sbayesrc_generic()`</span> <span class="pp">|</span> SBayesRC-style prior is more expressive and diagnostically demanding. <span class="pp">|</span></span>
+<span id="cb4-439"><a href="#cb4-439" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-440"><a href="#cb4-440" aria-hidden="true" tabindex="-1"></a>Whichever path is used, marker order, phenotype preprocessing, scaling,</span>
+<span id="cb4-441"><a href="#cb4-441" aria-hidden="true" tabindex="-1"></a>priors, MCMC settings, and computational controls should be recorded with the</span>
+<span id="cb4-442"><a href="#cb4-442" aria-hidden="true" tabindex="-1"></a>fit.</span>
+<span id="cb4-443"><a href="#cb4-443" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-444"><a href="#cb4-444" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb4-445"><a href="#cb4-445" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-446"><a href="#cb4-446" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Model overview</span><span class="co">](model_overview.html)</span></span>
+<span id="cb4-447"><a href="#cb4-447" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.html)</span></span>
+<span id="cb4-448"><a href="#cb4-448" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span></span>
+<span id="cb4-449"><a href="#cb4-449" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span></span>
+<span id="cb4-450"><a href="#cb4-450" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.html)</span></span>
+<span id="cb4-451"><a href="#cb4-451" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.html)</span></span>
+<span id="cb4-452"><a href="#cb4-452" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.html)</span></span>
+<span id="cb4-453"><a href="#cb4-453" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.html)</span></span>
+<span id="cb4-454"><a href="#cb4-454" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete sparse-LD/BED workflow on GitHub</span><span class="co">](https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 
