@@ -1,8 +1,7 @@
 # Annotation-based ST-BLR workflow
 #
-# Fixed-prior, learned annotation, and group annotation models are runnable
-# through package wrappers. The SBayesRC-style wrapper remains a development
-# prototype, so that section is a commented future workflow.
+# Fixed-prior, learned annotation, group annotation, and continuous
+# overlapping-annotation SBayesRC models are runnable through package wrappers.
 #
 # The MCMC settings shown here are demonstration settings. Real analyses need
 # longer chains and appropriate convergence and posterior predictive checks.
@@ -170,23 +169,24 @@ fit_group_annot <- stblr_csr_group_annot(
  seed = 10
 )
 
-# Future workflow: SBayesRC-style annotation model ------------------------
+# SBayesRC-style annotation model -----------------------------------------
 
-# model = "sbayesrc" uses SBayesRC-style mixture components with annotations.
-#
-# fit_sbayesrc <- stblr_csr_annotation(
-#  stats = stats,
-#  ld_prefix = ld_prefix,
-#  model = "sbayesrc",
-#  A = A,
-#  n = Glist$n,
-#  gamma = c(0, 0.01, 0.1, 1),
-#  nit = 1000,
-#  nburn = 100,
-#  nthin = 1,
-#  ncores = 3,
-#  seed = 10
-# )
+# stblr_csr_sbayesrc_generic() uses continuous overlapping annotations to
+# model SBayesRC-style mixture-component probabilities. These are conservative
+# demonstration settings. Real analyses require longer chains, convergence
+# checks, and posterior diagnostics.
+fit_sbayesrc <- stblr_csr_sbayesrc_generic(
+ stats = stats,
+ ld_prefix = ld_prefix,
+ A = A,
+ n = Glist$n,
+ gamma = c(0, 0.01, 0.1, 1),
+ nit = 1000,
+ nburn = 100,
+ nthin = 1,
+ ncores = 3,
+ seed = 10
+)
 
 # Inspect posterior summaries ---------------------------------------------
 
@@ -208,9 +208,8 @@ fit_group_annot$dm
 fit_group_annot$group_pi
 fit_group_annot$group_vb_multiplier
 
-# Future wrapper posterior summaries:
-# fit_sbayesrc$ncomp
-# fit_sbayesrc$alpha
-#
-# Future convenience wrappers are intended to be:
-# stblr_csr_sbayesrc_generic().
+# SBayesRC posterior summaries:
+fit_sbayesrc$bm
+fit_sbayesrc$dm
+fit_sbayesrc$ncomp
+fit_sbayesrc$alpha

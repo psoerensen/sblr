@@ -173,3 +173,192 @@ make_sbayesrc_alpha_init <- function(
   component_names = component_names
  )
 }
+
+format_sbayesrc_csr_fit <- function(
+  fit,
+  nt,
+  m,
+  gamma,
+  n_anno,
+  trait_names = NULL,
+  variable_names = NULL,
+  annotation_names = NULL
+) {
+ validate_positive_integer <- function(x, name) {
+  if (!is.numeric(x) || length(x) != 1 || !is.finite(x) ||
+      x <= 0 || x != as.integer(x)) {
+   stop(name, " must be a positive integer.")
+  }
+  as.integer(x)
+ }
+
+ validate_trait_list <- function(x, lengths_expected, name) {
+  if (!is.list(x) || length(x) != nt ||
+      any(lengths(x) != lengths_expected)) {
+   stop(
+    name, " must be a list of length nt with element length ",
+    lengths_expected, "."
+   )
+  }
+ }
+
+ nt <- validate_positive_integer(nt, "nt")
+ m <- validate_positive_integer(m, "m")
+ n_anno <- validate_positive_integer(n_anno, "n_anno")
+
+ if (!is.list(fit) || length(fit) != 24) {
+  stop("format_sbayesrc_csr_fit() expects the 24-slot SBayesRC CSR return object.")
+ }
+
+ if (!is.numeric(gamma) || length(gamma) < 2 ||
+     any(!is.finite(gamma))) {
+  stop("gamma must be a finite numeric vector with at least two elements.")
+ }
+ gamma <- as.numeric(gamma)
+ if (gamma[1] != 0) stop("gamma[1] must be 0.")
+ if (any(gamma[-1] <= 0)) stop("All active gamma values must be positive.")
+
+ if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
+ if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
+ if (is.null(annotation_names)) annotation_names <- paste0("A", seq_len(n_anno))
+
+ if (length(trait_names) != nt) stop("trait_names must have length nt.")
+ if (length(variable_names) != m) stop("variable_names must have length m.")
+ if (length(annotation_names) != n_anno) {
+  stop("annotation_names must have length n_anno.")
+ }
+
+ Kgamma <- length(gamma)
+ nstep <- Kgamma - 1L
+ component_names <- paste0(
+  "gamma_", format(gamma, trim = TRUE, scientific = FALSE)
+ )
+ step_names <- paste0("step_", seq_len(nstep))
+ alpha_names <- as.vector(outer(annotation_names, step_names, paste, sep = ":"))
+
+ for (i in seq_len(7)) {
+  validate_trait_list(fit[[i]], m, paste0("fit[[", i, "]]"))
+ }
+ for (i in 8:10) {
+  if (!is.list(fit[[i]]) || length(fit[[i]]) != nt ||
+      length(unique(lengths(fit[[i]]))) != 1) {
+   stop("fit[[", i, "]] must contain equally sized trace vectors for each trait.")
+  }
+ }
+ for (i in 11:16) {
+  validate_trait_list(fit[[i]], nt, paste0("fit[[", i, "]]"))
+ }
+ for (i in 17:18) {
+  validate_trait_list(fit[[i]], 2, paste0("fit[[", i, "]]"))
+ }
+ validate_trait_list(fit[[19]], n_anno * nstep, "fit[[19]]")
+ validate_trait_list(fit[[20]], nstep, "fit[[20]]")
+ for (i in 21:22) {
+  if (!is.list(fit[[i]]) || length(fit[[i]]) != nt ||
+      length(unique(lengths(fit[[i]]))) != 1) {
+   stop("fit[[", i, "]] must contain equally sized trace vectors for each trait.")
+  }
+ }
+ validate_trait_list(fit[[23]], m * Kgamma, "fit[[23]]")
+ validate_trait_list(fit[[24]], Kgamma, "fit[[24]]")
+
+ names(fit) <- c(
+  "bm", "dm", "wy", "r", "b", "component", "marker_index",
+  "vbs", "vgs", "ves",
+  "covb", "covg", "cove",
+  "vb", "vg", "ve",
+  "pi", "pim", "alpha_raw", "sigmaSqAlpha_raw",
+  "vle", "vld", "comp_prob_raw", "ncomp_raw"
+ )
+
+ for (i in seq_len(7)) {
+  fit[[i]] <- as.matrix(as.data.frame(fit[[i]]))
+  rownames(fit[[i]]) <- variable_names
+  colnames(fit[[i]]) <- trait_names
+ }
+
+ for (i in 8:10) {
+  fit[[i]] <- as.matrix(as.data.frame(fit[[i]]))
+  rownames(fit[[i]]) <- paste0("Iter", seq_len(nrow(fit[[i]])))
+  colnames(fit[[i]]) <- trait_names
+ }
+
+ for (i in 11:16) {
+  fit[[i]] <- matrix(unlist(fit[[i]]), ncol = nt, byrow = TRUE)
+  rownames(fit[[i]]) <- colnames(fit[[i]]) <- trait_names
+ }
+
+ for (i in 17:18) {
+  fit[[i]] <- matrix(unlist(fit[[i]]), ncol = 2, byrow = TRUE)
+  rownames(fit[[i]]) <- trait_names
+  colnames(fit[[i]]) <- c("pi0", "pi_active")
+ }
+
+ alpha_flat <- matrix(
+  unlist(fit$alpha_raw),
+  nrow = nt,
+  ncol = n_anno * nstep,
+  byrow = TRUE,
+  dimnames = list(trait_names, alpha_names)
+ )
+ alpha <- lapply(seq_len(nt), function(t) {
+  matrix(
+   alpha_flat[t, ],
+   nrow = n_anno,
+   ncol = nstep,
+   dimnames = list(annotation_names, step_names)
+  )
+ })
+ names(alpha) <- trait_names
+
+ sigmaSqAlpha <- matrix(
+  unlist(fit$sigmaSqAlpha_raw),
+  nrow = nt,
+  ncol = nstep,
+  byrow = TRUE,
+  dimnames = list(trait_names, step_names)
+ )
+
+ for (i in 21:22) {
+  fit[[i]] <- as.matrix(as.data.frame(fit[[i]]))
+  rownames(fit[[i]]) <- paste0("Iter", seq_len(nrow(fit[[i]])))
+  colnames(fit[[i]]) <- trait_names
+ }
+
+ comp_prob <- lapply(seq_len(nt), function(t) {
+  matrix(
+   fit$comp_prob_raw[[t]],
+   nrow = m,
+   ncol = Kgamma,
+   dimnames = list(variable_names, component_names)
+  )
+ })
+ names(comp_prob) <- trait_names
+
+ ncomp <- matrix(
+  unlist(fit$ncomp_raw),
+  nrow = nt,
+  ncol = Kgamma,
+  byrow = TRUE,
+  dimnames = list(trait_names, component_names)
+ )
+
+ out <- fit[1:18]
+ out$alpha_flat <- alpha_flat
+ out$alpha <- alpha
+ out$sigmaSqAlpha <- sigmaSqAlpha
+ out$vle <- fit$vle
+ out$vld <- fit$vld
+ out$comp_prob <- comp_prob
+ out$ncomp <- ncomp
+
+ valid_covariance <- function(x) {
+  is.matrix(x) && all(dim(x) == c(nt, nt)) &&
+   all(is.finite(x)) && all(diag(x) > 0)
+ }
+ if (valid_covariance(out$covb)) out$rb <- stats::cov2cor(out$covb)
+ if (valid_covariance(out$covg)) out$rg <- stats::cov2cor(out$covg)
+ if (valid_covariance(out$cove)) out$re <- stats::cov2cor(out$cove)
+
+ out
+}
