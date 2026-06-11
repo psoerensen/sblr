@@ -14,22 +14,22 @@ covered elsewhere.
 
 Let
 
-\[
+$$
 A =
 \begin{bmatrix}
 A_{11} & \cdots & A_{1K}\\
 \vdots & \ddots & \vdots\\
 A_{m1} & \cdots & A_{mK}
 \end{bmatrix}
-\]
+$$
 
-be an \(m \times K\) marker-by-annotation matrix. Row \(A_i\) describes marker
-\(i\), and column \(k\) describes an annotation. Binary annotations may encode
+be an $m \times K$ marker-by-annotation matrix. Row $A_i$ describes marker
+$i$, and column $k$ describes an annotation. Binary annotations may encode
 membership in functional sets; quantitative annotations may encode continuous
 scores. A marker may belong to several annotations, so the columns generally
 do not define a partition.
 
-The marker-row contract is strict. Rows of \(A\) must correspond, in the same
+The marker-row contract is strict. Rows of $A$ must correspond, in the same
 order, to:
 
 - the markers used to compute `wy` and `ww`;
@@ -45,7 +45,7 @@ incorrect analysis.
 ### Intercepts, binary columns, and quantitative columns
 
 The annotation-aware wrappers use `.stblr_prepare_annotation_matrix()` to
-validate and preprocess \(A\). Its relevant behavior is:
+validate and preprocess $A$. Its relevant behavior is:
 
 - values must be numeric and finite;
 - an intercept is recognized when the first column is all ones;
@@ -68,36 +68,36 @@ analyses or prediction data.
 ## Baseline Sparse Prior
 
 For a single trait, the baseline sparse prior introduces a marker inclusion
-indicator \(d_i\):
+indicator $d_i$:
 
-\[
+$$
 \begin{aligned}
 b_i \mid d_i = 0 &= 0,\\
 b_i \mid d_i = 1 &\sim N(0, v_b),\\
 \Pr(d_i = 1) &= \pi.
 \end{aligned}
-\]
+$$
 
-Here \(b_i\) is the effect of marker \(i\), \(v_b\) is the active-marker
-variance, and \(\pi\) is a global inclusion probability. The posterior
+Here $b_i$ is the effect of marker $i$, $v_b$ is the active-marker
+variance, and $\pi$ is a global inclusion probability. The posterior
 inclusion probability (PIP) is
 
-\[
+$$
 \Pr(d_i = 1 \mid \text{data}),
-\]
+$$
 
 which is summarized by `dm` when returned by a fitted model.
 
 The annotation-informed models retain this sparse-prior logic but replace one
 or both global quantities with structured marker-specific quantities:
 
-\[
+$$
 \Pr(d_i = 1) = \pi_i,
 \qquad
 b_i \mid d_i = 1 \sim N(0, v_b w_i),
-\]
+$$
 
-where \(w_i > 0\) is a marker-specific variance multiplier.
+where $w_i > 0$ is a marker-specific variance multiplier.
 
 ## Marker-Specific Prior Construction
 
@@ -106,20 +106,20 @@ where \(w_i > 0\) is a marker-specific variance multiplier.
 A common annotation construction places annotation effects on the log-odds
 scale:
 
-\[
+$$
 \operatorname{logit}(\pi_i)
 =
 \operatorname{logit}(\pi_0) + A_i \eta_\pi,
-\]
+$$
 
-where \(\pi_0\) is a baseline inclusion probability and \(\eta_\pi\) contains
-annotation coefficients. Positive values of \(A_i\eta_\pi\) increase prior
+where $\pi_0$ is a baseline inclusion probability and $\eta_\pi$ contains
+annotation coefficients. Positive values of $A_i\eta_\pi$ increase prior
 inclusion odds; negative values reduce them.
 
 The fixed-prior helper used by the wrappers centers the linear predictor before
 combining it with the baseline:
 
-\[
+$$
 \widetilde{\ell}_{\pi i}
 =
 A_i\eta_\pi - \frac{1}{m}\sum_{j=1}^m A_j\eta_\pi,
@@ -128,7 +128,7 @@ A_i\eta_\pi - \frac{1}{m}\sum_{j=1}^m A_j\eta_\pi,
 =
 \operatorname{logit}^{-1}
 \left\{\operatorname{logit}(\pi_0)+\widetilde{\ell}_{\pi i}\right\}.
-\]
+$$
 
 Centering makes the annotation effects primarily redistribute prior inclusion
 probability across markers rather than changing its genome-wide location.
@@ -139,42 +139,42 @@ numerical and inferential stability.
 
 Annotation effects on active-marker variance naturally use a log scale:
 
-\[
+$$
 \log w_i = A_i\eta_v,
 \qquad
 w_i = \exp(A_i\eta_v).
-\]
+$$
 
 As with inclusion probabilities, the wrapper centers the linear predictor:
 
-\[
+$$
 \widetilde{\ell}_{v i}
 =
 A_i\eta_v-\frac{1}{m}\sum_{j=1}^m A_j\eta_v,
 \qquad
 w_i=\exp(\widetilde{\ell}_{v i}).
-\]
+$$
 
-This construction makes \(w_i\) a relative multiplier around the global
-active-marker variance \(v_b\). Lower and upper bounds prevent extreme
+This construction makes $w_i$ a relative multiplier around the global
+active-marker variance $v_b$. Lower and upper bounds prevent extreme
 annotation combinations from creating nearly degenerate or unreasonably
 diffuse marker priors.
 
 ### Consequences for a single-marker update
 
 The marker-specific quantities enter the standard sparse BLR update directly.
-Let \(w_i^{XX}\) denote the diagonal marker cross-product and let
+Let $w_i^{XX}$ denote the diagonal marker cross-product and let
 
-\[
+$$
 s_i = r_i + w_i^{XX} b_i
-\]
+$$
 
 be the marker score formed from the current residual state. To avoid confusing
 the cross-product with the prior multiplier, write
-\(v_{b,i}=v_b w_i\). The log Bayes factor for the active versus null component
+$v_{b,i}=v_b w_i$. The log Bayes factor for the active versus null component
 is
 
-\[
+$$
 \log BF_i
 =
 \frac{1}{2}\log\left(
@@ -184,70 +184,70 @@ is
 \frac{1}{2}
 \frac{s_i^2v_{b,i}}
 {v_e(v_e+w_i^{XX}v_{b,i})}.
-\]
+$$
 
 The conditional inclusion probability is
 
-\[
+$$
 \Pr(d_i=1\mid\cdot)
 =
 \frac{\pi_i BF_i}{(1-\pi_i)+\pi_i BF_i}.
-\]
+$$
 
 Conditional on inclusion,
 
-\[
+$$
 b_i\mid d_i=1,\cdot
 \sim
 N\left(
 \frac{s_i}{w_i^{XX}+v_e/v_{b,i}},
 \frac{v_e}{w_i^{XX}+v_e/v_{b,i}}
 \right).
-\]
+$$
 
-Thus, \(\pi_i\) alters prior odds of inclusion, whereas \(w_i\) alters the
+Thus, $\pi_i$ alters prior odds of inclusion, whereas $w_i$ alters the
 active effect distribution and its shrinkage. These mechanisms should not be
 interpreted as interchangeable.
 
 ## Annotation-Level Posterior Summaries
 
 Posterior marker summaries can be aggregated to describe signal associated
-with an annotation set \(S_k=\{i:A_{ik}\ne0\}\). Useful descriptive summaries
+with an annotation set $S_k=\{i:A_{ik}\ne0\}$. Useful descriptive summaries
 include:
 
-\[
+$$
 m_{\mathrm{eff},k}
 =
 \sum_{i\in S_k}\widehat{\Pr}(d_i=1\mid\text{data}),
-\]
+$$
 
 the expected number of included markers in the set, and the PIP enrichment
 ratio
 
-\[
+$$
 E_k
 =
 \frac{|S_k|^{-1}\sum_{i\in S_k}\widehat{\Pr}(d_i=1\mid\text{data})}
 {|S_k^c|^{-1}\sum_{i\notin S_k}\widehat{\Pr}(d_i=1\mid\text{data})}.
-\]
+$$
 
 For summary-statistics fits, a marker-level contribution estimate may be
 written
 
-\[
+$$
 c_i
 =
 \frac{\widehat b_i\{wy_i-r_i\}}{n},
-\]
+$$
 
 with an optional PIP-weighted version. An annotation-level genetic-variance
 summary is then
 
-\[
+$$
 \widehat V_{G,k}
 =
 \sum_{i\in S_k} c_i.
-\]
+$$
 
 These set summaries are deliberately descriptive. When annotations overlap,
 their totals are not additive and the same marker contribution may appear in
@@ -256,11 +256,11 @@ set-based approach for known simulation truth and, when a fit is supplied,
 adds within-set means of `dm` and absolute `bm`.
 
 For conditional interpretation with overlapping annotations, one can regress a
-marker-level posterior response \(s_i\) on all annotation columns:
+marker-level posterior response $s_i$ on all annotation columns:
 
-\[
+$$
 s_i = \alpha + \sum_{k=1}^K A_{ik}\gamma_k+\epsilon_i.
-\]
+$$
 
 Possible responses include a PIP, squared posterior mean effect, or estimated
 marker contribution. Such a regression estimates conditional associations
@@ -272,7 +272,7 @@ genetic signal.
 An empirical-Bayes workflow estimates annotation signal from one genomic fit
 and uses it to construct priors for a subsequent fit:
 
-\[
+$$
 \text{initial genomic fit}
 \rightarrow
 \text{marker summaries}
@@ -282,7 +282,7 @@ and uses it to construct priors for a subsequent fit:
 \{\pi_i,w_i\}
 \rightarrow
 \text{updated genomic fit}.
-\]
+$$
 
 This approach separates prior construction from the genomic sampler. It is
 useful when annotation effects should be estimated with a dedicated model or
@@ -292,23 +292,23 @@ when fixed marker priors must be inspected before fitting.
 
 A smoothed set-level inclusion probability can be estimated from PIPs:
 
-\[
+$$
 \widehat\pi_k
 =
 \frac{a+\sum_{i\in S_k} dm_i}{2a+|S_k|},
-\]
+$$
 
-where \(a>0\) supplies symmetric pseudo-count shrinkage. A rough active-effect
+where $a>0$ supplies symmetric pseudo-count shrinkage. A rough active-effect
 variance estimate is
 
-\[
+$$
 \widehat v_{b,k}
 =
 \frac{\widehat V_{G,k}}
 {\max(m_{\mathrm{eff},k},c)},
-\]
+$$
 
-where \(c>0\) prevents instability when the expected number of active markers
+where $c>0$ prevents instability when the expected number of active markers
 is very small. Both estimates should generally be shrunk toward genome-wide
 values before they are converted into marker priors.
 
@@ -322,11 +322,11 @@ For overlapping annotations, an annotation-level regression or BLR can map
 marker summaries to annotation coefficients. Candidate marker-level responses
 from the archived design include:
 
-- posterior mean effects, \(\widehat b_i\);
-- transformed PIPs, such as a bounded \(\operatorname{logit}(dm_i)\);
+- posterior mean effects, $\widehat b_i$;
+- transformed PIPs, such as a bounded $\operatorname{logit}(dm_i)$;
 - squared effects or absolute effects; and
 - marker contribution estimates,
-  \(\widehat b_i(wy_i-r_i)/n\).
+  $\widehat b_i(wy_i-r_i)/n$.
 
 The fitted annotation effects can then be transformed through the centered
 logit and log-scale constructions above. Regularization is essential because
@@ -343,7 +343,7 @@ if uncertainty in the first-stage estimate is ignored.
 Useful safeguards include:
 
 - shrink annotation coefficients toward zero;
-- clamp \(\pi_i\) and \(w_i\) to defensible ranges;
+- clamp $\pi_i$ and $w_i$ to defensible ranges;
 - compare against an unannotated baseline;
 - split markers into approximately LD-independent folds and construct priors
   out of fold; and
@@ -358,7 +358,7 @@ responsibilities rather than a single exported package workflow.
 `stblr_csr_prior_annot()` fits a CSR summary-statistics model with fixed
 marker-specific inclusion probabilities and effect-variance multipliers.
 Users may either supply `fixed_pi_marker` and `fixed_vb_multiplier` directly,
-or supply \(A\) and fixed annotation coefficients from which the wrapper
+or supply $A$ and fixed annotation coefficients from which the wrapper
 constructs them.
 
 ```r
@@ -387,24 +387,24 @@ procedure.
 ## Learned Annotation Effects
 
 `stblr_csr_learn_annot()` learns annotation coefficients jointly with the
-marker model. For trait \(t\), the implemented construction is conceptually
+marker model. For trait $t$, the implemented construction is conceptually
 
-\[
+$$
 \operatorname{logit}(\pi_{it})
 =
 \operatorname{logit}(\pi_t)
 +
 \operatorname{center}(A_i\eta_{\pi,t}),
-\]
+$$
 
 and
 
-\[
+$$
 v_{b,it}
 =
 v_{b,t}
 \exp\{\operatorname{center}(A_i\eta_{v,t})\}.
-\]
+$$
 
 The annotation effects are initialized by `eta_pi_init` and `eta_vb_init`,
 with zero matrices used by default. Gaussian shrinkage scales
@@ -425,16 +425,16 @@ other annotations and the sampler specification.
 ## Group Priors
 
 `stblr_csr_group_annot()` assigns each marker to exactly one group through
-`group_index`. Group \(g\) receives a group-specific inclusion probability and
+`group_index`. Group $g$ receives a group-specific inclusion probability and
 variance multiplier:
 
-\[
+$$
 \Pr(d_i=1)=\pi_{g(i)},
 \qquad
 b_i\mid d_i=1
 \sim
 N\{0,v_b w_{g(i)}\}.
-\]
+$$
 
 Group inclusion probabilities have beta-prior shape parameters derived from a
 prior mean and strength. Group variance multipliers may also be updated,
@@ -483,7 +483,7 @@ than summed across rows.
 ## Overlap, Identifiability, and Double Counting
 
 Overlapping annotations are biologically natural but statistically difficult.
-If two columns of \(A\) identify nearly the same markers, their separate
+If two columns of $A$ identify nearly the same markers, their separate
 coefficients may be weakly identified even when their joint signal is clear.
 Rare annotations can produce unstable estimates, whereas very broad
 annotations may largely reproduce the intercept.
@@ -491,13 +491,13 @@ annotations may largely reproduce the intercept.
 Additive constructions on the logit and log scales provide a coherent way to
 combine overlap:
 
-\[
+$$
 \operatorname{logit}(\pi_i)
 =
 \operatorname{logit}(\pi_0)+A_i\eta_\pi,
 \qquad
 \log w_i=A_i\eta_v.
-\]
+$$
 
 However, additive predictors can still create extreme priors when a marker
 belongs to many enriched sets. Centering, coefficient shrinkage, and explicit
@@ -517,13 +517,13 @@ design directions rather than claims about the public API.
 
 For multiple traits, marker-specific annotation priors can vary by trait:
 
-\[
+$$
 \operatorname{logit}(\pi_{it})
 =
 \operatorname{logit}(\pi_{0t})+A_i\eta_{\pi,t},
 \qquad
 \log w_{it}=A_i\eta_{v,t}.
-\]
+$$
 
 Annotations could also influence cross-trait sharing. For example, a softmax
 model could assign marker-specific probabilities to patterns such as null,

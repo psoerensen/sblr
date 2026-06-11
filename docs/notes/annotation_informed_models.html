@@ -243,13 +243,13 @@ window.Quarto = {
 <section id="why-annotations-inform-priors" class="level2">
 <h2 class="anchored" data-anchor-id="why-annotations-inform-priors">Why Annotations Inform Priors</h2>
 <p>Markers are not exchangeable with respect to existing biological knowledge. They may lie in coding regions, regulatory regions, QTL intervals, conserved sequence, tissue-specific chromatin states, or other externally defined sets. Annotation-informed models ask whether that information should alter a marker’s prior probability of being active or the expected scale of an active effect.</p>
-<p>For marker (i) and trait (t), useful prior quantities include:</p>
+<p>For marker <span class="math inline">\(i\)</span> and trait <span class="math inline">\(t\)</span>, useful prior quantities include:</p>
 <p><span class="math display">\[
 \pi_{it} = P(d_{it}=1),
 \qquad
 v_{b,it} = \operatorname{Var}(b_{it}\mid d_{it}=1),
 \]</span></p>
-<p>and, for mixture models, component probabilities (<em>{itc}=P(c</em>{it}=c)). In proposed multi-trait extensions, annotations could additionally influence marker-specific sharing-model probabilities or effect covariance matrices.</p>
+<p>and, for mixture models, component probabilities <span class="math inline">\(\pi_{itc}=P(c_{it}=c)\)</span>. In proposed multi-trait extensions, annotations could additionally influence marker-specific sharing-model probabilities or effect covariance matrices.</p>
 <p>Annotation information can enter at different stages:</p>
 <ul>
 <li><strong>fixed/external:</strong> marker-specific priors are supplied before fitting;</li>
@@ -262,7 +262,7 @@ v_{b,it} = \operatorname{Var}(b_{it}\mid d_{it}=1),
 </section>
 <section id="annotation-matrix-overlap-centering-and-marker-ordering" class="level2">
 <h2 class="anchored" data-anchor-id="annotation-matrix-overlap-centering-and-marker-ordering">Annotation Matrix, Overlap, Centering, and Marker Ordering</h2>
-<p>Let (A) be an (m K) annotation matrix:</p>
+<p>Let <span class="math inline">\(A\)</span> be an <span class="math inline">\(m \times K\)</span> annotation matrix:</p>
 <p><span class="math display">\[
 A =
 \begin{bmatrix}
@@ -272,7 +272,7 @@ A_{m1} &amp; \cdots &amp; A_{mK}
 \end{bmatrix},
 \]</span></p>
 <p>where rows are markers and columns are annotations. Binary entries can encode set membership, while continuous columns can encode scores or measurements. Annotations may overlap: a marker can belong to several biological categories simultaneously.</p>
-<p>Overlap is scientifically useful but complicates interpretation. A direct sum over each annotation double-counts markers in multiple sets and is not a strict variance partition. Conditional annotation models instead use the whole row (A_i) to estimate the contribution of one annotation while accounting for the others. Strongly correlated annotation columns can still make individual coefficients weakly identified.</p>
+<p>Overlap is scientifically useful but complicates interpretation. A direct sum over each annotation double-counts markers in multiple sets and is not a strict variance partition. Conditional annotation models instead use the whole row <span class="math inline">\(A_i\)</span> to estimate the contribution of one annotation while accounting for the others. Strongly correlated annotation columns can still make individual coefficients weakly identified.</p>
 <p>All public annotation wrappers prepare <code>A</code> with the package’s annotation matrix helper. It:</p>
 <ul>
 <li>requires one row per model marker;</li>
@@ -294,7 +294,7 @@ A_{m1} &amp; \cdots &amp; A_{mK}
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(marker_id),</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>          <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Preparation of <code>stats</code>, sparse LD, and marker order is described in <a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
-<p>Centering has a statistical role beyond numerical convenience. If (z_{it}=A_i_t), a centered predictor is</p>
+<p>Centering has a statistical role beyond numerical convenience. If <span class="math inline">\(z_{it}=A_i\eta_t\)</span>, a centered predictor is</p>
 <p><span class="math display">\[
 z_{it}^{\mathrm{centered}}
 =
@@ -348,7 +348,7 @@ A_i\beta_{\pi,t}
 A_i\beta_{v,t}-\frac{1}{m}\sum_j A_j\beta_{v,t}
 \right),
 \]</span></p>
-<p>bounded to <code>vb_multiplier_min</code> and <code>vb_multiplier_max</code>, with (v_{b,it}=v_{b,t}_{it}).</p>
+<p>bounded to <code>vb_multiplier_min</code> and <code>vb_multiplier_max</code>, with <span class="math inline">\(v_{b,it}=v_{b,t}\lambda_{it}\)</span>.</p>
 <p>The direct route is illustrated by the annotation workflow:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_fixed <span class="ot">&lt;-</span> <span class="fu">stblr_csr_prior_annot</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
@@ -364,7 +364,7 @@ A_i\beta_{v,t}-\frac{1}{m}\sum_j A_j\beta_{v,t}
 </section>
 <section id="direct-learned-annotation-effects" class="level2">
 <h2 class="anchored" data-anchor-id="direct-learned-annotation-effects">Direct Learned Annotation Effects</h2>
-<p><code>stblr_csr_learn_annot()</code> learns annotation effects while fitting marker effects. For each trait, it maintains annotation coefficient vectors (<em>{,t}) and (</em>{v,t}). The implemented marker-specific prior is conceptually</p>
+<p><code>stblr_csr_learn_annot()</code> learns annotation effects while fitting marker effects. For each trait, it maintains annotation coefficient vectors <span class="math inline">\(\eta_{\pi,t}\)</span> and <span class="math inline">\(\eta_{v,t}\)</span>. The implemented marker-specific prior is conceptually</p>
 <p><span class="math display">\[
 \operatorname{logit}(\pi_{it})
 =
@@ -385,7 +385,7 @@ v_{b,t}
 \frac{v_{b,it}}{v_{b,t}}
 \in[\lambda_{\min},\lambda_{\max}].
 \]</span></p>
-<p>The sampler alternates between marker updates under current marker-specific priors and annotation-coefficient updates. At intervals controlled by <code>annot_update_every</code>, random-walk proposals perturb (<em>{,t}) or (</em>{v,t}). The inclusion-coefficient target uses current inclusion states, while the variance-coefficient target uses current active effects. Gaussian shrinkage scales <code>sigma_eta_pi</code> and <code>sigma_eta_vb</code> regularize the coefficients; proposal scales <code>rw_sd_eta_pi</code> and <code>rw_sd_eta_vb</code> control Metropolis movement.</p>
+<p>The sampler alternates between marker updates under current marker-specific priors and annotation-coefficient updates. At intervals controlled by <code>annot_update_every</code>, random-walk proposals perturb <span class="math inline">\(\eta_{\pi,t}\)</span> or <span class="math inline">\(\eta_{v,t}\)</span>. The inclusion-coefficient target uses current inclusion states, while the variance-coefficient target uses current active effects. Gaussian shrinkage scales <code>sigma_eta_pi</code> and <code>sigma_eta_vb</code> regularize the coefficients; proposal scales <code>rw_sd_eta_pi</code> and <code>rw_sd_eta_vb</code> control Metropolis movement.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_learned <span class="ot">&lt;-</span> <span class="fu">stblr_csr_learn_annot</span>(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
@@ -401,14 +401,14 @@ v_{b,t}
 </section>
 <section id="group-priors" class="level2">
 <h2 class="anchored" data-anchor-id="group-priors">Group Priors</h2>
-<p><code>stblr_csr_group_annot()</code> assigns every marker to exactly one group and gives each group trait-specific prior parameters. If (g(i)) is marker (i)’s group index, the prior is</p>
+<p><code>stblr_csr_group_annot()</code> assigns every marker to exactly one group and gives each group trait-specific prior parameters. If <span class="math inline">\(g(i)\)</span> is marker <span class="math inline">\(i\)</span>’s group index, the prior is</p>
 <p><span class="math display">\[
 d_{it}\sim\operatorname{Bernoulli}(\pi_{g(i),t}),
 \qquad
 b_{it}\mid d_{it}=1
 \sim N\left(0,v_{b,t}\lambda_{g(i),t}\right).
 \]</span></p>
-<p>The R wrapper accepts a length-(m) <code>group</code> vector, optionally named by marker. It converts group labels into an internal zero-based <code>group_index</code>, records group names and sizes, initializes <code>group_pi</code> and <code>group_vb_multiplier</code>, and returns group-level posterior summaries including included-marker counts.</p>
+<p>The R wrapper accepts a length-<span class="math inline">\(m\)</span> <code>group</code> vector, optionally named by marker. It converts group labels into an internal zero-based <code>group_index</code>, records group names and sizes, initializes <code>group_pi</code> and <code>group_vb_multiplier</code>, and returns group-level posterior summaries including included-marker counts.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>group <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(A[, <span class="st">"Anno1"</span>] <span class="sc">!=</span> <span class="dv">0</span>, <span class="st">"annotated"</span>, <span class="st">"background"</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(group) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -441,13 +441,13 @@ b_{it}\mid d_{it}=1
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Matching the gamma grid aligns that part of the prior specification; it does not make the complete implementation identical to GCTB SBayesRC.</p>
-<p>For marker (i), annotations determine component probabilities through a generalized probit stick-breaking construction. Let</p>
+<p>For marker <span class="math inline">\(i\)</span>, annotations determine component probabilities through a generalized probit stick-breaking construction. Let</p>
 <p><span class="math display">\[
 \eta_i=A_i\alpha,
 \qquad
 p_{ij}=\Phi(\eta_{ij}),
 \]</span></p>
-<p>for (C-1) stick-breaking steps. Then</p>
+<p>for <span class="math inline">\(C-1\)</span> stick-breaking steps. Then</p>
 <p><span class="math display">\[
 \begin{aligned}
 \pi_{i1} &amp;= 1-p_{i1},\\
@@ -456,7 +456,7 @@ p_{ij}=\Phi(\eta_{ij}),
 \pi_{iC} &amp;= \prod_{j=1}^{C-1}p_{ij}.
 \end{aligned}
 \]</span></p>
-<p>The probabilities are non-negative and sum to one. The native sampler floors and renormalizes them for numerical stability. Marker (i)’s expected gamma multiplier is</p>
+<p>The probabilities are non-negative and sum to one. The native sampler floors and renormalizes them for numerical stability. Marker <span class="math inline">\(i\)</span>’s expected gamma multiplier is</p>
 <p><span class="math display">\[
 E(\gamma_i\mid A_i,\alpha)
 =
@@ -476,7 +476,7 @@ E(\gamma_i\mid A_i,\alpha)
 <ul>
 <li><code>sbayesrc_annotation_pi(alpha, gamma)</code> applies stick-breaking to each annotation coefficient row;</li>
 <li><code>sbayesrc_annotation_gamma_mean(alpha, gamma)</code> returns expected gamma per annotation row;</li>
-<li><code>sbayesrc_marker_pi(A, alpha, gamma)</code> applies stick-breaking to (A), returning marker-level component probabilities;</li>
+<li><code>sbayesrc_marker_pi(A, alpha, gamma)</code> applies stick-breaking to <span class="math inline">\(A\alpha\)</span>, returning marker-level component probabilities;</li>
 <li><code>sbayesrc_marker_gamma_mean(A, alpha, gamma)</code> returns expected gamma per marker.</li>
 </ul>
 <p>Annotation-row diagnostics isolate one coefficient row and are not the same as marker-level predictions under overlapping annotation profiles. For biological interpretation, inspect both, and compare marker expected gamma with posterior inclusion probabilities without assuming they should be identical.</p>
@@ -512,7 +512,7 @@ E(\gamma_i\mid A_i,\alpha)
 \rightarrow
 \text{next genomic fit}.
 \]</span></p>
-<p>First-stage summaries can include posterior means (b_{it}), posterior inclusion probabilities (_{it}), residual scores, and set-specific genomic variance contributions. For an annotation set (S_k), a smoothed inclusion estimate is</p>
+<p>First-stage summaries can include posterior means <span class="math inline">\(\widehat b_{it}\)</span>, posterior inclusion probabilities <span class="math inline">\(\widehat{dm}_{it}\)</span>, residual scores, and set-specific genomic variance contributions. For an annotation set <span class="math inline">\(S_k\)</span>, a smoothed inclusion estimate is</p>
 <p><span class="math display">\[
 \widehat\pi_{k,t}
 =
@@ -537,7 +537,7 @@ m^{\mathrm{eff}}_{k,t}
 \frac{\widehat V_{G,k,t}}
 {\max(m^{\mathrm{eff}}_{k,t},c)}.
 \]</span></p>
-<p>For overlapping annotations, marker-level responses such as (<em>{it}), (b</em>{it}^2), or estimated variance contributions can be regressed jointly on (A). The resulting coefficients can construct marker-specific priors on logit or log scales.</p>
+<p>For overlapping annotations, marker-level responses such as <span class="math inline">\(\widehat{dm}_{it}\)</span>, <span class="math inline">\(\widehat b_{it}^2\)</span>, or estimated variance contributions can be regressed jointly on <span class="math inline">\(A\)</span>. The resulting coefficients can construct marker-specific priors on logit or log scales.</p>
 <p>This strategy preserves useful technical ideas for prior learning, annotation-level STBLR/MTBLR, multi-trait sharing priors, and warm starts. However, it is not identical to the four implemented direct workflow wrappers. When the same data estimate priors and evaluate the final model, uncertainty can be understated. Sample splitting, chromosome-wise cross-fitting, external estimates, or a fully hierarchical model are more conservative alternatives.</p>
 </section>
 <section id="choosing-an-annotation-model" class="level2">
@@ -1127,7 +1127,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>marker's prior probability of being active or the expected scale of an active</span>
 <span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>effect.</span>
 <span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>For marker <span class="sc">\(</span>i<span class="sc">\)</span> and trait <span class="sc">\(</span>t<span class="sc">\)</span>, useful prior quantities include:</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>For marker $i$ and trait $t$, useful prior quantities include:</span>
 <span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>\pi_{it} = P(d_{it}=1),</span>
@@ -1136,7 +1136,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>and, for mixture models, component probabilities</span>
-<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\pi_{itc}=P(c_{it}=c)<span class="sc">\)</span>. In proposed multi-trait extensions, annotations</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>$\pi_{itc}=P(c_{it}=c)$. In proposed multi-trait extensions, annotations</span>
 <span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>could additionally influence marker-specific sharing-model probabilities or</span>
 <span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>effect covariance matrices.</span>
 <span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a></span>
@@ -1156,7 +1156,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation Matrix, Overlap, Centering, and Marker Ordering</span></span>
 <span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>Let <span class="sc">\(</span>A<span class="sc">\)</span> be an <span class="sc">\(</span>m \times K<span class="sc">\)</span> annotation matrix:</span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>Let $A$ be an $m \times K$ annotation matrix:</span>
 <span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a>A =</span>
@@ -1175,7 +1175,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a>Overlap is scientifically useful but complicates interpretation. A direct sum</span>
 <span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a>over each annotation double-counts markers in multiple sets and is not a</span>
 <span id="cb10-83"><a href="#cb10-83" aria-hidden="true" tabindex="-1"></a>strict variance partition. Conditional annotation models instead use the</span>
-<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a>whole row <span class="sc">\(</span>A_i<span class="sc">\)</span> to estimate the contribution of one annotation while</span>
+<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a>whole row $A_i$ to estimate the contribution of one annotation while</span>
 <span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a>accounting for the others. Strongly correlated annotation columns can still</span>
 <span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a>make individual coefficients weakly identified.</span>
 <span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a></span>
@@ -1212,7 +1212,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-118"><a href="#cb10-118" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>.</span>
 <span id="cb10-119"><a href="#cb10-119" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-120"><a href="#cb10-120" aria-hidden="true" tabindex="-1"></a>Centering has a statistical role beyond numerical convenience. If</span>
-<span id="cb10-121"><a href="#cb10-121" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>z_{it}=A_i\eta_t<span class="sc">\)</span>, a centered predictor is</span>
+<span id="cb10-121"><a href="#cb10-121" aria-hidden="true" tabindex="-1"></a>$z_{it}=A_i\eta_t$, a centered predictor is</span>
 <span id="cb10-122"><a href="#cb10-122" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-123"><a href="#cb10-123" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-124"><a href="#cb10-124" aria-hidden="true" tabindex="-1"></a>z_{it}^{\mathrm{centered}}</span>
@@ -1293,7 +1293,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-199"><a href="#cb10-199" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-200"><a href="#cb10-200" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-201"><a href="#cb10-201" aria-hidden="true" tabindex="-1"></a>bounded to <span class="in">`vb_multiplier_min`</span> and <span class="in">`vb_multiplier_max`</span>, with</span>
-<span id="cb10-202"><a href="#cb10-202" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>v_{b,it}=v_{b,t}\lambda_{it}<span class="sc">\)</span>.</span>
+<span id="cb10-202"><a href="#cb10-202" aria-hidden="true" tabindex="-1"></a>$v_{b,it}=v_{b,t}\lambda_{it}$.</span>
 <span id="cb10-203"><a href="#cb10-203" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-204"><a href="#cb10-204" aria-hidden="true" tabindex="-1"></a>The direct route is illustrated by the annotation workflow:</span>
 <span id="cb10-205"><a href="#cb10-205" aria-hidden="true" tabindex="-1"></a></span>
@@ -1323,7 +1323,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-229"><a href="#cb10-229" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-230"><a href="#cb10-230" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr_learn_annot()`</span> learns annotation effects while fitting marker</span>
 <span id="cb10-231"><a href="#cb10-231" aria-hidden="true" tabindex="-1"></a>effects. For each trait, it maintains annotation coefficient vectors</span>
-<span id="cb10-232"><a href="#cb10-232" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\eta_{\pi,t}<span class="sc">\)</span> and <span class="sc">\(</span>\eta_{v,t}<span class="sc">\)</span>. The implemented marker-specific prior is</span>
+<span id="cb10-232"><a href="#cb10-232" aria-hidden="true" tabindex="-1"></a>$\eta_{\pi,t}$ and $\eta_{v,t}$. The implemented marker-specific prior is</span>
 <span id="cb10-233"><a href="#cb10-233" aria-hidden="true" tabindex="-1"></a>conceptually</span>
 <span id="cb10-234"><a href="#cb10-234" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-235"><a href="#cb10-235" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1354,8 +1354,8 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-260"><a href="#cb10-260" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-261"><a href="#cb10-261" aria-hidden="true" tabindex="-1"></a>The sampler alternates between marker updates under current marker-specific</span>
 <span id="cb10-262"><a href="#cb10-262" aria-hidden="true" tabindex="-1"></a>priors and annotation-coefficient updates. At intervals controlled by</span>
-<span id="cb10-263"><a href="#cb10-263" aria-hidden="true" tabindex="-1"></a><span class="in">`annot_update_every`</span>, random-walk proposals perturb <span class="sc">\(</span>\eta_{\pi,t}<span class="sc">\)</span> or</span>
-<span id="cb10-264"><a href="#cb10-264" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\eta_{v,t}<span class="sc">\)</span>. The inclusion-coefficient target uses current inclusion</span>
+<span id="cb10-263"><a href="#cb10-263" aria-hidden="true" tabindex="-1"></a><span class="in">`annot_update_every`</span>, random-walk proposals perturb $\eta_{\pi,t}$ or</span>
+<span id="cb10-264"><a href="#cb10-264" aria-hidden="true" tabindex="-1"></a>$\eta_{v,t}$. The inclusion-coefficient target uses current inclusion</span>
 <span id="cb10-265"><a href="#cb10-265" aria-hidden="true" tabindex="-1"></a>states, while the variance-coefficient target uses current active effects.</span>
 <span id="cb10-266"><a href="#cb10-266" aria-hidden="true" tabindex="-1"></a>Gaussian shrinkage scales <span class="in">`sigma_eta_pi`</span> and <span class="in">`sigma_eta_vb`</span> regularize the</span>
 <span id="cb10-267"><a href="#cb10-267" aria-hidden="true" tabindex="-1"></a>coefficients; proposal scales <span class="in">`rw_sd_eta_pi`</span> and <span class="in">`rw_sd_eta_vb`</span> control</span>
@@ -1388,7 +1388,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-294"><a href="#cb10-294" aria-hidden="true" tabindex="-1"></a><span class="fu">## Group Priors</span></span>
 <span id="cb10-295"><a href="#cb10-295" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-296"><a href="#cb10-296" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr_group_annot()`</span> assigns every marker to exactly one group and gives</span>
-<span id="cb10-297"><a href="#cb10-297" aria-hidden="true" tabindex="-1"></a>each group trait-specific prior parameters. If <span class="sc">\(</span>g(i)<span class="sc">\)</span> is marker <span class="sc">\(</span>i<span class="sc">\)</span>'s</span>
+<span id="cb10-297"><a href="#cb10-297" aria-hidden="true" tabindex="-1"></a>each group trait-specific prior parameters. If $g(i)$ is marker $i$'s</span>
 <span id="cb10-298"><a href="#cb10-298" aria-hidden="true" tabindex="-1"></a>group index, the prior is</span>
 <span id="cb10-299"><a href="#cb10-299" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-300"><a href="#cb10-300" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1398,7 +1398,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-304"><a href="#cb10-304" aria-hidden="true" tabindex="-1"></a>\sim N\left(0,v_{b,t}\lambda_{g(i),t}\right).</span>
 <span id="cb10-305"><a href="#cb10-305" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-306"><a href="#cb10-306" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-307"><a href="#cb10-307" aria-hidden="true" tabindex="-1"></a>The R wrapper accepts a length-<span class="sc">\(</span>m<span class="sc">\)</span> <span class="in">`group`</span> vector, optionally named by</span>
+<span id="cb10-307"><a href="#cb10-307" aria-hidden="true" tabindex="-1"></a>The R wrapper accepts a length-$m$ <span class="in">`group`</span> vector, optionally named by</span>
 <span id="cb10-308"><a href="#cb10-308" aria-hidden="true" tabindex="-1"></a>marker. It converts group labels into an internal zero-based <span class="in">`group_index`</span>,</span>
 <span id="cb10-309"><a href="#cb10-309" aria-hidden="true" tabindex="-1"></a>records group names and sizes, initializes <span class="in">`group_pi`</span> and</span>
 <span id="cb10-310"><a href="#cb10-310" aria-hidden="true" tabindex="-1"></a><span class="in">`group_vb_multiplier`</span>, and returns group-level posterior summaries including</span>
@@ -1470,7 +1470,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-376"><a href="#cb10-376" aria-hidden="true" tabindex="-1"></a>Matching the gamma grid aligns that part of the prior specification; it does</span>
 <span id="cb10-377"><a href="#cb10-377" aria-hidden="true" tabindex="-1"></a>not make the complete implementation identical to GCTB SBayesRC.</span>
 <span id="cb10-378"><a href="#cb10-378" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-379"><a href="#cb10-379" aria-hidden="true" tabindex="-1"></a>For marker <span class="sc">\(</span>i<span class="sc">\)</span>, annotations determine component probabilities through a</span>
+<span id="cb10-379"><a href="#cb10-379" aria-hidden="true" tabindex="-1"></a>For marker $i$, annotations determine component probabilities through a</span>
 <span id="cb10-380"><a href="#cb10-380" aria-hidden="true" tabindex="-1"></a>generalized probit stick-breaking construction. Let</span>
 <span id="cb10-381"><a href="#cb10-381" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-382"><a href="#cb10-382" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1479,7 +1479,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-385"><a href="#cb10-385" aria-hidden="true" tabindex="-1"></a>p_{ij}=\Phi(\eta_{ij}),</span>
 <span id="cb10-386"><a href="#cb10-386" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-387"><a href="#cb10-387" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-388"><a href="#cb10-388" aria-hidden="true" tabindex="-1"></a>for <span class="sc">\(</span>C-1<span class="sc">\)</span> stick-breaking steps. Then</span>
+<span id="cb10-388"><a href="#cb10-388" aria-hidden="true" tabindex="-1"></a>for $C-1$ stick-breaking steps. Then</span>
 <span id="cb10-389"><a href="#cb10-389" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-390"><a href="#cb10-390" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-391"><a href="#cb10-391" aria-hidden="true" tabindex="-1"></a>\begin{aligned}</span>
@@ -1491,7 +1491,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-397"><a href="#cb10-397" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-398"><a href="#cb10-398" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-399"><a href="#cb10-399" aria-hidden="true" tabindex="-1"></a>The probabilities are non-negative and sum to one. The native sampler floors</span>
-<span id="cb10-400"><a href="#cb10-400" aria-hidden="true" tabindex="-1"></a>and renormalizes them for numerical stability. Marker <span class="sc">\(</span>i<span class="sc">\)</span>'s expected gamma</span>
+<span id="cb10-400"><a href="#cb10-400" aria-hidden="true" tabindex="-1"></a>and renormalizes them for numerical stability. Marker $i$'s expected gamma</span>
 <span id="cb10-401"><a href="#cb10-401" aria-hidden="true" tabindex="-1"></a>multiplier is</span>
 <span id="cb10-402"><a href="#cb10-402" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-403"><a href="#cb10-403" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1530,7 +1530,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-436"><a href="#cb10-436" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`sbayesrc_annotation_gamma_mean(alpha, gamma)`</span> returns expected gamma per</span>
 <span id="cb10-437"><a href="#cb10-437" aria-hidden="true" tabindex="-1"></a>  annotation row;</span>
 <span id="cb10-438"><a href="#cb10-438" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`sbayesrc_marker_pi(A, alpha, gamma)`</span> applies stick-breaking to</span>
-<span id="cb10-439"><a href="#cb10-439" aria-hidden="true" tabindex="-1"></a>  <span class="sc">\(</span>A\alpha<span class="sc">\)</span>, returning marker-level component probabilities;</span>
+<span id="cb10-439"><a href="#cb10-439" aria-hidden="true" tabindex="-1"></a>  $A\alpha$, returning marker-level component probabilities;</span>
 <span id="cb10-440"><a href="#cb10-440" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`sbayesrc_marker_gamma_mean(A, alpha, gamma)`</span> returns expected gamma per</span>
 <span id="cb10-441"><a href="#cb10-441" aria-hidden="true" tabindex="-1"></a>  marker.</span>
 <span id="cb10-442"><a href="#cb10-442" aria-hidden="true" tabindex="-1"></a></span>
@@ -1595,9 +1595,9 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-501"><a href="#cb10-501" aria-hidden="true" tabindex="-1"></a>\text{next genomic fit}.</span>
 <span id="cb10-502"><a href="#cb10-502" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-503"><a href="#cb10-503" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-504"><a href="#cb10-504" aria-hidden="true" tabindex="-1"></a>First-stage summaries can include posterior means <span class="sc">\(</span>\widehat b_{it}<span class="sc">\)</span>,</span>
-<span id="cb10-505"><a href="#cb10-505" aria-hidden="true" tabindex="-1"></a>posterior inclusion probabilities <span class="sc">\(</span>\widehat{dm}_{it}<span class="sc">\)</span>, residual scores, and</span>
-<span id="cb10-506"><a href="#cb10-506" aria-hidden="true" tabindex="-1"></a>set-specific genomic variance contributions. For an annotation set <span class="sc">\(</span>S_k<span class="sc">\)</span>, a</span>
+<span id="cb10-504"><a href="#cb10-504" aria-hidden="true" tabindex="-1"></a>First-stage summaries can include posterior means $\widehat b_{it}$,</span>
+<span id="cb10-505"><a href="#cb10-505" aria-hidden="true" tabindex="-1"></a>posterior inclusion probabilities $\widehat{dm}_{it}$, residual scores, and</span>
+<span id="cb10-506"><a href="#cb10-506" aria-hidden="true" tabindex="-1"></a>set-specific genomic variance contributions. For an annotation set $S_k$, a</span>
 <span id="cb10-507"><a href="#cb10-507" aria-hidden="true" tabindex="-1"></a>smoothed inclusion estimate is</span>
 <span id="cb10-508"><a href="#cb10-508" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-509"><a href="#cb10-509" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1630,8 +1630,8 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb10-536"><a href="#cb10-536" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb10-537"><a href="#cb10-537" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-538"><a href="#cb10-538" aria-hidden="true" tabindex="-1"></a>For overlapping annotations, marker-level responses such as</span>
-<span id="cb10-539"><a href="#cb10-539" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\widehat{dm}_{it}\), \(\widehat b_{it}^2<span class="sc">\)</span>, or estimated variance</span>
-<span id="cb10-540"><a href="#cb10-540" aria-hidden="true" tabindex="-1"></a>contributions can be regressed jointly on <span class="sc">\(</span>A<span class="sc">\)</span>. The resulting coefficients</span>
+<span id="cb10-539"><a href="#cb10-539" aria-hidden="true" tabindex="-1"></a>$\widehat{dm}_{it}$, $\widehat b_{it}^2$, or estimated variance</span>
+<span id="cb10-540"><a href="#cb10-540" aria-hidden="true" tabindex="-1"></a>contributions can be regressed jointly on $A$. The resulting coefficients</span>
 <span id="cb10-541"><a href="#cb10-541" aria-hidden="true" tabindex="-1"></a>can construct marker-specific priors on logit or log scales.</span>
 <span id="cb10-542"><a href="#cb10-542" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-543"><a href="#cb10-543" aria-hidden="true" tabindex="-1"></a>This strategy preserves useful technical ideas for prior learning,</span>

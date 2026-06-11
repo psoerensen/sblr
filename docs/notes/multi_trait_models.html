@@ -255,28 +255,31 @@ window.Quarto = {
 </section>
 <section id="multi-trait-regression-model" class="level2">
 <h2 class="anchored" data-anchor-id="multi-trait-regression-model">Multi-Trait Regression Model</h2>
-<p>For (t) traits measured on a common set of (n) individuals, the individual-level model is</p>
-<p>[ = + , ]</p>
+<p>For <span class="math inline">\(t\)</span> traits measured on a common set of <span class="math inline">\(n\)</span> individuals, the individual-level model is</p>
+<p><span class="math display">\[
+\mathbf{Y} = \mathbf{X}\mathbf{B} + \mathbf{E},
+\]</span></p>
 <p>where:</p>
 <ul>
-<li>() is the (n t) phenotype matrix;</li>
-<li>() is the (n m) genotype matrix;</li>
-<li>() is the (m t) marker-effect matrix;</li>
-<li>() is the (n t) residual matrix.</li>
+<li><span class="math inline">\(\mathbf{Y}\)</span> is the <span class="math inline">\(n \times t\)</span> phenotype matrix;</li>
+<li><span class="math inline">\(\mathbf{X}\)</span> is the <span class="math inline">\(n \times m\)</span> genotype matrix;</li>
+<li><span class="math inline">\(\mathbf{B}\)</span> is the <span class="math inline">\(m \times t\)</span> marker-effect matrix;</li>
+<li><span class="math inline">\(\mathbf{E}\)</span> is the <span class="math inline">\(n \times t\)</span> residual matrix.</li>
 </ul>
-<p>The (i)th row of (),</p>
-[ _i =
-<span class="math display">\[\begin{bmatrix}
+<p>The <span class="math inline">\(i\)</span>th row of <span class="math inline">\(\mathbf{B}\)</span>,</p>
+<p><span class="math display">\[
+\mathbf{b}_i =
+\begin{bmatrix}
 b_{i1} &amp; \cdots &amp; b_{it}
-\end{bmatrix}\]</span>
-<p>^{T}, ]</p>
-<p>is the effect vector for marker (i). A marker may have no effect, affect one trait, or affect several traits. Joint MT-BLR models use prior probabilities and covariance matrices to describe these possibilities.</p>
+\end{bmatrix}^{\mathsf T},
+\]</span></p>
+<p>is the effect vector for marker <span class="math inline">\(i\)</span>. A marker may have no effect, affect one trait, or affect several traits. Joint MT-BLR models use prior probabilities and covariance matrices to describe these possibilities.</p>
 </section>
 <section id="marker-effects-sharing-and-pleiotropy" class="level2">
 <h2 class="anchored" data-anchor-id="marker-effects-sharing-and-pleiotropy">Marker Effects, Sharing, and Pleiotropy</h2>
 <p>A multi-trait marker model needs to distinguish between two related ideas:</p>
 <ol type="1">
-<li><strong>Trait-sharing pattern:</strong> which elements of (_i) are active.</li>
+<li><strong>Trait-sharing pattern:</strong> which elements of <span class="math inline">\(\mathbf{b}_i\)</span> are active.</li>
 <li><strong>Effect covariance:</strong> how the non-zero effects vary together across traits.</li>
 </ol>
 <p>For three traits, example sharing patterns are:</p>
@@ -310,18 +313,27 @@ b_{i1} &amp; \cdots &amp; b_{it}
 </section>
 <section id="multi-trait-sparse-priors" class="level2">
 <h2 class="anchored" data-anchor-id="multi-trait-sparse-priors">Multi-Trait Sparse Priors</h2>
-<p>The single-trait sparse prior combines an exact null component with an active normal component. MT-BLR generalizes this idea by assigning each marker a trait-sharing model (s_i). Conditional on (s_i), inactive effects are fixed at zero and active effects are drawn from a multivariate distribution.</p>
+<p>The single-trait sparse prior combines an exact null component with an active normal component. MT-BLR generalizes this idea by assigning each marker a trait-sharing model <span class="math inline">\(s_i\)</span>. Conditional on <span class="math inline">\(s_i\)</span>, inactive effects are fixed at zero and active effects are drawn from a multivariate distribution.</p>
 <p>A schematic prior is</p>
-<p>[ s_i (), ]</p>
-<p>[ <em>{i,s_i} s_i ( , </em>{b,s_i} ), ]</p>
-<p>where () contains prior probabilities for the allowed sharing patterns and (_{b,s_i}) is the active-effect covariance submatrix for pattern (s_i).</p>
+<p><span class="math display">\[
+s_i \sim \operatorname{Categorical}(\boldsymbol{\pi}),
+\]</span></p>
+<p><span class="math display">\[
+\mathbf{b}_{i,s_i} \mid s_i
+\sim
+\mathcal{N}\left(
+  \mathbf{0},
+  \boldsymbol{\Sigma}_{b,s_i}
+\right),
+\]</span></p>
+<p>where <span class="math inline">\(\boldsymbol{\pi}\)</span> contains prior probabilities for the allowed sharing patterns and <span class="math inline">\(\boldsymbol{\Sigma}_{b,s_i}\)</span> is the active-effect covariance submatrix for pattern <span class="math inline">\(s_i\)</span>.</p>
 <p>The allowed model space is an important modeling decision:</p>
 <ul>
-<li>A full model space permits all (2^t) inactive/active patterns.</li>
+<li>A full model space permits all <span class="math inline">\(2^t\)</span> inactive/active patterns.</li>
 <li>A restrictive model space may permit only all-null and all-active patterns.</li>
 <li>Custom prior probabilities can favor trait-specific or broadly shared effects.</li>
 </ul>
-<p>As the number of traits increases, the full (2^t) model space grows quickly. Restricting or regularizing the sharing patterns can therefore be both a scientific choice and a computational necessity.</p>
+<p>As the number of traits increases, the full <span class="math inline">\(2^t\)</span> model space grows quickly. Restricting or regularizing the sharing patterns can therefore be both a scientific choice and a computational necessity.</p>
 <p>The documented <code>sblr()</code> interface exposes sharing-model inputs such as <code>models</code> and <code>pimodels</code>. These describe the permitted patterns and their prior probabilities. Exact argument support and behavior should be checked for the selected experimental algorithm before a production analysis.</p>
 </section>
 <section id="genetic-effect-and-residual-covariance" class="level2">
@@ -329,27 +341,38 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <p>Covariance matrices are central to multi-trait inference.</p>
 <section id="active-effect-covariance" class="level3">
 <h3 class="anchored" data-anchor-id="active-effect-covariance">Active-effect covariance</h3>
-<p>The active-effect covariance, (_b), describes how non-zero marker effects vary together across traits. A positive off-diagonal entry favors effects with the same direction; a negative entry favors opposite directions. This covariance is conditional on the marker being active for the corresponding traits.</p>
+<p>The active-effect covariance, <span class="math inline">\(\boldsymbol{\Sigma}_b\)</span>, describes how non-zero marker effects vary together across traits. A positive off-diagonal entry favors effects with the same direction; a negative entry favors opposite directions. This covariance is conditional on the marker being active for the corresponding traits.</p>
 </section>
 <section id="genetic-covariance" class="level3">
 <h3 class="anchored" data-anchor-id="genetic-covariance">Genetic covariance</h3>
 <p>The aggregate genetic value is</p>
-<p>[ _{} = . ]</p>
+<p><span class="math display">\[
+\mathbf{G}_{\mathrm{value}} = \mathbf{X}\mathbf{B}.
+\]</span></p>
 <p>Its covariance across traits depends on both the fitted marker effects and LD. Genetic covariance therefore summarizes the combined architecture rather than only the conditional covariance of active effects.</p>
 </section>
 <section id="residual-covariance" class="level3">
 <h3 class="anchored" data-anchor-id="residual-covariance">Residual covariance</h3>
 <p>Residual vectors are commonly modeled as</p>
-<p>[ _r (, _e), ]</p>
-<p>where (_e) captures cross-trait association not explained by the fitted marker effects. Environmental effects, unmodeled genetic effects, measurement processes, and shared individuals can all contribute.</p>
+<p><span class="math display">\[
+\mathbf{e}_r \sim
+\mathcal{N}\left(\mathbf{0}, \boldsymbol{\Sigma}_e\right),
+\]</span></p>
+<p>where <span class="math inline">\(\boldsymbol{\Sigma}_e\)</span> captures cross-trait association not explained by the fitted marker effects. Environmental effects, unmodeled genetic effects, measurement processes, and shared individuals can all contribute.</p>
 <p>Effect, genetic, and residual covariance answer different questions and should not be interpreted interchangeably.</p>
 </section>
 </section>
 <section id="individual-level-and-summary-statistics-mtblr" class="level2">
 <h2 class="anchored" data-anchor-id="individual-level-and-summary-statistics-mtblr">Individual-Level and Summary-Statistics MTBLR</h2>
-<p>At the individual level, joint MT-BLR uses () and () directly. With complete data, it can calculate all required within-trait and cross-trait products from the observed individuals.</p>
+<p>At the individual level, joint MT-BLR uses <span class="math inline">\(\mathbf{X}\)</span> and <span class="math inline">\(\mathbf{Y}\)</span> directly. With complete data, it can calculate all required within-trait and cross-trait products from the observed individuals.</p>
 <p>At the summary-statistics level, the same calculations must be represented by compatible cross-products:</p>
-<p>[ ^{T}, ^{T}, ^{T}. ]</p>
+<p><span class="math display">\[
+\mathbf{X}^{\mathsf T}\mathbf{Y},
+\qquad
+\mathbf{X}^{\mathsf T}\mathbf{X},
+\qquad
+\mathbf{Y}^{\mathsf T}\mathbf{Y}.
+\]</span></p>
 <p>These correspond to:</p>
 <ul>
 <li>marker-by-trait cross-products, often denoted <code>Xy</code> or <code>wy</code>;</li>
@@ -357,13 +380,13 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <li>the trait cross-product matrix <code>SSY</code>;</li>
 <li>trait-specific sample sizes and, where needed, pairwise sample-overlap information.</li>
 </ul>
-<p>For one trait, (y^{T}y) is a scalar. For several traits, (^{T}) contains both trait-specific sums of squares and cross-trait products. The off-diagonal terms are necessary for estimating and updating residual covariance.</p>
+<p>For one trait, <span class="math inline">\(y^{\mathsf T}y\)</span> is a scalar. For several traits, <span class="math inline">\(\mathbf{Y}^{\mathsf T}\mathbf{Y}\)</span> contains both trait-specific sums of squares and cross-trait products. The off-diagonal terms are necessary for estimating and updating residual covariance.</p>
 <p>The summary statistics, LD, sample sizes, trait order, marker order, and scaling assumptions must all be compatible. See <a href="technical_summary_statistics.html">Technical Appendix: Summary Statistics</a> for the cross-product representation and <a href="technical_multitrait_overlap.html">Technical Appendix: Multi-Trait Overlap</a> for the role of <code>SSY</code> and sample overlap.</p>
 </section>
 <section id="sample-overlap-in-practice" class="level2">
 <h2 class="anchored" data-anchor-id="sample-overlap-in-practice">Sample Overlap in Practice</h2>
 <p>Full sample overlap is the simplest setting: all traits are measured on the same individuals, and <code>SSY</code> can be computed directly from the phenotype matrix. Cross-trait residual covariance then has a direct interpretation on that shared sample.</p>
-<p>With partial overlap, each trait pair may share a different number of individuals. A pairwise overlap matrix, often denoted (_{}), records those counts. Cross-trait phenotype products or covariances then require explicit assumptions about the shared samples and trait scaling.</p>
+<p>With partial overlap, each trait pair may share a different number of individuals. A pairwise overlap matrix, often denoted <span class="math inline">\(\mathbf{N}_{\mathrm{mat}}\)</span>, records those counts. Cross-trait phenotype products or covariances then require explicit assumptions about the shared samples and trait scaling.</p>
 <p>The current CSR multi-trait implementation is closest to a shared-LD, equal-sample-size setting. It consumes cross-trait phenotype information but does not expose a general <code>Nmat</code>-aware workflow for arbitrary partial overlap. Analyses with partial or uncertain overlap should therefore be treated as a technical extension, not as a routine current workflow.</p>
 </section>
 <section id="simulation-and-model-development" class="level2">
@@ -957,30 +980,30 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="fu">## Multi-Trait Regression Model</span></span>
 <span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>For <span class="sc">\(</span>t<span class="sc">\)</span> traits measured on a common set of <span class="sc">\(</span>n<span class="sc">\)</span> individuals, the</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>For $t$ traits measured on a common set of $n$ individuals, the</span>
 <span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>individual-level model is</span>
 <span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>\mathbf{Y} = \mathbf{X}\mathbf{B} + \mathbf{E},</span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>where:</span>
 <span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\mathbf{Y}<span class="sc">\)</span> is the <span class="sc">\(</span>n \times t<span class="sc">\)</span> phenotype matrix;</span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\mathbf{X}<span class="sc">\)</span> is the <span class="sc">\(</span>n \times m<span class="sc">\)</span> genotype matrix;</span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\mathbf{B}<span class="sc">\)</span> is the <span class="sc">\(</span>m \times t<span class="sc">\)</span> marker-effect matrix;</span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\mathbf{E}<span class="sc">\)</span> is the <span class="sc">\(</span>n \times t<span class="sc">\)</span> residual matrix.</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\mathbf{Y}$ is the $n \times t$ phenotype matrix;</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\mathbf{X}$ is the $n \times m$ genotype matrix;</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\mathbf{B}$ is the $m \times t$ marker-effect matrix;</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\mathbf{E}$ is the $n \times t$ residual matrix.</span>
 <span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>The <span class="sc">\(</span>i<span class="sc">\)</span>th row of <span class="sc">\(</span>\mathbf{B}<span class="sc">\)</span>,</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>The $i$th row of $\mathbf{B}$,</span>
 <span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>\mathbf{b}_i =</span>
 <span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
 <span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>b_{i1} &amp; \cdots &amp; b_{it}</span>
 <span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}^{\mathsf T},</span>
-<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>is the effect vector for marker <span class="sc">\(</span>i<span class="sc">\)</span>. A marker may have no effect, affect one</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>is the effect vector for marker $i$. A marker may have no effect, affect one</span>
 <span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>trait, or affect several traits. Joint MT-BLR models use prior probabilities</span>
 <span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>and covariance matrices to describe these possibilities.</span>
 <span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a></span>
@@ -988,7 +1011,7 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>A multi-trait marker model needs to distinguish between two related ideas:</span>
 <span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Trait-sharing pattern:** which elements of <span class="sc">\(</span>\mathbf{b}_i<span class="sc">\)</span> are active.</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Trait-sharing pattern:** which elements of $\mathbf{b}_i$ are active.</span>
 <span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Effect covariance:** how the non-zero effects vary together across</span>
 <span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>   traits.</span>
 <span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a></span>
@@ -1011,36 +1034,36 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>The single-trait sparse prior combines an exact null component with an active</span>
 <span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>normal component. MT-BLR generalizes this idea by assigning each marker a</span>
-<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>trait-sharing model <span class="sc">\(</span>s_i<span class="sc">\)</span>. Conditional on <span class="sc">\(</span>s_i<span class="sc">\)</span>, inactive effects are fixed</span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>trait-sharing model $s_i$. Conditional on $s_i$, inactive effects are fixed</span>
 <span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>at zero and active effects are drawn from a multivariate distribution.</span>
 <span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>A schematic prior is</span>
 <span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>s_i \sim \operatorname{Categorical}(\boldsymbol{\pi}),</span>
-<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>\mathbf{b}_{i,s_i} \mid s_i</span>
 <span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a>\sim</span>
 <span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>\mathcal{N}\left(</span>
 <span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>  \mathbf{0},</span>
 <span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>  \boldsymbol{\Sigma}_{b,s_i}</span>
 <span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>\right),</span>
-<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\boldsymbol{\pi}<span class="sc">\)</span> contains prior probabilities for the allowed</span>
-<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>sharing patterns and <span class="sc">\(</span>\boldsymbol{\Sigma}_{b,s_i}<span class="sc">\)</span> is the active-effect</span>
-<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>covariance submatrix for pattern <span class="sc">\(</span>s_i<span class="sc">\)</span>.</span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>where $\boldsymbol{\pi}$ contains prior probabilities for the allowed</span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>sharing patterns and $\boldsymbol{\Sigma}_{b,s_i}$ is the active-effect</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>covariance submatrix for pattern $s_i$.</span>
 <span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>The allowed model space is an important modeling decision:</span>
 <span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>A full model space permits all <span class="sc">\(</span>2^t<span class="sc">\)</span> inactive/active patterns.</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>A full model space permits all $2^t$ inactive/active patterns.</span>
 <span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>A restrictive model space may permit only all-null and all-active patterns.</span>
 <span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Custom prior probabilities can favor trait-specific or broadly shared</span>
 <span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>  effects.</span>
 <span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>As the number of traits increases, the full <span class="sc">\(</span>2^t<span class="sc">\)</span> model space grows quickly.</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>As the number of traits increases, the full $2^t$ model space grows quickly.</span>
 <span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a>Restricting or regularizing the sharing patterns can therefore be both a</span>
 <span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>scientific choice and a computational necessity.</span>
 <span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a></span>
@@ -1056,7 +1079,7 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a><span class="fu">### Active-effect covariance</span></span>
 <span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>The active-effect covariance,</span>
-<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\boldsymbol{\Sigma}_b<span class="sc">\)</span>, describes how non-zero marker effects vary together</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>$\boldsymbol{\Sigma}_b$, describes how non-zero marker effects vary together</span>
 <span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>across traits. A positive off-diagonal entry favors effects with the same</span>
 <span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>direction; a negative entry favors opposite directions. This covariance is</span>
 <span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>conditional on the marker being active for the corresponding traits.</span>
@@ -1065,9 +1088,9 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>The aggregate genetic value is</span>
 <span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>\mathbf{G}_{\mathrm{value}} = \mathbf{X}\mathbf{B}.</span>
-<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a>Its covariance across traits depends on both the fitted marker effects and LD.</span>
 <span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a>Genetic covariance therefore summarizes the combined architecture rather than</span>
@@ -1077,12 +1100,12 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>Residual vectors are commonly modeled as</span>
 <span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>\mathbf{e}_r \sim</span>
 <span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>\mathcal{N}\left(\mathbf{0}, \boldsymbol{\Sigma}_e\right),</span>
-<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\boldsymbol{\Sigma}_e<span class="sc">\)</span> captures cross-trait association not explained</span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>where $\boldsymbol{\Sigma}_e$ captures cross-trait association not explained</span>
 <span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>by the fitted marker effects. Environmental effects, unmodeled genetic effects,</span>
 <span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>measurement processes, and shared individuals can all contribute.</span>
 <span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a></span>
@@ -1091,20 +1114,20 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a><span class="fu">## Individual-Level and Summary-Statistics MTBLR</span></span>
 <span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>At the individual level, joint MT-BLR uses <span class="sc">\(</span>\mathbf{X}<span class="sc">\)</span> and</span>
-<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\mathbf{Y}<span class="sc">\)</span> directly. With complete data, it can calculate all required</span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>At the individual level, joint MT-BLR uses $\mathbf{X}$ and</span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>$\mathbf{Y}$ directly. With complete data, it can calculate all required</span>
 <span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a>within-trait and cross-trait products from the observed individuals.</span>
 <span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a>At the summary-statistics level, the same calculations must be represented by</span>
 <span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a>compatible cross-products:</span>
 <span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a>\mathbf{X}^{\mathsf T}\mathbf{Y},</span>
 <span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a>\mathbf{X}^{\mathsf T}\mathbf{X},</span>
 <span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb2-180"><a href="#cb2-180" aria-hidden="true" tabindex="-1"></a>\mathbf{Y}^{\mathsf T}\mathbf{Y}.</span>
-<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb2-182"><a href="#cb2-182" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-183"><a href="#cb2-183" aria-hidden="true" tabindex="-1"></a>These correspond to:</span>
 <span id="cb2-184"><a href="#cb2-184" aria-hidden="true" tabindex="-1"></a></span>
@@ -1114,8 +1137,8 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-188"><a href="#cb2-188" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>trait-specific sample sizes and, where needed, pairwise sample-overlap</span>
 <span id="cb2-189"><a href="#cb2-189" aria-hidden="true" tabindex="-1"></a>  information.</span>
 <span id="cb2-190"><a href="#cb2-190" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a>For one trait, <span class="sc">\(</span>y^{\mathsf T}y<span class="sc">\)</span> is a scalar. For several traits,</span>
-<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\mathbf{Y}^{\mathsf T}\mathbf{Y}<span class="sc">\)</span> contains both trait-specific sums of</span>
+<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a>For one trait, $y^{\mathsf T}y$ is a scalar. For several traits,</span>
+<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a>$\mathbf{Y}^{\mathsf T}\mathbf{Y}$ contains both trait-specific sums of</span>
 <span id="cb2-193"><a href="#cb2-193" aria-hidden="true" tabindex="-1"></a>squares and cross-trait products. The off-diagonal terms are necessary for</span>
 <span id="cb2-194"><a href="#cb2-194" aria-hidden="true" tabindex="-1"></a>estimating and updating residual covariance.</span>
 <span id="cb2-195"><a href="#cb2-195" aria-hidden="true" tabindex="-1"></a></span>
@@ -1135,7 +1158,7 @@ b_{i1} &amp; \cdots &amp; b_{it}
 <span id="cb2-209"><a href="#cb2-209" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-210"><a href="#cb2-210" aria-hidden="true" tabindex="-1"></a>With partial overlap, each trait pair may share a different number of</span>
 <span id="cb2-211"><a href="#cb2-211" aria-hidden="true" tabindex="-1"></a>individuals. A pairwise overlap matrix, often denoted</span>
-<span id="cb2-212"><a href="#cb2-212" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\mathbf{N}_{\mathrm{mat}}<span class="sc">\)</span>, records those counts. Cross-trait phenotype</span>
+<span id="cb2-212"><a href="#cb2-212" aria-hidden="true" tabindex="-1"></a>$\mathbf{N}_{\mathrm{mat}}$, records those counts. Cross-trait phenotype</span>
 <span id="cb2-213"><a href="#cb2-213" aria-hidden="true" tabindex="-1"></a>products or covariances then require explicit assumptions about the shared</span>
 <span id="cb2-214"><a href="#cb2-214" aria-hidden="true" tabindex="-1"></a>samples and trait scaling.</span>
 <span id="cb2-215"><a href="#cb2-215" aria-hidden="true" tabindex="-1"></a></span>

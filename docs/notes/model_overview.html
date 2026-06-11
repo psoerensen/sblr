@@ -183,7 +183,7 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#common-model-y-xb-e" id="toc-common-model-y-xb-e" class="nav-link active" data-scroll-target="#common-model-y-xb-e">Common Model: (y = Xb + e)</a></li>
+  <li><a href="#common-model-y-xb-e" id="toc-common-model-y-xb-e" class="nav-link active" data-scroll-target="#common-model-y-xb-e">Common Model: <span class="math inline">\(y = Xb + e\)</span></a></li>
   <li><a href="#three-axes-for-choosing-a-model" id="toc-three-axes-for-choosing-a-model" class="nav-link" data-scroll-target="#three-axes-for-choosing-a-model">Three Axes for Choosing a Model</a>
   <ul class="collapse">
   <li><a href="#single-trait-versus-multi-trait" id="toc-single-trait-versus-multi-trait" class="nav-link" data-scroll-target="#single-trait-versus-multi-trait">Single-Trait Versus Multi-Trait</a></li>
@@ -250,17 +250,17 @@ window.Quarto = {
 </ol>
 <p>These axes describe different choices. For example, a model can be single-trait, use summary statistics with disk-backed sparse LD, and use an annotation-informed prior. This note maps those choices to the current public functions and to the notes that explain them in detail.</p>
 <section id="common-model-y-xb-e" class="level2">
-<h2 class="anchored" data-anchor-id="common-model-y-xb-e">Common Model: (y = Xb + e)</h2>
+<h2 class="anchored" data-anchor-id="common-model-y-xb-e">Common Model: <span class="math inline">\(y = Xb + e\)</span></h2>
 <p>For one trait, the common regression model is</p>
 <p><span class="math display">\[
 y = Xb + e,
 \]</span></p>
-<p>where (X) is an (n m) genotype matrix, (b) is a vector of marker effects, and (e) is residual variation. Bayesian genomic regression combines this likelihood with a prior on marker effects and, often, latent inclusion indicators.</p>
-<p>For (n_t) traits, the model becomes</p>
+<p>where <span class="math inline">\(X\)</span> is an <span class="math inline">\(n \times m\)</span> genotype matrix, <span class="math inline">\(b\)</span> is a vector of marker effects, and <span class="math inline">\(e\)</span> is residual variation. Bayesian genomic regression combines this likelihood with a prior on marker effects and, often, latent inclusion indicators.</p>
+<p>For <span class="math inline">\(n_t\)</span> traits, the model becomes</p>
 <p><span class="math display">\[
 Y = XB + E,
 \]</span></p>
-<p>where each row of (B) is a marker-effect vector across traits. A genuinely joint multi-trait model can describe covariance among effects, residuals, or trait-sharing patterns. Running one single-trait model per phenotype can be useful and parallelizable, but it is not equivalent to a joint multi-trait likelihood.</p>
+<p>where each row of <span class="math inline">\(B\)</span> is a marker-effect vector across traits. A genuinely joint multi-trait model can describe covariance among effects, residuals, or trait-sharing patterns. Running one single-trait model per phenotype can be useful and parallelizable, but it is not equivalent to a joint multi-trait likelihood.</p>
 <p>The main posterior marker summaries are:</p>
 <p><span class="math display">\[
 \widehat b_{it} = E(b_{it}\mid\text{data})
@@ -288,7 +288,7 @@ ww_j = x_j^\top x_j,
 \qquad
 yy = y^\top y,
 \]</span></p>
-<p>plus compatible LD and sample size (n). The residual score can be maintained as</p>
+<p>plus compatible LD and sample size <span class="math inline">\(n\)</span>. The residual score can be maintained as</p>
 <p><span class="math display">\[
 r = X^\top y - X^\top Xb.
 \]</span></p>
@@ -317,7 +317,7 @@ b_{it}\mid d_{it}=0 = 0.
 </section>
 <section id="sparse-mixture-priors-and-posterior-outputs" class="level2">
 <h2 class="anchored" data-anchor-id="sparse-mixture-priors-and-posterior-outputs">Sparse Mixture Priors and Posterior Outputs</h2>
-<p>Sparse Bayesian regression allows many markers to have exactly zero current effects while a subset belongs to active components. The inclusion indicator (d_{it}) records whether marker (i) is active for trait (t). Across MCMC samples:</p>
+<p>Sparse Bayesian regression allows many markers to have exactly zero current effects while a subset belongs to active components. The inclusion indicator <span class="math inline">\(d_{it}\)</span> records whether marker <span class="math inline">\(i\)</span> is active for trait <span class="math inline">\(t\)</span>. Across MCMC samples:</p>
 <ul>
 <li><code>dm[i, t]</code> estimates the posterior inclusion probability;</li>
 <li><code>bm[i, t]</code> estimates the posterior mean marker effect;</li>
@@ -964,7 +964,7 @@ b_{it}\mid d_{it}=0 = 0.
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>annotation-informed prior. This note maps those choices to the current public</span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>functions and to the notes that explain them in detail.</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Common Model: \(y = Xb + e\)</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Common Model: $y = Xb + e$</span></span>
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>For one trait, the common regression model is</span>
 <span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
@@ -972,18 +972,18 @@ b_{it}\mid d_{it}=0 = 0.
 <span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>y = Xb + e,</span>
 <span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>X<span class="sc">\)</span> is an <span class="sc">\(</span>n \times m<span class="sc">\)</span> genotype matrix, <span class="sc">\(</span>b<span class="sc">\)</span> is a vector of marker</span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>effects, and <span class="sc">\(</span>e<span class="sc">\)</span> is residual variation. Bayesian genomic regression combines</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>where $X$ is an $n \times m$ genotype matrix, $b$ is a vector of marker</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>effects, and $e$ is residual variation. Bayesian genomic regression combines</span>
 <span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>this likelihood with a prior on marker effects and, often, latent inclusion</span>
 <span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>indicators.</span>
 <span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>For <span class="sc">\(</span>n_t<span class="sc">\)</span> traits, the model becomes</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>For $n_t$ traits, the model becomes</span>
 <span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>Y = XB + E,</span>
 <span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>where each row of <span class="sc">\(</span>B<span class="sc">\)</span> is a marker-effect vector across traits. A genuinely</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>where each row of $B$ is a marker-effect vector across traits. A genuinely</span>
 <span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>joint multi-trait model can describe covariance among effects, residuals, or</span>
 <span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>trait-sharing patterns. Running one single-trait model per phenotype can be</span>
 <span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>useful and parallelizable, but it is not equivalent to a joint multi-trait</span>
@@ -1042,7 +1042,7 @@ b_{it}\mid d_{it}=0 = 0.
 <span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a>yy = y^\top y,</span>
 <span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a>plus compatible LD and sample size <span class="sc">\(</span>n<span class="sc">\)</span>. The residual score can be maintained</span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a>plus compatible LD and sample size $n$. The residual score can be maintained</span>
 <span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a>as</span>
 <span id="cb1-102"><a href="#cb1-102" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-103"><a href="#cb1-103" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1093,7 +1093,7 @@ b_{it}\mid d_{it}=0 = 0.
 <span id="cb1-148"><a href="#cb1-148" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-149"><a href="#cb1-149" aria-hidden="true" tabindex="-1"></a>Sparse Bayesian regression allows many markers to have exactly zero current</span>
 <span id="cb1-150"><a href="#cb1-150" aria-hidden="true" tabindex="-1"></a>effects while a subset belongs to active components. The inclusion indicator</span>
-<span id="cb1-151"><a href="#cb1-151" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>d_{it}<span class="sc">\)</span> records whether marker <span class="sc">\(</span>i<span class="sc">\)</span> is active for trait <span class="sc">\(</span>t<span class="sc">\)</span>. Across MCMC</span>
+<span id="cb1-151"><a href="#cb1-151" aria-hidden="true" tabindex="-1"></a>$d_{it}$ records whether marker $i$ is active for trait $t$. Across MCMC</span>
 <span id="cb1-152"><a href="#cb1-152" aria-hidden="true" tabindex="-1"></a>samples:</span>
 <span id="cb1-153"><a href="#cb1-153" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-154"><a href="#cb1-154" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`dm[i, t]`</span> estimates the posterior inclusion probability;</span>

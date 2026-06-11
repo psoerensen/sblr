@@ -124,7 +124,7 @@ preprocessing must be explicit:
 - centering and scaling choices affect `stats$yy` and prior initialization;
 - missing phenotype handling must be consistent with the chosen sample.
 
-For trait \(t\), `bed_xtx_xty()` constructs quantities including
+For trait $t$, `bed_xtx_xty()` constructs quantities including
 
 $$
 wy_t = X^\top y_t,
@@ -134,7 +134,7 @@ ww_t = \operatorname{diag}(X^\top X),
 yy_t = y_t^\top y_t.
 $$
 
-The sparse-LD branch must use the same version of \(X\), including sample rows
+The sparse-LD branch must use the same version of $X$, including sample rows
 and marker scaling, that generated these statistics.
 
 ## Path A: Direct Individual-Level Fitting With `stblr_bed_marker()`
@@ -196,13 +196,13 @@ The main output handoff is:
 
 | Object | Meaning and use |
 |---|---|
-| `stats$wy` | Marker-trait cross-products \(X^\top Y\); drives marker-residual scores. |
+| `stats$wy` | Marker-trait cross-products $X^\top Y$; drives marker-residual scores. |
 | `stats$ww` | Per-marker diagonal genotype cross-products; used by marker updates. |
-| `stats$yy` | Per-trait phenotype sums of squares \(y_t^\top y_t\); used for likelihood and variance initialization. |
+| `stats$yy` | Per-trait phenotype sums of squares $y_t^\top y_t$; used for likelihood and variance initialization. |
 | `stats$n` | Sample size when returned; otherwise supply compatible `n` to `stblr_csr()`. |
 | `stats$m` | Marker count when returned; otherwise inferred from `stats$ww[[1]]`. |
 
-`stats$wy` and `stats$ww` must each describe the same \(m\) markers, in the
+`stats$wy` and `stats$ww` must each describe the same $m$ markers, in the
 same order later used by the CSR LD matrix. `stats$yy` has one entry per trait,
 not one entry per marker.
 
@@ -214,7 +214,7 @@ one chromosome and one BED file.
 ## Path B, Step 2: Streaming Sparse LD With `sparseLD_stream_CSR()`
 
 `sparseLD_stream_CSR()` computes marker correlations from BED data, applies
-distance and \(r^2\) retention rules, and writes a disk-backed CSR
+distance and $r^2$ retention rules, and writes a disk-backed CSR
 representation:
 
 ```r
@@ -244,7 +244,7 @@ Conceptually, CSR stores:
 
 - `row_ptr`: offsets delimiting retained entries for each LD row;
 - `col_idx`: column indices of retained marker pairs;
-- `values`: retained marker correlations \(r\).
+- `values`: retained marker correlations $r$.
 
 The disk format stores the upper triangle with an implicit unit diagonal and
 zero-based column indices. Package functions handle this storage contract;
@@ -296,7 +296,7 @@ the disk representation through package code and handle its index base.
 Useful checks include confirming:
 
 - matrix dimensions equal the selected marker count;
-- row pointers have length \(m+1\);
+- row pointers have length $m+1$;
 - column indices fall within the expected base and dimensions;
 - metadata records the intended `r2_threshold`, distance limits, and sample
   count;
@@ -335,9 +335,9 @@ stats$wy + stats$ww + ld_prefix
 ```
 
 The wrapper infers the number of traits from `length(stats$yy)`. It takes
-`n` from the function argument or `stats$n`, and takes \(m\) from the function
+`n` from the function argument or `stats$n`, and takes $m$ from the function
 argument, `stats$m`, or `length(stats$ww[[1]])`. Explicitly supplying `n` and
-checking \(m\) before fitting makes the data contract easier to audit.
+checking $m$ before fitting makes the data contract easier to audit.
 
 `stats$wy`, `stats$ww`, and `stats$yy` summarize the phenotype side and
 diagonal marker information. The files at `ld_prefix` provide the retained
@@ -427,9 +427,9 @@ Before fitting `stblr_csr()`, verify:
 3. `y` has `n` rows when `rows = NULL`, or describes the selected rows when
    `rows` is supplied.
 4. `af` has one value per selected marker and follows `cls` order.
-5. Every trait's `stats$wy` and `stats$ww` has length \(m=\text{length(cls)}\).
+5. Every trait's `stats$wy` and `stats$ww` has length $m=\text{length(cls)}$.
 6. `stats$yy` has one value per phenotype trait.
-7. CSR `nrow` and `ncol` both equal \(m\), and `row_ptr` has length \(m+1\).
+7. CSR `nrow` and `ncol` both equal $m$, and `row_ptr` has length $m+1$.
 8. CSR index bases are left to package functions; use `one_based` only when
    inspecting a returned R object.
 9. CSR metadata records the expected sample count, threshold, and distance

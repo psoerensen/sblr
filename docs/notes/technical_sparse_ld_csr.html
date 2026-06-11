@@ -255,7 +255,7 @@ window.Quarto = {
 <p>The present file suffixes, integer widths, floating-point widths, metadata keys, and upper-triangle storage convention are documented here to explain behavior and support validation. They should not be treated as a guaranteed manual file-format API. Use package readers, writers, and samplers rather than editing or independently constructing these files.</p>
 <section id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="level2">
 <h2 class="anchored" data-anchor-id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From BED Genotypes to Sufficient Statistics and Sparse LD</h2>
-<p>For genotype matrix (X), phenotype vector (y), and marker effects (b), a summary-statistics marker sampler needs quantities including</p>
+<p>For genotype matrix <span class="math inline">\(X\)</span>, phenotype vector <span class="math inline">\(y\)</span>, and marker effects <span class="math inline">\(b\)</span>, a summary-statistics marker sampler needs quantities including</p>
 <p><span class="math display">\[
 wy=X^\top y,
 \qquad
@@ -277,7 +277,7 @@ r=X^\top(y-Xb)=wy-X^\top Xb.
                                               v
                               stblr_csr(stats, ld_prefix, ...)</code></pre>
 <p><code>bed_xtx_xty()</code> supplies the phenotype cross-products and diagonal marker cross-products. <code>sparseLD_stream_CSR()</code> supplies retained off-diagonal marker correlations. During CSR model setup, the sampler combines the stored correlations with <code>stats$ww</code> to recover the corresponding off-diagonal cross-product scale.</p>
-<p>This split is important: the on-disk values are correlations, not raw (X_i^X_j), and the diagonal cross-products are supplied separately by <code>stats$ww</code>.</p>
+<p>This split is important: the on-disk values are correlations, not raw <span class="math inline">\(X_i^\top X_j\)</span>, and the diagonal cross-products are supplied separately by <code>stats$ww</code>.</p>
 </section>
 <section id="matrix-represented-by-the-current-writer" class="level2">
 <h2 class="anchored" data-anchor-id="matrix-represented-by-the-current-writer">Matrix Represented by the Current Writer</h2>
@@ -288,18 +288,18 @@ r_{ij}
 \frac{x_i^\top x_j}
 {\sqrt{(x_i^\top x_i)(x_j^\top x_j)}}.
 \]</span></p>
-<p>The writer retains an off-diagonal pair (i&lt;j) when it passes the configured distance rules and</p>
+<p>The writer retains an off-diagonal pair <span class="math inline">\(i&lt;j\)</span> when it passes the configured distance rules and</p>
 <p><span class="math display">\[
 r_{ij}^2 \geq \texttt{r2_threshold}.
 \]</span></p>
-<p>The stored value is signed (r_{ij}), not (r_{ij}^2). The current streamed artifact stores:</p>
+<p>The stored value is signed <span class="math inline">\(r_{ij}\)</span>, not <span class="math inline">\(r_{ij}^2\)</span>. The current streamed artifact stores:</p>
 <ul>
-<li>only the upper triangle, (j&gt;i);</li>
+<li>only the upper triangle, <span class="math inline">\(j&gt;i\)</span>;</li>
 <li>no explicit diagonal entries;</li>
 <li>an implicit diagonal correlation of one; and</li>
 <li>only pairs passing the threshold and window rules.</li>
 </ul>
-<p>Thus the disk artifact is a sparse, upper-triangle, correlation-like representation of LD. It is not itself the complete (X^X) matrix.</p>
+<p>Thus the disk artifact is a sparse, upper-triangle, correlation-like representation of LD. It is not itself the complete <span class="math inline">\(X^\top X\)</span> matrix.</p>
 <p>When a CSR ST-BLR sampler opens the prefix, it reads the stored correlation and constructs a symmetric in-memory neighbor structure. For each retained pair it converts</p>
 <p><span class="math display">\[
 r_{ij}
@@ -312,7 +312,7 @@ r_{ij}\sqrt{ww_iww_j}.
 </section>
 <section id="what-csr-means" class="level2">
 <h2 class="anchored" data-anchor-id="what-csr-means">What CSR Means</h2>
-<p>Compressed sparse row format represents a sparse matrix without allocating all (m^2) entries. Three arrays describe the retained entries:</p>
+<p>Compressed sparse row format represents a sparse matrix without allocating all <span class="math inline">\(m^2\)</span> entries. Three arrays describe the retained entries:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -327,7 +327,7 @@ r_{ij}\sqrt{ww_iww_j}.
 <tbody>
 <tr class="odd">
 <td><code>row_ptr</code></td>
-<td>Cumulative offsets delimiting each row’s retained entries; length (m+1).</td>
+<td>Cumulative offsets delimiting each row’s retained entries; length <span class="math inline">\(m+1\)</span>.</td>
 </tr>
 <tr class="even">
 <td><code>col_idx</code></td>
@@ -339,7 +339,7 @@ r_{ij}\sqrt{ww_iww_j}.
 </tr>
 </tbody>
 </table>
-<p>For zero-based row pointers, entries belonging to row (i) occupy positions</p>
+<p>For zero-based row pointers, entries belonging to row <span class="math inline">\(i\)</span> occupy positions</p>
 <p><span class="math display">\[
 \texttt{row\_ptr}[i]
 \quad\text{through}\quad
@@ -358,13 +358,13 @@ values  = [0.40, -0.20, 0.15]</code></pre>
 </section>
 <section id="why-disk-backed-sparse-csr-is-used" class="level2">
 <h2 class="anchored" data-anchor-id="why-disk-backed-sparse-csr-is-used">Why Disk-Backed Sparse CSR Is Used</h2>
-<p>A dense (mm) LD matrix requires (O(m^2)) storage. This becomes prohibitive for genome-scale marker sets even when most scientifically useful LD relationships are local or sufficiently strong.</p>
-<p>Sparse CSR reduces storage toward (O(m+)), where <code>nnz</code> is the number of retained off-diagonal upper-triangle entries. Disk-backed storage provides two additional advantages:</p>
+<p>A dense <span class="math inline">\(m\times m\)</span> LD matrix requires <span class="math inline">\(O(m^2)\)</span> storage. This becomes prohibitive for genome-scale marker sets even when most scientifically useful LD relationships are local or sufficiently strong.</p>
+<p>Sparse CSR reduces storage toward <span class="math inline">\(O(m+\mathrm{nnz})\)</span>, where <code>nnz</code> is the number of retained off-diagonal upper-triangle entries. Disk-backed storage provides two additional advantages:</p>
 <ul>
 <li>the resulting LD artifact can be reused by multiple CSR model fits; and</li>
 <li>the complete sparse arrays do not have to be returned to or retained in R during construction.</li>
 </ul>
-<p><code>sparseLD_stream_CSR()</code> processes marker blocks, computes candidate cross-products for block pairs, applies distance and (r^2) rules, and writes retained entries incrementally. It still needs working memory for decoded genotype blocks and block cross-products, but it avoids constructing either a dense whole-genome LD matrix or the complete sparse result in R.</p>
+<p><code>sparseLD_stream_CSR()</code> processes marker blocks, computes candidate cross-products for block pairs, applies distance and <span class="math inline">\(r^2\)</span> rules, and writes retained entries incrementally. It still needs working memory for decoded genotype blocks and block cross-products, but it avoids constructing either a dense whole-genome LD matrix or the complete sparse result in R.</p>
 </section>
 <section id="stable-user-facing-contract" class="level2">
 <h2 class="anchored" data-anchor-id="stable-user-facing-contract">Stable User-Facing Contract</h2>
@@ -475,7 +475,7 @@ Optional positive one-based sample indices. When supplied, LD is computed from t
 </dd>
 <dt><code>af</code></dt>
 <dd>
-Optional list of allele frequencies aligned to <code>cls</code>. When omitted, the writer computes allele frequencies from the selected packed genotypes. Supplied values must be finite and in ([0,1]). Missing genotypes are represented as zero after standardization, corresponding to mean imputation on that scale.
+Optional list of allele frequencies aligned to <code>cls</code>. When omitted, the writer computes allele frequencies from the selected packed genotypes. Supplied values must be finite and in <span class="math inline">\([0,1]\)</span>. Missing genotypes are represented as zero after standardization, corresponding to mean imputation on that scale.
 </dd>
 </dl>
 </section>
@@ -484,7 +484,7 @@ Optional list of allele frequencies aligned to <code>cls</code>. When omitted, t
 <dl>
 <dt><code>r2_threshold</code></dt>
 <dd>
-Minimum squared correlation for retaining an eligible pair. The writer compares (r_{ij}^2) with this value but stores signed (r_{ij}). A larger threshold produces a sparser approximation and may remove weak but collectively relevant LD.
+Minimum squared correlation for retaining an eligible pair. The writer compares <span class="math inline">\(r_{ij}^2\)</span> with this value but stores signed <span class="math inline">\(r_{ij}\)</span>. A larger threshold produces a sparser approximation and may remove weak but collectively relevant LD.
 </dd>
 <dt><code>max_distance_variants</code></dt>
 <dd>
@@ -499,7 +499,7 @@ Maximum base-pair separation when positions are supplied. Positive values restri
 Optional list of marker base-pair positions aligned to <code>cls</code>. When absent, the base-pair distance restriction cannot be applied, even if <code>max_distance_bp</code> is positive.
 </dd>
 </dl>
-<p>A pair must pass every enabled window rule before its (r^2) is tested. Disabling both distance restrictions permits all upper-triangle marker pairs to be considered and can be computationally expensive.</p>
+<p>A pair must pass every enabled window rule before its <span class="math inline">\(r^2\)</span> is tested. Disabling both distance restrictions permits all upper-triangle marker pairs to be considered and can be computationally expensive.</p>
 </section>
 <section id="computational-settings" class="level3">
 <h3 class="anchored" data-anchor-id="computational-settings">Computational Settings</h3>
@@ -528,8 +528,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <ol type="1">
 <li>decodes standardized marker values into floating-point working buffers;</li>
 <li>computes raw block cross-products with matrix multiplication;</li>
-<li>converts each eligible cross-product to correlation (r_{ij});</li>
-<li>applies distance and (r^2) retention rules; and</li>
+<li>converts each eligible cross-product to correlation <span class="math inline">\(r_{ij}\)</span>;</li>
+<li>applies distance and <span class="math inline">\(r^2\)</span> retention rules; and</li>
 <li>appends retained upper-triangle column indices and values to disk.</li>
 </ol>
 <p>After each row, it writes the cumulative retained-entry count to <code>row_ptr</code>. Consequently, the final row pointer equals <code>nnz</code>.</p>
@@ -544,7 +544,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <li><code>sparseLD_read_CSR(prefix, one_based = TRUE)</code> returns one-based column indices for convenient R inspection.</li>
 </ol>
 <p>The reader’s <code>one_based</code> argument changes only the returned <code>col_idx</code> vector. <code>row_ptr</code> remains a zero-based cumulative pointer array whose first value is zero and whose final value is <code>nnz</code>.</p>
-<p>The current streamed artifact omits diagonal entries and reports <code>diag = "implicit_1"</code>. Downstream ST-BLR samplers use the supplied <code>stats$ww</code> for diagonal (X_i^X_i) contributions. Users inspecting the sparse arrays should not mistake absence of explicit diagonal entries for a zero diagonal.</p>
+<p>The current streamed artifact omits diagonal entries and reports <code>diag = "implicit_1"</code>. Downstream ST-BLR samplers use the supplied <code>stats$ww</code> for diagonal <span class="math inline">\(X_i^\top X_i\)</span> contributions. Users inspecting the sparse arrays should not mistake absence of explicit diagonal entries for a zero diagonal.</p>
 <p>Package functions validate and handle these conventions. Manual index conversion or insertion of diagonal values risks corrupting the expected contract.</p>
 </section>
 <section id="marker-order-sample-and-scaling-invariants" class="level2">
@@ -589,7 +589,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <ol type="1">
 <li><code>cls</code> contains no missing marker matches.</li>
 <li>LD dimensions equal the intended marker count.</li>
-<li><code>row_ptr</code> has length (m+1).</li>
+<li><code>row_ptr</code> has length <span class="math inline">\(m+1\)</span>.</li>
 <li><code>col_idx</code> and <code>values</code> have equal length.</li>
 <li>the final row pointer equals <code>nnz</code>.</li>
 <li>returned <code>index_base</code> matches how <code>col_idx</code> is being inspected.</li>
@@ -615,10 +615,10 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <li>reads the zero-based upper-triangle arrays;</li>
 <li>validates row pointers, column bounds, finite correlations, and positive <code>stats$ww</code>;</li>
 <li>ignores any explicit self-pairs if encountered;</li>
-<li>converts retained (r_{ij}) to (r_{ij}); and</li>
+<li>converts retained <span class="math inline">\(r_{ij}\)</span> to <span class="math inline">\(r_{ij}\sqrt{ww_iww_j}\)</span>; and</li>
 <li>creates a symmetric in-memory neighbor structure for residual updates.</li>
 </ol>
-<p>For marker effect (b_i), the diagonal residual contribution uses (ww_i b_i), while retained off-diagonal neighbors use the converted cross-product values. Missing off-diagonal entries are treated as zero in the sparse approximation.</p>
+<p>For marker effect <span class="math inline">\(b_i\)</span>, the diagonal residual contribution uses <span class="math inline">\(ww_i b_i\)</span>, while retained off-diagonal neighbors use the converted cross-product values. Missing off-diagonal entries are treated as zero in the sparse approximation.</p>
 <p>Annotation-aware CSR wrappers use the same LD prefix and marker-order contract. Their differences concern prior structure, not CSR construction.</p>
 </section>
 <section id="scheduled-sparse-updates" class="level2">
@@ -635,7 +635,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <h2 class="anchored" data-anchor-id="sparse-ld-as-an-approximation">Sparse LD as an Approximation</h2>
 <p>The sparse matrix replaces unretained off-diagonal relationships with zero. Approximation enters through:</p>
 <ul>
-<li>(r^2) thresholding;</li>
+<li><span class="math inline">\(r^2\)</span> thresholding;</li>
 <li>marker-index and physical-distance windows;</li>
 <li>finite-sample LD estimation;</li>
 <li>allele-frequency estimation and missing-genotype handling;</li>
@@ -1162,7 +1162,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="fu">## From BED Genotypes to Sufficient Statistics and Sparse LD</span></span>
 <span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>For genotype matrix <span class="sc">\(</span>X<span class="sc">\)</span>, phenotype vector <span class="sc">\(</span>y<span class="sc">\)</span>, and marker effects <span class="sc">\(</span>b<span class="sc">\)</span>, a</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>For genotype matrix $X$, phenotype vector $y$, and marker effects $b$, a</span>
 <span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>summary-statistics marker sampler needs quantities including</span>
 <span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1200,7 +1200,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a>cross-product scale.</span>
 <span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>This split is important: the on-disk values are correlations, not raw</span>
-<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>X_i^\top X_j<span class="sc">\)</span>, and the diagonal cross-products are supplied separately by</span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a>$X_i^\top X_j$, and the diagonal cross-products are supplied separately by</span>
 <span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$ww`</span>.</span>
 <span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a><span class="fu">## Matrix Represented by the Current Writer</span></span>
@@ -1217,23 +1217,23 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a>{\sqrt{(x_i^\top x_i)(x_j^\top x_j)}}.</span>
 <span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a>The writer retains an off-diagonal pair <span class="sc">\(</span>i&lt;j<span class="sc">\)</span> when it passes the configured</span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a>The writer retains an off-diagonal pair $i&lt;j$ when it passes the configured</span>
 <span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a>distance rules and</span>
 <span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a>r_{ij}^2 \geq \texttt{r2_threshold}.</span>
 <span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>The stored value is signed <span class="sc">\(</span>r_{ij}<span class="sc">\)</span>, not <span class="sc">\(</span>r_{ij}^2<span class="sc">\)</span>. The current streamed</span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>The stored value is signed $r_{ij}$, not $r_{ij}^2$. The current streamed</span>
 <span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a>artifact stores:</span>
 <span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>only the upper triangle, <span class="sc">\(</span>j&gt;i<span class="sc">\)</span>;</span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>only the upper triangle, $j&gt;i$;</span>
 <span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>no explicit diagonal entries;</span>
 <span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>an implicit diagonal correlation of one; and</span>
 <span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>only pairs passing the threshold and window rules.</span>
 <span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a>Thus the disk artifact is a sparse, upper-triangle, correlation-like</span>
-<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a>representation of LD. It is not itself the complete <span class="sc">\(</span>X^\top X<span class="sc">\)</span> matrix.</span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a>representation of LD. It is not itself the complete $X^\top X$ matrix.</span>
 <span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a>When a CSR ST-BLR sampler opens the prefix, it reads the stored correlation</span>
 <span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a>and constructs a symmetric in-memory neighbor structure. For each retained</span>
@@ -1255,15 +1255,15 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a><span class="fu">## What CSR Means</span></span>
 <span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a>Compressed sparse row format represents a sparse matrix without allocating</span>
-<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a>all <span class="sc">\(</span>m^2<span class="sc">\)</span> entries. Three arrays describe the retained entries:</span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a>all $m^2$ entries. Three arrays describe the retained entries:</span>
 <span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Array <span class="pp">|</span> Current conceptual role <span class="pp">|</span></span>
 <span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
-<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`row_ptr`</span> <span class="pp">|</span> Cumulative offsets delimiting each row's retained entries; length <span class="sc">\(</span>m+1<span class="sc">\)</span>. <span class="pp">|</span></span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`row_ptr`</span> <span class="pp">|</span> Cumulative offsets delimiting each row's retained entries; length $m+1$. <span class="pp">|</span></span>
 <span id="cb12-125"><a href="#cb12-125" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`col_idx`</span> <span class="pp">|</span> Column index for every retained entry; length <span class="in">`nnz`</span>. <span class="pp">|</span></span>
 <span id="cb12-126"><a href="#cb12-126" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`values`</span> <span class="pp">|</span> Value for every retained entry; length <span class="in">`nnz`</span>. <span class="pp">|</span></span>
 <span id="cb12-127"><a href="#cb12-127" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a>For zero-based row pointers, entries belonging to row <span class="sc">\(</span>i<span class="sc">\)</span> occupy positions</span>
+<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a>For zero-based row pointers, entries belonging to row $i$ occupy positions</span>
 <span id="cb12-129"><a href="#cb12-129" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-130"><a href="#cb12-130" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb12-131"><a href="#cb12-131" aria-hidden="true" tabindex="-1"></a>\texttt{row<span class="sc">\_</span>ptr}<span class="co">[</span><span class="ot">i</span><span class="co">]</span></span>
@@ -1294,11 +1294,11 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-156"><a href="#cb12-156" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-157"><a href="#cb12-157" aria-hidden="true" tabindex="-1"></a><span class="fu">## Why Disk-Backed Sparse CSR Is Used</span></span>
 <span id="cb12-158"><a href="#cb12-158" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-159"><a href="#cb12-159" aria-hidden="true" tabindex="-1"></a>A dense <span class="sc">\(</span>m\times m<span class="sc">\)</span> LD matrix requires <span class="sc">\(</span>O(m^2)<span class="sc">\)</span> storage. This becomes</span>
+<span id="cb12-159"><a href="#cb12-159" aria-hidden="true" tabindex="-1"></a>A dense $m\times m$ LD matrix requires $O(m^2)$ storage. This becomes</span>
 <span id="cb12-160"><a href="#cb12-160" aria-hidden="true" tabindex="-1"></a>prohibitive for genome-scale marker sets even when most scientifically useful</span>
 <span id="cb12-161"><a href="#cb12-161" aria-hidden="true" tabindex="-1"></a>LD relationships are local or sufficiently strong.</span>
 <span id="cb12-162"><a href="#cb12-162" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-163"><a href="#cb12-163" aria-hidden="true" tabindex="-1"></a>Sparse CSR reduces storage toward <span class="sc">\(</span>O(m+\mathrm{nnz})<span class="sc">\)</span>, where <span class="in">`nnz`</span> is the</span>
+<span id="cb12-163"><a href="#cb12-163" aria-hidden="true" tabindex="-1"></a>Sparse CSR reduces storage toward $O(m+\mathrm{nnz})$, where <span class="in">`nnz`</span> is the</span>
 <span id="cb12-164"><a href="#cb12-164" aria-hidden="true" tabindex="-1"></a>number of retained off-diagonal upper-triangle entries. Disk-backed storage</span>
 <span id="cb12-165"><a href="#cb12-165" aria-hidden="true" tabindex="-1"></a>provides two additional advantages:</span>
 <span id="cb12-166"><a href="#cb12-166" aria-hidden="true" tabindex="-1"></a></span>
@@ -1307,7 +1307,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-169"><a href="#cb12-169" aria-hidden="true" tabindex="-1"></a>  during construction.</span>
 <span id="cb12-170"><a href="#cb12-170" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-171"><a href="#cb12-171" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span> processes marker blocks, computes candidate</span>
-<span id="cb12-172"><a href="#cb12-172" aria-hidden="true" tabindex="-1"></a>cross-products for block pairs, applies distance and <span class="sc">\(</span>r^2<span class="sc">\)</span> rules, and writes</span>
+<span id="cb12-172"><a href="#cb12-172" aria-hidden="true" tabindex="-1"></a>cross-products for block pairs, applies distance and $r^2$ rules, and writes</span>
 <span id="cb12-173"><a href="#cb12-173" aria-hidden="true" tabindex="-1"></a>retained entries incrementally. It still needs working memory for decoded</span>
 <span id="cb12-174"><a href="#cb12-174" aria-hidden="true" tabindex="-1"></a>genotype blocks and block cross-products, but it avoids constructing either a</span>
 <span id="cb12-175"><a href="#cb12-175" aria-hidden="true" tabindex="-1"></a>dense whole-genome LD matrix or the complete sparse result in R.</span>
@@ -1423,7 +1423,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-285"><a href="#cb12-285" aria-hidden="true" tabindex="-1"></a><span class="in">`af`</span></span>
 <span id="cb12-286"><a href="#cb12-286" aria-hidden="true" tabindex="-1"></a>: Optional list of allele frequencies aligned to <span class="in">`cls`</span>. When omitted, the</span>
 <span id="cb12-287"><a href="#cb12-287" aria-hidden="true" tabindex="-1"></a>  writer computes allele frequencies from the selected packed genotypes.</span>
-<span id="cb12-288"><a href="#cb12-288" aria-hidden="true" tabindex="-1"></a>  Supplied values must be finite and in <span class="sc">\(</span><span class="co">[</span><span class="ot">0,1</span><span class="co">]</span><span class="sc">\)</span>. Missing genotypes are</span>
+<span id="cb12-288"><a href="#cb12-288" aria-hidden="true" tabindex="-1"></a>  Supplied values must be finite and in $<span class="co">[</span><span class="ot">0,1</span><span class="co">]</span>$. Missing genotypes are</span>
 <span id="cb12-289"><a href="#cb12-289" aria-hidden="true" tabindex="-1"></a>  represented as zero after standardization, corresponding to mean</span>
 <span id="cb12-290"><a href="#cb12-290" aria-hidden="true" tabindex="-1"></a>  imputation on that scale.</span>
 <span id="cb12-291"><a href="#cb12-291" aria-hidden="true" tabindex="-1"></a></span>
@@ -1431,7 +1431,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-293"><a href="#cb12-293" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-294"><a href="#cb12-294" aria-hidden="true" tabindex="-1"></a><span class="in">`r2_threshold`</span></span>
 <span id="cb12-295"><a href="#cb12-295" aria-hidden="true" tabindex="-1"></a>: Minimum squared correlation for retaining an eligible pair. The writer</span>
-<span id="cb12-296"><a href="#cb12-296" aria-hidden="true" tabindex="-1"></a>  compares <span class="sc">\(</span>r_{ij}^2<span class="sc">\)</span> with this value but stores signed <span class="sc">\(</span>r_{ij}<span class="sc">\)</span>. A larger</span>
+<span id="cb12-296"><a href="#cb12-296" aria-hidden="true" tabindex="-1"></a>  compares $r_{ij}^2$ with this value but stores signed $r_{ij}$. A larger</span>
 <span id="cb12-297"><a href="#cb12-297" aria-hidden="true" tabindex="-1"></a>  threshold produces a sparser approximation and may remove weak but</span>
 <span id="cb12-298"><a href="#cb12-298" aria-hidden="true" tabindex="-1"></a>  collectively relevant LD.</span>
 <span id="cb12-299"><a href="#cb12-299" aria-hidden="true" tabindex="-1"></a></span>
@@ -1452,7 +1452,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-314"><a href="#cb12-314" aria-hidden="true" tabindex="-1"></a>  the base-pair distance restriction cannot be applied, even if</span>
 <span id="cb12-315"><a href="#cb12-315" aria-hidden="true" tabindex="-1"></a>  <span class="in">`max_distance_bp`</span> is positive.</span>
 <span id="cb12-316"><a href="#cb12-316" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-317"><a href="#cb12-317" aria-hidden="true" tabindex="-1"></a>A pair must pass every enabled window rule before its <span class="sc">\(</span>r^2<span class="sc">\)</span> is tested.</span>
+<span id="cb12-317"><a href="#cb12-317" aria-hidden="true" tabindex="-1"></a>A pair must pass every enabled window rule before its $r^2$ is tested.</span>
 <span id="cb12-318"><a href="#cb12-318" aria-hidden="true" tabindex="-1"></a>Disabling both distance restrictions permits all upper-triangle marker pairs</span>
 <span id="cb12-319"><a href="#cb12-319" aria-hidden="true" tabindex="-1"></a>to be considered and can be computationally expensive.</span>
 <span id="cb12-320"><a href="#cb12-320" aria-hidden="true" tabindex="-1"></a></span>
@@ -1493,8 +1493,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-355"><a href="#cb12-355" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-356"><a href="#cb12-356" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>decodes standardized marker values into floating-point working buffers;</span>
 <span id="cb12-357"><a href="#cb12-357" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>computes raw block cross-products with matrix multiplication;</span>
-<span id="cb12-358"><a href="#cb12-358" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>converts each eligible cross-product to correlation <span class="sc">\(</span>r_{ij}<span class="sc">\)</span>;</span>
-<span id="cb12-359"><a href="#cb12-359" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>applies distance and <span class="sc">\(</span>r^2<span class="sc">\)</span> retention rules; and</span>
+<span id="cb12-358"><a href="#cb12-358" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>converts each eligible cross-product to correlation $r_{ij}$;</span>
+<span id="cb12-359"><a href="#cb12-359" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>applies distance and $r^2$ retention rules; and</span>
 <span id="cb12-360"><a href="#cb12-360" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>appends retained upper-triangle column indices and values to disk.</span>
 <span id="cb12-361"><a href="#cb12-361" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-362"><a href="#cb12-362" aria-hidden="true" tabindex="-1"></a>After each row, it writes the cumulative retained-entry count to <span class="in">`row_ptr`</span>.</span>
@@ -1523,7 +1523,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-385"><a href="#cb12-385" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-386"><a href="#cb12-386" aria-hidden="true" tabindex="-1"></a>The current streamed artifact omits diagonal entries and reports</span>
 <span id="cb12-387"><a href="#cb12-387" aria-hidden="true" tabindex="-1"></a><span class="in">`diag = "implicit_1"`</span>. Downstream ST-BLR samplers use the supplied <span class="in">`stats$ww`</span></span>
-<span id="cb12-388"><a href="#cb12-388" aria-hidden="true" tabindex="-1"></a>for diagonal <span class="sc">\(</span>X_i^\top X_i<span class="sc">\)</span> contributions. Users inspecting the sparse</span>
+<span id="cb12-388"><a href="#cb12-388" aria-hidden="true" tabindex="-1"></a>for diagonal $X_i^\top X_i$ contributions. Users inspecting the sparse</span>
 <span id="cb12-389"><a href="#cb12-389" aria-hidden="true" tabindex="-1"></a>arrays should not mistake absence of explicit diagonal entries for a zero</span>
 <span id="cb12-390"><a href="#cb12-390" aria-hidden="true" tabindex="-1"></a>diagonal.</span>
 <span id="cb12-391"><a href="#cb12-391" aria-hidden="true" tabindex="-1"></a></span>
@@ -1603,7 +1603,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-465"><a href="#cb12-465" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-466"><a href="#cb12-466" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span><span class="in">`cls`</span> contains no missing marker matches.</span>
 <span id="cb12-467"><a href="#cb12-467" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>LD dimensions equal the intended marker count.</span>
-<span id="cb12-468"><a href="#cb12-468" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`row_ptr`</span> has length <span class="sc">\(</span>m+1<span class="sc">\)</span>.</span>
+<span id="cb12-468"><a href="#cb12-468" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`row_ptr`</span> has length $m+1$.</span>
 <span id="cb12-469"><a href="#cb12-469" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span><span class="in">`col_idx`</span> and <span class="in">`values`</span> have equal length.</span>
 <span id="cb12-470"><a href="#cb12-470" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>the final row pointer equals <span class="in">`nnz`</span>.</span>
 <span id="cb12-471"><a href="#cb12-471" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>returned <span class="in">`index_base`</span> matches how <span class="in">`col_idx`</span> is being inspected.</span>
@@ -1638,12 +1638,12 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-500"><a href="#cb12-500" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>validates row pointers, column bounds, finite correlations, and positive</span>
 <span id="cb12-501"><a href="#cb12-501" aria-hidden="true" tabindex="-1"></a>   <span class="in">`stats$ww`</span>;</span>
 <span id="cb12-502"><a href="#cb12-502" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>ignores any explicit self-pairs if encountered;</span>
-<span id="cb12-503"><a href="#cb12-503" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>converts retained <span class="sc">\(</span>r_{ij}<span class="sc">\)</span> to</span>
-<span id="cb12-504"><a href="#cb12-504" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\(</span>r_{ij}\sqrt{ww_iww_j}<span class="sc">\)</span>; and</span>
+<span id="cb12-503"><a href="#cb12-503" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>converts retained $r_{ij}$ to</span>
+<span id="cb12-504"><a href="#cb12-504" aria-hidden="true" tabindex="-1"></a>   $r_{ij}\sqrt{ww_iww_j}$; and</span>
 <span id="cb12-505"><a href="#cb12-505" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>creates a symmetric in-memory neighbor structure for residual updates.</span>
 <span id="cb12-506"><a href="#cb12-506" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-507"><a href="#cb12-507" aria-hidden="true" tabindex="-1"></a>For marker effect <span class="sc">\(</span>b_i<span class="sc">\)</span>, the diagonal residual contribution uses</span>
-<span id="cb12-508"><a href="#cb12-508" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>ww_i b_i<span class="sc">\)</span>, while retained off-diagonal neighbors use the converted</span>
+<span id="cb12-507"><a href="#cb12-507" aria-hidden="true" tabindex="-1"></a>For marker effect $b_i$, the diagonal residual contribution uses</span>
+<span id="cb12-508"><a href="#cb12-508" aria-hidden="true" tabindex="-1"></a>$ww_i b_i$, while retained off-diagonal neighbors use the converted</span>
 <span id="cb12-509"><a href="#cb12-509" aria-hidden="true" tabindex="-1"></a>cross-product values. Missing off-diagonal entries are treated as zero in the</span>
 <span id="cb12-510"><a href="#cb12-510" aria-hidden="true" tabindex="-1"></a>sparse approximation.</span>
 <span id="cb12-511"><a href="#cb12-511" aria-hidden="true" tabindex="-1"></a></span>
@@ -1675,7 +1675,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-537"><a href="#cb12-537" aria-hidden="true" tabindex="-1"></a>The sparse matrix replaces unretained off-diagonal relationships with zero.</span>
 <span id="cb12-538"><a href="#cb12-538" aria-hidden="true" tabindex="-1"></a>Approximation enters through:</span>
 <span id="cb12-539"><a href="#cb12-539" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-540"><a href="#cb12-540" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>r^2<span class="sc">\)</span> thresholding;</span>
+<span id="cb12-540"><a href="#cb12-540" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$r^2$ thresholding;</span>
 <span id="cb12-541"><a href="#cb12-541" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker-index and physical-distance windows;</span>
 <span id="cb12-542"><a href="#cb12-542" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>finite-sample LD estimation;</span>
 <span id="cb12-543"><a href="#cb12-543" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>allele-frequency estimation and missing-genotype handling;</span>

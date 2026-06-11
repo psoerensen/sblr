@@ -237,12 +237,12 @@ window.Quarto = {
 <p>These are two representations of closely related regression calculations, not two unrelated model families. The representation determines what must be stored, what can be recomputed during sampling, and which alignment and sample-overlap assumptions must be made explicit.</p>
 <section id="individual-level-plink-bed-representation" class="level2">
 <h2 class="anchored" data-anchor-id="individual-level-plink-bed-representation">Individual-Level PLINK BED Representation</h2>
-<p>Let (X) be an (n m) genotype matrix for (n) individuals and (m) markers, and let (Y) be an (n n_t) phenotype matrix for (n_t) traits. For one trait, (Y) reduces to a vector (y). A Bayesian linear regression model can be written as</p>
+<p>Let <span class="math inline">\(X\)</span> be an <span class="math inline">\(n \times m\)</span> genotype matrix for <span class="math inline">\(n\)</span> individuals and <span class="math inline">\(m\)</span> markers, and let <span class="math inline">\(Y\)</span> be an <span class="math inline">\(n \times n_t\)</span> phenotype matrix for <span class="math inline">\(n_t\)</span> traits. For one trait, <span class="math inline">\(Y\)</span> reduces to a vector <span class="math inline">\(y\)</span>. A Bayesian linear regression model can be written as</p>
 <p><span class="math display">\[
 Y = XB + E,
 \]</span></p>
-<p>where (B) contains marker effects and (E) contains residuals. In a single-trait model, this is (y = Xb + e).</p>
-<p>With individual-level data, a marker update can read the observed genotype column (x_j) and evaluate quantities such as</p>
+<p>where <span class="math inline">\(B\)</span> contains marker effects and <span class="math inline">\(E\)</span> contains residuals. In a single-trait model, this is <span class="math inline">\(y = Xb + e\)</span>.</p>
+<p>With individual-level data, a marker update can read the observed genotype column <span class="math inline">\(x_j\)</span> and evaluate quantities such as</p>
 <p><span class="math display">\[
 x_j^\top x_j
 \quad\text{and}\quad
@@ -250,7 +250,7 @@ x_j^\top e
 =
 x_j^\top(y-Xb).
 \]</span></p>
-<p>The sampler can therefore update effects from observed marker values and current individual-level residuals. It does not need a separately supplied LD matrix because correlations among markers are implicit in (X).</p>
+<p>The sampler can therefore update effects from observed marker values and current individual-level residuals. It does not need a separately supplied LD matrix because correlations among markers are implicit in <span class="math inline">\(X\)</span>.</p>
 <p>PLINK BED files store genotype calls compactly on disk rather than as an in-memory numeric matrix. In the package workflow, a qgg <code>Glist</code> supplies the BED file paths and related metadata:</p>
 <ul>
 <li><code>Glist$bedfiles</code> identifies the BED files;</li>
@@ -259,7 +259,7 @@ x_j^\top(y-Xb).
 <li><code>Glist$af</code> supplies allele frequencies used when markers are standardized;</li>
 <li><code>Glist$rsidsLD</code> identifies the selected markers and their intended LD order.</li>
 </ul>
-<p><code>stblr_bed_marker()</code> fits directly from this representation. It receives the <code>Glist</code>, phenotype vector or matrix <code>y</code>, chromosome selection, and marker column indices <code>cls</code>. Its BED samplers read marker blocks from disk and perform marker updates without first materializing all of (X) or a full (X^X) matrix. Optional <code>rows</code> select 1-based individual indices, and <code>scale = TRUE</code> standardizes markers using the corresponding allele frequencies.</p>
+<p><code>stblr_bed_marker()</code> fits directly from this representation. It receives the <code>Glist</code>, phenotype vector or matrix <code>y</code>, chromosome selection, and marker column indices <code>cls</code>. Its BED samplers read marker blocks from disk and perform marker updates without first materializing all of <span class="math inline">\(X\)</span> or a full <span class="math inline">\(X^\top X\)</span> matrix. Optional <code>rows</code> select 1-based individual indices, and <code>scale = TRUE</code> standardizes markers using the corresponding allele frequencies.</p>
 <p>The individual-level representation is information-rich: if the same individuals have multiple measured traits, cross-trait phenotype and residual cross-products can be calculated directly. Its main costs are access to sensitive individual-level data and repeated genotype reading during model fitting.</p>
 </section>
 <section id="dense-summary-statistic-representation" class="level2">
@@ -272,24 +272,24 @@ XX = X^\top X,
 \qquad
 yy = y^\top y,
 \]</span></p>
-<p>together with the sample size (n). For multiple traits,</p>
+<p>together with the sample size <span class="math inline">\(n\)</span>. For multiple traits,</p>
 <p><span class="math display">\[
 WY = X^\top Y
 \]</span></p>
 <p>contains one marker-trait cross-product column per trait.</p>
-<p>The matrix (X^X) describes both marker sums of squares on its diagonal and marker-marker LD in its off-diagonal entries. In package interfaces, <code>ww</code> denotes per-trait marker sums of squares or corresponding diagonal information, while LD supplies the off-diagonal relationships needed to propagate an effect update to correlated markers. Depending on scaling and the producing function, LD may be represented in correlation units or as the corresponding genotype cross-products. The statistics and LD representation must use the same marker scaling and order.</p>
+<p>The matrix <span class="math inline">\(X^\top X\)</span> describes both marker sums of squares on its diagonal and marker-marker LD in its off-diagonal entries. In package interfaces, <code>ww</code> denotes per-trait marker sums of squares or corresponding diagonal information, while LD supplies the off-diagonal relationships needed to propagate an effect update to correlated markers. Depending on scaling and the producing function, LD may be represented in correlation units or as the corresponding genotype cross-products. The statistics and LD representation must use the same marker scaling and order.</p>
 <p>These quantities are sufficient for many marker updates because the current marker-residual score can be represented as</p>
 <p><span class="math display">\[
 r = X^\top(y-Xb) = wy - X^\top Xb.
 \]</span></p>
-<p>If marker (j)’s effect changes by (b_j), the updated score can be calculated from column (j) of (X^X):</p>
+<p>If marker <span class="math inline">\(j\)</span>’s effect changes by <span class="math inline">\(\Delta b_j\)</span>, the updated score can be calculated from column <span class="math inline">\(j\)</span> of <span class="math inline">\(X^\top X\)</span>:</p>
 <p><span class="math display">\[
 r_{\text{new}}
 =
 r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 \]</span></p>
-<p>This is why a summary-statistics sampler needs more than marginal genotype-phenotype associations. It needs enough information to reproduce the cross-products used by the marker-update and variance calculations. Marginal <code>wy</code> values without compatible LD cannot account for correlated markers, and LD without <code>wy</code>, <code>yy</code>, and (n) does not define the phenotype side of the likelihood.</p>
-<p>A dense representation stores all of (X^X), which requires (O(m^2)) entries. That becomes impractical for large marker sets. The disk-backed sparse-LD representation retains the same conceptual role while dropping small or distant marker-marker entries.</p>
+<p>This is why a summary-statistics sampler needs more than marginal genotype-phenotype associations. It needs enough information to reproduce the cross-products used by the marker-update and variance calculations. Marginal <code>wy</code> values without compatible LD cannot account for correlated markers, and LD without <code>wy</code>, <code>yy</code>, and <span class="math inline">\(n\)</span> does not define the phenotype side of the likelihood.</p>
+<p>A dense representation stores all of <span class="math inline">\(X^\top X\)</span>, which requires <span class="math inline">\(O(m^2)\)</span> entries. That becomes impractical for large marker sets. The disk-backed sparse-LD representation retains the same conceptual role while dropping small or distant marker-marker entries.</p>
 </section>
 <section id="disk-backed-csr-sparse-ld-representation" class="level2">
 <h2 class="anchored" data-anchor-id="disk-backed-csr-sparse-ld-representation">Disk-Backed CSR Sparse-LD Representation</h2>
@@ -307,7 +307,7 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 <li><code>max_distance_variants</code>, which can restrict pairs by marker-index distance;</li>
 <li><code>block_size</code> and <code>nthreads</code>, which control construction rather than the statistical definition.</li>
 </ul>
-<p>The sparse representation approximates (X^X). It reduces memory and disk requirements when most long-range or weak marker relationships can be ignored, but the threshold and distance rules become part of the analysis. Two fits using different sparse-LD construction rules do not have identical inputs even if they began from the same BED file.</p>
+<p>The sparse representation approximates <span class="math inline">\(X^\top X\)</span>. It reduces memory and disk requirements when most long-range or weak marker relationships can be ignored, but the threshold and distance rules become part of the analysis. Two fits using different sparse-LD construction rules do not have identical inputs even if they began from the same BED file.</p>
 <p><code>sparseLD_read_CSR()</code> reads files written by <code>sparseLD_stream_CSR()</code> and returns row pointers, column indices, and values. Its <code>one_based</code> option controls the indexing convention of returned column indices. This reader is useful for checking dimensions, indexing, and retained entries; <code>stblr_csr()</code> uses the disk-backed prefix directly.</p>
 <p>Detailed storage and construction contracts belong in <a href="../notes/technical_sparse_ld_csr.html">Technical sparse LD and CSR</a>.</p>
 </section>
@@ -316,12 +316,12 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 <p><code>bed_xtx_xty()</code> is the package bridge from individual-level BED data and phenotypes to the sufficient statistics consumed by <code>stblr_csr()</code>. It accepts a BED file, the total number of individuals, selected BED marker columns <code>cls</code>, corresponding allele frequencies <code>af</code>, and a phenotype matrix <code>y</code>. Optional <code>rows</code> and <code>scale</code> determine which individuals and marker standardization are used.</p>
 <p>The returned <code>stats</code> object contains the marker-trait cross-products and related quantities required by the ST-BLR wrapper:</p>
 <ul>
-<li><code>stats$wy</code>: (X^Y), represented by trait;</li>
+<li><code>stats$wy</code>: <span class="math inline">\(X^\top Y\)</span>, represented by trait;</li>
 <li><code>stats$ww</code>: marker sums of squares or diagonal genotype cross-product information, represented by trait;</li>
-<li><code>stats$yy</code>: (y_t^y_t) for each trait;</li>
+<li><code>stats$yy</code>: <span class="math inline">\(y_t^\top y_t\)</span> for each trait;</li>
 <li><code>stats$n</code> and <code>stats$m</code>, when available, for sample and marker counts.</li>
 </ul>
-<p><code>stblr_csr()</code> combines this object with <code>ld_prefix</code>, the prefix written by <code>sparseLD_stream_CSR()</code>. The wrapper initializes per-trait variance quantities using <code>stats$yy</code>, (n), and (m), then passes <code>wy</code>, <code>ww</code>, <code>yy</code>, and the CSR prefix to the sparse-LD sampler.</p>
+<p><code>stblr_csr()</code> combines this object with <code>ld_prefix</code>, the prefix written by <code>sparseLD_stream_CSR()</code>. The wrapper initializes per-trait variance quantities using <code>stats$yy</code>, <span class="math inline">\(n\)</span>, and <span class="math inline">\(m\)</span>, then passes <code>wy</code>, <code>ww</code>, <code>yy</code>, and the CSR prefix to the sparse-LD sampler.</p>
 <p>The complete conceptual bridge is:</p>
 <pre class="text"><code>BED files + aligned phenotypes
           |
@@ -336,11 +336,11 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 <section id="multi-trait-cross-products-sample-overlap-and-ssy" class="level2">
 <h2 class="anchored" data-anchor-id="multi-trait-cross-products-sample-overlap-and-ssy">Multi-Trait Cross-Products, Sample Overlap, and <code>SSY</code></h2>
 <p>The phrase “multi-trait summary statistics” can refer to two different levels of information.</p>
-<p>First, traits can be fitted as separate or parallel single-trait regressions. For trait (t), the phenotype sum of squares is</p>
+<p>First, traits can be fitted as separate or parallel single-trait regressions. For trait <span class="math inline">\(t\)</span>, the phenotype sum of squares is</p>
 <p><span class="math display">\[
 yy_t = y_t^\top y_t = \sum_i y_{it}^2.
 \]</span></p>
-<p>A vector of <code>yy</code> values, with corresponding columns of (X^Y), is enough to initialize and fit per-trait likelihood calculations that do not require observed cross-trait phenotype products. The current <code>stblr_csr()</code> wrapper uses this per-trait representation: it infers the number of traits from <code>length(stats$yy)</code> and uses each <code>yy_t</code> to initialize trait-specific variances.</p>
+<p>A vector of <code>yy</code> values, with corresponding columns of <span class="math inline">\(X^\top Y\)</span>, is enough to initialize and fit per-trait likelihood calculations that do not require observed cross-trait phenotype products. The current <code>stblr_csr()</code> wrapper uses this per-trait representation: it infers the number of traits from <code>length(stats$yy)</code> and uses each <code>yy_t</code> to initialize trait-specific variances.</p>
 <p>Second, a genuinely joint multi-trait likelihood with a full residual covariance matrix requires the cross-trait phenotype matrix</p>
 <p><span class="math display">\[
 \mathrm{SSY} = Y^\top Y,
@@ -349,19 +349,19 @@ yy_t = y_t^\top y_t = \sum_i y_{it}^2.
 =
 \sum_{i \in \mathcal I_{ts}} y_{it}y_{is},
 \]</span></p>
-<p>where (I_{ts}) is the set of individuals observed for both traits. The diagonal entries are the univariate <code>yy_t</code>; the off-diagonal entries contain information that a vector of <code>yy</code> values does not preserve.</p>
-<p>With individual-level (Y), <code>SSY</code> and the effective overlap counts can be calculated from observed individuals. With summary statistics, they must be provided or reconstructed. If (N_{ts}) is the number of individuals shared by traits (t) and (s), and (R_y) is a phenotypic correlation matrix, a common approximation is</p>
+<p>where <span class="math inline">\(\mathcal I_{ts}\)</span> is the set of individuals observed for both traits. The diagonal entries are the univariate <code>yy_t</code>; the off-diagonal entries contain information that a vector of <code>yy</code> values does not preserve.</p>
+<p>With individual-level <span class="math inline">\(Y\)</span>, <code>SSY</code> and the effective overlap counts can be calculated from observed individuals. With summary statistics, they must be provided or reconstructed. If <span class="math inline">\(N_{ts}\)</span> is the number of individuals shared by traits <span class="math inline">\(t\)</span> and <span class="math inline">\(s\)</span>, and <span class="math inline">\(R_y\)</span> is a phenotypic correlation matrix, a common approximation is</p>
 <p><span class="math display">\[
 \widehat{\mathrm{SSY}}
 =
 N \odot \widehat{\operatorname{Cov}}(Y),
 \]</span></p>
-<p>with diagonals forced to the observed <code>yy_t</code>. This approximation assumes that overlap counts and phenotypic covariance information are meaningful for the study design. Full overlap, partial overlap, missingness, and meta-analysis can imply materially different (N) matrices.</p>
+<p>with diagonals forced to the observed <code>yy_t</code>. This approximation assumes that overlap counts and phenotypic covariance information are meaningful for the study design. Full overlap, partial overlap, missingness, and meta-analysis can imply materially different <span class="math inline">\(N\)</span> matrices.</p>
 <p>Without cross-trait <code>SSY</code> and overlap information, a summary-statistics model cannot reconstruct the cross-products needed for full residual covariance updates. The complete derivation and assumptions are preserved in <a href="../notes/technical_multitrait_overlap.html">Technical multi-trait sample overlap</a>.</p>
 </section>
 <section id="marker-ordering-and-annotation-alignment" class="level2">
 <h2 class="anchored" data-anchor-id="marker-ordering-and-annotation-alignment">Marker Ordering and Annotation Alignment</h2>
-<p>Marker order is a correctness condition, not presentation metadata. Every marker-indexed object must refer to the same biological marker at position (j):</p>
+<p>Marker order is a correctness condition, not presentation metadata. Every marker-indexed object must refer to the same biological marker at position <span class="math inline">\(j\)</span>:</p>
 <pre class="text"><code>BED marker column selected by cls
     = Glist$rsidsLD marker j
     = sufficient-statistic row j
@@ -371,7 +371,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <p>In the workflows, the intended LD marker order is established by <code>Glist$rsidsLD[[chr]]</code>. The BED column indices are derived with</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(cls))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The same <code>cls</code> is then supplied to <code>bed_xtx_xty()</code> and, as a list, <code>sparseLD_stream_CSR()</code>. Allele frequencies are subset with the same indices. For annotation models, the (m K) annotation matrix <code>A</code> must have one row per selected marker in exactly this order. The annotation workflow makes that contract explicit by assigning <code>Glist$rsidsLD[[chr]]</code> as row names and checking that they are identical to the expected marker IDs.</p>
+<p>The same <code>cls</code> is then supplied to <code>bed_xtx_xty()</code> and, as a list, <code>sparseLD_stream_CSR()</code>. Allele frequencies are subset with the same indices. For annotation models, the <span class="math inline">\(m \times K\)</span> annotation matrix <code>A</code> must have one row per selected marker in exactly this order. The annotation workflow makes that contract explicit by assigning <code>Glist$rsidsLD[[chr]]</code> as row names and checking that they are identical to the expected marker IDs.</p>
 <p>Posterior matrices such as <code>fit$bm</code> and <code>fit$dm</code> inherit the marker ordering used by the model input. A plausible-looking result is still invalid if its rows are joined to annotations or marker metadata in a different order.</p>
 <p>Sample alignment is equally important. When <code>rows</code> is used, the phenotype rows and every BED-derived object must describe the same individuals. Sufficient statistics generated from one sample subset cannot be combined with sparse LD generated from another without changing the implied model.</p>
 </section>
@@ -388,8 +388,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <p><strong>Summary statistics plus sparse LD</strong></p>
 <ul>
 <li>can avoid repeated access to individual-level genotypes after preparation;</li>
-<li>replaces the full (X^X) matrix with an explicit LD approximation;</li>
-<li>requires compatible <code>wy</code>, <code>ww</code>, <code>yy</code>, (n), and LD;</li>
+<li>replaces the full <span class="math inline">\(X^\top X\)</span> matrix with an explicit LD approximation;</li>
+<li>requires compatible <code>wy</code>, <code>ww</code>, <code>yy</code>, <span class="math inline">\(n\)</span>, and LD;</li>
 <li>requires <code>SSY</code> and overlap information for full joint multi-trait residual covariance calculations;</li>
 <li>cannot recover information omitted during summarization or sparsification.</li>
 </ul>
@@ -891,20 +891,20 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Individual-Level PLINK BED Representation</span></span>
 <span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>Let <span class="sc">\(</span>X<span class="sc">\)</span> be an <span class="sc">\(</span>n \times m<span class="sc">\)</span> genotype matrix for <span class="sc">\(</span>n<span class="sc">\)</span> individuals and <span class="sc">\(</span>m<span class="sc">\)</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>markers, and let <span class="sc">\(</span>Y<span class="sc">\)</span> be an <span class="sc">\(</span>n \times n_t<span class="sc">\)</span> phenotype matrix for <span class="sc">\(</span>n_t<span class="sc">\)</span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>traits. For one trait, <span class="sc">\(</span>Y<span class="sc">\)</span> reduces to a vector <span class="sc">\(</span>y<span class="sc">\)</span>. A Bayesian linear</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>Let $X$ be an $n \times m$ genotype matrix for $n$ individuals and $m$</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>markers, and let $Y$ be an $n \times n_t$ phenotype matrix for $n_t$</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>traits. For one trait, $Y$ reduces to a vector $y$. A Bayesian linear</span>
 <span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>regression model can be written as</span>
 <span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>Y = XB + E,</span>
 <span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>B<span class="sc">\)</span> contains marker effects and <span class="sc">\(</span>E<span class="sc">\)</span> contains residuals. In a</span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>single-trait model, this is <span class="sc">\(</span>y = Xb + e<span class="sc">\)</span>.</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>where $B$ contains marker effects and $E$ contains residuals. In a</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>single-trait model, this is $y = Xb + e$.</span>
 <span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>With individual-level data, a marker update can read the observed genotype</span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>column <span class="sc">\(</span>x_j<span class="sc">\)</span> and evaluate quantities such as</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>column $x_j$ and evaluate quantities such as</span>
 <span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>x_j^\top x_j</span>
@@ -916,7 +916,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>The sampler can therefore update effects from observed marker values and</span>
 <span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>current individual-level residuals. It does not need a separately supplied LD</span>
-<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>matrix because correlations among markers are implicit in <span class="sc">\(</span>X<span class="sc">\)</span>.</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>matrix because correlations among markers are implicit in $X$.</span>
 <span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>PLINK BED files store genotype calls compactly on disk rather than as an</span>
 <span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>in-memory numeric matrix. In the package workflow, a qgg <span class="in">`Glist`</span> supplies the</span>
@@ -931,8 +931,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_bed_marker()`</span> fits directly from this representation. It receives the</span>
 <span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist`</span>, phenotype vector or matrix <span class="in">`y`</span>, chromosome selection, and marker</span>
 <span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>column indices <span class="in">`cls`</span>. Its BED samplers read marker blocks from disk and perform</span>
-<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>marker updates without first materializing all of <span class="sc">\(</span>X<span class="sc">\)</span> or a full</span>
-<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>X^\top X<span class="sc">\)</span> matrix. Optional <span class="in">`rows`</span> select 1-based individual indices, and</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>marker updates without first materializing all of $X$ or a full</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>$X^\top X$ matrix. Optional <span class="in">`rows`</span> select 1-based individual indices, and</span>
 <span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a><span class="in">`scale = TRUE`</span> standardizes markers using the corresponding allele</span>
 <span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>frequencies.</span>
 <span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a></span>
@@ -955,7 +955,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>yy = y^\top y,</span>
 <span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>together with the sample size <span class="sc">\(</span>n<span class="sc">\)</span>. For multiple traits,</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>together with the sample size $n$. For multiple traits,</span>
 <span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>WY = X^\top Y</span>
@@ -963,7 +963,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>contains one marker-trait cross-product column per trait.</span>
 <span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>The matrix <span class="sc">\(</span>X^\top X<span class="sc">\)</span> describes both marker sums of squares on its diagonal</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>The matrix $X^\top X$ describes both marker sums of squares on its diagonal</span>
 <span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>and marker-marker LD in its off-diagonal entries. In package interfaces,</span>
 <span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a><span class="in">`ww`</span> denotes per-trait marker sums of squares or corresponding diagonal</span>
 <span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>information, while LD supplies the off-diagonal relationships needed to</span>
@@ -979,8 +979,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>r = X^\top(y-Xb) = wy - X^\top Xb.</span>
 <span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>If marker <span class="sc">\(</span>j<span class="sc">\)</span>'s effect changes by <span class="sc">\(</span>\Delta b_j<span class="sc">\)</span>, the updated score can be</span>
-<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>calculated from column <span class="sc">\(</span>j<span class="sc">\)</span> of <span class="sc">\(</span>X^\top X<span class="sc">\)</span>:</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>If marker $j$'s effect changes by $\Delta b_j$, the updated score can be</span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>calculated from column $j$ of $X^\top X$:</span>
 <span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>r_{\text{new}}</span>
@@ -992,11 +992,11 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>genotype-phenotype associations. It needs enough information to reproduce the</span>
 <span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>cross-products used by the marker-update and variance calculations. Marginal</span>
 <span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a><span class="in">`wy`</span> values without compatible LD cannot account for correlated markers, and</span>
-<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a>LD without <span class="in">`wy`</span>, <span class="in">`yy`</span>, and <span class="sc">\(</span>n<span class="sc">\)</span> does not define the phenotype side of the</span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a>LD without <span class="in">`wy`</span>, <span class="in">`yy`</span>, and $n$ does not define the phenotype side of the</span>
 <span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>likelihood.</span>
 <span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>A dense representation stores all of <span class="sc">\(</span>X^\top X<span class="sc">\)</span>, which requires</span>
-<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>O(m^2)<span class="sc">\)</span> entries. That becomes impractical for large marker sets. The</span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>A dense representation stores all of $X^\top X$, which requires</span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>$O(m^2)$ entries. That becomes impractical for large marker sets. The</span>
 <span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a>disk-backed sparse-LD representation retains the same conceptual role while</span>
 <span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a>dropping small or distant marker-marker entries.</span>
 <span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a></span>
@@ -1023,7 +1023,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`block_size`</span> and <span class="in">`nthreads`</span>, which control construction rather than the</span>
 <span id="cb4-151"><a href="#cb4-151" aria-hidden="true" tabindex="-1"></a>  statistical definition.</span>
 <span id="cb4-152"><a href="#cb4-152" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a>The sparse representation approximates <span class="sc">\(</span>X^\top X<span class="sc">\)</span>. It reduces memory and</span>
+<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a>The sparse representation approximates $X^\top X$. It reduces memory and</span>
 <span id="cb4-154"><a href="#cb4-154" aria-hidden="true" tabindex="-1"></a>disk requirements when most long-range or weak marker relationships can be</span>
 <span id="cb4-155"><a href="#cb4-155" aria-hidden="true" tabindex="-1"></a>ignored, but the threshold and distance rules become part of the analysis.</span>
 <span id="cb4-156"><a href="#cb4-156" aria-hidden="true" tabindex="-1"></a>Two fits using different sparse-LD construction rules do not have identical</span>
@@ -1050,15 +1050,15 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-177"><a href="#cb4-177" aria-hidden="true" tabindex="-1"></a>The returned <span class="in">`stats`</span> object contains the marker-trait cross-products and</span>
 <span id="cb4-178"><a href="#cb4-178" aria-hidden="true" tabindex="-1"></a>related quantities required by the ST-BLR wrapper:</span>
 <span id="cb4-179"><a href="#cb4-179" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-180"><a href="#cb4-180" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$wy`</span>: <span class="sc">\(</span>X^\top Y<span class="sc">\)</span>, represented by trait;</span>
+<span id="cb4-180"><a href="#cb4-180" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$wy`</span>: $X^\top Y$, represented by trait;</span>
 <span id="cb4-181"><a href="#cb4-181" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$ww`</span>: marker sums of squares or diagonal genotype cross-product</span>
 <span id="cb4-182"><a href="#cb4-182" aria-hidden="true" tabindex="-1"></a>  information, represented by trait;</span>
-<span id="cb4-183"><a href="#cb4-183" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>: <span class="sc">\(</span>y_t^\top y_t<span class="sc">\)</span> for each trait;</span>
+<span id="cb4-183"><a href="#cb4-183" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>: $y_t^\top y_t$ for each trait;</span>
 <span id="cb4-184"><a href="#cb4-184" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$n`</span> and <span class="in">`stats$m`</span>, when available, for sample and marker counts.</span>
 <span id="cb4-185"><a href="#cb4-185" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-186"><a href="#cb4-186" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> combines this object with <span class="in">`ld_prefix`</span>, the prefix written by</span>
 <span id="cb4-187"><a href="#cb4-187" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span>. The wrapper initializes per-trait variance quantities</span>
-<span id="cb4-188"><a href="#cb4-188" aria-hidden="true" tabindex="-1"></a>using <span class="in">`stats$yy`</span>, <span class="sc">\(</span>n<span class="sc">\)</span>, and <span class="sc">\(</span>m<span class="sc">\)</span>, then passes <span class="in">`wy`</span>, <span class="in">`ww`</span>, <span class="in">`yy`</span>, and the CSR</span>
+<span id="cb4-188"><a href="#cb4-188" aria-hidden="true" tabindex="-1"></a>using <span class="in">`stats$yy`</span>, $n$, and $m$, then passes <span class="in">`wy`</span>, <span class="in">`ww`</span>, <span class="in">`yy`</span>, and the CSR</span>
 <span id="cb4-189"><a href="#cb4-189" aria-hidden="true" tabindex="-1"></a>prefix to the sparse-LD sampler.</span>
 <span id="cb4-190"><a href="#cb4-190" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-191"><a href="#cb4-191" aria-hidden="true" tabindex="-1"></a>The complete conceptual bridge is:</span>
@@ -1086,13 +1086,13 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-213"><a href="#cb4-213" aria-hidden="true" tabindex="-1"></a>of information.</span>
 <span id="cb4-214"><a href="#cb4-214" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-215"><a href="#cb4-215" aria-hidden="true" tabindex="-1"></a>First, traits can be fitted as separate or parallel single-trait regressions.</span>
-<span id="cb4-216"><a href="#cb4-216" aria-hidden="true" tabindex="-1"></a>For trait <span class="sc">\(</span>t<span class="sc">\)</span>, the phenotype sum of squares is</span>
+<span id="cb4-216"><a href="#cb4-216" aria-hidden="true" tabindex="-1"></a>For trait $t$, the phenotype sum of squares is</span>
 <span id="cb4-217"><a href="#cb4-217" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-218"><a href="#cb4-218" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-219"><a href="#cb4-219" aria-hidden="true" tabindex="-1"></a>yy_t = y_t^\top y_t = \sum_i y_{it}^2.</span>
 <span id="cb4-220"><a href="#cb4-220" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-221"><a href="#cb4-221" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-222"><a href="#cb4-222" aria-hidden="true" tabindex="-1"></a>A vector of <span class="in">`yy`</span> values, with corresponding columns of <span class="sc">\(</span>X^\top Y<span class="sc">\)</span>, is enough</span>
+<span id="cb4-222"><a href="#cb4-222" aria-hidden="true" tabindex="-1"></a>A vector of <span class="in">`yy`</span> values, with corresponding columns of $X^\top Y$, is enough</span>
 <span id="cb4-223"><a href="#cb4-223" aria-hidden="true" tabindex="-1"></a>to initialize and fit per-trait likelihood calculations that do not require</span>
 <span id="cb4-224"><a href="#cb4-224" aria-hidden="true" tabindex="-1"></a>observed cross-trait phenotype products. The current <span class="in">`stblr_csr()`</span> wrapper</span>
 <span id="cb4-225"><a href="#cb4-225" aria-hidden="true" tabindex="-1"></a>uses this per-trait representation: it infers the number of traits from</span>
@@ -1110,14 +1110,14 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-237"><a href="#cb4-237" aria-hidden="true" tabindex="-1"></a>\sum_{i \in \mathcal I_{ts}} y_{it}y_{is},</span>
 <span id="cb4-238"><a href="#cb4-238" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-239"><a href="#cb4-239" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\mathcal I_{ts}<span class="sc">\)</span> is the set of individuals observed for both traits.</span>
+<span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a>where $\mathcal I_{ts}$ is the set of individuals observed for both traits.</span>
 <span id="cb4-241"><a href="#cb4-241" aria-hidden="true" tabindex="-1"></a>The diagonal entries are the univariate <span class="in">`yy_t`</span>; the off-diagonal entries</span>
 <span id="cb4-242"><a href="#cb4-242" aria-hidden="true" tabindex="-1"></a>contain information that a vector of <span class="in">`yy`</span> values does not preserve.</span>
 <span id="cb4-243"><a href="#cb4-243" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-244"><a href="#cb4-244" aria-hidden="true" tabindex="-1"></a>With individual-level <span class="sc">\(</span>Y<span class="sc">\)</span>, <span class="in">`SSY`</span> and the effective overlap counts can be</span>
+<span id="cb4-244"><a href="#cb4-244" aria-hidden="true" tabindex="-1"></a>With individual-level $Y$, <span class="in">`SSY`</span> and the effective overlap counts can be</span>
 <span id="cb4-245"><a href="#cb4-245" aria-hidden="true" tabindex="-1"></a>calculated from observed individuals. With summary statistics, they must be</span>
-<span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a>provided or reconstructed. If <span class="sc">\(</span>N_{ts}<span class="sc">\)</span> is the number of individuals shared</span>
-<span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a>by traits <span class="sc">\(</span>t<span class="sc">\)</span> and <span class="sc">\(</span>s<span class="sc">\)</span>, and <span class="sc">\(</span>R_y<span class="sc">\)</span> is a phenotypic correlation matrix, a</span>
+<span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a>provided or reconstructed. If $N_{ts}$ is the number of individuals shared</span>
+<span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a>by traits $t$ and $s$, and $R_y$ is a phenotypic correlation matrix, a</span>
 <span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a>common approximation is</span>
 <span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-250"><a href="#cb4-250" aria-hidden="true" tabindex="-1"></a>$$</span>
@@ -1129,7 +1129,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a>with diagonals forced to the observed <span class="in">`yy_t`</span>. This approximation assumes that</span>
 <span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a>overlap counts and phenotypic covariance information are meaningful for the</span>
 <span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a>study design. Full overlap, partial overlap, missingness, and meta-analysis</span>
-<span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a>can imply materially different <span class="sc">\(</span>N<span class="sc">\)</span> matrices.</span>
+<span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a>can imply materially different $N$ matrices.</span>
 <span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a>Without cross-trait <span class="in">`SSY`</span> and overlap information, a summary-statistics model</span>
 <span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a>cannot reconstruct the cross-products needed for full residual covariance</span>
@@ -1140,7 +1140,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-267"><a href="#cb4-267" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a>Marker order is a correctness condition, not presentation metadata. Every</span>
 <span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a>marker-indexed object must refer to the same biological marker at position</span>
-<span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>j<span class="sc">\)</span>:</span>
+<span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a>$j$:</span>
 <span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
 <span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a><span class="in">BED marker column selected by cls</span></span>
@@ -1161,7 +1161,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-289"><a href="#cb4-289" aria-hidden="true" tabindex="-1"></a>The same <span class="in">`cls`</span> is then supplied to <span class="in">`bed_xtx_xty()`</span> and, as a list,</span>
 <span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span>. Allele frequencies are subset with the same indices.</span>
-<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a>For annotation models, the <span class="sc">\(</span>m \times K<span class="sc">\)</span> annotation matrix <span class="in">`A`</span> must have one</span>
+<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a>For annotation models, the $m \times K$ annotation matrix <span class="in">`A`</span> must have one</span>
 <span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a>row per selected marker in exactly this order. The annotation workflow makes</span>
 <span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a>that contract explicit by assigning <span class="in">`Glist$rsidsLD[[chr]]`</span> as row names and</span>
 <span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a>checking that they are identical to the expected marker IDs.</span>
@@ -1191,8 +1191,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb4-318"><a href="#cb4-318" aria-hidden="true" tabindex="-1"></a>**Summary statistics plus sparse LD**</span>
 <span id="cb4-319"><a href="#cb4-319" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-320"><a href="#cb4-320" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>can avoid repeated access to individual-level genotypes after preparation;</span>
-<span id="cb4-321"><a href="#cb4-321" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>replaces the full <span class="sc">\(</span>X^\top X<span class="sc">\)</span> matrix with an explicit LD approximation;</span>
-<span id="cb4-322"><a href="#cb4-322" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>requires compatible <span class="in">`wy`</span>, <span class="in">`ww`</span>, <span class="in">`yy`</span>, <span class="sc">\(</span>n<span class="sc">\)</span>, and LD;</span>
+<span id="cb4-321"><a href="#cb4-321" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>replaces the full $X^\top X$ matrix with an explicit LD approximation;</span>
+<span id="cb4-322"><a href="#cb4-322" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>requires compatible <span class="in">`wy`</span>, <span class="in">`ww`</span>, <span class="in">`yy`</span>, $n$, and LD;</span>
 <span id="cb4-323"><a href="#cb4-323" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>requires <span class="in">`SSY`</span> and overlap information for full joint multi-trait residual</span>
 <span id="cb4-324"><a href="#cb4-324" aria-hidden="true" tabindex="-1"></a>  covariance calculations;</span>
 <span id="cb4-325"><a href="#cb4-325" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>cannot recover information omitted during summarization or sparsification.</span>

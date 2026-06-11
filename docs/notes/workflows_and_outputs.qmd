@@ -184,7 +184,7 @@ known.
 ### Prepare Shared CSR Inputs and Align `A`
 
 The workflow computes sufficient statistics and streams sparse LD exactly as
-in the plain CSR workflow. It then constructs an \(m \times K\) annotation
+in the plain CSR workflow. It then constructs an $m \times K$ annotation
 matrix `A`, where rows are markers and columns are annotations.
 
 ```r
@@ -192,8 +192,8 @@ rownames(A) <- marker_id
 stopifnot(nrow(A) == length(cls), identical(rownames(A), marker_id))
 ```
 
-The alignment check is essential. Row \(i\) of `A` must describe the same
-marker as row \(i\) of `stats$wy`, `stats$ww`, the sparse-LD rows and columns,
+The alignment check is essential. Row $i$ of `A` must describe the same
+marker as row $i$ of `stats$wy`, `stats$ww`, the sparse-LD rows and columns,
 and the returned marker-level posterior summaries.
 
 ### Fit Four Annotation Prior Families
@@ -231,7 +231,7 @@ model-specific or optional.
 
 | Component | Interpretation |
 |---|---|
-| `bm` | Posterior mean marker effects, usually an \(m \times n_t\) matrix. |
+| `bm` | Posterior mean marker effects, usually an $m \times n_t$ matrix. |
 | `dm` | Posterior inclusion probabilities or inclusion summaries, usually aligned with `bm`. |
 | `b` | Current or returned marker-effect state, when returned. It is not the same as `bm`. |
 | `r` | Current or returned marker-scale residual state, when returned. |
@@ -299,7 +299,7 @@ the fitted model, not as a known count of causal variants.
 
 ## PIPs and Top-Marker Summaries
 
-For marker \(i\) and trait \(t\), `dm[i, t]` estimates posterior evidence that
+For marker $i$ and trait $t$, `dm[i, t]` estimates posterior evidence that
 the marker is active under the fitted likelihood, prior, and sampler. A useful
 top-marker table contains marker identifier, trait, PIP, absolute posterior
 mean effect, and signed posterior mean effect:

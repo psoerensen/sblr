@@ -104,6 +104,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -362,10 +391,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="prepare-shared-csr-inputs-and-align-a" class="level3">
 <h3 class="anchored" data-anchor-id="prepare-shared-csr-inputs-and-align-a">Prepare Shared CSR Inputs and Align <code>A</code></h3>
-<p>The workflow computes sufficient statistics and streams sparse LD exactly as in the plain CSR workflow. It then constructs an (m K) annotation matrix <code>A</code>, where rows are markers and columns are annotations.</p>
+<p>The workflow computes sufficient statistics and streams sparse LD exactly as in the plain CSR workflow. It then constructs an <span class="math inline">\(m \times K\)</span> annotation matrix <code>A</code>, where rows are markers and columns are annotations.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The alignment check is essential. Row (i) of <code>A</code> must describe the same marker as row (i) of <code>stats$wy</code>, <code>stats$ww</code>, the sparse-LD rows and columns, and the returned marker-level posterior summaries.</p>
+<p>The alignment check is essential. Row <span class="math inline">\(i\)</span> of <code>A</code> must describe the same marker as row <span class="math inline">\(i\)</span> of <code>stats$wy</code>, <code>stats$ww</code>, the sparse-LD rows and columns, and the returned marker-level posterior summaries.</p>
 </section>
 <section id="fit-four-annotation-prior-families" class="level3">
 <h3 class="anchored" data-anchor-id="fit-four-annotation-prior-families">Fit Four Annotation Prior Families</h3>
@@ -398,7 +427,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td><code>bm</code></td>
-<td>Posterior mean marker effects, usually an (m n_t) matrix.</td>
+<td>Posterior mean marker effects, usually an <span class="math inline">\(m \times n_t\)</span> matrix.</td>
 </tr>
 <tr class="even">
 <td><code>dm</code></td>
@@ -484,7 +513,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pips-and-top-marker-summaries" class="level2">
 <h2 class="anchored" data-anchor-id="pips-and-top-marker-summaries">PIPs and Top-Marker Summaries</h2>
-<p>For marker (i) and trait (t), <code>dm[i, t]</code> estimates posterior evidence that the marker is active under the fitted likelihood, prior, and sampler. A useful top-marker table contains marker identifier, trait, PIP, absolute posterior mean effect, and signed posterior mean effect:</p>
+<p>For marker <span class="math inline">\(i\)</span> and trait <span class="math inline">\(t\)</span>, <code>dm[i, t]</code> estimates posterior evidence that the marker is active under the fitted likelihood, prior, and sampler. A useful top-marker table contains marker identifier, trait, PIP, absolute posterior mean effect, and signed posterior mean effect:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(<span class="sc">-</span>fit<span class="sc">$</span>dm[, <span class="dv">1</span>], <span class="sc">-</span><span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>]))</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">data.frame</span>(</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">marker =</span> <span class="fu">rownames</span>(fit<span class="sc">$</span>dm),</span>
@@ -1213,7 +1242,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-184"><a href="#cb10-184" aria-hidden="true" tabindex="-1"></a><span class="fu">### Prepare Shared CSR Inputs and Align `A`</span></span>
 <span id="cb10-185"><a href="#cb10-185" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-186"><a href="#cb10-186" aria-hidden="true" tabindex="-1"></a>The workflow computes sufficient statistics and streams sparse LD exactly as</span>
-<span id="cb10-187"><a href="#cb10-187" aria-hidden="true" tabindex="-1"></a>in the plain CSR workflow. It then constructs an <span class="sc">\(</span>m \times K<span class="sc">\)</span> annotation</span>
+<span id="cb10-187"><a href="#cb10-187" aria-hidden="true" tabindex="-1"></a>in the plain CSR workflow. It then constructs an $m \times K$ annotation</span>
 <span id="cb10-188"><a href="#cb10-188" aria-hidden="true" tabindex="-1"></a>matrix <span class="in">`A`</span>, where rows are markers and columns are annotations.</span>
 <span id="cb10-189"><a href="#cb10-189" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-190"><a href="#cb10-190" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
@@ -1221,8 +1250,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-192"><a href="#cb10-192" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span>
 <span id="cb10-193"><a href="#cb10-193" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb10-194"><a href="#cb10-194" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-195"><a href="#cb10-195" aria-hidden="true" tabindex="-1"></a>The alignment check is essential. Row <span class="sc">\(</span>i<span class="sc">\)</span> of <span class="in">`A`</span> must describe the same</span>
-<span id="cb10-196"><a href="#cb10-196" aria-hidden="true" tabindex="-1"></a>marker as row <span class="sc">\(</span>i<span class="sc">\)</span> of <span class="in">`stats$wy`</span>, <span class="in">`stats$ww`</span>, the sparse-LD rows and columns,</span>
+<span id="cb10-195"><a href="#cb10-195" aria-hidden="true" tabindex="-1"></a>The alignment check is essential. Row $i$ of <span class="in">`A`</span> must describe the same</span>
+<span id="cb10-196"><a href="#cb10-196" aria-hidden="true" tabindex="-1"></a>marker as row $i$ of <span class="in">`stats$wy`</span>, <span class="in">`stats$ww`</span>, the sparse-LD rows and columns,</span>
 <span id="cb10-197"><a href="#cb10-197" aria-hidden="true" tabindex="-1"></a>and the returned marker-level posterior summaries.</span>
 <span id="cb10-198"><a href="#cb10-198" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-199"><a href="#cb10-199" aria-hidden="true" tabindex="-1"></a><span class="fu">### Fit Four Annotation Prior Families</span></span>
@@ -1260,7 +1289,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-231"><a href="#cb10-231" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-232"><a href="#cb10-232" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Component <span class="pp">|</span> Interpretation <span class="pp">|</span></span>
 <span id="cb10-233"><a href="#cb10-233" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
-<span id="cb10-234"><a href="#cb10-234" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`bm`</span> <span class="pp">|</span> Posterior mean marker effects, usually an <span class="sc">\(</span>m \times n_t<span class="sc">\)</span> matrix. <span class="pp">|</span></span>
+<span id="cb10-234"><a href="#cb10-234" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`bm`</span> <span class="pp">|</span> Posterior mean marker effects, usually an $m \times n_t$ matrix. <span class="pp">|</span></span>
 <span id="cb10-235"><a href="#cb10-235" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`dm`</span> <span class="pp">|</span> Posterior inclusion probabilities or inclusion summaries, usually aligned with <span class="in">`bm`</span>. <span class="pp">|</span></span>
 <span id="cb10-236"><a href="#cb10-236" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`b`</span> <span class="pp">|</span> Current or returned marker-effect state, when returned. It is not the same as <span class="in">`bm`</span>. <span class="pp">|</span></span>
 <span id="cb10-237"><a href="#cb10-237" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`r`</span> <span class="pp">|</span> Current or returned marker-scale residual state, when returned. <span class="pp">|</span></span>
@@ -1328,7 +1357,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-299"><a href="#cb10-299" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-300"><a href="#cb10-300" aria-hidden="true" tabindex="-1"></a><span class="fu">## PIPs and Top-Marker Summaries</span></span>
 <span id="cb10-301"><a href="#cb10-301" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-302"><a href="#cb10-302" aria-hidden="true" tabindex="-1"></a>For marker <span class="sc">\(</span>i<span class="sc">\)</span> and trait <span class="sc">\(</span>t<span class="sc">\)</span>, <span class="in">`dm[i, t]`</span> estimates posterior evidence that</span>
+<span id="cb10-302"><a href="#cb10-302" aria-hidden="true" tabindex="-1"></a>For marker $i$ and trait $t$, <span class="in">`dm[i, t]`</span> estimates posterior evidence that</span>
 <span id="cb10-303"><a href="#cb10-303" aria-hidden="true" tabindex="-1"></a>the marker is active under the fitted likelihood, prior, and sampler. A useful</span>
 <span id="cb10-304"><a href="#cb10-304" aria-hidden="true" tabindex="-1"></a>top-marker table contains marker identifier, trait, PIP, absolute posterior</span>
 <span id="cb10-305"><a href="#cb10-305" aria-hidden="true" tabindex="-1"></a>mean effect, and signed posterior mean effect:</span>

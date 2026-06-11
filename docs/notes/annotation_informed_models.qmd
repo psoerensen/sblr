@@ -33,7 +33,7 @@ Annotation-informed models ask whether that information should alter a
 marker's prior probability of being active or the expected scale of an active
 effect.
 
-For marker \(i\) and trait \(t\), useful prior quantities include:
+For marker $i$ and trait $t$, useful prior quantities include:
 
 $$
 \pi_{it} = P(d_{it}=1),
@@ -42,7 +42,7 @@ v_{b,it} = \operatorname{Var}(b_{it}\mid d_{it}=1),
 $$
 
 and, for mixture models, component probabilities
-\(\pi_{itc}=P(c_{it}=c)\). In proposed multi-trait extensions, annotations
+$\pi_{itc}=P(c_{it}=c)$. In proposed multi-trait extensions, annotations
 could additionally influence marker-specific sharing-model probabilities or
 effect covariance matrices.
 
@@ -62,7 +62,7 @@ of uncertainty. None makes annotation membership causal by itself.
 
 ## Annotation Matrix, Overlap, Centering, and Marker Ordering
 
-Let \(A\) be an \(m \times K\) annotation matrix:
+Let $A$ be an $m \times K$ annotation matrix:
 
 $$
 A =
@@ -81,7 +81,7 @@ simultaneously.
 Overlap is scientifically useful but complicates interpretation. A direct sum
 over each annotation double-counts markers in multiple sets and is not a
 strict variance partition. Conditional annotation models instead use the
-whole row \(A_i\) to estimate the contribution of one annotation while
+whole row $A_i$ to estimate the contribution of one annotation while
 accounting for the others. Strongly correlated annotation columns can still
 make individual coefficients weakly identified.
 
@@ -118,7 +118,7 @@ Preparation of `stats`, sparse LD, and marker order is described in
 [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd).
 
 Centering has a statistical role beyond numerical convenience. If
-\(z_{it}=A_i\eta_t\), a centered predictor is
+$z_{it}=A_i\eta_t$, a centered predictor is
 
 $$
 z_{it}^{\mathrm{centered}}
@@ -199,7 +199,7 @@ A_i\beta_{v,t}-\frac{1}{m}\sum_j A_j\beta_{v,t}
 $$
 
 bounded to `vb_multiplier_min` and `vb_multiplier_max`, with
-\(v_{b,it}=v_{b,t}\lambda_{it}\).
+$v_{b,it}=v_{b,t}\lambda_{it}$.
 
 The direct route is illustrated by the annotation workflow:
 
@@ -229,7 +229,7 @@ uncertainty.
 
 `stblr_csr_learn_annot()` learns annotation effects while fitting marker
 effects. For each trait, it maintains annotation coefficient vectors
-\(\eta_{\pi,t}\) and \(\eta_{v,t}\). The implemented marker-specific prior is
+$\eta_{\pi,t}$ and $\eta_{v,t}$. The implemented marker-specific prior is
 conceptually
 
 $$
@@ -260,8 +260,8 @@ $$
 
 The sampler alternates between marker updates under current marker-specific
 priors and annotation-coefficient updates. At intervals controlled by
-`annot_update_every`, random-walk proposals perturb \(\eta_{\pi,t}\) or
-\(\eta_{v,t}\). The inclusion-coefficient target uses current inclusion
+`annot_update_every`, random-walk proposals perturb $\eta_{\pi,t}$ or
+$\eta_{v,t}$. The inclusion-coefficient target uses current inclusion
 states, while the variance-coefficient target uses current active effects.
 Gaussian shrinkage scales `sigma_eta_pi` and `sigma_eta_vb` regularize the
 coefficients; proposal scales `rw_sd_eta_pi` and `rw_sd_eta_vb` control
@@ -294,7 +294,7 @@ short chains can produce unstable or poorly mixed coefficient estimates.
 ## Group Priors
 
 `stblr_csr_group_annot()` assigns every marker to exactly one group and gives
-each group trait-specific prior parameters. If \(g(i)\) is marker \(i\)'s
+each group trait-specific prior parameters. If $g(i)$ is marker $i$'s
 group index, the prior is
 
 $$
@@ -304,7 +304,7 @@ b_{it}\mid d_{it}=1
 \sim N\left(0,v_{b,t}\lambda_{g(i),t}\right).
 $$
 
-The R wrapper accepts a length-\(m\) `group` vector, optionally named by
+The R wrapper accepts a length-$m$ `group` vector, optionally named by
 marker. It converts group labels into an internal zero-based `group_index`,
 records group names and sizes, initializes `group_pi` and
 `group_vb_multiplier`, and returns group-level posterior summaries including
@@ -376,7 +376,7 @@ fit_sbayesrc_published_gamma <- stblr_csr_sbayesrc_generic(
 Matching the gamma grid aligns that part of the prior specification; it does
 not make the complete implementation identical to GCTB SBayesRC.
 
-For marker \(i\), annotations determine component probabilities through a
+For marker $i$, annotations determine component probabilities through a
 generalized probit stick-breaking construction. Let
 
 $$
@@ -385,7 +385,7 @@ $$
 p_{ij}=\Phi(\eta_{ij}),
 $$
 
-for \(C-1\) stick-breaking steps. Then
+for $C-1$ stick-breaking steps. Then
 
 $$
 \begin{aligned}
@@ -397,7 +397,7 @@ $$
 $$
 
 The probabilities are non-negative and sum to one. The native sampler floors
-and renormalizes them for numerical stability. Marker \(i\)'s expected gamma
+and renormalizes them for numerical stability. Marker $i$'s expected gamma
 multiplier is
 
 $$
@@ -436,7 +436,7 @@ deterministic summaries:
 - `sbayesrc_annotation_gamma_mean(alpha, gamma)` returns expected gamma per
   annotation row;
 - `sbayesrc_marker_pi(A, alpha, gamma)` applies stick-breaking to
-  \(A\alpha\), returning marker-level component probabilities;
+  $A\alpha$, returning marker-level component probabilities;
 - `sbayesrc_marker_gamma_mean(A, alpha, gamma)` returns expected gamma per
   marker.
 
@@ -501,9 +501,9 @@ $$
 \text{next genomic fit}.
 $$
 
-First-stage summaries can include posterior means \(\widehat b_{it}\),
-posterior inclusion probabilities \(\widehat{dm}_{it}\), residual scores, and
-set-specific genomic variance contributions. For an annotation set \(S_k\), a
+First-stage summaries can include posterior means $\widehat b_{it}$,
+posterior inclusion probabilities $\widehat{dm}_{it}$, residual scores, and
+set-specific genomic variance contributions. For an annotation set $S_k$, a
 smoothed inclusion estimate is
 
 $$
@@ -536,8 +536,8 @@ m^{\mathrm{eff}}_{k,t}
 $$
 
 For overlapping annotations, marker-level responses such as
-\(\widehat{dm}_{it}\), \(\widehat b_{it}^2\), or estimated variance
-contributions can be regressed jointly on \(A\). The resulting coefficients
+$\widehat{dm}_{it}$, $\widehat b_{it}^2$, or estimated variance
+contributions can be regressed jointly on $A$. The resulting coefficients
 can construct marker-specific priors on logit or log scales.
 
 This strategy preserves useful technical ideas for prior learning,

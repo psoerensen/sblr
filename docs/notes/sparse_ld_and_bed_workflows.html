@@ -348,7 +348,7 @@ optional BED-versus-CSR posterior comparison</code></pre>
 <li>centering and scaling choices affect <code>stats$yy</code> and prior initialization;</li>
 <li>missing phenotype handling must be consistent with the chosen sample.</li>
 </ul>
-<p>For trait (t), <code>bed_xtx_xty()</code> constructs quantities including</p>
+<p>For trait <span class="math inline">\(t\)</span>, <code>bed_xtx_xty()</code> constructs quantities including</p>
 <p><span class="math display">\[
 wy_t = X^\top y_t,
 \qquad
@@ -356,7 +356,7 @@ ww_t = \operatorname{diag}(X^\top X),
 \qquad
 yy_t = y_t^\top y_t.
 \]</span></p>
-<p>The sparse-LD branch must use the same version of (X), including sample rows and marker scaling, that generated these statistics.</p>
+<p>The sparse-LD branch must use the same version of <span class="math inline">\(X\)</span>, including sample rows and marker scaling, that generated these statistics.</p>
 </section>
 <section id="path-a-direct-individual-level-fitting-with-stblr_bed_marker" class="level2">
 <h2 class="anchored" data-anchor-id="path-a-direct-individual-level-fitting-with-stblr_bed_marker">Path A: Direct Individual-Level Fitting With <code>stblr_bed_marker()</code></h2>
@@ -412,7 +412,7 @@ yy_t = y_t^\top y_t.
 <tbody>
 <tr class="odd">
 <td><code>stats$wy</code></td>
-<td>Marker-trait cross-products (X^Y); drives marker-residual scores.</td>
+<td>Marker-trait cross-products <span class="math inline">\(X^\top Y\)</span>; drives marker-residual scores.</td>
 </tr>
 <tr class="even">
 <td><code>stats$ww</code></td>
@@ -420,7 +420,7 @@ yy_t = y_t^\top y_t.
 </tr>
 <tr class="odd">
 <td><code>stats$yy</code></td>
-<td>Per-trait phenotype sums of squares (y_t^y_t); used for likelihood and variance initialization.</td>
+<td>Per-trait phenotype sums of squares <span class="math inline">\(y_t^\top y_t\)</span>; used for likelihood and variance initialization.</td>
 </tr>
 <tr class="even">
 <td><code>stats$n</code></td>
@@ -432,12 +432,12 @@ yy_t = y_t^\top y_t.
 </tr>
 </tbody>
 </table>
-<p><code>stats$wy</code> and <code>stats$ww</code> must each describe the same (m) markers, in the same order later used by the CSR LD matrix. <code>stats$yy</code> has one entry per trait, not one entry per marker.</p>
+<p><code>stats$wy</code> and <code>stats$ww</code> must each describe the same <span class="math inline">\(m\)</span> markers, in the same order later used by the CSR LD matrix. <code>stats$yy</code> has one entry per trait, not one entry per marker.</p>
 <p><code>bed_xtx_xty()</code> accepts a single BED file path and a single <code>cls</code> vector. Current multi-file sparse-LD preparation therefore needs statistics assembled with a compatible marker order and sample definition; the clean workflow uses one chromosome and one BED file.</p>
 </section>
 <section id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" class="level2">
 <h2 class="anchored" data-anchor-id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr">Path B, Step 2: Streaming Sparse LD With <code>sparseLD_stream_CSR()</code></h2>
-<p><code>sparseLD_stream_CSR()</code> computes marker correlations from BED data, applies distance and (r^2) retention rules, and writes a disk-backed CSR representation:</p>
+<p><code>sparseLD_stream_CSR()</code> computes marker correlations from BED data, applies distance and <span class="math inline">\(r^2\)</span> retention rules, and writes a disk-backed CSR representation:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ld_prefix <span class="ot">&lt;-</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>ld_written <span class="ot">&lt;-</span> <span class="fu">sparseLD_stream_CSR</span>(</span>
@@ -458,7 +458,7 @@ yy_t = y_t^\top y_t.
 <ul>
 <li><code>row_ptr</code>: offsets delimiting retained entries for each LD row;</li>
 <li><code>col_idx</code>: column indices of retained marker pairs;</li>
-<li><code>values</code>: retained marker correlations (r).</li>
+<li><code>values</code>: retained marker correlations <span class="math inline">\(r\)</span>.</li>
 </ul>
 <p>The disk format stores the upper triangle with an implicit unit diagonal and zero-based column indices. Package functions handle this storage contract; analysis code should not manually alter index bases or binary files.</p>
 <p><code>r2_threshold</code> controls which correlations are retained by squared magnitude. The distance arguments can additionally restrict candidate marker pairs. Values of zero disable the corresponding distance restriction in the example workflow. These settings change the LD approximation and should be recorded with analysis outputs.</p>
@@ -518,7 +518,7 @@ yy_t = y_t^\top y_t.
 <p>Useful checks include confirming:</p>
 <ul>
 <li>matrix dimensions equal the selected marker count;</li>
-<li>row pointers have length (m+1);</li>
+<li>row pointers have length <span class="math inline">\(m+1\)</span>;</li>
 <li>column indices fall within the expected base and dimensions;</li>
 <li>metadata records the intended <code>r2_threshold</code>, distance limits, and sample count;</li>
 <li>the number of stored values agrees with the final row pointer.</li>
@@ -545,7 +545,7 @@ yy_t = y_t^\top y_t.
 
 stats$wy + stats$ww + ld_prefix
     -&gt; marker-update and residual-score calculations</code></pre>
-<p>The wrapper infers the number of traits from <code>length(stats$yy)</code>. It takes <code>n</code> from the function argument or <code>stats$n</code>, and takes (m) from the function argument, <code>stats$m</code>, or <code>length(stats$ww[[1]])</code>. Explicitly supplying <code>n</code> and checking (m) before fitting makes the data contract easier to audit.</p>
+<p>The wrapper infers the number of traits from <code>length(stats$yy)</code>. It takes <code>n</code> from the function argument or <code>stats$n</code>, and takes <span class="math inline">\(m\)</span> from the function argument, <code>stats$m</code>, or <code>length(stats$ww[[1]])</code>. Explicitly supplying <code>n</code> and checking <span class="math inline">\(m\)</span> before fitting makes the data contract easier to audit.</p>
 <p><code>stats$wy</code>, <code>stats$ww</code>, and <code>stats$yy</code> summarize the phenotype side and diagonal marker information. The files at <code>ld_prefix</code> provide the retained off-diagonal marker relationships needed to update residual scores after marker effects change. The summary-statistics path therefore depends on both objects; neither is sufficient by itself.</p>
 </section>
 <section id="comparing-bed-direct-and-csr-posterior-outputs" class="level2">
@@ -593,9 +593,9 @@ stats$wy + stats$ww + ld_prefix
 <li><code>Glist$rsids[[chr]][cls]</code> exactly matches <code>Glist$rsidsLD[[chr]]</code>.</li>
 <li><code>y</code> has <code>n</code> rows when <code>rows = NULL</code>, or describes the selected rows when <code>rows</code> is supplied.</li>
 <li><code>af</code> has one value per selected marker and follows <code>cls</code> order.</li>
-<li>Every trait’s <code>stats$wy</code> and <code>stats$ww</code> has length (m=).</li>
+<li>Every trait’s <code>stats$wy</code> and <code>stats$ww</code> has length <span class="math inline">\(m=\text{length(cls)}\)</span>.</li>
 <li><code>stats$yy</code> has one value per phenotype trait.</li>
-<li>CSR <code>nrow</code> and <code>ncol</code> both equal (m), and <code>row_ptr</code> has length (m+1).</li>
+<li>CSR <code>nrow</code> and <code>ncol</code> both equal <span class="math inline">\(m\)</span>, and <code>row_ptr</code> has length <span class="math inline">\(m+1\)</span>.</li>
 <li>CSR index bases are left to package functions; use <code>one_based</code> only when inspecting a returned R object.</li>
 <li>CSR metadata records the expected sample count, threshold, and distance settings.</li>
 <li>Annotation rows and marker/group vectors match <code>marker_id</code> exactly before annotation-informed models are fitted.</li>
@@ -1212,7 +1212,7 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-124"><a href="#cb14-124" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>centering and scaling choices affect <span class="in">`stats$yy`</span> and prior initialization;</span>
 <span id="cb14-125"><a href="#cb14-125" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>missing phenotype handling must be consistent with the chosen sample.</span>
 <span id="cb14-126"><a href="#cb14-126" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-127"><a href="#cb14-127" aria-hidden="true" tabindex="-1"></a>For trait <span class="sc">\(</span>t<span class="sc">\)</span>, <span class="in">`bed_xtx_xty()`</span> constructs quantities including</span>
+<span id="cb14-127"><a href="#cb14-127" aria-hidden="true" tabindex="-1"></a>For trait $t$, <span class="in">`bed_xtx_xty()`</span> constructs quantities including</span>
 <span id="cb14-128"><a href="#cb14-128" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-129"><a href="#cb14-129" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb14-130"><a href="#cb14-130" aria-hidden="true" tabindex="-1"></a>wy_t = X^\top y_t,</span>
@@ -1222,7 +1222,7 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-134"><a href="#cb14-134" aria-hidden="true" tabindex="-1"></a>yy_t = y_t^\top y_t.</span>
 <span id="cb14-135"><a href="#cb14-135" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb14-136"><a href="#cb14-136" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-137"><a href="#cb14-137" aria-hidden="true" tabindex="-1"></a>The sparse-LD branch must use the same version of <span class="sc">\(</span>X<span class="sc">\)</span>, including sample rows</span>
+<span id="cb14-137"><a href="#cb14-137" aria-hidden="true" tabindex="-1"></a>The sparse-LD branch must use the same version of $X$, including sample rows</span>
 <span id="cb14-138"><a href="#cb14-138" aria-hidden="true" tabindex="-1"></a>and marker scaling, that generated these statistics.</span>
 <span id="cb14-139"><a href="#cb14-139" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-140"><a href="#cb14-140" aria-hidden="true" tabindex="-1"></a><span class="fu">## Path A: Direct Individual-Level Fitting With `stblr_bed_marker()`</span></span>
@@ -1284,13 +1284,13 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-196"><a href="#cb14-196" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-197"><a href="#cb14-197" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Object <span class="pp">|</span> Meaning and use <span class="pp">|</span></span>
 <span id="cb14-198"><a href="#cb14-198" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
-<span id="cb14-199"><a href="#cb14-199" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$wy`</span> <span class="pp">|</span> Marker-trait cross-products <span class="sc">\(</span>X^\top Y<span class="sc">\)</span>; drives marker-residual scores. <span class="pp">|</span></span>
+<span id="cb14-199"><a href="#cb14-199" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$wy`</span> <span class="pp">|</span> Marker-trait cross-products $X^\top Y$; drives marker-residual scores. <span class="pp">|</span></span>
 <span id="cb14-200"><a href="#cb14-200" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$ww`</span> <span class="pp">|</span> Per-marker diagonal genotype cross-products; used by marker updates. <span class="pp">|</span></span>
-<span id="cb14-201"><a href="#cb14-201" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$yy`</span> <span class="pp">|</span> Per-trait phenotype sums of squares <span class="sc">\(</span>y_t^\top y_t<span class="sc">\)</span>; used for likelihood and variance initialization. <span class="pp">|</span></span>
+<span id="cb14-201"><a href="#cb14-201" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$yy`</span> <span class="pp">|</span> Per-trait phenotype sums of squares $y_t^\top y_t$; used for likelihood and variance initialization. <span class="pp">|</span></span>
 <span id="cb14-202"><a href="#cb14-202" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$n`</span> <span class="pp">|</span> Sample size when returned; otherwise supply compatible <span class="in">`n`</span> to <span class="in">`stblr_csr()`</span>. <span class="pp">|</span></span>
 <span id="cb14-203"><a href="#cb14-203" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stats$m`</span> <span class="pp">|</span> Marker count when returned; otherwise inferred from <span class="in">`stats$ww[[1]]`</span>. <span class="pp">|</span></span>
 <span id="cb14-204"><a href="#cb14-204" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-205"><a href="#cb14-205" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$wy`</span> and <span class="in">`stats$ww`</span> must each describe the same <span class="sc">\(</span>m<span class="sc">\)</span> markers, in the</span>
+<span id="cb14-205"><a href="#cb14-205" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$wy`</span> and <span class="in">`stats$ww`</span> must each describe the same $m$ markers, in the</span>
 <span id="cb14-206"><a href="#cb14-206" aria-hidden="true" tabindex="-1"></a>same order later used by the CSR LD matrix. <span class="in">`stats$yy`</span> has one entry per trait,</span>
 <span id="cb14-207"><a href="#cb14-207" aria-hidden="true" tabindex="-1"></a>not one entry per marker.</span>
 <span id="cb14-208"><a href="#cb14-208" aria-hidden="true" tabindex="-1"></a></span>
@@ -1302,7 +1302,7 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-214"><a href="#cb14-214" aria-hidden="true" tabindex="-1"></a><span class="fu">## Path B, Step 2: Streaming Sparse LD With `sparseLD_stream_CSR()`</span></span>
 <span id="cb14-215"><a href="#cb14-215" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-216"><a href="#cb14-216" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span> computes marker correlations from BED data, applies</span>
-<span id="cb14-217"><a href="#cb14-217" aria-hidden="true" tabindex="-1"></a>distance and <span class="sc">\(</span>r^2<span class="sc">\)</span> retention rules, and writes a disk-backed CSR</span>
+<span id="cb14-217"><a href="#cb14-217" aria-hidden="true" tabindex="-1"></a>distance and $r^2$ retention rules, and writes a disk-backed CSR</span>
 <span id="cb14-218"><a href="#cb14-218" aria-hidden="true" tabindex="-1"></a>representation:</span>
 <span id="cb14-219"><a href="#cb14-219" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-220"><a href="#cb14-220" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
@@ -1332,7 +1332,7 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-244"><a href="#cb14-244" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-245"><a href="#cb14-245" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`row_ptr`</span>: offsets delimiting retained entries for each LD row;</span>
 <span id="cb14-246"><a href="#cb14-246" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`col_idx`</span>: column indices of retained marker pairs;</span>
-<span id="cb14-247"><a href="#cb14-247" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`values`</span>: retained marker correlations <span class="sc">\(</span>r<span class="sc">\)</span>.</span>
+<span id="cb14-247"><a href="#cb14-247" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`values`</span>: retained marker correlations $r$.</span>
 <span id="cb14-248"><a href="#cb14-248" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-249"><a href="#cb14-249" aria-hidden="true" tabindex="-1"></a>The disk format stores the upper triangle with an implicit unit diagonal and</span>
 <span id="cb14-250"><a href="#cb14-250" aria-hidden="true" tabindex="-1"></a>zero-based column indices. Package functions handle this storage contract;</span>
@@ -1384,7 +1384,7 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-296"><a href="#cb14-296" aria-hidden="true" tabindex="-1"></a>Useful checks include confirming:</span>
 <span id="cb14-297"><a href="#cb14-297" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-298"><a href="#cb14-298" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>matrix dimensions equal the selected marker count;</span>
-<span id="cb14-299"><a href="#cb14-299" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>row pointers have length <span class="sc">\(</span>m+1<span class="sc">\)</span>;</span>
+<span id="cb14-299"><a href="#cb14-299" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>row pointers have length $m+1$;</span>
 <span id="cb14-300"><a href="#cb14-300" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>column indices fall within the expected base and dimensions;</span>
 <span id="cb14-301"><a href="#cb14-301" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>metadata records the intended <span class="in">`r2_threshold`</span>, distance limits, and sample</span>
 <span id="cb14-302"><a href="#cb14-302" aria-hidden="true" tabindex="-1"></a>  count;</span>
@@ -1423,9 +1423,9 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-335"><a href="#cb14-335" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb14-336"><a href="#cb14-336" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-337"><a href="#cb14-337" aria-hidden="true" tabindex="-1"></a>The wrapper infers the number of traits from <span class="in">`length(stats$yy)`</span>. It takes</span>
-<span id="cb14-338"><a href="#cb14-338" aria-hidden="true" tabindex="-1"></a><span class="in">`n`</span> from the function argument or <span class="in">`stats$n`</span>, and takes <span class="sc">\(</span>m<span class="sc">\)</span> from the function</span>
+<span id="cb14-338"><a href="#cb14-338" aria-hidden="true" tabindex="-1"></a><span class="in">`n`</span> from the function argument or <span class="in">`stats$n`</span>, and takes $m$ from the function</span>
 <span id="cb14-339"><a href="#cb14-339" aria-hidden="true" tabindex="-1"></a>argument, <span class="in">`stats$m`</span>, or <span class="in">`length(stats$ww[[1]])`</span>. Explicitly supplying <span class="in">`n`</span> and</span>
-<span id="cb14-340"><a href="#cb14-340" aria-hidden="true" tabindex="-1"></a>checking <span class="sc">\(</span>m<span class="sc">\)</span> before fitting makes the data contract easier to audit.</span>
+<span id="cb14-340"><a href="#cb14-340" aria-hidden="true" tabindex="-1"></a>checking $m$ before fitting makes the data contract easier to audit.</span>
 <span id="cb14-341"><a href="#cb14-341" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-342"><a href="#cb14-342" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$wy`</span>, <span class="in">`stats$ww`</span>, and <span class="in">`stats$yy`</span> summarize the phenotype side and</span>
 <span id="cb14-343"><a href="#cb14-343" aria-hidden="true" tabindex="-1"></a>diagonal marker information. The files at <span class="in">`ld_prefix`</span> provide the retained</span>
@@ -1515,9 +1515,9 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb14-427"><a href="#cb14-427" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`y`</span> has <span class="in">`n`</span> rows when <span class="in">`rows = NULL`</span>, or describes the selected rows when</span>
 <span id="cb14-428"><a href="#cb14-428" aria-hidden="true" tabindex="-1"></a>   <span class="in">`rows`</span> is supplied.</span>
 <span id="cb14-429"><a href="#cb14-429" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span><span class="in">`af`</span> has one value per selected marker and follows <span class="in">`cls`</span> order.</span>
-<span id="cb14-430"><a href="#cb14-430" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Every trait's <span class="in">`stats$wy`</span> and <span class="in">`stats$ww`</span> has length <span class="sc">\(</span>m=\text{length(cls)}<span class="sc">\)</span>.</span>
+<span id="cb14-430"><a href="#cb14-430" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Every trait's <span class="in">`stats$wy`</span> and <span class="in">`stats$ww`</span> has length $m=\text{length(cls)}$.</span>
 <span id="cb14-431"><a href="#cb14-431" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span><span class="in">`stats$yy`</span> has one value per phenotype trait.</span>
-<span id="cb14-432"><a href="#cb14-432" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>CSR <span class="in">`nrow`</span> and <span class="in">`ncol`</span> both equal <span class="sc">\(</span>m<span class="sc">\)</span>, and <span class="in">`row_ptr`</span> has length <span class="sc">\(</span>m+1<span class="sc">\)</span>.</span>
+<span id="cb14-432"><a href="#cb14-432" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>CSR <span class="in">`nrow`</span> and <span class="in">`ncol`</span> both equal $m$, and <span class="in">`row_ptr`</span> has length $m+1$.</span>
 <span id="cb14-433"><a href="#cb14-433" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>CSR index bases are left to package functions; use <span class="in">`one_based`</span> only when</span>
 <span id="cb14-434"><a href="#cb14-434" aria-hidden="true" tabindex="-1"></a>   inspecting a returned R object.</span>
 <span id="cb14-435"><a href="#cb14-435" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span>CSR metadata records the expected sample count, threshold, and distance</span>

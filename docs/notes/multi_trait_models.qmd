@@ -31,30 +31,30 @@ marker effects or estimate cross-trait covariance during sampling.
 
 ## Multi-Trait Regression Model
 
-For \(t\) traits measured on a common set of \(n\) individuals, the
+For $t$ traits measured on a common set of $n$ individuals, the
 individual-level model is
 
-\[
+$$
 \mathbf{Y} = \mathbf{X}\mathbf{B} + \mathbf{E},
-\]
+$$
 
 where:
 
-- \(\mathbf{Y}\) is the \(n \times t\) phenotype matrix;
-- \(\mathbf{X}\) is the \(n \times m\) genotype matrix;
-- \(\mathbf{B}\) is the \(m \times t\) marker-effect matrix;
-- \(\mathbf{E}\) is the \(n \times t\) residual matrix.
+- $\mathbf{Y}$ is the $n \times t$ phenotype matrix;
+- $\mathbf{X}$ is the $n \times m$ genotype matrix;
+- $\mathbf{B}$ is the $m \times t$ marker-effect matrix;
+- $\mathbf{E}$ is the $n \times t$ residual matrix.
 
-The \(i\)th row of \(\mathbf{B}\),
+The $i$th row of $\mathbf{B}$,
 
-\[
+$$
 \mathbf{b}_i =
 \begin{bmatrix}
 b_{i1} & \cdots & b_{it}
 \end{bmatrix}^{\mathsf T},
-\]
+$$
 
-is the effect vector for marker \(i\). A marker may have no effect, affect one
+is the effect vector for marker $i$. A marker may have no effect, affect one
 trait, or affect several traits. Joint MT-BLR models use prior probabilities
 and covariance matrices to describe these possibilities.
 
@@ -62,7 +62,7 @@ and covariance matrices to describe these possibilities.
 
 A multi-trait marker model needs to distinguish between two related ideas:
 
-1. **Trait-sharing pattern:** which elements of \(\mathbf{b}_i\) are active.
+1. **Trait-sharing pattern:** which elements of $\mathbf{b}_i$ are active.
 2. **Effect covariance:** how the non-zero effects vary together across
    traits.
 
@@ -85,36 +85,36 @@ also influence the inferred sharing pattern.
 
 The single-trait sparse prior combines an exact null component with an active
 normal component. MT-BLR generalizes this idea by assigning each marker a
-trait-sharing model \(s_i\). Conditional on \(s_i\), inactive effects are fixed
+trait-sharing model $s_i$. Conditional on $s_i$, inactive effects are fixed
 at zero and active effects are drawn from a multivariate distribution.
 
 A schematic prior is
 
-\[
+$$
 s_i \sim \operatorname{Categorical}(\boldsymbol{\pi}),
-\]
+$$
 
-\[
+$$
 \mathbf{b}_{i,s_i} \mid s_i
 \sim
 \mathcal{N}\left(
   \mathbf{0},
   \boldsymbol{\Sigma}_{b,s_i}
 \right),
-\]
+$$
 
-where \(\boldsymbol{\pi}\) contains prior probabilities for the allowed
-sharing patterns and \(\boldsymbol{\Sigma}_{b,s_i}\) is the active-effect
-covariance submatrix for pattern \(s_i\).
+where $\boldsymbol{\pi}$ contains prior probabilities for the allowed
+sharing patterns and $\boldsymbol{\Sigma}_{b,s_i}$ is the active-effect
+covariance submatrix for pattern $s_i$.
 
 The allowed model space is an important modeling decision:
 
-- A full model space permits all \(2^t\) inactive/active patterns.
+- A full model space permits all $2^t$ inactive/active patterns.
 - A restrictive model space may permit only all-null and all-active patterns.
 - Custom prior probabilities can favor trait-specific or broadly shared
   effects.
 
-As the number of traits increases, the full \(2^t\) model space grows quickly.
+As the number of traits increases, the full $2^t$ model space grows quickly.
 Restricting or regularizing the sharing patterns can therefore be both a
 scientific choice and a computational necessity.
 
@@ -130,7 +130,7 @@ Covariance matrices are central to multi-trait inference.
 ### Active-effect covariance
 
 The active-effect covariance,
-\(\boldsymbol{\Sigma}_b\), describes how non-zero marker effects vary together
+$\boldsymbol{\Sigma}_b$, describes how non-zero marker effects vary together
 across traits. A positive off-diagonal entry favors effects with the same
 direction; a negative entry favors opposite directions. This covariance is
 conditional on the marker being active for the corresponding traits.
@@ -139,9 +139,9 @@ conditional on the marker being active for the corresponding traits.
 
 The aggregate genetic value is
 
-\[
+$$
 \mathbf{G}_{\mathrm{value}} = \mathbf{X}\mathbf{B}.
-\]
+$$
 
 Its covariance across traits depends on both the fitted marker effects and LD.
 Genetic covariance therefore summarizes the combined architecture rather than
@@ -151,12 +151,12 @@ only the conditional covariance of active effects.
 
 Residual vectors are commonly modeled as
 
-\[
+$$
 \mathbf{e}_r \sim
 \mathcal{N}\left(\mathbf{0}, \boldsymbol{\Sigma}_e\right),
-\]
+$$
 
-where \(\boldsymbol{\Sigma}_e\) captures cross-trait association not explained
+where $\boldsymbol{\Sigma}_e$ captures cross-trait association not explained
 by the fitted marker effects. Environmental effects, unmodeled genetic effects,
 measurement processes, and shared individuals can all contribute.
 
@@ -165,20 +165,20 @@ not be interpreted interchangeably.
 
 ## Individual-Level and Summary-Statistics MTBLR
 
-At the individual level, joint MT-BLR uses \(\mathbf{X}\) and
-\(\mathbf{Y}\) directly. With complete data, it can calculate all required
+At the individual level, joint MT-BLR uses $\mathbf{X}$ and
+$\mathbf{Y}$ directly. With complete data, it can calculate all required
 within-trait and cross-trait products from the observed individuals.
 
 At the summary-statistics level, the same calculations must be represented by
 compatible cross-products:
 
-\[
+$$
 \mathbf{X}^{\mathsf T}\mathbf{Y},
 \qquad
 \mathbf{X}^{\mathsf T}\mathbf{X},
 \qquad
 \mathbf{Y}^{\mathsf T}\mathbf{Y}.
-\]
+$$
 
 These correspond to:
 
@@ -188,8 +188,8 @@ These correspond to:
 - trait-specific sample sizes and, where needed, pairwise sample-overlap
   information.
 
-For one trait, \(y^{\mathsf T}y\) is a scalar. For several traits,
-\(\mathbf{Y}^{\mathsf T}\mathbf{Y}\) contains both trait-specific sums of
+For one trait, $y^{\mathsf T}y$ is a scalar. For several traits,
+$\mathbf{Y}^{\mathsf T}\mathbf{Y}$ contains both trait-specific sums of
 squares and cross-trait products. The off-diagonal terms are necessary for
 estimating and updating residual covariance.
 
@@ -209,7 +209,7 @@ that shared sample.
 
 With partial overlap, each trait pair may share a different number of
 individuals. A pairwise overlap matrix, often denoted
-\(\mathbf{N}_{\mathrm{mat}}\), records those counts. Cross-trait phenotype
+$\mathbf{N}_{\mathrm{mat}}$, records those counts. Cross-trait phenotype
 products or covariances then require explicit assumptions about the shared
 samples and trait scaling.
 

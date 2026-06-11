@@ -18,20 +18,20 @@ sample-overlap assumptions must be made explicit.
 
 ## Individual-Level PLINK BED Representation
 
-Let \(X\) be an \(n \times m\) genotype matrix for \(n\) individuals and \(m\)
-markers, and let \(Y\) be an \(n \times n_t\) phenotype matrix for \(n_t\)
-traits. For one trait, \(Y\) reduces to a vector \(y\). A Bayesian linear
+Let $X$ be an $n \times m$ genotype matrix for $n$ individuals and $m$
+markers, and let $Y$ be an $n \times n_t$ phenotype matrix for $n_t$
+traits. For one trait, $Y$ reduces to a vector $y$. A Bayesian linear
 regression model can be written as
 
 $$
 Y = XB + E,
 $$
 
-where \(B\) contains marker effects and \(E\) contains residuals. In a
-single-trait model, this is \(y = Xb + e\).
+where $B$ contains marker effects and $E$ contains residuals. In a
+single-trait model, this is $y = Xb + e$.
 
 With individual-level data, a marker update can read the observed genotype
-column \(x_j\) and evaluate quantities such as
+column $x_j$ and evaluate quantities such as
 
 $$
 x_j^\top x_j
@@ -43,7 +43,7 @@ $$
 
 The sampler can therefore update effects from observed marker values and
 current individual-level residuals. It does not need a separately supplied LD
-matrix because correlations among markers are implicit in \(X\).
+matrix because correlations among markers are implicit in $X$.
 
 PLINK BED files store genotype calls compactly on disk rather than as an
 in-memory numeric matrix. In the package workflow, a qgg `Glist` supplies the
@@ -58,8 +58,8 @@ BED file paths and related metadata:
 `stblr_bed_marker()` fits directly from this representation. It receives the
 `Glist`, phenotype vector or matrix `y`, chromosome selection, and marker
 column indices `cls`. Its BED samplers read marker blocks from disk and perform
-marker updates without first materializing all of \(X\) or a full
-\(X^\top X\) matrix. Optional `rows` select 1-based individual indices, and
+marker updates without first materializing all of $X$ or a full
+$X^\top X$ matrix. Optional `rows` select 1-based individual indices, and
 `scale = TRUE` standardizes markers using the corresponding allele
 frequencies.
 
@@ -82,7 +82,7 @@ XX = X^\top X,
 yy = y^\top y,
 $$
 
-together with the sample size \(n\). For multiple traits,
+together with the sample size $n$. For multiple traits,
 
 $$
 WY = X^\top Y
@@ -90,7 +90,7 @@ $$
 
 contains one marker-trait cross-product column per trait.
 
-The matrix \(X^\top X\) describes both marker sums of squares on its diagonal
+The matrix $X^\top X$ describes both marker sums of squares on its diagonal
 and marker-marker LD in its off-diagonal entries. In package interfaces,
 `ww` denotes per-trait marker sums of squares or corresponding diagonal
 information, while LD supplies the off-diagonal relationships needed to
@@ -106,8 +106,8 @@ $$
 r = X^\top(y-Xb) = wy - X^\top Xb.
 $$
 
-If marker \(j\)'s effect changes by \(\Delta b_j\), the updated score can be
-calculated from column \(j\) of \(X^\top X\):
+If marker $j$'s effect changes by $\Delta b_j$, the updated score can be
+calculated from column $j$ of $X^\top X$:
 
 $$
 r_{\text{new}}
@@ -119,11 +119,11 @@ This is why a summary-statistics sampler needs more than marginal
 genotype-phenotype associations. It needs enough information to reproduce the
 cross-products used by the marker-update and variance calculations. Marginal
 `wy` values without compatible LD cannot account for correlated markers, and
-LD without `wy`, `yy`, and \(n\) does not define the phenotype side of the
+LD without `wy`, `yy`, and $n$ does not define the phenotype side of the
 likelihood.
 
-A dense representation stores all of \(X^\top X\), which requires
-\(O(m^2)\) entries. That becomes impractical for large marker sets. The
+A dense representation stores all of $X^\top X$, which requires
+$O(m^2)$ entries. That becomes impractical for large marker sets. The
 disk-backed sparse-LD representation retains the same conceptual role while
 dropping small or distant marker-marker entries.
 
@@ -150,7 +150,7 @@ Sparsification is controlled by:
 - `block_size` and `nthreads`, which control construction rather than the
   statistical definition.
 
-The sparse representation approximates \(X^\top X\). It reduces memory and
+The sparse representation approximates $X^\top X$. It reduces memory and
 disk requirements when most long-range or weak marker relationships can be
 ignored, but the threshold and distance rules become part of the analysis.
 Two fits using different sparse-LD construction rules do not have identical
@@ -177,15 +177,15 @@ standardization are used.
 The returned `stats` object contains the marker-trait cross-products and
 related quantities required by the ST-BLR wrapper:
 
-- `stats$wy`: \(X^\top Y\), represented by trait;
+- `stats$wy`: $X^\top Y$, represented by trait;
 - `stats$ww`: marker sums of squares or diagonal genotype cross-product
   information, represented by trait;
-- `stats$yy`: \(y_t^\top y_t\) for each trait;
+- `stats$yy`: $y_t^\top y_t$ for each trait;
 - `stats$n` and `stats$m`, when available, for sample and marker counts.
 
 `stblr_csr()` combines this object with `ld_prefix`, the prefix written by
 `sparseLD_stream_CSR()`. The wrapper initializes per-trait variance quantities
-using `stats$yy`, \(n\), and \(m\), then passes `wy`, `ww`, `yy`, and the CSR
+using `stats$yy`, $n$, and $m$, then passes `wy`, `ww`, `yy`, and the CSR
 prefix to the sparse-LD sampler.
 
 The complete conceptual bridge is:
@@ -213,13 +213,13 @@ The phrase "multi-trait summary statistics" can refer to two different levels
 of information.
 
 First, traits can be fitted as separate or parallel single-trait regressions.
-For trait \(t\), the phenotype sum of squares is
+For trait $t$, the phenotype sum of squares is
 
 $$
 yy_t = y_t^\top y_t = \sum_i y_{it}^2.
 $$
 
-A vector of `yy` values, with corresponding columns of \(X^\top Y\), is enough
+A vector of `yy` values, with corresponding columns of $X^\top Y$, is enough
 to initialize and fit per-trait likelihood calculations that do not require
 observed cross-trait phenotype products. The current `stblr_csr()` wrapper
 uses this per-trait representation: it infers the number of traits from
@@ -237,14 +237,14 @@ $$
 \sum_{i \in \mathcal I_{ts}} y_{it}y_{is},
 $$
 
-where \(\mathcal I_{ts}\) is the set of individuals observed for both traits.
+where $\mathcal I_{ts}$ is the set of individuals observed for both traits.
 The diagonal entries are the univariate `yy_t`; the off-diagonal entries
 contain information that a vector of `yy` values does not preserve.
 
-With individual-level \(Y\), `SSY` and the effective overlap counts can be
+With individual-level $Y$, `SSY` and the effective overlap counts can be
 calculated from observed individuals. With summary statistics, they must be
-provided or reconstructed. If \(N_{ts}\) is the number of individuals shared
-by traits \(t\) and \(s\), and \(R_y\) is a phenotypic correlation matrix, a
+provided or reconstructed. If $N_{ts}$ is the number of individuals shared
+by traits $t$ and $s$, and $R_y$ is a phenotypic correlation matrix, a
 common approximation is
 
 $$
@@ -256,7 +256,7 @@ $$
 with diagonals forced to the observed `yy_t`. This approximation assumes that
 overlap counts and phenotypic covariance information are meaningful for the
 study design. Full overlap, partial overlap, missingness, and meta-analysis
-can imply materially different \(N\) matrices.
+can imply materially different $N$ matrices.
 
 Without cross-trait `SSY` and overlap information, a summary-statistics model
 cannot reconstruct the cross-products needed for full residual covariance
@@ -267,7 +267,7 @@ updates. The complete derivation and assumptions are preserved in
 
 Marker order is a correctness condition, not presentation metadata. Every
 marker-indexed object must refer to the same biological marker at position
-\(j\):
+$j$:
 
 ```text
 BED marker column selected by cls
@@ -288,7 +288,7 @@ stopifnot(!anyNA(cls))
 
 The same `cls` is then supplied to `bed_xtx_xty()` and, as a list,
 `sparseLD_stream_CSR()`. Allele frequencies are subset with the same indices.
-For annotation models, the \(m \times K\) annotation matrix `A` must have one
+For annotation models, the $m \times K$ annotation matrix `A` must have one
 row per selected marker in exactly this order. The annotation workflow makes
 that contract explicit by assigning `Glist$rsidsLD[[chr]]` as row names and
 checking that they are identical to the expected marker IDs.
@@ -318,8 +318,8 @@ failure modes.
 **Summary statistics plus sparse LD**
 
 - can avoid repeated access to individual-level genotypes after preparation;
-- replaces the full \(X^\top X\) matrix with an explicit LD approximation;
-- requires compatible `wy`, `ww`, `yy`, \(n\), and LD;
+- replaces the full $X^\top X$ matrix with an explicit LD approximation;
+- requires compatible `wy`, `ww`, `yy`, $n$, and LD;
 - requires `SSY` and overlap information for full joint multi-trait residual
   covariance calculations;
 - cannot recover information omitted during summarization or sparsification.

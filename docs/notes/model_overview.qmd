@@ -19,7 +19,7 @@ single-trait, use summary statistics with disk-backed sparse LD, and use an
 annotation-informed prior. This note maps those choices to the current public
 functions and to the notes that explain them in detail.
 
-## Common Model: \(y = Xb + e\)
+## Common Model: $y = Xb + e$
 
 For one trait, the common regression model is
 
@@ -27,18 +27,18 @@ $$
 y = Xb + e,
 $$
 
-where \(X\) is an \(n \times m\) genotype matrix, \(b\) is a vector of marker
-effects, and \(e\) is residual variation. Bayesian genomic regression combines
+where $X$ is an $n \times m$ genotype matrix, $b$ is a vector of marker
+effects, and $e$ is residual variation. Bayesian genomic regression combines
 this likelihood with a prior on marker effects and, often, latent inclusion
 indicators.
 
-For \(n_t\) traits, the model becomes
+For $n_t$ traits, the model becomes
 
 $$
 Y = XB + E,
 $$
 
-where each row of \(B\) is a marker-effect vector across traits. A genuinely
+where each row of $B$ is a marker-effect vector across traits. A genuinely
 joint multi-trait model can describe covariance among effects, residuals, or
 trait-sharing patterns. Running one single-trait model per phenotype can be
 useful and parallelizable, but it is not equivalent to a joint multi-trait
@@ -97,7 +97,7 @@ ww_j = x_j^\top x_j,
 yy = y^\top y,
 $$
 
-plus compatible LD and sample size \(n\). The residual score can be maintained
+plus compatible LD and sample size $n$. The residual score can be maintained
 as
 
 $$
@@ -148,7 +148,7 @@ from currently implemented public wrappers.
 
 Sparse Bayesian regression allows many markers to have exactly zero current
 effects while a subset belongs to active components. The inclusion indicator
-\(d_{it}\) records whether marker \(i\) is active for trait \(t\). Across MCMC
+$d_{it}$ records whether marker $i$ is active for trait $t$. Across MCMC
 samples:
 
 - `dm[i, t]` estimates the posterior inclusion probability;

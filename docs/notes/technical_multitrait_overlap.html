@@ -256,39 +256,57 @@ window.Quarto = {
 <p>The central issue is simple: separate single-trait summary statistics preserve each trait’s marginal phenotype sum of squares, but they do not preserve cross-trait phenotype products. A joint model with residual covariance needs those cross-products or defensible approximations to them.</p>
 <section id="multi-trait-individual-level-model" class="level2">
 <h2 class="anchored" data-anchor-id="multi-trait-individual-level-model">Multi-Trait Individual-Level Model</h2>
-<p>Let (T) denote the number of traits. For a fully overlapping sample, define:</p>
+<p>Let <span class="math inline">\(T\)</span> denote the number of traits. For a fully overlapping sample, define:</p>
 <ul>
-<li>(Y), an (nT) phenotype matrix;</li>
-<li>(X), an (nm) genotype matrix;</li>
-<li>(B), an (mT) marker-effect matrix; and</li>
-<li>(E_Y), an (nT) residual matrix.</li>
+<li><span class="math inline">\(Y\)</span>, an <span class="math inline">\(n\times T\)</span> phenotype matrix;</li>
+<li><span class="math inline">\(X\)</span>, an <span class="math inline">\(n\times m\)</span> genotype matrix;</li>
+<li><span class="math inline">\(B\)</span>, an <span class="math inline">\(m\times T\)</span> marker-effect matrix; and</li>
+<li><span class="math inline">\(E_Y\)</span>, an <span class="math inline">\(n\times T\)</span> residual matrix.</li>
 </ul>
 <p>The multi-trait linear model is</p>
-<p>[ Y=XB+E_Y. ]</p>
-<p>For individual (i), the residual vector may be modeled as</p>
-<p>[ e_iN_T(0,_e), ]</p>
-<p>where (_e) is the residual covariance matrix. Marker-effect vectors may also share covariance. For example, an active marker-effect vector (b_j) may have a prior involving a covariance matrix (_b).</p>
+<p><span class="math display">\[
+Y=XB+E_Y.
+\]</span></p>
+<p>For individual <span class="math inline">\(i\)</span>, the residual vector may be modeled as</p>
+<p><span class="math display">\[
+e_i\sim N_T(0,\Sigma_e),
+\]</span></p>
+<p>where <span class="math inline">\(\Sigma_e\)</span> is the residual covariance matrix. Marker-effect vectors may also share covariance. For example, an active marker-effect vector <span class="math inline">\(b_j\)</span> may have a prior involving a covariance matrix <span class="math inline">\(\Sigma_b\)</span>.</p>
 <p>These two covariance structures have different meanings:</p>
 <ul>
-<li>(_b) describes prior or posterior covariance among marker effects across traits and enables genetic information sharing;</li>
-<li>(_e) describes covariance among residual phenotype deviations for individuals observed on the same traits.</li>
+<li><span class="math inline">\(\Sigma_b\)</span> describes prior or posterior covariance among marker effects across traits and enables genetic information sharing;</li>
+<li><span class="math inline">\(\Sigma_e\)</span> describes covariance among residual phenotype deviations for individuals observed on the same traits.</li>
 </ul>
 <p>Residual covariance is therefore directly tied to which individuals are shared across traits.</p>
 </section>
 <section id="why-marginal-trait-statistics-are-not-enough" class="level2">
 <h2 class="anchored" data-anchor-id="why-marginal-trait-statistics-are-not-enough">Why Marginal Trait Statistics Are Not Enough</h2>
-<p>For one trait (t), the phenotype-side scalar summary is</p>
-<p>[ yy_t=y_t<sup>y_t=<em>i y</em>{it}</sup>2. ]</p>
-<p>Together with (X^y_t), genotype cross-products, and (n_t), this can support a single-trait likelihood. Repeating those inputs for several traits supports separate or parallel single-trait fits.</p>
+<p>For one trait <span class="math inline">\(t\)</span>, the phenotype-side scalar summary is</p>
+<p><span class="math display">\[
+yy_t=y_t^\top y_t=\sum_i y_{it}^2.
+\]</span></p>
+<p>Together with <span class="math inline">\(X^\top y_t\)</span>, genotype cross-products, and <span class="math inline">\(n_t\)</span>, this can support a single-trait likelihood. Repeating those inputs for several traits supports separate or parallel single-trait fits.</p>
 <p>A joint multi-trait likelihood additionally depends on cross-trait phenotype products:</p>
-<p>[ y_t^y_s = <em>i y</em>{it}y_{is}. ]</p>
-<p>The marginal values (yy_t) and (yy_s) do not determine this cross-product. For example, two phenotype pairs can have identical marginal sums of squares but opposite cross-trait correlations.</p>
-<p>Consequently, a full residual covariance update cannot be reconstructed from trait-specific <code>yy</code> values alone. It requires the complete cross-trait phenotype cross-product matrix, usually denoted <code>SSY</code> or (Y^Y), together with a clear sample-overlap interpretation.</p>
+<p><span class="math display">\[
+y_t^\top y_s
+=
+\sum_i y_{it}y_{is}.
+\]</span></p>
+<p>The marginal values <span class="math inline">\(yy_t\)</span> and <span class="math inline">\(yy_s\)</span> do not determine this cross-product. For example, two phenotype pairs can have identical marginal sums of squares but opposite cross-trait correlations.</p>
+<p>Consequently, a full residual covariance update cannot be reconstructed from trait-specific <code>yy</code> values alone. It requires the complete cross-trait phenotype cross-product matrix, usually denoted <code>SSY</code> or <span class="math inline">\(Y^\top Y\)</span>, together with a clear sample-overlap interpretation.</p>
 </section>
 <section id="multi-trait-summary-statistics" class="level2">
 <h2 class="anchored" data-anchor-id="multi-trait-summary-statistics">Multi-Trait Summary Statistics</h2>
-<p>Under full sample overlap with one common (X), the central summary statistics are:</p>
-<p>[ WY=X^Y, XX=X^X, SSY=Y^Y, n. ]</p>
+<p>Under full sample overlap with one common <span class="math inline">\(X\)</span>, the central summary statistics are:</p>
+<p><span class="math display">\[
+WY=X^\top Y,
+\qquad
+XX=X^\top X,
+\qquad
+SSY=Y^\top Y,
+\qquad
+n.
+\]</span></p>
 <p>Their dimensions are:</p>
 <table class="caption-top table">
 <colgroup>
@@ -305,22 +323,22 @@ window.Quarto = {
 </thead>
 <tbody>
 <tr class="odd">
-<td>(WY=X^Y)</td>
-<td style="text-align: right;">(mT)</td>
+<td><span class="math inline">\(WY=X^\top Y\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(m\times T\)</span></td>
 <td>Marker-trait cross-products</td>
 </tr>
 <tr class="even">
-<td>(XX=X^X)</td>
-<td style="text-align: right;">(mm)</td>
+<td><span class="math inline">\(XX=X^\top X\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(m\times m\)</span></td>
 <td>Marker cross-products or compatible LD representation</td>
 </tr>
 <tr class="odd">
-<td>(SSY=Y^Y)</td>
-<td style="text-align: right;">(TT)</td>
+<td><span class="math inline">\(SSY=Y^\top Y\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(T\times T\)</span></td>
 <td>Trait cross-products</td>
 </tr>
 <tr class="even">
-<td>(n)</td>
+<td><span class="math inline">\(n\)</span></td>
 <td style="text-align: right;">scalar</td>
 <td>Number of jointly observed individuals</td>
 </tr>
@@ -328,106 +346,193 @@ window.Quarto = {
 </table>
 <p>For partially overlapping studies, the representation expands to include:</p>
 <ul>
-<li>trait-specific sample sizes (n_t);</li>
-<li>pairwise overlap counts (N_{ts}); and</li>
+<li>trait-specific sample sizes <span class="math inline">\(n_t\)</span>;</li>
+<li>pairwise overlap counts <span class="math inline">\(N_{ts}\)</span>; and</li>
 <li>trait-pair-specific interpretations of cross-products.</li>
 </ul>
 <p>Define the sample-overlap matrix</p>
-[ N=
-<span class="math display">\[\begin{bmatrix}
+<p><span class="math display">\[
+N=
+\begin{bmatrix}
 N_{11} &amp; \cdots &amp; N_{1T}\\
 \vdots &amp; \ddots &amp; \vdots\\
 N_{T1} &amp; \cdots &amp; N_{TT}
-\end{bmatrix}\]</span>
-<p>, ]</p>
+\end{bmatrix},
+\]</span></p>
 <p>where</p>
-<p>[ N_{ts} = |I_{ts}| ]</p>
-<p>and (I_{ts}) is the set of individuals observed for both traits (t) and (s). By definition,</p>
-<p>[ N_{tt}=n_t. ]</p>
+<p><span class="math display">\[
+N_{ts}
+=
+|\mathcal I_{ts}|
+\]</span></p>
+<p>and <span class="math inline">\(\mathcal I_{ts}\)</span> is the set of individuals observed for both traits <span class="math inline">\(t\)</span> and <span class="math inline">\(s\)</span>. By definition,</p>
+<p><span class="math display">\[
+N_{tt}=n_t.
+\]</span></p>
 </section>
 <section id="cross-trait-ssy" class="level2">
 <h2 class="anchored" data-anchor-id="cross-trait-ssy">Cross-Trait <code>SSY</code></h2>
 <p>For partially overlapping traits, define</p>
-<p>[ SSY_{ts} = <em>{iI</em>{ts}}y_{it}y_{is}. ]</p>
+<p><span class="math display">\[
+SSY_{ts}
+=
+\sum_{i\in\mathcal I_{ts}}y_{it}y_{is}.
+\]</span></p>
 <p>The diagonal entries reduce to ordinary single-trait sums of squares:</p>
-<p>[ SSY_{tt}=yy_t. ]</p>
-<p>When all traits are observed on exactly the same individuals, (I_{ts}) is the common sample for every pair and</p>
-<p>[ SSY=Y^Y ]</p>
+<p><span class="math display">\[
+SSY_{tt}=yy_t.
+\]</span></p>
+<p>When all traits are observed on exactly the same individuals, <span class="math inline">\(\mathcal I_{ts}\)</span> is the common sample for every pair and</p>
+<p><span class="math display">\[
+SSY=Y^\top Y
+\]</span></p>
 <p>has its ordinary matrix-cross-product meaning.</p>
 <p>When samples overlap only partially, <code>SSY</code> remains a useful symmetric matrix of pairwise cross-products, but its entries are calculated from different sets of individuals. It should not be interpreted as the cross-product of one complete rectangular phenotype matrix unless such a matrix actually exists.</p>
 </section>
 <section id="full-sample-overlap" class="level2">
 <h2 class="anchored" data-anchor-id="full-sample-overlap">Full Sample Overlap</h2>
-<p>The cleanest MTBLR setting has all traits measured on the same (n) individuals:</p>
-<p>[ n_t=n, N_{ts}=n t,s. ]</p>
+<p>The cleanest MTBLR setting has all traits measured on the same <span class="math inline">\(n\)</span> individuals:</p>
+<p><span class="math display">\[
+n_t=n,
+\qquad
+N_{ts}=n
+\quad\text{for all }t,s.
+\]</span></p>
 <p>Then:</p>
-<p>[ WY=X^Y, SSY=Y^Y ]</p>
+<p><span class="math display">\[
+WY=X^\top Y,
+\qquad
+SSY=Y^\top Y
+\]</span></p>
 <p>can be computed directly, and the residual covariance has the conventional interpretation:</p>
-<p>[ _e = (e_i) ]</p>
+<p><span class="math display">\[
+\Sigma_e
+=
+\operatorname{Cov}(e_i)
+\]</span></p>
 <p>for residual vectors observed jointly on the same individuals.</p>
 <p>The current CSR MTBLR kernel is closest to this setting. It uses shared LD, requires equal trait sample sizes and matching <code>ww</code> values across traits, and accepts a full trait cross-product matrix through its <code>yy</code> argument.</p>
 <p>The archived theory draft also defines a weaker “full-overlap” approximation for unequal marginal sample sizes:</p>
-<p>[ N^{}_{ts} = (n_t,n_s). ]</p>
+<p><span class="math display">\[
+N^{\mathrm{full}}_{ts}
+=
+\min(n_t,n_s).
+\]</span></p>
 <p>This assumes the smaller study is nested within the larger study for each trait pair. It is useful as an explicit approximation, but it is not equivalent to all traits being measured on one common sample.</p>
 </section>
 <section id="partial-sample-overlap" class="level2">
 <h2 class="anchored" data-anchor-id="partial-sample-overlap">Partial Sample Overlap</h2>
 <p>With partial overlap, different trait pairs may share different individuals:</p>
-<p>[ 0&lt;N_{ts}&lt;(n_t,n_s). ]</p>
-<p>A convenient parameterization uses overlap fractions (p_{ts}):</p>
-<p>[ N^{}<em>{ts} = p</em>{ts}(n_t,n_s), N_{tt}=n_t. ]</p>
-<p>The matrix (N) records the amount of direct information available about each trait pair. A cross-trait phenotype covariance estimated from 500 shared individuals is not supported by the same information as one estimated from 50,000 shared individuals, even when the numerical correlation is identical.</p>
+<p><span class="math display">\[
+0&lt;N_{ts}&lt;\min(n_t,n_s).
+\]</span></p>
+<p>A convenient parameterization uses overlap fractions <span class="math inline">\(p_{ts}\in[0,1]\)</span>:</p>
+<p><span class="math display">\[
+N^{\mathrm{frac}}_{ts}
+=
+p_{ts}\min(n_t,n_s),
+\qquad
+N_{tt}=n_t.
+\]</span></p>
+<p>The matrix <span class="math inline">\(N\)</span> records the amount of direct information available about each trait pair. A cross-trait phenotype covariance estimated from 500 shared individuals is not supported by the same information as one estimated from 50,000 shared individuals, even when the numerical correlation is identical.</p>
 <p>Partial overlap complicates the likelihood because:</p>
 <ul>
 <li><code>SSY</code> entries arise from different pair-specific samples;</li>
-<li>marker-trait statistics (X_t^y_t) may arise from different genotype samples;</li>
+<li>marker-trait statistics <span class="math inline">\(X_t^\top y_t\)</span> may arise from different genotype samples;</li>
 <li>LD and diagonal genotype cross-products may differ by trait;</li>
 <li>residual covariance reflects only shared individuals; and</li>
-<li>a single common (X^X) may not exactly represent every trait pair.</li>
+<li>a single common <span class="math inline">\(X^\top X\)</span> may not exactly represent every trait pair.</li>
 </ul>
 <p>These issues require explicit modeling assumptions. Supplying an overlap matrix does not by itself make a shared-LD likelihood exact.</p>
 </section>
 <section id="no-overlap-and-unknown-overlap" class="level2">
 <h2 class="anchored" data-anchor-id="no-overlap-and-unknown-overlap">No Overlap and Unknown Overlap</h2>
-<p>If traits (t) and (s) have no shared individuals,</p>
-<p>[ N_{ts}=0. ]</p>
-<p>There is then no direct individual-level cross-product (<em>i y</em>{it}y_{is}) for that pair. Setting</p>
-<p>[ SSY_{ts}=0 ]</p>
+<p>If traits <span class="math inline">\(t\)</span> and <span class="math inline">\(s\)</span> have no shared individuals,</p>
+<p><span class="math display">\[
+N_{ts}=0.
+\]</span></p>
+<p>There is then no direct individual-level cross-product <span class="math inline">\(\sum_i y_{it}y_{is}\)</span> for that pair. Setting</p>
+<p><span class="math display">\[
+SSY_{ts}=0
+\]</span></p>
 <p>records the absence of observed cross-trait phenotype product under a centered phenotype convention. It does not establish that biological, genetic, or population-level residual correlation is zero.</p>
 <p>Genetic covariance can still be informed by shared markers, aligned marker-trait associations, and an appropriate cross-study model. Residual covariance between non-overlapping samples, however, is not directly identified by observed paired residuals. It must be fixed, strongly regularized, inferred from external information, or excluded from the model.</p>
 <p>When overlap is unknown, off-diagonal <code>SSY</code> is also unknown. Treating unknown overlap as full overlap can create spurious residual covariance; treating it as zero can discard real correlated-error information. Sensitivity analyses over plausible overlap assumptions are preferable to silently choosing either extreme.</p>
 </section>
 <section id="phenotypic-variance-from-marginal-summary-statistics" class="level2">
 <h2 class="anchored" data-anchor-id="phenotypic-variance-from-marginal-summary-statistics">Phenotypic Variance From Marginal Summary Statistics</h2>
-<p>For trait (t), let:</p>
-<p>[ yy_t=<em>{iI_t}y</em>{it}^2, n_t=|I_t|. ]</p>
+<p>For trait <span class="math inline">\(t\)</span>, let:</p>
+<p><span class="math display">\[
+yy_t=\sum_{i\in\mathcal I_t}y_{it}^2,
+\qquad
+n_t=|\mathcal I_t|.
+\]</span></p>
 <p>If phenotypes are centered or approximately centered, an empirical variance estimate is</p>
-<p>[ (y_t) . ]</p>
-<p>Using (n_t-1) instead gives the usual sample-variance denominator. The choice must match the intended likelihood and preprocessing convention. The archived reconstruction uses (yy_t/n_t) as the cross-product-per-observation quantity.</p>
+<p><span class="math display">\[
+\widehat{\operatorname{Var}}(y_t)
+\approx
+\frac{yy_t}{n_t}.
+\]</span></p>
+<p>Using <span class="math inline">\(n_t-1\)</span> instead gives the usual sample-variance denominator. The choice must match the intended likelihood and preprocessing convention. The archived reconstruction uses <span class="math inline">\(yy_t/n_t\)</span> as the cross-product-per-observation quantity.</p>
 <p>Collect the marginal variance estimates in:</p>
-<p>[ _y^2 = ( , , ). ]</p>
-<p>If phenotypes are not centered, (yy_t/n_t) is a second raw moment rather than a variance. Covariance reconstruction then requires explicit treatment of trait means.</p>
+<p><span class="math display">\[
+\widehat{\sigma}_y^2
+=
+\left(
+\frac{yy_1}{n_1},
+\ldots,
+\frac{yy_T}{n_T}
+\right).
+\]</span></p>
+<p>If phenotypes are not centered, <span class="math inline">\(yy_t/n_t\)</span> is a second raw moment rather than a variance. Covariance reconstruction then requires explicit treatment of trait means.</p>
 </section>
 <section id="covariance-reconstruction-from-correlations" class="level2">
 <h2 class="anchored" data-anchor-id="covariance-reconstruction-from-correlations">Covariance Reconstruction From Correlations</h2>
 <p>Suppose a phenotypic correlation matrix</p>
-<p>[ R_y=[r_{ts}] ]</p>
+<p><span class="math display">\[
+R_y=[r_{ts}]
+\]</span></p>
 <p>is available from individual-level data, a reported study estimate, or an external source. Convert it to phenotype covariance units using:</p>
-<p>[ <em>{ts} = r</em>{ts} . ]</p>
+<p><span class="math display">\[
+\widehat{\sigma}_{ts}
+=
+r_{ts}
+\sqrt{
+\widehat{\operatorname{Var}}(y_t)
+\widehat{\operatorname{Var}}(y_s)
+}.
+\]</span></p>
 <p>In matrix form:</p>
-<p>[ (Y) = D_yR_yD_y, ]</p>
+<p><span class="math display">\[
+\widehat{\operatorname{Cov}}(Y)
+=
+D_yR_yD_y,
+\]</span></p>
 <p>where</p>
-<p>[ D_y = ( , , ). ]</p>
+<p><span class="math display">\[
+D_y
+=
+\operatorname{diag}
+\left(
+\sqrt{\widehat{\operatorname{Var}}(y_1)},
+\ldots,
+\sqrt{\widehat{\operatorname{Var}}(y_T)}
+\right).
+\]</span></p>
 <p>This rescaling is essential. A correlation matrix alone is dimensionless and cannot replace phenotype cross-products when traits have different scales.</p>
-<p>The supplied (R_y) must have the same trait order as <code>yy</code>, (n), (WY), and all covariance priors. If (R_y) comes from another sample, its transportability is an additional assumption.</p>
+<p>The supplied <span class="math inline">\(R_y\)</span> must have the same trait order as <code>yy</code>, <span class="math inline">\(n\)</span>, <span class="math inline">\(WY\)</span>, and all covariance priors. If <span class="math inline">\(R_y\)</span> comes from another sample, its transportability is an additional assumption.</p>
 </section>
 <section id="reconstructing-ssy" class="level2">
 <h2 class="anchored" data-anchor-id="reconstructing-ssy">Reconstructing <code>SSY</code></h2>
 <p>Under the approximation that pairwise covariance is homogeneous across individuals and that missingness or study membership does not alter it,</p>
-<p>[ E(y_{it}y_{is}) = _{ts} ]</p>
+<p><span class="math display">\[
+E(y_{it}y_{is})
+=
+\sigma_{ts}
+\]</span></p>
 <p>for centered traits observed together. Therefore:</p>
-[
-<span class="math display">\[\begin{aligned}
+<p><span class="math display">\[
+\begin{aligned}
 E(SSY_{ts})
 &amp;=
 E\left[
@@ -437,15 +542,25 @@ E\left[
 \sum_{i\in\mathcal I_{ts}}E(y_{it}y_{is})\\
 &amp;=
 N_{ts}\sigma_{ts}.
-\end{aligned}\]</span>
-<p>]</p>
-<p>Replacing (_{ts}) with its estimate gives:</p>
-<p>[ <em>{ts} = N</em>{ts}_{ts}. ]</p>
+\end{aligned}
+\]</span></p>
+<p>Replacing <span class="math inline">\(\sigma_{ts}\)</span> with its estimate gives:</p>
+<p><span class="math display">\[
+\widehat{SSY}_{ts}
+=
+N_{ts}\widehat{\sigma}_{ts}.
+\]</span></p>
 <p>In matrix notation:</p>
-<p>[ = N(Y), ]</p>
-<p>where () denotes elementwise multiplication.</p>
+<p><span class="math display">\[
+\widehat{SSY}
+=
+N\odot\widehat{\operatorname{Cov}}(Y),
+\]</span></p>
+<p>where <span class="math inline">\(\odot\)</span> denotes elementwise multiplication.</p>
 <p>The diagonal should be forced to the observed marginal sums of squares:</p>
-<p>[ _{tt}=yy_t. ]</p>
+<p><span class="math display">\[
+\widehat{SSY}_{tt}=yy_t.
+\]</span></p>
 <p>This avoids small inconsistencies caused by rounding, denominator choices, or correlation-matrix construction.</p>
 <p>A short illustrative construction is:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>vy <span class="ot">&lt;-</span> yy <span class="sc">/</span> n</span>
@@ -457,27 +572,38 @@ N_{ts}\sigma_{ts}.
 <section id="first-principles-assumptions" class="level2">
 <h2 class="anchored" data-anchor-id="first-principles-assumptions">First-Principles Assumptions</h2>
 <p>The reconstruction</p>
-<p>[ <em>{ts}=N</em>{ts}_{ts} ]</p>
+<p><span class="math display">\[
+\widehat{SSY}_{ts}=N_{ts}\widehat{\sigma}_{ts}
+\]</span></p>
 <p>rests on several assumptions.</p>
 <section id="centered-phenotypes" class="level3">
 <h3 class="anchored" data-anchor-id="centered-phenotypes">Centered phenotypes</h3>
 <p>For nonzero means:</p>
-<p>[ E(y_ty_s) = (y_t,y_s) +E(y_t)E(y_s). ]</p>
+<p><span class="math display">\[
+E(y_ty_s)
+=
+\operatorname{Cov}(y_t,y_s)
++E(y_t)E(y_s).
+\]</span></p>
 <p>The covariance-only reconstruction is therefore appropriate when phenotypes are centered, residualized with an intercept, or otherwise have negligible means on the relevant sample.</p>
 </section>
 <section id="random-or-ignorable-missingness" class="level3">
 <h3 class="anchored" data-anchor-id="random-or-ignorable-missingness">Random or ignorable missingness</h3>
-<p>The shared individuals (I_{ts}) should not have a systematically different cross-trait covariance from the target population. If overlap is selected by disease status, cohort, measurement protocol, or other trait-related factors, covariance homogeneity may fail.</p>
+<p>The shared individuals <span class="math inline">\(\mathcal I_{ts}\)</span> should not have a systematically different cross-trait covariance from the target population. If overlap is selected by disease status, cohort, measurement protocol, or other trait-related factors, covariance homogeneity may fail.</p>
 </section>
 <section id="homogeneous-covariance" class="level3">
 <h3 class="anchored" data-anchor-id="homogeneous-covariance">Homogeneous covariance</h3>
 <p>The derivation assumes:</p>
-<p>[ (y_{it},y_{is}) = _{ts} ]</p>
+<p><span class="math display">\[
+\operatorname{Cov}(y_{it},y_{is})
+=
+\sigma_{ts}
+\]</span></p>
 <p>for individuals contributing to the pairwise product. Cohort heterogeneity, ancestry differences, environmental strata, and phenotype harmonization can violate this assumption.</p>
 </section>
 <section id="correct-overlap-counts" class="level3">
 <h3 class="anchored" data-anchor-id="correct-overlap-counts">Correct overlap counts</h3>
-<p>The approximation uses the actual or defensible effective value of (N_{ts}). Rounding overlap fractions, using total study size instead of shared size, or ignoring duplicated participants changes the implied cross-product.</p>
+<p>The approximation uses the actual or defensible effective value of <span class="math inline">\(N_{ts}\)</span>. Rounding overlap fractions, using total study size instead of shared size, or ignoring duplicated participants changes the implied cross-product.</p>
 </section>
 <section id="compatible-phenotype-covariance" class="level3">
 <h3 class="anchored" data-anchor-id="compatible-phenotype-covariance">Compatible phenotype covariance</h3>
@@ -487,10 +613,12 @@ N_{ts}\sigma_{ts}.
 <section id="why-ssy-matters-for-residual-covariance" class="level2">
 <h2 class="anchored" data-anchor-id="why-ssy-matters-for-residual-covariance">Why <code>SSY</code> Matters for Residual Covariance</h2>
 <p>Let:</p>
-<p>[ R_Y=Y-XB ]</p>
+<p><span class="math display">\[
+R_Y=Y-XB
+\]</span></p>
 <p>be the individual-level residual matrix. Its cross-product is:</p>
-[
-<span class="math display">\[\begin{aligned}
+<p><span class="math display">\[
+\begin{aligned}
 R_Y^\top R_Y
 &amp;=
 (Y-XB)^\top(Y-XB)\\
@@ -499,12 +627,19 @@ Y^\top Y
 -Y^\top XB
 -B^\top X^\top Y
 +B^\top X^\top XB.
-\end{aligned}\]</span>
-<p>]</p>
+\end{aligned}
+\]</span></p>
 <p>Using summary-statistic notation:</p>
-<p>[ R_Y^R_Y = SSY -WY^B -B^WY +B^XXB. ]</p>
+<p><span class="math display">\[
+R_Y^\top R_Y
+=
+SSY
+-WY^\top B
+-B^\top WY
++B^\top XXB.
+\]</span></p>
 <p>The off-diagonal entries of this residual cross-product depend directly on the off-diagonal entries of <code>SSY</code>. Without them, a sampler cannot reconstruct the full residual cross-product from marginal summaries alone.</p>
-<p>The current CSR MTBLR implementation accepts a full (TT) matrix through its <code>yy</code>/<code>YY</code> argument. It combines that matrix with marker-trait cross-products, current effects, and marker-scale residual scores, then symmetrizes the resulting residual cross-product before updating the residual covariance matrix.</p>
+<p>The current CSR MTBLR implementation accepts a full <span class="math inline">\(T\times T\)</span> matrix through its <code>yy</code>/<code>YY</code> argument. It combines that matrix with marker-trait cross-products, current effects, and marker-scale residual scores, then symmetrizes the resulting residual cross-product before updating the residual covariance matrix.</p>
 <p>If only diagonal <code>yy</code> values are available, a model can still update trait-specific residual variances. A full residual covariance update then requires off-diagonal values to be fixed, reconstructed, externally supplied, or excluded.</p>
 </section>
 <section id="genetic-covariance-and-residual-covariance" class="level2">
@@ -512,24 +647,42 @@ Y^\top Y
 <p>Multi-trait models can borrow information through both marker-effect and residual covariance, but these sources must not be conflated.</p>
 <section id="marker-effect-covariance" class="level3">
 <h3 class="anchored" data-anchor-id="marker-effect-covariance">Marker-effect covariance</h3>
-<p>For marker (j), let:</p>
-[ b_j=
-<span class="math display">\[\begin{bmatrix}
+<p>For marker <span class="math inline">\(j\)</span>, let:</p>
+<p><span class="math display">\[
+b_j=
+\begin{bmatrix}
 b_{j1} &amp; \cdots &amp; b_{jT}
-\end{bmatrix}\]</span>
-<p>^. ]</p>
+\end{bmatrix}^\top.
+\]</span></p>
 <p>A multi-trait prior can assign:</p>
-<p>[ b_j N_T(0,_b) ]</p>
-<p>on the active traits. Off-diagonal entries of (_b) allow effects to co-vary across traits. Trait-sharing model indicators can additionally encode whether a marker is active for specific subsets of traits.</p>
+<p><span class="math display">\[
+b_j\mid\text{active model}
+\sim
+N_T(0,\Sigma_b)
+\]</span></p>
+<p>on the active traits. Off-diagonal entries of <span class="math inline">\(\Sigma_b\)</span> allow effects to co-vary across traits. Trait-sharing model indicators can additionally encode whether a marker is active for specific subsets of traits.</p>
 </section>
 <section id="genetic-covariance-from-fitted-effects" class="level3">
 <h3 class="anchored" data-anchor-id="genetic-covariance-from-fitted-effects">Genetic covariance from fitted effects</h3>
 <p>With a common genotype matrix:</p>
-<p>[ G_X=XB ]</p>
+<p><span class="math display">\[
+G_X=XB
+\]</span></p>
 <p>has cross-product:</p>
-<p>[ G_X<sup>G_X=B</sup>XXB. ]</p>
-<p>Using marker-score residuals (R= WY-XXB), a symmetric summary-statistic estimate for traits (t) and (s) is:</p>
-<p>[ G_{ts} = . ]</p>
+<p><span class="math display">\[
+G_X^\top G_X=B^\top XXB.
+\]</span></p>
+<p>Using marker-score residuals <span class="math inline">\(R= WY-XXB\)</span>, a symmetric summary-statistic estimate for traits <span class="math inline">\(t\)</span> and <span class="math inline">\(s\)</span> is:</p>
+<p><span class="math display">\[
+\widehat G_{ts}
+=
+\frac{
+b_t^\top(wy_s-r_s)
++b_s^\top(wy_t-r_t)
+}{
+2\sqrt{n_tn_s}
+}.
+\]</span></p>
 <p>This quantity concerns genetic values induced by marker effects and LD. It is not determined by <code>SSY</code> alone.</p>
 </section>
 <section id="residual-covariance" class="level3">
@@ -544,7 +697,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <ul>
 <li><code>wy</code>, one marker vector per trait;</li>
 <li><code>ww</code>, marker diagonal cross-products per trait;</li>
-<li><code>yy</code>, a full (TT) trait cross-product matrix;</li>
+<li><code>yy</code>, a full <span class="math inline">\(T\times T\)</span> trait cross-product matrix;</li>
 <li><code>ld_prefix</code>, identifying shared CSR LD;</li>
 <li>marker-effect covariance <code>B</code>;</li>
 <li>residual covariance <code>E</code>;</li>
@@ -552,7 +705,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <li>a sample-size vector <code>n</code>.</li>
 </ul>
 <p>The current CSR kernel requires equal values in <code>n</code> and matching <code>ww</code> across traits because it assumes shared LD scaling. It does not accept <code>Nmat</code> directly. Therefore, <code>Nmat</code> currently serves as an analysis-level object used to construct, justify, and validate <code>SSY</code>; it is not automatically used by the native CSR likelihood to adjust each trait pair.</p>
-<p>This distinction matters. A mathematically reconstructed <code>SSY</code> for partial overlap does not by itself remove the kernel’s shared-(X), shared-LD, and equal-(n) assumptions. More general partial-overlap likelihoods require additional implementation and validation.</p>
+<p>This distinction matters. A mathematically reconstructed <code>SSY</code> for partial overlap does not by itself remove the kernel’s shared-<span class="math inline">\(X\)</span>, shared-LD, and equal-<span class="math inline">\(n\)</span> assumptions. More general partial-overlap likelihoods require additional implementation and validation.</p>
 </section>
 <section id="simulation-as-a-known-truth-check" class="level2">
 <h2 class="anchored" data-anchor-id="simulation-as-a-known-truth-check">Simulation as a Known-Truth Check</h2>
@@ -592,28 +745,28 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <td>Identical across every trait-indexed object</td>
 </tr>
 <tr class="even">
-<td>(WY=X^Y)</td>
-<td>(mT), with marker and trait order recorded</td>
+<td><span class="math inline">\(WY=X^\top Y\)</span></td>
+<td><span class="math inline">\(m\times T\)</span>, with marker and trait order recorded</td>
 </tr>
 <tr class="odd">
-<td><code>ww</code> / diagonal (XX)</td>
-<td>Length (m) per trait; compatible with LD scaling</td>
+<td><code>ww</code> / diagonal <span class="math inline">\(XX\)</span></td>
+<td>Length <span class="math inline">\(m\)</span> per trait; compatible with LD scaling</td>
 </tr>
 <tr class="even">
-<td>LD / (XX)</td>
-<td>Marker order identical to rows of (WY)</td>
+<td>LD / <span class="math inline">\(XX\)</span></td>
+<td>Marker order identical to rows of <span class="math inline">\(WY\)</span></td>
 </tr>
 <tr class="odd">
 <td><code>SSY</code></td>
-<td>Symmetric (TT) observed or reconstructed trait cross-product matrix</td>
+<td>Symmetric <span class="math inline">\(T\times T\)</span> observed or reconstructed trait cross-product matrix</td>
 </tr>
 <tr class="even">
-<td>(n)</td>
+<td><span class="math inline">\(n\)</span></td>
 <td>Trait-specific sample-size vector, even when all values are equal</td>
 </tr>
 <tr class="odd">
 <td><code>Nmat</code></td>
-<td>Symmetric (TT) pairwise overlap matrix used to justify <code>SSY</code></td>
+<td>Symmetric <span class="math inline">\(T\times T\)</span> pairwise overlap matrix used to justify <code>SSY</code></td>
 </tr>
 <tr class="even">
 <td>Phenotype scaling</td>
@@ -631,17 +784,21 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <h2 class="anchored" data-anchor-id="validation-checks">Validation Checks</h2>
 <p>Before fitting or interpreting a joint multi-trait model:</p>
 <ol type="1">
-<li><p>Confirm that <code>SSY</code> is (TT), finite, and symmetric.</p></li>
+<li><p>Confirm that <code>SSY</code> is <span class="math inline">\(T\times T\)</span>, finite, and symmetric.</p></li>
 <li><p>Confirm that <code>diag(SSY)</code> equals the trait-specific <code>yy</code> values.</p></li>
 <li><p>Check that observed full-overlap <code>SSY = crossprod(Y)</code> is positive semidefinite up to numerical tolerance.</p></li>
 <li><p>For reconstructed pairwise <code>SSY</code>, inspect eigenvalues and understand that pairwise-valid entries do not automatically guarantee a globally positive semidefinite matrix.</p></li>
 <li><p>Confirm that <code>Nmat</code> is symmetric and finite.</p></li>
 <li><p>Confirm that:</p>
-<p>[ N_{tt}=n_t ]</p>
+<p><span class="math display">\[
+N_{tt}=n_t
+\]</span></p>
 <p>and:</p>
-<p>[ 0N_{ts}(n_t,n_s). ]</p></li>
-<li><p>Confirm that trait order is identical across <code>SSY</code>, <code>Nmat</code>, (WY), (n), (_b), (_e), prior scale matrices, and outputs.</p></li>
-<li><p>Confirm that (WY), <code>ww</code>, and LD use the same marker order and compatible genotype scaling.</p></li>
+<p><span class="math display">\[
+0\le N_{ts}\le \min(n_t,n_s).
+\]</span></p></li>
+<li><p>Confirm that trait order is identical across <code>SSY</code>, <code>Nmat</code>, <span class="math inline">\(WY\)</span>, <span class="math inline">\(n\)</span>, <span class="math inline">\(\Sigma_b\)</span>, <span class="math inline">\(\Sigma_e\)</span>, prior scale matrices, and outputs.</p></li>
+<li><p>Confirm that <span class="math inline">\(WY\)</span>, <code>ww</code>, and LD use the same marker order and compatible genotype scaling.</p></li>
 <li><p>Confirm that reported phenotype correlations are on compatible phenotype definitions and scales.</p></li>
 <li><p>Record whether every off-diagonal <code>SSY</code> value was observed, reconstructed, fixed, or assumed.</p></li>
 <li><p>For current CSR MTBLR, confirm equal <code>n</code> values and equal <code>ww</code> vectors across traits.</p></li>
@@ -653,14 +810,14 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <h2 class="anchored" data-anchor-id="limitations-and-sensitivity-analysis">Limitations and Sensitivity Analysis</h2>
 <p>Multi-trait summary-statistics inference is sensitive to assumptions that are unnecessary or directly observable with complete individual-level data.</p>
 <ul>
-<li><strong>Overlap uncertainty:</strong> errors in (N_{ts}) directly alter reconstructed <code>SSY</code> off-diagonals.</li>
+<li><strong>Overlap uncertainty:</strong> errors in <span class="math inline">\(N_{ts}\)</span> directly alter reconstructed <code>SSY</code> off-diagonals.</li>
 <li><strong>Nonrandom missingness:</strong> shared individuals may not represent the marginal trait samples.</li>
 <li><strong>Phenotype heterogeneity:</strong> correlations can differ across cohorts, ancestries, environments, or phenotype definitions.</li>
 <li><strong>LD mismatch:</strong> trait-specific association statistics may not be compatible with one shared LD reference.</li>
-<li><strong>Scale mismatch:</strong> correlations, <code>yy</code>, (WY), and covariance priors may be expressed on different phenotype scales.</li>
+<li><strong>Scale mismatch:</strong> correlations, <code>yy</code>, <span class="math inline">\(WY\)</span>, and covariance priors may be expressed on different phenotype scales.</li>
 <li><strong>Weak identification:</strong> residual covariance is weakly or not directly identified when overlap is small, zero, or unknown.</li>
 <li><strong>Covariance instability:</strong> high-dimensional or highly correlated trait covariance matrices can be numerically unstable.</li>
-<li><strong>Current implementation scope:</strong> the CSR MTBLR kernel’s shared-LD and equal-(n) requirements are narrower than the most general partial-overlap theory.</li>
+<li><strong>Current implementation scope:</strong> the CSR MTBLR kernel’s shared-LD and equal-<span class="math inline">\(n\)</span> requirements are narrower than the most general partial-overlap theory.</li>
 </ul>
 <p>Production analyses should compare plausible overlap matrices, phenotype correlation sources, residual covariance restrictions, and LD references. Repeated chains, covariance diagnostics, predictive validation, and sensitivity to regularization are required before interpreting cross-trait borrowing or covariance estimates.</p>
 </section>
@@ -1148,34 +1305,34 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">## Multi-Trait Individual-Level Model</span></span>
 <span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>Let <span class="sc">\(</span>T<span class="sc">\)</span> denote the number of traits. For a fully overlapping sample, define:</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>Let $T$ denote the number of traits. For a fully overlapping sample, define:</span>
 <span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>Y<span class="sc">\)</span>, an <span class="sc">\(</span>n\times T<span class="sc">\)</span> phenotype matrix;</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>X<span class="sc">\)</span>, an <span class="sc">\(</span>n\times m<span class="sc">\)</span> genotype matrix;</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>B<span class="sc">\)</span>, an <span class="sc">\(</span>m\times T<span class="sc">\)</span> marker-effect matrix; and</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>E_Y<span class="sc">\)</span>, an <span class="sc">\(</span>n\times T<span class="sc">\)</span> residual matrix.</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$Y$, an $n\times T$ phenotype matrix;</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$X$, an $n\times m$ genotype matrix;</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$B$, an $m\times T$ marker-effect matrix; and</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$E_Y$, an $n\times T$ residual matrix.</span>
 <span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>The multi-trait linear model is</span>
 <span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>Y=XB+E_Y.</span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>For individual <span class="sc">\(</span>i<span class="sc">\)</span>, the residual vector may be modeled as</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>For individual $i$, the residual vector may be modeled as</span>
 <span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>e_i\sim N_T(0,\Sigma_e),</span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\Sigma_e<span class="sc">\)</span> is the residual covariance matrix. Marker-effect vectors may</span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>also share covariance. For example, an active marker-effect vector <span class="sc">\(</span>b_j<span class="sc">\)</span></span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>may have a prior involving a covariance matrix <span class="sc">\(</span>\Sigma_b<span class="sc">\)</span>.</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>where $\Sigma_e$ is the residual covariance matrix. Marker-effect vectors may</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>also share covariance. For example, an active marker-effect vector $b_j$</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>may have a prior involving a covariance matrix $\Sigma_b$.</span>
 <span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>These two covariance structures have different meanings:</span>
 <span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\Sigma_b<span class="sc">\)</span> describes prior or posterior covariance among marker effects</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\Sigma_b$ describes prior or posterior covariance among marker effects</span>
 <span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>  across traits and enables genetic information sharing;</span>
-<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>\Sigma_e<span class="sc">\)</span> describes covariance among residual phenotype deviations for</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\Sigma_e$ describes covariance among residual phenotype deviations for</span>
 <span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>  individuals observed on the same traits.</span>
 <span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>Residual covariance is therefore directly tied to which individuals are</span>
@@ -1183,40 +1340,40 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a><span class="fu">## Why Marginal Trait Statistics Are Not Enough</span></span>
 <span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>For one trait <span class="sc">\(</span>t<span class="sc">\)</span>, the phenotype-side scalar summary is</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>For one trait $t$, the phenotype-side scalar summary is</span>
 <span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>yy_t=y_t^\top y_t=\sum_i y_{it}^2.</span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>Together with <span class="sc">\(</span>X^\top y_t<span class="sc">\)</span>, genotype cross-products, and <span class="sc">\(</span>n_t<span class="sc">\)</span>, this can</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>Together with $X^\top y_t$, genotype cross-products, and $n_t$, this can</span>
 <span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>support a single-trait likelihood. Repeating those inputs for several traits</span>
 <span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>supports separate or parallel single-trait fits.</span>
 <span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>A joint multi-trait likelihood additionally depends on cross-trait phenotype</span>
 <span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>products:</span>
 <span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>y_t^\top y_s</span>
 <span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>\sum_i y_{it}y_{is}.</span>
-<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>The marginal values <span class="sc">\(</span>yy_t<span class="sc">\)</span> and <span class="sc">\(</span>yy_s<span class="sc">\)</span> do not determine this cross-product.</span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>The marginal values $yy_t$ and $yy_s$ do not determine this cross-product.</span>
 <span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>For example, two phenotype pairs can have identical marginal sums of squares</span>
 <span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>but opposite cross-trait correlations.</span>
 <span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>Consequently, a full residual covariance update cannot be reconstructed from</span>
 <span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>trait-specific <span class="in">`yy`</span> values alone. It requires the complete cross-trait</span>
-<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>phenotype cross-product matrix, usually denoted <span class="in">`SSY`</span> or <span class="sc">\(</span>Y^\top Y<span class="sc">\)</span>, together</span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>phenotype cross-product matrix, usually denoted <span class="in">`SSY`</span> or $Y^\top Y$, together</span>
 <span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>with a clear sample-overlap interpretation.</span>
 <span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="fu">## Multi-Trait Summary Statistics</span></span>
 <span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>Under full sample overlap with one common <span class="sc">\(</span>X<span class="sc">\)</span>, the central summary</span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>Under full sample overlap with one common $X$, the central summary</span>
 <span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>statistics are:</span>
 <span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>WY=X^\top Y,</span>
 <span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a>XX=X^\top X,</span>
@@ -1224,71 +1381,71 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a>SSY=Y^\top Y,</span>
 <span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>n.</span>
-<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>Their dimensions are:</span>
 <span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Quantity <span class="pp">|</span> Dimension <span class="pp">|</span> Meaning <span class="pp">|</span></span>
 <span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---:|---|</span></span>
-<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="sc">\(</span>WY=X^\top Y<span class="sc">\)</span> <span class="pp">|</span> <span class="sc">\(</span>m\times T<span class="sc">\)</span> <span class="pp">|</span> Marker-trait cross-products <span class="pp">|</span></span>
-<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="sc">\(</span>XX=X^\top X<span class="sc">\)</span> <span class="pp">|</span> <span class="sc">\(</span>m\times m<span class="sc">\)</span> <span class="pp">|</span> Marker cross-products or compatible LD representation <span class="pp">|</span></span>
-<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="sc">\(</span>SSY=Y^\top Y<span class="sc">\)</span> <span class="pp">|</span> <span class="sc">\(</span>T\times T<span class="sc">\)</span> <span class="pp">|</span> Trait cross-products <span class="pp">|</span></span>
-<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="sc">\(</span>n<span class="sc">\)</span> <span class="pp">|</span> scalar <span class="pp">|</span> Number of jointly observed individuals <span class="pp">|</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $WY=X^\top Y$ <span class="pp">|</span> $m\times T$ <span class="pp">|</span> Marker-trait cross-products <span class="pp">|</span></span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $XX=X^\top X$ <span class="pp">|</span> $m\times m$ <span class="pp">|</span> Marker cross-products or compatible LD representation <span class="pp">|</span></span>
+<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $SSY=Y^\top Y$ <span class="pp">|</span> $T\times T$ <span class="pp">|</span> Trait cross-products <span class="pp">|</span></span>
+<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $n$ <span class="pp">|</span> scalar <span class="pp">|</span> Number of jointly observed individuals <span class="pp">|</span></span>
 <span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a>For partially overlapping studies, the representation expands to include:</span>
 <span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>trait-specific sample sizes <span class="sc">\(</span>n_t<span class="sc">\)</span>;</span>
-<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pairwise overlap counts <span class="sc">\(</span>N_{ts}<span class="sc">\)</span>; and</span>
+<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>trait-specific sample sizes $n_t$;</span>
+<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pairwise overlap counts $N_{ts}$; and</span>
 <span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>trait-pair-specific interpretations of cross-products.</span>
 <span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a>Define the sample-overlap matrix</span>
 <span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a>N=</span>
 <span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
 <span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a>N_{11} &amp; \cdots &amp; N_{1T}<span class="sc">\\</span></span>
 <span id="cb3-118"><a href="#cb3-118" aria-hidden="true" tabindex="-1"></a>\vdots &amp; \ddots &amp; \vdots<span class="sc">\\</span></span>
 <span id="cb3-119"><a href="#cb3-119" aria-hidden="true" tabindex="-1"></a>N_{T1} &amp; \cdots &amp; N_{TT}</span>
 <span id="cb3-120"><a href="#cb3-120" aria-hidden="true" tabindex="-1"></a>\end{bmatrix},</span>
-<span id="cb3-121"><a href="#cb3-121" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-121"><a href="#cb3-121" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-122"><a href="#cb3-122" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-123"><a href="#cb3-123" aria-hidden="true" tabindex="-1"></a>where</span>
 <span id="cb3-124"><a href="#cb3-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-125"><a href="#cb3-125" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-125"><a href="#cb3-125" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-126"><a href="#cb3-126" aria-hidden="true" tabindex="-1"></a>N_{ts}</span>
 <span id="cb3-127"><a href="#cb3-127" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-128"><a href="#cb3-128" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span>\mathcal I_{ts}<span class="pp">|</span></span>
-<span id="cb3-129"><a href="#cb3-129" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-129"><a href="#cb3-129" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-130"><a href="#cb3-130" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-131"><a href="#cb3-131" aria-hidden="true" tabindex="-1"></a>and <span class="sc">\(</span>\mathcal I_{ts}<span class="sc">\)</span> is the set of individuals observed for both traits</span>
-<span id="cb3-132"><a href="#cb3-132" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>t<span class="sc">\)</span> and <span class="sc">\(</span>s<span class="sc">\)</span>. By definition,</span>
+<span id="cb3-131"><a href="#cb3-131" aria-hidden="true" tabindex="-1"></a>and $\mathcal I_{ts}$ is the set of individuals observed for both traits</span>
+<span id="cb3-132"><a href="#cb3-132" aria-hidden="true" tabindex="-1"></a>$t$ and $s$. By definition,</span>
 <span id="cb3-133"><a href="#cb3-133" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-134"><a href="#cb3-134" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-134"><a href="#cb3-134" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-135"><a href="#cb3-135" aria-hidden="true" tabindex="-1"></a>N_{tt}=n_t.</span>
-<span id="cb3-136"><a href="#cb3-136" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-136"><a href="#cb3-136" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-137"><a href="#cb3-137" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-138"><a href="#cb3-138" aria-hidden="true" tabindex="-1"></a><span class="fu">## Cross-Trait `SSY`</span></span>
 <span id="cb3-139"><a href="#cb3-139" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-140"><a href="#cb3-140" aria-hidden="true" tabindex="-1"></a>For partially overlapping traits, define</span>
 <span id="cb3-141"><a href="#cb3-141" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-142"><a href="#cb3-142" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-142"><a href="#cb3-142" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-143"><a href="#cb3-143" aria-hidden="true" tabindex="-1"></a>SSY_{ts}</span>
 <span id="cb3-144"><a href="#cb3-144" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-145"><a href="#cb3-145" aria-hidden="true" tabindex="-1"></a>\sum_{i\in\mathcal I_{ts}}y_{it}y_{is}.</span>
-<span id="cb3-146"><a href="#cb3-146" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-146"><a href="#cb3-146" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-147"><a href="#cb3-147" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-148"><a href="#cb3-148" aria-hidden="true" tabindex="-1"></a>The diagonal entries reduce to ordinary single-trait sums of squares:</span>
 <span id="cb3-149"><a href="#cb3-149" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-150"><a href="#cb3-150" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-150"><a href="#cb3-150" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-151"><a href="#cb3-151" aria-hidden="true" tabindex="-1"></a>SSY_{tt}=yy_t.</span>
-<span id="cb3-152"><a href="#cb3-152" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-152"><a href="#cb3-152" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-153"><a href="#cb3-153" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-154"><a href="#cb3-154" aria-hidden="true" tabindex="-1"></a>When all traits are observed on exactly the same individuals,</span>
-<span id="cb3-155"><a href="#cb3-155" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\mathcal I_{ts}<span class="sc">\)</span> is the common sample for every pair and</span>
+<span id="cb3-155"><a href="#cb3-155" aria-hidden="true" tabindex="-1"></a>$\mathcal I_{ts}$ is the common sample for every pair and</span>
 <span id="cb3-156"><a href="#cb3-156" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-157"><a href="#cb3-157" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-157"><a href="#cb3-157" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-158"><a href="#cb3-158" aria-hidden="true" tabindex="-1"></a>SSY=Y^\top Y</span>
-<span id="cb3-159"><a href="#cb3-159" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-159"><a href="#cb3-159" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-160"><a href="#cb3-160" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-161"><a href="#cb3-161" aria-hidden="true" tabindex="-1"></a>has its ordinary matrix-cross-product meaning.</span>
 <span id="cb3-162"><a href="#cb3-162" aria-hidden="true" tabindex="-1"></a></span>
@@ -1299,32 +1456,32 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-167"><a href="#cb3-167" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-168"><a href="#cb3-168" aria-hidden="true" tabindex="-1"></a><span class="fu">## Full Sample Overlap</span></span>
 <span id="cb3-169"><a href="#cb3-169" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-170"><a href="#cb3-170" aria-hidden="true" tabindex="-1"></a>The cleanest MTBLR setting has all traits measured on the same <span class="sc">\(</span>n<span class="sc">\)</span></span>
+<span id="cb3-170"><a href="#cb3-170" aria-hidden="true" tabindex="-1"></a>The cleanest MTBLR setting has all traits measured on the same $n$</span>
 <span id="cb3-171"><a href="#cb3-171" aria-hidden="true" tabindex="-1"></a>individuals:</span>
 <span id="cb3-172"><a href="#cb3-172" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-173"><a href="#cb3-173" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-173"><a href="#cb3-173" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-174"><a href="#cb3-174" aria-hidden="true" tabindex="-1"></a>n_t=n,</span>
 <span id="cb3-175"><a href="#cb3-175" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb3-176"><a href="#cb3-176" aria-hidden="true" tabindex="-1"></a>N_{ts}=n</span>
 <span id="cb3-177"><a href="#cb3-177" aria-hidden="true" tabindex="-1"></a>\quad\text{for all }t,s.</span>
-<span id="cb3-178"><a href="#cb3-178" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-178"><a href="#cb3-178" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-179"><a href="#cb3-179" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-180"><a href="#cb3-180" aria-hidden="true" tabindex="-1"></a>Then:</span>
 <span id="cb3-181"><a href="#cb3-181" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-182"><a href="#cb3-182" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-182"><a href="#cb3-182" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-183"><a href="#cb3-183" aria-hidden="true" tabindex="-1"></a>WY=X^\top Y,</span>
 <span id="cb3-184"><a href="#cb3-184" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb3-185"><a href="#cb3-185" aria-hidden="true" tabindex="-1"></a>SSY=Y^\top Y</span>
-<span id="cb3-186"><a href="#cb3-186" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-186"><a href="#cb3-186" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-187"><a href="#cb3-187" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-188"><a href="#cb3-188" aria-hidden="true" tabindex="-1"></a>can be computed directly, and the residual covariance has the conventional</span>
 <span id="cb3-189"><a href="#cb3-189" aria-hidden="true" tabindex="-1"></a>interpretation:</span>
 <span id="cb3-190"><a href="#cb3-190" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-191"><a href="#cb3-191" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-191"><a href="#cb3-191" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-192"><a href="#cb3-192" aria-hidden="true" tabindex="-1"></a>\Sigma_e</span>
 <span id="cb3-193"><a href="#cb3-193" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-194"><a href="#cb3-194" aria-hidden="true" tabindex="-1"></a>\operatorname{Cov}(e_i)</span>
-<span id="cb3-195"><a href="#cb3-195" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-195"><a href="#cb3-195" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-196"><a href="#cb3-196" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-197"><a href="#cb3-197" aria-hidden="true" tabindex="-1"></a>for residual vectors observed jointly on the same individuals.</span>
 <span id="cb3-198"><a href="#cb3-198" aria-hidden="true" tabindex="-1"></a></span>
@@ -1335,11 +1492,11 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-203"><a href="#cb3-203" aria-hidden="true" tabindex="-1"></a>The archived theory draft also defines a weaker "full-overlap" approximation</span>
 <span id="cb3-204"><a href="#cb3-204" aria-hidden="true" tabindex="-1"></a>for unequal marginal sample sizes:</span>
 <span id="cb3-205"><a href="#cb3-205" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-206"><a href="#cb3-206" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-206"><a href="#cb3-206" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-207"><a href="#cb3-207" aria-hidden="true" tabindex="-1"></a>N^{\mathrm{full}}_{ts}</span>
 <span id="cb3-208"><a href="#cb3-208" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-209"><a href="#cb3-209" aria-hidden="true" tabindex="-1"></a>\min(n_t,n_s).</span>
-<span id="cb3-210"><a href="#cb3-210" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-210"><a href="#cb3-210" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-211"><a href="#cb3-211" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-212"><a href="#cb3-212" aria-hidden="true" tabindex="-1"></a>This assumes the smaller study is nested within the larger study for each</span>
 <span id="cb3-213"><a href="#cb3-213" aria-hidden="true" tabindex="-1"></a>trait pair. It is useful as an explicit approximation, but it is not equivalent</span>
@@ -1349,22 +1506,22 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-217"><a href="#cb3-217" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-218"><a href="#cb3-218" aria-hidden="true" tabindex="-1"></a>With partial overlap, different trait pairs may share different individuals:</span>
 <span id="cb3-219"><a href="#cb3-219" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-220"><a href="#cb3-220" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-220"><a href="#cb3-220" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-221"><a href="#cb3-221" aria-hidden="true" tabindex="-1"></a>0&lt;N_{ts}&lt;\min(n_t,n_s).</span>
-<span id="cb3-222"><a href="#cb3-222" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-222"><a href="#cb3-222" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-223"><a href="#cb3-223" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-224"><a href="#cb3-224" aria-hidden="true" tabindex="-1"></a>A convenient parameterization uses overlap fractions</span>
-<span id="cb3-225"><a href="#cb3-225" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>p_{ts}\in<span class="co">[</span><span class="ot">0,1</span><span class="co">]</span><span class="sc">\)</span>:</span>
+<span id="cb3-225"><a href="#cb3-225" aria-hidden="true" tabindex="-1"></a>$p_{ts}\in<span class="co">[</span><span class="ot">0,1</span><span class="co">]</span>$:</span>
 <span id="cb3-226"><a href="#cb3-226" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-227"><a href="#cb3-227" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-227"><a href="#cb3-227" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-228"><a href="#cb3-228" aria-hidden="true" tabindex="-1"></a>N^{\mathrm{frac}}_{ts}</span>
 <span id="cb3-229"><a href="#cb3-229" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-230"><a href="#cb3-230" aria-hidden="true" tabindex="-1"></a>p_{ts}\min(n_t,n_s),</span>
 <span id="cb3-231"><a href="#cb3-231" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb3-232"><a href="#cb3-232" aria-hidden="true" tabindex="-1"></a>N_{tt}=n_t.</span>
-<span id="cb3-233"><a href="#cb3-233" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-233"><a href="#cb3-233" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-234"><a href="#cb3-234" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-235"><a href="#cb3-235" aria-hidden="true" tabindex="-1"></a>The matrix <span class="sc">\(</span>N<span class="sc">\)</span> records the amount of direct information available about each</span>
+<span id="cb3-235"><a href="#cb3-235" aria-hidden="true" tabindex="-1"></a>The matrix $N$ records the amount of direct information available about each</span>
 <span id="cb3-236"><a href="#cb3-236" aria-hidden="true" tabindex="-1"></a>trait pair. A cross-trait phenotype covariance estimated from 500 shared</span>
 <span id="cb3-237"><a href="#cb3-237" aria-hidden="true" tabindex="-1"></a>individuals is not supported by the same information as one estimated from</span>
 <span id="cb3-238"><a href="#cb3-238" aria-hidden="true" tabindex="-1"></a>50,000 shared individuals, even when the numerical correlation is identical.</span>
@@ -1372,29 +1529,29 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-240"><a href="#cb3-240" aria-hidden="true" tabindex="-1"></a>Partial overlap complicates the likelihood because:</span>
 <span id="cb3-241"><a href="#cb3-241" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-242"><a href="#cb3-242" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`SSY`</span> entries arise from different pair-specific samples;</span>
-<span id="cb3-243"><a href="#cb3-243" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker-trait statistics <span class="sc">\(</span>X_t^\top y_t<span class="sc">\)</span> may arise from different genotype</span>
+<span id="cb3-243"><a href="#cb3-243" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker-trait statistics $X_t^\top y_t$ may arise from different genotype</span>
 <span id="cb3-244"><a href="#cb3-244" aria-hidden="true" tabindex="-1"></a>  samples;</span>
 <span id="cb3-245"><a href="#cb3-245" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>LD and diagonal genotype cross-products may differ by trait;</span>
 <span id="cb3-246"><a href="#cb3-246" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>residual covariance reflects only shared individuals; and</span>
-<span id="cb3-247"><a href="#cb3-247" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>a single common <span class="sc">\(</span>X^\top X<span class="sc">\)</span> may not exactly represent every trait pair.</span>
+<span id="cb3-247"><a href="#cb3-247" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>a single common $X^\top X$ may not exactly represent every trait pair.</span>
 <span id="cb3-248"><a href="#cb3-248" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-249"><a href="#cb3-249" aria-hidden="true" tabindex="-1"></a>These issues require explicit modeling assumptions. Supplying an overlap</span>
 <span id="cb3-250"><a href="#cb3-250" aria-hidden="true" tabindex="-1"></a>matrix does not by itself make a shared-LD likelihood exact.</span>
 <span id="cb3-251"><a href="#cb3-251" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-252"><a href="#cb3-252" aria-hidden="true" tabindex="-1"></a><span class="fu">## No Overlap and Unknown Overlap</span></span>
 <span id="cb3-253"><a href="#cb3-253" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-254"><a href="#cb3-254" aria-hidden="true" tabindex="-1"></a>If traits <span class="sc">\(</span>t<span class="sc">\)</span> and <span class="sc">\(</span>s<span class="sc">\)</span> have no shared individuals,</span>
+<span id="cb3-254"><a href="#cb3-254" aria-hidden="true" tabindex="-1"></a>If traits $t$ and $s$ have no shared individuals,</span>
 <span id="cb3-255"><a href="#cb3-255" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-256"><a href="#cb3-256" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-256"><a href="#cb3-256" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-257"><a href="#cb3-257" aria-hidden="true" tabindex="-1"></a>N_{ts}=0.</span>
-<span id="cb3-258"><a href="#cb3-258" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-258"><a href="#cb3-258" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-259"><a href="#cb3-259" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-260"><a href="#cb3-260" aria-hidden="true" tabindex="-1"></a>There is then no direct individual-level cross-product</span>
-<span id="cb3-261"><a href="#cb3-261" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>\sum_i y_{it}y_{is}<span class="sc">\)</span> for that pair. Setting</span>
+<span id="cb3-261"><a href="#cb3-261" aria-hidden="true" tabindex="-1"></a>$\sum_i y_{it}y_{is}$ for that pair. Setting</span>
 <span id="cb3-262"><a href="#cb3-262" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-263"><a href="#cb3-263" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-263"><a href="#cb3-263" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-264"><a href="#cb3-264" aria-hidden="true" tabindex="-1"></a>SSY_{ts}=0</span>
-<span id="cb3-265"><a href="#cb3-265" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-265"><a href="#cb3-265" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-266"><a href="#cb3-266" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-267"><a href="#cb3-267" aria-hidden="true" tabindex="-1"></a>records the absence of observed cross-trait phenotype product under a centered</span>
 <span id="cb3-268"><a href="#cb3-268" aria-hidden="true" tabindex="-1"></a>phenotype convention. It does not establish that biological, genetic, or</span>
@@ -1414,31 +1571,31 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-282"><a href="#cb3-282" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-283"><a href="#cb3-283" aria-hidden="true" tabindex="-1"></a><span class="fu">## Phenotypic Variance From Marginal Summary Statistics</span></span>
 <span id="cb3-284"><a href="#cb3-284" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-285"><a href="#cb3-285" aria-hidden="true" tabindex="-1"></a>For trait <span class="sc">\(</span>t<span class="sc">\)</span>, let:</span>
+<span id="cb3-285"><a href="#cb3-285" aria-hidden="true" tabindex="-1"></a>For trait $t$, let:</span>
 <span id="cb3-286"><a href="#cb3-286" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-287"><a href="#cb3-287" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-287"><a href="#cb3-287" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-288"><a href="#cb3-288" aria-hidden="true" tabindex="-1"></a>yy_t=\sum_{i\in\mathcal I_t}y_{it}^2,</span>
 <span id="cb3-289"><a href="#cb3-289" aria-hidden="true" tabindex="-1"></a>\qquad</span>
 <span id="cb3-290"><a href="#cb3-290" aria-hidden="true" tabindex="-1"></a>n_t=|\mathcal I_t|.</span>
-<span id="cb3-291"><a href="#cb3-291" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-291"><a href="#cb3-291" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-292"><a href="#cb3-292" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-293"><a href="#cb3-293" aria-hidden="true" tabindex="-1"></a>If phenotypes are centered or approximately centered, an empirical variance</span>
 <span id="cb3-294"><a href="#cb3-294" aria-hidden="true" tabindex="-1"></a>estimate is</span>
 <span id="cb3-295"><a href="#cb3-295" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-296"><a href="#cb3-296" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-296"><a href="#cb3-296" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-297"><a href="#cb3-297" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_t)</span>
 <span id="cb3-298"><a href="#cb3-298" aria-hidden="true" tabindex="-1"></a>\approx</span>
 <span id="cb3-299"><a href="#cb3-299" aria-hidden="true" tabindex="-1"></a>\frac{yy_t}{n_t}.</span>
-<span id="cb3-300"><a href="#cb3-300" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-300"><a href="#cb3-300" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-301"><a href="#cb3-301" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-302"><a href="#cb3-302" aria-hidden="true" tabindex="-1"></a>Using <span class="sc">\(</span>n_t-1<span class="sc">\)</span> instead gives the usual sample-variance denominator. The</span>
+<span id="cb3-302"><a href="#cb3-302" aria-hidden="true" tabindex="-1"></a>Using $n_t-1$ instead gives the usual sample-variance denominator. The</span>
 <span id="cb3-303"><a href="#cb3-303" aria-hidden="true" tabindex="-1"></a>choice must match the intended likelihood and preprocessing convention. The</span>
-<span id="cb3-304"><a href="#cb3-304" aria-hidden="true" tabindex="-1"></a>archived reconstruction uses <span class="sc">\(</span>yy_t/n_t<span class="sc">\)</span> as the cross-product-per-observation</span>
+<span id="cb3-304"><a href="#cb3-304" aria-hidden="true" tabindex="-1"></a>archived reconstruction uses $yy_t/n_t$ as the cross-product-per-observation</span>
 <span id="cb3-305"><a href="#cb3-305" aria-hidden="true" tabindex="-1"></a>quantity.</span>
 <span id="cb3-306"><a href="#cb3-306" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-307"><a href="#cb3-307" aria-hidden="true" tabindex="-1"></a>Collect the marginal variance estimates in:</span>
 <span id="cb3-308"><a href="#cb3-308" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-309"><a href="#cb3-309" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-309"><a href="#cb3-309" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-310"><a href="#cb3-310" aria-hidden="true" tabindex="-1"></a>\widehat{\sigma}_y^2</span>
 <span id="cb3-311"><a href="#cb3-311" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-312"><a href="#cb3-312" aria-hidden="true" tabindex="-1"></a>\left(</span>
@@ -1446,9 +1603,9 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-314"><a href="#cb3-314" aria-hidden="true" tabindex="-1"></a>\ldots,</span>
 <span id="cb3-315"><a href="#cb3-315" aria-hidden="true" tabindex="-1"></a>\frac{yy_T}{n_T}</span>
 <span id="cb3-316"><a href="#cb3-316" aria-hidden="true" tabindex="-1"></a>\right).</span>
-<span id="cb3-317"><a href="#cb3-317" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-317"><a href="#cb3-317" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-318"><a href="#cb3-318" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-319"><a href="#cb3-319" aria-hidden="true" tabindex="-1"></a>If phenotypes are not centered, <span class="sc">\(</span>yy_t/n_t<span class="sc">\)</span> is a second raw moment rather</span>
+<span id="cb3-319"><a href="#cb3-319" aria-hidden="true" tabindex="-1"></a>If phenotypes are not centered, $yy_t/n_t$ is a second raw moment rather</span>
 <span id="cb3-320"><a href="#cb3-320" aria-hidden="true" tabindex="-1"></a>than a variance. Covariance reconstruction then requires explicit treatment</span>
 <span id="cb3-321"><a href="#cb3-321" aria-hidden="true" tabindex="-1"></a>of trait means.</span>
 <span id="cb3-322"><a href="#cb3-322" aria-hidden="true" tabindex="-1"></a></span>
@@ -1456,14 +1613,14 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-324"><a href="#cb3-324" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-325"><a href="#cb3-325" aria-hidden="true" tabindex="-1"></a>Suppose a phenotypic correlation matrix</span>
 <span id="cb3-326"><a href="#cb3-326" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-327"><a href="#cb3-327" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-327"><a href="#cb3-327" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-328"><a href="#cb3-328" aria-hidden="true" tabindex="-1"></a>R_y=<span class="co">[</span><span class="ot">r_{ts}</span><span class="co">]</span></span>
-<span id="cb3-329"><a href="#cb3-329" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-329"><a href="#cb3-329" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-330"><a href="#cb3-330" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-331"><a href="#cb3-331" aria-hidden="true" tabindex="-1"></a>is available from individual-level data, a reported study estimate, or an</span>
 <span id="cb3-332"><a href="#cb3-332" aria-hidden="true" tabindex="-1"></a>external source. Convert it to phenotype covariance units using:</span>
 <span id="cb3-333"><a href="#cb3-333" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-334"><a href="#cb3-334" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-334"><a href="#cb3-334" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-335"><a href="#cb3-335" aria-hidden="true" tabindex="-1"></a>\widehat{\sigma}_{ts}</span>
 <span id="cb3-336"><a href="#cb3-336" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-337"><a href="#cb3-337" aria-hidden="true" tabindex="-1"></a>r_{ts}</span>
@@ -1471,19 +1628,19 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-339"><a href="#cb3-339" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_t)</span>
 <span id="cb3-340"><a href="#cb3-340" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_s)</span>
 <span id="cb3-341"><a href="#cb3-341" aria-hidden="true" tabindex="-1"></a>}.</span>
-<span id="cb3-342"><a href="#cb3-342" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-342"><a href="#cb3-342" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-343"><a href="#cb3-343" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-344"><a href="#cb3-344" aria-hidden="true" tabindex="-1"></a>In matrix form:</span>
 <span id="cb3-345"><a href="#cb3-345" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-346"><a href="#cb3-346" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-346"><a href="#cb3-346" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-347"><a href="#cb3-347" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Cov}}(Y)</span>
 <span id="cb3-348"><a href="#cb3-348" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-349"><a href="#cb3-349" aria-hidden="true" tabindex="-1"></a>D_yR_yD_y,</span>
-<span id="cb3-350"><a href="#cb3-350" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-350"><a href="#cb3-350" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-351"><a href="#cb3-351" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-352"><a href="#cb3-352" aria-hidden="true" tabindex="-1"></a>where</span>
 <span id="cb3-353"><a href="#cb3-353" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-354"><a href="#cb3-354" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-354"><a href="#cb3-354" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-355"><a href="#cb3-355" aria-hidden="true" tabindex="-1"></a>D_y</span>
 <span id="cb3-356"><a href="#cb3-356" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-357"><a href="#cb3-357" aria-hidden="true" tabindex="-1"></a>\operatorname{diag}</span>
@@ -1492,13 +1649,13 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-360"><a href="#cb3-360" aria-hidden="true" tabindex="-1"></a>\ldots,</span>
 <span id="cb3-361"><a href="#cb3-361" aria-hidden="true" tabindex="-1"></a>\sqrt{\widehat{\operatorname{Var}}(y_T)}</span>
 <span id="cb3-362"><a href="#cb3-362" aria-hidden="true" tabindex="-1"></a>\right).</span>
-<span id="cb3-363"><a href="#cb3-363" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-363"><a href="#cb3-363" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-364"><a href="#cb3-364" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-365"><a href="#cb3-365" aria-hidden="true" tabindex="-1"></a>This rescaling is essential. A correlation matrix alone is dimensionless and</span>
 <span id="cb3-366"><a href="#cb3-366" aria-hidden="true" tabindex="-1"></a>cannot replace phenotype cross-products when traits have different scales.</span>
 <span id="cb3-367"><a href="#cb3-367" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-368"><a href="#cb3-368" aria-hidden="true" tabindex="-1"></a>The supplied <span class="sc">\(</span>R_y<span class="sc">\)</span> must have the same trait order as <span class="in">`yy`</span>, <span class="sc">\(</span>n<span class="sc">\)</span>, <span class="sc">\(</span>WY<span class="sc">\)</span>,</span>
-<span id="cb3-369"><a href="#cb3-369" aria-hidden="true" tabindex="-1"></a>and all covariance priors. If <span class="sc">\(</span>R_y<span class="sc">\)</span> comes from another sample, its</span>
+<span id="cb3-368"><a href="#cb3-368" aria-hidden="true" tabindex="-1"></a>The supplied $R_y$ must have the same trait order as <span class="in">`yy`</span>, $n$, $WY$,</span>
+<span id="cb3-369"><a href="#cb3-369" aria-hidden="true" tabindex="-1"></a>and all covariance priors. If $R_y$ comes from another sample, its</span>
 <span id="cb3-370"><a href="#cb3-370" aria-hidden="true" tabindex="-1"></a>transportability is an additional assumption.</span>
 <span id="cb3-371"><a href="#cb3-371" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-372"><a href="#cb3-372" aria-hidden="true" tabindex="-1"></a><span class="fu">## Reconstructing `SSY`</span></span>
@@ -1506,15 +1663,15 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-374"><a href="#cb3-374" aria-hidden="true" tabindex="-1"></a>Under the approximation that pairwise covariance is homogeneous across</span>
 <span id="cb3-375"><a href="#cb3-375" aria-hidden="true" tabindex="-1"></a>individuals and that missingness or study membership does not alter it,</span>
 <span id="cb3-376"><a href="#cb3-376" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-377"><a href="#cb3-377" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-377"><a href="#cb3-377" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-378"><a href="#cb3-378" aria-hidden="true" tabindex="-1"></a>E(y_{it}y_{is})</span>
 <span id="cb3-379"><a href="#cb3-379" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-380"><a href="#cb3-380" aria-hidden="true" tabindex="-1"></a>\sigma_{ts}</span>
-<span id="cb3-381"><a href="#cb3-381" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-381"><a href="#cb3-381" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-382"><a href="#cb3-382" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-383"><a href="#cb3-383" aria-hidden="true" tabindex="-1"></a>for centered traits observed together. Therefore:</span>
 <span id="cb3-384"><a href="#cb3-384" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-385"><a href="#cb3-385" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-385"><a href="#cb3-385" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-386"><a href="#cb3-386" aria-hidden="true" tabindex="-1"></a>\begin{aligned}</span>
 <span id="cb3-387"><a href="#cb3-387" aria-hidden="true" tabindex="-1"></a>E(SSY_{ts})</span>
 <span id="cb3-388"><a href="#cb3-388" aria-hidden="true" tabindex="-1"></a>&amp;=</span>
@@ -1526,31 +1683,31 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-394"><a href="#cb3-394" aria-hidden="true" tabindex="-1"></a>&amp;=</span>
 <span id="cb3-395"><a href="#cb3-395" aria-hidden="true" tabindex="-1"></a>N_{ts}\sigma_{ts}.</span>
 <span id="cb3-396"><a href="#cb3-396" aria-hidden="true" tabindex="-1"></a>\end{aligned}</span>
-<span id="cb3-397"><a href="#cb3-397" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-397"><a href="#cb3-397" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-398"><a href="#cb3-398" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-399"><a href="#cb3-399" aria-hidden="true" tabindex="-1"></a>Replacing <span class="sc">\(</span>\sigma_{ts}<span class="sc">\)</span> with its estimate gives:</span>
+<span id="cb3-399"><a href="#cb3-399" aria-hidden="true" tabindex="-1"></a>Replacing $\sigma_{ts}$ with its estimate gives:</span>
 <span id="cb3-400"><a href="#cb3-400" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-401"><a href="#cb3-401" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-401"><a href="#cb3-401" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-402"><a href="#cb3-402" aria-hidden="true" tabindex="-1"></a>\widehat{SSY}_{ts}</span>
 <span id="cb3-403"><a href="#cb3-403" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-404"><a href="#cb3-404" aria-hidden="true" tabindex="-1"></a>N_{ts}\widehat{\sigma}_{ts}.</span>
-<span id="cb3-405"><a href="#cb3-405" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-405"><a href="#cb3-405" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-406"><a href="#cb3-406" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-407"><a href="#cb3-407" aria-hidden="true" tabindex="-1"></a>In matrix notation:</span>
 <span id="cb3-408"><a href="#cb3-408" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-409"><a href="#cb3-409" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-409"><a href="#cb3-409" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-410"><a href="#cb3-410" aria-hidden="true" tabindex="-1"></a>\widehat{SSY}</span>
 <span id="cb3-411"><a href="#cb3-411" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-412"><a href="#cb3-412" aria-hidden="true" tabindex="-1"></a>N\odot\widehat{\operatorname{Cov}}(Y),</span>
-<span id="cb3-413"><a href="#cb3-413" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-413"><a href="#cb3-413" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-414"><a href="#cb3-414" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-415"><a href="#cb3-415" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\odot<span class="sc">\)</span> denotes elementwise multiplication.</span>
+<span id="cb3-415"><a href="#cb3-415" aria-hidden="true" tabindex="-1"></a>where $\odot$ denotes elementwise multiplication.</span>
 <span id="cb3-416"><a href="#cb3-416" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-417"><a href="#cb3-417" aria-hidden="true" tabindex="-1"></a>The diagonal should be forced to the observed marginal sums of squares:</span>
 <span id="cb3-418"><a href="#cb3-418" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-419"><a href="#cb3-419" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-419"><a href="#cb3-419" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-420"><a href="#cb3-420" aria-hidden="true" tabindex="-1"></a>\widehat{SSY}_{tt}=yy_t.</span>
-<span id="cb3-421"><a href="#cb3-421" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-421"><a href="#cb3-421" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-422"><a href="#cb3-422" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-423"><a href="#cb3-423" aria-hidden="true" tabindex="-1"></a>This avoids small inconsistencies caused by rounding, denominator choices, or</span>
 <span id="cb3-424"><a href="#cb3-424" aria-hidden="true" tabindex="-1"></a>correlation-matrix construction.</span>
@@ -1572,9 +1729,9 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-440"><a href="#cb3-440" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-441"><a href="#cb3-441" aria-hidden="true" tabindex="-1"></a>The reconstruction</span>
 <span id="cb3-442"><a href="#cb3-442" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-443"><a href="#cb3-443" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-443"><a href="#cb3-443" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-444"><a href="#cb3-444" aria-hidden="true" tabindex="-1"></a>\widehat{SSY}_{ts}=N_{ts}\widehat{\sigma}_{ts}</span>
-<span id="cb3-445"><a href="#cb3-445" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-445"><a href="#cb3-445" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-446"><a href="#cb3-446" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-447"><a href="#cb3-447" aria-hidden="true" tabindex="-1"></a>rests on several assumptions.</span>
 <span id="cb3-448"><a href="#cb3-448" aria-hidden="true" tabindex="-1"></a></span>
@@ -1582,12 +1739,12 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-450"><a href="#cb3-450" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-451"><a href="#cb3-451" aria-hidden="true" tabindex="-1"></a>For nonzero means:</span>
 <span id="cb3-452"><a href="#cb3-452" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-453"><a href="#cb3-453" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-453"><a href="#cb3-453" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-454"><a href="#cb3-454" aria-hidden="true" tabindex="-1"></a>E(y_ty_s)</span>
 <span id="cb3-455"><a href="#cb3-455" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-456"><a href="#cb3-456" aria-hidden="true" tabindex="-1"></a>\operatorname{Cov}(y_t,y_s)</span>
 <span id="cb3-457"><a href="#cb3-457" aria-hidden="true" tabindex="-1"></a>+E(y_t)E(y_s).</span>
-<span id="cb3-458"><a href="#cb3-458" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-458"><a href="#cb3-458" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-459"><a href="#cb3-459" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-460"><a href="#cb3-460" aria-hidden="true" tabindex="-1"></a>The covariance-only reconstruction is therefore appropriate when phenotypes</span>
 <span id="cb3-461"><a href="#cb3-461" aria-hidden="true" tabindex="-1"></a>are centered, residualized with an intercept, or otherwise have negligible</span>
@@ -1595,7 +1752,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-463"><a href="#cb3-463" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-464"><a href="#cb3-464" aria-hidden="true" tabindex="-1"></a><span class="fu">### Random or ignorable missingness</span></span>
 <span id="cb3-465"><a href="#cb3-465" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-466"><a href="#cb3-466" aria-hidden="true" tabindex="-1"></a>The shared individuals <span class="sc">\(</span>\mathcal I_{ts}<span class="sc">\)</span> should not have a systematically</span>
+<span id="cb3-466"><a href="#cb3-466" aria-hidden="true" tabindex="-1"></a>The shared individuals $\mathcal I_{ts}$ should not have a systematically</span>
 <span id="cb3-467"><a href="#cb3-467" aria-hidden="true" tabindex="-1"></a>different cross-trait covariance from the target population. If overlap is</span>
 <span id="cb3-468"><a href="#cb3-468" aria-hidden="true" tabindex="-1"></a>selected by disease status, cohort, measurement protocol, or other</span>
 <span id="cb3-469"><a href="#cb3-469" aria-hidden="true" tabindex="-1"></a>trait-related factors, covariance homogeneity may fail.</span>
@@ -1604,11 +1761,11 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-472"><a href="#cb3-472" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-473"><a href="#cb3-473" aria-hidden="true" tabindex="-1"></a>The derivation assumes:</span>
 <span id="cb3-474"><a href="#cb3-474" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-475"><a href="#cb3-475" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-475"><a href="#cb3-475" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-476"><a href="#cb3-476" aria-hidden="true" tabindex="-1"></a>\operatorname{Cov}(y_{it},y_{is})</span>
 <span id="cb3-477"><a href="#cb3-477" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-478"><a href="#cb3-478" aria-hidden="true" tabindex="-1"></a>\sigma_{ts}</span>
-<span id="cb3-479"><a href="#cb3-479" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-479"><a href="#cb3-479" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-480"><a href="#cb3-480" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-481"><a href="#cb3-481" aria-hidden="true" tabindex="-1"></a>for individuals contributing to the pairwise product. Cohort heterogeneity,</span>
 <span id="cb3-482"><a href="#cb3-482" aria-hidden="true" tabindex="-1"></a>ancestry differences, environmental strata, and phenotype harmonization can</span>
@@ -1617,7 +1774,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-485"><a href="#cb3-485" aria-hidden="true" tabindex="-1"></a><span class="fu">### Correct overlap counts</span></span>
 <span id="cb3-486"><a href="#cb3-486" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-487"><a href="#cb3-487" aria-hidden="true" tabindex="-1"></a>The approximation uses the actual or defensible effective value of</span>
-<span id="cb3-488"><a href="#cb3-488" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>N_{ts}<span class="sc">\)</span>. Rounding overlap fractions, using total study size instead of</span>
+<span id="cb3-488"><a href="#cb3-488" aria-hidden="true" tabindex="-1"></a>$N_{ts}$. Rounding overlap fractions, using total study size instead of</span>
 <span id="cb3-489"><a href="#cb3-489" aria-hidden="true" tabindex="-1"></a>shared size, or ignoring duplicated participants changes the implied</span>
 <span id="cb3-490"><a href="#cb3-490" aria-hidden="true" tabindex="-1"></a>cross-product.</span>
 <span id="cb3-491"><a href="#cb3-491" aria-hidden="true" tabindex="-1"></a></span>
@@ -1630,13 +1787,13 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-498"><a href="#cb3-498" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-499"><a href="#cb3-499" aria-hidden="true" tabindex="-1"></a>Let:</span>
 <span id="cb3-500"><a href="#cb3-500" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-501"><a href="#cb3-501" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-501"><a href="#cb3-501" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-502"><a href="#cb3-502" aria-hidden="true" tabindex="-1"></a>R_Y=Y-XB</span>
-<span id="cb3-503"><a href="#cb3-503" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-503"><a href="#cb3-503" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-504"><a href="#cb3-504" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-505"><a href="#cb3-505" aria-hidden="true" tabindex="-1"></a>be the individual-level residual matrix. Its cross-product is:</span>
 <span id="cb3-506"><a href="#cb3-506" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-507"><a href="#cb3-507" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-507"><a href="#cb3-507" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-508"><a href="#cb3-508" aria-hidden="true" tabindex="-1"></a>\begin{aligned}</span>
 <span id="cb3-509"><a href="#cb3-509" aria-hidden="true" tabindex="-1"></a>R_Y^\top R_Y</span>
 <span id="cb3-510"><a href="#cb3-510" aria-hidden="true" tabindex="-1"></a>&amp;=</span>
@@ -1647,24 +1804,24 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-515"><a href="#cb3-515" aria-hidden="true" tabindex="-1"></a>-B^\top X^\top Y</span>
 <span id="cb3-516"><a href="#cb3-516" aria-hidden="true" tabindex="-1"></a>+B^\top X^\top XB.</span>
 <span id="cb3-517"><a href="#cb3-517" aria-hidden="true" tabindex="-1"></a>\end{aligned}</span>
-<span id="cb3-518"><a href="#cb3-518" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-518"><a href="#cb3-518" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-519"><a href="#cb3-519" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-520"><a href="#cb3-520" aria-hidden="true" tabindex="-1"></a>Using summary-statistic notation:</span>
 <span id="cb3-521"><a href="#cb3-521" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-522"><a href="#cb3-522" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-522"><a href="#cb3-522" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-523"><a href="#cb3-523" aria-hidden="true" tabindex="-1"></a>R_Y^\top R_Y</span>
 <span id="cb3-524"><a href="#cb3-524" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-525"><a href="#cb3-525" aria-hidden="true" tabindex="-1"></a>SSY</span>
 <span id="cb3-526"><a href="#cb3-526" aria-hidden="true" tabindex="-1"></a>-WY^\top B</span>
 <span id="cb3-527"><a href="#cb3-527" aria-hidden="true" tabindex="-1"></a>-B^\top WY</span>
 <span id="cb3-528"><a href="#cb3-528" aria-hidden="true" tabindex="-1"></a>+B^\top XXB.</span>
-<span id="cb3-529"><a href="#cb3-529" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-529"><a href="#cb3-529" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-530"><a href="#cb3-530" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-531"><a href="#cb3-531" aria-hidden="true" tabindex="-1"></a>The off-diagonal entries of this residual cross-product depend directly on</span>
 <span id="cb3-532"><a href="#cb3-532" aria-hidden="true" tabindex="-1"></a>the off-diagonal entries of <span class="in">`SSY`</span>. Without them, a sampler cannot reconstruct</span>
 <span id="cb3-533"><a href="#cb3-533" aria-hidden="true" tabindex="-1"></a>the full residual cross-product from marginal summaries alone.</span>
 <span id="cb3-534"><a href="#cb3-534" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-535"><a href="#cb3-535" aria-hidden="true" tabindex="-1"></a>The current CSR MTBLR implementation accepts a full <span class="sc">\(</span>T\times T<span class="sc">\)</span> matrix</span>
+<span id="cb3-535"><a href="#cb3-535" aria-hidden="true" tabindex="-1"></a>The current CSR MTBLR implementation accepts a full $T\times T$ matrix</span>
 <span id="cb3-536"><a href="#cb3-536" aria-hidden="true" tabindex="-1"></a>through its <span class="in">`yy`</span>/<span class="in">`YY`</span> argument. It combines that matrix with marker-trait</span>
 <span id="cb3-537"><a href="#cb3-537" aria-hidden="true" tabindex="-1"></a>cross-products, current effects, and marker-scale residual scores, then</span>
 <span id="cb3-538"><a href="#cb3-538" aria-hidden="true" tabindex="-1"></a>symmetrizes the resulting residual cross-product before updating the residual</span>
@@ -1682,24 +1839,24 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-550"><a href="#cb3-550" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-551"><a href="#cb3-551" aria-hidden="true" tabindex="-1"></a><span class="fu">### Marker-effect covariance</span></span>
 <span id="cb3-552"><a href="#cb3-552" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-553"><a href="#cb3-553" aria-hidden="true" tabindex="-1"></a>For marker <span class="sc">\(</span>j<span class="sc">\)</span>, let:</span>
+<span id="cb3-553"><a href="#cb3-553" aria-hidden="true" tabindex="-1"></a>For marker $j$, let:</span>
 <span id="cb3-554"><a href="#cb3-554" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-555"><a href="#cb3-555" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-555"><a href="#cb3-555" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-556"><a href="#cb3-556" aria-hidden="true" tabindex="-1"></a>b_j=</span>
 <span id="cb3-557"><a href="#cb3-557" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
 <span id="cb3-558"><a href="#cb3-558" aria-hidden="true" tabindex="-1"></a>b_{j1} &amp; \cdots &amp; b_{jT}</span>
 <span id="cb3-559"><a href="#cb3-559" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}^\top.</span>
-<span id="cb3-560"><a href="#cb3-560" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-560"><a href="#cb3-560" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-561"><a href="#cb3-561" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-562"><a href="#cb3-562" aria-hidden="true" tabindex="-1"></a>A multi-trait prior can assign:</span>
 <span id="cb3-563"><a href="#cb3-563" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-564"><a href="#cb3-564" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-564"><a href="#cb3-564" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-565"><a href="#cb3-565" aria-hidden="true" tabindex="-1"></a>b_j\mid\text{active model}</span>
 <span id="cb3-566"><a href="#cb3-566" aria-hidden="true" tabindex="-1"></a>\sim</span>
 <span id="cb3-567"><a href="#cb3-567" aria-hidden="true" tabindex="-1"></a>N_T(0,\Sigma_b)</span>
-<span id="cb3-568"><a href="#cb3-568" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-568"><a href="#cb3-568" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-569"><a href="#cb3-569" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-570"><a href="#cb3-570" aria-hidden="true" tabindex="-1"></a>on the active traits. Off-diagonal entries of <span class="sc">\(</span>\Sigma_b<span class="sc">\)</span> allow effects to</span>
+<span id="cb3-570"><a href="#cb3-570" aria-hidden="true" tabindex="-1"></a>on the active traits. Off-diagonal entries of $\Sigma_b$ allow effects to</span>
 <span id="cb3-571"><a href="#cb3-571" aria-hidden="true" tabindex="-1"></a>co-vary across traits. Trait-sharing model indicators can additionally encode</span>
 <span id="cb3-572"><a href="#cb3-572" aria-hidden="true" tabindex="-1"></a>whether a marker is active for specific subsets of traits.</span>
 <span id="cb3-573"><a href="#cb3-573" aria-hidden="true" tabindex="-1"></a></span>
@@ -1707,20 +1864,20 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-575"><a href="#cb3-575" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-576"><a href="#cb3-576" aria-hidden="true" tabindex="-1"></a>With a common genotype matrix:</span>
 <span id="cb3-577"><a href="#cb3-577" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-578"><a href="#cb3-578" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-578"><a href="#cb3-578" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-579"><a href="#cb3-579" aria-hidden="true" tabindex="-1"></a>G_X=XB</span>
-<span id="cb3-580"><a href="#cb3-580" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-580"><a href="#cb3-580" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-581"><a href="#cb3-581" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-582"><a href="#cb3-582" aria-hidden="true" tabindex="-1"></a>has cross-product:</span>
 <span id="cb3-583"><a href="#cb3-583" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-584"><a href="#cb3-584" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-584"><a href="#cb3-584" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-585"><a href="#cb3-585" aria-hidden="true" tabindex="-1"></a>G_X^\top G_X=B^\top XXB.</span>
-<span id="cb3-586"><a href="#cb3-586" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-586"><a href="#cb3-586" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-587"><a href="#cb3-587" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-588"><a href="#cb3-588" aria-hidden="true" tabindex="-1"></a>Using marker-score residuals <span class="sc">\(</span>R= WY-XXB<span class="sc">\)</span>, a symmetric summary-statistic</span>
-<span id="cb3-589"><a href="#cb3-589" aria-hidden="true" tabindex="-1"></a>estimate for traits <span class="sc">\(</span>t<span class="sc">\)</span> and <span class="sc">\(</span>s<span class="sc">\)</span> is:</span>
+<span id="cb3-588"><a href="#cb3-588" aria-hidden="true" tabindex="-1"></a>Using marker-score residuals $R= WY-XXB$, a symmetric summary-statistic</span>
+<span id="cb3-589"><a href="#cb3-589" aria-hidden="true" tabindex="-1"></a>estimate for traits $t$ and $s$ is:</span>
 <span id="cb3-590"><a href="#cb3-590" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-591"><a href="#cb3-591" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb3-591"><a href="#cb3-591" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-592"><a href="#cb3-592" aria-hidden="true" tabindex="-1"></a>\widehat G_{ts}</span>
 <span id="cb3-593"><a href="#cb3-593" aria-hidden="true" tabindex="-1"></a>=</span>
 <span id="cb3-594"><a href="#cb3-594" aria-hidden="true" tabindex="-1"></a>\frac{</span>
@@ -1729,7 +1886,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-597"><a href="#cb3-597" aria-hidden="true" tabindex="-1"></a>}{</span>
 <span id="cb3-598"><a href="#cb3-598" aria-hidden="true" tabindex="-1"></a>2\sqrt{n_tn_s}</span>
 <span id="cb3-599"><a href="#cb3-599" aria-hidden="true" tabindex="-1"></a>}.</span>
-<span id="cb3-600"><a href="#cb3-600" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb3-600"><a href="#cb3-600" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb3-601"><a href="#cb3-601" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-602"><a href="#cb3-602" aria-hidden="true" tabindex="-1"></a>This quantity concerns genetic values induced by marker effects and LD. It is</span>
 <span id="cb3-603"><a href="#cb3-603" aria-hidden="true" tabindex="-1"></a>not determined by <span class="in">`SSY`</span> alone.</span>
@@ -1757,7 +1914,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-625"><a href="#cb3-625" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-626"><a href="#cb3-626" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`wy`</span>, one marker vector per trait;</span>
 <span id="cb3-627"><a href="#cb3-627" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`ww`</span>, marker diagonal cross-products per trait;</span>
-<span id="cb3-628"><a href="#cb3-628" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`yy`</span>, a full <span class="sc">\(</span>T\times T<span class="sc">\)</span> trait cross-product matrix;</span>
+<span id="cb3-628"><a href="#cb3-628" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`yy`</span>, a full $T\times T$ trait cross-product matrix;</span>
 <span id="cb3-629"><a href="#cb3-629" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`ld_prefix`</span>, identifying shared CSR LD;</span>
 <span id="cb3-630"><a href="#cb3-630" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker-effect covariance <span class="in">`B`</span>;</span>
 <span id="cb3-631"><a href="#cb3-631" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>residual covariance <span class="in">`E`</span>;</span>
@@ -1771,8 +1928,8 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-639"><a href="#cb3-639" aria-hidden="true" tabindex="-1"></a>native CSR likelihood to adjust each trait pair.</span>
 <span id="cb3-640"><a href="#cb3-640" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-641"><a href="#cb3-641" aria-hidden="true" tabindex="-1"></a>This distinction matters. A mathematically reconstructed <span class="in">`SSY`</span> for partial</span>
-<span id="cb3-642"><a href="#cb3-642" aria-hidden="true" tabindex="-1"></a>overlap does not by itself remove the kernel's shared-<span class="sc">\(</span>X<span class="sc">\)</span>, shared-LD, and</span>
-<span id="cb3-643"><a href="#cb3-643" aria-hidden="true" tabindex="-1"></a>equal-<span class="sc">\(</span>n<span class="sc">\)</span> assumptions. More general partial-overlap likelihoods require</span>
+<span id="cb3-642"><a href="#cb3-642" aria-hidden="true" tabindex="-1"></a>overlap does not by itself remove the kernel's shared-$X$, shared-LD, and</span>
+<span id="cb3-643"><a href="#cb3-643" aria-hidden="true" tabindex="-1"></a>equal-$n$ assumptions. More general partial-overlap likelihoods require</span>
 <span id="cb3-644"><a href="#cb3-644" aria-hidden="true" tabindex="-1"></a>additional implementation and validation.</span>
 <span id="cb3-645"><a href="#cb3-645" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-646"><a href="#cb3-646" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulation as a Known-Truth Check</span></span>
@@ -1812,12 +1969,12 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-680"><a href="#cb3-680" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Object <span class="pp">|</span> Required contract <span class="pp">|</span></span>
 <span id="cb3-681"><a href="#cb3-681" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
 <span id="cb3-682"><a href="#cb3-682" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Trait names/order <span class="pp">|</span> Identical across every trait-indexed object <span class="pp">|</span></span>
-<span id="cb3-683"><a href="#cb3-683" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="sc">\(</span>WY=X^\top Y<span class="sc">\)</span> <span class="pp">|</span> <span class="sc">\(</span>m\times T<span class="sc">\)</span>, with marker and trait order recorded <span class="pp">|</span></span>
-<span id="cb3-684"><a href="#cb3-684" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`ww`</span> / diagonal <span class="sc">\(</span>XX<span class="sc">\)</span> <span class="pp">|</span> Length <span class="sc">\(</span>m<span class="sc">\)</span> per trait; compatible with LD scaling <span class="pp">|</span></span>
-<span id="cb3-685"><a href="#cb3-685" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> LD / <span class="sc">\(</span>XX<span class="sc">\)</span> <span class="pp">|</span> Marker order identical to rows of <span class="sc">\(</span>WY<span class="sc">\)</span> <span class="pp">|</span></span>
-<span id="cb3-686"><a href="#cb3-686" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`SSY`</span> <span class="pp">|</span> Symmetric <span class="sc">\(</span>T\times T<span class="sc">\)</span> observed or reconstructed trait cross-product matrix <span class="pp">|</span></span>
-<span id="cb3-687"><a href="#cb3-687" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="sc">\(</span>n<span class="sc">\)</span> <span class="pp">|</span> Trait-specific sample-size vector, even when all values are equal <span class="pp">|</span></span>
-<span id="cb3-688"><a href="#cb3-688" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`Nmat`</span> <span class="pp">|</span> Symmetric <span class="sc">\(</span>T\times T<span class="sc">\)</span> pairwise overlap matrix used to justify <span class="in">`SSY`</span> <span class="pp">|</span></span>
+<span id="cb3-683"><a href="#cb3-683" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $WY=X^\top Y$ <span class="pp">|</span> $m\times T$, with marker and trait order recorded <span class="pp">|</span></span>
+<span id="cb3-684"><a href="#cb3-684" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`ww`</span> / diagonal $XX$ <span class="pp">|</span> Length $m$ per trait; compatible with LD scaling <span class="pp">|</span></span>
+<span id="cb3-685"><a href="#cb3-685" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> LD / $XX$ <span class="pp">|</span> Marker order identical to rows of $WY$ <span class="pp">|</span></span>
+<span id="cb3-686"><a href="#cb3-686" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`SSY`</span> <span class="pp">|</span> Symmetric $T\times T$ observed or reconstructed trait cross-product matrix <span class="pp">|</span></span>
+<span id="cb3-687"><a href="#cb3-687" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $n$ <span class="pp">|</span> Trait-specific sample-size vector, even when all values are equal <span class="pp">|</span></span>
+<span id="cb3-688"><a href="#cb3-688" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`Nmat`</span> <span class="pp">|</span> Symmetric $T\times T$ pairwise overlap matrix used to justify <span class="in">`SSY`</span> <span class="pp">|</span></span>
 <span id="cb3-689"><a href="#cb3-689" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Phenotype scaling <span class="pp">|</span> Centering, variance scaling, transformations, and covariate adjustment <span class="pp">|</span></span>
 <span id="cb3-690"><a href="#cb3-690" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Covariance priors <span class="pp">|</span> Trait order and units matching <span class="in">`SSY`</span> and marker statistics <span class="pp">|</span></span>
 <span id="cb3-691"><a href="#cb3-691" aria-hidden="true" tabindex="-1"></a></span>
@@ -1828,7 +1985,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-696"><a href="#cb3-696" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-697"><a href="#cb3-697" aria-hidden="true" tabindex="-1"></a>Before fitting or interpreting a joint multi-trait model:</span>
 <span id="cb3-698"><a href="#cb3-698" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-699"><a href="#cb3-699" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Confirm that <span class="in">`SSY`</span> is <span class="sc">\(</span>T\times T<span class="sc">\)</span>, finite, and symmetric.</span>
+<span id="cb3-699"><a href="#cb3-699" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Confirm that <span class="in">`SSY`</span> is $T\times T$, finite, and symmetric.</span>
 <span id="cb3-700"><a href="#cb3-700" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Confirm that <span class="in">`diag(SSY)`</span> equals the trait-specific <span class="in">`yy`</span> values.</span>
 <span id="cb3-701"><a href="#cb3-701" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Check that observed full-overlap <span class="in">`SSY = crossprod(Y)`</span> is positive</span>
 <span id="cb3-702"><a href="#cb3-702" aria-hidden="true" tabindex="-1"></a>   semidefinite up to numerical tolerance.</span>
@@ -1838,19 +1995,19 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-706"><a href="#cb3-706" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Confirm that <span class="in">`Nmat`</span> is symmetric and finite.</span>
 <span id="cb3-707"><a href="#cb3-707" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>Confirm that:</span>
 <span id="cb3-708"><a href="#cb3-708" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-709"><a href="#cb3-709" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\[</span></span>
+<span id="cb3-709"><a href="#cb3-709" aria-hidden="true" tabindex="-1"></a>   $$</span>
 <span id="cb3-710"><a href="#cb3-710" aria-hidden="true" tabindex="-1"></a>   N_{tt}=n_t</span>
-<span id="cb3-711"><a href="#cb3-711" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\]</span></span>
+<span id="cb3-711"><a href="#cb3-711" aria-hidden="true" tabindex="-1"></a>   $$</span>
 <span id="cb3-712"><a href="#cb3-712" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-713"><a href="#cb3-713" aria-hidden="true" tabindex="-1"></a>   and:</span>
 <span id="cb3-714"><a href="#cb3-714" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-715"><a href="#cb3-715" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\[</span></span>
+<span id="cb3-715"><a href="#cb3-715" aria-hidden="true" tabindex="-1"></a>   $$</span>
 <span id="cb3-716"><a href="#cb3-716" aria-hidden="true" tabindex="-1"></a>   0\le N_{ts}\le \min(n_t,n_s).</span>
-<span id="cb3-717"><a href="#cb3-717" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\]</span></span>
+<span id="cb3-717"><a href="#cb3-717" aria-hidden="true" tabindex="-1"></a>   $$</span>
 <span id="cb3-718"><a href="#cb3-718" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-719"><a href="#cb3-719" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>Confirm that trait order is identical across <span class="in">`SSY`</span>, <span class="in">`Nmat`</span>, <span class="sc">\(</span>WY<span class="sc">\)</span>, <span class="sc">\(</span>n<span class="sc">\)</span>,</span>
-<span id="cb3-720"><a href="#cb3-720" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\(</span>\Sigma_b<span class="sc">\)</span>, <span class="sc">\(</span>\Sigma_e<span class="sc">\)</span>, prior scale matrices, and outputs.</span>
-<span id="cb3-721"><a href="#cb3-721" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>Confirm that <span class="sc">\(</span>WY<span class="sc">\)</span>, <span class="in">`ww`</span>, and LD use the same marker order and compatible</span>
+<span id="cb3-719"><a href="#cb3-719" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>Confirm that trait order is identical across <span class="in">`SSY`</span>, <span class="in">`Nmat`</span>, $WY$, $n$,</span>
+<span id="cb3-720"><a href="#cb3-720" aria-hidden="true" tabindex="-1"></a>   $\Sigma_b$, $\Sigma_e$, prior scale matrices, and outputs.</span>
+<span id="cb3-721"><a href="#cb3-721" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>Confirm that $WY$, <span class="in">`ww`</span>, and LD use the same marker order and compatible</span>
 <span id="cb3-722"><a href="#cb3-722" aria-hidden="true" tabindex="-1"></a>   genotype scaling.</span>
 <span id="cb3-723"><a href="#cb3-723" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span>Confirm that reported phenotype correlations are on compatible phenotype</span>
 <span id="cb3-724"><a href="#cb3-724" aria-hidden="true" tabindex="-1"></a>   definitions and scales.</span>
@@ -1871,7 +2028,7 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-739"><a href="#cb3-739" aria-hidden="true" tabindex="-1"></a>Multi-trait summary-statistics inference is sensitive to assumptions that are</span>
 <span id="cb3-740"><a href="#cb3-740" aria-hidden="true" tabindex="-1"></a>unnecessary or directly observable with complete individual-level data.</span>
 <span id="cb3-741"><a href="#cb3-741" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-742"><a href="#cb3-742" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Overlap uncertainty:** errors in <span class="sc">\(</span>N_{ts}<span class="sc">\)</span> directly alter reconstructed</span>
+<span id="cb3-742"><a href="#cb3-742" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Overlap uncertainty:** errors in $N_{ts}$ directly alter reconstructed</span>
 <span id="cb3-743"><a href="#cb3-743" aria-hidden="true" tabindex="-1"></a>  <span class="in">`SSY`</span> off-diagonals.</span>
 <span id="cb3-744"><a href="#cb3-744" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Nonrandom missingness:** shared individuals may not represent the marginal</span>
 <span id="cb3-745"><a href="#cb3-745" aria-hidden="true" tabindex="-1"></a>  trait samples.</span>
@@ -1879,14 +2036,14 @@ b_{j1} &amp; \cdots &amp; b_{jT}
 <span id="cb3-747"><a href="#cb3-747" aria-hidden="true" tabindex="-1"></a>  ancestries, environments, or phenotype definitions.</span>
 <span id="cb3-748"><a href="#cb3-748" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LD mismatch:** trait-specific association statistics may not be compatible</span>
 <span id="cb3-749"><a href="#cb3-749" aria-hidden="true" tabindex="-1"></a>  with one shared LD reference.</span>
-<span id="cb3-750"><a href="#cb3-750" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Scale mismatch:** correlations, <span class="in">`yy`</span>, <span class="sc">\(</span>WY<span class="sc">\)</span>, and covariance priors may be</span>
+<span id="cb3-750"><a href="#cb3-750" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Scale mismatch:** correlations, <span class="in">`yy`</span>, $WY$, and covariance priors may be</span>
 <span id="cb3-751"><a href="#cb3-751" aria-hidden="true" tabindex="-1"></a>  expressed on different phenotype scales.</span>
 <span id="cb3-752"><a href="#cb3-752" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Weak identification:** residual covariance is weakly or not directly</span>
 <span id="cb3-753"><a href="#cb3-753" aria-hidden="true" tabindex="-1"></a>  identified when overlap is small, zero, or unknown.</span>
 <span id="cb3-754"><a href="#cb3-754" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Covariance instability:** high-dimensional or highly correlated trait</span>
 <span id="cb3-755"><a href="#cb3-755" aria-hidden="true" tabindex="-1"></a>  covariance matrices can be numerically unstable.</span>
 <span id="cb3-756"><a href="#cb3-756" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Current implementation scope:** the CSR MTBLR kernel's shared-LD and</span>
-<span id="cb3-757"><a href="#cb3-757" aria-hidden="true" tabindex="-1"></a>  equal-<span class="sc">\(</span>n<span class="sc">\)</span> requirements are narrower than the most general partial-overlap</span>
+<span id="cb3-757"><a href="#cb3-757" aria-hidden="true" tabindex="-1"></a>  equal-$n$ requirements are narrower than the most general partial-overlap</span>
 <span id="cb3-758"><a href="#cb3-758" aria-hidden="true" tabindex="-1"></a>  theory.</span>
 <span id="cb3-759"><a href="#cb3-759" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-760"><a href="#cb3-760" aria-hidden="true" tabindex="-1"></a>Production analyses should compare plausible overlap matrices, phenotype</span>
