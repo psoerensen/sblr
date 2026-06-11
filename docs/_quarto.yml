@@ -1,6 +1,6 @@
 project:
   type: website
-  output-dir: .
+  output-dir: "."
   render:
     - notes/*.qmd
     - notes/drafts/*.qmd
@@ -8,6 +8,15 @@ project:
 execute:
   eval: false
   freeze: true
+  echo: false
+  warning: false
+  message: false
+
+author:
+  - name: "Peter Sørensen"
+    affiliations:
+      - name: "Aarhus University"
+        department: "Center for Quantitative Genetics and Genomics"
 
 website:
   title: "sblr"
@@ -23,4 +32,19 @@ website:
 
 format:
   html:
+    theme: flatly
     toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    highlight-style: github
+  pdf:
+    toc: true
+    number-sections: true
+    highlight-style: kate
+    fig-pos: "H"
+    fig-width: 6
+    fig-height: 4
+    fontsize: 11pt
+    geometry: margin=1in

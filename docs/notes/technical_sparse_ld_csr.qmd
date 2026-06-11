@@ -1,6 +1,11 @@
 ---
 title: "Technical Appendix: Sparse LD and CSR"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This appendix will preserve the storage, construction, alignment, and
 computational contracts behind disk-backed sparse LD used by CSR BLR
@@ -60,4 +65,3 @@ implementation-sensitive details explicitly. -->
 - [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
 - [Technical summary statistics](technical_summary_statistics.qmd)
 - [Complete sparse-LD/BED workflow](../../examples/workflows/sparse_ld_bed_workflow.R)
-

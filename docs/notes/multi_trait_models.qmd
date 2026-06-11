@@ -1,6 +1,11 @@
 ---
 title: "Multi-Trait Models"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This note will explain joint multi-trait modeling, covariance structures,
 trait-sharing models, and sample-overlap requirements.
@@ -48,4 +53,3 @@ derivations in the linked appendices. -->
 - [Annotation-informed models](annotation_informed_models.qmd)
 - [Technical multi-trait overlap](technical_multitrait_overlap.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
-

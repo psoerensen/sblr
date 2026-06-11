@@ -1,6 +1,11 @@
 ---
 title: "Technical Appendix: Annotation Priors"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This appendix will preserve the detailed derivations, implementations,
 uncertainty considerations, and proposed extensions for annotation-informed

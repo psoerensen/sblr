@@ -1,6 +1,11 @@
 ---
 title: "Workflows and Outputs"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This note will connect model choices to executable workflows and explain
 compact posterior summaries while retaining full marker-scale outputs in fit

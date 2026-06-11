@@ -1,6 +1,11 @@
 ---
 title: "sblr Notes"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 These notes provide a readable path through the `sblr` data representations,
 model families, workflows, and technical derivations. The package and these
@@ -48,4 +53,3 @@ workflows_and_outputs.qmd. -->
 - [Multi-trait models](multi_trait_models.qmd)
 - [Annotation-informed models](annotation_informed_models.qmd)
 - [Workflows and outputs](workflows_and_outputs.qmd)
-

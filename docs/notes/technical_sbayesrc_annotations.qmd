@@ -1,6 +1,11 @@
 ---
 title: "Technical Appendix: SBayesRC-Style Annotation Priors"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This appendix will explain the implemented SBayesRC-style
 annotation-dependent BayesR prior, generalized probit stick-breaking

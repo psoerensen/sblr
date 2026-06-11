@@ -1,6 +1,11 @@
 ---
 title: "Technical Appendix: Summary Statistics"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This appendix will preserve the full algebra connecting individual-level
 models to summary-statistic residual calculations and derived genomic
@@ -42,4 +47,3 @@ including equations and R implementations. -->
 - [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
 - [Single-trait models](single_trait_models.qmd)
 - [Technical sparse-LD CSR](technical_sparse_ld_csr.qmd)
-

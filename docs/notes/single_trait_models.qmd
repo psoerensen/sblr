@@ -1,6 +1,11 @@
 ---
 title: "Single-Trait Models"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This note will explain single-trait BLR/ST-BLR models, prior interpretation,
 and the distinction between direct BED and summary-statistics CSR fitting.
@@ -45,4 +50,3 @@ annotation note. -->
 - [Technical summary statistics](technical_summary_statistics.qmd)
 - [Technical sparse-LD CSR](technical_sparse_ld_csr.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
-

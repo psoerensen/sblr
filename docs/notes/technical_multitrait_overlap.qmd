@@ -1,6 +1,11 @@
 ---
 title: "Technical Appendix: Multi-Trait Sample Overlap"
+status: "Draft"
 ---
+
+::: {.callout-note}
+This note is under active development. Some sections are structured outlines that will be expanded over time.
+:::
 
 This appendix will preserve the complete derivation of cross-trait `SSY` and
 sample-overlap matrices used by multi-trait summary-statistic models.
@@ -46,4 +51,3 @@ after completeness is verified. -->
 - [Data representations](data_representations.qmd)
 - [Multi-trait models](multi_trait_models.qmd)
 - [Archived theory draft](drafts/sblr_theory.qmd)
-
