@@ -627,63 +627,42 @@
     "href": "notes/index.html",
     "title": "sblr Notes",
     "section": "",
-    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThese notes provide a readable path through the sblr data representations, model families, workflows, and technical derivations. The package and these notes are experimental."
+    "text": "These notes describe the statistical models, data representations, sparse-LD workflows, annotation-informed priors, and technical details behind sblr. They are organized as a readable main path supported by practical workflow notes and more detailed technical appendices.\nsblr is an experimental research package. The notes distinguish current public workflows from lower-level or research-stage model components and identify the assumptions needed to interpret their outputs."
   },
   {
-    "objectID": "notes/index.html#what-sblr-is-and-its-experimental-status",
-    "href": "notes/index.html#what-sblr-is-and-its-experimental-status",
+    "objectID": "notes/index.html#recommended-reading-order",
+    "href": "notes/index.html#recommended-reading-order",
     "title": "sblr Notes",
-    "section": "1 What sblr Is and Its Experimental Status",
-    "text": "1 What sblr Is and Its Experimental Status"
+    "section": "1 Recommended Reading Order",
+    "text": "1 Recommended Reading Order\nNew readers can follow this sequence:\n\nModel Overview for the package landscape and model selection map.\nData Representations for the relationship between individual-level data and summary statistics plus LD.\nSingle-Trait Models for the core sparse BLR model used by the current BED and CSR workflows.\nSparse-LD and BED Workflows for the practical path from PLINK BED data to sufficient statistics and disk-backed CSR LD.\nAnnotation-Informed Models for fixed, learned, group, and SBayesRC-style annotation priors.\nWorkflows and Outputs for running the main workflows and interpreting returned fit objects.\nMulti-Trait Models for joint trait-sharing and covariance models.\nConsult the technical appendices as needed for derivations, implementation contracts, and detailed assumptions."
   },
   {
-    "objectID": "notes/index.html#four-documentation-axes-data-traits-priors-estimation",
-    "href": "notes/index.html#four-documentation-axes-data-traits-priors-estimation",
+    "objectID": "notes/index.html#main-explanatory-notes",
+    "href": "notes/index.html#main-explanatory-notes",
     "title": "sblr Notes",
-    "section": "2 Four Documentation Axes: Data, Traits, Priors, Estimation",
-    "text": "2 Four Documentation Axes: Data, Traits, Priors, Estimation"
+    "section": "2 Main Explanatory Notes",
+    "text": "2 Main Explanatory Notes\n\nModel Overview maps the main package axes: single-trait versus multi-trait, individual-level versus summary-statistics, and plain versus annotation-informed priors.\nData Representations explains individual-level genotype and phenotype inputs, sufficient statistics, LD, CSR storage, and marker-order alignment.\nSingle-Trait Models defines the core ST-BLR model, BayesC-style sparse prior, BED and CSR fitting paths, scheduled sparse updates, and posterior outputs.\nMulti-Trait Models introduces joint MT-BLR, trait-sharing patterns, genetic and residual covariance, sample-overlap requirements, and the current implementation status.\nAnnotation-Informed Models compares fixed marker-specific priors, learned annotation effects, group priors, and the SBayesRC-style annotation-dependent BayesR prior."
   },
   {
-    "objectID": "notes/index.html#choose-a-workflow",
-    "href": "notes/index.html#choose-a-workflow",
+    "objectID": "notes/index.html#practical-workflow-notes",
+    "href": "notes/index.html#practical-workflow-notes",
     "title": "sblr Notes",
-    "section": "3 Choose a Workflow",
-    "text": "3 Choose a Workflow"
+    "section": "3 Practical Workflow Notes",
+    "text": "3 Practical Workflow Notes\n\nSparse-LD and BED Workflows is the practical guide to aligning BED markers, deriving sufficient statistics, streaming sparse LD, fitting stblr_csr(), and cautiously comparing BED and CSR fits.\nWorkflows and Outputs connects the executable workflow scripts to fit-object components, compact summaries, diagnostics, interpretation, and recommended reporting.\n\nThe workflow scripts are runnable demonstrations and validation templates, not automatically lightweight package examples. Production analyses require appropriate MCMC settings, convergence checks, and sensitivity analyses."
   },
   {
-    "objectID": "notes/index.html#choose-a-model",
-    "href": "notes/index.html#choose-a-model",
+    "objectID": "notes/index.html#technical-appendices",
+    "href": "notes/index.html#technical-appendices",
     "title": "sblr Notes",
-    "section": "4 Choose a Model",
-    "text": "4 Choose a Model"
+    "section": "4 Technical Appendices",
+    "text": "4 Technical Appendices\n\nSummary Statistics derives the cross-product representation used by single- and multi-trait BLR and explains equivalence assumptions and practical limitations.\nSparse LD and CSR defines compressed sparse row storage, the disk-backed LD contract, indexing and diagonal conventions, construction settings, and validation checks.\nAnnotation-Informed Priors develops marker-specific inclusion and variance priors, empirical-Bayes constructions, learned effects, group priors, and regularization choices.\nSBayesRC-Style Annotation Priors explains the annotation-dependent BayesR mixture prior, probit stick-breaking probabilities, alpha updates, diagnostics, and differences from published GCTB SBayesRC.\nMulti-Trait Sample Overlap gives the detailed treatment of SSY, pairwise sample overlap, covariance reconstruction, current implementation constraints, and sensitivity analysis.\n\nSome appendices may still be expanded as the package API stabilizes."
   },
   {
-    "objectID": "notes/index.html#main-notes-versus-technical-appendices",
-    "href": "notes/index.html#main-notes-versus-technical-appendices",
+    "objectID": "notes/index.html#draft-archive",
+    "href": "notes/index.html#draft-archive",
     "title": "sblr Notes",
-    "section": "5 Main Notes Versus Technical Appendices",
-    "text": "5 Main Notes Versus Technical Appendices"
-  },
-  {
-    "objectID": "notes/index.html#runtime-convergence-and-reproducibility-cautions",
-    "href": "notes/index.html#runtime-convergence-and-reproducibility-cautions",
-    "title": "sblr Notes",
-    "section": "6 Runtime, Convergence, and Reproducibility Cautions",
-    "text": "6 Runtime, Convergence, and Reproducibility Cautions"
-  },
-  {
-    "objectID": "notes/index.html#public-api-and-example-script-links",
-    "href": "notes/index.html#public-api-and-example-script-links",
-    "title": "sblr Notes",
-    "section": "7 Public API and Example-Script Links",
-    "text": "7 Public API and Example-Script Links"
-  },
-  {
-    "objectID": "notes/index.html#related-notes",
-    "href": "notes/index.html#related-notes",
-    "title": "sblr Notes",
-    "section": "8 Related Notes",
-    "text": "8 Related Notes\n\nModel overview\nData representations\nSparse-LD and BED workflows\nSingle-trait models\nMulti-trait models\nAnnotation-informed models\nWorkflows and outputs"
+    "section": "5 Draft Archive",
+    "text": "5 Draft Archive\nThe archived source drafts preserve the original long-form theory and annotation-prior material used to build the maintained notes. They remain available for provenance and research context, but the maintained notes above are the recommended reading path.\n\nArchived sblr theory draft\nArchived annotation-informed priors draft"
   },
   {
     "objectID": "notes/annotation_informed_models.html",

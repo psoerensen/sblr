@@ -1,55 +1,107 @@
 ---
 title: "sblr Notes"
-status: "Draft"
 ---
 
-::: {.callout-note}
-This note is under active development. Some sections are structured outlines that will be expanded over time.
-:::
+These notes describe the statistical models, data representations, sparse-LD
+workflows, annotation-informed priors, and technical details behind `sblr`.
+They are organized as a readable main path supported by practical workflow
+notes and more detailed technical appendices.
 
-These notes provide a readable path through the `sblr` data representations,
-model families, workflows, and technical derivations. The package and these
-notes are experimental.
+`sblr` is an experimental research package. The notes distinguish current
+public workflows from lower-level or research-stage model components and
+identify the assumptions needed to interpret their outputs.
 
-<!-- Later: adapt concise motivation from drafts/sblr_theory.qmd and
-drafts/annotation_informed_priors_stblr_mtblr.qmd. Preserve detailed material
-in the linked technical appendices. -->
+## Recommended Reading Order
 
-## What `sblr` Is and Its Experimental Status
+New readers can follow this sequence:
 
-<!-- Later: summarize package scope and research-snapshot status. -->
+1. [Model Overview](model_overview.html) for the package landscape and model
+   selection map.
+2. [Data Representations](data_representations.html) for the relationship
+   between individual-level data and summary statistics plus LD.
+3. [Single-Trait Models](single_trait_models.html) for the core sparse BLR
+   model used by the current BED and CSR workflows.
+4. [Sparse-LD and BED Workflows](sparse_ld_and_bed_workflows.html) for the
+   practical path from PLINK BED data to sufficient statistics and disk-backed
+   CSR LD.
+5. [Annotation-Informed Models](annotation_informed_models.html) for fixed,
+   learned, group, and SBayesRC-style annotation priors.
+6. [Workflows and Outputs](workflows_and_outputs.html) for running the main
+   workflows and interpreting returned fit objects.
+7. [Multi-Trait Models](multi_trait_models.html) for joint trait-sharing and
+   covariance models.
+8. Consult the [technical appendices](#technical-appendices) as needed for
+   derivations, implementation contracts, and detailed assumptions.
 
-## Four Documentation Axes: Data, Traits, Priors, Estimation
+## Main Explanatory Notes
 
-<!-- Later: insert the classification framework from NOTE_STRATEGY.md. -->
+- [Model Overview](model_overview.html) maps the main package axes:
+  single-trait versus multi-trait, individual-level versus summary-statistics,
+  and plain versus annotation-informed priors.
 
-## Choose a Workflow
+- [Data Representations](data_representations.html) explains individual-level
+  genotype and phenotype inputs, sufficient statistics, LD, CSR storage, and
+  marker-order alignment.
 
-<!-- Later: link decisions to sparse_ld_and_bed_workflows.qmd and
-workflows_and_outputs.qmd. -->
+- [Single-Trait Models](single_trait_models.html) defines the core ST-BLR
+  model, BayesC-style sparse prior, BED and CSR fitting paths, scheduled sparse
+  updates, and posterior outputs.
 
-## Choose a Model
+- [Multi-Trait Models](multi_trait_models.html) introduces joint MT-BLR,
+  trait-sharing patterns, genetic and residual covariance, sample-overlap
+  requirements, and the current implementation status.
 
-<!-- Later: summarize the model comparison matrix from model_overview.qmd. -->
+- [Annotation-Informed Models](annotation_informed_models.html) compares
+  fixed marker-specific priors, learned annotation effects, group priors, and
+  the SBayesRC-style annotation-dependent BayesR prior.
 
-## Main Notes Versus Technical Appendices
+## Practical Workflow Notes
 
-<!-- Later: explain the definition/interpretation/full-derivation pattern. -->
+- [Sparse-LD and BED Workflows](sparse_ld_and_bed_workflows.html) is the
+  practical guide to aligning BED markers, deriving sufficient statistics,
+  streaming sparse LD, fitting `stblr_csr()`, and cautiously comparing BED and
+  CSR fits.
 
-## Runtime, Convergence, and Reproducibility Cautions
+- [Workflows and Outputs](workflows_and_outputs.html) connects the executable
+  workflow scripts to fit-object components, compact summaries, diagnostics,
+  interpretation, and recommended reporting.
 
-<!-- Later: preserve cautions from both workflows and the annotation draft. -->
+The workflow scripts are runnable demonstrations and validation templates,
+not automatically lightweight package examples. Production analyses require
+appropriate MCMC settings, convergence checks, and sensitivity analyses.
 
-## Public API and Example-Script Links
+## Technical Appendices
 
-<!-- Later: link current public wrappers and complete workflow scripts. -->
+- [Summary Statistics](technical_summary_statistics.html) derives the
+  cross-product representation used by single- and multi-trait BLR and
+  explains equivalence assumptions and practical limitations.
 
-## Related Notes
+- [Sparse LD and CSR](technical_sparse_ld_csr.html) defines compressed sparse
+  row storage, the disk-backed LD contract, indexing and diagonal conventions,
+  construction settings, and validation checks.
 
-- [Model overview](model_overview.qmd)
-- [Data representations](data_representations.qmd)
-- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd)
-- [Single-trait models](single_trait_models.qmd)
-- [Multi-trait models](multi_trait_models.qmd)
-- [Annotation-informed models](annotation_informed_models.qmd)
-- [Workflows and outputs](workflows_and_outputs.qmd)
+- [Annotation-Informed Priors](technical_annotation_priors.html) develops
+  marker-specific inclusion and variance priors, empirical-Bayes
+  constructions, learned effects, group priors, and regularization choices.
+
+- [SBayesRC-Style Annotation Priors](technical_sbayesrc_annotations.html)
+  explains the annotation-dependent BayesR mixture prior, probit
+  stick-breaking probabilities, alpha updates, diagnostics, and differences
+  from published GCTB SBayesRC.
+
+- [Multi-Trait Sample Overlap](technical_multitrait_overlap.html) gives the
+  detailed treatment of `SSY`, pairwise sample overlap, covariance
+  reconstruction, current implementation constraints, and sensitivity
+  analysis.
+
+Some appendices may still be expanded as the package API stabilizes.
+
+## Draft Archive
+
+The archived source drafts preserve the original long-form theory and
+annotation-prior material used to build the maintained notes. They remain
+available for provenance and research context, but the maintained notes above
+are the recommended reading path.
+
+- [Archived sblr theory draft](drafts/sblr_theory.html)
+- [Archived annotation-informed priors draft](drafts/annotation_informed_priors_stblr_mtblr.html)
