@@ -1,8 +1,8 @@
 # Annotation-based ST-BLR workflow
 #
-# The fixed-prior annotation model is runnable through stblr_csr_prior_annot().
-# Learned annotation, group annotation, and SBayesRC-style wrappers remain
-# development prototypes, so those sections are commented future workflows.
+# Fixed-prior and learned annotation models are runnable through package
+# wrappers. Group annotation and SBayesRC-style wrappers remain development
+# prototypes, so those sections are commented future workflows.
 #
 # The MCMC settings shown here are demonstration settings. Real analyses need
 # longer chains and appropriate convergence and posterior predictive checks.
@@ -122,25 +122,28 @@ fit_prior_annot <- stblr_csr_prior_annot(
  seed = 10
 )
 
-# Future workflow: learned annotation model -------------------------------
+# Learned annotation model ------------------------------------------------
 
-# model = "annot" learns annotation effects on marker inclusion probabilities
-# and, optionally, marker-effect variances.
-#
-# fit_annot <- stblr_csr_annotation(
-#  stats = stats,
-#  ld_prefix = ld_prefix,
-#  model = "annot",
-#  A = A,
-#  n = Glist$n,
-#  learn_pi_annot = TRUE,
-#  learn_vb_annot = TRUE,
-#  nit = 1000,
-#  nburn = 100,
-#  nthin = 1,
-#  ncores = 3,
-#  seed = 10
-# )
+# stblr_csr_learn_annot() learns annotation effects on marker inclusion
+# probabilities and, optionally, marker-effect variances. These proposal scales
+# are conservative demonstration settings. Real analyses require longer chains,
+# convergence checks, and posterior diagnostics.
+fit_learn_annot <- stblr_csr_learn_annot(
+ stats = stats,
+ ld_prefix = ld_prefix,
+ A = A,
+ n = Glist$n,
+ learn_pi_annot = TRUE,
+ learn_vb_annot = TRUE,
+ rw_sd_eta_pi = 0.02,
+ rw_sd_eta_vb = 0.02,
+ annot_update_every = 10,
+ nit = 1000,
+ nburn = 100,
+ nthin = 1,
+ ncores = 3,
+ seed = 10
+)
 
 # Future workflow: group annotation model --------------------------------
 
@@ -190,15 +193,17 @@ fit_prior_annot$dm
 fit_prior_annot$input$pi_marker
 fit_prior_annot$input$vb_multiplier
 
+# Learned-annotation posterior summaries:
+fit_learn_annot$bm
+fit_learn_annot$dm
+fit_learn_annot$eta_pi
+fit_learn_annot$eta_vb
+
 # Future wrapper posterior summaries:
-#
-# fit_annot$eta_pi
-# fit_annot$eta_vb
 # fit_group$group_pi
 # fit_group$group_vb_multiplier
 # fit_sbayesrc$ncomp
 # fit_sbayesrc$alpha
 #
 # Future convenience wrappers are intended to be:
-# stblr_csr_learn_annot(), stblr_csr_group_annot(), and
-# stblr_csr_sbayesrc_generic().
+# stblr_csr_group_annot() and stblr_csr_sbayesrc_generic().
