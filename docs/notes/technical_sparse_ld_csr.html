@@ -104,6 +104,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -155,17 +184,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" id="toc-from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="nav-link active" data-scroll-target="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">1</span> From BED Genotypes to Sufficient Statistics and Sparse LD</a></li>
-  <li><a href="#sparse-approximation-to-xx-threshold-and-distance-choices" id="toc-sparse-approximation-to-xx-threshold-and-distance-choices" class="nav-link" data-scroll-target="#sparse-approximation-to-xx-threshold-and-distance-choices"><span class="header-section-number">2</span> Sparse Approximation to (X^X): Threshold and Distance Choices</a></li>
-  <li><a href="#csr-representation-row-pointers-column-indices-and-values" id="toc-csr-representation-row-pointers-column-indices-and-values" class="nav-link" data-scroll-target="#csr-representation-row-pointers-column-indices-and-values"><span class="header-section-number">3</span> CSR Representation: Row Pointers, Column Indices, and Values</a></li>
-  <li><a href="#disk-backed-prefix-and-file-contract" id="toc-disk-backed-prefix-and-file-contract" class="nav-link" data-scroll-target="#disk-backed-prefix-and-file-contract"><span class="header-section-number">4</span> Disk-Backed Prefix and File Contract</a></li>
-  <li><a href="#one-based-r-marker-identities-versus-internal-csr-indexing" id="toc-one-based-r-marker-identities-versus-internal-csr-indexing" class="nav-link" data-scroll-target="#one-based-r-marker-identities-versus-internal-csr-indexing"><span class="header-section-number">5</span> One-Based R Marker Identities Versus Internal CSR Indexing</a></li>
-  <li><a href="#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants" id="toc-marker-ordering-sample-rows-allele-frequency-and-scaling-invariants" class="nav-link" data-scroll-target="#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants"><span class="header-section-number">6</span> Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</a></li>
-  <li><a href="#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs" id="toc-streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs" class="nav-link" data-scroll-target="#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs"><span class="header-section-number">7</span> Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs</a></li>
-  <li><a href="#reading-and-validating-csr-with-sparseld_read_csr" id="toc-reading-and-validating-csr-with-sparseld_read_csr" class="nav-link" data-scroll-target="#reading-and-validating-csr-with-sparseld_read_csr"><span class="header-section-number">8</span> Reading and Validating CSR With <code>sparseLD_read_CSR()</code></a></li>
-  <li><a href="#how-stblr_csr-consumes-statistics-and-the-csr-prefix" id="toc-how-stblr_csr-consumes-statistics-and-the-csr-prefix" class="nav-link" data-scroll-target="#how-stblr_csr-consumes-statistics-and-the-csr-prefix"><span class="header-section-number">9</span> How <code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</a></li>
-  <li><a href="#scheduled-sparse-updates-and-performance-controls" id="toc-scheduled-sparse-updates-and-performance-controls" class="nav-link" data-scroll-target="#scheduled-sparse-updates-and-performance-controls"><span class="header-section-number">10</span> Scheduled Sparse Updates and Performance Controls</a></li>
-  <li><a href="#numerical-approximation-reproducibility-and-bed-versus-csr-comparison" id="toc-numerical-approximation-reproducibility-and-bed-versus-csr-comparison" class="nav-link" data-scroll-target="#numerical-approximation-reproducibility-and-bed-versus-csr-comparison"><span class="header-section-number">11</span> Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison</a></li>
-  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">12</span> Related Notes and Sources</a></li>
+  <li><a href="#matrix-represented-by-the-current-writer" id="toc-matrix-represented-by-the-current-writer" class="nav-link" data-scroll-target="#matrix-represented-by-the-current-writer"><span class="header-section-number">2</span> Matrix Represented by the Current Writer</a></li>
+  <li><a href="#what-csr-means" id="toc-what-csr-means" class="nav-link" data-scroll-target="#what-csr-means"><span class="header-section-number">3</span> What CSR Means</a></li>
+  <li><a href="#why-disk-backed-sparse-csr-is-used" id="toc-why-disk-backed-sparse-csr-is-used" class="nav-link" data-scroll-target="#why-disk-backed-sparse-csr-is-used"><span class="header-section-number">4</span> Why Disk-Backed Sparse CSR Is Used</a></li>
+  <li><a href="#stable-user-facing-contract" id="toc-stable-user-facing-contract" class="nav-link" data-scroll-target="#stable-user-facing-contract"><span class="header-section-number">5</span> Stable User-Facing Contract</a></li>
+  <li><a href="#ld_prefix-and-the-current-disk-artifact" id="toc-ld_prefix-and-the-current-disk-artifact" class="nav-link" data-scroll-target="#ld_prefix-and-the-current-disk-artifact"><span class="header-section-number">6</span> <code>ld_prefix</code> and the Current Disk Artifact</a></li>
+  <li><a href="#exported-and-internal-helpers" id="toc-exported-and-internal-helpers" class="nav-link" data-scroll-target="#exported-and-internal-helpers"><span class="header-section-number">7</span> Exported and Internal Helpers</a></li>
+  <li><a href="#sparse-ld-construction-settings" id="toc-sparse-ld-construction-settings" class="nav-link" data-scroll-target="#sparse-ld-construction-settings"><span class="header-section-number">8</span> Sparse-LD Construction Settings</a>
+  <ul class="collapse">
+  <li><a href="#marker-and-sample-selection" id="toc-marker-and-sample-selection" class="nav-link" data-scroll-target="#marker-and-sample-selection"><span class="header-section-number">8.1</span> Marker and Sample Selection</a></li>
+  <li><a href="#threshold-and-window-settings" id="toc-threshold-and-window-settings" class="nav-link" data-scroll-target="#threshold-and-window-settings"><span class="header-section-number">8.2</span> Threshold and Window Settings</a></li>
+  <li><a href="#computational-settings" id="toc-computational-settings" class="nav-link" data-scroll-target="#computational-settings"><span class="header-section-number">8.3</span> Computational Settings</a></li>
+  <li><a href="#scaling" id="toc-scaling" class="nav-link" data-scroll-target="#scaling"><span class="header-section-number">8.4</span> Scaling</a></li>
+  </ul></li>
+  <li><a href="#streaming-and-blocking-behavior" id="toc-streaming-and-blocking-behavior" class="nav-link" data-scroll-target="#streaming-and-blocking-behavior"><span class="header-section-number">9</span> Streaming and Blocking Behavior</a></li>
+  <li><a href="#index-bases-and-diagonal-convention" id="toc-index-bases-and-diagonal-convention" class="nav-link" data-scroll-target="#index-bases-and-diagonal-convention"><span class="header-section-number">10</span> Index Bases and Diagonal Convention</a></li>
+  <li><a href="#marker-order-sample-and-scaling-invariants" id="toc-marker-order-sample-and-scaling-invariants" class="nav-link" data-scroll-target="#marker-order-sample-and-scaling-invariants"><span class="header-section-number">11</span> Marker-Order, Sample, and Scaling Invariants</a></li>
+  <li><a href="#reading-and-validating-a-prefix" id="toc-reading-and-validating-a-prefix" class="nav-link" data-scroll-target="#reading-and-validating-a-prefix"><span class="header-section-number">12</span> Reading and Validating a Prefix</a></li>
+  <li><a href="#how-stblr_csr-consumes-the-prefix" id="toc-how-stblr_csr-consumes-the-prefix" class="nav-link" data-scroll-target="#how-stblr_csr-consumes-the-prefix"><span class="header-section-number">13</span> How <code>stblr_csr()</code> Consumes the Prefix</a></li>
+  <li><a href="#scheduled-sparse-updates" id="toc-scheduled-sparse-updates" class="nav-link" data-scroll-target="#scheduled-sparse-updates"><span class="header-section-number">14</span> Scheduled Sparse Updates</a></li>
+  <li><a href="#sparse-ld-as-an-approximation" id="toc-sparse-ld-as-an-approximation" class="nav-link" data-scroll-target="#sparse-ld-as-an-approximation"><span class="header-section-number">15</span> Sparse LD as an Approximation</a></li>
+  <li><a href="#bed-versus-csr-comparison-and-reproducibility" id="toc-bed-versus-csr-comparison-and-reproducibility" class="nav-link" data-scroll-target="#bed-versus-csr-comparison-and-reproducibility"><span class="header-section-number">16</span> BED-Versus-CSR Comparison and Reproducibility</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">17</span> Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_sparse_ld_csr.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -204,74 +244,440 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This note is under active development. Some sections are structured outlines that will be expanded over time.</p>
-</div>
-</div>
-<p>This appendix will preserve the storage, construction, alignment, and computational contracts behind disk-backed sparse LD used by CSR BLR workflows.</p>
-<!-- Primary source: ../../examples/workflows/sparse_ld_bed_workflow.R.
-Later: align all contracts with public function help and label
-implementation-sensitive details explicitly. -->
+<p>This appendix defines the sparse linkage disequilibrium (LD) representation used by the current <code>sblr</code> BED-to-CSR workflow. It describes the statistical matrix, compressed sparse row (CSR) structure, disk-backed construction, indexing conventions, alignment requirements, and downstream conversion used by <code>stblr_csr()</code> and related wrappers.</p>
+<p>The stable user-facing contract is deliberately narrower than the current binary-file implementation:</p>
+<ol type="1">
+<li>create sparse LD with <code>sparseLD_stream_CSR()</code>;</li>
+<li>identify the resulting artifact by its <code>ld_prefix</code>;</li>
+<li>inspect it with <code>sparseLD_read_CSR()</code>; and</li>
+<li>pass the same prefix to <code>stblr_csr()</code> or an annotation-aware CSR wrapper.</li>
+</ol>
+<p>The present file suffixes, integer widths, floating-point widths, metadata keys, and upper-triangle storage convention are documented here to explain behavior and support validation. They should not be treated as a guaranteed manual file-format API. Use package readers, writers, and samplers rather than editing or independently constructing these files.</p>
 <section id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">1</span> From BED Genotypes to Sufficient Statistics and Sparse LD</h2>
-<!-- Later: document the complete cross-layer data flow. -->
+<p>For genotype matrix (X), phenotype vector (y), and marker effects (b), a summary-statistics marker sampler needs quantities including</p>
+<p><span class="math display">\[
+wy=X^\top y,
+\qquad
+ww_i=x_i^\top x_i,
+\qquad
+yy=y^\top y,
+\]</span></p>
+<p>and enough off-diagonal marker information to update</p>
+<p><span class="math display">\[
+r=X^\top(y-Xb)=wy-X^\top Xb.
+\]</span></p>
+<p>In the BED-derived workflow, these inputs are prepared in two coordinated branches:</p>
+<pre class="text"><code>the same BED files + cls + rows + allele frequencies
+    |
+    +--&gt; bed_xtx_xty() ------&gt; stats$wy, stats$ww, stats$yy
+    |
+    +--&gt; sparseLD_stream_CSR() ------&gt; disk-backed sparse correlations
+                                              |
+                                              v
+                              stblr_csr(stats, ld_prefix, ...)</code></pre>
+<p><code>bed_xtx_xty()</code> supplies the phenotype cross-products and diagonal marker cross-products. <code>sparseLD_stream_CSR()</code> supplies retained off-diagonal marker correlations. During CSR model setup, the sampler combines the stored correlations with <code>stats$ww</code> to recover the corresponding off-diagonal cross-product scale.</p>
+<p>This split is important: the on-disk values are correlations, not raw (X_i^X_j), and the diagonal cross-products are supplied separately by <code>stats$ww</code>.</p>
 </section>
-<section id="sparse-approximation-to-xx-threshold-and-distance-choices" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="sparse-approximation-to-xx-threshold-and-distance-choices"><span class="header-section-number">2</span> Sparse Approximation to (X^X): Threshold and Distance Choices</h2>
-<!-- Later: explain approximation choices and consequences. -->
-</section>
-<section id="csr-representation-row-pointers-column-indices-and-values" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="csr-representation-row-pointers-column-indices-and-values"><span class="header-section-number">3</span> CSR Representation: Row Pointers, Column Indices, and Values</h2>
-<!-- Later: document the representation without assuming format stability. -->
-</section>
-<section id="disk-backed-prefix-and-file-contract" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="disk-backed-prefix-and-file-contract"><span class="header-section-number">4</span> Disk-Backed Prefix and File Contract</h2>
-<!-- Later: identify current files and stable versus internal details. -->
-</section>
-<section id="one-based-r-marker-identities-versus-internal-csr-indexing" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="one-based-r-marker-identities-versus-internal-csr-indexing"><span class="header-section-number">5</span> One-Based R Marker Identities Versus Internal CSR Indexing</h2>
-<!-- Later: document index conversion and validation requirements. -->
-</section>
-<section id="marker-ordering-sample-rows-allele-frequency-and-scaling-invariants" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="marker-ordering-sample-rows-allele-frequency-and-scaling-invariants"><span class="header-section-number">6</span> Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</h2>
-<!-- Later: preserve all workflow contracts and common mismatch failures. -->
-</section>
-<section id="streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs"><span class="header-section-number">7</span> Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs</h2>
-<!-- Later: explain sparseLD_stream_CSR() controls and tradeoffs. -->
-</section>
-<section id="reading-and-validating-csr-with-sparseld_read_csr" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="reading-and-validating-csr-with-sparseld_read_csr"><span class="header-section-number">8</span> Reading and Validating CSR With <code>sparseLD_read_CSR()</code></h2>
-<!-- Later: preserve compact inspection and validation patterns. -->
-</section>
-<section id="how-stblr_csr-consumes-statistics-and-the-csr-prefix" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="how-stblr_csr-consumes-statistics-and-the-csr-prefix"><span class="header-section-number">9</span> How <code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</h2>
-<!-- Later: document the handoff without changing sampler behavior. -->
-</section>
-<section id="scheduled-sparse-updates-and-performance-controls" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="scheduled-sparse-updates-and-performance-controls"><span class="header-section-number">10</span> Scheduled Sparse Updates and Performance Controls</h2>
-<!-- Later: describe current controls as implementation-sensitive. -->
-</section>
-<section id="numerical-approximation-reproducibility-and-bed-versus-csr-comparison" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="numerical-approximation-reproducibility-and-bed-versus-csr-comparison"><span class="header-section-number">11</span> Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison</h2>
-<!-- Later: preserve comparison logic and expected sources of disagreement. -->
-</section>
-<section id="related-notes-and-sources" class="level2" data-number="12">
-<h2 data-number="12" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">12</span> Related Notes and Sources</h2>
+<section id="matrix-represented-by-the-current-writer" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="matrix-represented-by-the-current-writer"><span class="header-section-number">2</span> Matrix Represented by the Current Writer</h2>
+<p>The current BED sparse-LD writer standardizes each selected marker using its allele frequency, mean-imputes missing genotypes to zero on that standardized scale, computes marker cross-products, and normalizes off-diagonal entries to correlations:</p>
+<p><span class="math display">\[
+r_{ij}
+=
+\frac{x_i^\top x_j}
+{\sqrt{(x_i^\top x_i)(x_j^\top x_j)}}.
+\]</span></p>
+<p>The writer retains an off-diagonal pair (i&lt;j) when it passes the configured distance rules and</p>
+<p><span class="math display">\[
+r_{ij}^2 \geq \texttt{r2_threshold}.
+\]</span></p>
+<p>The stored value is signed (r_{ij}), not (r_{ij}^2). The current streamed artifact stores:</p>
 <ul>
-<li><a href="../notes/data_representations.html">Data representations</a></li>
-<li><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
-<li><a href="../notes/technical_summary_statistics.html">Technical summary statistics</a></li>
-<li><a href="../../examples/workflows/sparse_ld_bed_workflow.R">Complete sparse-LD/BED workflow</a></li>
+<li>only the upper triangle, (j&gt;i);</li>
+<li>no explicit diagonal entries;</li>
+<li>an implicit diagonal correlation of one; and</li>
+<li>only pairs passing the threshold and window rules.</li>
+</ul>
+<p>Thus the disk artifact is a sparse, upper-triangle, correlation-like representation of LD. It is not itself the complete (X^X) matrix.</p>
+<p>When a CSR ST-BLR sampler opens the prefix, it reads the stored correlation and constructs a symmetric in-memory neighbor structure. For each retained pair it converts</p>
+<p><span class="math display">\[
+r_{ij}
+\quad\longrightarrow\quad
+\widetilde{X_i^\top X_j}
+=
+r_{ij}\sqrt{ww_iww_j}.
+\]</span></p>
+<p>The diagonal contribution remains <code>ww[i]</code>. This is why the sparse-LD prefix and sufficient statistics must use compatible samples, marker scaling, and marker order. The current shared-LD ST-BLR setup also requires compatible <code>ww</code> across trait columns.</p>
+</section>
+<section id="what-csr-means" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="what-csr-means"><span class="header-section-number">3</span> What CSR Means</h2>
+<p>Compressed sparse row format represents a sparse matrix without allocating all (m^2) entries. Three arrays describe the retained entries:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Array</th>
+<th>Current conceptual role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>row_ptr</code></td>
+<td>Cumulative offsets delimiting each row’s retained entries; length (m+1).</td>
+</tr>
+<tr class="even">
+<td><code>col_idx</code></td>
+<td>Column index for every retained entry; length <code>nnz</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>values</code></td>
+<td>Value for every retained entry; length <code>nnz</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>For zero-based row pointers, entries belonging to row (i) occupy positions</p>
+<p><span class="math display">\[
+\texttt{row\_ptr}[i]
+\quad\text{through}\quad
+\texttt{row\_ptr}[i+1]-1.
+\]</span></p>
+<p>For example, consider the upper-triangle entries</p>
+<pre class="text"><code>row 0: (column 1, 0.40), (column 3, -0.20)
+row 1: (column 3, 0.15)
+row 2: no retained entries
+row 3: no retained entries</code></pre>
+<p>Their CSR arrays are conceptually:</p>
+<pre class="text"><code>row_ptr = [0, 2, 3, 3, 3]
+col_idx = [1, 3, 3]
+values  = [0.40, -0.20, 0.15]</code></pre>
+<p><code>row_ptr</code> is always a cumulative pointer array. The <code>one_based</code> option of <code>sparseLD_read_CSR()</code> converts returned <strong>column indices</strong> for convenient R inspection; it does not convert the row pointers.</p>
+</section>
+<section id="why-disk-backed-sparse-csr-is-used" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="why-disk-backed-sparse-csr-is-used"><span class="header-section-number">4</span> Why Disk-Backed Sparse CSR Is Used</h2>
+<p>A dense (mm) LD matrix requires (O(m^2)) storage. This becomes prohibitive for genome-scale marker sets even when most scientifically useful LD relationships are local or sufficiently strong.</p>
+<p>Sparse CSR reduces storage toward (O(m+)), where <code>nnz</code> is the number of retained off-diagonal upper-triangle entries. Disk-backed storage provides two additional advantages:</p>
+<ul>
+<li>the resulting LD artifact can be reused by multiple CSR model fits; and</li>
+<li>the complete sparse arrays do not have to be returned to or retained in R during construction.</li>
+</ul>
+<p><code>sparseLD_stream_CSR()</code> processes marker blocks, computes candidate cross-products for block pairs, applies distance and (r^2) rules, and writes retained entries incrementally. It still needs working memory for decoded genotype blocks and block cross-products, but it avoids constructing either a dense whole-genome LD matrix or the complete sparse result in R.</p>
+</section>
+<section id="stable-user-facing-contract" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="stable-user-facing-contract"><span class="header-section-number">5</span> Stable User-Facing Contract</h2>
+<p>The supported workflow treats the sparse-LD artifact as an opaque package- managed object identified by a prefix:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ld_prefix <span class="ot">&lt;-</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sparseLD_stream_CSR</span>(</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">bed_files =</span> Glist<span class="sc">$</span>bedfiles[chr],</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> <span class="fu">list</span>(cls),</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> ld_prefix,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="cn">NULL</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">af =</span> <span class="fu">list</span>(Glist<span class="sc">$</span>af[[chr]][cls]),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">r2_threshold =</span> <span class="fl">0.001</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">block_size =</span> <span class="dv">1024</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The stable usage expectations are:</p>
+<ul>
+<li>all files belonging to a prefix are created and retained together;</li>
+<li><code>sparseLD_read_CSR(ld_prefix)</code> is used for inspection and validation;</li>
+<li><code>stblr_csr(..., ld_prefix = ld_prefix)</code> and related wrappers consume it;</li>
+<li>marker order and construction settings are recorded externally; and</li>
+<li>package functions handle file naming, binary types, index bases, diagonal convention, and conversion to sampler structures.</li>
+</ul>
+<p>Analysis code should not assume that current suffixes, metadata keys, or binary encodings will remain unchanged. Independent tools that manually write these files depend on implementation details and can silently become incompatible after package changes.</p>
+</section>
+<section id="ld_prefix-and-the-current-disk-artifact" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="ld_prefix-and-the-current-disk-artifact"><span class="header-section-number">6</span> <code>ld_prefix</code> and the Current Disk Artifact</h2>
+<p><code>ld_prefix</code> is a common path prefix, not a single file and not an in-memory matrix. The current implementation derives several files from it. For example, a prefix <code>path/chr1_ld</code> currently identifies:</p>
+<pre class="text"><code>path/chr1_ld.row_ptr.u64.bin
+path/chr1_ld.col_idx.u32.0based.bin
+path/chr1_ld.values.f32.bin
+path/chr1_ld.meta.txt</code></pre>
+<p>These names expose current implementation details:</p>
+<ul>
+<li>row pointers are currently unsigned 64-bit integers;</li>
+<li>column indices are currently unsigned 32-bit zero-based integers;</li>
+<li>stored correlations are currently 32-bit floating-point values; and</li>
+<li>metadata is currently a text file describing dimensions and settings.</li>
+</ul>
+<p>The metadata currently records fields such as marker count, <code>nnz</code>, triangle and diagonal conventions, value type, normalization, threshold, distance limits, block size, thread count, and used sample count.</p>
+<p>Treat the complete prefix as one artifact. Do not mix files from separate runs. Do not overwrite an important prefix when changing samples, marker sets, allele frequencies, distance windows, or thresholds. Prefer distinct, descriptive prefixes and retain construction provenance beside them.</p>
+</section>
+<section id="exported-and-internal-helpers" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="exported-and-internal-helpers"><span class="header-section-number">7</span> Exported and Internal Helpers</h2>
+<p>Current <code>NAMESPACE</code> and wrapper status distinguish the supported public path from lower-level generated functions:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Helper</th>
+<th>Current role</th>
+<th>Current status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>sparseLD_stream_CSR()</code></td>
+<td>Computes BED-derived sparse LD and streams the disk-backed prefix.</td>
+<td>Exported; principal user-facing constructor.</td>
+</tr>
+<tr class="even">
+<td><code>sparseLD_read_CSR()</code></td>
+<td>Reads a written prefix into R for inspection and validation.</td>
+<td>Exported; user-facing reader.</td>
+</tr>
+<tr class="odd">
+<td><code>sparseLD_to_CSR()</code></td>
+<td>Computes the same upper-triangle sparse representation and returns arrays in memory.</td>
+<td>Generated lower-level wrapper; not exported in the current <code>NAMESPACE</code>.</td>
+</tr>
+<tr class="even">
+<td><code>sparseLD_write_CSR()</code></td>
+<td>Delegates to <code>sparseLD_stream_CSR()</code> with an output prefix.</td>
+<td>Generated alias/internal wrapper; not exported in the current <code>NAMESPACE</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The lower-level wrappers can be useful during development, but they are not the documented model handoff. In particular, <code>stblr_csr()</code> accepts <code>ld_prefix</code>, not an R list returned by <code>sparseLD_to_CSR()</code>.</p>
+<p>The package also contains older or separate CSR conversion code for other LD inputs. Its conventions should not be assumed to be identical to the BED-streamed prefix described here.</p>
+</section>
+<section id="sparse-ld-construction-settings" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="sparse-ld-construction-settings"><span class="header-section-number">8</span> Sparse-LD Construction Settings</h2>
+<p>Sparse-LD settings affect memory, runtime, disk use, and the statistical approximation. They should be selected deliberately and reported with model results.</p>
+<section id="marker-and-sample-selection" class="level3" data-number="8.1">
+<h3 data-number="8.1" class="anchored" data-anchor-id="marker-and-sample-selection"><span class="header-section-number">8.1</span> Marker and Sample Selection</h3>
+<dl>
+<dt><code>bed_files</code></dt>
+<dd>
+Paths to one or more PLINK BED files. Their corresponding <code>cls</code> entries define the concatenated model-marker order.
+</dd>
+<dt><code>n</code></dt>
+<dd>
+Number of individuals encoded by the BED source.
+</dd>
+<dt><code>cls</code></dt>
+<dd>
+A list of marker-column index vectors, one per BED file. The order within and across these vectors becomes the sparse-LD row and column order.
+</dd>
+<dt><code>rows</code></dt>
+<dd>
+Optional positive one-based sample indices. When supplied, LD is computed from this selected sample. The same sample selection must underlie the sufficient statistics used downstream.
+</dd>
+<dt><code>af</code></dt>
+<dd>
+Optional list of allele frequencies aligned to <code>cls</code>. When omitted, the writer computes allele frequencies from the selected packed genotypes. Supplied values must be finite and in ([0,1]). Missing genotypes are represented as zero after standardization, corresponding to mean imputation on that scale.
+</dd>
+</dl>
+</section>
+<section id="threshold-and-window-settings" class="level3" data-number="8.2">
+<h3 data-number="8.2" class="anchored" data-anchor-id="threshold-and-window-settings"><span class="header-section-number">8.2</span> Threshold and Window Settings</h3>
+<dl>
+<dt><code>r2_threshold</code></dt>
+<dd>
+Minimum squared correlation for retaining an eligible pair. The writer compares (r_{ij}^2) with this value but stores signed (r_{ij}). A larger threshold produces a sparser approximation and may remove weak but collectively relevant LD.
+</dd>
+<dt><code>max_distance_variants</code></dt>
+<dd>
+Maximum difference in model-order marker indices. Positive values restrict retained pairs to this index window. A value of zero disables this restriction in the current implementation.
+</dd>
+<dt><code>max_distance_bp</code></dt>
+<dd>
+Maximum base-pair separation when positions are supplied. Positive values restrict retained pairs by physical distance. A value of zero disables this restriction. The implementation evaluates forward position differences, so <code>pos_bp</code> should be aligned to marker order and ordered consistently within the intended genomic segments.
+</dd>
+<dt><code>pos_bp</code></dt>
+<dd>
+Optional list of marker base-pair positions aligned to <code>cls</code>. When absent, the base-pair distance restriction cannot be applied, even if <code>max_distance_bp</code> is positive.
+</dd>
+</dl>
+<p>A pair must pass every enabled window rule before its (r^2) is tested. Disabling both distance restrictions permits all upper-triangle marker pairs to be considered and can be computationally expensive.</p>
+</section>
+<section id="computational-settings" class="level3" data-number="8.3">
+<h3 data-number="8.3" class="anchored" data-anchor-id="computational-settings"><span class="header-section-number">8.3</span> Computational Settings</h3>
+<dl>
+<dt><code>block_size</code></dt>
+<dd>
+Number of markers decoded and compared in a working block. Larger values can improve matrix-multiplication efficiency but increase working memory roughly through genotype-block and block-cross-product buffers. It changes the construction strategy, not the intended retention rule.
+</dd>
+<dt><code>nthreads</code></dt>
+<dd>
+Requested OpenMP thread count. It affects construction performance and may affect low-level floating-point execution details, but it is not an LD threshold or model-prior parameter.
+</dd>
+</dl>
+</section>
+<section id="scaling" class="level3" data-number="8.4">
+<h3 data-number="8.4" class="anchored" data-anchor-id="scaling"><span class="header-section-number">8.4</span> Scaling</h3>
+<p><code>sparseLD_stream_CSR()</code> does not expose a <code>scale</code> argument. The current writer always constructs its correlation values from allele-frequency-standardized markers. By contrast, <code>bed_xtx_xty()</code> exposes <code>scale</code>. For the standard BED-to-CSR handoff, use compatible standardized marker statistics:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">bed_xtx_xty</span>(..., <span class="at">af =</span> af, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sparseLD_stream_CSR</span>(..., <span class="at">af =</span> <span class="fu">list</span>(af))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Using <code>bed_xtx_xty(..., scale = FALSE)</code> with the current standardized correlation writer changes the scale relationship assumed when the sampler combines <code>r_ij</code> with <code>stats$ww</code>. Such combinations require explicit validation rather than being assumed compatible.</p>
+</section>
+</section>
+<section id="streaming-and-blocking-behavior" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="streaming-and-blocking-behavior"><span class="header-section-number">9</span> Streaming and Blocking Behavior</h2>
+<p>The writer reads the selected BED markers into a packed representation, then works through pairs of marker blocks. For each eligible block pair it:</p>
+<ol type="1">
+<li>decodes standardized marker values into floating-point working buffers;</li>
+<li>computes raw block cross-products with matrix multiplication;</li>
+<li>converts each eligible cross-product to correlation (r_{ij});</li>
+<li>applies distance and (r^2) retention rules; and</li>
+<li>appends retained upper-triangle column indices and values to disk.</li>
+</ol>
+<p>After each row, it writes the cumulative retained-entry count to <code>row_ptr</code>. Consequently, the final row pointer equals <code>nnz</code>.</p>
+<p>Streaming avoids holding the final <code>col_idx</code> and <code>values</code> arrays in R or in one complete native in-memory result. It does not eliminate all memory or runtime costs: the packed selected genotype matrix, diagonal cross-products, decoded blocks, and block cross-products still require resources. The number of candidate block pairs can also become large when windows are wide or disabled.</p>
+</section>
+<section id="index-bases-and-diagonal-convention" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="index-bases-and-diagonal-convention"><span class="header-section-number">10</span> Index Bases and Diagonal Convention</h2>
+<p>Three conventions must be distinguished:</p>
+<ol type="1">
+<li><code>rows</code> and <code>cls</code> supplied from R use the documented R-facing indexing expected by their wrappers.</li>
+<li>Current on-disk <code>col_idx</code> entries are zero-based.</li>
+<li><code>sparseLD_read_CSR(prefix, one_based = TRUE)</code> returns one-based column indices for convenient R inspection.</li>
+</ol>
+<p>The reader’s <code>one_based</code> argument changes only the returned <code>col_idx</code> vector. <code>row_ptr</code> remains a zero-based cumulative pointer array whose first value is zero and whose final value is <code>nnz</code>.</p>
+<p>The current streamed artifact omits diagonal entries and reports <code>diag = "implicit_1"</code>. Downstream ST-BLR samplers use the supplied <code>stats$ww</code> for diagonal (X_i^X_i) contributions. Users inspecting the sparse arrays should not mistake absence of explicit diagonal entries for a zero diagonal.</p>
+<p>Package functions validate and handle these conventions. Manual index conversion or insertion of diagonal values risks corrupting the expected contract.</p>
+</section>
+<section id="marker-order-sample-and-scaling-invariants" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="marker-order-sample-and-scaling-invariants"><span class="header-section-number">11</span> Marker-Order, Sample, and Scaling Invariants</h2>
+<p>Sparse arrays contain positional indices, not biological marker identifiers. The most important cross-layer invariant is:</p>
+<pre class="text"><code>Glist$rsids[[chr]][cls]
+    == Glist$rsidsLD[[chr]]
+    == rows of stats$wy and stats$ww
+    == rows and columns of sparse LD
+    == rows of an annotation matrix A
+    == rows of fit$bm and fit$dm</code></pre>
+<p>Establish and retain marker order explicitly:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>marker_id <span class="ot">&lt;-</span> Glist<span class="sc">$</span>rsidsLD[[chr]]</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(marker_id, Glist<span class="sc">$</span>rsids[[chr]])</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="sc">!</span><span class="fu">anyNA</span>(cls),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(Glist<span class="sc">$</span>rsids[[chr]][cls], marker_id)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For multiple BED files, the concatenation of <code>cls[[1]]</code>, <code>cls[[2]]</code>, and so on defines the CSR order. Allele-frequency and position lists must follow the same per-file and concatenated order.</p>
+<p>The same selected sample must underlie LD and sufficient statistics. If <code>rows</code> is used, apply it consistently. If allele frequencies are supplied, they must correspond to that construction and marker order. If annotations are later used, align their rows before fitting:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A permutation error can produce dimensionally valid CSR files and model fits while assigning LD or annotations to the wrong markers. Dimension checks alone cannot detect this error.</p>
+</section>
+<section id="reading-and-validating-a-prefix" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="reading-and-validating-a-prefix"><span class="header-section-number">12</span> Reading and Validating a Prefix</h2>
+<p>Use the exported reader to inspect a prefix without manually decoding the binary files:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ld <span class="ot">&lt;-</span> <span class="fu">sparseLD_read_CSR</span>(ld_prefix, <span class="at">one_based =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>nrow <span class="sc">==</span> <span class="fu">length</span>(cls),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>ncol <span class="sc">==</span> <span class="fu">length</span>(cls),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(ld<span class="sc">$</span>row_ptr) <span class="sc">==</span> <span class="fu">length</span>(cls) <span class="sc">+</span> <span class="dv">1</span>L,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(ld<span class="sc">$</span>col_idx) <span class="sc">==</span> <span class="fu">length</span>(ld<span class="sc">$</span>values),</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tail</span>(ld<span class="sc">$</span>row_ptr, <span class="dv">1</span>) <span class="sc">==</span> <span class="fu">length</span>(ld<span class="sc">$</span>values),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>index_base <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(ld<span class="sc">$</span>diag, <span class="st">"implicit_1"</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The current reader checks that required metadata dimensions exist, reads the expected byte counts, verifies that row pointers begin at zero and end at <code>nnz</code>, requires nondecreasing row pointers, checks column-index bounds, and rejects non-finite values.</p>
+<p>Additional analysis-level validation should confirm:</p>
+<ol type="1">
+<li><code>cls</code> contains no missing marker matches.</li>
+<li>LD dimensions equal the intended marker count.</li>
+<li><code>row_ptr</code> has length (m+1).</li>
+<li><code>col_idx</code> and <code>values</code> have equal length.</li>
+<li>the final row pointer equals <code>nnz</code>.</li>
+<li>returned <code>index_base</code> matches how <code>col_idx</code> is being inspected.</li>
+<li>the upper-triangle and implicit-diagonal conventions are understood.</li>
+<li>values are finite signed correlations and remain within plausible correlation bounds.</li>
+<li><code>n_used</code>, thresholds, windows, and marker count match the intended run.</li>
+<li><code>stats$wy</code>, every <code>stats$ww</code> vector, annotations, and posterior rows use exactly the same marker order.</li>
+</ol>
+<p>The reader can validate structural properties but cannot prove that the BED source, allele frequencies, sample rows, phenotypes, annotations, or marker identities are scientifically aligned. Retain that provenance separately.</p>
+</section>
+<section id="how-stblr_csr-consumes-the-prefix" class="level2" data-number="13">
+<h2 data-number="13" class="anchored" data-anchor-id="how-stblr_csr-consumes-the-prefix"><span class="header-section-number">13</span> How <code>stblr_csr()</code> Consumes the Prefix</h2>
+<p>The public model handoff is short:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> n,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">FALSE</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>During setup, the current ST-BLR CSR implementation:</p>
+<ol type="1">
+<li>checks that metadata marker count matches the model marker count;</li>
+<li>reads the zero-based upper-triangle arrays;</li>
+<li>validates row pointers, column bounds, finite correlations, and positive <code>stats$ww</code>;</li>
+<li>ignores any explicit self-pairs if encountered;</li>
+<li>converts retained (r_{ij}) to (r_{ij}); and</li>
+<li>creates a symmetric in-memory neighbor structure for residual updates.</li>
+</ol>
+<p>For marker effect (b_i), the diagonal residual contribution uses (ww_i b_i), while retained off-diagonal neighbors use the converted cross-product values. Missing off-diagonal entries are treated as zero in the sparse approximation.</p>
+<p>Annotation-aware CSR wrappers use the same LD prefix and marker-order contract. Their differences concern prior structure, not CSR construction.</p>
+</section>
+<section id="scheduled-sparse-updates" class="level2" data-number="14">
+<h2 data-number="14" class="anchored" data-anchor-id="scheduled-sparse-updates"><span class="header-section-number">14</span> Scheduled Sparse Updates</h2>
+<p><code>stblr_csr(..., scheduled = TRUE)</code> uses a scheduled marker-update implementation that can revisit likely null markers less frequently and wake retained LD neighbors after an effect change. Settings such as <code>full_sweep_every</code>, <code>candidate_threshold</code>, <code>candidate_lifetime</code>, <code>null_skip_base</code>, <code>null_skip_max</code>, and LD-neighbor wake-up controls affect the sampler’s computational schedule.</p>
+<p>These controls are separate from CSR construction settings:</p>
+<ul>
+<li><code>r2_threshold</code> and distance windows determine which LD edges exist;</li>
+<li>scheduling controls determine when markers and retained neighbors are reconsidered during MCMC.</li>
+</ul>
+<p>Both can affect finite-run behavior and performance. The statistical prior is unchanged by choosing a scheduled path, but aggressive sparse scheduling must be checked for adequate mixing and sensitivity. See <a href="single_trait_models.html">Single-trait models</a> for the scheduling controls.</p>
+</section>
+<section id="sparse-ld-as-an-approximation" class="level2" data-number="15">
+<h2 data-number="15" class="anchored" data-anchor-id="sparse-ld-as-an-approximation"><span class="header-section-number">15</span> Sparse LD as an Approximation</h2>
+<p>The sparse matrix replaces unretained off-diagonal relationships with zero. Approximation enters through:</p>
+<ul>
+<li>(r^2) thresholding;</li>
+<li>marker-index and physical-distance windows;</li>
+<li>finite-sample LD estimation;</li>
+<li>allele-frequency estimation and missing-genotype handling;</li>
+<li>32-bit storage of retained correlation values; and</li>
+<li>any difference between the sample or scaling used for LD and sufficient statistics.</li>
+</ul>
+<p>Increasing <code>r2_threshold</code> or narrowing windows usually reduces <code>nnz</code>, runtime, and disk use, but can remove LD needed to represent the conditional marker likelihood adequately. Lower thresholds and wider windows preserve more LD at greater computational cost. There is no universally correct threshold; its adequacy depends on marker density, LD structure, sample size, phenotype architecture, and inferential target.</p>
+</section>
+<section id="bed-versus-csr-comparison-and-reproducibility" class="level2" data-number="16">
+<h2 data-number="16" class="anchored" data-anchor-id="bed-versus-csr-comparison-and-reproducibility"><span class="header-section-number">16</span> BED-Versus-CSR Comparison and Reproducibility</h2>
+<p>When both paths use the same BED source, markers, samples, phenotype, standardization, and priors, <code>stblr_bed_marker()</code> and <code>stblr_csr()</code> should usually show qualitatively comparable posterior patterns. Exact equality is not expected because:</p>
+<ul>
+<li>the CSR path omits unretained LD;</li>
+<li>BED and CSR samplers maintain residual information differently;</li>
+<li>update scheduling and initialization can differ;</li>
+<li>retained correlations use finite precision; and</li>
+<li>MCMC introduces Monte Carlo variation.</li>
+</ul>
+<p>A comparison should examine PIP rankings, posterior mean effects, aggregate variance summaries, and sensitivity to thresholds rather than equality of individual samples.</p>
+<p>For reproducibility, retain:</p>
+<ul>
+<li>immutable identifiers for BED inputs and selected samples;</li>
+<li>marker IDs in exact CSR order;</li>
+<li><code>cls</code>, <code>rows</code>, allele frequencies, and positions;</li>
+<li>sufficient-statistic dimensions and scaling choices;</li>
+<li>all files belonging to <code>ld_prefix</code>;</li>
+<li>the writer’s returned summary and metadata;</li>
+<li>package version and platform information; and</li>
+<li>model priors, MCMC settings, scheduling controls, and seeds.</li>
+</ul>
+<p>The current workflow scripts use demonstration-scale settings. Production analyses require sensitivity checks for LD construction and sampler settings, longer chains, and convergence diagnostics.</p>
+</section>
+<section id="related-notes-and-sources" class="level2" data-number="17">
+<h2 data-number="17" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">17</span> Related Notes and Sources</h2>
+<ul>
+<li><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
+<li><a href="data_representations.html">Data representations</a></li>
+<li><a href="single_trait_models.html">Single-trait models</a></li>
+<li><a href="workflows_and_outputs.html">Workflows and outputs</a></li>
+<li><a href="technical_summary_statistics.html">Technical summary statistics</a></li>
+<li><a href="https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R">Complete sparse-LD/BED workflow on GitHub</a></li>
+<li><a href="https://github.com/psoerensen/sblr/blob/master/examples/workflows/annotation_based_models.R">Complete annotation workflow on GitHub</a></li>
 </ul>
 
 
@@ -730,73 +1136,601 @@ implementation-sensitive details explicitly. -->
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: Sparse LD and CSR"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">status:</span><span class="co"> "Draft"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>This note is under active development. Some sections are structured outlines that will be expanded over time.</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>This appendix will preserve the storage, construction, alignment, and</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>computational contracts behind disk-backed sparse LD used by CSR BLR</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>workflows.</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Primary source: ../../examples/workflows/sparse_ld_bed_workflow.R.</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">Later: align all contracts with public function help and label</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">implementation-sensitive details explicitly. --&gt;</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## From BED Genotypes to Sufficient Statistics and Sparse LD</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document the complete cross-layer data flow. --&gt;</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sparse Approximation to \(X^\top X\): Threshold and Distance Choices</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: explain approximation choices and consequences. --&gt;</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">## CSR Representation: Row Pointers, Column Indices, and Values</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document the representation without assuming format stability. --&gt;</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## Disk-Backed Prefix and File Contract</span></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: identify current files and stable versus internal details. --&gt;</span></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="fu">## One-Based R Marker Identities Versus Internal CSR Indexing</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document index conversion and validation requirements. --&gt;</span></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</span></span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve all workflow contracts and common mismatch failures. --&gt;</span></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="fu">## Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs</span></span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: explain sparseLD_stream_CSR() controls and tradeoffs. --&gt;</span></span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## Reading and Validating CSR With `sparseLD_read_CSR()`</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve compact inspection and validation patterns. --&gt;</span></span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="fu">## How `stblr_csr()` Consumes Statistics and the CSR Prefix</span></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document the handoff without changing sampler behavior. --&gt;</span></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="fu">## Scheduled Sparse Updates and Performance Controls</span></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: describe current controls as implementation-sensitive. --&gt;</span></span>
-<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison</span></span>
-<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve comparison logic and expected sources of disagreement. --&gt;</span></span>
-<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
-<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span></span>
-<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span></span>
-<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.qmd)</span></span>
-<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete sparse-LD/BED workflow</span><span class="co">](../../examples/workflows/sparse_ld_bed_workflow.R)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb12" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: Sparse LD and CSR"</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>This appendix defines the sparse linkage disequilibrium (LD) representation</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>used by the current <span class="in">`sblr`</span> BED-to-CSR workflow. It describes the statistical</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>matrix, compressed sparse row (CSR) structure, disk-backed construction,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>indexing conventions, alignment requirements, and downstream conversion used</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>by <span class="in">`stblr_csr()`</span> and related wrappers.</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>The stable user-facing contract is deliberately narrower than the current</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>binary-file implementation:</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>create sparse LD with <span class="in">`sparseLD_stream_CSR()`</span>;</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>identify the resulting artifact by its <span class="in">`ld_prefix`</span>;</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>inspect it with <span class="in">`sparseLD_read_CSR()`</span>; and</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>pass the same prefix to <span class="in">`stblr_csr()`</span> or an annotation-aware CSR wrapper.</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>The present file suffixes, integer widths, floating-point widths, metadata</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>keys, and upper-triangle storage convention are documented here to explain</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>behavior and support validation. They should not be treated as a guaranteed</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>manual file-format API. Use package readers, writers, and samplers rather than</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>editing or independently constructing these files.</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="fu">## From BED Genotypes to Sufficient Statistics and Sparse LD</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>For genotype matrix <span class="sc">\(</span>X<span class="sc">\)</span>, phenotype vector <span class="sc">\(</span>y<span class="sc">\)</span>, and marker effects <span class="sc">\(</span>b<span class="sc">\)</span>, a</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>summary-statistics marker sampler needs quantities including</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>wy=X^\top y,</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>ww_i=x_i^\top x_i,</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>yy=y^\top y,</span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>and enough off-diagonal marker information to update</span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>r=X^\top(y-Xb)=wy-X^\top Xb.</span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>In the BED-derived workflow, these inputs are prepared in two coordinated</span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a>branches:</span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a><span class="in">the same BED files + cls + rows + allele frequencies</span></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a><span class="in">    |</span></span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a><span class="in">    +--&gt; bed_xtx_xty() ------&gt; stats$wy, stats$ww, stats$yy</span></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a><span class="in">    |</span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a><span class="in">    +--&gt; sparseLD_stream_CSR() ------&gt; disk-backed sparse correlations</span></span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a><span class="in">                                              |</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a><span class="in">                                              v</span></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a><span class="in">                              stblr_csr(stats, ld_prefix, ...)</span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a><span class="in">`bed_xtx_xty()`</span> supplies the phenotype cross-products and diagonal marker</span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a>cross-products. <span class="in">`sparseLD_stream_CSR()`</span> supplies retained off-diagonal marker</span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a>correlations. During CSR model setup, the sampler combines the stored</span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a>correlations with <span class="in">`stats$ww`</span> to recover the corresponding off-diagonal</span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a>cross-product scale.</span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>This split is important: the on-disk values are correlations, not raw</span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>X_i^\top X_j<span class="sc">\)</span>, and the diagonal cross-products are supplied separately by</span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$ww`</span>.</span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a><span class="fu">## Matrix Represented by the Current Writer</span></span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a>The current BED sparse-LD writer standardizes each selected marker using its</span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a>allele frequency, mean-imputes missing genotypes to zero on that standardized</span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a>scale, computes marker cross-products, and normalizes off-diagonal entries to</span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a>correlations:</span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a>r_{ij}</span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a>\frac{x_i^\top x_j}</span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a>{\sqrt{(x_i^\top x_i)(x_j^\top x_j)}}.</span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a>The writer retains an off-diagonal pair <span class="sc">\(</span>i&lt;j<span class="sc">\)</span> when it passes the configured</span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a>distance rules and</span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a>r_{ij}^2 \geq \texttt{r2_threshold}.</span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>The stored value is signed <span class="sc">\(</span>r_{ij}<span class="sc">\)</span>, not <span class="sc">\(</span>r_{ij}^2<span class="sc">\)</span>. The current streamed</span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a>artifact stores:</span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>only the upper triangle, <span class="sc">\(</span>j&gt;i<span class="sc">\)</span>;</span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>no explicit diagonal entries;</span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>an implicit diagonal correlation of one; and</span>
+<span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>only pairs passing the threshold and window rules.</span>
+<span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a>Thus the disk artifact is a sparse, upper-triangle, correlation-like</span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a>representation of LD. It is not itself the complete <span class="sc">\(</span>X^\top X<span class="sc">\)</span> matrix.</span>
+<span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a>When a CSR ST-BLR sampler opens the prefix, it reads the stored correlation</span>
+<span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a>and constructs a symmetric in-memory neighbor structure. For each retained</span>
+<span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a>pair it converts</span>
+<span id="cb12-103"><a href="#cb12-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-104"><a href="#cb12-104" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-105"><a href="#cb12-105" aria-hidden="true" tabindex="-1"></a>r_{ij}</span>
+<span id="cb12-106"><a href="#cb12-106" aria-hidden="true" tabindex="-1"></a>\quad\longrightarrow\quad</span>
+<span id="cb12-107"><a href="#cb12-107" aria-hidden="true" tabindex="-1"></a>\widetilde{X_i^\top X_j}</span>
+<span id="cb12-108"><a href="#cb12-108" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb12-109"><a href="#cb12-109" aria-hidden="true" tabindex="-1"></a>r_{ij}\sqrt{ww_iww_j}.</span>
+<span id="cb12-110"><a href="#cb12-110" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-111"><a href="#cb12-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-112"><a href="#cb12-112" aria-hidden="true" tabindex="-1"></a>The diagonal contribution remains <span class="in">`ww[i]`</span>. This is why the sparse-LD prefix</span>
+<span id="cb12-113"><a href="#cb12-113" aria-hidden="true" tabindex="-1"></a>and sufficient statistics must use compatible samples, marker scaling, and</span>
+<span id="cb12-114"><a href="#cb12-114" aria-hidden="true" tabindex="-1"></a>marker order. The current shared-LD ST-BLR setup also requires compatible</span>
+<span id="cb12-115"><a href="#cb12-115" aria-hidden="true" tabindex="-1"></a><span class="in">`ww`</span> across trait columns.</span>
+<span id="cb12-116"><a href="#cb12-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a><span class="fu">## What CSR Means</span></span>
+<span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a>Compressed sparse row format represents a sparse matrix without allocating</span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a>all <span class="sc">\(</span>m^2<span class="sc">\)</span> entries. Three arrays describe the retained entries:</span>
+<span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Array <span class="pp">|</span> Current conceptual role <span class="pp">|</span></span>
+<span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`row_ptr`</span> <span class="pp">|</span> Cumulative offsets delimiting each row's retained entries; length <span class="sc">\(</span>m+1<span class="sc">\)</span>. <span class="pp">|</span></span>
+<span id="cb12-125"><a href="#cb12-125" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`col_idx`</span> <span class="pp">|</span> Column index for every retained entry; length <span class="in">`nnz`</span>. <span class="pp">|</span></span>
+<span id="cb12-126"><a href="#cb12-126" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`values`</span> <span class="pp">|</span> Value for every retained entry; length <span class="in">`nnz`</span>. <span class="pp">|</span></span>
+<span id="cb12-127"><a href="#cb12-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a>For zero-based row pointers, entries belonging to row <span class="sc">\(</span>i<span class="sc">\)</span> occupy positions</span>
+<span id="cb12-129"><a href="#cb12-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-130"><a href="#cb12-130" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-131"><a href="#cb12-131" aria-hidden="true" tabindex="-1"></a>\texttt{row<span class="sc">\_</span>ptr}<span class="co">[</span><span class="ot">i</span><span class="co">]</span></span>
+<span id="cb12-132"><a href="#cb12-132" aria-hidden="true" tabindex="-1"></a>\quad\text{through}\quad</span>
+<span id="cb12-133"><a href="#cb12-133" aria-hidden="true" tabindex="-1"></a>\texttt{row<span class="sc">\_</span>ptr}<span class="co">[</span><span class="ot">i+1</span><span class="co">]</span>-1.</span>
+<span id="cb12-134"><a href="#cb12-134" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb12-135"><a href="#cb12-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-136"><a href="#cb12-136" aria-hidden="true" tabindex="-1"></a>For example, consider the upper-triangle entries</span>
+<span id="cb12-137"><a href="#cb12-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-138"><a href="#cb12-138" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb12-139"><a href="#cb12-139" aria-hidden="true" tabindex="-1"></a><span class="in">row 0: (column 1, 0.40), (column 3, -0.20)</span></span>
+<span id="cb12-140"><a href="#cb12-140" aria-hidden="true" tabindex="-1"></a><span class="in">row 1: (column 3, 0.15)</span></span>
+<span id="cb12-141"><a href="#cb12-141" aria-hidden="true" tabindex="-1"></a><span class="in">row 2: no retained entries</span></span>
+<span id="cb12-142"><a href="#cb12-142" aria-hidden="true" tabindex="-1"></a><span class="in">row 3: no retained entries</span></span>
+<span id="cb12-143"><a href="#cb12-143" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-144"><a href="#cb12-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-145"><a href="#cb12-145" aria-hidden="true" tabindex="-1"></a>Their CSR arrays are conceptually:</span>
+<span id="cb12-146"><a href="#cb12-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-147"><a href="#cb12-147" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb12-148"><a href="#cb12-148" aria-hidden="true" tabindex="-1"></a><span class="in">row_ptr = [0, 2, 3, 3, 3]</span></span>
+<span id="cb12-149"><a href="#cb12-149" aria-hidden="true" tabindex="-1"></a><span class="in">col_idx = [1, 3, 3]</span></span>
+<span id="cb12-150"><a href="#cb12-150" aria-hidden="true" tabindex="-1"></a><span class="in">values  = [0.40, -0.20, 0.15]</span></span>
+<span id="cb12-151"><a href="#cb12-151" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-152"><a href="#cb12-152" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-153"><a href="#cb12-153" aria-hidden="true" tabindex="-1"></a><span class="in">`row_ptr`</span> is always a cumulative pointer array. The <span class="in">`one_based`</span> option of</span>
+<span id="cb12-154"><a href="#cb12-154" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_read_CSR()`</span> converts returned **column indices** for convenient R</span>
+<span id="cb12-155"><a href="#cb12-155" aria-hidden="true" tabindex="-1"></a>inspection; it does not convert the row pointers.</span>
+<span id="cb12-156"><a href="#cb12-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-157"><a href="#cb12-157" aria-hidden="true" tabindex="-1"></a><span class="fu">## Why Disk-Backed Sparse CSR Is Used</span></span>
+<span id="cb12-158"><a href="#cb12-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-159"><a href="#cb12-159" aria-hidden="true" tabindex="-1"></a>A dense <span class="sc">\(</span>m\times m<span class="sc">\)</span> LD matrix requires <span class="sc">\(</span>O(m^2)<span class="sc">\)</span> storage. This becomes</span>
+<span id="cb12-160"><a href="#cb12-160" aria-hidden="true" tabindex="-1"></a>prohibitive for genome-scale marker sets even when most scientifically useful</span>
+<span id="cb12-161"><a href="#cb12-161" aria-hidden="true" tabindex="-1"></a>LD relationships are local or sufficiently strong.</span>
+<span id="cb12-162"><a href="#cb12-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-163"><a href="#cb12-163" aria-hidden="true" tabindex="-1"></a>Sparse CSR reduces storage toward <span class="sc">\(</span>O(m+\mathrm{nnz})<span class="sc">\)</span>, where <span class="in">`nnz`</span> is the</span>
+<span id="cb12-164"><a href="#cb12-164" aria-hidden="true" tabindex="-1"></a>number of retained off-diagonal upper-triangle entries. Disk-backed storage</span>
+<span id="cb12-165"><a href="#cb12-165" aria-hidden="true" tabindex="-1"></a>provides two additional advantages:</span>
+<span id="cb12-166"><a href="#cb12-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-167"><a href="#cb12-167" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the resulting LD artifact can be reused by multiple CSR model fits; and</span>
+<span id="cb12-168"><a href="#cb12-168" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the complete sparse arrays do not have to be returned to or retained in R</span>
+<span id="cb12-169"><a href="#cb12-169" aria-hidden="true" tabindex="-1"></a>  during construction.</span>
+<span id="cb12-170"><a href="#cb12-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-171"><a href="#cb12-171" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span> processes marker blocks, computes candidate</span>
+<span id="cb12-172"><a href="#cb12-172" aria-hidden="true" tabindex="-1"></a>cross-products for block pairs, applies distance and <span class="sc">\(</span>r^2<span class="sc">\)</span> rules, and writes</span>
+<span id="cb12-173"><a href="#cb12-173" aria-hidden="true" tabindex="-1"></a>retained entries incrementally. It still needs working memory for decoded</span>
+<span id="cb12-174"><a href="#cb12-174" aria-hidden="true" tabindex="-1"></a>genotype blocks and block cross-products, but it avoids constructing either a</span>
+<span id="cb12-175"><a href="#cb12-175" aria-hidden="true" tabindex="-1"></a>dense whole-genome LD matrix or the complete sparse result in R.</span>
+<span id="cb12-176"><a href="#cb12-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-177"><a href="#cb12-177" aria-hidden="true" tabindex="-1"></a><span class="fu">## Stable User-Facing Contract</span></span>
+<span id="cb12-178"><a href="#cb12-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-179"><a href="#cb12-179" aria-hidden="true" tabindex="-1"></a>The supported workflow treats the sparse-LD artifact as an opaque package-</span>
+<span id="cb12-180"><a href="#cb12-180" aria-hidden="true" tabindex="-1"></a>managed object identified by a prefix:</span>
+<span id="cb12-181"><a href="#cb12-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-182"><a href="#cb12-182" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb12-183"><a href="#cb12-183" aria-hidden="true" tabindex="-1"></a>ld_prefix <span class="ot">&lt;-</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>)</span>
+<span id="cb12-184"><a href="#cb12-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-185"><a href="#cb12-185" aria-hidden="true" tabindex="-1"></a><span class="fu">sparseLD_stream_CSR</span>(</span>
+<span id="cb12-186"><a href="#cb12-186" aria-hidden="true" tabindex="-1"></a>  <span class="at">bed_files =</span> Glist<span class="sc">$</span>bedfiles[chr],</span>
+<span id="cb12-187"><a href="#cb12-187" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb12-188"><a href="#cb12-188" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> <span class="fu">list</span>(cls),</span>
+<span id="cb12-189"><a href="#cb12-189" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> ld_prefix,</span>
+<span id="cb12-190"><a href="#cb12-190" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="cn">NULL</span>,</span>
+<span id="cb12-191"><a href="#cb12-191" aria-hidden="true" tabindex="-1"></a>  <span class="at">af =</span> <span class="fu">list</span>(Glist<span class="sc">$</span>af[[chr]][cls]),</span>
+<span id="cb12-192"><a href="#cb12-192" aria-hidden="true" tabindex="-1"></a>  <span class="at">r2_threshold =</span> <span class="fl">0.001</span>,</span>
+<span id="cb12-193"><a href="#cb12-193" aria-hidden="true" tabindex="-1"></a>  <span class="at">block_size =</span> <span class="dv">1024</span>,</span>
+<span id="cb12-194"><a href="#cb12-194" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
+<span id="cb12-195"><a href="#cb12-195" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-196"><a href="#cb12-196" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-197"><a href="#cb12-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-198"><a href="#cb12-198" aria-hidden="true" tabindex="-1"></a>The stable usage expectations are:</span>
+<span id="cb12-199"><a href="#cb12-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-200"><a href="#cb12-200" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>all files belonging to a prefix are created and retained together;</span>
+<span id="cb12-201"><a href="#cb12-201" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`sparseLD_read_CSR(ld_prefix)`</span> is used for inspection and validation;</span>
+<span id="cb12-202"><a href="#cb12-202" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_csr(..., ld_prefix = ld_prefix)`</span> and related wrappers consume it;</span>
+<span id="cb12-203"><a href="#cb12-203" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker order and construction settings are recorded externally; and</span>
+<span id="cb12-204"><a href="#cb12-204" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>package functions handle file naming, binary types, index bases, diagonal</span>
+<span id="cb12-205"><a href="#cb12-205" aria-hidden="true" tabindex="-1"></a>  convention, and conversion to sampler structures.</span>
+<span id="cb12-206"><a href="#cb12-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-207"><a href="#cb12-207" aria-hidden="true" tabindex="-1"></a>Analysis code should not assume that current suffixes, metadata keys, or</span>
+<span id="cb12-208"><a href="#cb12-208" aria-hidden="true" tabindex="-1"></a>binary encodings will remain unchanged. Independent tools that manually write</span>
+<span id="cb12-209"><a href="#cb12-209" aria-hidden="true" tabindex="-1"></a>these files depend on implementation details and can silently become</span>
+<span id="cb12-210"><a href="#cb12-210" aria-hidden="true" tabindex="-1"></a>incompatible after package changes.</span>
+<span id="cb12-211"><a href="#cb12-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-212"><a href="#cb12-212" aria-hidden="true" tabindex="-1"></a><span class="fu">## `ld_prefix` and the Current Disk Artifact</span></span>
+<span id="cb12-213"><a href="#cb12-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-214"><a href="#cb12-214" aria-hidden="true" tabindex="-1"></a><span class="in">`ld_prefix`</span> is a common path prefix, not a single file and not an in-memory</span>
+<span id="cb12-215"><a href="#cb12-215" aria-hidden="true" tabindex="-1"></a>matrix. The current implementation derives several files from it. For</span>
+<span id="cb12-216"><a href="#cb12-216" aria-hidden="true" tabindex="-1"></a>example, a prefix <span class="in">`path/chr1_ld`</span> currently identifies:</span>
+<span id="cb12-217"><a href="#cb12-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-218"><a href="#cb12-218" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb12-219"><a href="#cb12-219" aria-hidden="true" tabindex="-1"></a><span class="in">path/chr1_ld.row_ptr.u64.bin</span></span>
+<span id="cb12-220"><a href="#cb12-220" aria-hidden="true" tabindex="-1"></a><span class="in">path/chr1_ld.col_idx.u32.0based.bin</span></span>
+<span id="cb12-221"><a href="#cb12-221" aria-hidden="true" tabindex="-1"></a><span class="in">path/chr1_ld.values.f32.bin</span></span>
+<span id="cb12-222"><a href="#cb12-222" aria-hidden="true" tabindex="-1"></a><span class="in">path/chr1_ld.meta.txt</span></span>
+<span id="cb12-223"><a href="#cb12-223" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-224"><a href="#cb12-224" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-225"><a href="#cb12-225" aria-hidden="true" tabindex="-1"></a>These names expose current implementation details:</span>
+<span id="cb12-226"><a href="#cb12-226" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-227"><a href="#cb12-227" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>row pointers are currently unsigned 64-bit integers;</span>
+<span id="cb12-228"><a href="#cb12-228" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>column indices are currently unsigned 32-bit zero-based integers;</span>
+<span id="cb12-229"><a href="#cb12-229" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>stored correlations are currently 32-bit floating-point values; and</span>
+<span id="cb12-230"><a href="#cb12-230" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>metadata is currently a text file describing dimensions and settings.</span>
+<span id="cb12-231"><a href="#cb12-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-232"><a href="#cb12-232" aria-hidden="true" tabindex="-1"></a>The metadata currently records fields such as marker count, <span class="in">`nnz`</span>, triangle</span>
+<span id="cb12-233"><a href="#cb12-233" aria-hidden="true" tabindex="-1"></a>and diagonal conventions, value type, normalization, threshold, distance</span>
+<span id="cb12-234"><a href="#cb12-234" aria-hidden="true" tabindex="-1"></a>limits, block size, thread count, and used sample count.</span>
+<span id="cb12-235"><a href="#cb12-235" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-236"><a href="#cb12-236" aria-hidden="true" tabindex="-1"></a>Treat the complete prefix as one artifact. Do not mix files from separate</span>
+<span id="cb12-237"><a href="#cb12-237" aria-hidden="true" tabindex="-1"></a>runs. Do not overwrite an important prefix when changing samples, marker</span>
+<span id="cb12-238"><a href="#cb12-238" aria-hidden="true" tabindex="-1"></a>sets, allele frequencies, distance windows, or thresholds. Prefer distinct,</span>
+<span id="cb12-239"><a href="#cb12-239" aria-hidden="true" tabindex="-1"></a>descriptive prefixes and retain construction provenance beside them.</span>
+<span id="cb12-240"><a href="#cb12-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-241"><a href="#cb12-241" aria-hidden="true" tabindex="-1"></a><span class="fu">## Exported and Internal Helpers</span></span>
+<span id="cb12-242"><a href="#cb12-242" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-243"><a href="#cb12-243" aria-hidden="true" tabindex="-1"></a>Current <span class="in">`NAMESPACE`</span> and wrapper status distinguish the supported public path</span>
+<span id="cb12-244"><a href="#cb12-244" aria-hidden="true" tabindex="-1"></a>from lower-level generated functions:</span>
+<span id="cb12-245"><a href="#cb12-245" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-246"><a href="#cb12-246" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Helper <span class="pp">|</span> Current role <span class="pp">|</span> Current status <span class="pp">|</span></span>
+<span id="cb12-247"><a href="#cb12-247" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb12-248"><a href="#cb12-248" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_stream_CSR()`</span> <span class="pp">|</span> Computes BED-derived sparse LD and streams the disk-backed prefix. <span class="pp">|</span> Exported; principal user-facing constructor. <span class="pp">|</span></span>
+<span id="cb12-249"><a href="#cb12-249" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_read_CSR()`</span> <span class="pp">|</span> Reads a written prefix into R for inspection and validation. <span class="pp">|</span> Exported; user-facing reader. <span class="pp">|</span></span>
+<span id="cb12-250"><a href="#cb12-250" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_to_CSR()`</span> <span class="pp">|</span> Computes the same upper-triangle sparse representation and returns arrays in memory. <span class="pp">|</span> Generated lower-level wrapper; not exported in the current <span class="in">`NAMESPACE`</span>. <span class="pp">|</span></span>
+<span id="cb12-251"><a href="#cb12-251" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_write_CSR()`</span> <span class="pp">|</span> Delegates to <span class="in">`sparseLD_stream_CSR()`</span> with an output prefix. <span class="pp">|</span> Generated alias/internal wrapper; not exported in the current <span class="in">`NAMESPACE`</span>. <span class="pp">|</span></span>
+<span id="cb12-252"><a href="#cb12-252" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-253"><a href="#cb12-253" aria-hidden="true" tabindex="-1"></a>The lower-level wrappers can be useful during development, but they are not</span>
+<span id="cb12-254"><a href="#cb12-254" aria-hidden="true" tabindex="-1"></a>the documented model handoff. In particular, <span class="in">`stblr_csr()`</span> accepts</span>
+<span id="cb12-255"><a href="#cb12-255" aria-hidden="true" tabindex="-1"></a><span class="in">`ld_prefix`</span>, not an R list returned by <span class="in">`sparseLD_to_CSR()`</span>.</span>
+<span id="cb12-256"><a href="#cb12-256" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-257"><a href="#cb12-257" aria-hidden="true" tabindex="-1"></a>The package also contains older or separate CSR conversion code for other LD</span>
+<span id="cb12-258"><a href="#cb12-258" aria-hidden="true" tabindex="-1"></a>inputs. Its conventions should not be assumed to be identical to the</span>
+<span id="cb12-259"><a href="#cb12-259" aria-hidden="true" tabindex="-1"></a>BED-streamed prefix described here.</span>
+<span id="cb12-260"><a href="#cb12-260" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-261"><a href="#cb12-261" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sparse-LD Construction Settings</span></span>
+<span id="cb12-262"><a href="#cb12-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-263"><a href="#cb12-263" aria-hidden="true" tabindex="-1"></a>Sparse-LD settings affect memory, runtime, disk use, and the statistical</span>
+<span id="cb12-264"><a href="#cb12-264" aria-hidden="true" tabindex="-1"></a>approximation. They should be selected deliberately and reported with model</span>
+<span id="cb12-265"><a href="#cb12-265" aria-hidden="true" tabindex="-1"></a>results.</span>
+<span id="cb12-266"><a href="#cb12-266" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-267"><a href="#cb12-267" aria-hidden="true" tabindex="-1"></a><span class="fu">### Marker and Sample Selection</span></span>
+<span id="cb12-268"><a href="#cb12-268" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-269"><a href="#cb12-269" aria-hidden="true" tabindex="-1"></a><span class="in">`bed_files`</span></span>
+<span id="cb12-270"><a href="#cb12-270" aria-hidden="true" tabindex="-1"></a>: Paths to one or more PLINK BED files. Their corresponding <span class="in">`cls`</span> entries</span>
+<span id="cb12-271"><a href="#cb12-271" aria-hidden="true" tabindex="-1"></a>  define the concatenated model-marker order.</span>
+<span id="cb12-272"><a href="#cb12-272" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-273"><a href="#cb12-273" aria-hidden="true" tabindex="-1"></a><span class="in">`n`</span></span>
+<span id="cb12-274"><a href="#cb12-274" aria-hidden="true" tabindex="-1"></a>: Number of individuals encoded by the BED source.</span>
+<span id="cb12-275"><a href="#cb12-275" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-276"><a href="#cb12-276" aria-hidden="true" tabindex="-1"></a><span class="in">`cls`</span></span>
+<span id="cb12-277"><a href="#cb12-277" aria-hidden="true" tabindex="-1"></a>: A list of marker-column index vectors, one per BED file. The order within</span>
+<span id="cb12-278"><a href="#cb12-278" aria-hidden="true" tabindex="-1"></a>  and across these vectors becomes the sparse-LD row and column order.</span>
+<span id="cb12-279"><a href="#cb12-279" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-280"><a href="#cb12-280" aria-hidden="true" tabindex="-1"></a><span class="in">`rows`</span></span>
+<span id="cb12-281"><a href="#cb12-281" aria-hidden="true" tabindex="-1"></a>: Optional positive one-based sample indices. When supplied, LD is computed</span>
+<span id="cb12-282"><a href="#cb12-282" aria-hidden="true" tabindex="-1"></a>  from this selected sample. The same sample selection must underlie the</span>
+<span id="cb12-283"><a href="#cb12-283" aria-hidden="true" tabindex="-1"></a>  sufficient statistics used downstream.</span>
+<span id="cb12-284"><a href="#cb12-284" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-285"><a href="#cb12-285" aria-hidden="true" tabindex="-1"></a><span class="in">`af`</span></span>
+<span id="cb12-286"><a href="#cb12-286" aria-hidden="true" tabindex="-1"></a>: Optional list of allele frequencies aligned to <span class="in">`cls`</span>. When omitted, the</span>
+<span id="cb12-287"><a href="#cb12-287" aria-hidden="true" tabindex="-1"></a>  writer computes allele frequencies from the selected packed genotypes.</span>
+<span id="cb12-288"><a href="#cb12-288" aria-hidden="true" tabindex="-1"></a>  Supplied values must be finite and in <span class="sc">\(</span><span class="co">[</span><span class="ot">0,1</span><span class="co">]</span><span class="sc">\)</span>. Missing genotypes are</span>
+<span id="cb12-289"><a href="#cb12-289" aria-hidden="true" tabindex="-1"></a>  represented as zero after standardization, corresponding to mean</span>
+<span id="cb12-290"><a href="#cb12-290" aria-hidden="true" tabindex="-1"></a>  imputation on that scale.</span>
+<span id="cb12-291"><a href="#cb12-291" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-292"><a href="#cb12-292" aria-hidden="true" tabindex="-1"></a><span class="fu">### Threshold and Window Settings</span></span>
+<span id="cb12-293"><a href="#cb12-293" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-294"><a href="#cb12-294" aria-hidden="true" tabindex="-1"></a><span class="in">`r2_threshold`</span></span>
+<span id="cb12-295"><a href="#cb12-295" aria-hidden="true" tabindex="-1"></a>: Minimum squared correlation for retaining an eligible pair. The writer</span>
+<span id="cb12-296"><a href="#cb12-296" aria-hidden="true" tabindex="-1"></a>  compares <span class="sc">\(</span>r_{ij}^2<span class="sc">\)</span> with this value but stores signed <span class="sc">\(</span>r_{ij}<span class="sc">\)</span>. A larger</span>
+<span id="cb12-297"><a href="#cb12-297" aria-hidden="true" tabindex="-1"></a>  threshold produces a sparser approximation and may remove weak but</span>
+<span id="cb12-298"><a href="#cb12-298" aria-hidden="true" tabindex="-1"></a>  collectively relevant LD.</span>
+<span id="cb12-299"><a href="#cb12-299" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-300"><a href="#cb12-300" aria-hidden="true" tabindex="-1"></a><span class="in">`max_distance_variants`</span></span>
+<span id="cb12-301"><a href="#cb12-301" aria-hidden="true" tabindex="-1"></a>: Maximum difference in model-order marker indices. Positive values restrict</span>
+<span id="cb12-302"><a href="#cb12-302" aria-hidden="true" tabindex="-1"></a>  retained pairs to this index window. A value of zero disables this</span>
+<span id="cb12-303"><a href="#cb12-303" aria-hidden="true" tabindex="-1"></a>  restriction in the current implementation.</span>
+<span id="cb12-304"><a href="#cb12-304" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-305"><a href="#cb12-305" aria-hidden="true" tabindex="-1"></a><span class="in">`max_distance_bp`</span></span>
+<span id="cb12-306"><a href="#cb12-306" aria-hidden="true" tabindex="-1"></a>: Maximum base-pair separation when positions are supplied. Positive values</span>
+<span id="cb12-307"><a href="#cb12-307" aria-hidden="true" tabindex="-1"></a>  restrict retained pairs by physical distance. A value of zero disables this</span>
+<span id="cb12-308"><a href="#cb12-308" aria-hidden="true" tabindex="-1"></a>  restriction. The implementation evaluates forward position differences,</span>
+<span id="cb12-309"><a href="#cb12-309" aria-hidden="true" tabindex="-1"></a>  so <span class="in">`pos_bp`</span> should be aligned to marker order and ordered consistently</span>
+<span id="cb12-310"><a href="#cb12-310" aria-hidden="true" tabindex="-1"></a>  within the intended genomic segments.</span>
+<span id="cb12-311"><a href="#cb12-311" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-312"><a href="#cb12-312" aria-hidden="true" tabindex="-1"></a><span class="in">`pos_bp`</span></span>
+<span id="cb12-313"><a href="#cb12-313" aria-hidden="true" tabindex="-1"></a>: Optional list of marker base-pair positions aligned to <span class="in">`cls`</span>. When absent,</span>
+<span id="cb12-314"><a href="#cb12-314" aria-hidden="true" tabindex="-1"></a>  the base-pair distance restriction cannot be applied, even if</span>
+<span id="cb12-315"><a href="#cb12-315" aria-hidden="true" tabindex="-1"></a>  <span class="in">`max_distance_bp`</span> is positive.</span>
+<span id="cb12-316"><a href="#cb12-316" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-317"><a href="#cb12-317" aria-hidden="true" tabindex="-1"></a>A pair must pass every enabled window rule before its <span class="sc">\(</span>r^2<span class="sc">\)</span> is tested.</span>
+<span id="cb12-318"><a href="#cb12-318" aria-hidden="true" tabindex="-1"></a>Disabling both distance restrictions permits all upper-triangle marker pairs</span>
+<span id="cb12-319"><a href="#cb12-319" aria-hidden="true" tabindex="-1"></a>to be considered and can be computationally expensive.</span>
+<span id="cb12-320"><a href="#cb12-320" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-321"><a href="#cb12-321" aria-hidden="true" tabindex="-1"></a><span class="fu">### Computational Settings</span></span>
+<span id="cb12-322"><a href="#cb12-322" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-323"><a href="#cb12-323" aria-hidden="true" tabindex="-1"></a><span class="in">`block_size`</span></span>
+<span id="cb12-324"><a href="#cb12-324" aria-hidden="true" tabindex="-1"></a>: Number of markers decoded and compared in a working block. Larger values</span>
+<span id="cb12-325"><a href="#cb12-325" aria-hidden="true" tabindex="-1"></a>  can improve matrix-multiplication efficiency but increase working memory</span>
+<span id="cb12-326"><a href="#cb12-326" aria-hidden="true" tabindex="-1"></a>  roughly through genotype-block and block-cross-product buffers. It changes</span>
+<span id="cb12-327"><a href="#cb12-327" aria-hidden="true" tabindex="-1"></a>  the construction strategy, not the intended retention rule.</span>
+<span id="cb12-328"><a href="#cb12-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-329"><a href="#cb12-329" aria-hidden="true" tabindex="-1"></a><span class="in">`nthreads`</span></span>
+<span id="cb12-330"><a href="#cb12-330" aria-hidden="true" tabindex="-1"></a>: Requested OpenMP thread count. It affects construction performance and may</span>
+<span id="cb12-331"><a href="#cb12-331" aria-hidden="true" tabindex="-1"></a>  affect low-level floating-point execution details, but it is not an LD</span>
+<span id="cb12-332"><a href="#cb12-332" aria-hidden="true" tabindex="-1"></a>  threshold or model-prior parameter.</span>
+<span id="cb12-333"><a href="#cb12-333" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-334"><a href="#cb12-334" aria-hidden="true" tabindex="-1"></a><span class="fu">### Scaling</span></span>
+<span id="cb12-335"><a href="#cb12-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-336"><a href="#cb12-336" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span> does not expose a <span class="in">`scale`</span> argument. The current writer</span>
+<span id="cb12-337"><a href="#cb12-337" aria-hidden="true" tabindex="-1"></a>always constructs its correlation values from allele-frequency-standardized</span>
+<span id="cb12-338"><a href="#cb12-338" aria-hidden="true" tabindex="-1"></a>markers. By contrast, <span class="in">`bed_xtx_xty()`</span> exposes <span class="in">`scale`</span>. For the standard</span>
+<span id="cb12-339"><a href="#cb12-339" aria-hidden="true" tabindex="-1"></a>BED-to-CSR handoff, use compatible standardized marker statistics:</span>
+<span id="cb12-340"><a href="#cb12-340" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-341"><a href="#cb12-341" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb12-342"><a href="#cb12-342" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">bed_xtx_xty</span>(..., <span class="at">af =</span> af, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-343"><a href="#cb12-343" aria-hidden="true" tabindex="-1"></a><span class="fu">sparseLD_stream_CSR</span>(..., <span class="at">af =</span> <span class="fu">list</span>(af))</span>
+<span id="cb12-344"><a href="#cb12-344" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-345"><a href="#cb12-345" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-346"><a href="#cb12-346" aria-hidden="true" tabindex="-1"></a>Using <span class="in">`bed_xtx_xty(..., scale = FALSE)`</span> with the current standardized</span>
+<span id="cb12-347"><a href="#cb12-347" aria-hidden="true" tabindex="-1"></a>correlation writer changes the scale relationship assumed when the sampler</span>
+<span id="cb12-348"><a href="#cb12-348" aria-hidden="true" tabindex="-1"></a>combines <span class="in">`r_ij`</span> with <span class="in">`stats$ww`</span>. Such combinations require explicit</span>
+<span id="cb12-349"><a href="#cb12-349" aria-hidden="true" tabindex="-1"></a>validation rather than being assumed compatible.</span>
+<span id="cb12-350"><a href="#cb12-350" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-351"><a href="#cb12-351" aria-hidden="true" tabindex="-1"></a><span class="fu">## Streaming and Blocking Behavior</span></span>
+<span id="cb12-352"><a href="#cb12-352" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-353"><a href="#cb12-353" aria-hidden="true" tabindex="-1"></a>The writer reads the selected BED markers into a packed representation, then</span>
+<span id="cb12-354"><a href="#cb12-354" aria-hidden="true" tabindex="-1"></a>works through pairs of marker blocks. For each eligible block pair it:</span>
+<span id="cb12-355"><a href="#cb12-355" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-356"><a href="#cb12-356" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>decodes standardized marker values into floating-point working buffers;</span>
+<span id="cb12-357"><a href="#cb12-357" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>computes raw block cross-products with matrix multiplication;</span>
+<span id="cb12-358"><a href="#cb12-358" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>converts each eligible cross-product to correlation <span class="sc">\(</span>r_{ij}<span class="sc">\)</span>;</span>
+<span id="cb12-359"><a href="#cb12-359" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>applies distance and <span class="sc">\(</span>r^2<span class="sc">\)</span> retention rules; and</span>
+<span id="cb12-360"><a href="#cb12-360" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>appends retained upper-triangle column indices and values to disk.</span>
+<span id="cb12-361"><a href="#cb12-361" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-362"><a href="#cb12-362" aria-hidden="true" tabindex="-1"></a>After each row, it writes the cumulative retained-entry count to <span class="in">`row_ptr`</span>.</span>
+<span id="cb12-363"><a href="#cb12-363" aria-hidden="true" tabindex="-1"></a>Consequently, the final row pointer equals <span class="in">`nnz`</span>.</span>
+<span id="cb12-364"><a href="#cb12-364" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-365"><a href="#cb12-365" aria-hidden="true" tabindex="-1"></a>Streaming avoids holding the final <span class="in">`col_idx`</span> and <span class="in">`values`</span> arrays in R or in</span>
+<span id="cb12-366"><a href="#cb12-366" aria-hidden="true" tabindex="-1"></a>one complete native in-memory result. It does not eliminate all memory or</span>
+<span id="cb12-367"><a href="#cb12-367" aria-hidden="true" tabindex="-1"></a>runtime costs: the packed selected genotype matrix, diagonal cross-products,</span>
+<span id="cb12-368"><a href="#cb12-368" aria-hidden="true" tabindex="-1"></a>decoded blocks, and block cross-products still require resources. The number</span>
+<span id="cb12-369"><a href="#cb12-369" aria-hidden="true" tabindex="-1"></a>of candidate block pairs can also become large when windows are wide or</span>
+<span id="cb12-370"><a href="#cb12-370" aria-hidden="true" tabindex="-1"></a>disabled.</span>
+<span id="cb12-371"><a href="#cb12-371" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-372"><a href="#cb12-372" aria-hidden="true" tabindex="-1"></a><span class="fu">## Index Bases and Diagonal Convention</span></span>
+<span id="cb12-373"><a href="#cb12-373" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-374"><a href="#cb12-374" aria-hidden="true" tabindex="-1"></a>Three conventions must be distinguished:</span>
+<span id="cb12-375"><a href="#cb12-375" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-376"><a href="#cb12-376" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span><span class="in">`rows`</span> and <span class="in">`cls`</span> supplied from R use the documented R-facing indexing</span>
+<span id="cb12-377"><a href="#cb12-377" aria-hidden="true" tabindex="-1"></a>   expected by their wrappers.</span>
+<span id="cb12-378"><a href="#cb12-378" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Current on-disk <span class="in">`col_idx`</span> entries are zero-based.</span>
+<span id="cb12-379"><a href="#cb12-379" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`sparseLD_read_CSR(prefix, one_based = TRUE)`</span> returns one-based column</span>
+<span id="cb12-380"><a href="#cb12-380" aria-hidden="true" tabindex="-1"></a>   indices for convenient R inspection.</span>
+<span id="cb12-381"><a href="#cb12-381" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-382"><a href="#cb12-382" aria-hidden="true" tabindex="-1"></a>The reader's <span class="in">`one_based`</span> argument changes only the returned <span class="in">`col_idx`</span> vector.</span>
+<span id="cb12-383"><a href="#cb12-383" aria-hidden="true" tabindex="-1"></a><span class="in">`row_ptr`</span> remains a zero-based cumulative pointer array whose first value is</span>
+<span id="cb12-384"><a href="#cb12-384" aria-hidden="true" tabindex="-1"></a>zero and whose final value is <span class="in">`nnz`</span>.</span>
+<span id="cb12-385"><a href="#cb12-385" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-386"><a href="#cb12-386" aria-hidden="true" tabindex="-1"></a>The current streamed artifact omits diagonal entries and reports</span>
+<span id="cb12-387"><a href="#cb12-387" aria-hidden="true" tabindex="-1"></a><span class="in">`diag = "implicit_1"`</span>. Downstream ST-BLR samplers use the supplied <span class="in">`stats$ww`</span></span>
+<span id="cb12-388"><a href="#cb12-388" aria-hidden="true" tabindex="-1"></a>for diagonal <span class="sc">\(</span>X_i^\top X_i<span class="sc">\)</span> contributions. Users inspecting the sparse</span>
+<span id="cb12-389"><a href="#cb12-389" aria-hidden="true" tabindex="-1"></a>arrays should not mistake absence of explicit diagonal entries for a zero</span>
+<span id="cb12-390"><a href="#cb12-390" aria-hidden="true" tabindex="-1"></a>diagonal.</span>
+<span id="cb12-391"><a href="#cb12-391" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-392"><a href="#cb12-392" aria-hidden="true" tabindex="-1"></a>Package functions validate and handle these conventions. Manual index</span>
+<span id="cb12-393"><a href="#cb12-393" aria-hidden="true" tabindex="-1"></a>conversion or insertion of diagonal values risks corrupting the expected</span>
+<span id="cb12-394"><a href="#cb12-394" aria-hidden="true" tabindex="-1"></a>contract.</span>
+<span id="cb12-395"><a href="#cb12-395" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-396"><a href="#cb12-396" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker-Order, Sample, and Scaling Invariants</span></span>
+<span id="cb12-397"><a href="#cb12-397" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-398"><a href="#cb12-398" aria-hidden="true" tabindex="-1"></a>Sparse arrays contain positional indices, not biological marker identifiers.</span>
+<span id="cb12-399"><a href="#cb12-399" aria-hidden="true" tabindex="-1"></a>The most important cross-layer invariant is:</span>
+<span id="cb12-400"><a href="#cb12-400" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-401"><a href="#cb12-401" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb12-402"><a href="#cb12-402" aria-hidden="true" tabindex="-1"></a><span class="in">Glist$rsids[[chr]][cls]</span></span>
+<span id="cb12-403"><a href="#cb12-403" aria-hidden="true" tabindex="-1"></a><span class="in">    == Glist$rsidsLD[[chr]]</span></span>
+<span id="cb12-404"><a href="#cb12-404" aria-hidden="true" tabindex="-1"></a><span class="in">    == rows of stats$wy and stats$ww</span></span>
+<span id="cb12-405"><a href="#cb12-405" aria-hidden="true" tabindex="-1"></a><span class="in">    == rows and columns of sparse LD</span></span>
+<span id="cb12-406"><a href="#cb12-406" aria-hidden="true" tabindex="-1"></a><span class="in">    == rows of an annotation matrix A</span></span>
+<span id="cb12-407"><a href="#cb12-407" aria-hidden="true" tabindex="-1"></a><span class="in">    == rows of fit$bm and fit$dm</span></span>
+<span id="cb12-408"><a href="#cb12-408" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-409"><a href="#cb12-409" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-410"><a href="#cb12-410" aria-hidden="true" tabindex="-1"></a>Establish and retain marker order explicitly:</span>
+<span id="cb12-411"><a href="#cb12-411" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-412"><a href="#cb12-412" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb12-413"><a href="#cb12-413" aria-hidden="true" tabindex="-1"></a>marker_id <span class="ot">&lt;-</span> Glist<span class="sc">$</span>rsidsLD[[chr]]</span>
+<span id="cb12-414"><a href="#cb12-414" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(marker_id, Glist<span class="sc">$</span>rsids[[chr]])</span>
+<span id="cb12-415"><a href="#cb12-415" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-416"><a href="#cb12-416" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb12-417"><a href="#cb12-417" aria-hidden="true" tabindex="-1"></a>  <span class="sc">!</span><span class="fu">anyNA</span>(cls),</span>
+<span id="cb12-418"><a href="#cb12-418" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(Glist<span class="sc">$</span>rsids[[chr]][cls], marker_id)</span>
+<span id="cb12-419"><a href="#cb12-419" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-420"><a href="#cb12-420" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-421"><a href="#cb12-421" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-422"><a href="#cb12-422" aria-hidden="true" tabindex="-1"></a>For multiple BED files, the concatenation of <span class="in">`cls[[1]]`</span>, <span class="in">`cls[[2]]`</span>, and so</span>
+<span id="cb12-423"><a href="#cb12-423" aria-hidden="true" tabindex="-1"></a>on defines the CSR order. Allele-frequency and position lists must follow the</span>
+<span id="cb12-424"><a href="#cb12-424" aria-hidden="true" tabindex="-1"></a>same per-file and concatenated order.</span>
+<span id="cb12-425"><a href="#cb12-425" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-426"><a href="#cb12-426" aria-hidden="true" tabindex="-1"></a>The same selected sample must underlie LD and sufficient statistics. If</span>
+<span id="cb12-427"><a href="#cb12-427" aria-hidden="true" tabindex="-1"></a><span class="in">`rows`</span> is used, apply it consistently. If allele frequencies are supplied,</span>
+<span id="cb12-428"><a href="#cb12-428" aria-hidden="true" tabindex="-1"></a>they must correspond to that construction and marker order. If annotations</span>
+<span id="cb12-429"><a href="#cb12-429" aria-hidden="true" tabindex="-1"></a>are later used, align their rows before fitting:</span>
+<span id="cb12-430"><a href="#cb12-430" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-431"><a href="#cb12-431" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb12-432"><a href="#cb12-432" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
+<span id="cb12-433"><a href="#cb12-433" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span>
+<span id="cb12-434"><a href="#cb12-434" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-435"><a href="#cb12-435" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-436"><a href="#cb12-436" aria-hidden="true" tabindex="-1"></a>A permutation error can produce dimensionally valid CSR files and model fits</span>
+<span id="cb12-437"><a href="#cb12-437" aria-hidden="true" tabindex="-1"></a>while assigning LD or annotations to the wrong markers. Dimension checks</span>
+<span id="cb12-438"><a href="#cb12-438" aria-hidden="true" tabindex="-1"></a>alone cannot detect this error.</span>
+<span id="cb12-439"><a href="#cb12-439" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-440"><a href="#cb12-440" aria-hidden="true" tabindex="-1"></a><span class="fu">## Reading and Validating a Prefix</span></span>
+<span id="cb12-441"><a href="#cb12-441" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-442"><a href="#cb12-442" aria-hidden="true" tabindex="-1"></a>Use the exported reader to inspect a prefix without manually decoding the</span>
+<span id="cb12-443"><a href="#cb12-443" aria-hidden="true" tabindex="-1"></a>binary files:</span>
+<span id="cb12-444"><a href="#cb12-444" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-445"><a href="#cb12-445" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb12-446"><a href="#cb12-446" aria-hidden="true" tabindex="-1"></a>ld <span class="ot">&lt;-</span> <span class="fu">sparseLD_read_CSR</span>(ld_prefix, <span class="at">one_based =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-447"><a href="#cb12-447" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-448"><a href="#cb12-448" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb12-449"><a href="#cb12-449" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>nrow <span class="sc">==</span> <span class="fu">length</span>(cls),</span>
+<span id="cb12-450"><a href="#cb12-450" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>ncol <span class="sc">==</span> <span class="fu">length</span>(cls),</span>
+<span id="cb12-451"><a href="#cb12-451" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(ld<span class="sc">$</span>row_ptr) <span class="sc">==</span> <span class="fu">length</span>(cls) <span class="sc">+</span> <span class="dv">1</span>L,</span>
+<span id="cb12-452"><a href="#cb12-452" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(ld<span class="sc">$</span>col_idx) <span class="sc">==</span> <span class="fu">length</span>(ld<span class="sc">$</span>values),</span>
+<span id="cb12-453"><a href="#cb12-453" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tail</span>(ld<span class="sc">$</span>row_ptr, <span class="dv">1</span>) <span class="sc">==</span> <span class="fu">length</span>(ld<span class="sc">$</span>values),</span>
+<span id="cb12-454"><a href="#cb12-454" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>index_base <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb12-455"><a href="#cb12-455" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(ld<span class="sc">$</span>diag, <span class="st">"implicit_1"</span>)</span>
+<span id="cb12-456"><a href="#cb12-456" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-457"><a href="#cb12-457" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-458"><a href="#cb12-458" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-459"><a href="#cb12-459" aria-hidden="true" tabindex="-1"></a>The current reader checks that required metadata dimensions exist, reads the</span>
+<span id="cb12-460"><a href="#cb12-460" aria-hidden="true" tabindex="-1"></a>expected byte counts, verifies that row pointers begin at zero and end at</span>
+<span id="cb12-461"><a href="#cb12-461" aria-hidden="true" tabindex="-1"></a><span class="in">`nnz`</span>, requires nondecreasing row pointers, checks column-index bounds, and</span>
+<span id="cb12-462"><a href="#cb12-462" aria-hidden="true" tabindex="-1"></a>rejects non-finite values.</span>
+<span id="cb12-463"><a href="#cb12-463" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-464"><a href="#cb12-464" aria-hidden="true" tabindex="-1"></a>Additional analysis-level validation should confirm:</span>
+<span id="cb12-465"><a href="#cb12-465" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-466"><a href="#cb12-466" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span><span class="in">`cls`</span> contains no missing marker matches.</span>
+<span id="cb12-467"><a href="#cb12-467" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>LD dimensions equal the intended marker count.</span>
+<span id="cb12-468"><a href="#cb12-468" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`row_ptr`</span> has length <span class="sc">\(</span>m+1<span class="sc">\)</span>.</span>
+<span id="cb12-469"><a href="#cb12-469" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span><span class="in">`col_idx`</span> and <span class="in">`values`</span> have equal length.</span>
+<span id="cb12-470"><a href="#cb12-470" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>the final row pointer equals <span class="in">`nnz`</span>.</span>
+<span id="cb12-471"><a href="#cb12-471" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>returned <span class="in">`index_base`</span> matches how <span class="in">`col_idx`</span> is being inspected.</span>
+<span id="cb12-472"><a href="#cb12-472" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>the upper-triangle and implicit-diagonal conventions are understood.</span>
+<span id="cb12-473"><a href="#cb12-473" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>values are finite signed correlations and remain within plausible</span>
+<span id="cb12-474"><a href="#cb12-474" aria-hidden="true" tabindex="-1"></a>   correlation bounds.</span>
+<span id="cb12-475"><a href="#cb12-475" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span><span class="in">`n_used`</span>, thresholds, windows, and marker count match the intended run.</span>
+<span id="cb12-476"><a href="#cb12-476" aria-hidden="true" tabindex="-1"></a><span class="ss">10. </span><span class="in">`stats$wy`</span>, every <span class="in">`stats$ww`</span> vector, annotations, and posterior rows use</span>
+<span id="cb12-477"><a href="#cb12-477" aria-hidden="true" tabindex="-1"></a>    exactly the same marker order.</span>
+<span id="cb12-478"><a href="#cb12-478" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-479"><a href="#cb12-479" aria-hidden="true" tabindex="-1"></a>The reader can validate structural properties but cannot prove that the BED</span>
+<span id="cb12-480"><a href="#cb12-480" aria-hidden="true" tabindex="-1"></a>source, allele frequencies, sample rows, phenotypes, annotations, or marker</span>
+<span id="cb12-481"><a href="#cb12-481" aria-hidden="true" tabindex="-1"></a>identities are scientifically aligned. Retain that provenance separately.</span>
+<span id="cb12-482"><a href="#cb12-482" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-483"><a href="#cb12-483" aria-hidden="true" tabindex="-1"></a><span class="fu">## How `stblr_csr()` Consumes the Prefix</span></span>
+<span id="cb12-484"><a href="#cb12-484" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-485"><a href="#cb12-485" aria-hidden="true" tabindex="-1"></a>The public model handoff is short:</span>
+<span id="cb12-486"><a href="#cb12-486" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-487"><a href="#cb12-487" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb12-488"><a href="#cb12-488" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb12-489"><a href="#cb12-489" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb12-490"><a href="#cb12-490" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb12-491"><a href="#cb12-491" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> n,</span>
+<span id="cb12-492"><a href="#cb12-492" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">FALSE</span></span>
+<span id="cb12-493"><a href="#cb12-493" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-494"><a href="#cb12-494" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-495"><a href="#cb12-495" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-496"><a href="#cb12-496" aria-hidden="true" tabindex="-1"></a>During setup, the current ST-BLR CSR implementation:</span>
+<span id="cb12-497"><a href="#cb12-497" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-498"><a href="#cb12-498" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>checks that metadata marker count matches the model marker count;</span>
+<span id="cb12-499"><a href="#cb12-499" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>reads the zero-based upper-triangle arrays;</span>
+<span id="cb12-500"><a href="#cb12-500" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>validates row pointers, column bounds, finite correlations, and positive</span>
+<span id="cb12-501"><a href="#cb12-501" aria-hidden="true" tabindex="-1"></a>   <span class="in">`stats$ww`</span>;</span>
+<span id="cb12-502"><a href="#cb12-502" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>ignores any explicit self-pairs if encountered;</span>
+<span id="cb12-503"><a href="#cb12-503" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>converts retained <span class="sc">\(</span>r_{ij}<span class="sc">\)</span> to</span>
+<span id="cb12-504"><a href="#cb12-504" aria-hidden="true" tabindex="-1"></a>   <span class="sc">\(</span>r_{ij}\sqrt{ww_iww_j}<span class="sc">\)</span>; and</span>
+<span id="cb12-505"><a href="#cb12-505" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>creates a symmetric in-memory neighbor structure for residual updates.</span>
+<span id="cb12-506"><a href="#cb12-506" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-507"><a href="#cb12-507" aria-hidden="true" tabindex="-1"></a>For marker effect <span class="sc">\(</span>b_i<span class="sc">\)</span>, the diagonal residual contribution uses</span>
+<span id="cb12-508"><a href="#cb12-508" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>ww_i b_i<span class="sc">\)</span>, while retained off-diagonal neighbors use the converted</span>
+<span id="cb12-509"><a href="#cb12-509" aria-hidden="true" tabindex="-1"></a>cross-product values. Missing off-diagonal entries are treated as zero in the</span>
+<span id="cb12-510"><a href="#cb12-510" aria-hidden="true" tabindex="-1"></a>sparse approximation.</span>
+<span id="cb12-511"><a href="#cb12-511" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-512"><a href="#cb12-512" aria-hidden="true" tabindex="-1"></a>Annotation-aware CSR wrappers use the same LD prefix and marker-order</span>
+<span id="cb12-513"><a href="#cb12-513" aria-hidden="true" tabindex="-1"></a>contract. Their differences concern prior structure, not CSR construction.</span>
+<span id="cb12-514"><a href="#cb12-514" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-515"><a href="#cb12-515" aria-hidden="true" tabindex="-1"></a><span class="fu">## Scheduled Sparse Updates</span></span>
+<span id="cb12-516"><a href="#cb12-516" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-517"><a href="#cb12-517" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr(..., scheduled = TRUE)`</span> uses a scheduled marker-update</span>
+<span id="cb12-518"><a href="#cb12-518" aria-hidden="true" tabindex="-1"></a>implementation that can revisit likely null markers less frequently and wake</span>
+<span id="cb12-519"><a href="#cb12-519" aria-hidden="true" tabindex="-1"></a>retained LD neighbors after an effect change. Settings such as</span>
+<span id="cb12-520"><a href="#cb12-520" aria-hidden="true" tabindex="-1"></a><span class="in">`full_sweep_every`</span>, <span class="in">`candidate_threshold`</span>, <span class="in">`candidate_lifetime`</span>,</span>
+<span id="cb12-521"><a href="#cb12-521" aria-hidden="true" tabindex="-1"></a><span class="in">`null_skip_base`</span>, <span class="in">`null_skip_max`</span>, and LD-neighbor wake-up controls affect the</span>
+<span id="cb12-522"><a href="#cb12-522" aria-hidden="true" tabindex="-1"></a>sampler's computational schedule.</span>
+<span id="cb12-523"><a href="#cb12-523" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-524"><a href="#cb12-524" aria-hidden="true" tabindex="-1"></a>These controls are separate from CSR construction settings:</span>
+<span id="cb12-525"><a href="#cb12-525" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-526"><a href="#cb12-526" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`r2_threshold`</span> and distance windows determine which LD edges exist;</span>
+<span id="cb12-527"><a href="#cb12-527" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>scheduling controls determine when markers and retained neighbors are</span>
+<span id="cb12-528"><a href="#cb12-528" aria-hidden="true" tabindex="-1"></a>  reconsidered during MCMC.</span>
+<span id="cb12-529"><a href="#cb12-529" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-530"><a href="#cb12-530" aria-hidden="true" tabindex="-1"></a>Both can affect finite-run behavior and performance. The statistical prior is</span>
+<span id="cb12-531"><a href="#cb12-531" aria-hidden="true" tabindex="-1"></a>unchanged by choosing a scheduled path, but aggressive sparse scheduling must</span>
+<span id="cb12-532"><a href="#cb12-532" aria-hidden="true" tabindex="-1"></a>be checked for adequate mixing and sensitivity. See</span>
+<span id="cb12-533"><a href="#cb12-533" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.html)</span> for the scheduling controls.</span>
+<span id="cb12-534"><a href="#cb12-534" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-535"><a href="#cb12-535" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sparse LD as an Approximation</span></span>
+<span id="cb12-536"><a href="#cb12-536" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-537"><a href="#cb12-537" aria-hidden="true" tabindex="-1"></a>The sparse matrix replaces unretained off-diagonal relationships with zero.</span>
+<span id="cb12-538"><a href="#cb12-538" aria-hidden="true" tabindex="-1"></a>Approximation enters through:</span>
+<span id="cb12-539"><a href="#cb12-539" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-540"><a href="#cb12-540" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="sc">\(</span>r^2<span class="sc">\)</span> thresholding;</span>
+<span id="cb12-541"><a href="#cb12-541" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker-index and physical-distance windows;</span>
+<span id="cb12-542"><a href="#cb12-542" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>finite-sample LD estimation;</span>
+<span id="cb12-543"><a href="#cb12-543" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>allele-frequency estimation and missing-genotype handling;</span>
+<span id="cb12-544"><a href="#cb12-544" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>32-bit storage of retained correlation values; and</span>
+<span id="cb12-545"><a href="#cb12-545" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>any difference between the sample or scaling used for LD and sufficient</span>
+<span id="cb12-546"><a href="#cb12-546" aria-hidden="true" tabindex="-1"></a>  statistics.</span>
+<span id="cb12-547"><a href="#cb12-547" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-548"><a href="#cb12-548" aria-hidden="true" tabindex="-1"></a>Increasing <span class="in">`r2_threshold`</span> or narrowing windows usually reduces <span class="in">`nnz`</span>, runtime,</span>
+<span id="cb12-549"><a href="#cb12-549" aria-hidden="true" tabindex="-1"></a>and disk use, but can remove LD needed to represent the conditional marker</span>
+<span id="cb12-550"><a href="#cb12-550" aria-hidden="true" tabindex="-1"></a>likelihood adequately. Lower thresholds and wider windows preserve more LD at</span>
+<span id="cb12-551"><a href="#cb12-551" aria-hidden="true" tabindex="-1"></a>greater computational cost. There is no universally correct threshold; its</span>
+<span id="cb12-552"><a href="#cb12-552" aria-hidden="true" tabindex="-1"></a>adequacy depends on marker density, LD structure, sample size, phenotype</span>
+<span id="cb12-553"><a href="#cb12-553" aria-hidden="true" tabindex="-1"></a>architecture, and inferential target.</span>
+<span id="cb12-554"><a href="#cb12-554" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-555"><a href="#cb12-555" aria-hidden="true" tabindex="-1"></a><span class="fu">## BED-Versus-CSR Comparison and Reproducibility</span></span>
+<span id="cb12-556"><a href="#cb12-556" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-557"><a href="#cb12-557" aria-hidden="true" tabindex="-1"></a>When both paths use the same BED source, markers, samples, phenotype,</span>
+<span id="cb12-558"><a href="#cb12-558" aria-hidden="true" tabindex="-1"></a>standardization, and priors, <span class="in">`stblr_bed_marker()`</span> and <span class="in">`stblr_csr()`</span> should</span>
+<span id="cb12-559"><a href="#cb12-559" aria-hidden="true" tabindex="-1"></a>usually show qualitatively comparable posterior patterns. Exact equality is</span>
+<span id="cb12-560"><a href="#cb12-560" aria-hidden="true" tabindex="-1"></a>not expected because:</span>
+<span id="cb12-561"><a href="#cb12-561" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-562"><a href="#cb12-562" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the CSR path omits unretained LD;</span>
+<span id="cb12-563"><a href="#cb12-563" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>BED and CSR samplers maintain residual information differently;</span>
+<span id="cb12-564"><a href="#cb12-564" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>update scheduling and initialization can differ;</span>
+<span id="cb12-565"><a href="#cb12-565" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>retained correlations use finite precision; and</span>
+<span id="cb12-566"><a href="#cb12-566" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>MCMC introduces Monte Carlo variation.</span>
+<span id="cb12-567"><a href="#cb12-567" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-568"><a href="#cb12-568" aria-hidden="true" tabindex="-1"></a>A comparison should examine PIP rankings, posterior mean effects, aggregate</span>
+<span id="cb12-569"><a href="#cb12-569" aria-hidden="true" tabindex="-1"></a>variance summaries, and sensitivity to thresholds rather than equality of</span>
+<span id="cb12-570"><a href="#cb12-570" aria-hidden="true" tabindex="-1"></a>individual samples.</span>
+<span id="cb12-571"><a href="#cb12-571" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-572"><a href="#cb12-572" aria-hidden="true" tabindex="-1"></a>For reproducibility, retain:</span>
+<span id="cb12-573"><a href="#cb12-573" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-574"><a href="#cb12-574" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>immutable identifiers for BED inputs and selected samples;</span>
+<span id="cb12-575"><a href="#cb12-575" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker IDs in exact CSR order;</span>
+<span id="cb12-576"><a href="#cb12-576" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`cls`</span>, <span class="in">`rows`</span>, allele frequencies, and positions;</span>
+<span id="cb12-577"><a href="#cb12-577" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sufficient-statistic dimensions and scaling choices;</span>
+<span id="cb12-578"><a href="#cb12-578" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>all files belonging to <span class="in">`ld_prefix`</span>;</span>
+<span id="cb12-579"><a href="#cb12-579" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the writer's returned summary and metadata;</span>
+<span id="cb12-580"><a href="#cb12-580" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>package version and platform information; and</span>
+<span id="cb12-581"><a href="#cb12-581" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>model priors, MCMC settings, scheduling controls, and seeds.</span>
+<span id="cb12-582"><a href="#cb12-582" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-583"><a href="#cb12-583" aria-hidden="true" tabindex="-1"></a>The current workflow scripts use demonstration-scale settings. Production</span>
+<span id="cb12-584"><a href="#cb12-584" aria-hidden="true" tabindex="-1"></a>analyses require sensitivity checks for LD construction and sampler settings,</span>
+<span id="cb12-585"><a href="#cb12-585" aria-hidden="true" tabindex="-1"></a>longer chains, and convergence diagnostics.</span>
+<span id="cb12-586"><a href="#cb12-586" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-587"><a href="#cb12-587" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb12-588"><a href="#cb12-588" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-589"><a href="#cb12-589" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span></span>
+<span id="cb12-590"><a href="#cb12-590" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.html)</span></span>
+<span id="cb12-591"><a href="#cb12-591" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.html)</span></span>
+<span id="cb12-592"><a href="#cb12-592" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.html)</span></span>
+<span id="cb12-593"><a href="#cb12-593" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.html)</span></span>
+<span id="cb12-594"><a href="#cb12-594" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete sparse-LD/BED workflow on GitHub</span><span class="co">](https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R)</span></span>
+<span id="cb12-595"><a href="#cb12-595" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete annotation workflow on GitHub</span><span class="co">](https://github.com/psoerensen/sblr/blob/master/examples/workflows/annotation_based_models.R)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 
