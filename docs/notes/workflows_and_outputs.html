@@ -156,15 +156,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#workflow-decision-table" id="toc-workflow-decision-table" class="nav-link active" data-scroll-target="#workflow-decision-table"><span class="header-section-number">1</span> Workflow Decision Table</a></li>
   <li><a href="#workflow-scripts-as-executable-architecture-documents" id="toc-workflow-scripts-as-executable-architecture-documents" class="nav-link" data-scroll-target="#workflow-scripts-as-executable-architecture-documents"><span class="header-section-number">2</span> Workflow Scripts as Executable Architecture Documents</a></li>
-  <li><a href="#bed-direct-and-summary-statistics-csr-workflow-index" id="toc-bed-direct-and-summary-statistics-csr-workflow-index" class="nav-link" data-scroll-target="#bed-direct-and-summary-statistics-csr-workflow-index"><span class="header-section-number">3</span> BED-Direct and Summary-Statistics CSR Workflow Index</a></li>
-  <li><a href="#annotation-model-comparison-workflow" id="toc-annotation-model-comparison-workflow" class="nav-link" data-scroll-target="#annotation-model-comparison-workflow"><span class="header-section-number">4</span> Annotation-Model Comparison Workflow</a></li>
-  <li><a href="#mcmc-settings-demonstration-versus-real-analysis" id="toc-mcmc-settings-demonstration-versus-real-analysis" class="nav-link" data-scroll-target="#mcmc-settings-demonstration-versus-real-analysis"><span class="header-section-number">5</span> MCMC Settings: Demonstration Versus Real Analysis</a></li>
-  <li><a href="#fit-object-structure" id="toc-fit-object-structure" class="nav-link" data-scroll-target="#fit-object-structure"><span class="header-section-number">6</span> Fit Object Structure</a></li>
-  <li><a href="#compact-fit-summaries" id="toc-compact-fit-summaries" class="nav-link" data-scroll-target="#compact-fit-summaries"><span class="header-section-number">7</span> Compact Fit Summaries</a></li>
-  <li><a href="#top-marker-summaries" id="toc-top-marker-summaries" class="nav-link" data-scroll-target="#top-marker-summaries"><span class="header-section-number">8</span> Top-Marker Summaries</a></li>
-  <li><a href="#annotation-level-summaries" id="toc-annotation-level-summaries" class="nav-link" data-scroll-target="#annotation-level-summaries"><span class="header-section-number">9</span> Annotation-Level Summaries</a></li>
-  <li><a href="#sbayesrc-style-prior-architecture-diagnostics" id="toc-sbayesrc-style-prior-architecture-diagnostics" class="nav-link" data-scroll-target="#sbayesrc-style-prior-architecture-diagnostics"><span class="header-section-number">10</span> SBayesRC-Style Prior-Architecture Diagnostics</a></li>
-  <li><a href="#convergence-posterior-predictive-checks-and-reproducibility" id="toc-convergence-posterior-predictive-checks-and-reproducibility" class="nav-link" data-scroll-target="#convergence-posterior-predictive-checks-and-reproducibility"><span class="header-section-number">11</span> Convergence, Posterior Predictive Checks, and Reproducibility</a></li>
+  <li><a href="#bed-direct-and-summary-statistics-csr-workflow" id="toc-bed-direct-and-summary-statistics-csr-workflow" class="nav-link" data-scroll-target="#bed-direct-and-summary-statistics-csr-workflow"><span class="header-section-number">3</span> BED-Direct and Summary-Statistics CSR Workflow</a>
+  <ul class="collapse">
+  <li><a href="#prepare-bed-glist-and-phenotype-inputs" id="toc-prepare-bed-glist-and-phenotype-inputs" class="nav-link" data-scroll-target="#prepare-bed-glist-and-phenotype-inputs"><span class="header-section-number">3.1</span> Prepare BED, <code>Glist</code>, and Phenotype Inputs</a></li>
+  <li><a href="#optionally-fit-the-direct-bed-model" id="toc-optionally-fit-the-direct-bed-model" class="nav-link" data-scroll-target="#optionally-fit-the-direct-bed-model"><span class="header-section-number">3.2</span> Optionally Fit the Direct BED Model</a></li>
+  <li><a href="#compute-sufficient-statistics-and-sparse-ld" id="toc-compute-sufficient-statistics-and-sparse-ld" class="nav-link" data-scroll-target="#compute-sufficient-statistics-and-sparse-ld"><span class="header-section-number">3.3</span> Compute Sufficient Statistics and Sparse LD</a></li>
+  <li><a href="#fit-and-compare-the-csr-model" id="toc-fit-and-compare-the-csr-model" class="nav-link" data-scroll-target="#fit-and-compare-the-csr-model"><span class="header-section-number">3.4</span> Fit and Compare the CSR Model</a></li>
+  </ul></li>
+  <li><a href="#annotation-model-comparison-workflow" id="toc-annotation-model-comparison-workflow" class="nav-link" data-scroll-target="#annotation-model-comparison-workflow"><span class="header-section-number">4</span> Annotation-Model Comparison Workflow</a>
+  <ul class="collapse">
+  <li><a href="#simulate-and-inspect-annotation-signal" id="toc-simulate-and-inspect-annotation-signal" class="nav-link" data-scroll-target="#simulate-and-inspect-annotation-signal"><span class="header-section-number">4.1</span> Simulate and Inspect Annotation Signal</a></li>
+  <li><a href="#prepare-shared-csr-inputs-and-align-a" id="toc-prepare-shared-csr-inputs-and-align-a" class="nav-link" data-scroll-target="#prepare-shared-csr-inputs-and-align-a"><span class="header-section-number">4.2</span> Prepare Shared CSR Inputs and Align <code>A</code></a></li>
+  <li><a href="#fit-four-annotation-prior-families" id="toc-fit-four-annotation-prior-families" class="nav-link" data-scroll-target="#fit-four-annotation-prior-families"><span class="header-section-number">4.3</span> Fit Four Annotation Prior Families</a></li>
+  </ul></li>
+  <li><a href="#fit-object-structure" id="toc-fit-object-structure" class="nav-link" data-scroll-target="#fit-object-structure"><span class="header-section-number">5</span> Fit Object Structure</a>
+  <ul class="collapse">
+  <li><a href="#annotation-specific-components" id="toc-annotation-specific-components" class="nav-link" data-scroll-target="#annotation-specific-components"><span class="header-section-number">5.1</span> Annotation-Specific Components</a></li>
+  </ul></li>
+  <li><a href="#compact-reporting" id="toc-compact-reporting" class="nav-link" data-scroll-target="#compact-reporting"><span class="header-section-number">6</span> Compact Reporting</a></li>
+  <li><a href="#pips-and-top-marker-summaries" id="toc-pips-and-top-marker-summaries" class="nav-link" data-scroll-target="#pips-and-top-marker-summaries"><span class="header-section-number">7</span> PIPs and Top-Marker Summaries</a></li>
+  <li><a href="#variance-and-covariance-summaries" id="toc-variance-and-covariance-summaries" class="nav-link" data-scroll-target="#variance-and-covariance-summaries"><span class="header-section-number">8</span> Variance and Covariance Summaries</a></li>
+  <li><a href="#annotation-level-diagnostics" id="toc-annotation-level-diagnostics" class="nav-link" data-scroll-target="#annotation-level-diagnostics"><span class="header-section-number">9</span> Annotation-Level Diagnostics</a>
+  <ul class="collapse">
+  <li><a href="#simulation-truth-and-posterior-summaries" id="toc-simulation-truth-and-posterior-summaries" class="nav-link" data-scroll-target="#simulation-truth-and-posterior-summaries"><span class="header-section-number">9.1</span> Simulation Truth and Posterior Summaries</a></li>
+  <li><a href="#learned-and-group-annotation-fits" id="toc-learned-and-group-annotation-fits" class="nav-link" data-scroll-target="#learned-and-group-annotation-fits"><span class="header-section-number">9.2</span> Learned and Group Annotation Fits</a></li>
+  <li><a href="#sbayesrc-style-prior-architecture-diagnostics" id="toc-sbayesrc-style-prior-architecture-diagnostics" class="nav-link" data-scroll-target="#sbayesrc-style-prior-architecture-diagnostics"><span class="header-section-number">9.3</span> SBayesRC-Style Prior-Architecture Diagnostics</a></li>
+  </ul></li>
+  <li><a href="#demonstration-versus-production-runs" id="toc-demonstration-versus-production-runs" class="nav-link" data-scroll-target="#demonstration-versus-production-runs"><span class="header-section-number">10</span> Demonstration Versus Production Runs</a></li>
+  <li><a href="#recommended-reporting-checklist" id="toc-recommended-reporting-checklist" class="nav-link" data-scroll-target="#recommended-reporting-checklist"><span class="header-section-number">11</span> Recommended Reporting Checklist</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">12</span> Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="workflows_and_outputs.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
@@ -204,76 +223,352 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This note is under active development. Some sections are structured outlines that will be expanded over time.</p>
-</div>
-</div>
-<p>This note will connect model choices to executable workflows and explain compact posterior summaries while retaining full marker-scale outputs in fit objects.</p>
-<!-- Later: use both workflow scripts as coequal executable architecture
-sources. Reuse staged-workflow material from the annotation draft, clearly
-labeling experimental proposals. -->
+<p>The workflow scripts in <code>examples/workflows/</code> connect the model interfaces, data representations, and posterior outputs described elsewhere in these notes. They show the current sequence of package calls, the objects passed between layers, and compact ways to inspect fitted models.</p>
+<p>These scripts are <strong>runnable demonstrations and validation templates</strong>. They are deliberately not automatically lightweight package examples: they may need external PLINK data, a prepared qgg <code>Glist</code>, local output paths, native code, multiple threads, and long MCMC runs. Both <code>docs/</code> and <code>examples/</code> are listed in <code>.Rbuildignore</code>, so they remain available in the GitHub repository and documentation site without becoming part of the installed package build.</p>
+<p>The main scripts are:</p>
+<ul>
+<li><code>examples/workflows/sparse_ld_bed_workflow.R</code>, which connects direct individual-level BED fitting to BED-derived sufficient statistics and disk-backed sparse-LD CSR fitting;</li>
+<li><code>examples/workflows/annotation_based_models.R</code>, which builds on the same CSR foundation to compare four annotation-informed prior structures.</li>
+</ul>
+<p>This note explains how to run those workflows deliberately, how to summarize their returned fit objects, and how to avoid interpreting demonstration output as final inference.</p>
 <section id="workflow-decision-table" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="workflow-decision-table"><span class="header-section-number">1</span> Workflow Decision Table</h2>
-<!-- Later: map data, traits, priors, and estimation choices to workflows. -->
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Question</th>
+<th>Starting data</th>
+<th>Principal workflow or function</th>
+<th>Main output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Fit directly from individual-level PLINK genotypes</td>
+<td>BED-backed <code>Glist</code>, phenotype matrix, aligned marker columns</td>
+<td><code>stblr_bed_marker()</code> in <code>sparse_ld_bed_workflow.R</code></td>
+<td>BED ST-BLR fit</td>
+</tr>
+<tr class="even">
+<td>Prepare reusable summary-statistics inputs from BED</td>
+<td>BED files, phenotypes, marker columns, allele frequencies</td>
+<td><code>bed_xtx_xty()</code> and <code>sparseLD_stream_CSR()</code></td>
+<td>Sufficient statistics and a CSR LD prefix</td>
+</tr>
+<tr class="odd">
+<td>Fit plain ST-BLR from summary statistics and sparse LD</td>
+<td><code>stats</code> and <code>ld_prefix</code></td>
+<td><code>stblr_csr()</code></td>
+<td>CSR ST-BLR fit</td>
+</tr>
+<tr class="even">
+<td>Compare annotation prior families</td>
+<td><code>stats</code>, <code>ld_prefix</code>, aligned annotations or groups</td>
+<td><code>annotation_based_models.R</code></td>
+<td>Fixed, learned, group, and SBayesRC-style fits</td>
+</tr>
+<tr class="odd">
+<td>Check recovery against known truth</td>
+<td>Simulated genotypes/phenotypes and causal markers</td>
+<td><code>mtsim()</code> or <code>mtsim_annotation()</code></td>
+<td>Simulation truth plus fitted-model diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>Choose the workflow from the available data and the intended prior, not from which script is shortest. The model map in <a href="model_overview.html">Model overview</a> separates data representation, trait structure, and prior structure.</p>
 </section>
 <section id="workflow-scripts-as-executable-architecture-documents" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="workflow-scripts-as-executable-architecture-documents"><span class="header-section-number">2</span> Workflow Scripts as Executable Architecture Documents</h2>
-<!-- Later: explain scripts versus conceptual notes, help, and tests. -->
+<p>A workflow script serves several roles at once:</p>
+<ol type="1">
+<li>It demonstrates a complete object handoff across public functions.</li>
+<li>It records marker-order, sample-row, scaling, and LD settings that must remain consistent.</li>
+<li>It provides an integration check that independently developed package layers compose correctly.</li>
+<li>It supplies compact inspection patterns for objects that may contain tens of thousands of marker rows.</li>
+</ol>
+<p>It does <strong>not</strong> replace function help, automated tests, or a study-specific analysis plan. Help pages define individual arguments. Tests should verify small deterministic contracts. Workflow scripts instead show how realistic, potentially expensive pieces are assembled.</p>
+<p>Before running either workflow, replace its local data paths, confirm the selected sample and marker order, choose an LD output prefix that can be written safely, and decide whether the demonstration-scale MCMC settings are appropriate for the immediate purpose.</p>
 </section>
-<section id="bed-direct-and-summary-statistics-csr-workflow-index" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="bed-direct-and-summary-statistics-csr-workflow-index"><span class="header-section-number">3</span> BED-Direct and Summary-Statistics CSR Workflow Index</h2>
-<!-- Later: link rather than duplicate sparse_ld_and_bed_workflows.qmd. -->
+<section id="bed-direct-and-summary-statistics-csr-workflow" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="bed-direct-and-summary-statistics-csr-workflow"><span class="header-section-number">3</span> BED-Direct and Summary-Statistics CSR Workflow</h2>
+<p><code>sparse_ld_bed_workflow.R</code> is the practical bridge between an individual-level BED model and a summary-statistics CSR model. The complete data and alignment contracts are documented in <a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
+<p>Its stages are:</p>
+<pre class="text"><code>BED-backed Glist + phenotypes
+    -&gt; align LD markers with BED columns using cls
+    -&gt; optionally fit stblr_bed_marker()
+    -&gt; compute stats with bed_xtx_xty()
+    -&gt; stream sparse LD with sparseLD_stream_CSR()
+    -&gt; fit stblr_csr()
+    -&gt; compare BED and CSR summaries cautiously</code></pre>
+<section id="prepare-bed-glist-and-phenotype-inputs" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="prepare-bed-glist-and-phenotype-inputs"><span class="header-section-number">3.1</span> Prepare BED, <code>Glist</code>, and Phenotype Inputs</h3>
+<p>The workflow loads a qgg <code>Glist</code>, selects chromosomes and markers, and obtains or simulates a phenotype matrix. <code>mtsim()</code> is useful for integration checks because its returned effects and causal markers provide known truth. In a real analysis, phenotypes and covariate adjustment must instead follow the study’s analysis plan.</p>
+<p>The script maps selected LD-marker identifiers back to BED marker columns:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(cls))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This is a correctness check, not bookkeeping. The same selected markers and order must be used for BED fitting, sufficient statistics, sparse LD, and posterior interpretation.</p>
+</section>
+<section id="optionally-fit-the-direct-bed-model" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="optionally-fit-the-direct-bed-model"><span class="header-section-number">3.2</span> Optionally Fit the Direct BED Model</h3>
+<p><code>stblr_bed_marker()</code> reads marker data from BED files during fitting. It is the direct individual-level comparison path and does not need a separately prepared sparse-LD artifact.</p>
+<p>Use it when individual-level genotypes remain available and direct marker updates are desired. Record the selected rows, <code>cls</code>, scaling choice, prior settings, scheduling controls, seed, and MCMC settings. These choices matter when comparing its output with a CSR fit.</p>
+</section>
+<section id="compute-sufficient-statistics-and-sparse-ld" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="compute-sufficient-statistics-and-sparse-ld"><span class="header-section-number">3.3</span> Compute Sufficient Statistics and Sparse LD</h3>
+<p><code>bed_xtx_xty()</code> computes the marker-trait and phenotype cross-products used by the CSR model. The important returned quantities include:</p>
+<ul>
+<li><code>stats$wy</code>, corresponding to marker-trait cross-products;</li>
+<li><code>stats$ww</code>, containing marker diagonal cross-products;</li>
+<li><code>stats$yy</code>, containing phenotype sums of squares;</li>
+<li>metadata such as marker count, trait count, and sample size when available.</li>
+</ul>
+<p><code>sparseLD_stream_CSR()</code> then writes thresholded sparse LD from the same BED source. Its <code>r2_threshold</code>, distance limits, selected rows, allele frequencies, marker columns, and scaling assumptions should be reported. <code>sparseLD_read_CSR()</code> can inspect the resulting representation, but users should rely on package readers and writers rather than treating the on-disk files as a stable manual file-format API.</p>
+</section>
+<section id="fit-and-compare-the-csr-model" class="level3" data-number="3.4">
+<h3 data-number="3.4" class="anchored" data-anchor-id="fit-and-compare-the-csr-model"><span class="header-section-number">3.4</span> Fit and Compare the CSR Model</h3>
+<p><code>stblr_csr()</code> combines <code>stats</code> with the CSR <code>ld_prefix</code>. A short call is:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">10</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Matched BED and CSR fits should agree qualitatively when marker order, selected rows, genotype scaling, priors, and MCMC settings match. Exact equality is not expected. Sparse-LD thresholding, residual representation, update scheduling, floating-point behavior, and Monte Carlo variation can all produce differences. Compare posterior effects, PIPs, and variance summaries; do not treat equality of individual draws as a validation target.</p>
+</section>
 </section>
 <section id="annotation-model-comparison-workflow" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="annotation-model-comparison-workflow"><span class="header-section-number">4</span> Annotation-Model Comparison Workflow</h2>
-<!-- Later: preserve the four-model sequence from annotation_based_models.R. -->
+<p><code>annotation_based_models.R</code> starts from the same BED-to-CSR preparation path, then compares annotation prior families while holding <code>stats</code>, sparse LD, and marker order fixed.</p>
+<p>Its stages are:</p>
+<pre class="text"><code>mtsim_annotation()
+    -&gt; summarize_annotation_signal()
+    -&gt; bed_xtx_xty()
+    -&gt; sparseLD_stream_CSR()
+    -&gt; align annotation matrix A
+    -&gt; fit fixed, learned, group, and SBayesRC-style CSR models
+    -&gt; compact fit, marker, variance, and annotation summaries</code></pre>
+<section id="simulate-and-inspect-annotation-signal" class="level3" data-number="4.1">
+<h3 data-number="4.1" class="anchored" data-anchor-id="simulate-and-inspect-annotation-signal"><span class="header-section-number">4.1</span> Simulate and Inspect Annotation Signal</h3>
+<p><code>mtsim_annotation()</code> simulates multi-trait phenotypes, marker effects, overlapping annotation memberships, enriched causal-marker sampling, and marker-specific prior values. It is useful because the annotation architecture and causal markers are known.</p>
+<p>Before fitting, <code>summarize_annotation_signal(sim)</code> reports annotation size, causal-marker counts, and causal rates. These are truth-aware simulation diagnostics. They are unavailable in real data, where causal membership is not known.</p>
 </section>
-<section id="mcmc-settings-demonstration-versus-real-analysis" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="mcmc-settings-demonstration-versus-real-analysis"><span class="header-section-number">5</span> MCMC Settings: Demonstration Versus Real Analysis</h2>
-<!-- Later: preserve explicit chain-length and diagnostic cautions. -->
+<section id="prepare-shared-csr-inputs-and-align-a" class="level3" data-number="4.2">
+<h3 data-number="4.2" class="anchored" data-anchor-id="prepare-shared-csr-inputs-and-align-a"><span class="header-section-number">4.2</span> Prepare Shared CSR Inputs and Align <code>A</code></h3>
+<p>The workflow computes sufficient statistics and streams sparse LD exactly as in the plain CSR workflow. It then constructs an (m K) annotation matrix <code>A</code>, where rows are markers and columns are annotations.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The alignment check is essential. Row (i) of <code>A</code> must describe the same marker as row (i) of <code>stats$wy</code>, <code>stats$ww</code>, the sparse-LD rows and columns, and the returned marker-level posterior summaries.</p>
 </section>
-<section id="fit-object-structure" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="fit-object-structure"><span class="header-section-number">6</span> Fit Object Structure</h2>
-<!-- Later: document common and model-specific fit components. -->
+<section id="fit-four-annotation-prior-families" class="level3" data-number="4.3">
+<h3 data-number="4.3" class="anchored" data-anchor-id="fit-four-annotation-prior-families"><span class="header-section-number">4.3</span> Fit Four Annotation Prior Families</h3>
+<p>The script fits:</p>
+<ol type="1">
+<li><code>stblr_csr_prior_annot()</code> with fixed marker-specific inclusion probabilities and variance multipliers;</li>
+<li><code>stblr_csr_learn_annot()</code> with annotation effects learned during fitting;</li>
+<li><code>stblr_csr_group_annot()</code> with mutually exclusive group-level priors;</li>
+<li><code>stblr_csr_sbayesrc_generic()</code> with an <strong>SBayesRC-style annotation-dependent BayesR prior</strong>.</li>
+</ol>
+<p>The fourth model uses annotation-dependent probit stick-breaking probabilities over an exact null and multiple active variance components. It is not an exact reproduction of the published GCTB SBayesRC implementation as exposed by default: <code>sblr</code> uses a CSR sparse-LD likelihood and defaults to <code>gamma = c(0, 0.01, 0.1, 1)</code>. Users who want the published gamma grid can supply:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Matching that grid aligns one part of the prior specification; it does not make the complete implementation identical to GCTB SBayesRC. See <a href="annotation_informed_models.html">Annotation-informed models</a> for the model comparison.</p>
 </section>
-<section id="compact-fit-summaries" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="compact-fit-summaries"><span class="header-section-number">7</span> Compact Fit Summaries</h2>
-<!-- Later: reuse compact_fit_summary() concepts from the annotation workflow. -->
 </section>
-<section id="top-marker-summaries" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="top-marker-summaries"><span class="header-section-number">8</span> Top-Marker Summaries</h2>
-<!-- Later: reuse top_marker_summary() concepts without printing full matrices. -->
+<section id="fit-object-structure" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="fit-object-structure"><span class="header-section-number">5</span> Fit Object Structure</h2>
+<p>The public wrappers format native sampler results into named lists. Always inspect <code>names(fit)</code> and the relevant help page because some components are model-specific or optional.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>bm</code></td>
+<td>Posterior mean marker effects, usually an (m n_t) matrix.</td>
+</tr>
+<tr class="even">
+<td><code>dm</code></td>
+<td>Posterior inclusion probabilities or inclusion summaries, usually aligned with <code>bm</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>b</code></td>
+<td>Current or returned marker-effect state, when returned. It is not the same as <code>bm</code>.</td>
+</tr>
+<tr class="even">
+<td><code>r</code></td>
+<td>Current or returned marker-scale residual state, when returned.</td>
+</tr>
+<tr class="odd">
+<td><code>vbs</code></td>
+<td>MCMC trace of marker-effect variance scale.</td>
+</tr>
+<tr class="even">
+<td><code>vgs</code></td>
+<td>MCMC trace of genetic variance summaries.</td>
+</tr>
+<tr class="odd">
+<td><code>ves</code></td>
+<td>MCMC trace of residual variance summaries.</td>
+</tr>
+<tr class="even">
+<td><code>covb</code></td>
+<td>Posterior marker-effect covariance summary, when returned.</td>
+</tr>
+<tr class="odd">
+<td><code>covg</code></td>
+<td>Posterior genetic covariance summary, when returned.</td>
+</tr>
+<tr class="even">
+<td><code>cove</code></td>
+<td>Posterior residual covariance summary, when returned.</td>
+</tr>
+<tr class="odd">
+<td><code>pi</code></td>
+<td>Final or current inclusion-probability summary, with exact meaning determined by the wrapper.</td>
+</tr>
+<tr class="even">
+<td><code>pim</code></td>
+<td>Posterior mean inclusion-probability summary, when returned.</td>
+</tr>
+<tr class="odd">
+<td><code>input</code></td>
+<td>Resolved model inputs, preprocessing choices, priors, and MCMC settings added by public wrappers.</td>
+</tr>
+</tbody>
+</table>
+<p>Some fits additionally return correlation versions <code>rb</code>, <code>rg</code>, and <code>re</code> when the corresponding covariance matrices are valid. CSR fits may also return <code>vle</code> and <code>vld</code>, separating linkage-equilibrium and LD contributions under the sampler’s definitions.</p>
+<section id="annotation-specific-components" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="annotation-specific-components"><span class="header-section-number">5.1</span> Annotation-Specific Components</h3>
+<ul>
+<li>Learned-annotation fits return <code>eta_pi</code> and <code>eta_vb</code>, summarizing annotation effects on inclusion probabilities and variance multipliers.</li>
+<li>Group fits return <code>group_pi</code>, <code>group_vb_multiplier</code>, <code>group_nincluded</code>, and <code>group_size</code>.</li>
+<li>SBayesRC-style fits return <code>alpha</code>, <code>sigmaSqAlpha</code>, <code>comp_prob</code>, and <code>ncomp</code>. Here <code>alpha</code> contains annotation coefficients for stick-breaking steps, <code>sigmaSqAlpha</code> summarizes their variance parameters, <code>comp_prob</code> contains marker-level posterior component probabilities, and <code>ncomp</code> summarizes numbers of markers assigned to components.</li>
+</ul>
+<p>These components have different dimensions and meanings. Do not compare an <code>eta_pi</code> coefficient directly with an <code>alpha</code> coefficient without accounting for their distinct links and prior structures.</p>
 </section>
-<section id="annotation-level-summaries" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="annotation-level-summaries"><span class="header-section-number">9</span> Annotation-Level Summaries</h2>
-<!-- Later: reuse annotation_model_summary() and summarize_annotation_signal(). -->
 </section>
-<section id="sbayesrc-style-prior-architecture-diagnostics" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="sbayesrc-style-prior-architecture-diagnostics"><span class="header-section-number">10</span> SBayesRC-Style Prior-Architecture Diagnostics</h2>
-<!-- Later: reuse expected-gamma diagnostics and link their derivation. -->
+<section id="compact-reporting" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="compact-reporting"><span class="header-section-number">6</span> Compact Reporting</h2>
+<p>Marker-level matrices can contain tens of thousands or millions of entries. Printing <code>fit$bm</code>, <code>fit$dm</code>, <code>fit$b</code>, a full <code>comp_prob</code>, or the complete fit object floods the console and obscures useful diagnostics. Full objects should remain available for analysis and serialization, while routine reporting should aggregate them deliberately.</p>
+<p>A compact trait-level summary can include:</p>
+<ul>
+<li>number of markers and traits;</li>
+<li>sum of PIPs by trait, <code>colSums(fit$dm)</code>;</li>
+<li>mean absolute posterior effect, <code>colMeans(abs(fit$bm))</code>;</li>
+<li>means and selected quantiles of <code>vbs</code>, <code>vgs</code>, and <code>ves</code>;</li>
+<li>compact diagonal and off-diagonal covariance summaries when present.</li>
+</ul>
+<p>For example:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">trait =</span> <span class="fu">colnames</span>(fit<span class="sc">$</span>dm),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">pip_sum =</span> <span class="fu">colSums</span>(fit<span class="sc">$</span>dm),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_abs_bm =</span> <span class="fu">colMeans</span>(<span class="fu">abs</span>(fit<span class="sc">$</span>bm)),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_vg =</span> <span class="fu">colMeans</span>(fit<span class="sc">$</span>vgs),</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_ve =</span> <span class="fu">colMeans</span>(fit<span class="sc">$</span>ves)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Treat <code>sum(PIP)</code> as an effective posterior number of included markers under the fitted model, not as a known count of causal variants.</p>
 </section>
-<section id="convergence-posterior-predictive-checks-and-reproducibility" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="convergence-posterior-predictive-checks-and-reproducibility"><span class="header-section-number">11</span> Convergence, Posterior Predictive Checks, and Reproducibility</h2>
-<!-- Later: preserve workflow cautions and define minimum reporting needs. -->
+<section id="pips-and-top-marker-summaries" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="pips-and-top-marker-summaries"><span class="header-section-number">7</span> PIPs and Top-Marker Summaries</h2>
+<p>For marker (i) and trait (t), <code>dm[i, t]</code> estimates posterior evidence that the marker is active under the fitted likelihood, prior, and sampler. A useful top-marker table contains marker identifier, trait, PIP, absolute posterior mean effect, and signed posterior mean effect:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(<span class="sc">-</span>fit<span class="sc">$</span>dm[, <span class="dv">1</span>], <span class="sc">-</span><span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>]))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">data.frame</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">marker =</span> <span class="fu">rownames</span>(fit<span class="sc">$</span>dm),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pip =</span> fit<span class="sc">$</span>dm[, <span class="dv">1</span>],</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">abs_bm =</span> <span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>]),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">bm =</span> fit<span class="sc">$</span>bm[, <span class="dv">1</span>]</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)[ord, ], <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Rankings depend on LD, the marker set, priors, phenotype architecture, summary-statistic quality, and MCMC settings. Correlated markers can share posterior evidence, and an annotation-informed prior can change rankings even when the likelihood is unchanged. Top markers are candidates for follow-up, not automatically causal variants.</p>
+<p>When comparing models, report whether the same markers, traits, LD, and MCMC settings were used. Differences in rankings otherwise combine model effects with input differences.</p>
+</section>
+<section id="variance-and-covariance-summaries" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="variance-and-covariance-summaries"><span class="header-section-number">8</span> Variance and Covariance Summaries</h2>
+<p><code>vgs</code> and <code>ves</code> provide iteration-level genetic and residual variance summaries. <code>vbs</code> tracks the active marker-effect variance scale used by the model. Report posterior means together with quantiles or trace diagnostics, not only final values.</p>
+<p>In simulations, compare posterior genetic and residual variance summaries with the generating architecture and requested <code>h2</code>. Do not expect exact recovery from a short chain or finite simulated data. Realized simulated heritability, sparse-LD approximation, prior shrinkage, and Monte Carlo variation all affect the comparison.</p>
+<p>For multiple traits, <code>covb</code>, <code>covg</code>, and <code>cove</code> summarize different covariance targets when returned. Their off-diagonal entries should be interpreted only after confirming that the fitted wrapper actually represents the intended joint model. Parallel single-trait fits do not automatically become a fully joint multi-trait analysis.</p>
+</section>
+<section id="annotation-level-diagnostics" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="annotation-level-diagnostics"><span class="header-section-number">9</span> Annotation-Level Diagnostics</h2>
+<p>Annotation diagnostics answer different questions depending on whether truth is available and how annotation information enters the prior.</p>
+<section id="simulation-truth-and-posterior-summaries" class="level3" data-number="9.1">
+<h3 data-number="9.1" class="anchored" data-anchor-id="simulation-truth-and-posterior-summaries"><span class="header-section-number">9.1</span> Simulation Truth and Posterior Summaries</h3>
+<p>For an <code>mtsim_annotation()</code> result:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summarize_annotation_signal</span>(sim)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summarize_annotation_signal</span>(sim, fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The first call summarizes true annotation sizes and causal enrichment. The second adds annotation-level mean PIP and mean absolute posterior effects for each trait. Comparing these tables helps assess recovery in simulations, but does not establish causal annotation effects in real data.</p>
+</section>
+<section id="learned-and-group-annotation-fits" class="level3" data-number="9.2">
+<h3 data-number="9.2" class="anchored" data-anchor-id="learned-and-group-annotation-fits"><span class="header-section-number">9.2</span> Learned and Group Annotation Fits</h3>
+<p>For learned models, inspect <code>eta_pi</code> and <code>eta_vb</code> together with posterior marker summaries, annotation prevalence, and correlations among annotation columns. Large coefficients can reflect true enrichment, overlap, collinearity, weak regularization, or short-chain instability.</p>
+<p>For group models, report group sizes alongside <code>group_pi</code>, <code>group_vb_multiplier</code>, and <code>group_nincluded</code>. Small groups generally produce less stable group-level summaries.</p>
+</section>
+<section id="sbayesrc-style-prior-architecture-diagnostics" class="level3" data-number="9.3">
+<h3 data-number="9.3" class="anchored" data-anchor-id="sbayesrc-style-prior-architecture-diagnostics"><span class="header-section-number">9.3</span> SBayesRC-Style Prior-Architecture Diagnostics</h3>
+<p>The exported helpers convert SBayesRC-style annotation coefficients into component probabilities and expected gamma multipliers:</p>
+<ul>
+<li><code>sbayesrc_annotation_pi()</code> and <code>sbayesrc_annotation_gamma_mean()</code> summarize individual annotation coefficient rows;</li>
+<li><code>sbayesrc_marker_pi()</code> and <code>sbayesrc_marker_gamma_mean()</code> combine complete marker annotation profiles with <code>alpha</code>.</li>
+</ul>
+<p>Annotation-row summaries are not the same as marker-level predictions when annotations overlap. A compact report can show the annotation-level expected gamma table, <code>summary()</code> of marker expected gamma, and its correlation with PIP by trait. These describe the fitted prior architecture and posterior relationship; they are not proof that an annotation or marker is causal.</p>
+<p>See <a href="technical_annotation_priors.html">Technical annotation priors</a> and <a href="technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a> for the underlying prior structures.</p>
+</section>
+</section>
+<section id="demonstration-versus-production-runs" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="demonstration-versus-production-runs"><span class="header-section-number">10</span> Demonstration Versus Production Runs</h2>
+<p>The workflow scripts use short, single-chain settings to test integration and make iterative development feasible. A successful demonstration run shows that inputs align, native samplers execute, and outputs can be formatted. It does not establish convergence or robust inference.</p>
+<p>Production analyses generally require:</p>
+<ul>
+<li>substantially longer burn-in and retained sampling;</li>
+<li>repeated chains or otherwise defensible convergence assessment;</li>
+<li>trace, mixing, effective-sample-size, and posterior predictive diagnostics;</li>
+<li>sensitivity analysis for prior settings and annotation regularization;</li>
+<li>sensitivity to LD thresholds, LD windows, scaling, and marker selection;</li>
+<li>reproducible seeds, software versions, and input provenance;</li>
+<li>held-out validation or cross-fitting where data-derived priors are reused.</li>
+</ul>
+<p>No universal chain length can be recommended from the current workflows. Required effort depends on marker count, sparsity, LD, prior complexity, annotation collinearity, and the inferential target.</p>
+</section>
+<section id="recommended-reporting-checklist" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="recommended-reporting-checklist"><span class="header-section-number">11</span> Recommended Reporting Checklist</h2>
+<p>For each reported fit, record:</p>
+<ul>
+<li><strong>Data source:</strong> BED source or summary-statistics provenance, selected chromosomes/regions, marker count, and marker-order checks.</li>
+<li><strong>Samples and traits:</strong> sample size <code>n</code>, selected sample rows, number of traits, phenotype preprocessing, and missingness handling.</li>
+<li><strong>LD construction:</strong> source panel, <code>r2_threshold</code>, distance limits, scaling, block settings, and CSR prefix provenance.</li>
+<li><strong>Model and priors:</strong> wrapper name, plain or annotation-informed prior, inclusion and variance-prior settings, annotation preprocessing, group definitions, and gamma grid where relevant.</li>
+<li><strong>MCMC settings:</strong> <code>nit</code>, <code>nburn</code>, <code>nthin</code>, chains, seed, scheduling choices, and thread count.</li>
+<li><strong>Convergence caveat:</strong> diagnostics performed and any limitations caused by short or single-chain runs.</li>
+<li><strong>Marker summaries:</strong> PIP sums, top-marker table, and selected posterior effect summaries without dumping full matrices.</li>
+<li><strong>Variance summaries:</strong> posterior means and uncertainty for genetic, residual, and active marker-effect variance quantities.</li>
+<li><strong>Annotation summaries:</strong> annotation size, enrichment or learned coefficients, group summaries, or SBayesRC-style component diagnostics when relevant.</li>
+<li><strong>Validation and sensitivity:</strong> BED-versus-CSR comparison, simulation truth, held-out prediction, prior sensitivity, and LD-threshold sensitivity as appropriate.</li>
+</ul>
+<p>For annotation-informed analyses, explicitly state that enrichment and posterior prioritization are evidence structures rather than causal proof.</p>
 </section>
 <section id="related-notes-and-sources" class="level2" data-number="12">
 <h2 data-number="12" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">12</span> Related Notes and Sources</h2>
 <ul>
-<li><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
-<li><a href="../notes/annotation_informed_models.html">Annotation-informed models</a></li>
-<li><a href="../../examples/workflows/sparse_ld_bed_workflow.R">Complete sparse-LD/BED workflow</a></li>
-<li><a href="../../examples/workflows/annotation_based_models.R">Complete annotation workflow</a></li>
-<li><a href="../notes/technical_annotation_priors.html">Technical annotation priors</a></li>
-<li><a href="../notes/technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a></li>
+<li><a href="model_overview.html">Model overview</a></li>
+<li><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
+<li><a href="annotation_informed_models.html">Annotation-informed models</a></li>
+<li><a href="technical_annotation_priors.html">Technical annotation priors</a></li>
+<li><a href="technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a></li>
+<li><a href="https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R">Complete sparse-LD/BED workflow on GitHub</a></li>
+<li><a href="https://github.com/psoerensen/sblr/blob/master/examples/workflows/annotation_based_models.R">Complete annotation workflow on GitHub</a></li>
 </ul>
 
 
@@ -732,75 +1027,462 @@ labeling experimental proposals. -->
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Workflows and Outputs"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">status:</span><span class="co"> "Draft"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>This note is under active development. Some sections are structured outlines that will be expanded over time.</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>This note will connect model choices to executable workflows and explain</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>compact posterior summaries while retaining full marker-scale outputs in fit</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>objects.</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: use both workflow scripts as coequal executable architecture</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">sources. Reuse staged-workflow material from the annotation draft, clearly</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">labeling experimental proposals. --&gt;</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## Workflow Decision Table</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: map data, traits, priors, and estimation choices to workflows. --&gt;</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Workflow Scripts as Executable Architecture Documents</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: explain scripts versus conceptual notes, help, and tests. --&gt;</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">## BED-Direct and Summary-Statistics CSR Workflow Index</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: link rather than duplicate sparse_ld_and_bed_workflows.qmd. --&gt;</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Model Comparison Workflow</span></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve the four-model sequence from annotation_based_models.R. --&gt;</span></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="fu">## MCMC Settings: Demonstration Versus Real Analysis</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve explicit chain-length and diagnostic cautions. --&gt;</span></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit Object Structure</span></span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document common and model-specific fit components. --&gt;</span></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="fu">## Compact Fit Summaries</span></span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: reuse compact_fit_summary() concepts from the annotation workflow. --&gt;</span></span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## Top-Marker Summaries</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: reuse top_marker_summary() concepts without printing full matrices. --&gt;</span></span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Level Summaries</span></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: reuse annotation_model_summary() and summarize_annotation_signal(). --&gt;</span></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="fu">## SBayesRC-Style Prior-Architecture Diagnostics</span></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: reuse expected-gamma diagnostics and link their derivation. --&gt;</span></span>
-<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## Convergence, Posterior Predictive Checks, and Reproducibility</span></span>
-<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve workflow cautions and define minimum reporting needs. --&gt;</span></span>
-<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
-<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span></span>
-<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span></span>
-<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete sparse-LD/BED workflow</span><span class="co">](../../examples/workflows/sparse_ld_bed_workflow.R)</span></span>
-<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete annotation workflow</span><span class="co">](../../examples/workflows/annotation_based_models.R)</span></span>
-<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.qmd)</span></span>
-<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.qmd)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Workflows and Outputs"</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>The workflow scripts in <span class="in">`examples/workflows/`</span> connect the model interfaces,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>data representations, and posterior outputs described elsewhere in these</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>notes. They show the current sequence of package calls, the objects passed</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>between layers, and compact ways to inspect fitted models.</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>These scripts are **runnable demonstrations and validation templates**. They</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>are deliberately not automatically lightweight package examples: they may</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>need external PLINK data, a prepared qgg <span class="in">`Glist`</span>, local output paths, native</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>code, multiple threads, and long MCMC runs. Both <span class="in">`docs/`</span> and <span class="in">`examples/`</span> are</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>listed in <span class="in">`.Rbuildignore`</span>, so they remain available in the GitHub repository</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>and documentation site without becoming part of the installed package build.</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>The main scripts are:</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`examples/workflows/sparse_ld_bed_workflow.R`</span>, which connects direct</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  individual-level BED fitting to BED-derived sufficient statistics and</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  disk-backed sparse-LD CSR fitting;</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`examples/workflows/annotation_based_models.R`</span>, which builds on the same CSR</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>  foundation to compare four annotation-informed prior structures.</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>This note explains how to run those workflows deliberately, how to summarize</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>their returned fit objects, and how to avoid interpreting demonstration output</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>as final inference.</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="fu">## Workflow Decision Table</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Question <span class="pp">|</span> Starting data <span class="pp">|</span> Principal workflow or function <span class="pp">|</span> Main output <span class="pp">|</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fit directly from individual-level PLINK genotypes <span class="pp">|</span> BED-backed <span class="in">`Glist`</span>, phenotype matrix, aligned marker columns <span class="pp">|</span> <span class="in">`stblr_bed_marker()`</span> in <span class="in">`sparse_ld_bed_workflow.R`</span> <span class="pp">|</span> BED ST-BLR fit <span class="pp">|</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Prepare reusable summary-statistics inputs from BED <span class="pp">|</span> BED files, phenotypes, marker columns, allele frequencies <span class="pp">|</span> <span class="in">`bed_xtx_xty()`</span> and <span class="in">`sparseLD_stream_CSR()`</span> <span class="pp">|</span> Sufficient statistics and a CSR LD prefix <span class="pp">|</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fit plain ST-BLR from summary statistics and sparse LD <span class="pp">|</span> <span class="in">`stats`</span> and <span class="in">`ld_prefix`</span> <span class="pp">|</span> <span class="in">`stblr_csr()`</span> <span class="pp">|</span> CSR ST-BLR fit <span class="pp">|</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Compare annotation prior families <span class="pp">|</span> <span class="in">`stats`</span>, <span class="in">`ld_prefix`</span>, aligned annotations or groups <span class="pp">|</span> <span class="in">`annotation_based_models.R`</span> <span class="pp">|</span> Fixed, learned, group, and SBayesRC-style fits <span class="pp">|</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Check recovery against known truth <span class="pp">|</span> Simulated genotypes/phenotypes and causal markers <span class="pp">|</span> <span class="in">`mtsim()`</span> or <span class="in">`mtsim_annotation()`</span> <span class="pp">|</span> Simulation truth plus fitted-model diagnostics <span class="pp">|</span></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>Choose the workflow from the available data and the intended prior, not from</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>which script is shortest. The model map in</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Model overview</span><span class="co">](model_overview.html)</span> separates data representation, trait</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>structure, and prior structure.</span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a><span class="fu">## Workflow Scripts as Executable Architecture Documents</span></span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>A workflow script serves several roles at once:</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>It demonstrates a complete object handoff across public functions.</span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>It records marker-order, sample-row, scaling, and LD settings that must</span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>   remain consistent.</span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>It provides an integration check that independently developed package</span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a>   layers compose correctly.</span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>It supplies compact inspection patterns for objects that may contain tens</span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>   of thousands of marker rows.</span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a>It does **not** replace function help, automated tests, or a study-specific</span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>analysis plan. Help pages define individual arguments. Tests should verify</span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>small deterministic contracts. Workflow scripts instead show how realistic,</span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>potentially expensive pieces are assembled.</span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>Before running either workflow, replace its local data paths, confirm the</span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a>selected sample and marker order, choose an LD output prefix that can be</span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a>written safely, and decide whether the demonstration-scale MCMC settings are</span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>appropriate for the immediate purpose.</span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a><span class="fu">## BED-Direct and Summary-Statistics CSR Workflow</span></span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a><span class="in">`sparse_ld_bed_workflow.R`</span> is the practical bridge between an individual-level</span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>BED model and a summary-statistics CSR model. The complete data and alignment</span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a>contracts are documented in</span>
+<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span>.</span>
+<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a>Its stages are:</span>
+<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a><span class="in">BED-backed Glist + phenotypes</span></span>
+<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; align LD markers with BED columns using cls</span></span>
+<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; optionally fit stblr_bed_marker()</span></span>
+<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compute stats with bed_xtx_xty()</span></span>
+<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; stream sparse LD with sparseLD_stream_CSR()</span></span>
+<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; fit stblr_csr()</span></span>
+<span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compare BED and CSR summaries cautiously</span></span>
+<span id="cb10-83"><a href="#cb10-83" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a><span class="fu">### Prepare BED, `Glist`, and Phenotype Inputs</span></span>
+<span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a>The workflow loads a qgg <span class="in">`Glist`</span>, selects chromosomes and markers, and obtains</span>
+<span id="cb10-88"><a href="#cb10-88" aria-hidden="true" tabindex="-1"></a>or simulates a phenotype matrix. <span class="in">`mtsim()`</span> is useful for integration checks</span>
+<span id="cb10-89"><a href="#cb10-89" aria-hidden="true" tabindex="-1"></a>because its returned effects and causal markers provide known truth. In a real</span>
+<span id="cb10-90"><a href="#cb10-90" aria-hidden="true" tabindex="-1"></a>analysis, phenotypes and covariate adjustment must instead follow the study's</span>
+<span id="cb10-91"><a href="#cb10-91" aria-hidden="true" tabindex="-1"></a>analysis plan.</span>
+<span id="cb10-92"><a href="#cb10-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-93"><a href="#cb10-93" aria-hidden="true" tabindex="-1"></a>The script maps selected LD-marker identifiers back to BED marker columns:</span>
+<span id="cb10-94"><a href="#cb10-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-95"><a href="#cb10-95" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-96"><a href="#cb10-96" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span>
+<span id="cb10-97"><a href="#cb10-97" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(cls))</span>
+<span id="cb10-98"><a href="#cb10-98" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-99"><a href="#cb10-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-100"><a href="#cb10-100" aria-hidden="true" tabindex="-1"></a>This is a correctness check, not bookkeeping. The same selected markers and</span>
+<span id="cb10-101"><a href="#cb10-101" aria-hidden="true" tabindex="-1"></a>order must be used for BED fitting, sufficient statistics, sparse LD, and</span>
+<span id="cb10-102"><a href="#cb10-102" aria-hidden="true" tabindex="-1"></a>posterior interpretation.</span>
+<span id="cb10-103"><a href="#cb10-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-104"><a href="#cb10-104" aria-hidden="true" tabindex="-1"></a><span class="fu">### Optionally Fit the Direct BED Model</span></span>
+<span id="cb10-105"><a href="#cb10-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-106"><a href="#cb10-106" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_bed_marker()`</span> reads marker data from BED files during fitting. It is the</span>
+<span id="cb10-107"><a href="#cb10-107" aria-hidden="true" tabindex="-1"></a>direct individual-level comparison path and does not need a separately</span>
+<span id="cb10-108"><a href="#cb10-108" aria-hidden="true" tabindex="-1"></a>prepared sparse-LD artifact.</span>
+<span id="cb10-109"><a href="#cb10-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-110"><a href="#cb10-110" aria-hidden="true" tabindex="-1"></a>Use it when individual-level genotypes remain available and direct marker</span>
+<span id="cb10-111"><a href="#cb10-111" aria-hidden="true" tabindex="-1"></a>updates are desired. Record the selected rows, <span class="in">`cls`</span>, scaling choice, prior</span>
+<span id="cb10-112"><a href="#cb10-112" aria-hidden="true" tabindex="-1"></a>settings, scheduling controls, seed, and MCMC settings. These choices matter</span>
+<span id="cb10-113"><a href="#cb10-113" aria-hidden="true" tabindex="-1"></a>when comparing its output with a CSR fit.</span>
+<span id="cb10-114"><a href="#cb10-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-115"><a href="#cb10-115" aria-hidden="true" tabindex="-1"></a><span class="fu">### Compute Sufficient Statistics and Sparse LD</span></span>
+<span id="cb10-116"><a href="#cb10-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-117"><a href="#cb10-117" aria-hidden="true" tabindex="-1"></a><span class="in">`bed_xtx_xty()`</span> computes the marker-trait and phenotype cross-products used by</span>
+<span id="cb10-118"><a href="#cb10-118" aria-hidden="true" tabindex="-1"></a>the CSR model. The important returned quantities include:</span>
+<span id="cb10-119"><a href="#cb10-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-120"><a href="#cb10-120" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$wy`</span>, corresponding to marker-trait cross-products;</span>
+<span id="cb10-121"><a href="#cb10-121" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$ww`</span>, containing marker diagonal cross-products;</span>
+<span id="cb10-122"><a href="#cb10-122" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>, containing phenotype sums of squares;</span>
+<span id="cb10-123"><a href="#cb10-123" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>metadata such as marker count, trait count, and sample size when available.</span>
+<span id="cb10-124"><a href="#cb10-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-125"><a href="#cb10-125" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span> then writes thresholded sparse LD from the same BED</span>
+<span id="cb10-126"><a href="#cb10-126" aria-hidden="true" tabindex="-1"></a>source. Its <span class="in">`r2_threshold`</span>, distance limits, selected rows, allele</span>
+<span id="cb10-127"><a href="#cb10-127" aria-hidden="true" tabindex="-1"></a>frequencies, marker columns, and scaling assumptions should be reported.</span>
+<span id="cb10-128"><a href="#cb10-128" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_read_CSR()`</span> can inspect the resulting representation, but users</span>
+<span id="cb10-129"><a href="#cb10-129" aria-hidden="true" tabindex="-1"></a>should rely on package readers and writers rather than treating the on-disk</span>
+<span id="cb10-130"><a href="#cb10-130" aria-hidden="true" tabindex="-1"></a>files as a stable manual file-format API.</span>
+<span id="cb10-131"><a href="#cb10-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-132"><a href="#cb10-132" aria-hidden="true" tabindex="-1"></a><span class="fu">### Fit and Compare the CSR Model</span></span>
+<span id="cb10-133"><a href="#cb10-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-134"><a href="#cb10-134" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> combines <span class="in">`stats`</span> with the CSR <span class="in">`ld_prefix`</span>. A short call is:</span>
+<span id="cb10-135"><a href="#cb10-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-136"><a href="#cb10-136" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-137"><a href="#cb10-137" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb10-138"><a href="#cb10-138" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb10-139"><a href="#cb10-139" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb10-140"><a href="#cb10-140" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb10-141"><a href="#cb10-141" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb10-142"><a href="#cb10-142" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span>,</span>
+<span id="cb10-143"><a href="#cb10-143" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">10</span></span>
+<span id="cb10-144"><a href="#cb10-144" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-145"><a href="#cb10-145" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-146"><a href="#cb10-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-147"><a href="#cb10-147" aria-hidden="true" tabindex="-1"></a>Matched BED and CSR fits should agree qualitatively when marker order, selected</span>
+<span id="cb10-148"><a href="#cb10-148" aria-hidden="true" tabindex="-1"></a>rows, genotype scaling, priors, and MCMC settings match. Exact equality is not</span>
+<span id="cb10-149"><a href="#cb10-149" aria-hidden="true" tabindex="-1"></a>expected. Sparse-LD thresholding, residual representation, update scheduling,</span>
+<span id="cb10-150"><a href="#cb10-150" aria-hidden="true" tabindex="-1"></a>floating-point behavior, and Monte Carlo variation can all produce</span>
+<span id="cb10-151"><a href="#cb10-151" aria-hidden="true" tabindex="-1"></a>differences. Compare posterior effects, PIPs, and variance summaries; do not</span>
+<span id="cb10-152"><a href="#cb10-152" aria-hidden="true" tabindex="-1"></a>treat equality of individual draws as a validation target.</span>
+<span id="cb10-153"><a href="#cb10-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-154"><a href="#cb10-154" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Model Comparison Workflow</span></span>
+<span id="cb10-155"><a href="#cb10-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-156"><a href="#cb10-156" aria-hidden="true" tabindex="-1"></a><span class="in">`annotation_based_models.R`</span> starts from the same BED-to-CSR preparation path,</span>
+<span id="cb10-157"><a href="#cb10-157" aria-hidden="true" tabindex="-1"></a>then compares annotation prior families while holding <span class="in">`stats`</span>, sparse LD, and</span>
+<span id="cb10-158"><a href="#cb10-158" aria-hidden="true" tabindex="-1"></a>marker order fixed.</span>
+<span id="cb10-159"><a href="#cb10-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-160"><a href="#cb10-160" aria-hidden="true" tabindex="-1"></a>Its stages are:</span>
+<span id="cb10-161"><a href="#cb10-161" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-162"><a href="#cb10-162" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb10-163"><a href="#cb10-163" aria-hidden="true" tabindex="-1"></a><span class="in">mtsim_annotation()</span></span>
+<span id="cb10-164"><a href="#cb10-164" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; summarize_annotation_signal()</span></span>
+<span id="cb10-165"><a href="#cb10-165" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; bed_xtx_xty()</span></span>
+<span id="cb10-166"><a href="#cb10-166" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; sparseLD_stream_CSR()</span></span>
+<span id="cb10-167"><a href="#cb10-167" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; align annotation matrix A</span></span>
+<span id="cb10-168"><a href="#cb10-168" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; fit fixed, learned, group, and SBayesRC-style CSR models</span></span>
+<span id="cb10-169"><a href="#cb10-169" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compact fit, marker, variance, and annotation summaries</span></span>
+<span id="cb10-170"><a href="#cb10-170" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-171"><a href="#cb10-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-172"><a href="#cb10-172" aria-hidden="true" tabindex="-1"></a><span class="fu">### Simulate and Inspect Annotation Signal</span></span>
+<span id="cb10-173"><a href="#cb10-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-174"><a href="#cb10-174" aria-hidden="true" tabindex="-1"></a><span class="in">`mtsim_annotation()`</span> simulates multi-trait phenotypes, marker effects,</span>
+<span id="cb10-175"><a href="#cb10-175" aria-hidden="true" tabindex="-1"></a>overlapping annotation memberships, enriched causal-marker sampling, and</span>
+<span id="cb10-176"><a href="#cb10-176" aria-hidden="true" tabindex="-1"></a>marker-specific prior values. It is useful because the annotation architecture</span>
+<span id="cb10-177"><a href="#cb10-177" aria-hidden="true" tabindex="-1"></a>and causal markers are known.</span>
+<span id="cb10-178"><a href="#cb10-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-179"><a href="#cb10-179" aria-hidden="true" tabindex="-1"></a>Before fitting, <span class="in">`summarize_annotation_signal(sim)`</span> reports annotation size,</span>
+<span id="cb10-180"><a href="#cb10-180" aria-hidden="true" tabindex="-1"></a>causal-marker counts, and causal rates. These are truth-aware simulation</span>
+<span id="cb10-181"><a href="#cb10-181" aria-hidden="true" tabindex="-1"></a>diagnostics. They are unavailable in real data, where causal membership is not</span>
+<span id="cb10-182"><a href="#cb10-182" aria-hidden="true" tabindex="-1"></a>known.</span>
+<span id="cb10-183"><a href="#cb10-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-184"><a href="#cb10-184" aria-hidden="true" tabindex="-1"></a><span class="fu">### Prepare Shared CSR Inputs and Align `A`</span></span>
+<span id="cb10-185"><a href="#cb10-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-186"><a href="#cb10-186" aria-hidden="true" tabindex="-1"></a>The workflow computes sufficient statistics and streams sparse LD exactly as</span>
+<span id="cb10-187"><a href="#cb10-187" aria-hidden="true" tabindex="-1"></a>in the plain CSR workflow. It then constructs an <span class="sc">\(</span>m \times K<span class="sc">\)</span> annotation</span>
+<span id="cb10-188"><a href="#cb10-188" aria-hidden="true" tabindex="-1"></a>matrix <span class="in">`A`</span>, where rows are markers and columns are annotations.</span>
+<span id="cb10-189"><a href="#cb10-189" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-190"><a href="#cb10-190" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-191"><a href="#cb10-191" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
+<span id="cb10-192"><a href="#cb10-192" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span>
+<span id="cb10-193"><a href="#cb10-193" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-194"><a href="#cb10-194" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-195"><a href="#cb10-195" aria-hidden="true" tabindex="-1"></a>The alignment check is essential. Row <span class="sc">\(</span>i<span class="sc">\)</span> of <span class="in">`A`</span> must describe the same</span>
+<span id="cb10-196"><a href="#cb10-196" aria-hidden="true" tabindex="-1"></a>marker as row <span class="sc">\(</span>i<span class="sc">\)</span> of <span class="in">`stats$wy`</span>, <span class="in">`stats$ww`</span>, the sparse-LD rows and columns,</span>
+<span id="cb10-197"><a href="#cb10-197" aria-hidden="true" tabindex="-1"></a>and the returned marker-level posterior summaries.</span>
+<span id="cb10-198"><a href="#cb10-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-199"><a href="#cb10-199" aria-hidden="true" tabindex="-1"></a><span class="fu">### Fit Four Annotation Prior Families</span></span>
+<span id="cb10-200"><a href="#cb10-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-201"><a href="#cb10-201" aria-hidden="true" tabindex="-1"></a>The script fits:</span>
+<span id="cb10-202"><a href="#cb10-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-203"><a href="#cb10-203" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span><span class="in">`stblr_csr_prior_annot()`</span> with fixed marker-specific inclusion</span>
+<span id="cb10-204"><a href="#cb10-204" aria-hidden="true" tabindex="-1"></a>   probabilities and variance multipliers;</span>
+<span id="cb10-205"><a href="#cb10-205" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span><span class="in">`stblr_csr_learn_annot()`</span> with annotation effects learned during fitting;</span>
+<span id="cb10-206"><a href="#cb10-206" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`stblr_csr_group_annot()`</span> with mutually exclusive group-level priors;</span>
+<span id="cb10-207"><a href="#cb10-207" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span><span class="in">`stblr_csr_sbayesrc_generic()`</span> with an **SBayesRC-style</span>
+<span id="cb10-208"><a href="#cb10-208" aria-hidden="true" tabindex="-1"></a>   annotation-dependent BayesR prior**.</span>
+<span id="cb10-209"><a href="#cb10-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-210"><a href="#cb10-210" aria-hidden="true" tabindex="-1"></a>The fourth model uses annotation-dependent probit stick-breaking probabilities</span>
+<span id="cb10-211"><a href="#cb10-211" aria-hidden="true" tabindex="-1"></a>over an exact null and multiple active variance components. It is not an exact</span>
+<span id="cb10-212"><a href="#cb10-212" aria-hidden="true" tabindex="-1"></a>reproduction of the published GCTB SBayesRC implementation as exposed by</span>
+<span id="cb10-213"><a href="#cb10-213" aria-hidden="true" tabindex="-1"></a>default: <span class="in">`sblr`</span> uses a CSR sparse-LD likelihood and defaults to</span>
+<span id="cb10-214"><a href="#cb10-214" aria-hidden="true" tabindex="-1"></a><span class="in">`gamma = c(0, 0.01, 0.1, 1)`</span>. Users who want the published gamma grid can</span>
+<span id="cb10-215"><a href="#cb10-215" aria-hidden="true" tabindex="-1"></a>supply:</span>
+<span id="cb10-216"><a href="#cb10-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-217"><a href="#cb10-217" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-218"><a href="#cb10-218" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
+<span id="cb10-219"><a href="#cb10-219" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-220"><a href="#cb10-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-221"><a href="#cb10-221" aria-hidden="true" tabindex="-1"></a>Matching that grid aligns one part of the prior specification; it does not</span>
+<span id="cb10-222"><a href="#cb10-222" aria-hidden="true" tabindex="-1"></a>make the complete implementation identical to GCTB SBayesRC. See</span>
+<span id="cb10-223"><a href="#cb10-223" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span> for the model</span>
+<span id="cb10-224"><a href="#cb10-224" aria-hidden="true" tabindex="-1"></a>comparison.</span>
+<span id="cb10-225"><a href="#cb10-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-226"><a href="#cb10-226" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit Object Structure</span></span>
+<span id="cb10-227"><a href="#cb10-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-228"><a href="#cb10-228" aria-hidden="true" tabindex="-1"></a>The public wrappers format native sampler results into named lists. Always</span>
+<span id="cb10-229"><a href="#cb10-229" aria-hidden="true" tabindex="-1"></a>inspect <span class="in">`names(fit)`</span> and the relevant help page because some components are</span>
+<span id="cb10-230"><a href="#cb10-230" aria-hidden="true" tabindex="-1"></a>model-specific or optional.</span>
+<span id="cb10-231"><a href="#cb10-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-232"><a href="#cb10-232" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Component <span class="pp">|</span> Interpretation <span class="pp">|</span></span>
+<span id="cb10-233"><a href="#cb10-233" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb10-234"><a href="#cb10-234" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`bm`</span> <span class="pp">|</span> Posterior mean marker effects, usually an <span class="sc">\(</span>m \times n_t<span class="sc">\)</span> matrix. <span class="pp">|</span></span>
+<span id="cb10-235"><a href="#cb10-235" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`dm`</span> <span class="pp">|</span> Posterior inclusion probabilities or inclusion summaries, usually aligned with <span class="in">`bm`</span>. <span class="pp">|</span></span>
+<span id="cb10-236"><a href="#cb10-236" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`b`</span> <span class="pp">|</span> Current or returned marker-effect state, when returned. It is not the same as <span class="in">`bm`</span>. <span class="pp">|</span></span>
+<span id="cb10-237"><a href="#cb10-237" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`r`</span> <span class="pp">|</span> Current or returned marker-scale residual state, when returned. <span class="pp">|</span></span>
+<span id="cb10-238"><a href="#cb10-238" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`vbs`</span> <span class="pp">|</span> MCMC trace of marker-effect variance scale. <span class="pp">|</span></span>
+<span id="cb10-239"><a href="#cb10-239" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`vgs`</span> <span class="pp">|</span> MCMC trace of genetic variance summaries. <span class="pp">|</span></span>
+<span id="cb10-240"><a href="#cb10-240" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`ves`</span> <span class="pp">|</span> MCMC trace of residual variance summaries. <span class="pp">|</span></span>
+<span id="cb10-241"><a href="#cb10-241" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`covb`</span> <span class="pp">|</span> Posterior marker-effect covariance summary, when returned. <span class="pp">|</span></span>
+<span id="cb10-242"><a href="#cb10-242" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`covg`</span> <span class="pp">|</span> Posterior genetic covariance summary, when returned. <span class="pp">|</span></span>
+<span id="cb10-243"><a href="#cb10-243" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`cove`</span> <span class="pp">|</span> Posterior residual covariance summary, when returned. <span class="pp">|</span></span>
+<span id="cb10-244"><a href="#cb10-244" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`pi`</span> <span class="pp">|</span> Final or current inclusion-probability summary, with exact meaning determined by the wrapper. <span class="pp">|</span></span>
+<span id="cb10-245"><a href="#cb10-245" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`pim`</span> <span class="pp">|</span> Posterior mean inclusion-probability summary, when returned. <span class="pp">|</span></span>
+<span id="cb10-246"><a href="#cb10-246" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`input`</span> <span class="pp">|</span> Resolved model inputs, preprocessing choices, priors, and MCMC settings added by public wrappers. <span class="pp">|</span></span>
+<span id="cb10-247"><a href="#cb10-247" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-248"><a href="#cb10-248" aria-hidden="true" tabindex="-1"></a>Some fits additionally return correlation versions <span class="in">`rb`</span>, <span class="in">`rg`</span>, and <span class="in">`re`</span> when</span>
+<span id="cb10-249"><a href="#cb10-249" aria-hidden="true" tabindex="-1"></a>the corresponding covariance matrices are valid. CSR fits may also return</span>
+<span id="cb10-250"><a href="#cb10-250" aria-hidden="true" tabindex="-1"></a><span class="in">`vle`</span> and <span class="in">`vld`</span>, separating linkage-equilibrium and LD contributions under</span>
+<span id="cb10-251"><a href="#cb10-251" aria-hidden="true" tabindex="-1"></a>the sampler's definitions.</span>
+<span id="cb10-252"><a href="#cb10-252" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-253"><a href="#cb10-253" aria-hidden="true" tabindex="-1"></a><span class="fu">### Annotation-Specific Components</span></span>
+<span id="cb10-254"><a href="#cb10-254" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-255"><a href="#cb10-255" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Learned-annotation fits return <span class="in">`eta_pi`</span> and <span class="in">`eta_vb`</span>, summarizing annotation</span>
+<span id="cb10-256"><a href="#cb10-256" aria-hidden="true" tabindex="-1"></a>  effects on inclusion probabilities and variance multipliers.</span>
+<span id="cb10-257"><a href="#cb10-257" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Group fits return <span class="in">`group_pi`</span>, <span class="in">`group_vb_multiplier`</span>, <span class="in">`group_nincluded`</span>, and</span>
+<span id="cb10-258"><a href="#cb10-258" aria-hidden="true" tabindex="-1"></a>  <span class="in">`group_size`</span>.</span>
+<span id="cb10-259"><a href="#cb10-259" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>SBayesRC-style fits return <span class="in">`alpha`</span>, <span class="in">`sigmaSqAlpha`</span>, <span class="in">`comp_prob`</span>, and</span>
+<span id="cb10-260"><a href="#cb10-260" aria-hidden="true" tabindex="-1"></a>  <span class="in">`ncomp`</span>. Here <span class="in">`alpha`</span> contains annotation coefficients for stick-breaking</span>
+<span id="cb10-261"><a href="#cb10-261" aria-hidden="true" tabindex="-1"></a>  steps, <span class="in">`sigmaSqAlpha`</span> summarizes their variance parameters, <span class="in">`comp_prob`</span></span>
+<span id="cb10-262"><a href="#cb10-262" aria-hidden="true" tabindex="-1"></a>  contains marker-level posterior component probabilities, and <span class="in">`ncomp`</span></span>
+<span id="cb10-263"><a href="#cb10-263" aria-hidden="true" tabindex="-1"></a>  summarizes numbers of markers assigned to components.</span>
+<span id="cb10-264"><a href="#cb10-264" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-265"><a href="#cb10-265" aria-hidden="true" tabindex="-1"></a>These components have different dimensions and meanings. Do not compare an</span>
+<span id="cb10-266"><a href="#cb10-266" aria-hidden="true" tabindex="-1"></a><span class="in">`eta_pi`</span> coefficient directly with an <span class="in">`alpha`</span> coefficient without accounting</span>
+<span id="cb10-267"><a href="#cb10-267" aria-hidden="true" tabindex="-1"></a>for their distinct links and prior structures.</span>
+<span id="cb10-268"><a href="#cb10-268" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-269"><a href="#cb10-269" aria-hidden="true" tabindex="-1"></a><span class="fu">## Compact Reporting</span></span>
+<span id="cb10-270"><a href="#cb10-270" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-271"><a href="#cb10-271" aria-hidden="true" tabindex="-1"></a>Marker-level matrices can contain tens of thousands or millions of entries.</span>
+<span id="cb10-272"><a href="#cb10-272" aria-hidden="true" tabindex="-1"></a>Printing <span class="in">`fit$bm`</span>, <span class="in">`fit$dm`</span>, <span class="in">`fit$b`</span>, a full <span class="in">`comp_prob`</span>, or the complete fit</span>
+<span id="cb10-273"><a href="#cb10-273" aria-hidden="true" tabindex="-1"></a>object floods the console and obscures useful diagnostics. Full objects should</span>
+<span id="cb10-274"><a href="#cb10-274" aria-hidden="true" tabindex="-1"></a>remain available for analysis and serialization, while routine reporting</span>
+<span id="cb10-275"><a href="#cb10-275" aria-hidden="true" tabindex="-1"></a>should aggregate them deliberately.</span>
+<span id="cb10-276"><a href="#cb10-276" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-277"><a href="#cb10-277" aria-hidden="true" tabindex="-1"></a>A compact trait-level summary can include:</span>
+<span id="cb10-278"><a href="#cb10-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-279"><a href="#cb10-279" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>number of markers and traits;</span>
+<span id="cb10-280"><a href="#cb10-280" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sum of PIPs by trait, <span class="in">`colSums(fit$dm)`</span>;</span>
+<span id="cb10-281"><a href="#cb10-281" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>mean absolute posterior effect, <span class="in">`colMeans(abs(fit$bm))`</span>;</span>
+<span id="cb10-282"><a href="#cb10-282" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>means and selected quantiles of <span class="in">`vbs`</span>, <span class="in">`vgs`</span>, and <span class="in">`ves`</span>;</span>
+<span id="cb10-283"><a href="#cb10-283" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>compact diagonal and off-diagonal covariance summaries when present.</span>
+<span id="cb10-284"><a href="#cb10-284" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-285"><a href="#cb10-285" aria-hidden="true" tabindex="-1"></a>For example:</span>
+<span id="cb10-286"><a href="#cb10-286" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-287"><a href="#cb10-287" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-288"><a href="#cb10-288" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb10-289"><a href="#cb10-289" aria-hidden="true" tabindex="-1"></a>  <span class="at">trait =</span> <span class="fu">colnames</span>(fit<span class="sc">$</span>dm),</span>
+<span id="cb10-290"><a href="#cb10-290" aria-hidden="true" tabindex="-1"></a>  <span class="at">pip_sum =</span> <span class="fu">colSums</span>(fit<span class="sc">$</span>dm),</span>
+<span id="cb10-291"><a href="#cb10-291" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_abs_bm =</span> <span class="fu">colMeans</span>(<span class="fu">abs</span>(fit<span class="sc">$</span>bm)),</span>
+<span id="cb10-292"><a href="#cb10-292" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_vg =</span> <span class="fu">colMeans</span>(fit<span class="sc">$</span>vgs),</span>
+<span id="cb10-293"><a href="#cb10-293" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_ve =</span> <span class="fu">colMeans</span>(fit<span class="sc">$</span>ves)</span>
+<span id="cb10-294"><a href="#cb10-294" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-295"><a href="#cb10-295" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-296"><a href="#cb10-296" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-297"><a href="#cb10-297" aria-hidden="true" tabindex="-1"></a>Treat <span class="in">`sum(PIP)`</span> as an effective posterior number of included markers under</span>
+<span id="cb10-298"><a href="#cb10-298" aria-hidden="true" tabindex="-1"></a>the fitted model, not as a known count of causal variants.</span>
+<span id="cb10-299"><a href="#cb10-299" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-300"><a href="#cb10-300" aria-hidden="true" tabindex="-1"></a><span class="fu">## PIPs and Top-Marker Summaries</span></span>
+<span id="cb10-301"><a href="#cb10-301" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-302"><a href="#cb10-302" aria-hidden="true" tabindex="-1"></a>For marker <span class="sc">\(</span>i<span class="sc">\)</span> and trait <span class="sc">\(</span>t<span class="sc">\)</span>, <span class="in">`dm[i, t]`</span> estimates posterior evidence that</span>
+<span id="cb10-303"><a href="#cb10-303" aria-hidden="true" tabindex="-1"></a>the marker is active under the fitted likelihood, prior, and sampler. A useful</span>
+<span id="cb10-304"><a href="#cb10-304" aria-hidden="true" tabindex="-1"></a>top-marker table contains marker identifier, trait, PIP, absolute posterior</span>
+<span id="cb10-305"><a href="#cb10-305" aria-hidden="true" tabindex="-1"></a>mean effect, and signed posterior mean effect:</span>
+<span id="cb10-306"><a href="#cb10-306" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-307"><a href="#cb10-307" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-308"><a href="#cb10-308" aria-hidden="true" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(<span class="sc">-</span>fit<span class="sc">$</span>dm[, <span class="dv">1</span>], <span class="sc">-</span><span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>]))</span>
+<span id="cb10-309"><a href="#cb10-309" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">data.frame</span>(</span>
+<span id="cb10-310"><a href="#cb10-310" aria-hidden="true" tabindex="-1"></a>  <span class="at">marker =</span> <span class="fu">rownames</span>(fit<span class="sc">$</span>dm),</span>
+<span id="cb10-311"><a href="#cb10-311" aria-hidden="true" tabindex="-1"></a>  <span class="at">pip =</span> fit<span class="sc">$</span>dm[, <span class="dv">1</span>],</span>
+<span id="cb10-312"><a href="#cb10-312" aria-hidden="true" tabindex="-1"></a>  <span class="at">abs_bm =</span> <span class="fu">abs</span>(fit<span class="sc">$</span>bm[, <span class="dv">1</span>]),</span>
+<span id="cb10-313"><a href="#cb10-313" aria-hidden="true" tabindex="-1"></a>  <span class="at">bm =</span> fit<span class="sc">$</span>bm[, <span class="dv">1</span>]</span>
+<span id="cb10-314"><a href="#cb10-314" aria-hidden="true" tabindex="-1"></a>)[ord, ], <span class="dv">10</span>)</span>
+<span id="cb10-315"><a href="#cb10-315" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-316"><a href="#cb10-316" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-317"><a href="#cb10-317" aria-hidden="true" tabindex="-1"></a>Rankings depend on LD, the marker set, priors, phenotype architecture,</span>
+<span id="cb10-318"><a href="#cb10-318" aria-hidden="true" tabindex="-1"></a>summary-statistic quality, and MCMC settings. Correlated markers can share</span>
+<span id="cb10-319"><a href="#cb10-319" aria-hidden="true" tabindex="-1"></a>posterior evidence, and an annotation-informed prior can change rankings even</span>
+<span id="cb10-320"><a href="#cb10-320" aria-hidden="true" tabindex="-1"></a>when the likelihood is unchanged. Top markers are candidates for follow-up,</span>
+<span id="cb10-321"><a href="#cb10-321" aria-hidden="true" tabindex="-1"></a>not automatically causal variants.</span>
+<span id="cb10-322"><a href="#cb10-322" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-323"><a href="#cb10-323" aria-hidden="true" tabindex="-1"></a>When comparing models, report whether the same markers, traits, LD, and MCMC</span>
+<span id="cb10-324"><a href="#cb10-324" aria-hidden="true" tabindex="-1"></a>settings were used. Differences in rankings otherwise combine model effects</span>
+<span id="cb10-325"><a href="#cb10-325" aria-hidden="true" tabindex="-1"></a>with input differences.</span>
+<span id="cb10-326"><a href="#cb10-326" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-327"><a href="#cb10-327" aria-hidden="true" tabindex="-1"></a><span class="fu">## Variance and Covariance Summaries</span></span>
+<span id="cb10-328"><a href="#cb10-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-329"><a href="#cb10-329" aria-hidden="true" tabindex="-1"></a><span class="in">`vgs`</span> and <span class="in">`ves`</span> provide iteration-level genetic and residual variance</span>
+<span id="cb10-330"><a href="#cb10-330" aria-hidden="true" tabindex="-1"></a>summaries. <span class="in">`vbs`</span> tracks the active marker-effect variance scale used by the</span>
+<span id="cb10-331"><a href="#cb10-331" aria-hidden="true" tabindex="-1"></a>model. Report posterior means together with quantiles or trace diagnostics,</span>
+<span id="cb10-332"><a href="#cb10-332" aria-hidden="true" tabindex="-1"></a>not only final values.</span>
+<span id="cb10-333"><a href="#cb10-333" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-334"><a href="#cb10-334" aria-hidden="true" tabindex="-1"></a>In simulations, compare posterior genetic and residual variance summaries with</span>
+<span id="cb10-335"><a href="#cb10-335" aria-hidden="true" tabindex="-1"></a>the generating architecture and requested <span class="in">`h2`</span>. Do not expect exact recovery</span>
+<span id="cb10-336"><a href="#cb10-336" aria-hidden="true" tabindex="-1"></a>from a short chain or finite simulated data. Realized simulated heritability,</span>
+<span id="cb10-337"><a href="#cb10-337" aria-hidden="true" tabindex="-1"></a>sparse-LD approximation, prior shrinkage, and Monte Carlo variation all affect</span>
+<span id="cb10-338"><a href="#cb10-338" aria-hidden="true" tabindex="-1"></a>the comparison.</span>
+<span id="cb10-339"><a href="#cb10-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-340"><a href="#cb10-340" aria-hidden="true" tabindex="-1"></a>For multiple traits, <span class="in">`covb`</span>, <span class="in">`covg`</span>, and <span class="in">`cove`</span> summarize different covariance</span>
+<span id="cb10-341"><a href="#cb10-341" aria-hidden="true" tabindex="-1"></a>targets when returned. Their off-diagonal entries should be interpreted only</span>
+<span id="cb10-342"><a href="#cb10-342" aria-hidden="true" tabindex="-1"></a>after confirming that the fitted wrapper actually represents the intended</span>
+<span id="cb10-343"><a href="#cb10-343" aria-hidden="true" tabindex="-1"></a>joint model. Parallel single-trait fits do not automatically become a fully</span>
+<span id="cb10-344"><a href="#cb10-344" aria-hidden="true" tabindex="-1"></a>joint multi-trait analysis.</span>
+<span id="cb10-345"><a href="#cb10-345" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-346"><a href="#cb10-346" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Level Diagnostics</span></span>
+<span id="cb10-347"><a href="#cb10-347" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-348"><a href="#cb10-348" aria-hidden="true" tabindex="-1"></a>Annotation diagnostics answer different questions depending on whether truth</span>
+<span id="cb10-349"><a href="#cb10-349" aria-hidden="true" tabindex="-1"></a>is available and how annotation information enters the prior.</span>
+<span id="cb10-350"><a href="#cb10-350" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-351"><a href="#cb10-351" aria-hidden="true" tabindex="-1"></a><span class="fu">### Simulation Truth and Posterior Summaries</span></span>
+<span id="cb10-352"><a href="#cb10-352" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-353"><a href="#cb10-353" aria-hidden="true" tabindex="-1"></a>For an <span class="in">`mtsim_annotation()`</span> result:</span>
+<span id="cb10-354"><a href="#cb10-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-355"><a href="#cb10-355" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb10-356"><a href="#cb10-356" aria-hidden="true" tabindex="-1"></a><span class="fu">summarize_annotation_signal</span>(sim)</span>
+<span id="cb10-357"><a href="#cb10-357" aria-hidden="true" tabindex="-1"></a><span class="fu">summarize_annotation_signal</span>(sim, fit)</span>
+<span id="cb10-358"><a href="#cb10-358" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-359"><a href="#cb10-359" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-360"><a href="#cb10-360" aria-hidden="true" tabindex="-1"></a>The first call summarizes true annotation sizes and causal enrichment. The</span>
+<span id="cb10-361"><a href="#cb10-361" aria-hidden="true" tabindex="-1"></a>second adds annotation-level mean PIP and mean absolute posterior effects for</span>
+<span id="cb10-362"><a href="#cb10-362" aria-hidden="true" tabindex="-1"></a>each trait. Comparing these tables helps assess recovery in simulations, but</span>
+<span id="cb10-363"><a href="#cb10-363" aria-hidden="true" tabindex="-1"></a>does not establish causal annotation effects in real data.</span>
+<span id="cb10-364"><a href="#cb10-364" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-365"><a href="#cb10-365" aria-hidden="true" tabindex="-1"></a><span class="fu">### Learned and Group Annotation Fits</span></span>
+<span id="cb10-366"><a href="#cb10-366" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-367"><a href="#cb10-367" aria-hidden="true" tabindex="-1"></a>For learned models, inspect <span class="in">`eta_pi`</span> and <span class="in">`eta_vb`</span> together with posterior</span>
+<span id="cb10-368"><a href="#cb10-368" aria-hidden="true" tabindex="-1"></a>marker summaries, annotation prevalence, and correlations among annotation</span>
+<span id="cb10-369"><a href="#cb10-369" aria-hidden="true" tabindex="-1"></a>columns. Large coefficients can reflect true enrichment, overlap,</span>
+<span id="cb10-370"><a href="#cb10-370" aria-hidden="true" tabindex="-1"></a>collinearity, weak regularization, or short-chain instability.</span>
+<span id="cb10-371"><a href="#cb10-371" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-372"><a href="#cb10-372" aria-hidden="true" tabindex="-1"></a>For group models, report group sizes alongside <span class="in">`group_pi`</span>,</span>
+<span id="cb10-373"><a href="#cb10-373" aria-hidden="true" tabindex="-1"></a><span class="in">`group_vb_multiplier`</span>, and <span class="in">`group_nincluded`</span>. Small groups generally produce</span>
+<span id="cb10-374"><a href="#cb10-374" aria-hidden="true" tabindex="-1"></a>less stable group-level summaries.</span>
+<span id="cb10-375"><a href="#cb10-375" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-376"><a href="#cb10-376" aria-hidden="true" tabindex="-1"></a><span class="fu">### SBayesRC-Style Prior-Architecture Diagnostics</span></span>
+<span id="cb10-377"><a href="#cb10-377" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-378"><a href="#cb10-378" aria-hidden="true" tabindex="-1"></a>The exported helpers convert SBayesRC-style annotation coefficients into</span>
+<span id="cb10-379"><a href="#cb10-379" aria-hidden="true" tabindex="-1"></a>component probabilities and expected gamma multipliers:</span>
+<span id="cb10-380"><a href="#cb10-380" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-381"><a href="#cb10-381" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`sbayesrc_annotation_pi()`</span> and <span class="in">`sbayesrc_annotation_gamma_mean()`</span> summarize</span>
+<span id="cb10-382"><a href="#cb10-382" aria-hidden="true" tabindex="-1"></a>  individual annotation coefficient rows;</span>
+<span id="cb10-383"><a href="#cb10-383" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`sbayesrc_marker_pi()`</span> and <span class="in">`sbayesrc_marker_gamma_mean()`</span> combine complete</span>
+<span id="cb10-384"><a href="#cb10-384" aria-hidden="true" tabindex="-1"></a>  marker annotation profiles with <span class="in">`alpha`</span>.</span>
+<span id="cb10-385"><a href="#cb10-385" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-386"><a href="#cb10-386" aria-hidden="true" tabindex="-1"></a>Annotation-row summaries are not the same as marker-level predictions when</span>
+<span id="cb10-387"><a href="#cb10-387" aria-hidden="true" tabindex="-1"></a>annotations overlap. A compact report can show the annotation-level expected</span>
+<span id="cb10-388"><a href="#cb10-388" aria-hidden="true" tabindex="-1"></a>gamma table, <span class="in">`summary()`</span> of marker expected gamma, and its correlation with</span>
+<span id="cb10-389"><a href="#cb10-389" aria-hidden="true" tabindex="-1"></a>PIP by trait. These describe the fitted prior architecture and posterior</span>
+<span id="cb10-390"><a href="#cb10-390" aria-hidden="true" tabindex="-1"></a>relationship; they are not proof that an annotation or marker is causal.</span>
+<span id="cb10-391"><a href="#cb10-391" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-392"><a href="#cb10-392" aria-hidden="true" tabindex="-1"></a>See <span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.html)</span> and</span>
+<span id="cb10-393"><a href="#cb10-393" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.html)</span></span>
+<span id="cb10-394"><a href="#cb10-394" aria-hidden="true" tabindex="-1"></a>for the underlying prior structures.</span>
+<span id="cb10-395"><a href="#cb10-395" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-396"><a href="#cb10-396" aria-hidden="true" tabindex="-1"></a><span class="fu">## Demonstration Versus Production Runs</span></span>
+<span id="cb10-397"><a href="#cb10-397" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-398"><a href="#cb10-398" aria-hidden="true" tabindex="-1"></a>The workflow scripts use short, single-chain settings to test integration and</span>
+<span id="cb10-399"><a href="#cb10-399" aria-hidden="true" tabindex="-1"></a>make iterative development feasible. A successful demonstration run shows</span>
+<span id="cb10-400"><a href="#cb10-400" aria-hidden="true" tabindex="-1"></a>that inputs align, native samplers execute, and outputs can be formatted. It</span>
+<span id="cb10-401"><a href="#cb10-401" aria-hidden="true" tabindex="-1"></a>does not establish convergence or robust inference.</span>
+<span id="cb10-402"><a href="#cb10-402" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-403"><a href="#cb10-403" aria-hidden="true" tabindex="-1"></a>Production analyses generally require:</span>
+<span id="cb10-404"><a href="#cb10-404" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-405"><a href="#cb10-405" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>substantially longer burn-in and retained sampling;</span>
+<span id="cb10-406"><a href="#cb10-406" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>repeated chains or otherwise defensible convergence assessment;</span>
+<span id="cb10-407"><a href="#cb10-407" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>trace, mixing, effective-sample-size, and posterior predictive diagnostics;</span>
+<span id="cb10-408"><a href="#cb10-408" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sensitivity analysis for prior settings and annotation regularization;</span>
+<span id="cb10-409"><a href="#cb10-409" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sensitivity to LD thresholds, LD windows, scaling, and marker selection;</span>
+<span id="cb10-410"><a href="#cb10-410" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>reproducible seeds, software versions, and input provenance;</span>
+<span id="cb10-411"><a href="#cb10-411" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>held-out validation or cross-fitting where data-derived priors are reused.</span>
+<span id="cb10-412"><a href="#cb10-412" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-413"><a href="#cb10-413" aria-hidden="true" tabindex="-1"></a>No universal chain length can be recommended from the current workflows.</span>
+<span id="cb10-414"><a href="#cb10-414" aria-hidden="true" tabindex="-1"></a>Required effort depends on marker count, sparsity, LD, prior complexity,</span>
+<span id="cb10-415"><a href="#cb10-415" aria-hidden="true" tabindex="-1"></a>annotation collinearity, and the inferential target.</span>
+<span id="cb10-416"><a href="#cb10-416" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-417"><a href="#cb10-417" aria-hidden="true" tabindex="-1"></a><span class="fu">## Recommended Reporting Checklist</span></span>
+<span id="cb10-418"><a href="#cb10-418" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-419"><a href="#cb10-419" aria-hidden="true" tabindex="-1"></a>For each reported fit, record:</span>
+<span id="cb10-420"><a href="#cb10-420" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-421"><a href="#cb10-421" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Data source:** BED source or summary-statistics provenance, selected</span>
+<span id="cb10-422"><a href="#cb10-422" aria-hidden="true" tabindex="-1"></a>  chromosomes/regions, marker count, and marker-order checks.</span>
+<span id="cb10-423"><a href="#cb10-423" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Samples and traits:** sample size <span class="in">`n`</span>, selected sample rows, number of</span>
+<span id="cb10-424"><a href="#cb10-424" aria-hidden="true" tabindex="-1"></a>  traits, phenotype preprocessing, and missingness handling.</span>
+<span id="cb10-425"><a href="#cb10-425" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LD construction:** source panel, <span class="in">`r2_threshold`</span>, distance limits, scaling,</span>
+<span id="cb10-426"><a href="#cb10-426" aria-hidden="true" tabindex="-1"></a>  block settings, and CSR prefix provenance.</span>
+<span id="cb10-427"><a href="#cb10-427" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Model and priors:** wrapper name, plain or annotation-informed prior,</span>
+<span id="cb10-428"><a href="#cb10-428" aria-hidden="true" tabindex="-1"></a>  inclusion and variance-prior settings, annotation preprocessing, group</span>
+<span id="cb10-429"><a href="#cb10-429" aria-hidden="true" tabindex="-1"></a>  definitions, and gamma grid where relevant.</span>
+<span id="cb10-430"><a href="#cb10-430" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**MCMC settings:** <span class="in">`nit`</span>, <span class="in">`nburn`</span>, <span class="in">`nthin`</span>, chains, seed, scheduling choices,</span>
+<span id="cb10-431"><a href="#cb10-431" aria-hidden="true" tabindex="-1"></a>  and thread count.</span>
+<span id="cb10-432"><a href="#cb10-432" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Convergence caveat:** diagnostics performed and any limitations caused by</span>
+<span id="cb10-433"><a href="#cb10-433" aria-hidden="true" tabindex="-1"></a>  short or single-chain runs.</span>
+<span id="cb10-434"><a href="#cb10-434" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Marker summaries:** PIP sums, top-marker table, and selected posterior</span>
+<span id="cb10-435"><a href="#cb10-435" aria-hidden="true" tabindex="-1"></a>  effect summaries without dumping full matrices.</span>
+<span id="cb10-436"><a href="#cb10-436" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Variance summaries:** posterior means and uncertainty for genetic,</span>
+<span id="cb10-437"><a href="#cb10-437" aria-hidden="true" tabindex="-1"></a>  residual, and active marker-effect variance quantities.</span>
+<span id="cb10-438"><a href="#cb10-438" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Annotation summaries:** annotation size, enrichment or learned</span>
+<span id="cb10-439"><a href="#cb10-439" aria-hidden="true" tabindex="-1"></a>  coefficients, group summaries, or SBayesRC-style component diagnostics when</span>
+<span id="cb10-440"><a href="#cb10-440" aria-hidden="true" tabindex="-1"></a>  relevant.</span>
+<span id="cb10-441"><a href="#cb10-441" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Validation and sensitivity:** BED-versus-CSR comparison, simulation truth,</span>
+<span id="cb10-442"><a href="#cb10-442" aria-hidden="true" tabindex="-1"></a>  held-out prediction, prior sensitivity, and LD-threshold sensitivity as</span>
+<span id="cb10-443"><a href="#cb10-443" aria-hidden="true" tabindex="-1"></a>  appropriate.</span>
+<span id="cb10-444"><a href="#cb10-444" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-445"><a href="#cb10-445" aria-hidden="true" tabindex="-1"></a>For annotation-informed analyses, explicitly state that enrichment and</span>
+<span id="cb10-446"><a href="#cb10-446" aria-hidden="true" tabindex="-1"></a>posterior prioritization are evidence structures rather than causal proof.</span>
+<span id="cb10-447"><a href="#cb10-447" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-448"><a href="#cb10-448" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb10-449"><a href="#cb10-449" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-450"><a href="#cb10-450" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Model overview</span><span class="co">](model_overview.html)</span></span>
+<span id="cb10-451"><a href="#cb10-451" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span></span>
+<span id="cb10-452"><a href="#cb10-452" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span></span>
+<span id="cb10-453"><a href="#cb10-453" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.html)</span></span>
+<span id="cb10-454"><a href="#cb10-454" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.html)</span></span>
+<span id="cb10-455"><a href="#cb10-455" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete sparse-LD/BED workflow on GitHub</span><span class="co">](https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R)</span></span>
+<span id="cb10-456"><a href="#cb10-456" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete annotation workflow on GitHub</span><span class="co">](https://github.com/psoerensen/sblr/blob/master/examples/workflows/annotation_based_models.R)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 
