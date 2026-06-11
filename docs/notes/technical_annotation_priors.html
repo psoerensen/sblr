@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Technical Appendix: Annotation Priors</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Technical Appendix: Annotation Priors</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#annotation-level-posterior-summaries-and-overlap"
+id="toc-annotation-level-posterior-summaries-and-overlap">Annotation-Level
+Posterior Summaries and Overlap</a></li>
+<li><a href="#pip-enrichment-and-variance-attribution"
+id="toc-pip-enrichment-and-variance-attribution">PIP Enrichment and
+Variance Attribution</a></li>
+<li><a href="#empirical-bayes-inclusion-and-variance-priors"
+id="toc-empirical-bayes-inclusion-and-variance-priors">Empirical-Bayes
+Inclusion and Variance Priors</a></li>
+<li><a href="#marker-specific-prior-scale-construction"
+id="toc-marker-specific-prior-scale-construction">Marker-Specific Prior
+Scale Construction</a></li>
+<li><a
+href="#full-stblr-marker-update-derivation-with-marker-specific-priors"
+id="toc-full-stblr-marker-update-derivation-with-marker-specific-priors">Full
+STBLR Marker-Update Derivation With Marker-Specific Priors</a></li>
+<li><a
+href="#annotation-specific-mtblr-covariance-and-sharing-model-priors"
+id="toc-annotation-specific-mtblr-covariance-and-sharing-model-priors">Annotation-Specific
+MTBLR Covariance and Sharing-Model Priors</a></li>
+<li><a href="#annotation-level-stblrmtblr-as-a-prior-learning-stage"
+id="toc-annotation-level-stblrmtblr-as-a-prior-learning-stage">Annotation-Level
+STBLR/MTBLR as a Prior-Learning Stage</a></li>
+<li><a href="#direct-hierarchical-annotation-models"
+id="toc-direct-hierarchical-annotation-models">Direct Hierarchical
+Annotation Models</a></li>
+<li><a href="#fixed-versus-jointly-updated-annotation-coefficients"
+id="toc-fixed-versus-jointly-updated-annotation-coefficients">Fixed
+Versus Jointly Updated Annotation Coefficients</a></li>
+<li><a href="#proposed-c-changes-and-sparse-annotation-representation"
+id="toc-proposed-c-changes-and-sparse-annotation-representation">Proposed
+C++ Changes and Sparse Annotation Representation</a></li>
+<li><a href="#centering-shrinkage-caps-cross-fitting-and-uncertainty"
+id="toc-centering-shrinkage-caps-cross-fitting-and-uncertainty">Centering,
+Shrinkage, Caps, Cross-Fitting, and Uncertainty</a></li>
+<li><a href="#warm-started-regional-mtblr"
+id="toc-warm-started-regional-mtblr">Warm-Started Regional
+MTBLR</a></li>
+<li><a href="#related-notes-and-sources"
+id="toc-related-notes-and-sources">Related Notes and Sources</a></li>
+</ul>
+</nav>
+<p>This appendix will preserve the detailed derivations,
+implementations, uncertainty considerations, and proposed extensions for
+annotation-informed STBLR and MTBLR priors.</p>
+<!-- Primary source: drafts/annotation_informed_priors_stblr_mtblr.qmd.
+Migrate all mapped equations, R implementations, C++ sketches, assumptions,
+and cautions except SBayesRC-specific material, which has its own appendix. -->
+<h2
+id="annotation-level-posterior-summaries-and-overlap">Annotation-Level
+Posterior Summaries and Overlap</h2>
+<!-- Later: migrate set summaries, overlap handling, and implementations. -->
+<h2 id="pip-enrichment-and-variance-attribution">PIP Enrichment and
+Variance Attribution</h2>
+<!-- Later: preserve full enrichment and attribution derivations. -->
+<h2 id="empirical-bayes-inclusion-and-variance-priors">Empirical-Bayes
+Inclusion and Variance Priors</h2>
+<!-- Later: migrate staged prior-learning equations and uncertainty caveats. -->
+<h2 id="marker-specific-prior-scale-construction">Marker-Specific Prior
+Scale Construction</h2>
+<!-- Later: preserve overlapping-annotation scale construction. -->
+<h2
+id="full-stblr-marker-update-derivation-with-marker-specific-priors">Full
+STBLR Marker-Update Derivation With Marker-Specific Priors</h2>
+<!-- Later: migrate the complete derivation and implementation sketch. -->
+<h2
+id="annotation-specific-mtblr-covariance-and-sharing-model-priors">Annotation-Specific
+MTBLR Covariance and Sharing-Model Priors</h2>
+<!-- Later: preserve all MTBLR prior equations and R implementations. -->
+<h2
+id="annotation-level-stblrmtblr-as-a-prior-learning-stage">Annotation-Level
+STBLR/MTBLR as a Prior-Learning Stage</h2>
+<!-- Later: migrate empirical-Bayes annotation-level model material. -->
+<h2 id="direct-hierarchical-annotation-models">Direct Hierarchical
+Annotation Models</h2>
+<!-- Later: preserve direct-model definitions and hierarchical interpretation. -->
+<h2 id="fixed-versus-jointly-updated-annotation-coefficients">Fixed
+Versus Jointly Updated Annotation Coefficients</h2>
+<!-- Later: preserve fixed and sampling-update alternatives. -->
+<h2
+id="proposed-c-changes-and-sparse-annotation-representation">Proposed
+C++ Changes and Sparse Annotation Representation</h2>
+<!-- Later: retain design sketches, clearly labeled as proposed. -->
+<h2
+id="centering-shrinkage-caps-cross-fitting-and-uncertainty">Centering,
+Shrinkage, Caps, Cross-Fitting, and Uncertainty</h2>
+<!-- Later: preserve all regularization and overfitting cautions. -->
+<h2 id="warm-started-regional-mtblr">Warm-Started Regional MTBLR</h2>
+<!-- Later: retain as proposed/experimental unless a stable wrapper exists. -->
+<h2 id="related-notes-and-sources">Related Notes and Sources</h2>
+<ul>
+<li><a href="annotation_informed_models.html">Annotation-informed
+models</a></li>
+<li><a href="multi_trait_models.html">Multi-trait models</a></li>
+<li><a href="workflows_and_outputs.html">Workflows and outputs</a></li>
+<li><a href="technical_sbayesrc_annotations.html">Technical SBayesRC
+annotations</a></li>
+<li><a href="drafts/annotation_informed_priors_stblr_mtblr.html">Archived
+annotation-prior draft</a></li>
+</ul>
+</body>
+</html>

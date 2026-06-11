@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>sblr_theory</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+</head>
+<body>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a
+href="#theory-constructing-cross-trait-summary-statistic-matrices-ssy-and-nmat"
+id="toc-theory-constructing-cross-trait-summary-statistic-matrices-ssy-and-nmat">Theory:
+Constructing Cross-Trait Summary-Statistic Matrices (SSY and Nmat)</a>
+<ul>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
+</ul></li>
+<li><a href="#phenotypic-variance-from-summary-statistics"
+id="toc-phenotypic-variance-from-summary-statistics">Phenotypic Variance
+From Summary Statistics</a></li>
+<li><a href="#phenotypic-covariance-from-correlation-information"
+id="toc-phenotypic-covariance-from-correlation-information">Phenotypic
+Covariance From Correlation Information</a></li>
+<li><a href="#the-sample-overlap-matrix-n"
+id="toc-the-sample-overlap-matrix-n">The Sample-Overlap Matrix (N)</a>
+<ul>
+<li><a href="#full-overlap-assumption"
+id="toc-full-overlap-assumption">Full-overlap assumption</a></li>
+<li><a href="#fractional-overlap-assumption"
+id="toc-fractional-overlap-assumption">Fractional-overlap
+assumption</a></li>
+</ul></li>
+<li><a href="#reconstructing-the-cross-trait-ssy-matrix"
+id="toc-reconstructing-the-cross-trait-ssy-matrix">Reconstructing the
+Cross-Trait SSY Matrix</a></li>
+<li><a href="#why-ssy-and-nmat-are-needed-in-multivariate-blr"
+id="toc-why-ssy-and-nmat-are-needed-in-multivariate-blr">Why SSY and
+Nmat Are Needed in Multivariate BLR</a></li>
+<li><a href="#summary" id="toc-summary">Summary</a></li>
+<li><a href="#deriving-ssy-from-first-principles"
+id="toc-deriving-ssy-from-first-principles">5.1 Deriving SSY from first
+principles</a></li>
+</ul>
+</nav>
+<h2
+id="theory-constructing-cross-trait-summary-statistic-matrices-ssy-and-nmat">Theory:
+Constructing Cross-Trait Summary-Statistic Matrices (SSY and Nmat)</h2>
+<h3 id="overview">Overview</h3>
+<p>In multivariate Bayesian linear regression using <em>summary
+statistics</em>, the likelihood depends on cross-trait quantities of the
+form</p>
+<p><span class="math display">\[
+\mathrm{SSY}_{t_1,t_2}
+\;=\;
+\sum_{i=1}^{N_{t_1,t_2}}
+y_{i t_1} \, y_{i t_2},
+\]</span></p>
+<p>where (y_{i t}) denotes the phenotype of individual (i) for trait
+(t), and (N_{t_1,t_2}) is the number of individuals jointly observed for
+traits (t_1) and (t_2).<br />
+In the univariate case this reduces to the usual sum of squares (_t =
+<em>i y</em>{it}^2), but in the multivariate case the full matrix</p>
+<p><span class="math display">\[
+\mathrm{SSY} = \bigl[\mathrm{SSY}_{t_1,t_2}\bigr]_{t_1,t_2=1}^{n_t}
+\]</span></p>
+<p>is required to estimate or sample from a <em>residual covariance
+matrix</em> (E) or its inverse.</p>
+<p>When individual-level data are unavailable, we must reconstruct or
+approximate SSY and the effective sample-overlap matrix (N) from summary
+statistics, phenotypic variances, and (estimated or assumed) phenotypic
+correlations. This section describes the statistical foundations of
+these reconstructed matrices and how the helper functions
+<code>build_SSY_full_overlap()</code>, <code>build_Nmat_full()</code>,
+and <code>build_Nmat_frac()</code> implement them.</p>
+<hr />
+<h2 id="phenotypic-variance-from-summary-statistics">Phenotypic Variance
+From Summary Statistics</h2>
+<p>For trait (t), let</p>
+<ul>
+<li>(yy_t = <em>i y</em>{it}^2) (the univariate summary statistic),</li>
+<li>(n_t) be the number of individuals with observations for trait
+(t).</li>
+</ul>
+<p>The empirical phenotypic variance is approximated by</p>
+<p><span class="math display">\[
+\widehat{\mathrm{Var}}(y_t)
+\approx
+\frac{yy_t}{n_t}.
+\]</span></p>
+<p>This is valid when phenotypes have been centered (or approximately
+centered), a standard preprocessing step in GWAS pipelines.</p>
+<p>We collect these into a diagonal variance vector:</p>
+<p><span class="math display">\[
+\hat{\sigma}^2_y = \left( \frac{yy_t}{n_t} \right)_{t=1}^{n_t}.
+\]</span></p>
+<hr />
+<h2 id="phenotypic-covariance-from-correlation-information">Phenotypic
+Covariance From Correlation Information</h2>
+<p>If we know (or estimate) the phenotypic correlation matrix</p>
+<p><span class="math display">\[
+R_y = \bigl[r_{t_1,t_2}\bigr],
+\]</span></p>
+<p>then the corresponding phenotypic covariance matrix is</p>
+<p><span class="math display">\[
+\widehat{\mathrm{Cov}}(y)
+=
+\bigl[ r_{t_1,t_2}
+      \,\sqrt{\widehat{\mathrm{Var}}(y_{t_1})
+              \widehat{\mathrm{Var}}(y_{t_2})}
+\bigr].
+\]</span></p>
+<p>This step is essential: correlation matrices contain
+<em>standardized</em> information, and we rescale them back to
+covariance units using the variance estimates derived from summary
+statistics.</p>
+<hr />
+<h2 id="the-sample-overlap-matrix-n">The Sample-Overlap Matrix (N)</h2>
+<p>For two traits (t_1) and (t_2), define</p>
+<p><span class="math display">\[
+N_{t_1,t_2}
+=
+\text{number of individuals observed for both traits}.
+\]</span></p>
+<h3 id="full-overlap-assumption">Full-overlap assumption</h3>
+<p>When the two traits originate from the same biobank or cohort, the
+overlap is often close to the size of the <em>smaller</em> sample:</p>
+<p><span class="math display">\[
+N^{\text{full}}_{t_1,t_2} = \min(n_{t_1}, n_{t_2}).
+\]</span></p>
+<p>This defines the function <code>build_Nmat_full()</code>.</p>
+<h3 id="fractional-overlap-assumption">Fractional-overlap
+assumption</h3>
+<p>In meta-analysis or multi-cohort settings, sample overlap may be
+<em>partial</em>. We then model</p>
+<p><span class="math display">\[
+N^{\text{frac}}_{t_1,t_2}
+=
+p_{t_1,t_2} \,\min(n_{t_1}, n_{t_2}),
+\]</span></p>
+<p>where (p_{t_1,t_2} ) is a user-supplied overlap proportion. This
+defines <code>build_Nmat_frac()</code>.</p>
+<p>The diagonal entries satisfy (N_{t,t} = n_t).</p>
+<hr />
+<h2 id="reconstructing-the-cross-trait-ssy-matrix">Reconstructing the
+Cross-Trait SSY Matrix</h2>
+<p>The cross-product between two traits is defined as</p>
+<p><span class="math display">\[
+\mathrm{SSY}_{t_1,t_2}
+=
+\sum_{i=1}^{N_{t_1,t_2}}
+y_{i t_1} \, y_{i t_2}.
+\]</span></p>
+<p>Under the assumption of independence across individuals and using the
+covariance identity</p>
+<p><span class="math display">\[
+\mathbb{E}[y_{t_1} y_{t_2}]
+=
+\mathrm{Cov}(y_{t_1},y_{t_2}),
+\]</span></p>
+<p>we obtain the summary-statistic approximation</p>
+<p><span class="math display">\[
+\mathrm{SSY}_{t_1,t_2}
+\;\approx\;
+N_{t_1,t_2}
+\cdot
+\widehat{\mathrm{Cov}}(y_{t_1}, y_{t_2}).
+\]</span></p>
+<p>This is the key identity used by
+<code>build_SSY_full_overlap()</code>:</p>
+<ul>
+<li>it constructs the covariance matrix using (R_y) and the variance
+estimates,</li>
+<li>multiplies by the appropriate overlap counts (N_{t_1,t_2}),</li>
+<li>and forces the diagonals to match the observed univariate summary
+statistics: (_{t,t} = yy_t).</li>
+</ul>
+<p>Thus, the reconstructed SSY matrix is:</p>
+<p><span class="math display">\[
+\widehat{\mathrm{SSY}}
+=
+N \odot \widehat{\mathrm{Cov}}(y),
+\]</span></p>
+<p>where () denotes elementwise multiplication.</p>
+<hr />
+<h2 id="why-ssy-and-nmat-are-needed-in-multivariate-blr">Why SSY and
+Nmat Are Needed in Multivariate BLR</h2>
+<p>In a multivariate Bayesian linear regression model</p>
+<p><span class="math display">\[
+y = Xb + e,
+\quad
+e \sim \mathcal{N}(0, E \otimes I),
+\]</span></p>
+<p>the full residual covariance sampler for (E) requires access to the
+cross-trait quantities</p>
+<p><span class="math display">\[
+\sum_i e_{i t_1} e_{i t_2},
+\]</span></p>
+<p>which, after substituting (e = y - Xb), depend on the observed SSY
+matrix, the cross-products involving (X), and the current posterior draw
+of (b).</p>
+<p>When individual-level data are unavailable, the only way to compute
+these cross-trait sums is through a reconstruction of SSY and Nmat from
+summary statistics.<br />
+Without these matrices, the sampler must be restricted to
+<em>diagonal</em> residual variances (the usual summary-statistic
+assumption).</p>
+<p>The functions provided here therefore enable <em>full multivariate
+residual variance estimation</em> in summary-statistic MTBLR when a
+phenotypic correlation matrix or sample-overlap information is
+available.</p>
+<hr />
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><code>build_Nmat_full()</code> constructs a full-overlap
+sample-overlap matrix<br />
+(N_{t_1,t_2} = (n_{t_1},n_{t_2})).</p></li>
+<li><p><code>build_Nmat_frac()</code> generalizes this using overlap
+fractions<br />
+(N_{t_1,t_2} = p_{t_1,t_2}(n_{t_1},n_{t_2})).</p></li>
+<li><p><code>build_SSY_full_overlap()</code> combines variances,
+phenotypic correlations, and overlap counts to reconstruct:</p>
+<p><span class="math display">\[
+\widehat{\mathrm{SSY}} = N \odot \widehat{\mathrm{Cov}}(y).
+\]</span></p></li>
+<li><p>These matrices provide the necessary inputs for a full sampler of
+the residual covariance matrix (E) when only summary statistics are
+available.</p></li>
+</ul>
+<h2 id="deriving-ssy-from-first-principles">5.1 Deriving SSY from first
+principles</h2>
+<p>Let (Y_t) be an (n_t)-dimensional vector of observations for trait
+(t).<br />
+If samples overlap partially, define the set of shared individuals:</p>
+<p><span class="math display">\[
+\mathcal{I}_{ts} = \text{indices of individuals with both }y_t\text{ and
+}y_s.
+\]</span></p>
+<p>Then:</p>
+<p><span class="math display">\[
+\mathrm{SSY}_{ts}
+=
+\sum_{i \in \mathcal{I}_{ts}} y_{ti} y_{si}.
+\]</span></p>
+<p>If we assume:</p>
+<ol type="1">
+<li><p>random missingness independent of trait values, and<br />
+</p></li>
+<li><p>covariance structure homogeneous across individuals, i.e.</p>
+<p><span class="math display">\[
+\mathrm{Cov}(y_t, y_s) = \sigma_{ts}
+\]</span></p></li>
+</ol>
+<p>then the expectation becomes:</p>
+<p><span class="math display">\[
+\mathbb{E}[\mathrm{SSY}_{ts}]
+  = |\mathcal{I}_{ts}| \, \sigma_{ts}.
+\]</span></p>
+<p>If we approximate the overlap size as:</p>
+<p><span class="math display">\[
+|\mathcal{I}_{ts}| \approx N_{ts},
+\]</span></p>
+<p>then:</p>
+<p><span class="math display">\[
+\mathrm{SSY}_{ts}
+\approx N_{ts} \, \sigma_{ts}.
+\]</span></p>
+<p>Estimating (_{ts}) by:</p>
+<p><span class="math display">\[
+\widehat{\sigma}_{ts}
+= R_{y,ts}
+  \sqrt{
+    \widehat{\mathrm{Var}}(y_t)\,
+    \widehat{\mathrm{Var}}(y_s)
+  }
+\]</span></p>
+<p>yields the final approximation:</p>
+<p><span class="math display">\[
+\mathrm{SSY}
+\approx
+N \odot \widehat{\mathrm{Cov}}(y).
+\]</span></p>
+<p>This provides a principled summary‑statistic reconstruction of<br />
+(Y^Y) suitable for multi‑trait Bayesian models.</p>
+</body>
+</html>

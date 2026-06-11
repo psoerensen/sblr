@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Technical Appendix: Sparse LD and CSR</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Technical Appendix: Sparse LD and CSR</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"
+id="toc-from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From
+BED Genotypes to Sufficient Statistics and Sparse LD</a></li>
+<li><a href="#sparse-approximation-to-xx-threshold-and-distance-choices"
+id="toc-sparse-approximation-to-xx-threshold-and-distance-choices">Sparse
+Approximation to (X^X): Threshold and Distance Choices</a></li>
+<li><a href="#csr-representation-row-pointers-column-indices-and-values"
+id="toc-csr-representation-row-pointers-column-indices-and-values">CSR
+Representation: Row Pointers, Column Indices, and Values</a></li>
+<li><a href="#disk-backed-prefix-and-file-contract"
+id="toc-disk-backed-prefix-and-file-contract">Disk-Backed Prefix and
+File Contract</a></li>
+<li><a
+href="#one-based-r-marker-identities-versus-internal-csr-indexing"
+id="toc-one-based-r-marker-identities-versus-internal-csr-indexing">One-Based
+R Marker Identities Versus Internal CSR Indexing</a></li>
+<li><a
+href="#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants"
+id="toc-marker-ordering-sample-rows-allele-frequency-and-scaling-invariants">Marker
+Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</a></li>
+<li><a
+href="#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs"
+id="toc-streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs">Streaming
+and Blocking Behavior, Memory Use, and Disk Tradeoffs</a></li>
+<li><a href="#reading-and-validating-csr-with-sparseld_read_csr"
+id="toc-reading-and-validating-csr-with-sparseld_read_csr">Reading and
+Validating CSR With <code>sparseLD_read_CSR()</code></a></li>
+<li><a href="#how-stblr_csr-consumes-statistics-and-the-csr-prefix"
+id="toc-how-stblr_csr-consumes-statistics-and-the-csr-prefix">How
+<code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</a></li>
+<li><a href="#scheduled-sparse-updates-and-performance-controls"
+id="toc-scheduled-sparse-updates-and-performance-controls">Scheduled
+Sparse Updates and Performance Controls</a></li>
+<li><a
+href="#numerical-approximation-reproducibility-and-bed-versus-csr-comparison"
+id="toc-numerical-approximation-reproducibility-and-bed-versus-csr-comparison">Numerical
+Approximation, Reproducibility, and BED-Versus-CSR Comparison</a></li>
+<li><a href="#related-notes-and-sources"
+id="toc-related-notes-and-sources">Related Notes and Sources</a></li>
+</ul>
+</nav>
+<p>This appendix will preserve the storage, construction, alignment, and
+computational contracts behind disk-backed sparse LD used by CSR BLR
+workflows.</p>
+<!-- Primary source: ../../examples/workflows/sparse_ld_bed_workflow.R.
+Later: align all contracts with public function help and label
+implementation-sensitive details explicitly. -->
+<h2 id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From
+BED Genotypes to Sufficient Statistics and Sparse LD</h2>
+<!-- Later: document the complete cross-layer data flow. -->
+<h2
+id="sparse-approximation-to-xx-threshold-and-distance-choices">Sparse
+Approximation to (X^X): Threshold and Distance Choices</h2>
+<!-- Later: explain approximation choices and consequences. -->
+<h2 id="csr-representation-row-pointers-column-indices-and-values">CSR
+Representation: Row Pointers, Column Indices, and Values</h2>
+<!-- Later: document the representation without assuming format stability. -->
+<h2 id="disk-backed-prefix-and-file-contract">Disk-Backed Prefix and
+File Contract</h2>
+<!-- Later: identify current files and stable versus internal details. -->
+<h2
+id="one-based-r-marker-identities-versus-internal-csr-indexing">One-Based
+R Marker Identities Versus Internal CSR Indexing</h2>
+<!-- Later: document index conversion and validation requirements. -->
+<h2
+id="marker-ordering-sample-rows-allele-frequency-and-scaling-invariants">Marker
+Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</h2>
+<!-- Later: preserve all workflow contracts and common mismatch failures. -->
+<h2
+id="streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs">Streaming
+and Blocking Behavior, Memory Use, and Disk Tradeoffs</h2>
+<!-- Later: explain sparseLD_stream_CSR() controls and tradeoffs. -->
+<h2 id="reading-and-validating-csr-with-sparseld_read_csr">Reading and
+Validating CSR With <code>sparseLD_read_CSR()</code></h2>
+<!-- Later: preserve compact inspection and validation patterns. -->
+<h2 id="how-stblr_csr-consumes-statistics-and-the-csr-prefix">How
+<code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</h2>
+<!-- Later: document the handoff without changing sampler behavior. -->
+<h2 id="scheduled-sparse-updates-and-performance-controls">Scheduled
+Sparse Updates and Performance Controls</h2>
+<!-- Later: describe current controls as implementation-sensitive. -->
+<h2
+id="numerical-approximation-reproducibility-and-bed-versus-csr-comparison">Numerical
+Approximation, Reproducibility, and BED-Versus-CSR Comparison</h2>
+<!-- Later: preserve comparison logic and expected sources of disagreement. -->
+<h2 id="related-notes-and-sources">Related Notes and Sources</h2>
+<ul>
+<li><a href="data_representations.html">Data representations</a></li>
+<li><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED
+workflows</a></li>
+<li><a href="technical_summary_statistics.html">Technical summary
+statistics</a></li>
+<li><a href="../../examples/workflows/sparse_ld_bed_workflow.R">Complete
+sparse-LD/BED workflow</a></li>
+</ul>
+</body>
+</html>

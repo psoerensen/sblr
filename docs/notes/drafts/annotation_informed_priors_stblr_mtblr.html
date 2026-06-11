@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="" />
+  <title>Annotation-Informed Prior Scales for STBLR and MTBLR</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Annotation-Informed Prior Scales for STBLR and
+MTBLR</h1>
+<p class="subtitle">Using posterior marker summaries and annotations to
+construct prior inclusion probabilities, prior effect variances, and
+sharing-model priors</p>
+<p class="author"></p>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#motivation" id="toc-motivation">Motivation</a></li>
+<li><a href="#summary-statistic-residual-notation"
+id="toc-summary-statistic-residual-notation">Summary-statistic residual
+notation</a></li>
+<li><a href="#set-specific-genomic-variance-decomposition"
+id="toc-set-specific-genomic-variance-decomposition">Set-specific
+genomic variance decomposition</a>
+<ul>
+<li><a href="#r-implementation" id="toc-r-implementation">R
+implementation</a></li>
+</ul></li>
+<li><a href="#inclusion-probability-enrichment"
+id="toc-inclusion-probability-enrichment">Inclusion-probability
+enrichment</a>
+<ul>
+<li><a href="#r-implementation-1" id="toc-r-implementation-1">R
+implementation</a></li>
+</ul></li>
+<li><a href="#combining-effect-size-and-inclusion-probability"
+id="toc-combining-effect-size-and-inclusion-probability">Combining
+effect size and inclusion probability</a>
+<ul>
+<li><a href="#r-implementation-2" id="toc-r-implementation-2">R
+implementation</a></li>
+</ul></li>
+<li><a href="#handling-overlapping-annotations"
+id="toc-handling-overlapping-annotations">Handling overlapping
+annotations</a>
+<ul>
+<li><a href="#r-implementation-linear-model-on-variance-contribution"
+id="toc-r-implementation-linear-model-on-variance-contribution">R
+implementation: linear model on variance contribution</a></li>
+<li><a href="#r-implementation-weighted-linear-model"
+id="toc-r-implementation-weighted-linear-model">R implementation:
+weighted linear model</a></li>
+<li><a href="#r-implementation-fractional-response-model-for-pip"
+id="toc-r-implementation-fractional-response-model-for-pip">R
+implementation: fractional response model for PIP</a></li>
+</ul></li>
+<li><a href="#using-stblr-or-mtblr-instead-of-ridge-regression"
+id="toc-using-stblr-or-mtblr-instead-of-ridge-regression">Using STBLR or
+MTBLR instead of ridge regression</a></li>
+<li><a
+href="#deriving-annotation-specific-prior-inclusion-probabilities"
+id="toc-deriving-annotation-specific-prior-inclusion-probabilities">Deriving
+annotation-specific prior inclusion probabilities</a>
+<ul>
+<li><a href="#r-implementation-3" id="toc-r-implementation-3">R
+implementation</a></li>
+</ul></li>
+<li><a href="#deriving-annotation-specific-prior-effect-variances"
+id="toc-deriving-annotation-specific-prior-effect-variances">Deriving
+annotation-specific prior effect variances</a>
+<ul>
+<li><a href="#r-implementation-4" id="toc-r-implementation-4">R
+implementation</a></li>
+</ul></li>
+<li><a href="#marker-specific-prior-scales-for-overlapping-annotations"
+id="toc-marker-specific-prior-scales-for-overlapping-annotations">Marker-specific
+prior scales for overlapping annotations</a>
+<ul>
+<li><a href="#r-implementation-5" id="toc-r-implementation-5">R
+implementation</a></li>
+</ul></li>
+<li><a href="#using-marker-specific-prior-variances-in-stblr"
+id="toc-using-marker-specific-prior-variances-in-stblr">Using
+marker-specific prior variances in STBLR</a></li>
+<li><a href="#annotation-specific-mtblr-prior-covariance-matrices"
+id="toc-annotation-specific-mtblr-prior-covariance-matrices">Annotation-specific
+MTBLR prior covariance matrices</a>
+<ul>
+<li><a href="#r-implementation-6" id="toc-r-implementation-6">R
+implementation</a></li>
+</ul></li>
+<li><a href="#annotation-specific-mtblr-model-priors"
+id="toc-annotation-specific-mtblr-model-priors">Annotation-specific
+MTBLR model priors</a>
+<ul>
+<li><a href="#r-implementation-7" id="toc-r-implementation-7">R
+implementation</a></li>
+</ul></li>
+<li><a href="#prior-scale-derivation-from-annotation-blr"
+id="toc-prior-scale-derivation-from-annotation-blr">Prior scale
+derivation from annotation BLR</a></li>
+<li><a href="#recommended-modelling-hierarchy"
+id="toc-recommended-modelling-hierarchy">Recommended modelling
+hierarchy</a>
+<ul>
+<li><a href="#stage-1-stblr-genome-wide-screening"
+id="toc-stage-1-stblr-genome-wide-screening">Stage 1: STBLR genome-wide
+screening</a></li>
+<li><a href="#stage-2-annotation-summary-and-decomposition"
+id="toc-stage-2-annotation-summary-and-decomposition">Stage 2:
+Annotation summary and decomposition</a></li>
+<li><a href="#stage-3-derive-prior-parameters"
+id="toc-stage-3-derive-prior-parameters">Stage 3: Derive prior
+parameters</a></li>
+<li><a href="#stage-4-annotation-informed-stblr-or-mtblr"
+id="toc-stage-4-annotation-informed-stblr-or-mtblr">Stage 4:
+Annotation-informed STBLR or MTBLR</a></li>
+</ul></li>
+<li><a href="#warm-started-regional-mtblr"
+id="toc-warm-started-regional-mtblr">Warm-started regional
+MTBLR</a></li>
+<li><a href="#practical-cautions" id="toc-practical-cautions">Practical
+cautions</a></li>
+<li><a href="#minimal-example-workflow"
+id="toc-minimal-example-workflow">Minimal example workflow</a></li>
+<li><a href="#summary" id="toc-summary">Summary</a></li>
+<li><a
+href="#empirical-bayes-priors-from-an-annotation-level-stblr-or-mtblr"
+id="toc-empirical-bayes-priors-from-an-annotation-level-stblr-or-mtblr">Empirical-Bayes
+priors from an annotation-level STBLR or MTBLR</a>
+<ul>
+<li><a href="#first-stage-genomic-fit"
+id="toc-first-stage-genomic-fit">First-stage genomic fit</a></li>
+<li><a href="#annotation-level-stblr"
+id="toc-annotation-level-stblr">Annotation-level STBLR</a></li>
+<li><a href="#annotation-level-mtblr"
+id="toc-annotation-level-mtblr">Annotation-level MTBLR</a></li>
+<li><a href="#deriving-marker-specific-inclusion-priors"
+id="toc-deriving-marker-specific-inclusion-priors">Deriving
+marker-specific inclusion priors</a></li>
+<li><a href="#deriving-marker-specific-prior-effect-variances"
+id="toc-deriving-marker-specific-prior-effect-variances">Deriving
+marker-specific prior effect variances</a></li>
+<li><a href="#deriving-mtblr-marker-specific-sharing-model-priors"
+id="toc-deriving-mtblr-marker-specific-sharing-model-priors">Deriving
+MTBLR marker-specific sharing-model priors</a></li>
+<li><a
+href="#deriving-a-global-mtblr-prior-covariance-matrix-from-annotations"
+id="toc-deriving-a-global-mtblr-prior-covariance-matrix-from-annotations">Deriving
+a global MTBLR prior covariance matrix from annotations</a></li>
+<li><a href="#recommended-empirical-bayes-workflow"
+id="toc-recommended-empirical-bayes-workflow">Recommended
+empirical-Bayes workflow</a></li>
+<li><a href="#interpretation"
+id="toc-interpretation">Interpretation</a></li>
+<li><a href="#cross-fitting-and-overfitting"
+id="toc-cross-fitting-and-overfitting">Cross-fitting and
+overfitting</a></li>
+</ul></li>
+<li><a
+href="#direct-annotation-modelling-inside-the-genomic-stblr-or-mtblr-sampler"
+id="toc-direct-annotation-modelling-inside-the-genomic-stblr-or-mtblr-sampler">Direct
+annotation modelling inside the genomic STBLR or MTBLR sampler</a>
+<ul>
+<li><a href="#direct-annotation-informed-stblr"
+id="toc-direct-annotation-informed-stblr">Direct annotation-informed
+STBLR</a></li>
+<li><a href="#modified-stblr-marker-update"
+id="toc-modified-stblr-marker-update">Modified STBLR marker
+update</a></li>
+<li><a href="#estimating-annotation-effects-inside-the-sampler"
+id="toc-estimating-annotation-effects-inside-the-sampler">Estimating
+annotation effects inside the sampler</a>
+<ul>
+<li><a href="#fixed-annotation-effects"
+id="toc-fixed-annotation-effects">Fixed annotation effects</a></li>
+<li><a href="#updating-annotation-effects-during-sampling"
+id="toc-updating-annotation-effects-during-sampling">Updating annotation
+effects during sampling</a></li>
+</ul></li>
+<li><a href="#direct-annotation-informed-mtblr"
+id="toc-direct-annotation-informed-mtblr">Direct annotation-informed
+MTBLR</a></li>
+<li><a href="#mtblr-model-prior-in-the-marker-update"
+id="toc-mtblr-model-prior-in-the-marker-update">MTBLR model prior in the
+marker update</a></li>
+<li><a href="#annotation-informed-mtblr-effect-covariance"
+id="toc-annotation-informed-mtblr-effect-covariance">Annotation-informed
+MTBLR effect covariance</a></li>
+<li><a
+href="#direct-annotation-aware-stblr-and-mtblr-as-hierarchical-models"
+id="toc-direct-annotation-aware-stblr-and-mtblr-as-hierarchical-models">Direct
+annotation-aware STBLR and MTBLR as hierarchical models</a></li>
+<li><a href="#practical-implementation-strategy"
+id="toc-practical-implementation-strategy">Practical implementation
+strategy</a>
+<ul>
+<li><a href="#step-1-fixed-marker-specific-priors"
+id="toc-step-1-fixed-marker-specific-priors">Step 1: Fixed
+marker-specific priors</a></li>
+<li><a
+href="#step-2-annotation-matrix-as-input-fixed-annotation-coefficients"
+id="toc-step-2-annotation-matrix-as-input-fixed-annotation-coefficients">Step
+2: Annotation matrix as input, fixed annotation coefficients</a></li>
+<li><a href="#step-3-update-annotation-coefficients"
+id="toc-step-3-update-annotation-coefficients">Step 3: Update annotation
+coefficients</a></li>
+</ul></li>
+<li><a href="#sparse-annotation-matrix-implementation"
+id="toc-sparse-annotation-matrix-implementation">Sparse annotation
+matrix implementation</a></li>
+<li><a href="#centering-shrinkage-and-caps"
+id="toc-centering-shrinkage-and-caps">Centering, shrinkage, and
+caps</a></li>
+<li><a href="#recommended-first-direct-model"
+id="toc-recommended-first-direct-model">Recommended first direct
+model</a></li>
+<li><a href="#causal-interpretation-and-causal-hypothesis-generation"
+id="toc-causal-interpretation-and-causal-hypothesis-generation">Causal
+interpretation and causal-hypothesis generation</a>
+<ul>
+<li><a href="#genetic-sharing-versus-causal-direction"
+id="toc-genetic-sharing-versus-causal-direction">Genetic sharing versus
+causal direction</a></li>
+<li><a href="#what-can-be-inferred-directly"
+id="toc-what-can-be-inferred-directly">What can be inferred
+directly</a></li>
+<li><a href="#connection-to-colocalization"
+id="toc-connection-to-colocalization">Connection to
+colocalization</a></li>
+<li><a href="#connection-to-mendelian-randomization"
+id="toc-connection-to-mendelian-randomization">Connection to Mendelian
+randomization</a></li>
+<li><a href="#annotation-specific-causal-hypotheses"
+id="toc-annotation-specific-causal-hypotheses">Annotation-specific
+causal hypotheses</a></li>
+<li><a href="#practical-causal-workflow"
+id="toc-practical-causal-workflow">Practical causal workflow</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="motivation">Motivation</h1>
+<p>In sparse Bayesian regression models fitted to genome-wide summary
+statistics, single-trait Bayesian linear regression (STBLR) can be used
+as a stable first-stage model. The resulting posterior marker summaries,
+especially posterior mean marker effects and posterior inclusion
+probabilities, can then be used to inform a second-stage multi-trait
+Bayesian linear regression (MTBLR) model.</p>
+<p>The main idea is to use first-stage posterior summaries together with
+marker annotations or marker sets to construct annotation-informed prior
+parameters. These parameters can then be used in later STBLR or MTBLR
+analyses.</p>
+<p>Typical first-stage outputs are:</p>
+<p><span class="math display">\[
+\hat b_{it} = E(b_{it} \mid \text{data}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\widehat{dm}_{it} = P(d_{it}=1 \mid \text{data}),
+\]</span></p>
+<p>where marker <span class="math inline">\(i = 1, \ldots, m\)</span>
+and trait <span class="math inline">\(t = 1, \ldots, T\)</span>.</p>
+<p>Let <span class="math inline">\(A\)</span> denote an annotation
+matrix:</p>
+<p><span class="math display">\[
+A_{ik} =
+\begin{cases}
+1, &amp; \text{if marker } i \text{ belongs to annotation } k, \\
+0, &amp; \text{otherwise}.
+\end{cases}
+\]</span></p>
+<p>The annotation columns may overlap. For example, a marker may be
+coding, close to a gene, and located inside a QTL region at the same
+time.</p>
+<p>The goal is to derive annotation-specific or marker-specific prior
+parameters such as:</p>
+<p><span class="math display">\[
+\pi_{k,t}, \qquad \sigma^2_{b,k,t}, \qquad B_k, \qquad \pi_{k,m},
+\]</span></p>
+<p>where <span class="math inline">\(k\)</span> indexes an annotation
+class or marker set, <span class="math inline">\(t\)</span> indexes a
+trait, and <span class="math inline">\(m\)</span> indexes a multi-trait
+sharing model.</p>
+<h1 id="summary-statistic-residual-notation">Summary-statistic residual
+notation</h1>
+<p>Assume the STBLR or MTBLR model stores the following
+summary-statistic quantities:</p>
+<p><span class="math display">\[
+wy_t = X^\top y_t,
+\]</span></p>
+<p><span class="math display">\[
+ww_i = x_i^\top x_i,
+\]</span></p>
+<p>and the residual score vector</p>
+<p><span class="math display">\[
+r_t = X^\top y_t - X^\top X b_t.
+\]</span></p>
+<p>Then</p>
+<p><span class="math display">\[
+X^\top X b_t = wy_t - r_t.
+\]</span></p>
+<p>This identity is useful because it allows approximate genetic
+variance and covariance decomposition using only summary-statistic
+quantities and marker effects.</p>
+<p>For a single trait, the genomic variance estimate is</p>
+<p><span class="math display">\[
+\widehat V_{G,t}
+= \frac{1}{n} b_t^\top X^\top X b_t
+= \frac{1}{n} b_t^\top (wy_t - r_t).
+\]</span></p>
+<p>For traits <span class="math inline">\(t_1\)</span> and <span
+class="math inline">\(t_2\)</span>, a symmetric genetic covariance
+estimate is</p>
+<p><span class="math display">\[
+\widehat G_{t_1,t_2}
+= \frac{1}{2n}
+\left\{
+b_{t_1}^\top (wy_{t_2} - r_{t_2})
++ b_{t_2}^\top (wy_{t_1} - r_{t_1})
+\right\}.
+\]</span></p>
+<h1 id="set-specific-genomic-variance-decomposition">Set-specific
+genomic variance decomposition</h1>
+<p>For a marker set or annotation <span
+class="math inline">\(S_k\)</span>, define the set-specific genomic
+variance contribution for trait <span class="math inline">\(t\)</span>
+as</p>
+<p><span class="math display">\[
+\widehat V_{G,k,t}
+=
+\frac{1}{n}
+\sum_{i \in S_k}
+\hat b_{it}(wy_{it}-r_{it}).
+\]</span></p>
+<p>This gives a direct summary-statistic analogue of decomposing</p>
+<p><span class="math display">\[
+b_t^\top X^\top X b_t.
+\]</span></p>
+<p>If the sets are non-overlapping, the set-specific contributions can
+be interpreted as an approximate partition of genomic variance. If the
+sets overlap, the contributions should be interpreted as
+annotation-specific attributions rather than a strict variance
+partition, because the same marker may contribute to more than one
+annotation.</p>
+<h2 id="r-implementation">R implementation</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimate_vg_by_set <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, sets, n) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> fit<span class="sc">$</span>bm</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  q <span class="ot">&lt;-</span> fit<span class="sc">$</span>wy <span class="sc">-</span> fit<span class="sc">$</span>r</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> <span class="fu">length</span>(sets), <span class="at">ncol =</span> <span class="fu">ncol</span>(b))</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(out) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(out) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(b)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (s <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[s]]</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">ncol</span>(b))) {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>      out[s, t] <span class="ot">&lt;-</span> <span class="fu">sum</span>(b[idx, t] <span class="sc">*</span> q[idx, t]) <span class="sc">/</span> n</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  out</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>A proportion of total genomic variance can be computed as</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>vg_set <span class="ot">&lt;-</span> <span class="fu">estimate_vg_by_set</span>(fitST, sets, n)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>prop_of_vg <span class="ot">&lt;-</span> <span class="fu">sweep</span>(vg_set, <span class="dv">2</span>, <span class="fu">colMeans</span>(fitST<span class="sc">$</span>vgs), <span class="st">&quot;/&quot;</span>)</span></code></pre></div>
+<p>If phenotypes are standardized to variance approximately one, the
+values themselves can also be interpreted as approximate proportions of
+phenotypic variance.</p>
+<h1 id="inclusion-probability-enrichment">Inclusion-probability
+enrichment</h1>
+<p>Annotation enrichment can also be assessed using posterior inclusion
+probabilities.</p>
+<p>For annotation <span class="math inline">\(S_k\)</span>, the expected
+number of included markers for trait <span
+class="math inline">\(t\)</span> is</p>
+<p><span class="math display">\[
+E[N_{k,t} \mid \text{data}]
+=
+\sum_{i \in S_k} \widehat{dm}_{it}.
+\]</span></p>
+<p>A simple enrichment ratio is</p>
+<p><span class="math display">\[
+\text{enrichment}_{k,t}
+=
+\frac{|S_k|^{-1}\sum_{i \in S_k}\widehat{dm}_{it}}
+{|S_k^c|^{-1}\sum_{i \notin S_k}\widehat{dm}_{it}}.
+\]</span></p>
+<h2 id="r-implementation-1">R implementation</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>estimate_pip_enrichment <span class="ot">&lt;-</span> <span class="cf">function</span>(dm, sets) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> <span class="fu">length</span>(sets), <span class="at">ncol =</span> <span class="fu">ncol</span>(dm))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(out) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(out) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(dm)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  all_idx <span class="ot">&lt;-</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(dm))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (s <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[s]]</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    bg <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(all_idx, idx)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">ncol</span>(dm))) {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>      mean_in <span class="ot">&lt;-</span> <span class="fu">mean</span>(dm[idx, t])</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>      mean_bg <span class="ot">&lt;-</span> <span class="fu">mean</span>(dm[bg, t])</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>      out[s, t] <span class="ot">&lt;-</span> mean_in <span class="sc">/</span> mean_bg</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  out</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This is not a variance decomposition. It measures whether posterior
+inclusion probability is enriched in a marker set.</p>
+<h1 id="combining-effect-size-and-inclusion-probability">Combining
+effect size and inclusion probability</h1>
+<p>A useful LD-aware marker-level contribution is</p>
+<p><span class="math display">\[
+c_{it}
+=
+\frac{\hat b_{it}(wy_{it}-r_{it})}{n}.
+\]</span></p>
+<p>A posterior-inclusion-weighted contribution is</p>
+<p><span class="math display">\[
+c^{\mathrm{weighted}}_{it}
+=
+\frac{\widehat{dm}_{it}\hat b_{it}(wy_{it}-r_{it})}{n}.
+\]</span></p>
+<p>This downweights markers with low posterior inclusion
+probability.</p>
+<h2 id="r-implementation-2">R implementation</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>estimate_weighted_vg_by_set <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, sets, n) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> fit<span class="sc">$</span>bm</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  dm <span class="ot">&lt;-</span> fit<span class="sc">$</span>dm</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  q <span class="ot">&lt;-</span> fit<span class="sc">$</span>wy <span class="sc">-</span> fit<span class="sc">$</span>r</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> <span class="fu">length</span>(sets), <span class="at">ncol =</span> <span class="fu">ncol</span>(b))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(out) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(out) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(b)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (s <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[s]]</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">ncol</span>(b))) {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      out[s, t] <span class="ot">&lt;-</span> <span class="fu">sum</span>(dm[idx, t] <span class="sc">*</span> b[idx, t] <span class="sc">*</span> q[idx, t]) <span class="sc">/</span> n</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  out</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h1 id="handling-overlapping-annotations">Handling overlapping
+annotations</h1>
+<p>When annotations overlap, direct set summation can double-count
+markers. A multiple-regression approach can be used to estimate partial
+annotation effects.</p>
+<p>For a marker-level response <span class="math inline">\(s_i\)</span>,
+fit</p>
+<p><span class="math display">\[
+s_i = \alpha + \sum_k A_{ik}\gamma_k + e_i.
+\]</span></p>
+<p>This estimates the effect of annotation <span
+class="math inline">\(k\)</span> conditional on the other
+annotations.</p>
+<p>Possible responses include:</p>
+<p><span class="math display">\[
+s_{it} = \widehat{dm}_{it},
+\]</span></p>
+<p><span class="math display">\[
+s_{it} = \hat b_{it}^2,
+\]</span></p>
+<p>or</p>
+<p><span class="math display">\[
+s_{it} = \frac{\hat b_{it}(wy_{it}-r_{it})}{n}.
+\]</span></p>
+<p>For inclusion probabilities, a logit transformation can be used:</p>
+<p><span class="math display">\[
+s_{it} = \operatorname{logit}(\widehat{dm}_{it}).
+\]</span></p>
+<h2 id="r-implementation-linear-model-on-variance-contribution">R
+implementation: linear model on variance contribution</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>annotation_lm_vg <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, annot, trait, n) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> fit<span class="sc">$</span>bm[, trait]</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  q <span class="ot">&lt;-</span> fit<span class="sc">$</span>wy[, trait] <span class="sc">-</span> fit<span class="sc">$</span>r[, trait]</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> b <span class="sc">*</span> q <span class="sc">/</span> n</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(annot)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lm</span>(y <span class="sc">~</span> ., <span class="at">data =</span> X)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="r-implementation-weighted-linear-model">R implementation:
+weighted linear model</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>annotation_lm_vg_weighted <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, annot, trait, n, <span class="at">eps =</span> <span class="fl">1e-6</span>) {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> fit<span class="sc">$</span>bm[, trait]</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  dm <span class="ot">&lt;-</span> fit<span class="sc">$</span>dm[, trait]</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  q <span class="ot">&lt;-</span> fit<span class="sc">$</span>wy[, trait] <span class="sc">-</span> fit<span class="sc">$</span>r[, trait]</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> b <span class="sc">*</span> q <span class="sc">/</span> n</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  w <span class="ot">&lt;-</span> <span class="fu">pmax</span>(dm, eps)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(annot)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lm</span>(y <span class="sc">~</span> ., <span class="at">data =</span> X, <span class="at">weights =</span> w)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="r-implementation-fractional-response-model-for-pip">R
+implementation: fractional response model for PIP</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>annotation_glm_dm <span class="ot">&lt;-</span> <span class="cf">function</span>(dm, annot, trait, <span class="at">eps =</span> <span class="fl">1e-6</span>) {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">pmin</span>(<span class="fu">pmax</span>(dm[, trait], eps), <span class="dv">1</span> <span class="sc">-</span> eps)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(annot)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glm</span>(p <span class="sc">~</span> ., <span class="at">data =</span> X, <span class="at">family =</span> <span class="fu">quasibinomial</span>())</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h1 id="using-stblr-or-mtblr-instead-of-ridge-regression">Using STBLR or
+MTBLR instead of ridge regression</h1>
+<p>Instead of a ridge regression on marker-level scores, one can fit
+STBLR or MTBLR with annotations as predictors.</p>
+<p>Let <span class="math inline">\(S\)</span> be a marker-by-trait
+matrix of marker-level scores. Examples are</p>
+<p><span class="math display">\[
+S_{it} = \operatorname{logit}(\widehat{dm}_{it}),
+\]</span></p>
+<p><span class="math display">\[
+S_{it} = \hat b_{it}^2,
+\]</span></p>
+<p>or</p>
+<p><span class="math display">\[
+S_{it} = \frac{\hat b_{it}(wy_{it}-r_{it})}{n}.
+\]</span></p>
+<p>Then fit an annotation-level model:</p>
+<p><span class="math display">\[
+S = A\Gamma + E,
+\]</span></p>
+<p>where <span class="math inline">\(A\)</span> is the
+marker-by-annotation design matrix and <span
+class="math inline">\(\Gamma\)</span> is an annotation-by-trait
+coefficient matrix.</p>
+<p>A Bayesian variable-selection prior on <span
+class="math inline">\(\Gamma\)</span> can identify which annotations
+contribute to which traits. MTBLR can additionally learn whether
+annotation effects are shared across traits.</p>
+<p>This turns overlapping-annotation adjustment into a Bayesian
+variable-selection problem.</p>
+<h1
+id="deriving-annotation-specific-prior-inclusion-probabilities">Deriving
+annotation-specific prior inclusion probabilities</h1>
+<p>For annotation <span class="math inline">\(S_k\)</span>, a simple
+empirical Bayes estimate of the inclusion probability for trait <span
+class="math inline">\(t\)</span> is</p>
+<p><span class="math display">\[
+\widehat\pi_{k,t}
+=
+\frac{\alpha + \sum_{i \in S_k}\widehat{dm}_{it}}
+{2\alpha + |S_k|}.
+\]</span></p>
+<p>Here <span class="math inline">\(\alpha\)</span> is a pseudo-count. A
+common choice is <span class="math inline">\(\alpha = 1\)</span>.</p>
+<h2 id="r-implementation-3">R implementation</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>estimate_annotation_pi <span class="ot">&lt;-</span> <span class="cf">function</span>(dm, sets, <span class="at">alpha =</span> <span class="dv">1</span>) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  nt <span class="ot">&lt;-</span> <span class="fu">ncol</span>(dm)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  K <span class="ot">&lt;-</span> <span class="fu">length</span>(sets)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  pi_ann <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, K, nt)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(pi_ann) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(pi_ann) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(dm)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[k]]</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(nt)) {</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>      pi_ann[k, t] <span class="ot">&lt;-</span> (alpha <span class="sc">+</span> <span class="fu">sum</span>(dm[idx, t])) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> alpha <span class="sc">+</span> <span class="fu">length</span>(idx))</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(<span class="fu">pmax</span>(pi_ann, <span class="fl">1e-8</span>), <span class="dv">1</span> <span class="sc">-</span> <span class="fl">1e-8</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>For marker-specific priors, assign each marker to an annotation or
+compute a marker-specific value from overlapping annotations.</p>
+<h1 id="deriving-annotation-specific-prior-effect-variances">Deriving
+annotation-specific prior effect variances</h1>
+<p>For annotation <span class="math inline">\(S_k\)</span>, an estimated
+genomic variance contribution is</p>
+<p><span class="math display">\[
+\widehat V_{G,k,t}
+=
+\frac{1}{n}
+\sum_{i \in S_k}
+\hat b_{it}(wy_{it}-r_{it}).
+\]</span></p>
+<p>A simple prior scale is</p>
+<p><span class="math display">\[
+\widehat\sigma^2_{b,k,t}
+=
+\frac{\widehat V_{G,k,t}}{|S_k|}.
+\]</span></p>
+<p>However, in sparse models it is usually better to divide by an
+effective number of active markers:</p>
+<p><span class="math display">\[
+m^{\mathrm{eff}}_{k,t}
+=
+\sum_{i \in S_k}\widehat{dm}_{it}.
+\]</span></p>
+<p>Then</p>
+<p><span class="math display">\[
+\widehat\sigma^2_{b,k,t}
+=
+\frac{\widehat V_{G,k,t}}
+{\max(m^{\mathrm{eff}}_{k,t}, c)},
+\]</span></p>
+<p>where <span class="math inline">\(c\)</span> is a floor such as 1 or
+5.</p>
+<h2 id="r-implementation-4">R implementation</h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>estimate_annotation_vb <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, sets, n, <span class="at">min_eff =</span> <span class="dv">1</span>, <span class="at">shrink =</span> <span class="fl">0.5</span>) {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  b  <span class="ot">&lt;-</span> fit<span class="sc">$</span>bm</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  dm <span class="ot">&lt;-</span> fit<span class="sc">$</span>dm</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  q  <span class="ot">&lt;-</span> fit<span class="sc">$</span>wy <span class="sc">-</span> fit<span class="sc">$</span>r</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  nt <span class="ot">&lt;-</span> <span class="fu">ncol</span>(b)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  K <span class="ot">&lt;-</span> <span class="fu">length</span>(sets)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  vb_ann <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, K, nt)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  vg_ann <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, K, nt)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  meff   <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, K, nt)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(vb_ann) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(vg_ann) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(meff) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(vb_ann) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(vg_ann) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(meff) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(b)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[k]]</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(nt)) {</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      vg <span class="ot">&lt;-</span> <span class="fu">sum</span>(b[idx, t] <span class="sc">*</span> q[idx, t]) <span class="sc">/</span> n</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      neff <span class="ot">&lt;-</span> <span class="fu">sum</span>(dm[idx, t])</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>      vg_ann[k, t] <span class="ot">&lt;-</span> <span class="fu">max</span>(vg, <span class="dv">0</span>)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>      meff[k, t] <span class="ot">&lt;-</span> neff</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>      vb_ann[k, t] <span class="ot">&lt;-</span> <span class="fu">max</span>(vg_ann[k, t] <span class="sc">/</span> <span class="fu">max</span>(neff, min_eff), <span class="fl">1e-12</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Shrink annotation-specific scales toward a global scale.</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  vb_global <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(vb_ann, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(nt)) {</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>    vb_ann[, t] <span class="ot">&lt;-</span> shrink <span class="sc">*</span> vb_ann[, t] <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> shrink) <span class="sc">*</span> vb_global[t]</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">vb =</span> vb_ann, <span class="at">vg =</span> vg_ann, <span class="at">meff =</span> meff)</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h1
+id="marker-specific-prior-scales-for-overlapping-annotations">Marker-specific
+prior scales for overlapping annotations</h1>
+<p>For overlapping annotations, marker-specific prior scales can be
+constructed on the log scale:</p>
+<p><span class="math display">\[
+\log v_{b,i,t}
+=
+\mu_t + \sum_k A_{ik}\gamma_{k,t}.
+\]</span></p>
+<p>Equivalently,</p>
+<p><span class="math display">\[
+v_{b,i,t}
+= \exp\left(\mu_t + A_i\gamma_t\right).
+\]</span></p>
+<p>The coefficients <span class="math inline">\(\gamma_{k,t}\)</span>
+may be estimated from an annotation regression or annotation-level BLR
+model.</p>
+<p>Because annotation effects can be noisy, the multiplicative effect on
+the prior scale should be capped:</p>
+<p><span class="math display">\[
+v_{b,i,t}
+= v_{b,t}^{\mathrm{global}}\times
+\operatorname{clip}\left(\exp(A_i\gamma_t), c_{\min}, c_{\max}\right).
+\]</span></p>
+<h2 id="r-implementation-5">R implementation</h2>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>derive_marker_vb_from_annotation_model <span class="ot">&lt;-</span> <span class="cf">function</span>(global_vb, annot, gamma,</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>                                                   <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="dv">4</span>)) {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># annot: m x K annotation matrix</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># gamma: K x nt annotation coefficients on log scale</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># global_vb: length nt</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> annot <span class="sc">%*%</span> gamma</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  vb_marker <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="fu">nrow</span>(annot), <span class="fu">ncol</span>(gamma))</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">ncol</span>(gamma))) {</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    mult <span class="ot">&lt;-</span> <span class="fu">exp</span>(eta[, t])</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    mult <span class="ot">&lt;-</span> <span class="fu">pmin</span>(<span class="fu">pmax</span>(mult, cap[<span class="dv">1</span>]), cap[<span class="dv">2</span>])</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    vb_marker[, t] <span class="ot">&lt;-</span> global_vb[t] <span class="sc">*</span> mult</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(vb_marker) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(gamma)</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  vb_marker</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h1 id="using-marker-specific-prior-variances-in-stblr">Using
+marker-specific prior variances in STBLR</h1>
+<p>The standard BayesC marker update uses a global prior variance <span
+class="math inline">\(v_b\)</span>. For marker <span
+class="math inline">\(i\)</span>, the marginal Bayes factor is</p>
+<p><span class="math display">\[
+\log BF_i
+=
+\frac{1}{2}\log\left(\frac{v_e}{v_e + w_i v_b}\right)
++
+\frac{1}{2}\frac{s_i^2 v_b}{v_e(v_e+w_i v_b)},
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+s_i = r_i + w_i b_i.
+\]</span></p>
+<p>With annotation-informed marker-specific prior variance <span
+class="math inline">\(v_{b,i}\)</span>, replace <span
+class="math inline">\(v_b\)</span> by <span
+class="math inline">\(v_{b,i}\)</span>:</p>
+<p><span class="math display">\[
+\log BF_i
+=
+\frac{1}{2}\log\left(\frac{v_e}{v_e + w_i v_{b,i}}\right)
++
+\frac{1}{2}\frac{s_i^2 v_{b,i}}{v_e(v_e+w_i v_{b,i})}.
+\]</span></p>
+<p>The posterior conditional distribution for <span
+class="math inline">\(b_i\)</span>, given inclusion, becomes</p>
+<p><span class="math display">\[
+b_i \mid d_i=1, \cdots
+\sim
+N\left(
+\frac{s_i}{w_i + v_e/v_{b,i}},
+\frac{v_e}{w_i + v_e/v_{b,i}}
+\right).
+\]</span></p>
+<p>The corresponding C++ change is conceptually simple. Replace</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> denom <span class="op">=</span> ve <span class="op">+</span> wi <span class="op">*</span> vb<span class="op">;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> lhs <span class="op">=</span> wi <span class="op">+</span> ve <span class="op">/</span> vb<span class="op">;</span></span></code></pre></div>
+<p>with</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> vbi <span class="op">=</span> vb_marker<span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> denom <span class="op">=</span> ve <span class="op">+</span> wi <span class="op">*</span> vbi<span class="op">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> lhs <span class="op">=</span> wi <span class="op">+</span> ve <span class="op">/</span> vbi<span class="op">;</span></span></code></pre></div>
+<h1
+id="annotation-specific-mtblr-prior-covariance-matrices">Annotation-specific
+MTBLR prior covariance matrices</h1>
+<p>For MTBLR, marker effects are vectors:</p>
+<p><span class="math display">\[
+\mathbf b_i = (b_{i1}, \ldots, b_{iT})^\top.
+\]</span></p>
+<p>The global MTBLR prior may use</p>
+<p><span class="math display">\[
+\mathbf b_i \sim N(0, B).
+\]</span></p>
+<p>An annotation-informed extension uses annotation-specific covariance
+matrices:</p>
+<p><span class="math display">\[
+\mathbf b_i \mid a(i)=k \sim N(0, B_k).
+\]</span></p>
+<p>A simple estimate of <span class="math inline">\(B_k\)</span> is</p>
+<p><span class="math display">\[
+\widehat B_k
+=
+\frac{
+\sum_{i \in S_k} w_i \hat{\mathbf b}_i \hat{\mathbf b}_i^\top
+}{
+\sum_{i \in S_k} w_i
+},
+\]</span></p>
+<p>where <span class="math inline">\(w_i\)</span> can be derived from
+posterior inclusion probabilities, for example</p>
+<p><span class="math display">\[
+w_i = \max_t \widehat{dm}_{it}.
+\]</span></p>
+<h2 id="r-implementation-6">R implementation</h2>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>estimate_annotation_B <span class="ot">&lt;-</span> <span class="cf">function</span>(bm, dm, sets, <span class="at">ridge =</span> <span class="fl">1e-8</span>, <span class="at">shrink =</span> <span class="fl">0.5</span>) {</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  nt <span class="ot">&lt;-</span> <span class="fu">ncol</span>(bm)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  K <span class="ot">&lt;-</span> <span class="fu">length</span>(sets)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  B_list <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&quot;list&quot;</span>, K)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(B_list) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Global covariance from posterior mean effects.</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  w_global <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="fu">apply</span>(dm, <span class="dv">1</span>, max), <span class="fl">1e-6</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  B_global <span class="ot">&lt;-</span> <span class="fu">crossprod</span>(bm <span class="sc">*</span> <span class="fu">sqrt</span>(w_global)) <span class="sc">/</span> <span class="fu">sum</span>(w_global)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  B_global <span class="ot">&lt;-</span> B_global <span class="sc">+</span> <span class="fu">diag</span>(ridge, nt)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[k]]</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    w <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="fu">apply</span>(dm[idx, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="dv">1</span>, max), <span class="fl">1e-6</span>)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    Bk <span class="ot">&lt;-</span> <span class="fu">crossprod</span>(bm[idx, , <span class="at">drop =</span> <span class="cn">FALSE</span>] <span class="sc">*</span> <span class="fu">sqrt</span>(w)) <span class="sc">/</span> <span class="fu">sum</span>(w)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    Bk <span class="ot">&lt;-</span> shrink <span class="sc">*</span> Bk <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> shrink) <span class="sc">*</span> B_global</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    Bk <span class="ot">&lt;-</span> <span class="fl">0.5</span> <span class="sc">*</span> (Bk <span class="sc">+</span> <span class="fu">t</span>(Bk))</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">diag</span>(Bk) <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="fu">diag</span>(Bk), ridge)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    B_list[[k]] <span class="ot">&lt;-</span> Bk</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  B_list</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h1 id="annotation-specific-mtblr-model-priors">Annotation-specific
+MTBLR model priors</h1>
+<p>In MTBLR, each marker can belong to one of several sharing models.
+For three traits, the model set may be</p>
+<p><span class="math display">\[
+000, 100, 010, 001, 110, 101, 011, 111.
+\]</span></p>
+<p>Let <span class="math inline">\(m_k\)</span> be the binary vector for
+model <span class="math inline">\(k\)</span>. A soft model
+responsibility based on STBLR inclusion probabilities is</p>
+<p><span class="math display">\[
+w_{i,k}
+=
+\prod_{t=1}^T
+\widehat{dm}_{it}^{m_{k,t}}
+(1-\widehat{dm}_{it})^{1-m_{k,t}}.
+\]</span></p>
+<p>For annotation <span class="math inline">\(S_a\)</span>, an
+annotation-specific sharing-model prior is</p>
+<p><span class="math display">\[
+\pi_{a,k}
+=
+\frac{\alpha_k + \sum_{i \in S_a}w_{i,k}}
+{\sum_l \alpha_l + |S_a|}.
+\]</span></p>
+<h2 id="r-implementation-7">R implementation</h2>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>estimate_annotation_model_pi <span class="ot">&lt;-</span> <span class="cf">function</span>(dm, models, sets, <span class="at">alpha =</span> <span class="dv">1</span>) {</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(dm)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  nt <span class="ot">&lt;-</span> <span class="fu">ncol</span>(dm)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  K <span class="ot">&lt;-</span> <span class="fu">length</span>(sets)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  nmodels <span class="ot">&lt;-</span> <span class="fu">length</span>(models)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, M, nmodels)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="fu">seq_len</span>(nmodels)) {</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    model <span class="ot">&lt;-</span> models[[j]]</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, M)</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">seq_len</span>(nt)) {</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>      dmt <span class="ot">&lt;-</span> <span class="fu">pmin</span>(<span class="fu">pmax</span>(dm[, t], <span class="fl">1e-6</span>), <span class="dv">1</span> <span class="sc">-</span> <span class="fl">1e-6</span>)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>      p <span class="ot">&lt;-</span> p <span class="sc">*</span> <span class="cf">if</span> (model[t] <span class="sc">==</span> <span class="dv">1</span>) dmt <span class="cf">else</span> (<span class="dv">1</span> <span class="sc">-</span> dmt)</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    W[, j] <span class="ot">&lt;-</span> p</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>  pi_ann <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, K, nmodels)</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(pi_ann) <span class="ot">&lt;-</span> <span class="fu">names</span>(sets)</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(pi_ann) <span class="ot">&lt;-</span> <span class="fu">sapply</span>(models, paste, <span class="at">collapse =</span> <span class="st">&quot;_&quot;</span>)</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(sets)) {</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> sets[[k]]</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    counts <span class="ot">&lt;-</span> <span class="fu">colSums</span>(W[idx, , <span class="at">drop =</span> <span class="cn">FALSE</span>]) <span class="sc">+</span> alpha</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    pi_ann[k, ] <span class="ot">&lt;-</span> counts <span class="sc">/</span> <span class="fu">sum</span>(counts)</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>  pi_ann</span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>In the MTBLR marker update, a global model prior</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi<span class="op">[</span>k<span class="op">])</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<p>can be replaced by an annotation-specific model prior:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi_annotation<span class="op">[</span>ann_i<span class="op">][</span>k<span class="op">])</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<p>or a marker-specific prior:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi_marker<span class="op">(</span>i<span class="op">,</span> k<span class="op">))</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<h1 id="prior-scale-derivation-from-annotation-blr">Prior scale
+derivation from annotation BLR</h1>
+<p>If an annotation-level BLR is fitted to marker-level scores, the
+posterior annotation effects can be used to construct prior scales.</p>
+<p>For single-trait marker-specific effect variances:</p>
+<p><span class="math display">\[
+\log v_{b,i,t}
+=
+\mu_t + A_i\gamma_t.
+\]</span></p>
+<p>For marker-specific inclusion probabilities:</p>
+<p><span class="math display">\[
+\operatorname{logit}(\pi_{i,t})
+=
+\eta_t + A_i\alpha_t.
+\]</span></p>
+<p>For MTBLR sharing-model priors:</p>
+<p><span class="math display">\[
+\log \pi_{i,k}
+=
+\zeta_k + A_i\delta_k,
+\]</span></p>
+<p>followed by normalization across models:</p>
+<p><span class="math display">\[
+\pi_{i,k}
+=
+\frac{\exp(\zeta_k + A_i\delta_k)}
+{\sum_l \exp(\zeta_l + A_i\delta_l)}.
+\]</span></p>
+<p>This provides a coherent way to use overlapping annotations without
+assigning each marker to a single class.</p>
+<h1 id="recommended-modelling-hierarchy">Recommended modelling
+hierarchy</h1>
+<p>A practical implementation can proceed in stages.</p>
+<h2 id="stage-1-stblr-genome-wide-screening">Stage 1: STBLR genome-wide
+screening</h2>
+<p>Run STBLR for each trait to obtain:</p>
+<p><span class="math display">\[
+\hat b_{it}, \qquad \widehat{dm}_{it}, \qquad r_{it}.
+\]</span></p>
+<p>These are used to estimate annotation effects, variance
+contributions, and sharing patterns.</p>
+<h2 id="stage-2-annotation-summary-and-decomposition">Stage 2:
+Annotation summary and decomposition</h2>
+<p>Compute:</p>
+<p><span class="math display">\[
+\widehat V_{G,k,t},
+\]</span></p>
+<p>PIP enrichment,</p>
+<p><span class="math display">\[
+\text{enrichment}_{k,t},
+\]</span></p>
+<p>and, if desired, fit annotation-level STBLR or MTBLR models.</p>
+<h2 id="stage-3-derive-prior-parameters">Stage 3: Derive prior
+parameters</h2>
+<p>Estimate:</p>
+<p><span class="math display">\[
+\pi_{k,t},
+\]</span></p>
+<p><span class="math display">\[
+\sigma^2_{b,k,t},
+\]</span></p>
+<p><span class="math display">\[
+B_k,
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\pi_{k,m}.
+\]</span></p>
+<p>For overlapping annotations, derive marker-specific priors using
+log-linear or logistic annotation models.</p>
+<h2 id="stage-4-annotation-informed-stblr-or-mtblr">Stage 4:
+Annotation-informed STBLR or MTBLR</h2>
+<p>Use the derived priors in a second-stage model:</p>
+<p><span class="math display">\[
+b_{it} \sim (1-\pi_{it})\delta_0 + \pi_{it}N(0, v_{b,it})
+\]</span></p>
+<p>for STBLR, or</p>
+<p><span class="math display">\[
+\mathbf b_i \sim \sum_m \pi_{i,m} N_m(0, B_i)
+\]</span></p>
+<p>for MTBLR.</p>
+<h1 id="warm-started-regional-mtblr">Warm-started regional MTBLR</h1>
+<p>The same STBLR outputs can also be used to warm-start MTBLR in
+selected regions.</p>
+<p>Let</p>
+<p><span class="math display">\[
+b^{(0)}_{it} = \hat b_{it}^{\mathrm{STBLR}}.
+\]</span></p>
+<p>Use this as the initial value for MTBLR.</p>
+<p>Select candidate markers using STBLR posterior summaries, for
+example:</p>
+<p><span class="math display">\[
+\max_t \widehat{dm}_{it} &gt; \tau.
+\]</span></p>
+<p>Then expand selected markers by LD neighborhoods and update only
+those markers in MTBLR.</p>
+<p>The residual should still be initialized using all marker
+effects:</p>
+<p><span class="math display">\[
+r_t = wy_t - X^\top X b_t^{(0)}.
+\]</span></p>
+<p>Then, during MTBLR, update only markers inside selected regions while
+holding the remaining markers fixed at their STBLR posterior mean
+values.</p>
+<p>This gives a computationally efficient approximate MTBLR analysis
+while preserving the genome-wide STBLR background effect.</p>
+<h1 id="practical-cautions">Practical cautions</h1>
+<ol type="1">
+<li><p>Annotation-derived prior parameters are empirical Bayes
+quantities. They should be documented as such.</p></li>
+<li><p>Very small annotations can give unstable prior scale estimates.
+Use pseudo-counts, floors, and shrinkage toward global values.</p></li>
+<li><p>For overlapping annotations, avoid interpreting direct set sums
+as a strict variance partition.</p></li>
+<li><p>Marker-specific prior variances should be capped to avoid overly
+aggressive annotation effects.</p></li>
+<li><p>If prior parameters are derived from the same data used for final
+inference, uncertainty may be underestimated. For prediction or
+discovery, this can still be useful, but for formal inference one may
+need cross-validation, sample splitting, or a fully hierarchical
+model.</p></li>
+</ol>
+<h1 id="minimal-example-workflow">Minimal example workflow</h1>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Run first-stage STBLR.</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fitST <span class="ot">&lt;-</span> <span class="fu">stblr_cpg_omp_csr</span>(...)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Estimate annotation-specific variance contributions.</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>vg_ann <span class="ot">&lt;-</span> <span class="fu">estimate_vg_by_set</span>(fitST, sets, n)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Estimate annotation-specific inclusion probabilities.</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>pi_ann <span class="ot">&lt;-</span> <span class="fu">estimate_annotation_pi</span>(fitST<span class="sc">$</span>dm, sets, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Estimate annotation-specific prior effect variances.</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>vb_ann <span class="ot">&lt;-</span> <span class="fu">estimate_annotation_vb</span>(fitST, sets, n, <span class="at">min_eff =</span> <span class="dv">1</span>, <span class="at">shrink =</span> <span class="fl">0.5</span>)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Estimate annotation-specific MTBLR sharing priors.</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>pi_model_ann <span class="ot">&lt;-</span> <span class="fu">estimate_annotation_model_pi</span>(fitST<span class="sc">$</span>dm, models, sets, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Optional: derive annotation-specific MT prior covariance matrices.</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>B_ann <span class="ot">&lt;-</span> <span class="fu">estimate_annotation_B</span>(fitST<span class="sc">$</span>bm, fitST<span class="sc">$</span>dm, sets)</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 7. Use these quantities as priors, initial values, or region-selection weights</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="co">#    in a second-stage STBLR or MTBLR model.</span></span></code></pre></div>
+<h1 id="summary">Summary</h1>
+<p>STBLR posterior marker summaries can be used to construct
+biologically informed prior parameters for later STBLR or MTBLR
+analyses. The most useful derived quantities are:</p>
+<p><span class="math display">\[
+\pi_{k,t},
+\]</span></p>
+<p>annotation-specific inclusion probabilities,</p>
+<p><span class="math display">\[
+\sigma^2_{b,k,t},
+\]</span></p>
+<p>annotation-specific effect variances,</p>
+<p><span class="math display">\[
+B_k,
+\]</span></p>
+<p>annotation-specific multi-trait effect covariance matrices, and</p>
+<p><span class="math display">\[
+\pi_{k,m},
+\]</span></p>
+<p>annotation-specific multi-trait sharing-model probabilities.</p>
+<p>For overlapping annotations, multiple regression, STBLR, or MTBLR can
+be used as an annotation-level model. This provides partial annotation
+effects and avoids arbitrary assignment of markers to a single
+category.</p>
+<p>The resulting annotation-informed priors can be used for improved
+initialization, regional MTBLR fitting, marker-specific prior scales,
+and biologically interpretable multi-trait sharing analyses.</p>
+<h1
+id="empirical-bayes-priors-from-an-annotation-level-stblr-or-mtblr">Empirical-Bayes
+priors from an annotation-level STBLR or MTBLR</h1>
+<p>A more coherent extension is to use the first genomic STBLR or MTBLR
+fit only as an intermediate step. The posterior marker summaries from
+this fit are converted into marker-level response variables. These
+response variables are then analysed with a second-stage STBLR or MTBLR
+model in which the design matrix is the marker-by-annotation matrix.</p>
+<p>The complete empirical-Bayes loop is:</p>
+<p><span class="math display">\[
+\text{genomic STBLR/MTBLR}
+\rightarrow
+\text{marker-level summaries}
+\rightarrow
+\text{annotation STBLR/MTBLR}
+\rightarrow
+\text{annotation-informed priors}
+\rightarrow
+\text{next genomic STBLR/MTBLR}.
+\]</span></p>
+<p>This is different from using annotations directly in a ridge
+regression. The annotation-level STBLR or MTBLR can perform shrinkage,
+variable selection, and multi-trait sharing inference among
+annotations.</p>
+<h2 id="first-stage-genomic-fit">First-stage genomic fit</h2>
+<p>The first-stage genomic model is fitted using the ordinary
+summary-statistic inputs:</p>
+<p><span class="math display">\[
+wy, \quad ww, \quad yy, \quad LD.
+\]</span></p>
+<p>It produces marker-level posterior summaries:</p>
+<p><span class="math display">\[
+\hat b_{it}, \qquad dm_{it}, \qquad r_{it}, \qquad
+q_{it}=wy_{it}-r_{it}.
+\]</span></p>
+<p>Here <span class="math inline">\(\hat b_{it}\)</span> is the
+posterior mean marker effect, <span
+class="math inline">\(dm_{it}\)</span> is the posterior inclusion
+probability, and <span class="math inline">\(q_{it}\)</span> is the
+fitted marker score implied by the current posterior mean effects.</p>
+<p>Useful marker-level response matrices include:</p>
+<p><span class="math display">\[
+S^{(b)}_{it} = \hat b_{it},
+\]</span></p>
+<p><span class="math display">\[
+S^{(pip)}_{it} = \operatorname{logit}(dm_{it}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+S^{(vg)}_{it}
+=
+\frac{\hat b_{it}(wy_{it}-r_{it})}{n}.
+\]</span></p>
+<p>The third response is LD-aware and directly related to the
+marker-level contribution to genomic variance.</p>
+<p>In R:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>S_b <span class="ot">&lt;-</span> fit0<span class="sc">$</span>bm</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>S_pip <span class="ot">&lt;-</span> <span class="fu">qlogis</span>(<span class="fu">pmin</span>(<span class="fu">pmax</span>(fit0<span class="sc">$</span>dm, <span class="fl">1e-6</span>), <span class="dv">1</span> <span class="sc">-</span> <span class="fl">1e-6</span>))</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>S_vg <span class="ot">&lt;-</span> fit0<span class="sc">$</span>bm <span class="sc">*</span> (fit0<span class="sc">$</span>wy <span class="sc">-</span> fit0<span class="sc">$</span>r) <span class="sc">/</span> n</span></code></pre></div>
+<h2 id="annotation-level-stblr">Annotation-level STBLR</h2>
+<p>Let <span class="math inline">\(A\)</span> be the
+marker-by-annotation matrix. A single-trait annotation model is:</p>
+<p><span class="math display">\[
+S_t = A\gamma_t + e_t,
+\]</span></p>
+<p>where <span class="math inline">\(S_t\)</span> is one column of a
+marker-level response matrix, and <span
+class="math inline">\(\gamma_t\)</span> is a vector of annotation
+effects for trait <span class="math inline">\(t\)</span>.</p>
+<p>Using a BayesC-like prior,</p>
+<p><span class="math display">\[
+\gamma_{kt} = \delta_{kt}\alpha_{kt},
+\]</span></p>
+<p><span class="math display">\[
+\delta_{kt} \sim \operatorname{Bernoulli}(\pi_{\gamma,t}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\alpha_{kt} \mid \delta_{kt}=1
+\sim
+N(0, \sigma^2_{\gamma,t}).
+\]</span></p>
+<p>The annotation-level STBLR posterior gives:</p>
+<p><span class="math display">\[
+E(\gamma_{kt} \mid S),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+P(\delta_{kt}=1 \mid S).
+\]</span></p>
+<p>These quantities measure whether annotation <span
+class="math inline">\(k\)</span> explains marker-level evidence for
+trait <span class="math inline">\(t\)</span>, conditional on other
+overlapping annotations.</p>
+<h2 id="annotation-level-mtblr">Annotation-level MTBLR</h2>
+<p>For multiple traits, use:</p>
+<p><span class="math display">\[
+S = A\Gamma + E,
+\]</span></p>
+<p>where <span class="math inline">\(S\)</span> is an <span
+class="math inline">\(m \times T\)</span> marker-level response matrix
+and <span class="math inline">\(\Gamma\)</span> is a <span
+class="math inline">\(K \times T\)</span> matrix of annotation
+effects.</p>
+<p>For annotation <span class="math inline">\(k\)</span>:</p>
+<p><span class="math display">\[
+\boldsymbol{\gamma}_k
+=
+(\gamma_{k1},\ldots,\gamma_{kT})^\top.
+\]</span></p>
+<p>An MTBLR prior can be used to infer annotation sharing patterns:</p>
+<p><span class="math display">\[
+\boldsymbol{\gamma}_k
+\sim
+\sum_m \pi_{\gamma,m} N_m(0, B_\gamma),
+\]</span></p>
+<p>where <span class="math inline">\(m\)</span> indexes trait-sharing
+models such as:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="dv">000</span>, <span class="dv">100</span>, <span class="dv">010</span>, <span class="dv">001</span>, <span class="dv">110</span>, <span class="dv">101</span>, <span class="dv">011</span>, <span class="dv">111</span></span></code></pre></div>
+<p>for three traits. The posterior model probabilities indicate whether
+an annotation contributes to one trait, several traits, or all
+traits.</p>
+<h2 id="deriving-marker-specific-inclusion-priors">Deriving
+marker-specific inclusion priors</h2>
+<p>From an annotation model fitted to <span
+class="math inline">\(S^{(pip)}\)</span>, construct a marker-specific
+annotation score:</p>
+<p><span class="math display">\[
+\eta_{it}
+=
+\eta_{0t} + \sum_k A_{ik}\hat\gamma_{kt}.
+\]</span></p>
+<p>Then transform it to a marker-specific prior inclusion
+probability:</p>
+<p><span class="math display">\[
+\pi_{it}
+=
+\operatorname{logit}^{-1}(\eta_{it}).
+\]</span></p>
+<p>The annotation contribution should usually be centered so the
+genome-wide mean prior inclusion probability remains close to the
+original base rate.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>derive_pi_marker <span class="ot">&lt;-</span> <span class="cf">function</span>(A, gamma, base_pi, <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">1e-8</span>, <span class="fl">0.05</span>)) {</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(A)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  gamma <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(gamma)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> A <span class="sc">%*%</span> gamma</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Center annotation contribution so the genome-wide mean stays near base_pi.</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> <span class="fu">sweep</span>(eta, <span class="dv">2</span>, <span class="fu">colMeans</span>(eta, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="st">&quot;-&quot;</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> <span class="fu">sweep</span>(eta, <span class="dv">2</span>, <span class="fu">qlogis</span>(base_pi), <span class="st">&quot;+&quot;</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  pi_marker <span class="ot">&lt;-</span> <span class="fu">plogis</span>(eta)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(<span class="fu">pmax</span>(pi_marker, cap[<span class="dv">1</span>]), cap[<span class="dv">2</span>])</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>A reasonable base rate is:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>base_pi <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(fit0<span class="sc">$</span>dm)</span></code></pre></div>
+<p>Then:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>pi_marker <span class="ot">&lt;-</span> <span class="fu">derive_pi_marker</span>(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> annot,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> fitAnn_pip<span class="sc">$</span>bm,</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">base_pi =</span> base_pi,</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">1e-8</span>, <span class="fl">0.05</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>In the next genomic STBLR, marker <span
+class="math inline">\(i\)</span> and trait <span
+class="math inline">\(t\)</span> use <span
+class="math inline">\(\pi_{it}\)</span> instead of a global <span
+class="math inline">\(\pi_t\)</span>.</p>
+<h2 id="deriving-marker-specific-prior-effect-variances">Deriving
+marker-specific prior effect variances</h2>
+<p>From an annotation model fitted to <span
+class="math inline">\(S^{(vg)}\)</span> or <span
+class="math inline">\(S^{(b^2)}\)</span>, construct marker-specific
+prior effect variances:</p>
+<p><span class="math display">\[
+\log v_{b,it}
+=
+\log v_{b,t}^{global}
++
+\sum_k A_{ik}\hat\theta_{kt}.
+\]</span></p>
+<p>Thus:</p>
+<p><span class="math display">\[
+v_{b,it}
+=
+v_{b,t}^{global}
+\exp\left(\sum_k A_{ik}\hat\theta_{kt}\right).
+\]</span></p>
+<p>Again, the annotation contribution should be centered and capped.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>derive_vb_marker <span class="ot">&lt;-</span> <span class="cf">function</span>(A, theta, global_vb, <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="dv">4</span>)) {</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(A)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  theta <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(theta)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> A <span class="sc">%*%</span> theta</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> <span class="fu">sweep</span>(eta, <span class="dv">2</span>, <span class="fu">colMeans</span>(eta, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="st">&quot;-&quot;</span>)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  mult <span class="ot">&lt;-</span> <span class="fu">exp</span>(eta)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  mult <span class="ot">&lt;-</span> <span class="fu">pmin</span>(<span class="fu">pmax</span>(mult, cap[<span class="dv">1</span>]), cap[<span class="dv">2</span>])</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  vb_marker <span class="ot">&lt;-</span> <span class="fu">sweep</span>(mult, <span class="dv">2</span>, global_vb, <span class="st">&quot;*&quot;</span>)</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmax</span>(vb_marker, <span class="fl">1e-12</span>)</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>For example:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>global_vb <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(fit0<span class="sc">$</span>vbs)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>vb_marker <span class="ot">&lt;-</span> <span class="fu">derive_vb_marker</span>(</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> annot,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">theta =</span> fitAnn_vg<span class="sc">$</span>bm,</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">global_vb =</span> global_vb,</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="dv">4</span>)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>These marker-specific prior variances can be used in the next genomic
+STBLR by replacing the global <span class="math inline">\(v_b\)</span>
+with <span class="math inline">\(v_{b,it}\)</span>.</p>
+<h2 id="deriving-mtblr-marker-specific-sharing-model-priors">Deriving
+MTBLR marker-specific sharing-model priors</h2>
+<p>For MTBLR, annotation-level MTBLR can be used to derive
+marker-specific priors over sharing models.</p>
+<p>Let <span class="math inline">\(\eta_{km}\)</span> be the
+annotation-level effect of annotation <span
+class="math inline">\(k\)</span> on sharing model <span
+class="math inline">\(m\)</span>. Then for marker <span
+class="math inline">\(i\)</span>:</p>
+<p><span class="math display">\[
+\log \pi_{im}
+=
+\log \pi_m^{global}
++
+\sum_k A_{ik}\eta_{km}.
+\]</span></p>
+<p>Normalize across models:</p>
+<p><span class="math display">\[
+\pi_{im}
+=
+\frac{\exp(\log \pi_{im})}
+{\sum_l \exp(\log \pi_{il})}.
+\]</span></p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>derive_model_pi_marker <span class="ot">&lt;-</span> <span class="cf">function</span>(A, eta_model, base_pi, <span class="at">eps =</span> <span class="fl">1e-12</span>) {</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(A)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  eta_model <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(eta_model)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  log_pi <span class="ot">&lt;-</span> A <span class="sc">%*%</span> eta_model</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  log_pi <span class="ot">&lt;-</span> <span class="fu">sweep</span>(log_pi, <span class="dv">2</span>, <span class="fu">colMeans</span>(log_pi, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="st">&quot;-&quot;</span>)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  log_pi <span class="ot">&lt;-</span> <span class="fu">sweep</span>(log_pi, <span class="dv">2</span>, <span class="fu">log</span>(<span class="fu">pmax</span>(base_pi, eps)), <span class="st">&quot;+&quot;</span>)</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  log_pi <span class="ot">&lt;-</span> <span class="fu">sweep</span>(log_pi, <span class="dv">1</span>, <span class="fu">apply</span>(log_pi, <span class="dv">1</span>, max), <span class="st">&quot;-&quot;</span>)</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  pi_marker <span class="ot">&lt;-</span> <span class="fu">exp</span>(log_pi)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  pi_marker <span class="ot">&lt;-</span> <span class="fu">sweep</span>(pi_marker, <span class="dv">1</span>, <span class="fu">rowSums</span>(pi_marker), <span class="st">&quot;/&quot;</span>)</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmax</span>(pi_marker, eps)</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>In the genomic MTBLR C++ marker sampler, this changes the model prior
+term from:</p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi<span class="op">[</span>k<span class="op">])</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<p>to:</p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi_marker<span class="op">(</span>i<span class="op">,</span> k<span class="op">))</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<p>This allows annotations to influence whether a marker is more likely
+to be trait-specific or pleiotropic.</p>
+<h2
+id="deriving-a-global-mtblr-prior-covariance-matrix-from-annotations">Deriving
+a global MTBLR prior covariance matrix from annotations</h2>
+<p>An annotation-level MTBLR also gives annotation effect estimates
+across traits. These can be used to estimate a global prior covariance
+matrix for the next genomic MTBLR run.</p>
+<p>Let <span class="math inline">\(\hat\Gamma\)</span> be the matrix of
+annotation posterior mean effects. A weighted covariance estimate
+is:</p>
+<p><span class="math display">\[
+B_{ann}
+=
+\frac{\sum_k w_k
+\hat{\boldsymbol\gamma}_k\hat{\boldsymbol\gamma}_k^\top}
+{\sum_k w_k},
+\]</span></p>
+<p>where <span class="math inline">\(w_k\)</span> can be an
+annotation-level posterior inclusion weight, for example:</p>
+<p><span class="math display">\[
+w_k = \max_t dm^{ann}_{kt}.
+\]</span></p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>estimate_B_from_annotation_model <span class="ot">&lt;-</span> <span class="cf">function</span>(gamma, dm, <span class="at">ridge =</span> <span class="fl">1e-8</span>) {</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  gamma <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(gamma)</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  w <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="fu">apply</span>(dm, <span class="dv">1</span>, max), <span class="fl">1e-6</span>)</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  B <span class="ot">&lt;-</span> <span class="fu">crossprod</span>(gamma <span class="sc">*</span> <span class="fu">sqrt</span>(w)) <span class="sc">/</span> <span class="fu">sum</span>(w)</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  B <span class="ot">&lt;-</span> <span class="fl">0.5</span> <span class="sc">*</span> (B <span class="sc">+</span> <span class="fu">t</span>(B))</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">diag</span>(B) <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="fu">diag</span>(B), ridge)</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>  B</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This matrix can be used as the initial global <span
+class="math inline">\(B\)</span> matrix in the next MTBLR run.</p>
+<h2 id="recommended-empirical-bayes-workflow">Recommended
+empirical-Bayes workflow</h2>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Round 1: genomic STBLR or MTBLR</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>fit0 <span class="ot">&lt;-</span> <span class="fu">stblr_cpg_omp_csr</span>(...)</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="co"># or:</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="co"># fit0 &lt;- mtblr_cpg_omp_csr(...)</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Marker-level responses</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>S_b   <span class="ot">&lt;-</span> fit0<span class="sc">$</span>bm</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>S_pip <span class="ot">&lt;-</span> <span class="fu">qlogis</span>(<span class="fu">pmin</span>(<span class="fu">pmax</span>(fit0<span class="sc">$</span>dm, <span class="fl">1e-6</span>), <span class="dv">1</span> <span class="sc">-</span> <span class="fl">1e-6</span>))</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>S_vg  <span class="ot">&lt;-</span> fit0<span class="sc">$</span>bm <span class="sc">*</span> (fit0<span class="sc">$</span>wy <span class="sc">-</span> fit0<span class="sc">$</span>r) <span class="sc">/</span> n</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Round 2: annotation-level STBLR or MTBLR</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Here annot is the marker-by-annotation design matrix.</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>fitAnn_pip <span class="ot">&lt;-</span> <span class="fu">stblr_annotation</span>(</span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> S_pip,</span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">X =</span> annot</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>fitAnn_vg <span class="ot">&lt;-</span> <span class="fu">stblr_annotation</span>(</span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> S_vg,</span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">X =</span> annot</span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional multi-trait annotation model.</span></span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>fitAnn_mt <span class="ot">&lt;-</span> <span class="fu">mtblr_annotation</span>(</span>
+<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">Y =</span> S_vg,</span>
+<span id="cb30-30"><a href="#cb30-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">X =</span> annot,</span>
+<span id="cb30-31"><a href="#cb30-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">models =</span> models</span>
+<span id="cb30-32"><a href="#cb30-32" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-33"><a href="#cb30-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-34"><a href="#cb30-34" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-35"><a href="#cb30-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Derive annotation-informed genomic priors</span></span>
+<span id="cb30-36"><a href="#cb30-36" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-37"><a href="#cb30-37" aria-hidden="true" tabindex="-1"></a>pi_marker <span class="ot">&lt;-</span> <span class="fu">derive_pi_marker</span>(</span>
+<span id="cb30-38"><a href="#cb30-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> annot,</span>
+<span id="cb30-39"><a href="#cb30-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> fitAnn_pip<span class="sc">$</span>bm,</span>
+<span id="cb30-40"><a href="#cb30-40" aria-hidden="true" tabindex="-1"></a>  <span class="at">base_pi =</span> <span class="fu">colMeans</span>(fit0<span class="sc">$</span>dm),</span>
+<span id="cb30-41"><a href="#cb30-41" aria-hidden="true" tabindex="-1"></a>  <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">1e-8</span>, <span class="fl">0.05</span>)</span>
+<span id="cb30-42"><a href="#cb30-42" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-43"><a href="#cb30-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-44"><a href="#cb30-44" aria-hidden="true" tabindex="-1"></a>vb_marker <span class="ot">&lt;-</span> <span class="fu">derive_vb_marker</span>(</span>
+<span id="cb30-45"><a href="#cb30-45" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> annot,</span>
+<span id="cb30-46"><a href="#cb30-46" aria-hidden="true" tabindex="-1"></a>  <span class="at">theta =</span> fitAnn_vg<span class="sc">$</span>bm,</span>
+<span id="cb30-47"><a href="#cb30-47" aria-hidden="true" tabindex="-1"></a>  <span class="at">global_vb =</span> <span class="fu">colMeans</span>(fit0<span class="sc">$</span>vbs),</span>
+<span id="cb30-48"><a href="#cb30-48" aria-hidden="true" tabindex="-1"></a>  <span class="at">cap =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="dv">4</span>)</span>
+<span id="cb30-49"><a href="#cb30-49" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-50"><a href="#cb30-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-51"><a href="#cb30-51" aria-hidden="true" tabindex="-1"></a>B_init <span class="ot">&lt;-</span> <span class="fu">estimate_B_from_annotation_model</span>(</span>
+<span id="cb30-52"><a href="#cb30-52" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> fitAnn_mt<span class="sc">$</span>bm,</span>
+<span id="cb30-53"><a href="#cb30-53" aria-hidden="true" tabindex="-1"></a>  <span class="at">dm =</span> fitAnn_mt<span class="sc">$</span>dm</span>
+<span id="cb30-54"><a href="#cb30-54" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-55"><a href="#cb30-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-56"><a href="#cb30-56" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-57"><a href="#cb30-57" aria-hidden="true" tabindex="-1"></a><span class="co"># Round 3: genomic STBLR or MTBLR with annotation-informed priors</span></span>
+<span id="cb30-58"><a href="#cb30-58" aria-hidden="true" tabindex="-1"></a><span class="co"># ------------------------------------------------------------</span></span>
+<span id="cb30-59"><a href="#cb30-59" aria-hidden="true" tabindex="-1"></a>fit1 <span class="ot">&lt;-</span> <span class="fu">stblr_cpg_omp_csr</span>(</span>
+<span id="cb30-60"><a href="#cb30-60" aria-hidden="true" tabindex="-1"></a>  ...,</span>
+<span id="cb30-61"><a href="#cb30-61" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> pi_marker,</span>
+<span id="cb30-62"><a href="#cb30-62" aria-hidden="true" tabindex="-1"></a>  <span class="at">vb_marker =</span> vb_marker</span>
+<span id="cb30-63"><a href="#cb30-63" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-64"><a href="#cb30-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-65"><a href="#cb30-65" aria-hidden="true" tabindex="-1"></a>fit1_mt <span class="ot">&lt;-</span> <span class="fu">mtblr_cpg_omp_csr</span>(</span>
+<span id="cb30-66"><a href="#cb30-66" aria-hidden="true" tabindex="-1"></a>  ...,</span>
+<span id="cb30-67"><a href="#cb30-67" aria-hidden="true" tabindex="-1"></a>  <span class="at">B =</span> B_init,</span>
+<span id="cb30-68"><a href="#cb30-68" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker_model =</span> pi_marker_model,</span>
+<span id="cb30-69"><a href="#cb30-69" aria-hidden="true" tabindex="-1"></a>  <span class="at">adjE =</span> <span class="fl">0.9</span></span>
+<span id="cb30-70"><a href="#cb30-70" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<h2 id="interpretation">Interpretation</h2>
+<p>The annotation-level BLR or MTBLR does not estimate marker effects
+directly. It estimates how annotations explain marker-level evidence
+from the first genomic model. The resulting priors are therefore
+empirical-Bayes priors. They are useful for stabilizing later genomic
+analyses, improving initialization, guiding sharing-model probabilities,
+and incorporating biological information.</p>
+<p>The most useful derived quantities are:</p>
+<p><span class="math display">\[
+\pi_{it},
+\]</span></p>
+<p>marker-specific inclusion probabilities,</p>
+<p><span class="math display">\[
+v_{b,it},
+\]</span></p>
+<p>marker-specific prior effect variances,</p>
+<p><span class="math display">\[
+\pi_{im},
+\]</span></p>
+<p>marker-specific MTBLR sharing-model probabilities, and</p>
+<p><span class="math display">\[
+B_{ann},
+\]</span></p>
+<p>an annotation-informed global MTBLR prior covariance matrix.</p>
+<h2 id="cross-fitting-and-overfitting">Cross-fitting and
+overfitting</h2>
+<p>Because the same data may be used to estimate marker summaries and
+then to construct priors, the procedure is empirical Bayes and can be
+optimistic if used for formal inference. A more conservative strategy is
+chromosome-wise cross-fitting:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (chr <span class="cf">in</span> chromosomes) {</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 1. Fit or summarize annotation model using all chromosomes except chr.</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 2. Derive priors for markers on chr.</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 3. Refit genomic STBLR or MTBLR on chr using those priors.</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This avoids using the same markers both to estimate their
+annotation-informed priors and to evaluate their posterior evidence.</p>
+<h1
+id="direct-annotation-modelling-inside-the-genomic-stblr-or-mtblr-sampler">Direct
+annotation modelling inside the genomic STBLR or MTBLR sampler</h1>
+<p>The empirical-Bayes strategy above treats annotation modelling as a
+separate second-stage analysis. A more direct alternative is to include
+the annotation matrix inside the genomic STBLR or MTBLR sampler itself.
+In this formulation, annotations do not only summarize results after
+fitting; they directly parameterize the marker-level prior probabilities
+and prior scales used during sampling.</p>
+<p>Let <span class="math inline">\(A\)</span> be the
+marker-by-annotation matrix, with entries <span
+class="math inline">\(A_{ik}\)</span> for marker <span
+class="math inline">\(i=1,\ldots,m\)</span> and annotation <span
+class="math inline">\(k=1,\ldots,K\)</span>. The goal is to let <span
+class="math inline">\(A_i\)</span>, the annotation profile of marker
+<span class="math inline">\(i\)</span>, determine quantities such
+as:</p>
+<p><span class="math display">\[
+\pi_{it},
+\]</span></p>
+<p><span class="math display">\[
+v_{b,it},
+\]</span></p>
+<p><span class="math display">\[
+\pi_{im},
+\]</span></p>
+<p>and, for MTBLR,</p>
+<p><span class="math display">\[
+B_i.
+\]</span></p>
+<p>Here <span class="math inline">\(\pi_{it}\)</span> is the prior
+inclusion probability for marker <span class="math inline">\(i\)</span>
+and trait <span class="math inline">\(t\)</span>, <span
+class="math inline">\(v_{b,it}\)</span> is the marker-specific prior
+effect variance, <span class="math inline">\(\pi_{im}\)</span> is the
+marker-specific prior probability of MTBLR sharing model <span
+class="math inline">\(m\)</span>, and <span
+class="math inline">\(B_i\)</span> is a marker-specific prior covariance
+matrix for multivariate marker effects.</p>
+<h2 id="direct-annotation-informed-stblr">Direct annotation-informed
+STBLR</h2>
+<p>In a single-trait BayesC-style STBLR model, marker effects can be
+written as:</p>
+<p><span class="math display">\[
+b_{it} = d_{it}\alpha_{it},
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+d_{it} \sim \mathrm{Bernoulli}(\pi_{it}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\alpha_{it} \mid d_{it}=1 \sim N(0, v_{b,it}).
+\]</span></p>
+<p>The annotation matrix can be used to model the prior inclusion
+probability as:</p>
+<p><span class="math display">\[
+\mathrm{logit}(\pi_{it}) = \mu_{\pi,t} + A_i \eta_{\pi,t},
+\]</span></p>
+<p>where <span class="math inline">\(\eta_{\pi,t}\)</span> is a vector
+of annotation effects on inclusion probability for trait <span
+class="math inline">\(t\)</span>.</p>
+<p>Similarly, the marker-specific prior effect variance can be modelled
+as:</p>
+<p><span class="math display">\[
+\log(v_{b,it}) = \mu_{v,t} + A_i \eta_{v,t}.
+\]</span></p>
+<p>Equivalently,</p>
+<p><span class="math display">\[
+v_{b,it} = \exp(\mu_{v,t} + A_i\eta_{v,t}).
+\]</span></p>
+<p>This gives an annotation-aware STBLR model:</p>
+<p><span class="math display">\[
+b_{it} \sim (1-\pi_{it})\delta_0 + \pi_{it}N(0,v_{b,it}).
+\]</span></p>
+<p>This is a direct extension of the usual global-prior STBLR model,
+where all markers share the same <span
+class="math inline">\(\pi_t\)</span> and <span
+class="math inline">\(v_{b,t}\)</span>.</p>
+<h2 id="modified-stblr-marker-update">Modified STBLR marker update</h2>
+<p>For marker <span class="math inline">\(i\)</span>, define the partial
+residual score:</p>
+<p><span class="math display">\[
+s_{it} = r_{it} + w_{it}b_{it},
+\]</span></p>
+<p>where <span class="math inline">\(w_{it}=x_i^\top x_i\)</span> for
+trait <span class="math inline">\(t\)</span>.</p>
+<p>With marker-specific prior variance <span
+class="math inline">\(v_{b,it}\)</span> and residual variance <span
+class="math inline">\(v_{e,t}\)</span>, the Bayes factor for inclusion
+becomes:</p>
+<p><span class="math display">\[
+\log BF_{it}
+=
+\frac{1}{2}\log\left(\frac{v_{e,t}}{v_{e,t}+w_{it}v_{b,it}}\right)
++
+\frac{1}{2}\frac{s_{it}^2v_{b,it}}{v_{e,t}(v_{e,t}+w_{it}v_{b,it})}.
+\]</span></p>
+<p>The posterior inclusion probability is:</p>
+<p><span class="math display">\[
+P(d_{it}=1 \mid -)
+=
+\frac{\pi_{it}BF_{it}}{(1-\pi_{it})+\pi_{it}BF_{it}}.
+\]</span></p>
+<p>Conditional on inclusion, the posterior draw is:</p>
+<p><span class="math display">\[
+b_{it} \mid d_{it}=1,- \sim N(m_{it}, s^2_{it}),
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+m_{it} = \frac{s_{it}}{w_{it}+v_{e,t}/v_{b,it}},
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+s^2_{it} = \frac{v_{e,t}}{w_{it}+v_{e,t}/v_{b,it}}.
+\]</span></p>
+<p>Thus, the only change in the existing STBLR sampler is to replace the
+global <span class="math inline">\(\pi_t\)</span> and <span
+class="math inline">\(v_{b,t}\)</span> by marker-specific values <span
+class="math inline">\(\pi_{it}\)</span> and <span
+class="math inline">\(v_{b,it}\)</span>.</p>
+<p>A corresponding C++ change is conceptually:</p>
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> pi1 <span class="op">=</span> pi_marker<span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> pi0 <span class="op">=</span> <span class="fl">1.0</span> <span class="op">-</span> pi1<span class="op">;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> vbi <span class="op">=</span> vb_marker<span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> denom <span class="op">=</span> ve <span class="op">+</span> wi <span class="op">*</span> vbi<span class="op">;</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> logBF <span class="op">=</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.5</span> <span class="op">*</span> <span class="bu">std::</span>log<span class="op">(</span>ve <span class="op">/</span> denom<span class="op">)</span> <span class="op">+</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.5</span> <span class="op">*</span> score <span class="op">*</span> score <span class="op">*</span> vbi <span class="op">/</span> <span class="op">(</span>ve <span class="op">*</span> denom<span class="op">);</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> lhs <span class="op">=</span> wi <span class="op">+</span> ve <span class="op">/</span> vbi<span class="op">;</span></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> mean <span class="op">=</span> score <span class="op">/</span> lhs<span class="op">;</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> sd <span class="op">=</span> <span class="bu">std::</span>sqrt<span class="op">(</span>ve <span class="op">/</span> lhs<span class="op">);</span></span></code></pre></div>
+<p>For multiple traits running in parallel STBLR, <span
+class="math inline">\(\pi_{it}\)</span> and <span
+class="math inline">\(v_{b,it}\)</span> can be stored as marker-by-trait
+matrices:</p>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> pi1 <span class="op">=</span> pi_marker<span class="op">(</span>i<span class="op">,</span> t<span class="op">);</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> vbi <span class="op">=</span> vb_marker<span class="op">(</span>i<span class="op">,</span> t<span class="op">);</span></span></code></pre></div>
+<h2 id="estimating-annotation-effects-inside-the-sampler">Estimating
+annotation effects inside the sampler</h2>
+<p>There are two main ways to handle the annotation coefficients <span
+class="math inline">\(\eta_{\pi,t}\)</span> and <span
+class="math inline">\(\eta_{v,t}\)</span>.</p>
+<h3 id="fixed-annotation-effects">Fixed annotation effects</h3>
+<p>The simplest approach is to estimate <span
+class="math inline">\(\eta_{\pi,t}\)</span> and <span
+class="math inline">\(\eta_{v,t}\)</span> before the genomic sampler,
+for example from a previous STBLR/MTBLR annotation analysis, and then
+treat them as fixed during the next genomic run.</p>
+<p>This gives a stable empirical-Bayes model:</p>
+<p><span class="math display">\[
+\widehat\eta_{\pi,t}, \widehat\eta_{v,t}
+\quad \Rightarrow \quad
+\pi_{it}, v_{b,it}
+\quad \Rightarrow \quad
+\text{annotation-informed genomic STBLR}.
+\]</span></p>
+<p>This is the easiest and safest implementation.</p>
+<h3 id="updating-annotation-effects-during-sampling">Updating annotation
+effects during sampling</h3>
+<p>A more ambitious approach is to update the annotation effects inside
+the sampler. For example, one could place priors on annotation
+effects:</p>
+<p><span class="math display">\[
+\eta_{\pi,kt} \sim N(0, \sigma^2_{\eta_\pi,t}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\eta_{v,kt} \sim N(0, \sigma^2_{\eta_v,t}).
+\]</span></p>
+<p>The sampler would then alternate between:</p>
+<ol type="1">
+<li>marker-effect updates using current <span
+class="math inline">\(\pi_{it}\)</span> and <span
+class="math inline">\(v_{b,it}\)</span>,</li>
+<li>annotation-effect updates using current marker inclusion states
+<span class="math inline">\(d_{it}\)</span> and marker effects <span
+class="math inline">\(b_{it}\)</span>,</li>
+<li>variance component updates.</li>
+</ol>
+<p>For inclusion probabilities, the annotation update can be viewed as a
+Bayesian logistic regression:</p>
+<p><span class="math display">\[
+d_{it} \sim \mathrm{Bernoulli}(\pi_{it}),
+\]</span></p>
+<p>with</p>
+<p><span class="math display">\[
+\mathrm{logit}(\pi_{it}) = \mu_{\pi,t} + A_i\eta_{\pi,t}.
+\]</span></p>
+<p>For effect variances, active marker effects can inform a log-variance
+regression:</p>
+<p><span class="math display">\[
+\log(b_{it}^2 + \epsilon) \approx \mu_{v,t} + A_i\eta_{v,t} + e_{it},
+\]</span></p>
+<p>using only markers with <span
+class="math inline">\(d_{it}=1\)</span>, or using weights based on
+posterior inclusion probabilities.</p>
+<p>This fully Bayesian version is more elegant, but also more
+complicated and more prone to mixing issues. For implementation, it is
+usually better to start with fixed annotation-derived priors.</p>
+<h2 id="direct-annotation-informed-mtblr">Direct annotation-informed
+MTBLR</h2>
+<p>In MTBLR, each marker has a vector of trait effects:</p>
+<p><span class="math display">\[
+\mathbf b_i = (b_{i1},\ldots,b_{iT})^\top.
+\]</span></p>
+<p>The usual MTBLR model uses a set of sharing models <span
+class="math inline">\(M_m\)</span>. For example, with three traits the
+model space may be:</p>
+<p><span class="math display">\[
+000, 100, 010, 001, 110, 101, 011, 111.
+\]</span></p>
+<p>A direct annotation-aware MTBLR model lets the annotation profile
+<span class="math inline">\(A_i\)</span> determine the prior probability
+of each sharing model:</p>
+<p><span class="math display">\[
+P(M_i=m \mid A_i) = \pi_{im}.
+\]</span></p>
+<p>A convenient parameterization is a multinomial-logit model:</p>
+<p><span class="math display">\[
+\log \pi_{im} = c_m + A_i\eta_m - C_i,
+\]</span></p>
+<p>where <span class="math inline">\(C_i\)</span> is the normalizing
+constant:</p>
+<p><span class="math display">\[
+C_i = \log\left(\sum_l \exp(c_l + A_i\eta_l)\right).
+\]</span></p>
+<p>Equivalently,</p>
+<p><span class="math display">\[
+\pi_{im}
+=
+\frac{\exp(c_m + A_i\eta_m)}
+{\sum_l \exp(c_l + A_i\eta_l)}.
+\]</span></p>
+<p>The annotation matrix can therefore make coding markers more likely
+to follow a shared model, promoter markers more likely to be
+trait-specific, or QTL markers more likely to have non-null effects
+across several traits.</p>
+<h2 id="mtblr-model-prior-in-the-marker-update">MTBLR model prior in the
+marker update</h2>
+<p>In the MTBLR marker sampler, the model posterior weight for marker
+<span class="math inline">\(i\)</span> and model <span
+class="math inline">\(m\)</span> typically has the form:</p>
+<p><span class="math display">\[
+\log w_{im}
+=
+\log \pi_m + \log L_{im},
+\]</span></p>
+<p>where <span class="math inline">\(\log L_{im}\)</span> is the
+marginal likelihood contribution under sharing model <span
+class="math inline">\(m\)</span>.</p>
+<p>With annotation-informed marker-specific model priors, this
+becomes:</p>
+<p><span class="math display">\[
+\log w_{im}
+=
+\log \pi_{im} + \log L_{im}.
+\]</span></p>
+<p>Thus, the existing sampler only needs to replace the global model
+prior <span class="math inline">\(\pi_m\)</span> with marker-specific
+priors <span class="math inline">\(\pi_{im}\)</span>.</p>
+<p>In C++ this corresponds to replacing:</p>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi<span class="op">[</span>k<span class="op">])</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<p>with:</p>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>loglik<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> <span class="bu">std::</span>log<span class="op">(</span>pi_marker_model<span class="op">(</span>i<span class="op">,</span> k<span class="op">))</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> logdet <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> quad<span class="op">;</span></span></code></pre></div>
+<p>This is likely the most useful direct annotation extension for MTBLR,
+because it lets annotations guide the sharing model while still allowing
+the multivariate likelihood to override the prior when the data are
+strong.</p>
+<h2 id="annotation-informed-mtblr-effect-covariance">Annotation-informed
+MTBLR effect covariance</h2>
+<p>Annotations can also affect the prior covariance matrix of marker
+effects. A global MTBLR model may use:</p>
+<p><span class="math display">\[
+\mathbf b_i \mid M_i=m \sim N_m(0,B),
+\]</span></p>
+<p>where <span class="math inline">\(N_m(0,B)\)</span> denotes a
+multivariate normal distribution restricted to the active traits in
+model <span class="math inline">\(m\)</span>.</p>
+<p>An annotation-aware version can use marker-specific or
+annotation-specific covariance matrices:</p>
+<p><span class="math display">\[
+\mathbf b_i \mid M_i=m,A_i \sim N_m(0,B_i).
+\]</span></p>
+<p>A log-linear construction for trait-specific prior variances is:</p>
+<p><span class="math display">\[
+\log B_{i,tt} = \mu_{B,t} + A_i\eta_{B,t}.
+\]</span></p>
+<p>For cross-trait covariances, one can either use a global correlation
+matrix <span class="math inline">\(R\)</span> and annotation-specific
+standard deviations:</p>
+<p><span class="math display">\[
+B_i = D_i R D_i,
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+D_i = \mathrm{diag}(\sqrt{B_{i,11}},\ldots,\sqrt{B_{i,TT}}),
+\]</span></p>
+<p>or use annotation-specific full covariance matrices <span
+class="math inline">\(B_k\)</span>.</p>
+<p>The first approach is more stable:</p>
+<p><span class="math display">\[
+B_i = D_i R D_i.
+\]</span></p>
+<p>It lets annotations change the amount of prior variance per trait
+while preserving a globally estimated cross-trait correlation
+structure.</p>
+<p>The second approach is more flexible:</p>
+<p><span class="math display">\[
+B_i = \sum_k w_{ik}B_k,
+\]</span></p>
+<p>where <span class="math inline">\(w_{ik}\)</span> are normalized
+annotation weights for marker <span class="math inline">\(i\)</span>.
+However, this can be unstable if annotations are sparse or highly
+overlapping.</p>
+<h2
+id="direct-annotation-aware-stblr-and-mtblr-as-hierarchical-models">Direct
+annotation-aware STBLR and MTBLR as hierarchical models</h2>
+<p>The direct annotation model can be summarized as a hierarchical
+prior.</p>
+<p>For STBLR:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mathrm{logit}(\pi_{it}) &amp;= \mu_{\pi,t} + A_i\eta_{\pi,t}, \\
+\log(v_{b,it}) &amp;= \mu_{v,t} + A_i\eta_{v,t}, \\
+d_{it} &amp;\sim \mathrm{Bernoulli}(\pi_{it}), \\
+b_{it} \mid d_{it}=1 &amp;\sim N(0,v_{b,it}), \\
+b_{it} \mid d_{it}=0 &amp;= 0.
+\end{aligned}
+\]</span></p>
+<p>For MTBLR:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\pi_{im}
+&amp;=
+\frac{\exp(c_m + A_i\eta_m)}
+{\sum_l \exp(c_l + A_i\eta_l)}, \\
+M_i &amp;\sim \mathrm{Categorical}(\pi_{i1},\ldots,\pi_{iM}), \\
+\mathbf b_i \mid M_i=m,A_i &amp;\sim N_m(0,B_i).
+\end{aligned}
+\]</span></p>
+<p>These formulations are direct annotation-informed genomic models
+rather than post hoc annotation analyses.</p>
+<h2 id="practical-implementation-strategy">Practical implementation
+strategy</h2>
+<p>A good implementation path is incremental.</p>
+<h3 id="step-1-fixed-marker-specific-priors">Step 1: Fixed
+marker-specific priors</h3>
+<p>First, compute <span class="math inline">\(\pi_{it}\)</span>, <span
+class="math inline">\(v_{b,it}\)</span>, and <span
+class="math inline">\(\pi_{im}\)</span> outside the sampler, then pass
+them as inputs:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_cpg_omp_csr</span>(</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  ...,</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> pi_marker,</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">vb_marker =</span> vb_marker</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>fit_mt <span class="ot">&lt;-</span> <span class="fu">mtblr_cpg_omp_csr</span>(</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>  ...,</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker_model =</span> pi_marker_model</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>This only requires small changes to the marker-update functions.</p>
+<h3
+id="step-2-annotation-matrix-as-input-fixed-annotation-coefficients">Step
+2: Annotation matrix as input, fixed annotation coefficients</h3>
+<p>Instead of passing full marker-specific prior matrices, pass the
+annotation matrix and annotation coefficients:</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_cpg_omp_csr</span>(</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  ...,</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">annot =</span> A,</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">eta_pi =</span> eta_pi,</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">eta_vb =</span> eta_vb</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>Then compute marker-specific priors inside C++:</p>
+<p><span class="math display">\[
+\pi_{it} = \mathrm{logit}^{-1}(\mu_{\pi,t}+A_i\eta_{\pi,t}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+v_{b,it} = \exp(\mu_{v,t}+A_i\eta_{v,t}).
+\]</span></p>
+<p>This saves memory if <span class="math inline">\(m\)</span> is large
+and the annotation matrix is sparse.</p>
+<h3 id="step-3-update-annotation-coefficients">Step 3: Update annotation
+coefficients</h3>
+<p>Finally, update <span class="math inline">\(\eta_{\pi,t}\)</span>,
+<span class="math inline">\(\eta_{v,t}\)</span>, or <span
+class="math inline">\(\eta_m\)</span> inside the sampler. This creates a
+fully hierarchical annotation-informed BLR/MTBLR model, but requires
+additional MCMC steps, careful priors, and good diagnostics.</p>
+<h2 id="sparse-annotation-matrix-implementation">Sparse annotation
+matrix implementation</h2>
+<p>For large numbers of markers and annotations, the annotation matrix
+<span class="math inline">\(A\)</span> should be stored sparsely. For
+each marker <span class="math inline">\(i\)</span>, store the list of
+active annotations:</p>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> AnnotationNeighbor <span class="op">{</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> k<span class="op">;</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">float</span> value<span class="op">;</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> AnnotationRows <span class="op">=</span> <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="bu">std::</span>vector<span class="op">&lt;</span>AnnotationNeighbor<span class="op">&gt;&gt;;</span></span></code></pre></div>
+<p>Then the linear predictor for marker <span
+class="math inline">\(i\)</span> is:</p>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="dt">double</span> eta_i <span class="op">=</span> intercept<span class="op">;</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span><span class="at">const</span> <span class="kw">auto</span><span class="op">&amp;</span> a <span class="op">:</span> annot_rows<span class="op">[</span>i<span class="op">])</span> <span class="op">{</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  eta_i <span class="op">+=</span> <span class="kw">static_cast</span><span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;(</span>a<span class="op">.</span>value<span class="op">)</span> <span class="op">*</span> eta<span class="op">[</span>a<span class="op">.</span>k<span class="op">];</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>For STBLR:</p>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> pi_i <span class="op">=</span> inv_logit<span class="op">(</span>eta_pi_i<span class="op">);</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> vb_i <span class="op">=</span> <span class="bu">std::</span>exp<span class="op">(</span>eta_vb_i<span class="op">);</span></span></code></pre></div>
+<p>For MTBLR sharing models:</p>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> model <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> model <span class="op">&lt;</span> nmodels<span class="op">;</span> <span class="op">++</span>model<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  log_pi_model<span class="op">[</span>model<span class="op">]</span> <span class="op">=</span> base_log_pi<span class="op">[</span>model<span class="op">];</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="at">const</span> <span class="kw">auto</span><span class="op">&amp;</span> a <span class="op">:</span> annot_rows<span class="op">[</span>i<span class="op">])</span> <span class="op">{</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    log_pi_model<span class="op">[</span>model<span class="op">]</span> <span class="op">+=</span> a<span class="op">.</span>value <span class="op">*</span> eta_model<span class="op">(</span>a<span class="op">.</span>k<span class="op">,</span> model<span class="op">);</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Then apply softmax to get pi_marker_model[i, model].</span></span></code></pre></div>
+<p>This avoids constructing dense marker-by-model or marker-by-trait
+prior matrices when <span class="math inline">\(m\)</span> is large.</p>
+<h2 id="centering-shrinkage-and-caps">Centering, shrinkage, and
+caps</h2>
+<p>Direct annotation priors can be powerful but need regularization. The
+annotation contribution should usually be centered so that it
+redistributes prior mass rather than changing the total prior sparsity
+too aggressively.</p>
+<p>For inclusion probabilities:</p>
+<p><span class="math display">\[
+\eta_{it}^{centered}
+=
+A_i\eta_{\pi,t}
+-\frac{1}{m}\sum_{j=1}^m A_j\eta_{\pi,t}.
+\]</span></p>
+<p>Then:</p>
+<p><span class="math display">\[
+\mathrm{logit}(\pi_{it})
+=
+\mathrm{logit}(\pi_t^{global})+
+\eta_{it}^{centered}.
+\]</span></p>
+<p>For prior variances:</p>
+<p><span class="math display">\[
+\log(v_{b,it})
+=
+\log(v_{b,t}^{global})+
+\xi_{it}^{centered},
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+\xi_{it}^{centered}
+=
+A_i\eta_{v,t}
+-
+\frac{1}{m}\sum_{j=1}^m A_j\eta_{v,t}.
+\]</span> The resulting multipliers should be capped:</p>
+<p><span class="math display">\[
+\frac{v_{b,it}}{v_{b,t}^{global}} \in [c_{min},c_{max}],
+\]</span></p>
+<p>for example:</p>
+<p><span class="math display">\[
+[c_{min},c_{max}] = [0.25,4].
+\]</span></p>
+<p>Similarly, marker-specific inclusion probabilities should be
+bounded:</p>
+<p><span class="math display">\[
+\pi_{it} \in [\epsilon, \pi_{max}],
+\]</span></p>
+<p>for example:</p>
+<p><span class="math display">\[
+\epsilon = 10^{-8}, \qquad \pi_{max}=0.05.
+\]</span></p>
+<p>These constraints prevent a highly enriched annotation from
+overwhelming the likelihood or causing too many markers to enter the
+model.</p>
+<h2 id="recommended-first-direct-model">Recommended first direct
+model</h2>
+<p>The most practical first direct annotation model is:</p>
+<p><span class="math display">\[
+\mathrm{logit}(\pi_{it}) = \mathrm{logit}(\pi_t^{global}) +
+A_i\eta_{\pi,t}^{centered},
+\]</span></p>
+<p>with a global <span class="math inline">\(v_{b,t}\)</span>
+unchanged.</p>
+<p>For MTBLR, the most practical first model is:</p>
+<p><span class="math display">\[
+\log \pi_{im} = \log \pi_m^{global} + A_i\eta_m^{centered} - C_i.
+\]</span></p>
+<p>These two extensions are simple, interpretable, and likely to be
+stable. Marker-specific prior variances <span
+class="math inline">\(v_{b,it}\)</span> and marker-specific covariance
+matrices <span class="math inline">\(B_i\)</span> are useful next steps,
+but they should be introduced with shrinkage and caps.</p>
+<h2 id="causal-interpretation-and-causal-hypothesis-generation">Causal
+interpretation and causal-hypothesis generation</h2>
+<p>The annotation-informed STBLR/MTBLR framework can provide evidence
+for genetic sharing, annotation enrichment, and plausible biological
+mechanisms, but it does not by itself identify causal relationships in
+the intervention sense. The model can estimate posterior quantities such
+as</p>
+<p><span class="math display">\[
+P(d_{it}=1 \mid \text{data}),
+\]</span></p>
+<p>where <span class="math inline">\(d_{it}\)</span> indicates that
+marker <span class="math inline">\(i\)</span> is active for trait <span
+class="math inline">\(t\)</span>, and in the multivariate case</p>
+<p><span class="math display">\[
+P(M_i=m \mid A_i, \text{data}),
+\]</span></p>
+<p>where <span class="math inline">\(M_i\)</span> is a trait-sharing
+model and <span class="math inline">\(A_i\)</span> denotes the
+annotation profile of marker <span class="math inline">\(i\)</span>.
+These are statements about which genetic effects and annotation patterns
+best explain the observed summary statistics. They are not, by
+themselves, causal effects such as</p>
+<p><span class="math display">\[
+\text{annotation} \rightarrow \text{trait},
+\]</span></p>
+<p>or</p>
+<p><span class="math display">\[
+\text{trait 1} \rightarrow \text{trait 2}.
+\]</span></p>
+<p>A careful interpretation is that the model identifies annotations,
+regions, and marker-sharing configurations that are enriched for genetic
+signal. For example, if annotation <span
+class="math inline">\(A\)</span> has high posterior support for shared
+effects on traits <span class="math inline">\(t_1\)</span> and <span
+class="math inline">\(t_2\)</span>, then the model supports the
+statement</p>
+<p><span class="math display">\[
+A \text{ is enriched for shared genetic effects on } t_1 \text{ and }
+t_2.
+\]</span></p>
+<p>This is a genetic-architecture statement, not a direct causal claim.
+It can, however, motivate causal hypotheses about biological
+mechanisms.</p>
+<h3 id="genetic-sharing-versus-causal-direction">Genetic sharing versus
+causal direction</h3>
+<p>MTBLR can help distinguish different forms of genetic sharing. For
+example, a marker may support a sharing model such as</p>
+<p><span class="math display">\[
+M_i = 110,
+\]</span></p>
+<p>which indicates an effect on traits 1 and 2 but not trait 3. If this
+sharing pattern is enriched in annotation <span
+class="math inline">\(A\)</span>, then</p>
+<p><span class="math display">\[
+P(M_i=110 \mid A_i, \text{data})
+\]</span></p>
+<p>may be larger than the genome-wide background probability. This
+suggests that annotation <span class="math inline">\(A\)</span> may tag
+a biological mechanism relevant to both traits.</p>
+<p>However, this does not determine whether the relationship is</p>
+<p><span class="math display">\[
+G \rightarrow t_1 \rightarrow t_2,
+\]</span></p>
+<p>or</p>
+<p><span class="math display">\[
+G \rightarrow t_2 \rightarrow t_1,
+\]</span></p>
+<p>or horizontal pleiotropy,</p>
+<p><span class="math display">\[
+G \rightarrow t_1
+\quad \text{and} \quad
+G \rightarrow t_2,
+\]</span></p>
+<p>through separate biological pathways. Additional information is
+required to infer directionality.</p>
+<h3 id="what-can-be-inferred-directly">What can be inferred
+directly</h3>
+<p>The framework can directly support posterior statements such as:</p>
+<p><span class="math display">\[
+P(\text{marker } i \text{ is active for trait } t \mid \text{data}),
+\]</span></p>
+<p><span class="math display">\[
+P(\text{marker } i \text{ has a shared effect across traits} \mid
+\text{data}),
+\]</span></p>
+<p><span class="math display">\[
+P(\text{annotation } k \text{ is enriched for effects} \mid
+\text{data}),
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+P(M_i=m \mid A_i, \text{data}).
+\]</span></p>
+<p>These quantities can be used to prioritize markers, regions,
+annotations, and biological pathways for downstream causal analyses.
+They should be interpreted as posterior evidence for association and
+sharing, not as proof of causation.</p>
+<h3 id="connection-to-colocalization">Connection to colocalization</h3>
+<p>A natural downstream analysis is colocalization. Suppose a genomic
+region shows a strong MTBLR sharing signal between a molecular trait
+<span class="math inline">\(x\)</span> and a complex trait <span
+class="math inline">\(y\)</span>. If fine-mapping and colocalization
+support the same causal variant for both traits, then this strengthens
+the hypothesis</p>
+<p><span class="math display">\[
+G \rightarrow x \rightarrow y.
+\]</span></p>
+<p>In this setting, annotation-aware MTBLR can be used as a
+prioritization step. It can identify regions and annotations where
+shared effects are likely, and colocalization can then test whether the
+same underlying variant is responsible for the molecular and
+complex-trait associations.</p>
+<h3 id="connection-to-mendelian-randomization">Connection to Mendelian
+randomization</h3>
+<p>Mendelian randomization can be used to test directional hypotheses
+such as</p>
+<p><span class="math display">\[
+x \rightarrow y,
+\]</span></p>
+<p>using genetic variants as instruments. The validity of this
+interpretation depends on instrumental-variable assumptions. In
+particular, the genetic instruments should be associated with the
+exposure, should not be associated with confounders of the
+exposure-outcome relationship, and should affect the outcome only
+through the exposure.</p>
+<p>Annotation-aware MTBLR can help select or classify candidate
+instruments. For example, variants that appear trait-specific for
+exposure <span class="math inline">\(x\)</span> may be more useful as
+instruments than variants with strong evidence of broad horizontal
+pleiotropy. Conversely, markers assigned to shared-effect models may
+indicate biological pleiotropy and should be handled carefully in causal
+analyses.</p>
+<h3 id="annotation-specific-causal-hypotheses">Annotation-specific
+causal hypotheses</h3>
+<p>The most useful causal-hypothesis output from the framework may be
+annotation-specific sharing probabilities. For example, for annotation
+<span class="math inline">\(k\)</span>, one can estimate</p>
+<p><span class="math display">\[
+P(M=110 \mid A_k=1, \text{data}),
+\]</span></p>
+<p>or compare it to the background probability</p>
+<p><span class="math display">\[
+P(M=110 \mid \text{data}).
+\]</span></p>
+<p>If</p>
+<p><span class="math display">\[
+P(M=110 \mid A_k=1, \text{data})
+&gt;
+P(M=110 \mid \text{data}),
+\]</span></p>
+<p>then annotation <span class="math inline">\(k\)</span> is enriched
+for variants with shared effects on traits 1 and 2. This can motivate a
+biological hypothesis that the functional class represented by
+annotation <span class="math inline">\(k\)</span> is involved in a
+mechanism linking the two traits.</p>
+<p>Similarly, if annotation <span class="math inline">\(k\)</span> is
+enriched for trait-specific models, such as</p>
+<p><span class="math display">\[
+M=100,
+\]</span></p>
+<p>then the annotation may be more relevant to a trait-specific pathway
+than to a shared pathway.</p>
+<h3 id="practical-causal-workflow">Practical causal workflow</h3>
+<p>A practical workflow is:</p>
+<ol type="1">
+<li>Fit STBLR or MTBLR using GWAS summary statistics and sparse LD.</li>
+<li>Estimate marker-level posterior summaries such as <span
+class="math inline">\(bm\)</span>, <span
+class="math inline">\(dm\)</span>, and sharing-model probabilities.</li>
+<li>Use annotation-aware STBLR/MTBLR to identify annotations enriched
+for trait-specific or shared genetic effects.</li>
+<li>Use the enriched annotations and regions to define candidate
+mechanisms.</li>
+<li>Perform regional fine-mapping to construct credible sets.</li>
+<li>Test colocalization with molecular QTL data, such as expression,
+methylation, protein, metabolite, or microbiome QTL.</li>
+<li>Use Mendelian randomization, mediation analysis, perturbation data,
+or experimental validation to test directional causal hypotheses.</li>
+</ol>
+<p>Thus, the annotation-informed STBLR/MTBLR framework is best viewed as
+a mechanism-discovery and hypothesis-prioritization layer. It can point
+to annotations and regions that are likely to be biologically relevant,
+but causal interpretation requires additional assumptions or external
+evidence.</p>
+<p>A suitable manuscript statement is:</p>
+<blockquote>
+<p>The annotation-informed STBLR/MTBLR framework identifies annotations
+and genomic regions enriched for trait-specific or shared genetic
+effects. These results can prioritize plausible causal mechanisms and
+candidate mediators. However, causal interpretation requires additional
+assumptions or complementary analyses, such as fine-mapping,
+colocalization, Mendelian randomization, mediation analysis,
+perturbation experiments, or external functional validation.</p>
+</blockquote>
+</body>
+</html>

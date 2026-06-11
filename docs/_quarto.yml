@@ -1,0 +1,26 @@
+project:
+  type: website
+  output-dir: .
+  render:
+    - notes/*.qmd
+    - notes/drafts/*.qmd
+
+execute:
+  eval: false
+  freeze: true
+
+website:
+  title: "sblr"
+  navbar:
+    left:
+      - text: "Home"
+        href: index.html
+      - text: "Notes"
+        href: notes/index.html
+    right:
+      - text: "GitHub"
+        href: https://github.com/psoerensen/sblr
+
+format:
+  html:
+    toc: true

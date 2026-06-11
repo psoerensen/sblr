@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Sparse-LD and BED Workflows</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Sparse-LD and BED Workflows</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#one-genotype-source-two-fitting-paths"
+id="toc-one-genotype-source-two-fitting-paths">One Genotype Source, Two
+Fitting Paths</a></li>
+<li><a href="#selecting-samples-and-markers-from-a-bed-backed-glist"
+id="toc-selecting-samples-and-markers-from-a-bed-backed-glist">Selecting
+Samples and Markers From a BED-Backed <code>Glist</code></a></li>
+<li><a href="#simulating-or-supplying-aligned-phenotypes"
+id="toc-simulating-or-supplying-aligned-phenotypes">Simulating or
+Supplying Aligned Phenotypes</a></li>
+<li><a
+href="#path-a-direct-individual-level-fitting-with-stblr_bed_marker"
+id="toc-path-a-direct-individual-level-fitting-with-stblr_bed_marker">Path
+A: Direct Individual-Level Fitting With
+<code>stblr_bed_marker()</code></a></li>
+<li><a href="#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty"
+id="toc-path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty">Path B,
+Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code>
+With <code>bed_xtx_xty()</code></a></li>
+<li><a
+href="#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr"
+id="toc-path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr">Path
+B, Step 2: Streaming Sparse LD With
+<code>sparseLD_stream_CSR()</code></a>
+<ul>
+<li><a href="#related-sparse-ld-helpers"
+id="toc-related-sparse-ld-helpers">Related Sparse-LD Helpers</a></li>
+</ul></li>
+<li><a
+href="#inspecting-and-validating-csr-files-with-sparseld_read_csr"
+id="toc-inspecting-and-validating-csr-files-with-sparseld_read_csr">Inspecting
+and Validating CSR Files With <code>sparseLD_read_CSR()</code></a></li>
+<li><a
+href="#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr"
+id="toc-path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr">Path
+B, Step 3: Fitting Summary-Statistics BLR With
+<code>stblr_csr()</code></a></li>
+<li><a href="#comparing-bed-direct-and-csr-posterior-outputs"
+id="toc-comparing-bed-direct-and-csr-posterior-outputs">Comparing
+BED-Direct and CSR Posterior Outputs</a></li>
+<li><a
+href="#marker-order-allele-frequency-scaling-rows-and-ld-thresholds"
+id="toc-marker-order-allele-frequency-scaling-rows-and-ld-thresholds">Marker
+Order, Allele Frequency, Scaling, Rows, and LD Thresholds</a></li>
+<li><a href="#validation-checklist"
+id="toc-validation-checklist">Validation Checklist</a></li>
+<li><a href="#runtime-disk-reproducibility-and-convergence-cautions"
+id="toc-runtime-disk-reproducibility-and-convergence-cautions">Runtime,
+Disk, Reproducibility, and Convergence Cautions</a></li>
+<li><a href="#related-notes-and-sources"
+id="toc-related-notes-and-sources">Related Notes and Sources</a></li>
+</ul>
+</nav>
+<p>This note describes the practical bridge from individual-level PLINK
+BED genotypes and aligned phenotypes to a disk-backed sparse-LD
+representation and the sufficient statistics required by
+<code>stblr_csr()</code>. The same starting data can also be fitted
+directly with <code>stblr_bed_marker()</code>, making the workflow
+useful for understanding and checking the relationship between the
+individual-level and summary-statistics paths.</p>
+<p>The examples below are intentionally short. The complete executable
+sequence is in the <a
+href="../../examples/workflows/sparse_ld_bed_workflow.R">sparse-LD/BED
+workflow</a>. Its fitting steps are computationally expensive and its
+MCMC settings are demonstration settings rather than recommendations for
+real analysis.</p>
+<h2 id="one-genotype-source-two-fitting-paths">One Genotype Source, Two
+Fitting Paths</h2>
+<p>The workflow begins with PLINK BED files, marker metadata, and one or
+more phenotypes. It then branches into two model-input
+representations:</p>
+<pre class="text"><code>BED files + phenotype y
+        |
+        v
+align markers with cls and select sample rows
+        |
+        +--&gt; bed_xtx_xty()
+        |       |
+        |       v
+        |    stats$wy, stats$ww, stats$yy, n
+        |
+        +--&gt; sparseLD_stream_CSR()
+                |
+                v
+             ld_prefix
+                |
+                +--&gt; sparseLD_read_CSR() for inspection
+                |
+                v
+             stblr_csr()
+                |
+                v
+          CSR posterior summaries
+
+BED files + phenotype y + the same cls/rows/scaling
+        |
+        v
+stblr_bed_marker()
+        |
+        v
+optional BED-versus-CSR posterior comparison</code></pre>
+<p>The CSR path converts individual-level data into reusable
+cross-products and sparse LD files. The direct BED path retains access
+to observed genotypes during sampling. Both paths represent related
+marker-update calculations, but they are not numerically identical by
+construction.</p>
+<p>The statistical role of each representation is developed in <a
+href="data_representations.html">Data representations</a>. This note
+focuses on object handoffs and practical contracts.</p>
+<h2 id="selecting-samples-and-markers-from-a-bed-backed-glist">Selecting
+Samples and Markers From a BED-Backed <code>Glist</code></h2>
+<p>A qgg <code>Glist</code> connects biological marker identities to BED
+file columns and allele frequencies. The principal objects are:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Object</th>
+<th>Practical role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bed_files</code></td>
+<td>Paths to one or more PLINK BED files containing individual-level
+genotypes.</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td>Number of individuals encoded in the BED files.</td>
+</tr>
+<tr>
+<td><code>Glist$rsids[[chr]]</code></td>
+<td>Marker identities in BED column order for a chromosome.</td>
+</tr>
+<tr>
+<td><code>Glist$rsidsLD[[chr]]</code></td>
+<td>Selected marker identities in the intended LD/model order.</td>
+</tr>
+<tr>
+<td><code>cls</code></td>
+<td>BED column indices that map the intended LD/model order into
+<code>Glist$rsids</code>.</td>
+</tr>
+<tr>
+<td><code>rows</code></td>
+<td>Optional 1-based BED row indices selecting individuals.</td>
+</tr>
+<tr>
+<td><code>af</code></td>
+<td>Allele frequencies corresponding exactly to <code>cls</code>, used
+for genotype scaling.</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>Phenotype vector or matrix aligned to all individuals or to
+<code>rows</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The workflow establishes marker order with:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>chr <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>marker_id <span class="ot">&lt;-</span> Glist<span class="sc">$</span>rsidsLD[[chr]]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(marker_id, Glist<span class="sc">$</span>rsids[[chr]])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(cls))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>bed_files <span class="ot">&lt;-</span> Glist<span class="sc">$</span>bedfiles[chr]</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>af <span class="ot">&lt;-</span> Glist<span class="sc">$</span>af[[chr]][cls]</span></code></pre></div>
+<p><code>cls[j]</code> identifies the BED column containing
+<code>marker_id[j]</code>. Its order, not just its set of values,
+determines the order of every downstream marker-indexed object.</p>
+<p>For one BED file, <code>bed_xtx_xty()</code> receives
+<code>cls</code> as an integer vector. The sparse-LD helpers accept
+<code>bed_files</code> and <code>cls</code> as parallel collections, so
+<code>cls</code> is supplied as <code>list(cls)</code>. For multiple BED
+files, each <code>cls[[k]]</code> selects and orders markers from
+<code>bed_files[k]</code>; the concatenated selection is the model
+order.</p>
+<p><code>n</code> is the total number of BED rows. If
+<code>rows = NULL</code>, all BED rows are used and <code>y</code>
+should have <code>n</code> rows. If <code>rows</code> is supplied, it
+selects the individuals used to construct statistics and LD, and
+<code>y</code> must describe that same selected sample in the expected
+order. The same <code>rows</code> value must be used for both branches
+of CSR preparation.</p>
+<h2 id="simulating-or-supplying-aligned-phenotypes">Simulating or
+Supplying Aligned Phenotypes</h2>
+<p>The workflow example simulates traits for
+<code>Glist$rsidsLD[[chr]]</code> and then scales the resulting
+phenotype matrix:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">mtsim</span>(<span class="at">Glist =</span> Glist, <span class="at">chr =</span> chr, <span class="at">rsids =</span> marker_id, <span class="at">nt =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">scale</span>(sim<span class="sc">$</span>y))</span></code></pre></div>
+<p>Real analyses can replace this with observed phenotypes, but
+alignment and preprocessing must be explicit:</p>
+<ul>
+<li>rows of <code>y</code> must correspond to BED individuals or the
+selected <code>rows</code>;</li>
+<li>columns of <code>y</code> define traits and should have stable
+names;</li>
+<li>centering and scaling choices affect <code>stats$yy</code> and prior
+initialization;</li>
+<li>missing phenotype handling must be consistent with the chosen
+sample.</li>
+</ul>
+<p>For trait (t), <code>bed_xtx_xty()</code> constructs quantities
+including</p>
+<p><span class="math display">\[
+wy_t = X^\top y_t,
+\qquad
+ww_t = \operatorname{diag}(X^\top X),
+\qquad
+yy_t = y_t^\top y_t.
+\]</span></p>
+<p>The sparse-LD branch must use the same version of (X), including
+sample rows and marker scaling, that generated these statistics.</p>
+<h2
+id="path-a-direct-individual-level-fitting-with-stblr_bed_marker">Path
+A: Direct Individual-Level Fitting With
+<code>stblr_bed_marker()</code></h2>
+<p>Use <code>stblr_bed_marker()</code> when individual-level BED
+genotypes and aligned phenotypes remain available during fitting and a
+separate sparse-LD artifact is not required. The sampler reads selected
+genotype blocks from BED and uses observed marker values directly.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_bed <span class="ot">&lt;-</span> <span class="fu">stblr_bed_marker</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> chr,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> cls,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">scale =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="cn">NULL</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> <span class="fl">0.001</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">h2 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">10</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">TRUE</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>This path is appropriate when:</p>
+<ul>
+<li>individual-level data access is allowed throughout analysis;</li>
+<li>reading BED blocks during sampling is acceptable;</li>
+<li>observed genotype information is preferred to a thresholded LD
+approximation;</li>
+<li>the fit is being used as a reference for CSR preparation or model
+behavior.</li>
+</ul>
+<p><code>stblr_bed_marker()</code> derives BED paths, allele
+frequencies, and marker names from <code>Glist</code>. If
+<code>cls</code> is omitted, the wrapper matches
+<code>Glist$rsidsLD</code> against <code>Glist$rsids</code>; supplying
+<code>cls</code> explicitly makes the comparison contract visible.</p>
+<h2 id="path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty">Path B,
+Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code>
+With <code>bed_xtx_xty()</code></h2>
+<p><code>bed_xtx_xty()</code> converts the selected BED genotypes and
+phenotype matrix into sufficient statistics for ST-BLR fitting:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">bed_xtx_xty</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">bed_file =</span> bed_files,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> cls,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">af =</span> af,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="cn">NULL</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">scale =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>The main output handoff is:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Object</th>
+<th>Meaning and use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stats$wy</code></td>
+<td>Marker-trait cross-products (X^Y); drives marker-residual
+scores.</td>
+</tr>
+<tr>
+<td><code>stats$ww</code></td>
+<td>Per-marker diagonal genotype cross-products; used by marker
+updates.</td>
+</tr>
+<tr>
+<td><code>stats$yy</code></td>
+<td>Per-trait phenotype sums of squares (y_t^y_t); used for likelihood
+and variance initialization.</td>
+</tr>
+<tr>
+<td><code>stats$n</code></td>
+<td>Sample size when returned; otherwise supply compatible
+<code>n</code> to <code>stblr_csr()</code>.</td>
+</tr>
+<tr>
+<td><code>stats$m</code></td>
+<td>Marker count when returned; otherwise inferred from
+<code>stats$ww[[1]]</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><code>stats$wy</code> and <code>stats$ww</code> must each describe
+the same (m) markers, in the same order later used by the CSR LD matrix.
+<code>stats$yy</code> has one entry per trait, not one entry per
+marker.</p>
+<p><code>bed_xtx_xty()</code> accepts a single BED file path and a
+single <code>cls</code> vector. Current multi-file sparse-LD preparation
+therefore needs statistics assembled with a compatible marker order and
+sample definition; the clean workflow uses one chromosome and one BED
+file.</p>
+<h2 id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr">Path
+B, Step 2: Streaming Sparse LD With
+<code>sparseLD_stream_CSR()</code></h2>
+<p><code>sparseLD_stream_CSR()</code> computes marker correlations from
+BED data, applies distance and (r^2) retention rules, and writes a
+disk-backed CSR representation:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ld_prefix <span class="ot">&lt;-</span> <span class="fu">file.path</span>(output_dir, <span class="st">&quot;chr1_ld&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>ld_written <span class="ot">&lt;-</span> <span class="fu">sparseLD_stream_CSR</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">bed_files =</span> bed_files,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">cls =</span> <span class="fu">list</span>(cls),</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> ld_prefix,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="cn">NULL</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">af =</span> <span class="fu">list</span>(af),</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">r2_threshold =</span> <span class="fl">0.001</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_distance_bp =</span> <span class="dv">0</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_distance_variants =</span> <span class="dv">0</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">block_size =</span> <span class="dv">1024</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p><code>ld_prefix</code> is not a matrix object. It is the common
+prefix for the metadata, row-pointer, column-index, and value files
+consumed by <code>stblr_csr()</code>. The writer returns a compact
+summary containing file paths, dimensions, the number of stored nonzero
+entries, construction settings, and sample counts.</p>
+<p>Conceptually, CSR stores:</p>
+<ul>
+<li><code>row_ptr</code>: offsets delimiting retained entries for each
+LD row;</li>
+<li><code>col_idx</code>: column indices of retained marker pairs;</li>
+<li><code>values</code>: retained marker correlations (r).</li>
+</ul>
+<p>The disk format stores the upper triangle with an implicit unit
+diagonal and zero-based column indices. Package functions handle this
+storage contract; analysis code should not manually alter index bases or
+binary files.</p>
+<p><code>r2_threshold</code> controls which correlations are retained by
+squared magnitude. The distance arguments can additionally restrict
+candidate marker pairs. Values of zero disable the corresponding
+distance restriction in the example workflow. These settings change the
+LD approximation and should be recorded with analysis outputs.</p>
+<h3 id="related-sparse-ld-helpers">Related Sparse-LD Helpers</h3>
+<p>The package source currently contains four related Rcpp wrappers:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Helper</th>
+<th>Behavior</th>
+<th>Current package status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sparseLD_stream_CSR()</code></td>
+<td>Computes sparse LD and writes the disk-backed CSR files at
+<code>out_prefix</code>, returning a writing summary.</td>
+<td>Exported and used by the public workflow.</td>
+</tr>
+<tr>
+<td><code>sparseLD_to_CSR()</code></td>
+<td>Computes the sparse LD representation and returns
+<code>row_ptr</code>, <code>col_idx</code>, and <code>values</code> in
+an in-memory R list.</td>
+<td>Generated internal wrapper; not currently exported or separately
+documented.</td>
+</tr>
+<tr>
+<td><code>sparseLD_write_CSR()</code></td>
+<td>Currently delegates to <code>sparseLD_stream_CSR()</code> and writes
+the same disk-backed representation.</td>
+<td>Generated internal wrapper; not currently exported or separately
+documented.</td>
+</tr>
+<tr>
+<td><code>sparseLD_read_CSR()</code></td>
+<td>Reads an existing disk-backed CSR prefix into an R list for
+inspection.</td>
+<td>Exported.</td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>sparseLD_stream_CSR()</code> for the supported BED-to-disk
+workflow. The in-memory <code>sparseLD_to_CSR()</code> representation
+can be useful during development, but it materializes sparse arrays in R
+and is not the input contract used by <code>stblr_csr()</code>. The
+<code>sparseLD_write_CSR()</code> alias should not be treated as a
+separate stable public API while it remains unexported.</p>
+<h2
+id="inspecting-and-validating-csr-files-with-sparseld_read_csr">Inspecting
+and Validating CSR Files With <code>sparseLD_read_CSR()</code></h2>
+<p>Before fitting, <code>sparseLD_read_CSR()</code> can inspect the
+files at <code>ld_prefix</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ld <span class="ot">&lt;-</span> <span class="fu">sparseLD_read_CSR</span>(ld_prefix, <span class="at">one_based =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>nrow <span class="sc">==</span> <span class="fu">length</span>(cls),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  ld<span class="sc">$</span>ncol <span class="sc">==</span> <span class="fu">length</span>(cls),</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(ld<span class="sc">$</span>row_ptr) <span class="sc">==</span> <span class="fu">length</span>(cls) <span class="sc">+</span> <span class="dv">1</span><span class="dt">L</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>The reader returns the row pointers, column indices, values,
+dimensions, and metadata. <code>one_based = TRUE</code> makes returned
+column indices convenient for R inspection;
+<code>one_based = FALSE</code> exposes their zero-based disk convention.
+This option changes only the returned inspection object. The CSR
+samplers read the disk representation through package code and handle
+its index base.</p>
+<p>Useful checks include confirming:</p>
+<ul>
+<li>matrix dimensions equal the selected marker count;</li>
+<li>row pointers have length (m+1);</li>
+<li>column indices fall within the expected base and dimensions;</li>
+<li>metadata records the intended <code>r2_threshold</code>, distance
+limits, and sample count;</li>
+<li>the number of stored values agrees with the final row pointer.</li>
+</ul>
+<p>The binary-file and metadata details are documented further in <a
+href="technical_sparse_ld_csr.html">Technical sparse LD and CSR</a>.</p>
+<h2
+id="path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr">Path B,
+Step 3: Fitting Summary-Statistics BLR With
+<code>stblr_csr()</code></h2>
+<p><code>stblr_csr()</code> combines the sufficient-statistics object
+with the disk-backed LD prefix:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> Glist<span class="sc">$</span>n,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">pi_marker =</span> <span class="fl">0.001</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">h2 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">nit =</span> <span class="dv">1000</span>,</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">nburn =</span> <span class="dv">100</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">10</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">scheduled =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>Its core data handoff is:</p>
+<pre class="text"><code>n + stats$yy
+    -&gt; phenotype variance and prior initialization
+
+stats$wy + stats$ww + ld_prefix
+    -&gt; marker-update and residual-score calculations</code></pre>
+<p>The wrapper infers the number of traits from
+<code>length(stats$yy)</code>. It takes <code>n</code> from the function
+argument or <code>stats$n</code>, and takes (m) from the function
+argument, <code>stats$m</code>, or <code>length(stats$ww[[1]])</code>.
+Explicitly supplying <code>n</code> and checking (m) before fitting
+makes the data contract easier to audit.</p>
+<p><code>stats$wy</code>, <code>stats$ww</code>, and
+<code>stats$yy</code> summarize the phenotype side and diagonal marker
+information. The files at <code>ld_prefix</code> provide the retained
+off-diagonal marker relationships needed to update residual scores after
+marker effects change. The summary-statistics path therefore depends on
+both objects; neither is sufficient by itself.</p>
+<h2 id="comparing-bed-direct-and-csr-posterior-outputs">Comparing
+BED-Direct and CSR Posterior Outputs</h2>
+<p>When both representations are prepared from the same individual-level
+data, <code>stblr_bed_marker()</code> provides a useful comparison for
+<code>stblr_csr()</code>. Compare posterior quantities that share the
+same marker and trait order, such as posterior mean effects
+<code>fit$bm</code> and posterior inclusion probabilities
+<code>fit$dm</code>.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_csr<span class="sc">$</span>bm[, <span class="dv">1</span>], fit_bed<span class="sc">$</span>bm[, <span class="dv">1</span>],</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;CSR posterior mean effect&quot;</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;BED posterior mean effect&quot;</span>)</span></code></pre></div>
+<p>The fits should agree <strong>qualitatively</strong> when markers,
+sample rows, phenotypes, scaling, allele frequencies, priors, and MCMC
+settings are matched. Strong signals and broad posterior patterns should
+be recognizable across paths. Exact equality is not expected
+because:</p>
+<ul>
+<li>CSR LD is a thresholded and possibly distance-limited
+approximation;</li>
+<li>BED and CSR samplers can use different update scheduling;</li>
+<li>finite MCMC chains introduce Monte Carlo variation;</li>
+<li>differences in initialization, residual adjustment, or prior
+settings change the posterior;</li>
+<li>floating-point and storage precision differ across
+calculations.</li>
+</ul>
+<p>A comparison is an integration diagnostic, not a proof that either
+fit has converged or that the sparse-LD approximation is adequate.</p>
+<h2
+id="marker-order-allele-frequency-scaling-rows-and-ld-thresholds">Marker
+Order, Allele Frequency, Scaling, Rows, and LD Thresholds</h2>
+<p>The central practical invariant is:</p>
+<pre class="text"><code>Glist$rsids[[chr]][cls]
+    == Glist$rsidsLD[[chr]]
+    == rows of stats$wy and stats$ww
+    == rows and columns of sparse LD
+    == rows of any later annotation matrix
+    == rows of fit$bm and fit$dm</code></pre>
+<p>The first equality should be tested directly:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="sc">!</span><span class="fu">anyNA</span>(cls),</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(Glist<span class="sc">$</span>rsids[[chr]][cls], Glist<span class="sc">$</span>rsidsLD[[chr]])</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>The remaining equalities are positional contracts. Sparse LD binary
+files do not supply biological marker IDs to repair a mismatch later.
+Retain <code>marker_id &lt;- Glist$rsidsLD[[chr]]</code> beside the
+preparation outputs and attach or verify it whenever annotations and
+posterior summaries are joined.</p>
+<p>Scaling also has to match. If
+<code>bed_xtx_xty(..., scale = TRUE)</code> standardizes markers using
+<code>af</code>, then sparse LD must be constructed from the same
+selected samples and corresponding allele frequencies. If
+<code>rows</code> is used, use it in both calls and ensure
+<code>y</code> describes those rows. LD thresholds and distance limits
+should be treated as recorded model-input settings, not merely
+performance options.</p>
+<p>The annotation workflow extends this contract with:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code></pre></div>
+<p>This is the handoff from the base CSR workflow to the models
+described in <a
+href="annotation_informed_models.html">Annotation-informed
+models</a>.</p>
+<h2 id="validation-checklist">Validation Checklist</h2>
+<p>Before fitting <code>stblr_csr()</code>, verify:</p>
+<ol type="1">
+<li><code>cls</code> has no missing values.</li>
+<li><code>Glist$rsids[[chr]][cls]</code> exactly matches
+<code>Glist$rsidsLD[[chr]]</code>.</li>
+<li><code>y</code> has <code>n</code> rows when
+<code>rows = NULL</code>, or describes the selected rows when
+<code>rows</code> is supplied.</li>
+<li><code>af</code> has one value per selected marker and follows
+<code>cls</code> order.</li>
+<li>Every trait’s <code>stats$wy</code> and <code>stats$ww</code> has
+length (m=).</li>
+<li><code>stats$yy</code> has one value per phenotype trait.</li>
+<li>CSR <code>nrow</code> and <code>ncol</code> both equal (m), and
+<code>row_ptr</code> has length (m+1).</li>
+<li>CSR index bases are left to package functions; use
+<code>one_based</code> only when inspecting a returned R object.</li>
+<li>CSR metadata records the expected sample count, threshold, and
+distance settings.</li>
+<li>Annotation rows and marker/group vectors match
+<code>marker_id</code> exactly before annotation-informed models are
+fitted.</li>
+<li>Posterior rows are interpreted in the same marker order.</li>
+<li>Real analyses use adequate chains, convergence checks, and posterior
+predictive diagnostics.</li>
+</ol>
+<h2 id="runtime-disk-reproducibility-and-convergence-cautions">Runtime,
+Disk, Reproducibility, and Convergence Cautions</h2>
+<p>Both sufficient-statistic construction and sparse-LD construction can
+be runtime-heavy. <code>block_size</code> and <code>nthreads</code>
+affect construction performance, while <code>r2_threshold</code> and
+distance restrictions also affect the statistical LD approximation.
+Record all of them.</p>
+<p>Disk-backed CSR preparation writes multiple files sharing
+<code>ld_prefix</code>. Treat them as one artifact: moving, replacing,
+or mixing files from different runs can invalidate the prefix. Use
+distinct prefixes for different marker sets, sample subsets, scaling
+choices, and LD thresholds.</p>
+<p>For reproducibility, retain:</p>
+<ul>
+<li>marker IDs in model order;</li>
+<li>BED paths or immutable genotype-data identifiers;</li>
+<li><code>cls</code>, <code>rows</code>, <code>af</code>, and phenotype
+preprocessing details;</li>
+<li>sufficient-statistic dimensions and trait names;</li>
+<li>the complete CSR prefix and its metadata;</li>
+<li>sampler priors, scheduling controls, seeds, and MCMC settings.</li>
+</ul>
+<p>The short chains in workflow scripts demonstrate object handoffs.
+Real analyses require longer chains and appropriate convergence and
+posterior predictive checks. Compact output guidance is covered in <a
+href="workflows_and_outputs.html">Workflows and outputs</a>.</p>
+<h2 id="related-notes-and-sources">Related Notes and Sources</h2>
+<ul>
+<li><a href="data_representations.html">Data representations</a></li>
+<li><a href="technical_sparse_ld_csr.html">Technical sparse LD and
+CSR</a></li>
+<li><a href="technical_summary_statistics.html">Technical summary
+statistics</a></li>
+<li><a href="workflows_and_outputs.html">Workflows and outputs</a></li>
+<li><a href="annotation_informed_models.html">Annotation-informed
+models</a></li>
+<li><a href="../../examples/workflows/sparse_ld_bed_workflow.R">Complete
+sparse-LD/BED workflow</a></li>
+<li><a
+href="../../examples/workflows/annotation_based_models.R">Complete
+annotation workflow</a></li>
+</ul>
+</body>
+</html>

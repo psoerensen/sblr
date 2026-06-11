@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Multi-Trait Models</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Multi-Trait Models</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#why-model-traits-jointly"
+id="toc-why-model-traits-jointly">Why Model Traits Jointly</a></li>
+<li><a href="#effect-vectors-and-covariance-matrices"
+id="toc-effect-vectors-and-covariance-matrices">Effect Vectors and
+Covariance Matrices</a></li>
+<li><a href="#trait-sharing-model-space"
+id="toc-trait-sharing-model-space">Trait-Sharing Model Space</a></li>
+<li><a href="#residual-covariance-and-cross-trait-sufficient-statistics"
+id="toc-residual-covariance-and-cross-trait-sufficient-statistics">Residual
+Covariance and Cross-Trait Sufficient Statistics</a></li>
+<li><a href="#full-versus-partial-sample-overlap"
+id="toc-full-versus-partial-sample-overlap">Full Versus Partial Sample
+Overlap</a></li>
+<li><a href="#annotation-informed-mtblr-concepts"
+id="toc-annotation-informed-mtblr-concepts">Annotation-Informed MTBLR
+Concepts</a></li>
+<li><a href="#current-implementation-status-and-proposed-extensions"
+id="toc-current-implementation-status-and-proposed-extensions">Current
+Implementation Status and Proposed Extensions</a></li>
+<li><a href="#interpretation-sharing-is-not-causal-direction"
+id="toc-interpretation-sharing-is-not-causal-direction">Interpretation:
+Sharing Is Not Causal Direction</a></li>
+<li><a href="#related-notes" id="toc-related-notes">Related
+Notes</a></li>
+</ul>
+</nav>
+<p>This note will explain joint multi-trait modeling, covariance
+structures, trait-sharing models, and sample-overlap requirements.</p>
+<!-- Later: reuse all high-level material from drafts/sblr_theory.qmd and the
+annotation draft's MTBLR sections. Keep full overlap and annotation-prior
+derivations in the linked appendices. -->
+<h2 id="why-model-traits-jointly">Why Model Traits Jointly</h2>
+<!-- Later: explain joint information sharing and its limits. -->
+<h2 id="effect-vectors-and-covariance-matrices">Effect Vectors and
+Covariance Matrices</h2>
+<!-- Later: define b_i, B, E, and posterior covariance outputs. -->
+<h2 id="trait-sharing-model-space">Trait-Sharing Model Space</h2>
+<!-- Later: explain sharing patterns such as 000 through 111. -->
+<h2
+id="residual-covariance-and-cross-trait-sufficient-statistics">Residual
+Covariance and Cross-Trait Sufficient Statistics</h2>
+<!-- Later: introduce SSY and Nmat without shortening the appendix derivation. -->
+<h2 id="full-versus-partial-sample-overlap">Full Versus Partial Sample
+Overlap</h2>
+<!-- Later: summarize both assumptions from drafts/sblr_theory.qmd. -->
+<h2 id="annotation-informed-mtblr-concepts">Annotation-Informed MTBLR
+Concepts</h2>
+<!-- Later: summarize annotation-specific covariance and sharing priors. -->
+<h2 id="current-implementation-status-and-proposed-extensions">Current
+Implementation Status and Proposed Extensions</h2>
+<!-- Later: distinguish public functionality from research proposals. -->
+<h2 id="interpretation-sharing-is-not-causal-direction">Interpretation:
+Sharing Is Not Causal Direction</h2>
+<!-- Later: preserve causal-interpretation cautions from the annotation draft. -->
+<h2 id="related-notes">Related Notes</h2>
+<ul>
+<li><a href="model_overview.html">Model overview</a></li>
+<li><a href="data_representations.html">Data representations</a></li>
+<li><a href="annotation_informed_models.html">Annotation-informed
+models</a></li>
+<li><a href="technical_multitrait_overlap.html">Technical multi-trait
+overlap</a></li>
+<li><a href="technical_annotation_priors.html">Technical annotation
+priors</a></li>
+</ul>
+</body>
+</html>
