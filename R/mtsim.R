@@ -436,33 +436,6 @@ force_correlation <- function(X, target_cor) {
 #
 # =============================================================================
 
-force_correlation <- function(X, target_cor) {
- X <- scale(X, center = TRUE, scale = TRUE)
-
- current_cor <- cor(X)
-
- eig_current <- eigen(current_cor, symmetric = TRUE)
- eig_target <- eigen(target_cor, symmetric = TRUE)
-
- if (any(eig_current$values <= 1e-8)) {
-  stop("Current correlation matrix is not positive definite.")
- }
-
- if (any(eig_target$values <= 1e-8)) {
-  stop("Target correlation matrix is not positive definite.")
- }
-
- current_inv_sqrt <- eig_current$vectors %*%
-  diag(1 / sqrt(eig_current$values)) %*%
-  t(eig_current$vectors)
-
- target_sqrt <- eig_target$vectors %*%
-  diag(sqrt(eig_target$values)) %*%
-  t(eig_target$vectors)
-
- X %*% current_inv_sqrt %*% target_sqrt
-}
-
 make_overlapping_annotations <- function(
   m,
   n_annotations = 5,
