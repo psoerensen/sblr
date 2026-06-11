@@ -102,9 +102,9 @@ mtsim <- function(
   }
 
   if (is.null(chr)) {
-   W <- getG(Glist = Glist, rsids = rsids, ids = ids)
+   W <- qgg::getG(Glist = Glist, rsids = rsids, ids = ids)
   } else {
-   W <- getG(Glist = Glist, chr = chr, rsids = rsids, ids = ids)
+   W <- qgg::getG(Glist = Glist, chr = chr, rsids = rsids, ids = ids)
   }
  }
 
@@ -706,9 +706,9 @@ mtsim_annotation <- function(
   }
 
   if (is.null(chr)) {
-   W <- getG(Glist = Glist, rsids = rsids, ids = ids)
+   W <- qgg::getG(Glist = Glist, rsids = rsids, ids = ids)
   } else {
-   W <- getG(Glist = Glist, chr = chr, rsids = rsids, ids = ids)
+   W <- qgg::getG(Glist = Glist, chr = chr, rsids = rsids, ids = ids)
   }
  }
 

@@ -75,7 +75,9 @@ stblr_bed_marker(
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 
-\item{rebuild_every, full_sweep_every, candidate_threshold, candidate_lifetime, }{skip_nulls_burnin_only Sparse sampler controls.}
+\item{rebuild_every, full_sweep_every, candidate_threshold, candidate_lifetime}{Sparse sampler controls.}
+
+\item{skip_nulls_burnin_only}{Restrict null-marker skipping to burn-in.}
 
 \item{ncores}{Number of OpenMP threads.}
 

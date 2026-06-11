@@ -33,6 +33,44 @@ sblr(
   verbose = NULL
 )
 }
+\arguments{
+\item{yy}{Trait cross-product matrix.}
+
+\item{Xy}{List of marker-trait cross-products, one vector per trait.}
+
+\item{XX}{List of marker cross-product or linkage disequilibrium matrices.}
+
+\item{n}{Sample size.}
+
+\item{sets}{Optional marker index sets.}
+
+\item{b}{Optional initial marker effects.}
+
+\item{h2}{Initial trait heritability.}
+
+\item{pi}{Initial marker inclusion probability.}
+
+\item{models}{Optional multi-trait inclusion models.}
+
+\item{pimodels}{Optional prior probabilities for `models`.}
+
+\item{vg, vb, ve}{Optional initial genetic, marker-effect, and residual
+covariance matrices.}
+
+\item{ssb_prior, sse_prior}{Optional prior scale matrices.}
+
+\item{updateB, updateE, updatePi}{Logical sampler update controls.}
+
+\item{algorithm}{Sampler implementation.}
+
+\item{nub, nue}{Prior degrees of freedom.}
+
+\item{nit, nburn, nthin}{MCMC iteration controls.}
+
+\item{method}{Bayesian regression method.}
+
+\item{verbose}{Print initial variance and prior summaries.}
+}
 \value{
 A list containing posterior summaries and fitted model components.
 }

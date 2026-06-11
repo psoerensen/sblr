@@ -3,6 +3,25 @@
 #' Fits scalable Bayesian linear regression models for multiple traits using
 #' summary statistics and sparse linkage disequilibrium matrices.
 #'
+#' @param yy Trait cross-product matrix.
+#' @param Xy List of marker-trait cross-products, one vector per trait.
+#' @param XX List of marker cross-product or linkage disequilibrium matrices.
+#' @param n Sample size.
+#' @param sets Optional marker index sets.
+#' @param b Optional initial marker effects.
+#' @param h2 Initial trait heritability.
+#' @param pi Initial marker inclusion probability.
+#' @param models Optional multi-trait inclusion models.
+#' @param pimodels Optional prior probabilities for `models`.
+#' @param vg,vb,ve Optional initial genetic, marker-effect, and residual
+#'   covariance matrices.
+#' @param ssb_prior,sse_prior Optional prior scale matrices.
+#' @param updateB,updateE,updatePi Logical sampler update controls.
+#' @param algorithm Sampler implementation.
+#' @param nub,nue Prior degrees of freedom.
+#' @param nit,nburn,nthin MCMC iteration controls.
+#' @param method Bayesian regression method.
+#' @param verbose Print initial variance and prior summaries.
 #' @return A list containing posterior summaries and fitted model components.
 #' @useDynLib sblr, .registration = TRUE
 #' @export
@@ -278,6 +297,17 @@ sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
 }
 
 
+#' Convert a Text LD Matrix to CSR Format
+#'
+#' Reads a text linkage disequilibrium matrix and returns a compressed sparse
+#' row representation.
+#'
+#' @param filename Path to the text LD file.
+#' @param mchr Chromosome index.
+#' @param msize Number of markers.
+#' @param r2 Minimum squared-correlation threshold.
+#' @param onebased Return one-based column indices.
+#' @return A list representing a CSR sparse matrix.
 #' @export
 readLD_to_CSR <- function(filename,
                           mchr,

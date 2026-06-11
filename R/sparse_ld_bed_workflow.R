@@ -1,12 +1,54 @@
-#' Core Sparse-LD and BED Helpers
+#' Compute BED Marker Sufficient Statistics
 #'
-#' Export selected Rcpp-generated helpers used by the core sparse-LD and PLINK
-#' BED workflow.
+#' Computes marker cross-products and marker-trait cross-products directly from
+#' a PLINK BED file.
 #'
-#' @name sparse_ld_bed_helpers
-#' @export bed_xtx_xty
-#' @export sparseLD_stream_CSR
-#' @export sparseLD_read_CSR
+#' @param bed_file Path to a PLINK BED file.
+#' @param n Number of individuals in the BED file.
+#' @param cls Marker column indices.
+#' @param af Allele frequencies corresponding to `cls`.
+#' @param y Phenotype matrix.
+#' @param rows Optional 1-based individual row indices.
+#' @param scale Standardize markers using allele frequencies.
+#' @param nthreads Number of OpenMP threads.
+#' @param MG,JB,TB Internal blocking and tiling controls.
+#' @return A list containing sufficient statistics for ST-BLR fitting.
+#' @name bed_xtx_xty
+#' @export
+NULL
+
+#' Stream Sparse LD from PLINK BED Files to CSR Files
+#'
+#' Computes sparse linkage disequilibrium from PLINK BED files and writes a
+#' disk-backed CSR representation.
+#'
+#' @param bed_files Paths to PLINK BED files.
+#' @param n Number of individuals in the BED files.
+#' @param cls List of marker column indices, one vector per BED file.
+#' @param out_prefix Output prefix for the CSR files.
+#' @param rows Optional 1-based individual row indices.
+#' @param af Optional list of allele-frequency vectors.
+#' @param pos_bp Optional marker base-pair positions.
+#' @param max_distance_bp Maximum base-pair distance between retained pairs.
+#' @param max_distance_variants Maximum marker-index distance between retained
+#'   pairs.
+#' @param r2_threshold Minimum squared-correlation threshold.
+#' @param block_size Marker block size.
+#' @param nthreads Number of OpenMP threads.
+#' @return The output prefix and sparse-LD writing summary.
+#' @name sparseLD_stream_CSR
+#' @export
+NULL
+
+#' Read a Disk-Backed Sparse-LD CSR Matrix
+#'
+#' Reads CSR files previously written by [sparseLD_stream_CSR()].
+#'
+#' @param prefix Prefix of the disk-backed CSR files.
+#' @param one_based Convert returned column indices to one-based indexing.
+#' @return A list containing CSR row pointers, column indices, and values.
+#' @name sparseLD_read_CSR
+#' @export
 NULL
 
 .resolve_pi_prior <- function(pi_marker = 0.001, pi_init = NULL,
@@ -152,8 +194,11 @@ NULL
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
 #' @param scheduled Use the scheduled sparse-LD sampler.
-#' @param full_sweep_every,null_skip_base,null_skip_max,candidate_threshold,
-#'   candidate_lifetime,skip_nulls_burnin_only Scheduled sampler controls.
+#' @param full_sweep_every,null_skip_base,null_skip_max,candidate_threshold
+#'   Scheduled sampler controls.
+#' @param candidate_lifetime Number of scheduled sweeps that candidates remain
+#'   active.
+#' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
 #' @param wakeup_ld_neighbors,wakeup_diff_threshold,wakeup_max_neighbors
 #'   Scheduled neighbor wake-up controls.
 #' @param use_d_init,use_r_init,rebuild_r_before_updateE Initialization and
@@ -292,8 +337,9 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor.
 #' @param nit,nburn,nthin MCMC iteration controls.
-#' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime,
-#'   skip_nulls_burnin_only Sparse sampler controls.
+#' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime
+#'   Sparse sampler controls.
+#' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
 #' @param scheduled Use the scheduled BED sampler.

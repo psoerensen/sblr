@@ -72,7 +72,12 @@ stblr_csr(
 
 \item{scheduled}{Use the scheduled sparse-LD sampler.}
 
-\item{full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, }{candidate_lifetime,skip_nulls_burnin_only Scheduled sampler controls.}
+\item{full_sweep_every, null_skip_base, null_skip_max, candidate_threshold}{Scheduled sampler controls.}
+
+\item{candidate_lifetime}{Number of scheduled sweeps that candidates remain
+active.}
+
+\item{skip_nulls_burnin_only}{Restrict null-marker skipping to burn-in.}
 
 \item{wakeup_ld_neighbors, wakeup_diff_threshold, wakeup_max_neighbors}{Scheduled neighbor wake-up controls.}
 
