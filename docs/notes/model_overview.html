@@ -1,309 +1,286 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Model Overview</title>
-  <style>
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Peter Sørensen">
+
+<title>Model Overview – sblr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-234273d1456647dabc34a594ac50e507.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-3f1ceb0eb11a066e0501c9e2d1de2658.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
       }
-      h1 {
-        font-size: 1.8em;
-      }
     }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-  </style>
-  <script
-  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
-  type="text/javascript"></script>
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
 </head>
-<body>
-<header id="title-block-header">
-<h1 class="title">Model Overview</h1>
-</header>
-<nav id="TOC" role="doc-toc">
-<ul>
-<li><a href="#common-model-y-xb-e" id="toc-common-model-y-xb-e">Common
-Model: (y = Xb + e)</a></li>
-<li><a href="#three-axes-for-choosing-a-model"
-id="toc-three-axes-for-choosing-a-model">Three Axes for Choosing a
-Model</a>
-<ul>
-<li><a href="#single-trait-versus-multi-trait"
-id="toc-single-trait-versus-multi-trait">Single-Trait Versus
-Multi-Trait</a></li>
-<li><a href="#individual-level-versus-summary-statistics"
-id="toc-individual-level-versus-summary-statistics">Individual-Level
-Versus Summary Statistics</a></li>
-<li><a href="#plain-versus-annotation-informed-priors"
-id="toc-plain-versus-annotation-informed-priors">Plain Versus
-Annotation-Informed Priors</a></li>
-</ul></li>
-<li><a href="#sparse-mixture-priors-and-posterior-outputs"
-id="toc-sparse-mixture-priors-and-posterior-outputs">Sparse Mixture
-Priors and Posterior Outputs</a></li>
-<li><a href="#practical-workflow-families"
-id="toc-practical-workflow-families">Practical Workflow Families</a>
-<ul>
-<li><a href="#direct-bed-individual-level-st-blr"
-id="toc-direct-bed-individual-level-st-blr">Direct BED Individual-Level
-ST-BLR</a></li>
-<li><a href="#bed-to-sufficient-statistics-and-sparse-ld"
-id="toc-bed-to-sufficient-statistics-and-sparse-ld">BED to Sufficient
-Statistics and Sparse LD</a></li>
-<li><a href="#csr-summary-statistics-st-blr"
-id="toc-csr-summary-statistics-st-blr">CSR Summary-Statistics
-ST-BLR</a></li>
-<li><a href="#annotation-informed-csr-st-blr"
-id="toc-annotation-informed-csr-st-blr">Annotation-Informed CSR
-ST-BLR</a></li>
-<li><a href="#simulation-and-model-checking"
-id="toc-simulation-and-model-checking">Simulation and Model
-Checking</a></li>
-</ul></li>
-<li><a href="#model-and-function-map"
-id="toc-model-and-function-map">Model and Function Map</a></li>
-<li><a href="#implemented-models-and-research-extensions"
-id="toc-implemented-models-and-research-extensions">Implemented Models
-and Research Extensions</a></li>
-<li><a href="#what-is-not-guaranteed"
-id="toc-what-is-not-guaranteed">What Is Not Guaranteed</a></li>
-<li><a href="#how-to-read-these-notes"
-id="toc-how-to-read-these-notes">How to Read These Notes</a></li>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">sblr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../notes/index.html"> 
+<span class="menu-text">Notes</span></a>
+  </li>  
 </ul>
-</nav>
-<p><code>sblr</code> is an experimental R package for Bayesian linear
-regression of genomic marker effects. Its models estimate marker
-effects, posterior inclusion probabilities, and variance or covariance
-components from either individual-level PLINK BED data or summary
-statistics combined with linkage disequilibrium (LD).</p>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="https://github.com/psoerensen/sblr"> 
+<span class="menu-text">GitHub</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#common-model-y-xb-e" id="toc-common-model-y-xb-e" class="nav-link active" data-scroll-target="#common-model-y-xb-e"><span class="header-section-number">1</span> Common Model: (y = Xb + e)</a></li>
+  <li><a href="#three-axes-for-choosing-a-model" id="toc-three-axes-for-choosing-a-model" class="nav-link" data-scroll-target="#three-axes-for-choosing-a-model"><span class="header-section-number">2</span> Three Axes for Choosing a Model</a>
+  <ul class="collapse">
+  <li><a href="#single-trait-versus-multi-trait" id="toc-single-trait-versus-multi-trait" class="nav-link" data-scroll-target="#single-trait-versus-multi-trait"><span class="header-section-number">2.1</span> Single-Trait Versus Multi-Trait</a></li>
+  <li><a href="#individual-level-versus-summary-statistics" id="toc-individual-level-versus-summary-statistics" class="nav-link" data-scroll-target="#individual-level-versus-summary-statistics"><span class="header-section-number">2.2</span> Individual-Level Versus Summary Statistics</a></li>
+  <li><a href="#plain-versus-annotation-informed-priors" id="toc-plain-versus-annotation-informed-priors" class="nav-link" data-scroll-target="#plain-versus-annotation-informed-priors"><span class="header-section-number">2.3</span> Plain Versus Annotation-Informed Priors</a></li>
+  </ul></li>
+  <li><a href="#sparse-mixture-priors-and-posterior-outputs" id="toc-sparse-mixture-priors-and-posterior-outputs" class="nav-link" data-scroll-target="#sparse-mixture-priors-and-posterior-outputs"><span class="header-section-number">3</span> Sparse Mixture Priors and Posterior Outputs</a></li>
+  <li><a href="#practical-workflow-families" id="toc-practical-workflow-families" class="nav-link" data-scroll-target="#practical-workflow-families"><span class="header-section-number">4</span> Practical Workflow Families</a>
+  <ul class="collapse">
+  <li><a href="#direct-bed-individual-level-st-blr" id="toc-direct-bed-individual-level-st-blr" class="nav-link" data-scroll-target="#direct-bed-individual-level-st-blr"><span class="header-section-number">4.1</span> Direct BED Individual-Level ST-BLR</a></li>
+  <li><a href="#bed-to-sufficient-statistics-and-sparse-ld" id="toc-bed-to-sufficient-statistics-and-sparse-ld" class="nav-link" data-scroll-target="#bed-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">4.2</span> BED to Sufficient Statistics and Sparse LD</a></li>
+  <li><a href="#csr-summary-statistics-st-blr" id="toc-csr-summary-statistics-st-blr" class="nav-link" data-scroll-target="#csr-summary-statistics-st-blr"><span class="header-section-number">4.3</span> CSR Summary-Statistics ST-BLR</a></li>
+  <li><a href="#annotation-informed-csr-st-blr" id="toc-annotation-informed-csr-st-blr" class="nav-link" data-scroll-target="#annotation-informed-csr-st-blr"><span class="header-section-number">4.4</span> Annotation-Informed CSR ST-BLR</a></li>
+  <li><a href="#simulation-and-model-checking" id="toc-simulation-and-model-checking" class="nav-link" data-scroll-target="#simulation-and-model-checking"><span class="header-section-number">4.5</span> Simulation and Model Checking</a></li>
+  </ul></li>
+  <li><a href="#model-and-function-map" id="toc-model-and-function-map" class="nav-link" data-scroll-target="#model-and-function-map"><span class="header-section-number">5</span> Model and Function Map</a></li>
+  <li><a href="#implemented-models-and-research-extensions" id="toc-implemented-models-and-research-extensions" class="nav-link" data-scroll-target="#implemented-models-and-research-extensions"><span class="header-section-number">6</span> Implemented Models and Research Extensions</a></li>
+  <li><a href="#what-is-not-guaranteed" id="toc-what-is-not-guaranteed" class="nav-link" data-scroll-target="#what-is-not-guaranteed"><span class="header-section-number">7</span> What Is Not Guaranteed</a></li>
+  <li><a href="#how-to-read-these-notes" id="toc-how-to-read-these-notes" class="nav-link" data-scroll-target="#how-to-read-these-notes"><span class="header-section-number">8</span> How to Read These Notes</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="model_overview.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Model Overview</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Author</div>
+  <div class="quarto-title-meta-heading">Affiliation</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Peter Sørensen </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Aarhus University
+          </p>
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><code>sblr</code> is an experimental R package for Bayesian linear regression of genomic marker effects. Its models estimate marker effects, posterior inclusion probabilities, and variance or covariance components from either individual-level PLINK BED data or summary statistics combined with linkage disequilibrium (LD).</p>
 <p>The package landscape is easiest to understand along three axes:</p>
 <ol type="1">
 <li><strong>single-trait versus multi-trait modeling</strong>;</li>
-<li><strong>individual-level versus summary-statistics inputs</strong>;
-and</li>
+<li><strong>individual-level versus summary-statistics inputs</strong>; and</li>
 <li><strong>plain versus annotation-informed priors</strong>.</li>
 </ol>
-<p>These axes describe different choices. For example, a model can be
-single-trait, use summary statistics with disk-backed sparse LD, and use
-an annotation-informed prior. This note maps those choices to the
-current public functions and to the notes that explain them in
-detail.</p>
-<h2 id="common-model-y-xb-e">Common Model: (y = Xb + e)</h2>
+<p>These axes describe different choices. For example, a model can be single-trait, use summary statistics with disk-backed sparse LD, and use an annotation-informed prior. This note maps those choices to the current public functions and to the notes that explain them in detail.</p>
+<section id="common-model-y-xb-e" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="common-model-y-xb-e"><span class="header-section-number">1</span> Common Model: (y = Xb + e)</h2>
 <p>For one trait, the common regression model is</p>
 <p><span class="math display">\[
 y = Xb + e,
 \]</span></p>
-<p>where (X) is an (n m) genotype matrix, (b) is a vector of marker
-effects, and (e) is residual variation. Bayesian genomic regression
-combines this likelihood with a prior on marker effects and, often,
-latent inclusion indicators.</p>
+<p>where (X) is an (n m) genotype matrix, (b) is a vector of marker effects, and (e) is residual variation. Bayesian genomic regression combines this likelihood with a prior on marker effects and, often, latent inclusion indicators.</p>
 <p>For (n_t) traits, the model becomes</p>
 <p><span class="math display">\[
 Y = XB + E,
 \]</span></p>
-<p>where each row of (B) is a marker-effect vector across traits. A
-genuinely joint multi-trait model can describe covariance among effects,
-residuals, or trait-sharing patterns. Running one single-trait model per
-phenotype can be useful and parallelizable, but it is not equivalent to
-a joint multi-trait likelihood.</p>
+<p>where each row of (B) is a marker-effect vector across traits. A genuinely joint multi-trait model can describe covariance among effects, residuals, or trait-sharing patterns. Running one single-trait model per phenotype can be useful and parallelizable, but it is not equivalent to a joint multi-trait likelihood.</p>
 <p>The main posterior marker summaries are:</p>
 <p><span class="math display">\[
 \widehat b_{it} = E(b_{it}\mid\text{data})
 \quad\text{and}\quad
 \widehat{dm}_{it} = P(d_{it}=1\mid\text{data}),
 \]</span></p>
-<p>represented in fitted objects by <code>bm</code> and <code>dm</code>.
-Depending on the wrapper, fits also contain sampled effects and
-indicators, variance traces, covariance summaries, prior parameters, and
-model-specific annotation diagnostics.</p>
-<h2 id="three-axes-for-choosing-a-model">Three Axes for Choosing a
-Model</h2>
-<h3 id="single-trait-versus-multi-trait">Single-Trait Versus
-Multi-Trait</h3>
-<p><strong>Single-trait BLR/ST-BLR</strong> estimates scalar effects and
-inclusion probabilities for one phenotype. Current BED, CSR, and
-annotation workflow examples are centered on this model family. Several
-ST-BLR wrappers accept a phenotype matrix or multiple trait-specific
-sufficient-statistic columns, but their marker-update structure should
-not automatically be interpreted as a full joint MTBLR sharing
-model.</p>
-<p><strong>Multi-trait BLR (MTBLR)</strong> treats marker effects as
-vectors and can model effect covariance, residual covariance, and
-explicit trait-sharing models. The public <code>sblr()</code> interface
-accepts summary-statistics inputs such as a trait cross-product matrix
-<code>yy</code>, marker-trait cross-products <code>Xy</code>, LD or
-marker cross-products <code>XX</code>, and optional multi-trait
-inclusion models. Full summary-statistics residual-covariance modeling
-additionally depends on cross-trait phenotype products and
-sample-overlap assumptions.</p>
-<p>The current most polished end-to-end workflows are BED/CSR ST-BLR and
-annotation-informed CSR ST-BLR. Multi-trait theory remains central to
-the package and motivates the covariance outputs, simulation tools, and
-proposed annotation-aware extensions. Read <a
-href="multi_trait_models.html">Multi-trait models</a> before interpreting
-trait sharing or covariance as a joint model result.</p>
-<h3 id="individual-level-versus-summary-statistics">Individual-Level
-Versus Summary Statistics</h3>
-<p>With <strong>individual-level data</strong>, the sampler can read
-observed genotype columns from BED files and calculate marker-update
-quantities directly. The principal public interface is
-<code>stblr_bed_marker()</code>.</p>
-<p>With <strong>summary statistics</strong>, the sampler instead
-receives cross-products:</p>
+<p>represented in fitted objects by <code>bm</code> and <code>dm</code>. Depending on the wrapper, fits also contain sampled effects and indicators, variance traces, covariance summaries, prior parameters, and model-specific annotation diagnostics.</p>
+</section>
+<section id="three-axes-for-choosing-a-model" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="three-axes-for-choosing-a-model"><span class="header-section-number">2</span> Three Axes for Choosing a Model</h2>
+<section id="single-trait-versus-multi-trait" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="single-trait-versus-multi-trait"><span class="header-section-number">2.1</span> Single-Trait Versus Multi-Trait</h3>
+<p><strong>Single-trait BLR/ST-BLR</strong> estimates scalar effects and inclusion probabilities for one phenotype. Current BED, CSR, and annotation workflow examples are centered on this model family. Several ST-BLR wrappers accept a phenotype matrix or multiple trait-specific sufficient-statistic columns, but their marker-update structure should not automatically be interpreted as a full joint MTBLR sharing model.</p>
+<p><strong>Multi-trait BLR (MTBLR)</strong> treats marker effects as vectors and can model effect covariance, residual covariance, and explicit trait-sharing models. The public <code>sblr()</code> interface accepts summary-statistics inputs such as a trait cross-product matrix <code>yy</code>, marker-trait cross-products <code>Xy</code>, LD or marker cross-products <code>XX</code>, and optional multi-trait inclusion models. Full summary-statistics residual-covariance modeling additionally depends on cross-trait phenotype products and sample-overlap assumptions.</p>
+<p>The current most polished end-to-end workflows are BED/CSR ST-BLR and annotation-informed CSR ST-BLR. Multi-trait theory remains central to the package and motivates the covariance outputs, simulation tools, and proposed annotation-aware extensions. Read <a href="../notes/multi_trait_models.html">Multi-trait models</a> before interpreting trait sharing or covariance as a joint model result.</p>
+</section>
+<section id="individual-level-versus-summary-statistics" class="level3" data-number="2.2">
+<h3 data-number="2.2" class="anchored" data-anchor-id="individual-level-versus-summary-statistics"><span class="header-section-number">2.2</span> Individual-Level Versus Summary Statistics</h3>
+<p>With <strong>individual-level data</strong>, the sampler can read observed genotype columns from BED files and calculate marker-update quantities directly. The principal public interface is <code>stblr_bed_marker()</code>.</p>
+<p>With <strong>summary statistics</strong>, the sampler instead receives cross-products:</p>
 <p><span class="math display">\[
 wy = X^\top y,
 \qquad
@@ -311,28 +288,16 @@ ww_j = x_j^\top x_j,
 \qquad
 yy = y^\top y,
 \]</span></p>
-<p>plus compatible LD and sample size (n). The residual score can be
-maintained as</p>
+<p>plus compatible LD and sample size (n). The residual score can be maintained as</p>
 <p><span class="math display">\[
 r = X^\top y - X^\top Xb.
 \]</span></p>
-<p><code>stblr_csr()</code> uses sufficient statistics from
-<code>bed_xtx_xty()</code> with a disk-backed sparse-LD prefix written
-by <code>sparseLD_stream_CSR()</code>. The public <code>sblr()</code>
-interface represents the broader summary-statistics model family and
-accepts dense or sparse marker cross-product structures through
-<code>XX</code>.</p>
-<p>These representations, their information requirements, and
-sample-overlap issues are covered in <a
-href="data_representations.html">Data representations</a>. The practical
-BED-to-CSR handoff is covered in <a
-href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED
-workflows</a>.</p>
-<h3 id="plain-versus-annotation-informed-priors">Plain Versus
-Annotation-Informed Priors</h3>
-<p>A <strong>plain/global prior</strong> gives markers a common prior
-architecture, such as a global inclusion probability and marker-effect
-variance. A BayesC-style spike-and-slab representation is</p>
+<p><code>stblr_csr()</code> uses sufficient statistics from <code>bed_xtx_xty()</code> with a disk-backed sparse-LD prefix written by <code>sparseLD_stream_CSR()</code>. The public <code>sblr()</code> interface represents the broader summary-statistics model family and accepts dense or sparse marker cross-product structures through <code>XX</code>.</p>
+<p>These representations, their information requirements, and sample-overlap issues are covered in <a href="../notes/data_representations.html">Data representations</a>. The practical BED-to-CSR handoff is covered in <a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
+</section>
+<section id="plain-versus-annotation-informed-priors" class="level3" data-number="2.3">
+<h3 data-number="2.3" class="anchored" data-anchor-id="plain-versus-annotation-informed-priors"><span class="header-section-number">2.3</span> Plain Versus Annotation-Informed Priors</h3>
+<p>A <strong>plain/global prior</strong> gives markers a common prior architecture, such as a global inclusion probability and marker-effect variance. A BayesC-style spike-and-slab representation is</p>
 <p><span class="math display">\[
 d_{it} \sim \operatorname{Bernoulli}(\pi_t),
 \qquad
@@ -340,99 +305,59 @@ b_{it}\mid d_{it}=1 \sim N(0,v_{b,t}),
 \qquad
 b_{it}\mid d_{it}=0 = 0.
 \]</span></p>
-<p>An <strong>annotation-informed prior</strong> allows prior inclusion
-probabilities, variance scales, or mixture-component probabilities to
-vary by marker, marker group, or annotation profile. Current public CSR
-wrappers distinguish four implemented forms:</p>
+<p>An <strong>annotation-informed prior</strong> allows prior inclusion probabilities, variance scales, or mixture-component probabilities to vary by marker, marker group, or annotation profile. Current public CSR wrappers distinguish four implemented forms:</p>
 <ul>
-<li>fixed marker-specific inclusion probabilities or variance
-multipliers;</li>
+<li>fixed marker-specific inclusion probabilities or variance multipliers;</li>
 <li>group-level priors;</li>
 <li>directly learned annotation effects on inclusion or variance;</li>
-<li>SBayesRC-style mixture probabilities learned from overlapping
-annotations.</li>
+<li>SBayesRC-style mixture probabilities learned from overlapping annotations.</li>
 </ul>
-<p>These models use annotation information as a prior or evidence
-structure. They do not by themselves establish that an annotation is
-causal. The empirical-Bayes and proposed multi-trait annotation
-extensions in the source drafts remain important technical directions,
-but they should be distinguished from currently implemented public
-wrappers.</p>
-<h2 id="sparse-mixture-priors-and-posterior-outputs">Sparse Mixture
-Priors and Posterior Outputs</h2>
-<p>Sparse Bayesian regression allows many markers to have exactly zero
-current effects while a subset belongs to active components. The
-inclusion indicator (d_{it}) records whether marker (i) is active for
-trait (t). Across MCMC samples:</p>
+<p>These models use annotation information as a prior or evidence structure. They do not by themselves establish that an annotation is causal. The empirical-Bayes and proposed multi-trait annotation extensions in the source drafts remain important technical directions, but they should be distinguished from currently implemented public wrappers.</p>
+</section>
+</section>
+<section id="sparse-mixture-priors-and-posterior-outputs" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="sparse-mixture-priors-and-posterior-outputs"><span class="header-section-number">3</span> Sparse Mixture Priors and Posterior Outputs</h2>
+<p>Sparse Bayesian regression allows many markers to have exactly zero current effects while a subset belongs to active components. The inclusion indicator (d_{it}) records whether marker (i) is active for trait (t). Across MCMC samples:</p>
 <ul>
-<li><code>dm[i, t]</code> estimates the posterior inclusion
-probability;</li>
-<li><code>bm[i, t]</code> estimates the posterior mean marker
-effect;</li>
-<li><code>b</code> and <code>d</code> may retain current or sampled
-marker states;</li>
-<li><code>vbs</code>, <code>vgs</code>, and <code>ves</code> record
-variance-component traces;</li>
-<li><code>covb</code>, <code>covg</code>, and <code>cove</code>
-summarize effect, genetic, and residual covariance where available.</li>
+<li><code>dm[i, t]</code> estimates the posterior inclusion probability;</li>
+<li><code>bm[i, t]</code> estimates the posterior mean marker effect;</li>
+<li><code>b</code> and <code>d</code> may retain current or sampled marker states;</li>
+<li><code>vbs</code>, <code>vgs</code>, and <code>ves</code> record variance-component traces;</li>
+<li><code>covb</code>, <code>covg</code>, and <code>cove</code> summarize effect, genetic, and residual covariance where available.</li>
 </ul>
-<p>Annotation models change how prior mass or effect scale is
-distributed before and during these updates. They do not change the
-requirement that marker rows in statistics, LD, annotations, and
-posterior summaries remain aligned.</p>
-<p>The full marker-update algebra and annotation-prior derivations are
-deferred to <a href="technical_summary_statistics.html">Technical summary
-statistics</a> and <a href="technical_annotation_priors.html">Technical
-annotation priors</a>.</p>
-<h2 id="practical-workflow-families">Practical Workflow Families</h2>
-<p>The package’s current workflows can be read as five connected
-families.</p>
-<h3 id="direct-bed-individual-level-st-blr">Direct BED Individual-Level
-ST-BLR</h3>
-<p>Use <code>stblr_bed_marker()</code> when BED genotypes and aligned
-phenotypes remain available during fitting. Genotypes are read in
-blocks, and a separate LD artifact is not required.</p>
-<h3 id="bed-to-sufficient-statistics-and-sparse-ld">BED to Sufficient
-Statistics and Sparse LD</h3>
-<p>Use <code>bed_xtx_xty()</code> to derive <code>wy</code>,
-<code>ww</code>, and <code>yy</code> from BED data and phenotypes. Use
-<code>sparseLD_stream_CSR()</code> to derive disk-backed sparse LD from
-the same markers, samples, allele frequencies, and scaling convention.
-This preparation workflow creates reusable inputs for CSR models.</p>
-<h3 id="csr-summary-statistics-st-blr">CSR Summary-Statistics
-ST-BLR</h3>
-<p>Use <code>stblr_csr()</code> with the sufficient-statistics object
-and sparse-LD prefix. This path is appropriate when the prepared
-cross-products and LD files should be reused without repeated BED access
-during fitting.</p>
-<h3 id="annotation-informed-csr-st-blr">Annotation-Informed CSR
-ST-BLR</h3>
-<p>Start from the same <code>stats</code> and <code>ld_prefix</code>,
-then add marker-aligned annotation information or marker-specific
-priors. Choose among fixed, learned, group, and SBayesRC-style wrappers
-according to the intended prior architecture.</p>
-<h3 id="simulation-and-model-checking">Simulation and Model
-Checking</h3>
-<p>Use <code>mtsim()</code> to simulate multi-trait phenotypes, marker
-effects, and known shared or trait-specific signals. Use
-<code>mtsim_annotation()</code> to additionally simulate overlapping
-annotations, causal enrichment, and marker-specific prior values.
-Simulation outputs provide known truth for checking marker recovery,
-annotation summaries, model behavior, and BED-versus-CSR
-preparation.</p>
-<p>Simulation is a model-checking tool, not evidence that the same
-assumptions hold in real data.</p>
-<h2 id="model-and-function-map">Model and Function Map</h2>
-<table>
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-</colgroup>
+<p>Annotation models change how prior mass or effect scale is distributed before and during these updates. They do not change the requirement that marker rows in statistics, LD, annotations, and posterior summaries remain aligned.</p>
+<p>The full marker-update algebra and annotation-prior derivations are deferred to <a href="../notes/technical_summary_statistics.html">Technical summary statistics</a> and <a href="../notes/technical_annotation_priors.html">Technical annotation priors</a>.</p>
+</section>
+<section id="practical-workflow-families" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="practical-workflow-families"><span class="header-section-number">4</span> Practical Workflow Families</h2>
+<p>The package’s current workflows can be read as five connected families.</p>
+<section id="direct-bed-individual-level-st-blr" class="level3" data-number="4.1">
+<h3 data-number="4.1" class="anchored" data-anchor-id="direct-bed-individual-level-st-blr"><span class="header-section-number">4.1</span> Direct BED Individual-Level ST-BLR</h3>
+<p>Use <code>stblr_bed_marker()</code> when BED genotypes and aligned phenotypes remain available during fitting. Genotypes are read in blocks, and a separate LD artifact is not required.</p>
+</section>
+<section id="bed-to-sufficient-statistics-and-sparse-ld" class="level3" data-number="4.2">
+<h3 data-number="4.2" class="anchored" data-anchor-id="bed-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">4.2</span> BED to Sufficient Statistics and Sparse LD</h3>
+<p>Use <code>bed_xtx_xty()</code> to derive <code>wy</code>, <code>ww</code>, and <code>yy</code> from BED data and phenotypes. Use <code>sparseLD_stream_CSR()</code> to derive disk-backed sparse LD from the same markers, samples, allele frequencies, and scaling convention. This preparation workflow creates reusable inputs for CSR models.</p>
+</section>
+<section id="csr-summary-statistics-st-blr" class="level3" data-number="4.3">
+<h3 data-number="4.3" class="anchored" data-anchor-id="csr-summary-statistics-st-blr"><span class="header-section-number">4.3</span> CSR Summary-Statistics ST-BLR</h3>
+<p>Use <code>stblr_csr()</code> with the sufficient-statistics object and sparse-LD prefix. This path is appropriate when the prepared cross-products and LD files should be reused without repeated BED access during fitting.</p>
+</section>
+<section id="annotation-informed-csr-st-blr" class="level3" data-number="4.4">
+<h3 data-number="4.4" class="anchored" data-anchor-id="annotation-informed-csr-st-blr"><span class="header-section-number">4.4</span> Annotation-Informed CSR ST-BLR</h3>
+<p>Start from the same <code>stats</code> and <code>ld_prefix</code>, then add marker-aligned annotation information or marker-specific priors. Choose among fixed, learned, group, and SBayesRC-style wrappers according to the intended prior architecture.</p>
+</section>
+<section id="simulation-and-model-checking" class="level3" data-number="4.5">
+<h3 data-number="4.5" class="anchored" data-anchor-id="simulation-and-model-checking"><span class="header-section-number">4.5</span> Simulation and Model Checking</h3>
+<p>Use <code>mtsim()</code> to simulate multi-trait phenotypes, marker effects, and known shared or trait-specific signals. Use <code>mtsim_annotation()</code> to additionally simulate overlapping annotations, causal enrichment, and marker-specific prior values. Simulation outputs provide known truth for checking marker recovery, annotation summaries, model behavior, and BED-versus-CSR preparation.</p>
+<p>Simulation is a model-checking tool, not evidence that the same assumptions hold in real data.</p>
+</section>
+</section>
+<section id="model-and-function-map" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="model-and-function-map"><span class="header-section-number">5</span> Model and Function Map</h2>
+<table class="caption-top table">
 <thead>
-<tr>
+<tr class="header">
 <th>Function</th>
 <th>Primary role</th>
 <th>Data representation</th>
@@ -441,183 +366,873 @@ assumptions hold in real data.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td><code>stblr_bed_marker()</code></td>
-<td>Fit ST-BLR directly from selected PLINK BED markers and
-phenotypes.</td>
+<td>Fit ST-BLR directly from selected PLINK BED markers and phenotypes.</td>
 <td>Individual-level BED</td>
 <td>Plain/global ST-BLR; accepts one or more phenotype columns.</td>
-<td><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED
-workflows</a>, <a href="single_trait_models.html">Single-trait
-models</a></td>
+<td><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>, <a href="../notes/single_trait_models.html">Single-trait models</a></td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>bed_xtx_xty()</code></td>
-<td>Derive marker-trait and phenotype sufficient statistics from BED
-data.</td>
+<td>Derive marker-trait and phenotype sufficient statistics from BED data.</td>
 <td>BED to summary statistics</td>
 <td>Preparation, not a fitted model.</td>
-<td><a href="data_representations.html">Data representations</a></td>
+<td><a href="../notes/data_representations.html">Data representations</a></td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>sparseLD_stream_CSR()</code></td>
 <td>Construct disk-backed sparse LD from BED data.</td>
 <td>BED to CSR LD</td>
 <td>Preparation, not a fitted model.</td>
-<td><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED
-workflows</a>, <a href="technical_sparse_ld_csr.html">Technical sparse LD
-and CSR</a></td>
+<td><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>, <a href="../notes/technical_sparse_ld_csr.html">Technical sparse LD and CSR</a></td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>stblr_csr()</code></td>
 <td>Fit ST-BLR from <code>stats</code> and a CSR LD prefix.</td>
 <td>Summary statistics plus disk-backed sparse LD</td>
 <td>Plain/global ST-BLR.</td>
-<td><a href="single_trait_models.html">Single-trait models</a></td>
+<td><a href="../notes/single_trait_models.html">Single-trait models</a></td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>stblr_csr_prior_annot()</code></td>
-<td>Fit CSR ST-BLR with fixed marker-specific priors, supplied directly
-or derived from fixed annotation coefficients.</td>
+<td>Fit CSR ST-BLR with fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients.</td>
 <td>Summary statistics plus CSR LD and optional annotations</td>
 <td>Fixed annotation-informed prior.</td>
-<td><a href="annotation_informed_models.html">Annotation-informed
-models</a></td>
+<td><a href="../notes/annotation_informed_models.html">Annotation-informed models</a></td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>stblr_csr_learn_annot()</code></td>
-<td>Learn annotation effects on marker inclusion and optionally
-effect-variance multipliers during CSR fitting.</td>
+<td>Learn annotation effects on marker inclusion and optionally effect-variance multipliers during CSR fitting.</td>
 <td>Summary statistics plus CSR LD and annotations</td>
 <td>Direct learned annotation prior.</td>
-<td><a href="annotation_informed_models.html">Annotation-informed
-models</a>, <a href="technical_annotation_priors.html">Technical
-annotation priors</a></td>
+<td><a href="../notes/annotation_informed_models.html">Annotation-informed models</a>, <a href="../notes/technical_annotation_priors.html">Technical annotation priors</a></td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>stblr_csr_group_annot()</code></td>
-<td>Fit CSR ST-BLR with group-level inclusion probabilities and variance
-multipliers.</td>
+<td>Fit CSR ST-BLR with group-level inclusion probabilities and variance multipliers.</td>
 <td>Summary statistics plus CSR LD and marker groups</td>
 <td>Group prior.</td>
-<td><a href="annotation_informed_models.html">Annotation-informed
-models</a></td>
+<td><a href="../notes/annotation_informed_models.html">Annotation-informed models</a></td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>stblr_csr_sbayesrc_generic()</code></td>
-<td>Fit an SBayesRC-style annotation-dependent BayesR prior with
-marker-specific mixture probabilities. It is not an exact reproduction
-of GCTB SBayesRC as exposed by default.</td>
+<td>Fit an SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. It is not an exact reproduction of GCTB SBayesRC as exposed by default.</td>
 <td>Summary statistics plus CSR LD and overlapping annotations</td>
 <td>Probit stick-breaking mixture prior.</td>
-<td><a href="annotation_informed_models.html">Annotation-informed
-models</a>, <a href="technical_sbayesrc_annotations.html">Technical
-SBayesRC-style annotations</a></td>
+<td><a href="../notes/annotation_informed_models.html">Annotation-informed models</a>, <a href="../notes/technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a></td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>sblr()</code></td>
-<td>Fit the broader summary-statistics BLR interface, including
-multi-trait inputs and optional sharing models.</td>
+<td>Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models.</td>
 <td>Summary statistics plus marker cross-products/LD</td>
 <td>Plain single- or multi-trait model components.</td>
-<td><a href="multi_trait_models.html">Multi-trait models</a></td>
+<td><a href="../notes/multi_trait_models.html">Multi-trait models</a></td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>mtsim()</code></td>
-<td>Simulate multi-trait phenotypes and marker effects with shared and
-trait-specific signals.</td>
+<td>Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals.</td>
 <td>Simulated matrix or <code>Glist</code> genotypes</td>
 <td>Model checking and multi-trait truth.</td>
-<td><a href="workflows_and_outputs.html">Workflows and outputs</a></td>
+<td><a href="../notes/workflows_and_outputs.html">Workflows and outputs</a></td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>mtsim_annotation()</code></td>
-<td>Simulate multi-trait phenotypes with overlapping annotation
-enrichment and marker-specific priors.</td>
-<td>Simulated matrix or <code>Glist</code> genotypes plus
-annotations</td>
+<td>Simulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors.</td>
+<td>Simulated matrix or <code>Glist</code> genotypes plus annotations</td>
 <td>Annotation-model checking.</td>
-<td><a href="annotation_informed_models.html">Annotation-informed
-models</a>, <a href="workflows_and_outputs.html">Workflows and
-outputs</a></td>
+<td><a href="../notes/annotation_informed_models.html">Annotation-informed models</a>, <a href="../notes/workflows_and_outputs.html">Workflows and outputs</a></td>
 </tr>
 </tbody>
 </table>
-<h2 id="implemented-models-and-research-extensions">Implemented Models
-and Research Extensions</h2>
-<p>The model/function map above describes current public interfaces. The
-archived technical drafts also contain deeper or proposed directions,
-including:</p>
+</section>
+<section id="implemented-models-and-research-extensions" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="implemented-models-and-research-extensions"><span class="header-section-number">6</span> Implemented Models and Research Extensions</h2>
+<p>The model/function map above describes current public interfaces. The archived technical drafts also contain deeper or proposed directions, including:</p>
 <ul>
-<li>empirical-Bayes loops that use first-stage marker summaries to
-estimate annotation-level priors for later genomic fits;</li>
-<li>direct annotation-aware MTBLR sharing-model priors and covariance
-models;</li>
-<li>sparse annotation representations and sampler implementation
-sketches;</li>
+<li>empirical-Bayes loops that use first-stage marker summaries to estimate annotation-level priors for later genomic fits;</li>
+<li>direct annotation-aware MTBLR sharing-model priors and covariance models;</li>
+<li>sparse annotation representations and sampler implementation sketches;</li>
 <li>warm-started regional MTBLR workflows;</li>
-<li>reconstruction of cross-trait <code>SSY</code> and overlap matrices
-for joint summary-statistics models.</li>
+<li>reconstruction of cross-trait <code>SSY</code> and overlap matrices for joint summary-statistics models.</li>
 </ul>
-<p>These ideas should be preserved because they explain the intended
-model landscape, but they must be labeled as implemented, experimental,
-or proposed when moved into maintained notes. Public function
-availability alone also does not guarantee that every model path has an
-equally polished end-to-end workflow.</p>
-<h2 id="what-is-not-guaranteed">What Is Not Guaranteed</h2>
+<p>These ideas should be preserved because they explain the intended model landscape, but they must be labeled as implemented, experimental, or proposed when moved into maintained notes. Public function availability alone also does not guarantee that every model path has an equally polished end-to-end workflow.</p>
+</section>
+<section id="what-is-not-guaranteed" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="what-is-not-guaranteed"><span class="header-section-number">7</span> What Is Not Guaranteed</h2>
 <ul>
-<li><strong>BED and CSR fits are not exactly equal.</strong> Under
-matched markers, rows, scaling, priors, and MCMC settings they should
-agree qualitatively, but sparse-LD approximation, update scheduling,
-floating-point precision, and Monte Carlo variation prevent exact
-equality.</li>
-<li><strong>CSR disk internals are not a manual file-format
-API.</strong> Use package writers, readers, and model wrappers rather
-than editing row-pointer, column-index, value, or metadata files
-directly.</li>
-<li><strong>Annotation effects are not causal proof.</strong>
-Enrichment, learned prior coefficients, posterior inclusion, and shared
-genetic signals can generate hypotheses but do not identify causal
-biological mechanisms by themselves.</li>
-<li><strong>Short workflow chains are not final inference.</strong>
-Demonstration settings establish object handoffs and model execution.
-Real analyses require longer chains, convergence assessment, sensitivity
-analysis, and posterior predictive checks.</li>
+<li><strong>BED and CSR fits are not exactly equal.</strong> Under matched markers, rows, scaling, priors, and MCMC settings they should agree qualitatively, but sparse-LD approximation, update scheduling, floating-point precision, and Monte Carlo variation prevent exact equality.</li>
+<li><strong>CSR disk internals are not a manual file-format API.</strong> Use package writers, readers, and model wrappers rather than editing row-pointer, column-index, value, or metadata files directly.</li>
+<li><strong>Annotation effects are not causal proof.</strong> Enrichment, learned prior coefficients, posterior inclusion, and shared genetic signals can generate hypotheses but do not identify causal biological mechanisms by themselves.</li>
+<li><strong>Short workflow chains are not final inference.</strong> Demonstration settings establish object handoffs and model execution. Real analyses require longer chains, convergence assessment, sensitivity analysis, and posterior predictive checks.</li>
 </ul>
-<h2 id="how-to-read-these-notes">How to Read These Notes</h2>
+</section>
+<section id="how-to-read-these-notes" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="how-to-read-these-notes"><span class="header-section-number">8</span> How to Read These Notes</h2>
 <p>Choose the next note according to the question:</p>
 <ul>
-<li>To understand what BED, sufficient statistics, sparse LD,
-<code>yy</code>, and <code>SSY</code> represent, read <a
-href="data_representations.html">Data representations</a>.</li>
-<li>To prepare aligned BED-derived statistics and disk-backed CSR LD,
-read <a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED
-workflows</a>.</li>
-<li>To understand plain BED and CSR ST-BLR models, read <a
-href="single_trait_models.html">Single-trait models</a>.</li>
-<li>To understand joint effects, covariance, trait sharing, and sample
-overlap, read <a href="multi_trait_models.html">Multi-trait
-models</a>.</li>
-<li>To choose among fixed, group, learned, empirical-Bayes, and
-SBayesRC-style priors, read <a
-href="annotation_informed_models.html">Annotation-informed
-models</a>.</li>
-<li>To run workflows and interpret compact fit summaries, read <a
-href="workflows_and_outputs.html">Workflows and outputs</a>.</li>
+<li>To understand what BED, sufficient statistics, sparse LD, <code>yy</code>, and <code>SSY</code> represent, read <a href="../notes/data_representations.html">Data representations</a>.</li>
+<li>To prepare aligned BED-derived statistics and disk-backed CSR LD, read <a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</li>
+<li>To understand plain BED and CSR ST-BLR models, read <a href="../notes/single_trait_models.html">Single-trait models</a>.</li>
+<li>To understand joint effects, covariance, trait sharing, and sample overlap, read <a href="../notes/multi_trait_models.html">Multi-trait models</a>.</li>
+<li>To choose among fixed, group, learned, empirical-Bayes, and SBayesRC-style priors, read <a href="../notes/annotation_informed_models.html">Annotation-informed models</a>.</li>
+<li>To run workflows and interpret compact fit summaries, read <a href="../notes/workflows_and_outputs.html">Workflows and outputs</a>.</li>
 </ul>
-<p>For full derivations and implementation-sensitive contracts, use the
-technical appendices:</p>
+<p>For full derivations and implementation-sensitive contracts, use the technical appendices:</p>
 <ul>
-<li><a href="technical_summary_statistics.html">Technical summary
-statistics</a></li>
-<li><a href="technical_multitrait_overlap.html">Technical multi-trait
-sample overlap</a></li>
-<li><a href="technical_sparse_ld_csr.html">Technical sparse LD and
-CSR</a></li>
-<li><a href="technical_annotation_priors.html">Technical annotation
-priors</a></li>
-<li><a href="technical_sbayesrc_annotations.html">Technical
-SBayesRC-style annotations</a></li>
+<li><a href="../notes/technical_summary_statistics.html">Technical summary statistics</a></li>
+<li><a href="../notes/technical_multitrait_overlap.html">Technical multi-trait sample overlap</a></li>
+<li><a href="../notes/technical_sparse_ld_csr.html">Technical sparse LD and CSR</a></li>
+<li><a href="../notes/technical_annotation_priors.html">Technical annotation priors</a></li>
+<li><a href="../notes/technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a></li>
 </ul>
-</body>
-</html>
+
+
+<!-- -->
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Model Overview"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="in">`sblr`</span> is an experimental R package for Bayesian linear regression of genomic</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>marker effects. Its models estimate marker effects, posterior inclusion</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>probabilities, and variance or covariance components from either</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>individual-level PLINK BED data or summary statistics combined with linkage</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>disequilibrium (LD).</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>The package landscape is easiest to understand along three axes:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**single-trait versus multi-trait modeling**;</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**individual-level versus summary-statistics inputs**; and</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**plain versus annotation-informed priors**.</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>These axes describe different choices. For example, a model can be</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>single-trait, use summary statistics with disk-backed sparse LD, and use an</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>annotation-informed prior. This note maps those choices to the current public</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>functions and to the notes that explain them in detail.</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Common Model: \(y = Xb + e\)</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>For one trait, the common regression model is</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>y = Xb + e,</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>X<span class="sc">\)</span> is an <span class="sc">\(</span>n \times m<span class="sc">\)</span> genotype matrix, <span class="sc">\(</span>b<span class="sc">\)</span> is a vector of marker</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>effects, and <span class="sc">\(</span>e<span class="sc">\)</span> is residual variation. Bayesian genomic regression combines</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>this likelihood with a prior on marker effects and, often, latent inclusion</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>indicators.</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>For <span class="sc">\(</span>n_t<span class="sc">\)</span> traits, the model becomes</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>Y = XB + E,</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>where each row of <span class="sc">\(</span>B<span class="sc">\)</span> is a marker-effect vector across traits. A genuinely</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>joint multi-trait model can describe covariance among effects, residuals, or</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>trait-sharing patterns. Running one single-trait model per phenotype can be</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>useful and parallelizable, but it is not equivalent to a joint multi-trait</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>likelihood.</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>The main posterior marker summaries are:</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>\widehat b_{it} = E(b_{it}\mid\text{data})</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>\quad\text{and}\quad</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>\widehat{dm}_{it} = P(d_{it}=1\mid\text{data}),</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>represented in fitted objects by <span class="in">`bm`</span> and <span class="in">`dm`</span>. Depending on the wrapper, fits</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>also contain sampled effects and indicators, variance traces, covariance</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>summaries, prior parameters, and model-specific annotation diagnostics.</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="fu">## Three Axes for Choosing a Model</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="fu">### Single-Trait Versus Multi-Trait</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>**Single-trait BLR/ST-BLR** estimates scalar effects and inclusion</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>probabilities for one phenotype. Current BED, CSR, and annotation workflow</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>examples are centered on this model family. Several ST-BLR wrappers accept a</span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>phenotype matrix or multiple trait-specific sufficient-statistic columns, but</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>their marker-update structure should not automatically be interpreted as a</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>full joint MTBLR sharing model.</span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>**Multi-trait BLR (MTBLR)** treats marker effects as vectors and can model</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>effect covariance, residual covariance, and explicit trait-sharing models.</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>The public <span class="in">`sblr()`</span> interface accepts summary-statistics inputs such as a trait</span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>cross-product matrix <span class="in">`yy`</span>, marker-trait cross-products <span class="in">`Xy`</span>, LD or marker</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>cross-products <span class="in">`XX`</span>, and optional multi-trait inclusion models. Full</span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a>summary-statistics residual-covariance modeling additionally depends on</span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a>cross-trait phenotype products and sample-overlap assumptions.</span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>The current most polished end-to-end workflows are BED/CSR ST-BLR and</span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>annotation-informed CSR ST-BLR. Multi-trait theory remains central to the</span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>package and motivates the covariance outputs, simulation tools, and proposed</span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a>annotation-aware extensions. Read <span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.qmd)</span></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a>before interpreting trait sharing or covariance as a joint model result.</span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a><span class="fu">### Individual-Level Versus Summary Statistics</span></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a>With **individual-level data**, the sampler can read observed genotype columns</span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a>from BED files and calculate marker-update quantities directly. The principal</span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a>public interface is <span class="in">`stblr_bed_marker()`</span>.</span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a>With **summary statistics**, the sampler instead receives cross-products:</span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a>wy = X^\top y,</span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a>ww_j = x_j^\top x_j,</span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a>yy = y^\top y,</span>
+<span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a>plus compatible LD and sample size <span class="sc">\(</span>n<span class="sc">\)</span>. The residual score can be maintained</span>
+<span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a>as</span>
+<span id="cb1-102"><a href="#cb1-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-103"><a href="#cb1-103" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-104"><a href="#cb1-104" aria-hidden="true" tabindex="-1"></a>r = X^\top y - X^\top Xb.</span>
+<span id="cb1-105"><a href="#cb1-105" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-106"><a href="#cb1-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-107"><a href="#cb1-107" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> uses sufficient statistics from <span class="in">`bed_xtx_xty()`</span> with a</span>
+<span id="cb1-108"><a href="#cb1-108" aria-hidden="true" tabindex="-1"></a>disk-backed sparse-LD prefix written by <span class="in">`sparseLD_stream_CSR()`</span>. The public</span>
+<span id="cb1-109"><a href="#cb1-109" aria-hidden="true" tabindex="-1"></a><span class="in">`sblr()`</span> interface represents the broader summary-statistics model family and</span>
+<span id="cb1-110"><a href="#cb1-110" aria-hidden="true" tabindex="-1"></a>accepts dense or sparse marker cross-product structures through <span class="in">`XX`</span>.</span>
+<span id="cb1-111"><a href="#cb1-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-112"><a href="#cb1-112" aria-hidden="true" tabindex="-1"></a>These representations, their information requirements, and sample-overlap</span>
+<span id="cb1-113"><a href="#cb1-113" aria-hidden="true" tabindex="-1"></a>issues are covered in <span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span>. The</span>
+<span id="cb1-114"><a href="#cb1-114" aria-hidden="true" tabindex="-1"></a>practical BED-to-CSR handoff is covered in</span>
+<span id="cb1-115"><a href="#cb1-115" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>.</span>
+<span id="cb1-116"><a href="#cb1-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-117"><a href="#cb1-117" aria-hidden="true" tabindex="-1"></a><span class="fu">### Plain Versus Annotation-Informed Priors</span></span>
+<span id="cb1-118"><a href="#cb1-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-119"><a href="#cb1-119" aria-hidden="true" tabindex="-1"></a>A **plain/global prior** gives markers a common prior architecture, such as a</span>
+<span id="cb1-120"><a href="#cb1-120" aria-hidden="true" tabindex="-1"></a>global inclusion probability and marker-effect variance. A BayesC-style</span>
+<span id="cb1-121"><a href="#cb1-121" aria-hidden="true" tabindex="-1"></a>spike-and-slab representation is</span>
+<span id="cb1-122"><a href="#cb1-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-123"><a href="#cb1-123" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-124"><a href="#cb1-124" aria-hidden="true" tabindex="-1"></a>d_{it} \sim \operatorname{Bernoulli}(\pi_t),</span>
+<span id="cb1-125"><a href="#cb1-125" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb1-126"><a href="#cb1-126" aria-hidden="true" tabindex="-1"></a>b_{it}\mid d_{it}=1 \sim N(0,v_{b,t}),</span>
+<span id="cb1-127"><a href="#cb1-127" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb1-128"><a href="#cb1-128" aria-hidden="true" tabindex="-1"></a>b_{it}\mid d_{it}=0 = 0.</span>
+<span id="cb1-129"><a href="#cb1-129" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb1-130"><a href="#cb1-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-131"><a href="#cb1-131" aria-hidden="true" tabindex="-1"></a>An **annotation-informed prior** allows prior inclusion probabilities,</span>
+<span id="cb1-132"><a href="#cb1-132" aria-hidden="true" tabindex="-1"></a>variance scales, or mixture-component probabilities to vary by marker,</span>
+<span id="cb1-133"><a href="#cb1-133" aria-hidden="true" tabindex="-1"></a>marker group, or annotation profile. Current public CSR wrappers distinguish</span>
+<span id="cb1-134"><a href="#cb1-134" aria-hidden="true" tabindex="-1"></a>four implemented forms:</span>
+<span id="cb1-135"><a href="#cb1-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-136"><a href="#cb1-136" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>fixed marker-specific inclusion probabilities or variance multipliers;</span>
+<span id="cb1-137"><a href="#cb1-137" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>group-level priors;</span>
+<span id="cb1-138"><a href="#cb1-138" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>directly learned annotation effects on inclusion or variance;</span>
+<span id="cb1-139"><a href="#cb1-139" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>SBayesRC-style mixture probabilities learned from overlapping annotations.</span>
+<span id="cb1-140"><a href="#cb1-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-141"><a href="#cb1-141" aria-hidden="true" tabindex="-1"></a>These models use annotation information as a prior or evidence structure.</span>
+<span id="cb1-142"><a href="#cb1-142" aria-hidden="true" tabindex="-1"></a>They do not by themselves establish that an annotation is causal. The</span>
+<span id="cb1-143"><a href="#cb1-143" aria-hidden="true" tabindex="-1"></a>empirical-Bayes and proposed multi-trait annotation extensions in the source</span>
+<span id="cb1-144"><a href="#cb1-144" aria-hidden="true" tabindex="-1"></a>drafts remain important technical directions, but they should be distinguished</span>
+<span id="cb1-145"><a href="#cb1-145" aria-hidden="true" tabindex="-1"></a>from currently implemented public wrappers.</span>
+<span id="cb1-146"><a href="#cb1-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-147"><a href="#cb1-147" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sparse Mixture Priors and Posterior Outputs</span></span>
+<span id="cb1-148"><a href="#cb1-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-149"><a href="#cb1-149" aria-hidden="true" tabindex="-1"></a>Sparse Bayesian regression allows many markers to have exactly zero current</span>
+<span id="cb1-150"><a href="#cb1-150" aria-hidden="true" tabindex="-1"></a>effects while a subset belongs to active components. The inclusion indicator</span>
+<span id="cb1-151"><a href="#cb1-151" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>d_{it}<span class="sc">\)</span> records whether marker <span class="sc">\(</span>i<span class="sc">\)</span> is active for trait <span class="sc">\(</span>t<span class="sc">\)</span>. Across MCMC</span>
+<span id="cb1-152"><a href="#cb1-152" aria-hidden="true" tabindex="-1"></a>samples:</span>
+<span id="cb1-153"><a href="#cb1-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-154"><a href="#cb1-154" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`dm[i, t]`</span> estimates the posterior inclusion probability;</span>
+<span id="cb1-155"><a href="#cb1-155" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`bm[i, t]`</span> estimates the posterior mean marker effect;</span>
+<span id="cb1-156"><a href="#cb1-156" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`b`</span> and <span class="in">`d`</span> may retain current or sampled marker states;</span>
+<span id="cb1-157"><a href="#cb1-157" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`vbs`</span>, <span class="in">`vgs`</span>, and <span class="in">`ves`</span> record variance-component traces;</span>
+<span id="cb1-158"><a href="#cb1-158" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`covb`</span>, <span class="in">`covg`</span>, and <span class="in">`cove`</span> summarize effect, genetic, and residual</span>
+<span id="cb1-159"><a href="#cb1-159" aria-hidden="true" tabindex="-1"></a>  covariance where available.</span>
+<span id="cb1-160"><a href="#cb1-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-161"><a href="#cb1-161" aria-hidden="true" tabindex="-1"></a>Annotation models change how prior mass or effect scale is distributed before</span>
+<span id="cb1-162"><a href="#cb1-162" aria-hidden="true" tabindex="-1"></a>and during these updates. They do not change the requirement that marker rows</span>
+<span id="cb1-163"><a href="#cb1-163" aria-hidden="true" tabindex="-1"></a>in statistics, LD, annotations, and posterior summaries remain aligned.</span>
+<span id="cb1-164"><a href="#cb1-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-165"><a href="#cb1-165" aria-hidden="true" tabindex="-1"></a>The full marker-update algebra and annotation-prior derivations are deferred to</span>
+<span id="cb1-166"><a href="#cb1-166" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.qmd)</span> and</span>
+<span id="cb1-167"><a href="#cb1-167" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.qmd)</span>.</span>
+<span id="cb1-168"><a href="#cb1-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-169"><a href="#cb1-169" aria-hidden="true" tabindex="-1"></a><span class="fu">## Practical Workflow Families</span></span>
+<span id="cb1-170"><a href="#cb1-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-171"><a href="#cb1-171" aria-hidden="true" tabindex="-1"></a>The package's current workflows can be read as five connected families.</span>
+<span id="cb1-172"><a href="#cb1-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-173"><a href="#cb1-173" aria-hidden="true" tabindex="-1"></a><span class="fu">### Direct BED Individual-Level ST-BLR</span></span>
+<span id="cb1-174"><a href="#cb1-174" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-175"><a href="#cb1-175" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`stblr_bed_marker()`</span> when BED genotypes and aligned phenotypes remain</span>
+<span id="cb1-176"><a href="#cb1-176" aria-hidden="true" tabindex="-1"></a>available during fitting. Genotypes are read in blocks, and a separate LD</span>
+<span id="cb1-177"><a href="#cb1-177" aria-hidden="true" tabindex="-1"></a>artifact is not required.</span>
+<span id="cb1-178"><a href="#cb1-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-179"><a href="#cb1-179" aria-hidden="true" tabindex="-1"></a><span class="fu">### BED to Sufficient Statistics and Sparse LD</span></span>
+<span id="cb1-180"><a href="#cb1-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-181"><a href="#cb1-181" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`bed_xtx_xty()`</span> to derive <span class="in">`wy`</span>, <span class="in">`ww`</span>, and <span class="in">`yy`</span> from BED data and</span>
+<span id="cb1-182"><a href="#cb1-182" aria-hidden="true" tabindex="-1"></a>phenotypes. Use <span class="in">`sparseLD_stream_CSR()`</span> to derive disk-backed sparse LD from</span>
+<span id="cb1-183"><a href="#cb1-183" aria-hidden="true" tabindex="-1"></a>the same markers, samples, allele frequencies, and scaling convention. This</span>
+<span id="cb1-184"><a href="#cb1-184" aria-hidden="true" tabindex="-1"></a>preparation workflow creates reusable inputs for CSR models.</span>
+<span id="cb1-185"><a href="#cb1-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-186"><a href="#cb1-186" aria-hidden="true" tabindex="-1"></a><span class="fu">### CSR Summary-Statistics ST-BLR</span></span>
+<span id="cb1-187"><a href="#cb1-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-188"><a href="#cb1-188" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`stblr_csr()`</span> with the sufficient-statistics object and sparse-LD prefix.</span>
+<span id="cb1-189"><a href="#cb1-189" aria-hidden="true" tabindex="-1"></a>This path is appropriate when the prepared cross-products and LD files should</span>
+<span id="cb1-190"><a href="#cb1-190" aria-hidden="true" tabindex="-1"></a>be reused without repeated BED access during fitting.</span>
+<span id="cb1-191"><a href="#cb1-191" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-192"><a href="#cb1-192" aria-hidden="true" tabindex="-1"></a><span class="fu">### Annotation-Informed CSR ST-BLR</span></span>
+<span id="cb1-193"><a href="#cb1-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-194"><a href="#cb1-194" aria-hidden="true" tabindex="-1"></a>Start from the same <span class="in">`stats`</span> and <span class="in">`ld_prefix`</span>, then add marker-aligned</span>
+<span id="cb1-195"><a href="#cb1-195" aria-hidden="true" tabindex="-1"></a>annotation information or marker-specific priors. Choose among fixed,</span>
+<span id="cb1-196"><a href="#cb1-196" aria-hidden="true" tabindex="-1"></a>learned, group, and SBayesRC-style wrappers according to the intended prior</span>
+<span id="cb1-197"><a href="#cb1-197" aria-hidden="true" tabindex="-1"></a>architecture.</span>
+<span id="cb1-198"><a href="#cb1-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-199"><a href="#cb1-199" aria-hidden="true" tabindex="-1"></a><span class="fu">### Simulation and Model Checking</span></span>
+<span id="cb1-200"><a href="#cb1-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-201"><a href="#cb1-201" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`mtsim()`</span> to simulate multi-trait phenotypes, marker effects, and known</span>
+<span id="cb1-202"><a href="#cb1-202" aria-hidden="true" tabindex="-1"></a>shared or trait-specific signals. Use <span class="in">`mtsim_annotation()`</span> to additionally</span>
+<span id="cb1-203"><a href="#cb1-203" aria-hidden="true" tabindex="-1"></a>simulate overlapping annotations, causal enrichment, and marker-specific prior</span>
+<span id="cb1-204"><a href="#cb1-204" aria-hidden="true" tabindex="-1"></a>values. Simulation outputs provide known truth for checking marker recovery,</span>
+<span id="cb1-205"><a href="#cb1-205" aria-hidden="true" tabindex="-1"></a>annotation summaries, model behavior, and BED-versus-CSR preparation.</span>
+<span id="cb1-206"><a href="#cb1-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-207"><a href="#cb1-207" aria-hidden="true" tabindex="-1"></a>Simulation is a model-checking tool, not evidence that the same assumptions</span>
+<span id="cb1-208"><a href="#cb1-208" aria-hidden="true" tabindex="-1"></a>hold in real data.</span>
+<span id="cb1-209"><a href="#cb1-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-210"><a href="#cb1-210" aria-hidden="true" tabindex="-1"></a><span class="fu">## Model and Function Map</span></span>
+<span id="cb1-211"><a href="#cb1-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-212"><a href="#cb1-212" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Function <span class="pp">|</span> Primary role <span class="pp">|</span> Data representation <span class="pp">|</span> Trait/prior emphasis <span class="pp">|</span> Read next <span class="pp">|</span></span>
+<span id="cb1-213"><a href="#cb1-213" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|</span></span>
+<span id="cb1-214"><a href="#cb1-214" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_bed_marker()`</span> <span class="pp">|</span> Fit ST-BLR directly from selected PLINK BED markers and phenotypes. <span class="pp">|</span> Individual-level BED <span class="pp">|</span> Plain/global ST-BLR; accepts one or more phenotype columns. <span class="pp">|</span> <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>, <span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-215"><a href="#cb1-215" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`bed_xtx_xty()`</span> <span class="pp">|</span> Derive marker-trait and phenotype sufficient statistics from BED data. <span class="pp">|</span> BED to summary statistics <span class="pp">|</span> Preparation, not a fitted model. <span class="pp">|</span> <span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-216"><a href="#cb1-216" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_stream_CSR()`</span> <span class="pp">|</span> Construct disk-backed sparse LD from BED data. <span class="pp">|</span> BED to CSR LD <span class="pp">|</span> Preparation, not a fitted model. <span class="pp">|</span> <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>, <span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-217"><a href="#cb1-217" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr()`</span> <span class="pp">|</span> Fit ST-BLR from <span class="in">`stats`</span> and a CSR LD prefix. <span class="pp">|</span> Summary statistics plus disk-backed sparse LD <span class="pp">|</span> Plain/global ST-BLR. <span class="pp">|</span> <span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-218"><a href="#cb1-218" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_prior_annot()`</span> <span class="pp">|</span> Fit CSR ST-BLR with fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. <span class="pp">|</span> Summary statistics plus CSR LD and optional annotations <span class="pp">|</span> Fixed annotation-informed prior. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-219"><a href="#cb1-219" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_learn_annot()`</span> <span class="pp">|</span> Learn annotation effects on marker inclusion and optionally effect-variance multipliers during CSR fitting. <span class="pp">|</span> Summary statistics plus CSR LD and annotations <span class="pp">|</span> Direct learned annotation prior. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>, <span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-220"><a href="#cb1-220" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_group_annot()`</span> <span class="pp">|</span> Fit CSR ST-BLR with group-level inclusion probabilities and variance multipliers. <span class="pp">|</span> Summary statistics plus CSR LD and marker groups <span class="pp">|</span> Group prior. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-221"><a href="#cb1-221" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_sbayesrc_generic()`</span> <span class="pp">|</span> Fit an SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. It is not an exact reproduction of GCTB SBayesRC as exposed by default. <span class="pp">|</span> Summary statistics plus CSR LD and overlapping annotations <span class="pp">|</span> Probit stick-breaking mixture prior. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>, <span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-222"><a href="#cb1-222" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sblr()`</span> <span class="pp">|</span> Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models. <span class="pp">|</span> Summary statistics plus marker cross-products/LD <span class="pp">|</span> Plain single- or multi-trait model components. <span class="pp">|</span> <span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-223"><a href="#cb1-223" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`mtsim()`</span> <span class="pp">|</span> Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals. <span class="pp">|</span> Simulated matrix or <span class="in">`Glist`</span> genotypes <span class="pp">|</span> Model checking and multi-trait truth. <span class="pp">|</span> <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-224"><a href="#cb1-224" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`mtsim_annotation()`</span> <span class="pp">|</span> Simulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors. <span class="pp">|</span> Simulated matrix or <span class="in">`Glist`</span> genotypes plus annotations <span class="pp">|</span> Annotation-model checking. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>, <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
+<span id="cb1-225"><a href="#cb1-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-226"><a href="#cb1-226" aria-hidden="true" tabindex="-1"></a><span class="fu">## Implemented Models and Research Extensions</span></span>
+<span id="cb1-227"><a href="#cb1-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-228"><a href="#cb1-228" aria-hidden="true" tabindex="-1"></a>The model/function map above describes current public interfaces. The archived</span>
+<span id="cb1-229"><a href="#cb1-229" aria-hidden="true" tabindex="-1"></a>technical drafts also contain deeper or proposed directions, including:</span>
+<span id="cb1-230"><a href="#cb1-230" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-231"><a href="#cb1-231" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>empirical-Bayes loops that use first-stage marker summaries to estimate</span>
+<span id="cb1-232"><a href="#cb1-232" aria-hidden="true" tabindex="-1"></a>  annotation-level priors for later genomic fits;</span>
+<span id="cb1-233"><a href="#cb1-233" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>direct annotation-aware MTBLR sharing-model priors and covariance models;</span>
+<span id="cb1-234"><a href="#cb1-234" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sparse annotation representations and sampler implementation sketches;</span>
+<span id="cb1-235"><a href="#cb1-235" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>warm-started regional MTBLR workflows;</span>
+<span id="cb1-236"><a href="#cb1-236" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>reconstruction of cross-trait <span class="in">`SSY`</span> and overlap matrices for joint</span>
+<span id="cb1-237"><a href="#cb1-237" aria-hidden="true" tabindex="-1"></a>  summary-statistics models.</span>
+<span id="cb1-238"><a href="#cb1-238" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-239"><a href="#cb1-239" aria-hidden="true" tabindex="-1"></a>These ideas should be preserved because they explain the intended model</span>
+<span id="cb1-240"><a href="#cb1-240" aria-hidden="true" tabindex="-1"></a>landscape, but they must be labeled as implemented, experimental, or proposed</span>
+<span id="cb1-241"><a href="#cb1-241" aria-hidden="true" tabindex="-1"></a>when moved into maintained notes. Public function availability alone also does</span>
+<span id="cb1-242"><a href="#cb1-242" aria-hidden="true" tabindex="-1"></a>not guarantee that every model path has an equally polished end-to-end</span>
+<span id="cb1-243"><a href="#cb1-243" aria-hidden="true" tabindex="-1"></a>workflow.</span>
+<span id="cb1-244"><a href="#cb1-244" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-245"><a href="#cb1-245" aria-hidden="true" tabindex="-1"></a><span class="fu">## What Is Not Guaranteed</span></span>
+<span id="cb1-246"><a href="#cb1-246" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-247"><a href="#cb1-247" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**BED and CSR fits are not exactly equal.** Under matched markers, rows,</span>
+<span id="cb1-248"><a href="#cb1-248" aria-hidden="true" tabindex="-1"></a>  scaling, priors, and MCMC settings they should agree qualitatively, but</span>
+<span id="cb1-249"><a href="#cb1-249" aria-hidden="true" tabindex="-1"></a>  sparse-LD approximation, update scheduling, floating-point precision, and</span>
+<span id="cb1-250"><a href="#cb1-250" aria-hidden="true" tabindex="-1"></a>  Monte Carlo variation prevent exact equality.</span>
+<span id="cb1-251"><a href="#cb1-251" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**CSR disk internals are not a manual file-format API.** Use package writers,</span>
+<span id="cb1-252"><a href="#cb1-252" aria-hidden="true" tabindex="-1"></a>  readers, and model wrappers rather than editing row-pointer, column-index,</span>
+<span id="cb1-253"><a href="#cb1-253" aria-hidden="true" tabindex="-1"></a>  value, or metadata files directly.</span>
+<span id="cb1-254"><a href="#cb1-254" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Annotation effects are not causal proof.** Enrichment, learned prior</span>
+<span id="cb1-255"><a href="#cb1-255" aria-hidden="true" tabindex="-1"></a>  coefficients, posterior inclusion, and shared genetic signals can generate</span>
+<span id="cb1-256"><a href="#cb1-256" aria-hidden="true" tabindex="-1"></a>  hypotheses but do not identify causal biological mechanisms by themselves.</span>
+<span id="cb1-257"><a href="#cb1-257" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Short workflow chains are not final inference.** Demonstration settings</span>
+<span id="cb1-258"><a href="#cb1-258" aria-hidden="true" tabindex="-1"></a>  establish object handoffs and model execution. Real analyses require longer</span>
+<span id="cb1-259"><a href="#cb1-259" aria-hidden="true" tabindex="-1"></a>  chains, convergence assessment, sensitivity analysis, and posterior</span>
+<span id="cb1-260"><a href="#cb1-260" aria-hidden="true" tabindex="-1"></a>  predictive checks.</span>
+<span id="cb1-261"><a href="#cb1-261" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-262"><a href="#cb1-262" aria-hidden="true" tabindex="-1"></a><span class="fu">## How to Read These Notes</span></span>
+<span id="cb1-263"><a href="#cb1-263" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-264"><a href="#cb1-264" aria-hidden="true" tabindex="-1"></a>Choose the next note according to the question:</span>
+<span id="cb1-265"><a href="#cb1-265" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-266"><a href="#cb1-266" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>To understand what BED, sufficient statistics, sparse LD, <span class="in">`yy`</span>, and <span class="in">`SSY`</span></span>
+<span id="cb1-267"><a href="#cb1-267" aria-hidden="true" tabindex="-1"></a>  represent, read <span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span>.</span>
+<span id="cb1-268"><a href="#cb1-268" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>To prepare aligned BED-derived statistics and disk-backed CSR LD, read</span>
+<span id="cb1-269"><a href="#cb1-269" aria-hidden="true" tabindex="-1"></a>  <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>.</span>
+<span id="cb1-270"><a href="#cb1-270" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>To understand plain BED and CSR ST-BLR models, read</span>
+<span id="cb1-271"><a href="#cb1-271" aria-hidden="true" tabindex="-1"></a>  <span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.qmd)</span>.</span>
+<span id="cb1-272"><a href="#cb1-272" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>To understand joint effects, covariance, trait sharing, and sample overlap,</span>
+<span id="cb1-273"><a href="#cb1-273" aria-hidden="true" tabindex="-1"></a>  read <span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.qmd)</span>.</span>
+<span id="cb1-274"><a href="#cb1-274" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>To choose among fixed, group, learned, empirical-Bayes, and SBayesRC-style</span>
+<span id="cb1-275"><a href="#cb1-275" aria-hidden="true" tabindex="-1"></a>  priors, read <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>.</span>
+<span id="cb1-276"><a href="#cb1-276" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>To run workflows and interpret compact fit summaries, read</span>
+<span id="cb1-277"><a href="#cb1-277" aria-hidden="true" tabindex="-1"></a>  <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span>.</span>
+<span id="cb1-278"><a href="#cb1-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-279"><a href="#cb1-279" aria-hidden="true" tabindex="-1"></a>For full derivations and implementation-sensitive contracts, use the technical</span>
+<span id="cb1-280"><a href="#cb1-280" aria-hidden="true" tabindex="-1"></a>appendices:</span>
+<span id="cb1-281"><a href="#cb1-281" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-282"><a href="#cb1-282" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.qmd)</span></span>
+<span id="cb1-283"><a href="#cb1-283" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical multi-trait sample overlap</span><span class="co">](technical_multitrait_overlap.qmd)</span></span>
+<span id="cb1-284"><a href="#cb1-284" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.qmd)</span></span>
+<span id="cb1-285"><a href="#cb1-285" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.qmd)</span></span>
+<span id="cb1-286"><a href="#cb1-286" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.qmd)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,1332 @@
+[
+  {
+    "objectID": "notes/drafts/sblr_theory.html",
+    "href": "notes/drafts/sblr_theory.html",
+    "title": "",
+    "section": "",
+    "text": "Code"
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#theory-constructing-cross-trait-summary-statistic-matrices-ssy-and-nmat",
+    "href": "notes/drafts/sblr_theory.html#theory-constructing-cross-trait-summary-statistic-matrices-ssy-and-nmat",
+    "title": "",
+    "section": "1 Theory: Constructing Cross-Trait Summary-Statistic Matrices (SSY and Nmat)",
+    "text": "1 Theory: Constructing Cross-Trait Summary-Statistic Matrices (SSY and Nmat)\n\n1.1 Overview\nIn multivariate Bayesian linear regression using summary statistics, the likelihood depends on cross-trait quantities of the form\n\\[\n\\mathrm{SSY}_{t_1,t_2}\n\\;=\\;\n\\sum_{i=1}^{N_{t_1,t_2}}\ny_{i t_1} \\, y_{i t_2},\n\\]\nwhere (y_{i t}) denotes the phenotype of individual (i) for trait (t), and (N_{t_1,t_2}) is the number of individuals jointly observed for traits (t_1) and (t_2).\nIn the univariate case this reduces to the usual sum of squares (_t = i y{it}^2), but in the multivariate case the full matrix\n\\[\n\\mathrm{SSY} = \\bigl[\\mathrm{SSY}_{t_1,t_2}\\bigr]_{t_1,t_2=1}^{n_t}\n\\]\nis required to estimate or sample from a residual covariance matrix (E) or its inverse.\nWhen individual-level data are unavailable, we must reconstruct or approximate SSY and the effective sample-overlap matrix (N) from summary statistics, phenotypic variances, and (estimated or assumed) phenotypic correlations. This section describes the statistical foundations of these reconstructed matrices and how the helper functions build_SSY_full_overlap(), build_Nmat_full(), and build_Nmat_frac() implement them."
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#phenotypic-variance-from-summary-statistics",
+    "href": "notes/drafts/sblr_theory.html#phenotypic-variance-from-summary-statistics",
+    "title": "",
+    "section": "2 Phenotypic Variance From Summary Statistics",
+    "text": "2 Phenotypic Variance From Summary Statistics\nFor trait (t), let\n\n(yy_t = i y{it}^2) (the univariate summary statistic),\n(n_t) be the number of individuals with observations for trait (t).\n\nThe empirical phenotypic variance is approximated by\n\\[\n\\widehat{\\mathrm{Var}}(y_t)\n\\approx\n\\frac{yy_t}{n_t}.\n\\]\nThis is valid when phenotypes have been centered (or approximately centered), a standard preprocessing step in GWAS pipelines.\nWe collect these into a diagonal variance vector:\n\\[\n\\hat{\\sigma}^2_y = \\left( \\frac{yy_t}{n_t} \\right)_{t=1}^{n_t}.\n\\]"
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#phenotypic-covariance-from-correlation-information",
+    "href": "notes/drafts/sblr_theory.html#phenotypic-covariance-from-correlation-information",
+    "title": "",
+    "section": "3 Phenotypic Covariance From Correlation Information",
+    "text": "3 Phenotypic Covariance From Correlation Information\nIf we know (or estimate) the phenotypic correlation matrix\n\\[\nR_y = \\bigl[r_{t_1,t_2}\\bigr],\n\\]\nthen the corresponding phenotypic covariance matrix is\n\\[\n\\widehat{\\mathrm{Cov}}(y)\n=\n\\bigl[ r_{t_1,t_2}\n      \\,\\sqrt{\\widehat{\\mathrm{Var}}(y_{t_1})\n              \\widehat{\\mathrm{Var}}(y_{t_2})}\n\\bigr].\n\\]\nThis step is essential: correlation matrices contain standardized information, and we rescale them back to covariance units using the variance estimates derived from summary statistics."
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#the-sample-overlap-matrix-n",
+    "href": "notes/drafts/sblr_theory.html#the-sample-overlap-matrix-n",
+    "title": "",
+    "section": "4 The Sample-Overlap Matrix (N)",
+    "text": "4 The Sample-Overlap Matrix (N)\nFor two traits (t_1) and (t_2), define\n\\[\nN_{t_1,t_2}\n=\n\\text{number of individuals observed for both traits}.\n\\]\n\n4.1 Full-overlap assumption\nWhen the two traits originate from the same biobank or cohort, the overlap is often close to the size of the smaller sample:\n\\[\nN^{\\text{full}}_{t_1,t_2} = \\min(n_{t_1}, n_{t_2}).\n\\]\nThis defines the function build_Nmat_full().\n\n\n4.2 Fractional-overlap assumption\nIn meta-analysis or multi-cohort settings, sample overlap may be partial. We then model\n\\[\nN^{\\text{frac}}_{t_1,t_2}\n=\np_{t_1,t_2} \\,\\min(n_{t_1}, n_{t_2}),\n\\]\nwhere (p_{t_1,t_2} ) is a user-supplied overlap proportion. This defines build_Nmat_frac().\nThe diagonal entries satisfy (N_{t,t} = n_t)."
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#reconstructing-the-cross-trait-ssy-matrix",
+    "href": "notes/drafts/sblr_theory.html#reconstructing-the-cross-trait-ssy-matrix",
+    "title": "",
+    "section": "5 Reconstructing the Cross-Trait SSY Matrix",
+    "text": "5 Reconstructing the Cross-Trait SSY Matrix\nThe cross-product between two traits is defined as\n\\[\n\\mathrm{SSY}_{t_1,t_2}\n=\n\\sum_{i=1}^{N_{t_1,t_2}}\ny_{i t_1} \\, y_{i t_2}.\n\\]\nUnder the assumption of independence across individuals and using the covariance identity\n\\[\n\\mathbb{E}[y_{t_1} y_{t_2}]\n=\n\\mathrm{Cov}(y_{t_1},y_{t_2}),\n\\]\nwe obtain the summary-statistic approximation\n\\[\n\\mathrm{SSY}_{t_1,t_2}\n\\;\\approx\\;\nN_{t_1,t_2}\n\\cdot\n\\widehat{\\mathrm{Cov}}(y_{t_1}, y_{t_2}).\n\\]\nThis is the key identity used by build_SSY_full_overlap():\n\nit constructs the covariance matrix using (R_y) and the variance estimates,\nmultiplies by the appropriate overlap counts (N_{t_1,t_2}),\nand forces the diagonals to match the observed univariate summary statistics: (_{t,t} = yy_t).\n\nThus, the reconstructed SSY matrix is:\n\\[\n\\widehat{\\mathrm{SSY}}\n=\nN \\odot \\widehat{\\mathrm{Cov}}(y),\n\\]\nwhere () denotes elementwise multiplication."
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#why-ssy-and-nmat-are-needed-in-multivariate-blr",
+    "href": "notes/drafts/sblr_theory.html#why-ssy-and-nmat-are-needed-in-multivariate-blr",
+    "title": "",
+    "section": "6 Why SSY and Nmat Are Needed in Multivariate BLR",
+    "text": "6 Why SSY and Nmat Are Needed in Multivariate BLR\nIn a multivariate Bayesian linear regression model\n\\[\ny = Xb + e,\n\\quad\ne \\sim \\mathcal{N}(0, E \\otimes I),\n\\]\nthe full residual covariance sampler for (E) requires access to the cross-trait quantities\n\\[\n\\sum_i e_{i t_1} e_{i t_2},\n\\]\nwhich, after substituting (e = y - Xb), depend on the observed SSY matrix, the cross-products involving (X), and the current posterior draw of (b).\nWhen individual-level data are unavailable, the only way to compute these cross-trait sums is through a reconstruction of SSY and Nmat from summary statistics.\nWithout these matrices, the sampler must be restricted to diagonal residual variances (the usual summary-statistic assumption).\nThe functions provided here therefore enable full multivariate residual variance estimation in summary-statistic MTBLR when a phenotypic correlation matrix or sample-overlap information is available."
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#summary",
+    "href": "notes/drafts/sblr_theory.html#summary",
+    "title": "",
+    "section": "7 Summary",
+    "text": "7 Summary\n\nbuild_Nmat_full() constructs a full-overlap sample-overlap matrix\n(N_{t_1,t_2} = (n_{t_1},n_{t_2})).\nbuild_Nmat_frac() generalizes this using overlap fractions\n(N_{t_1,t_2} = p_{t_1,t_2}(n_{t_1},n_{t_2})).\nbuild_SSY_full_overlap() combines variances, phenotypic correlations, and overlap counts to reconstruct:\n\\[\n\\widehat{\\mathrm{SSY}} = N \\odot \\widehat{\\mathrm{Cov}}(y).\n\\]\nThese matrices provide the necessary inputs for a full sampler of the residual covariance matrix (E) when only summary statistics are available."
+  },
+  {
+    "objectID": "notes/drafts/sblr_theory.html#deriving-ssy-from-first-principles",
+    "href": "notes/drafts/sblr_theory.html#deriving-ssy-from-first-principles",
+    "title": "",
+    "section": "8 5.1 Deriving SSY from first principles",
+    "text": "8 5.1 Deriving SSY from first principles\nLet (Y_t) be an (n_t)-dimensional vector of observations for trait (t).\nIf samples overlap partially, define the set of shared individuals:\n\\[\n\\mathcal{I}_{ts} = \\text{indices of individuals with both }y_t\\text{ and }y_s.\n\\]\nThen:\n\\[\n\\mathrm{SSY}_{ts}\n=\n\\sum_{i \\in \\mathcal{I}_{ts}} y_{ti} y_{si}.\n\\]\nIf we assume:\n\nrandom missingness independent of trait values, and\n\ncovariance structure homogeneous across individuals, i.e.\n\\[\n\\mathrm{Cov}(y_t, y_s) = \\sigma_{ts}\n\\]\n\nthen the expectation becomes:\n\\[\n\\mathbb{E}[\\mathrm{SSY}_{ts}]\n  = |\\mathcal{I}_{ts}| \\, \\sigma_{ts}.\n\\]\nIf we approximate the overlap size as:\n\\[\n|\\mathcal{I}_{ts}| \\approx N_{ts},\n\\]\nthen:\n\\[\n\\mathrm{SSY}_{ts}\n\\approx N_{ts} \\, \\sigma_{ts}.\n\\]\nEstimating (_{ts}) by:\n\\[\n\\widehat{\\sigma}_{ts}\n= R_{y,ts}\n  \\sqrt{\n    \\widehat{\\mathrm{Var}}(y_t)\\,\n    \\widehat{\\mathrm{Var}}(y_s)\n  }\n\\]\nyields the final approximation:\n\\[\n\\mathrm{SSY}\n\\approx\nN \\odot \\widehat{\\mathrm{Cov}}(y).\n\\]\nThis provides a principled summary‑statistic reconstruction of\n(Y^Y) suitable for multi‑trait Bayesian models."
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html",
+    "href": "notes/workflows_and_outputs.html",
+    "title": "Workflows and Outputs",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis note will connect model choices to executable workflows and explain compact posterior summaries while retaining full marker-scale outputs in fit objects."
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#workflow-decision-table",
+    "href": "notes/workflows_and_outputs.html#workflow-decision-table",
+    "title": "Workflows and Outputs",
+    "section": "1 Workflow Decision Table",
+    "text": "1 Workflow Decision Table"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#workflow-scripts-as-executable-architecture-documents",
+    "href": "notes/workflows_and_outputs.html#workflow-scripts-as-executable-architecture-documents",
+    "title": "Workflows and Outputs",
+    "section": "2 Workflow Scripts as Executable Architecture Documents",
+    "text": "2 Workflow Scripts as Executable Architecture Documents"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#bed-direct-and-summary-statistics-csr-workflow-index",
+    "href": "notes/workflows_and_outputs.html#bed-direct-and-summary-statistics-csr-workflow-index",
+    "title": "Workflows and Outputs",
+    "section": "3 BED-Direct and Summary-Statistics CSR Workflow Index",
+    "text": "3 BED-Direct and Summary-Statistics CSR Workflow Index"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#annotation-model-comparison-workflow",
+    "href": "notes/workflows_and_outputs.html#annotation-model-comparison-workflow",
+    "title": "Workflows and Outputs",
+    "section": "4 Annotation-Model Comparison Workflow",
+    "text": "4 Annotation-Model Comparison Workflow"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#mcmc-settings-demonstration-versus-real-analysis",
+    "href": "notes/workflows_and_outputs.html#mcmc-settings-demonstration-versus-real-analysis",
+    "title": "Workflows and Outputs",
+    "section": "5 MCMC Settings: Demonstration Versus Real Analysis",
+    "text": "5 MCMC Settings: Demonstration Versus Real Analysis"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#fit-object-structure",
+    "href": "notes/workflows_and_outputs.html#fit-object-structure",
+    "title": "Workflows and Outputs",
+    "section": "6 Fit Object Structure",
+    "text": "6 Fit Object Structure"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#compact-fit-summaries",
+    "href": "notes/workflows_and_outputs.html#compact-fit-summaries",
+    "title": "Workflows and Outputs",
+    "section": "7 Compact Fit Summaries",
+    "text": "7 Compact Fit Summaries"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#top-marker-summaries",
+    "href": "notes/workflows_and_outputs.html#top-marker-summaries",
+    "title": "Workflows and Outputs",
+    "section": "8 Top-Marker Summaries",
+    "text": "8 Top-Marker Summaries"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#annotation-level-summaries",
+    "href": "notes/workflows_and_outputs.html#annotation-level-summaries",
+    "title": "Workflows and Outputs",
+    "section": "9 Annotation-Level Summaries",
+    "text": "9 Annotation-Level Summaries"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#sbayesrc-style-prior-architecture-diagnostics",
+    "href": "notes/workflows_and_outputs.html#sbayesrc-style-prior-architecture-diagnostics",
+    "title": "Workflows and Outputs",
+    "section": "10 SBayesRC-Style Prior-Architecture Diagnostics",
+    "text": "10 SBayesRC-Style Prior-Architecture Diagnostics"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#convergence-posterior-predictive-checks-and-reproducibility",
+    "href": "notes/workflows_and_outputs.html#convergence-posterior-predictive-checks-and-reproducibility",
+    "title": "Workflows and Outputs",
+    "section": "11 Convergence, Posterior Predictive Checks, and Reproducibility",
+    "text": "11 Convergence, Posterior Predictive Checks, and Reproducibility"
+  },
+  {
+    "objectID": "notes/workflows_and_outputs.html#related-notes-and-sources",
+    "href": "notes/workflows_and_outputs.html#related-notes-and-sources",
+    "title": "Workflows and Outputs",
+    "section": "12 Related Notes and Sources",
+    "text": "12 Related Notes and Sources\n\nSparse-LD and BED workflows\nAnnotation-informed models\nComplete sparse-LD/BED workflow\nComplete annotation workflow\nTechnical annotation priors\nTechnical SBayesRC-style annotations"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html",
+    "href": "notes/technical_sparse_ld_csr.html",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will preserve the storage, construction, alignment, and computational contracts behind disk-backed sparse LD used by CSR BLR workflows."
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld",
+    "href": "notes/technical_sparse_ld_csr.html#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "1 From BED Genotypes to Sufficient Statistics and Sparse LD",
+    "text": "1 From BED Genotypes to Sufficient Statistics and Sparse LD"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#sparse-approximation-to-xx-threshold-and-distance-choices",
+    "href": "notes/technical_sparse_ld_csr.html#sparse-approximation-to-xx-threshold-and-distance-choices",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "2 Sparse Approximation to (X^X): Threshold and Distance Choices",
+    "text": "2 Sparse Approximation to (X^X): Threshold and Distance Choices"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#csr-representation-row-pointers-column-indices-and-values",
+    "href": "notes/technical_sparse_ld_csr.html#csr-representation-row-pointers-column-indices-and-values",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "3 CSR Representation: Row Pointers, Column Indices, and Values",
+    "text": "3 CSR Representation: Row Pointers, Column Indices, and Values"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#disk-backed-prefix-and-file-contract",
+    "href": "notes/technical_sparse_ld_csr.html#disk-backed-prefix-and-file-contract",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "4 Disk-Backed Prefix and File Contract",
+    "text": "4 Disk-Backed Prefix and File Contract"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#one-based-r-marker-identities-versus-internal-csr-indexing",
+    "href": "notes/technical_sparse_ld_csr.html#one-based-r-marker-identities-versus-internal-csr-indexing",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "5 One-Based R Marker Identities Versus Internal CSR Indexing",
+    "text": "5 One-Based R Marker Identities Versus Internal CSR Indexing"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants",
+    "href": "notes/technical_sparse_ld_csr.html#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "6 Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants",
+    "text": "6 Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs",
+    "href": "notes/technical_sparse_ld_csr.html#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "7 Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs",
+    "text": "7 Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#reading-and-validating-csr-with-sparseld_read_csr",
+    "href": "notes/technical_sparse_ld_csr.html#reading-and-validating-csr-with-sparseld_read_csr",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "8 Reading and Validating CSR With sparseLD_read_CSR()",
+    "text": "8 Reading and Validating CSR With sparseLD_read_CSR()"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#how-stblr_csr-consumes-statistics-and-the-csr-prefix",
+    "href": "notes/technical_sparse_ld_csr.html#how-stblr_csr-consumes-statistics-and-the-csr-prefix",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "9 How stblr_csr() Consumes Statistics and the CSR Prefix",
+    "text": "9 How stblr_csr() Consumes Statistics and the CSR Prefix"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#scheduled-sparse-updates-and-performance-controls",
+    "href": "notes/technical_sparse_ld_csr.html#scheduled-sparse-updates-and-performance-controls",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "10 Scheduled Sparse Updates and Performance Controls",
+    "text": "10 Scheduled Sparse Updates and Performance Controls"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#numerical-approximation-reproducibility-and-bed-versus-csr-comparison",
+    "href": "notes/technical_sparse_ld_csr.html#numerical-approximation-reproducibility-and-bed-versus-csr-comparison",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "11 Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison",
+    "text": "11 Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison"
+  },
+  {
+    "objectID": "notes/technical_sparse_ld_csr.html#related-notes-and-sources",
+    "href": "notes/technical_sparse_ld_csr.html#related-notes-and-sources",
+    "title": "Technical Appendix: Sparse LD and CSR",
+    "section": "12 Related Notes and Sources",
+    "text": "12 Related Notes and Sources\n\nData representations\nSparse-LD and BED workflows\nTechnical summary statistics\nComplete sparse-LD/BED workflow"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html",
+    "href": "notes/technical_multitrait_overlap.html",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will preserve the complete derivation of cross-trait SSY and sample-overlap matrices used by multi-trait summary-statistic models."
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#cross-trait-ssy-definition",
+    "href": "notes/technical_multitrait_overlap.html#cross-trait-ssy-definition",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "1 Cross-Trait SSY Definition",
+    "text": "1 Cross-Trait SSY Definition"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#phenotypic-variance-from-summary-statistics",
+    "href": "notes/technical_multitrait_overlap.html#phenotypic-variance-from-summary-statistics",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "2 Phenotypic Variance From Summary Statistics",
+    "text": "2 Phenotypic Variance From Summary Statistics"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#covariance-reconstruction-from-r_y",
+    "href": "notes/technical_multitrait_overlap.html#covariance-reconstruction-from-r_y",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "3 Covariance Reconstruction From (R_y)",
+    "text": "3 Covariance Reconstruction From (R_y)"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#full-overlap-and-fractional-overlap-n",
+    "href": "notes/technical_multitrait_overlap.html#full-overlap-and-fractional-overlap-n",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "4 Full-Overlap and Fractional-Overlap (N)",
+    "text": "4 Full-Overlap and Fractional-Overlap (N)"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#reconstruction-ny",
+    "href": "notes/technical_multitrait_overlap.html#reconstruction-ny",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "5 Reconstruction (=N(y))",
+    "text": "5 Reconstruction (=N(y))"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#why-full-residual-covariance-estimation-requires-ssy-and-n",
+    "href": "notes/technical_multitrait_overlap.html#why-full-residual-covariance-estimation-requires-ssy-and-n",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "6 Why Full Residual Covariance Estimation Requires SSY and (N)",
+    "text": "6 Why Full Residual Covariance Estimation Requires SSY and (N)"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#first-principles-derivation-and-assumptions",
+    "href": "notes/technical_multitrait_overlap.html#first-principles-derivation-and-assumptions",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "7 First-Principles Derivation and Assumptions",
+    "text": "7 First-Principles Derivation and Assumptions"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#limitations-missingness-and-sensitivity-analysis",
+    "href": "notes/technical_multitrait_overlap.html#limitations-missingness-and-sensitivity-analysis",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "8 Limitations, Missingness, and Sensitivity Analysis",
+    "text": "8 Limitations, Missingness, and Sensitivity Analysis"
+  },
+  {
+    "objectID": "notes/technical_multitrait_overlap.html#related-notes",
+    "href": "notes/technical_multitrait_overlap.html#related-notes",
+    "title": "Technical Appendix: Multi-Trait Sample Overlap",
+    "section": "9 Related Notes",
+    "text": "9 Related Notes\n\nData representations\nMulti-trait models\nArchived theory draft"
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html",
+    "href": "notes/sparse_ld_and_bed_workflows.html",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "",
+    "text": "This note describes the practical bridge from individual-level PLINK BED genotypes and aligned phenotypes to a disk-backed sparse-LD representation and the sufficient statistics required by stblr_csr(). The same starting data can also be fitted directly with stblr_bed_marker(), making the workflow useful for understanding and checking the relationship between the individual-level and summary-statistics paths.\nThe examples below are intentionally short. The complete executable sequence is in the sparse-LD/BED workflow. Its fitting steps are computationally expensive and its MCMC settings are demonstration settings rather than recommendations for real analysis."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#one-genotype-source-two-fitting-paths",
+    "href": "notes/sparse_ld_and_bed_workflows.html#one-genotype-source-two-fitting-paths",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "1 One Genotype Source, Two Fitting Paths",
+    "text": "1 One Genotype Source, Two Fitting Paths\nThe workflow begins with PLINK BED files, marker metadata, and one or more phenotypes. It then branches into two model-input representations:\nBED files + phenotype y\n        |\n        v\nalign markers with cls and select sample rows\n        |\n        +--&gt; bed_xtx_xty()\n        |       |\n        |       v\n        |    stats$wy, stats$ww, stats$yy, n\n        |\n        +--&gt; sparseLD_stream_CSR()\n                |\n                v\n             ld_prefix\n                |\n                +--&gt; sparseLD_read_CSR() for inspection\n                |\n                v\n             stblr_csr()\n                |\n                v\n          CSR posterior summaries\n\nBED files + phenotype y + the same cls/rows/scaling\n        |\n        v\nstblr_bed_marker()\n        |\n        v\noptional BED-versus-CSR posterior comparison\nThe CSR path converts individual-level data into reusable cross-products and sparse LD files. The direct BED path retains access to observed genotypes during sampling. Both paths represent related marker-update calculations, but they are not numerically identical by construction.\nThe statistical role of each representation is developed in Data representations. This note focuses on object handoffs and practical contracts."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#selecting-samples-and-markers-from-a-bed-backed-glist",
+    "href": "notes/sparse_ld_and_bed_workflows.html#selecting-samples-and-markers-from-a-bed-backed-glist",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "2 Selecting Samples and Markers From a BED-Backed Glist",
+    "text": "2 Selecting Samples and Markers From a BED-Backed Glist\nA qgg Glist connects biological marker identities to BED file columns and allele frequencies. The principal objects are:\n\n\n\n\n\n\n\nObject\nPractical role\n\n\n\n\nbed_files\nPaths to one or more PLINK BED files containing individual-level genotypes.\n\n\nn\nNumber of individuals encoded in the BED files.\n\n\nGlist$rsids[[chr]]\nMarker identities in BED column order for a chromosome.\n\n\nGlist$rsidsLD[[chr]]\nSelected marker identities in the intended LD/model order.\n\n\ncls\nBED column indices that map the intended LD/model order into Glist$rsids.\n\n\nrows\nOptional 1-based BED row indices selecting individuals.\n\n\naf\nAllele frequencies corresponding exactly to cls, used for genotype scaling.\n\n\ny\nPhenotype vector or matrix aligned to all individuals or to rows.\n\n\n\nThe workflow establishes marker order with:\nchr &lt;- 1\nmarker_id &lt;- Glist$rsidsLD[[chr]]\ncls &lt;- match(marker_id, Glist$rsids[[chr]])\nstopifnot(!anyNA(cls))\n\nbed_files &lt;- Glist$bedfiles[chr]\naf &lt;- Glist$af[[chr]][cls]\ncls[j] identifies the BED column containing marker_id[j]. Its order, not just its set of values, determines the order of every downstream marker-indexed object.\nFor one BED file, bed_xtx_xty() receives cls as an integer vector. The sparse-LD helpers accept bed_files and cls as parallel collections, so cls is supplied as list(cls). For multiple BED files, each cls[[k]] selects and orders markers from bed_files[k]; the concatenated selection is the model order.\nn is the total number of BED rows. If rows = NULL, all BED rows are used and y should have n rows. If rows is supplied, it selects the individuals used to construct statistics and LD, and y must describe that same selected sample in the expected order. The same rows value must be used for both branches of CSR preparation."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#simulating-or-supplying-aligned-phenotypes",
+    "href": "notes/sparse_ld_and_bed_workflows.html#simulating-or-supplying-aligned-phenotypes",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "3 Simulating or Supplying Aligned Phenotypes",
+    "text": "3 Simulating or Supplying Aligned Phenotypes\nThe workflow example simulates traits for Glist$rsidsLD[[chr]] and then scales the resulting phenotype matrix:\nsim &lt;- mtsim(Glist = Glist, chr = chr, rsids = marker_id, nt = 3, seed = 1)\ny &lt;- as.matrix(scale(sim$y))\nReal analyses can replace this with observed phenotypes, but alignment and preprocessing must be explicit:\n\nrows of y must correspond to BED individuals or the selected rows;\ncolumns of y define traits and should have stable names;\ncentering and scaling choices affect stats$yy and prior initialization;\nmissing phenotype handling must be consistent with the chosen sample.\n\nFor trait (t), bed_xtx_xty() constructs quantities including\n\\[\nwy_t = X^\\top y_t,\n\\qquad\nww_t = \\operatorname{diag}(X^\\top X),\n\\qquad\nyy_t = y_t^\\top y_t.\n\\]\nThe sparse-LD branch must use the same version of (X), including sample rows and marker scaling, that generated these statistics."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#path-a-direct-individual-level-fitting-with-stblr_bed_marker",
+    "href": "notes/sparse_ld_and_bed_workflows.html#path-a-direct-individual-level-fitting-with-stblr_bed_marker",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "4 Path A: Direct Individual-Level Fitting With stblr_bed_marker()",
+    "text": "4 Path A: Direct Individual-Level Fitting With stblr_bed_marker()\nUse stblr_bed_marker() when individual-level BED genotypes and aligned phenotypes remain available during fitting and a separate sparse-LD artifact is not required. The sampler reads selected genotype blocks from BED and uses observed marker values directly.\nfit_bed &lt;- stblr_bed_marker(\n  Glist = Glist,\n  y = y,\n  chr = chr,\n  cls = cls,\n  scale = TRUE,\n  rows = NULL,\n  pi_marker = 0.001,\n  h2 = 0.5,\n  nit = 1000,\n  nburn = 100,\n  seed = 10,\n  scheduled = TRUE\n)\nThis path is appropriate when:\n\nindividual-level data access is allowed throughout analysis;\nreading BED blocks during sampling is acceptable;\nobserved genotype information is preferred to a thresholded LD approximation;\nthe fit is being used as a reference for CSR preparation or model behavior.\n\nstblr_bed_marker() derives BED paths, allele frequencies, and marker names from Glist. If cls is omitted, the wrapper matches Glist$rsidsLD against Glist$rsids; supplying cls explicitly makes the comparison contract visible."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty",
+    "href": "notes/sparse_ld_and_bed_workflows.html#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "5 Path B, Step 1: Deriving wy, ww, and yy With bed_xtx_xty()",
+    "text": "5 Path B, Step 1: Deriving wy, ww, and yy With bed_xtx_xty()\nbed_xtx_xty() converts the selected BED genotypes and phenotype matrix into sufficient statistics for ST-BLR fitting:\nstats &lt;- bed_xtx_xty(\n  bed_file = bed_files,\n  n = Glist$n,\n  cls = cls,\n  af = af,\n  y = y,\n  rows = NULL,\n  scale = TRUE,\n  nthreads = 4\n)\nThe main output handoff is:\n\n\n\n\n\n\n\nObject\nMeaning and use\n\n\n\n\nstats$wy\nMarker-trait cross-products (X^Y); drives marker-residual scores.\n\n\nstats$ww\nPer-marker diagonal genotype cross-products; used by marker updates.\n\n\nstats$yy\nPer-trait phenotype sums of squares (y_t^y_t); used for likelihood and variance initialization.\n\n\nstats$n\nSample size when returned; otherwise supply compatible n to stblr_csr().\n\n\nstats$m\nMarker count when returned; otherwise inferred from stats$ww[[1]].\n\n\n\nstats$wy and stats$ww must each describe the same (m) markers, in the same order later used by the CSR LD matrix. stats$yy has one entry per trait, not one entry per marker.\nbed_xtx_xty() accepts a single BED file path and a single cls vector. Current multi-file sparse-LD preparation therefore needs statistics assembled with a compatible marker order and sample definition; the clean workflow uses one chromosome and one BED file."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr",
+    "href": "notes/sparse_ld_and_bed_workflows.html#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "6 Path B, Step 2: Streaming Sparse LD With sparseLD_stream_CSR()",
+    "text": "6 Path B, Step 2: Streaming Sparse LD With sparseLD_stream_CSR()\nsparseLD_stream_CSR() computes marker correlations from BED data, applies distance and (r^2) retention rules, and writes a disk-backed CSR representation:\nld_prefix &lt;- file.path(output_dir, \"chr1_ld\")\n\nld_written &lt;- sparseLD_stream_CSR(\n  bed_files = bed_files,\n  n = Glist$n,\n  cls = list(cls),\n  out_prefix = ld_prefix,\n  rows = NULL,\n  af = list(af),\n  r2_threshold = 0.001,\n  max_distance_bp = 0,\n  max_distance_variants = 0,\n  block_size = 1024,\n  nthreads = 4\n)\nld_prefix is not a matrix object. It is the common prefix for the metadata, row-pointer, column-index, and value files consumed by stblr_csr(). The writer returns a compact summary containing file paths, dimensions, the number of stored nonzero entries, construction settings, and sample counts.\nConceptually, CSR stores:\n\nrow_ptr: offsets delimiting retained entries for each LD row;\ncol_idx: column indices of retained marker pairs;\nvalues: retained marker correlations (r).\n\nThe disk format stores the upper triangle with an implicit unit diagonal and zero-based column indices. Package functions handle this storage contract; analysis code should not manually alter index bases or binary files.\nr2_threshold controls which correlations are retained by squared magnitude. The distance arguments can additionally restrict candidate marker pairs. Values of zero disable the corresponding distance restriction in the example workflow. These settings change the LD approximation and should be recorded with analysis outputs.\n\n6.1 Related Sparse-LD Helpers\nThe package source currently contains four related Rcpp wrappers:\n\n\n\n\n\n\n\n\nHelper\nBehavior\nCurrent package status\n\n\n\n\nsparseLD_stream_CSR()\nComputes sparse LD and writes the disk-backed CSR files at out_prefix, returning a writing summary.\nExported and used by the public workflow.\n\n\nsparseLD_to_CSR()\nComputes the sparse LD representation and returns row_ptr, col_idx, and values in an in-memory R list.\nGenerated internal wrapper; not currently exported or separately documented.\n\n\nsparseLD_write_CSR()\nCurrently delegates to sparseLD_stream_CSR() and writes the same disk-backed representation.\nGenerated internal wrapper; not currently exported or separately documented.\n\n\nsparseLD_read_CSR()\nReads an existing disk-backed CSR prefix into an R list for inspection.\nExported.\n\n\n\nUse sparseLD_stream_CSR() for the supported BED-to-disk workflow. The in-memory sparseLD_to_CSR() representation can be useful during development, but it materializes sparse arrays in R and is not the input contract used by stblr_csr(). The sparseLD_write_CSR() alias should not be treated as a separate stable public API while it remains unexported."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#inspecting-and-validating-csr-files-with-sparseld_read_csr",
+    "href": "notes/sparse_ld_and_bed_workflows.html#inspecting-and-validating-csr-files-with-sparseld_read_csr",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "7 Inspecting and Validating CSR Files With sparseLD_read_CSR()",
+    "text": "7 Inspecting and Validating CSR Files With sparseLD_read_CSR()\nBefore fitting, sparseLD_read_CSR() can inspect the files at ld_prefix:\nld &lt;- sparseLD_read_CSR(ld_prefix, one_based = TRUE)\n\nstopifnot(\n  ld$nrow == length(cls),\n  ld$ncol == length(cls),\n  length(ld$row_ptr) == length(cls) + 1L\n)\nThe reader returns the row pointers, column indices, values, dimensions, and metadata. one_based = TRUE makes returned column indices convenient for R inspection; one_based = FALSE exposes their zero-based disk convention. This option changes only the returned inspection object. The CSR samplers read the disk representation through package code and handle its index base.\nUseful checks include confirming:\n\nmatrix dimensions equal the selected marker count;\nrow pointers have length (m+1);\ncolumn indices fall within the expected base and dimensions;\nmetadata records the intended r2_threshold, distance limits, and sample count;\nthe number of stored values agrees with the final row pointer.\n\nThe binary-file and metadata details are documented further in Technical sparse LD and CSR."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr",
+    "href": "notes/sparse_ld_and_bed_workflows.html#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "8 Path B, Step 3: Fitting Summary-Statistics BLR With stblr_csr()",
+    "text": "8 Path B, Step 3: Fitting Summary-Statistics BLR With stblr_csr()\nstblr_csr() combines the sufficient-statistics object with the disk-backed LD prefix:\nfit_csr &lt;- stblr_csr(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  n = Glist$n,\n  pi_marker = 0.001,\n  h2 = 0.5,\n  nit = 1000,\n  nburn = 100,\n  seed = 10,\n  scheduled = FALSE\n)\nIts core data handoff is:\nn + stats$yy\n    -&gt; phenotype variance and prior initialization\n\nstats$wy + stats$ww + ld_prefix\n    -&gt; marker-update and residual-score calculations\nThe wrapper infers the number of traits from length(stats$yy). It takes n from the function argument or stats$n, and takes (m) from the function argument, stats$m, or length(stats$ww[[1]]). Explicitly supplying n and checking (m) before fitting makes the data contract easier to audit.\nstats$wy, stats$ww, and stats$yy summarize the phenotype side and diagonal marker information. The files at ld_prefix provide the retained off-diagonal marker relationships needed to update residual scores after marker effects change. The summary-statistics path therefore depends on both objects; neither is sufficient by itself."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#comparing-bed-direct-and-csr-posterior-outputs",
+    "href": "notes/sparse_ld_and_bed_workflows.html#comparing-bed-direct-and-csr-posterior-outputs",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "9 Comparing BED-Direct and CSR Posterior Outputs",
+    "text": "9 Comparing BED-Direct and CSR Posterior Outputs\nWhen both representations are prepared from the same individual-level data, stblr_bed_marker() provides a useful comparison for stblr_csr(). Compare posterior quantities that share the same marker and trait order, such as posterior mean effects fit$bm and posterior inclusion probabilities fit$dm.\nplot(fit_csr$bm[, 1], fit_bed$bm[, 1],\n     xlab = \"CSR posterior mean effect\",\n     ylab = \"BED posterior mean effect\")\nThe fits should agree qualitatively when markers, sample rows, phenotypes, scaling, allele frequencies, priors, and MCMC settings are matched. Strong signals and broad posterior patterns should be recognizable across paths. Exact equality is not expected because:\n\nCSR LD is a thresholded and possibly distance-limited approximation;\nBED and CSR samplers can use different update scheduling;\nfinite MCMC chains introduce Monte Carlo variation;\ndifferences in initialization, residual adjustment, or prior settings change the posterior;\nfloating-point and storage precision differ across calculations.\n\nA comparison is an integration diagnostic, not a proof that either fit has converged or that the sparse-LD approximation is adequate."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#marker-order-allele-frequency-scaling-rows-and-ld-thresholds",
+    "href": "notes/sparse_ld_and_bed_workflows.html#marker-order-allele-frequency-scaling-rows-and-ld-thresholds",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "10 Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds",
+    "text": "10 Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds\nThe central practical invariant is:\nGlist$rsids[[chr]][cls]\n    == Glist$rsidsLD[[chr]]\n    == rows of stats$wy and stats$ww\n    == rows and columns of sparse LD\n    == rows of any later annotation matrix\n    == rows of fit$bm and fit$dm\nThe first equality should be tested directly:\nstopifnot(\n  !anyNA(cls),\n  identical(Glist$rsids[[chr]][cls], Glist$rsidsLD[[chr]])\n)\nThe remaining equalities are positional contracts. Sparse LD binary files do not supply biological marker IDs to repair a mismatch later. Retain marker_id &lt;- Glist$rsidsLD[[chr]] beside the preparation outputs and attach or verify it whenever annotations and posterior summaries are joined.\nScaling also has to match. If bed_xtx_xty(..., scale = TRUE) standardizes markers using af, then sparse LD must be constructed from the same selected samples and corresponding allele frequencies. If rows is used, use it in both calls and ensure y describes those rows. LD thresholds and distance limits should be treated as recorded model-input settings, not merely performance options.\nThe annotation workflow extends this contract with:\nrownames(A) &lt;- marker_id\nstopifnot(nrow(A) == length(cls), identical(rownames(A), marker_id))\nThis is the handoff from the base CSR workflow to the models described in Annotation-informed models."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#validation-checklist",
+    "href": "notes/sparse_ld_and_bed_workflows.html#validation-checklist",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "11 Validation Checklist",
+    "text": "11 Validation Checklist\nBefore fitting stblr_csr(), verify:\n\ncls has no missing values.\nGlist$rsids[[chr]][cls] exactly matches Glist$rsidsLD[[chr]].\ny has n rows when rows = NULL, or describes the selected rows when rows is supplied.\naf has one value per selected marker and follows cls order.\nEvery trait’s stats$wy and stats$ww has length (m=).\nstats$yy has one value per phenotype trait.\nCSR nrow and ncol both equal (m), and row_ptr has length (m+1).\nCSR index bases are left to package functions; use one_based only when inspecting a returned R object.\nCSR metadata records the expected sample count, threshold, and distance settings.\nAnnotation rows and marker/group vectors match marker_id exactly before annotation-informed models are fitted.\nPosterior rows are interpreted in the same marker order.\nReal analyses use adequate chains, convergence checks, and posterior predictive diagnostics."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#runtime-disk-reproducibility-and-convergence-cautions",
+    "href": "notes/sparse_ld_and_bed_workflows.html#runtime-disk-reproducibility-and-convergence-cautions",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "12 Runtime, Disk, Reproducibility, and Convergence Cautions",
+    "text": "12 Runtime, Disk, Reproducibility, and Convergence Cautions\nBoth sufficient-statistic construction and sparse-LD construction can be runtime-heavy. block_size and nthreads affect construction performance, while r2_threshold and distance restrictions also affect the statistical LD approximation. Record all of them.\nDisk-backed CSR preparation writes multiple files sharing ld_prefix. Treat them as one artifact: moving, replacing, or mixing files from different runs can invalidate the prefix. Use distinct prefixes for different marker sets, sample subsets, scaling choices, and LD thresholds.\nFor reproducibility, retain:\n\nmarker IDs in model order;\nBED paths or immutable genotype-data identifiers;\ncls, rows, af, and phenotype preprocessing details;\nsufficient-statistic dimensions and trait names;\nthe complete CSR prefix and its metadata;\nsampler priors, scheduling controls, seeds, and MCMC settings.\n\nThe short chains in workflow scripts demonstrate object handoffs. Real analyses require longer chains and appropriate convergence and posterior predictive checks. Compact output guidance is covered in Workflows and outputs."
+  },
+  {
+    "objectID": "notes/sparse_ld_and_bed_workflows.html#related-notes-and-sources",
+    "href": "notes/sparse_ld_and_bed_workflows.html#related-notes-and-sources",
+    "title": "Sparse-LD and BED Workflows",
+    "section": "13 Related Notes and Sources",
+    "text": "13 Related Notes and Sources\n\nData representations\nTechnical sparse LD and CSR\nTechnical summary statistics\nWorkflows and outputs\nAnnotation-informed models\nComplete sparse-LD/BED workflow\nComplete annotation workflow"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html",
+    "href": "notes/multi_trait_models.html",
+    "title": "Multi-Trait Models",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis note will explain joint multi-trait modeling, covariance structures, trait-sharing models, and sample-overlap requirements."
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#why-model-traits-jointly",
+    "href": "notes/multi_trait_models.html#why-model-traits-jointly",
+    "title": "Multi-Trait Models",
+    "section": "1 Why Model Traits Jointly",
+    "text": "1 Why Model Traits Jointly"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#effect-vectors-and-covariance-matrices",
+    "href": "notes/multi_trait_models.html#effect-vectors-and-covariance-matrices",
+    "title": "Multi-Trait Models",
+    "section": "2 Effect Vectors and Covariance Matrices",
+    "text": "2 Effect Vectors and Covariance Matrices"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#trait-sharing-model-space",
+    "href": "notes/multi_trait_models.html#trait-sharing-model-space",
+    "title": "Multi-Trait Models",
+    "section": "3 Trait-Sharing Model Space",
+    "text": "3 Trait-Sharing Model Space"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#residual-covariance-and-cross-trait-sufficient-statistics",
+    "href": "notes/multi_trait_models.html#residual-covariance-and-cross-trait-sufficient-statistics",
+    "title": "Multi-Trait Models",
+    "section": "4 Residual Covariance and Cross-Trait Sufficient Statistics",
+    "text": "4 Residual Covariance and Cross-Trait Sufficient Statistics"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#full-versus-partial-sample-overlap",
+    "href": "notes/multi_trait_models.html#full-versus-partial-sample-overlap",
+    "title": "Multi-Trait Models",
+    "section": "5 Full Versus Partial Sample Overlap",
+    "text": "5 Full Versus Partial Sample Overlap"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#annotation-informed-mtblr-concepts",
+    "href": "notes/multi_trait_models.html#annotation-informed-mtblr-concepts",
+    "title": "Multi-Trait Models",
+    "section": "6 Annotation-Informed MTBLR Concepts",
+    "text": "6 Annotation-Informed MTBLR Concepts"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#current-implementation-status-and-proposed-extensions",
+    "href": "notes/multi_trait_models.html#current-implementation-status-and-proposed-extensions",
+    "title": "Multi-Trait Models",
+    "section": "7 Current Implementation Status and Proposed Extensions",
+    "text": "7 Current Implementation Status and Proposed Extensions"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#interpretation-sharing-is-not-causal-direction",
+    "href": "notes/multi_trait_models.html#interpretation-sharing-is-not-causal-direction",
+    "title": "Multi-Trait Models",
+    "section": "8 Interpretation: Sharing Is Not Causal Direction",
+    "text": "8 Interpretation: Sharing Is Not Causal Direction"
+  },
+  {
+    "objectID": "notes/multi_trait_models.html#related-notes",
+    "href": "notes/multi_trait_models.html#related-notes",
+    "title": "Multi-Trait Models",
+    "section": "9 Related Notes",
+    "text": "9 Related Notes\n\nModel overview\nData representations\nAnnotation-informed models\nTechnical multi-trait overlap\nTechnical annotation priors"
+  },
+  {
+    "objectID": "notes/index.html",
+    "href": "notes/index.html",
+    "title": "sblr Notes",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThese notes provide a readable path through the sblr data representations, model families, workflows, and technical derivations. The package and these notes are experimental."
+  },
+  {
+    "objectID": "notes/index.html#what-sblr-is-and-its-experimental-status",
+    "href": "notes/index.html#what-sblr-is-and-its-experimental-status",
+    "title": "sblr Notes",
+    "section": "1 What sblr Is and Its Experimental Status",
+    "text": "1 What sblr Is and Its Experimental Status"
+  },
+  {
+    "objectID": "notes/index.html#four-documentation-axes-data-traits-priors-estimation",
+    "href": "notes/index.html#four-documentation-axes-data-traits-priors-estimation",
+    "title": "sblr Notes",
+    "section": "2 Four Documentation Axes: Data, Traits, Priors, Estimation",
+    "text": "2 Four Documentation Axes: Data, Traits, Priors, Estimation"
+  },
+  {
+    "objectID": "notes/index.html#choose-a-workflow",
+    "href": "notes/index.html#choose-a-workflow",
+    "title": "sblr Notes",
+    "section": "3 Choose a Workflow",
+    "text": "3 Choose a Workflow"
+  },
+  {
+    "objectID": "notes/index.html#choose-a-model",
+    "href": "notes/index.html#choose-a-model",
+    "title": "sblr Notes",
+    "section": "4 Choose a Model",
+    "text": "4 Choose a Model"
+  },
+  {
+    "objectID": "notes/index.html#main-notes-versus-technical-appendices",
+    "href": "notes/index.html#main-notes-versus-technical-appendices",
+    "title": "sblr Notes",
+    "section": "5 Main Notes Versus Technical Appendices",
+    "text": "5 Main Notes Versus Technical Appendices"
+  },
+  {
+    "objectID": "notes/index.html#runtime-convergence-and-reproducibility-cautions",
+    "href": "notes/index.html#runtime-convergence-and-reproducibility-cautions",
+    "title": "sblr Notes",
+    "section": "6 Runtime, Convergence, and Reproducibility Cautions",
+    "text": "6 Runtime, Convergence, and Reproducibility Cautions"
+  },
+  {
+    "objectID": "notes/index.html#public-api-and-example-script-links",
+    "href": "notes/index.html#public-api-and-example-script-links",
+    "title": "sblr Notes",
+    "section": "7 Public API and Example-Script Links",
+    "text": "7 Public API and Example-Script Links"
+  },
+  {
+    "objectID": "notes/index.html#related-notes",
+    "href": "notes/index.html#related-notes",
+    "title": "sblr Notes",
+    "section": "8 Related Notes",
+    "text": "8 Related Notes\n\nModel overview\nData representations\nSparse-LD and BED workflows\nSingle-trait models\nMulti-trait models\nAnnotation-informed models\nWorkflows and outputs"
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html",
+    "href": "notes/annotation_informed_models.html",
+    "title": "Annotation-Informed Models",
+    "section": "",
+    "text": "Annotation-informed Bayesian linear regression uses external marker annotations to structure priors over marker inclusion, effect variance, or mixture-component membership. The likelihood still comes from phenotype summary statistics and LD. Annotations change how prior probability and scale are distributed across markers before and during posterior sampling.\nIn sblr, the polished annotation workflows build on the CSR ST-BLR data contract:\nThis note explains the implemented public wrappers and places them within the broader empirical-Bayes and multi-trait framework preserved in the archived annotation draft. Full marker-update derivations and implementation sketches belong in Technical annotation priors; full stick-breaking details belong in Technical SBayesRC-style annotations."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#why-annotations-inform-priors",
+    "href": "notes/annotation_informed_models.html#why-annotations-inform-priors",
+    "title": "Annotation-Informed Models",
+    "section": "1 Why Annotations Inform Priors",
+    "text": "1 Why Annotations Inform Priors\nMarkers are not exchangeable with respect to existing biological knowledge. They may lie in coding regions, regulatory regions, QTL intervals, conserved sequence, tissue-specific chromatin states, or other externally defined sets. Annotation-informed models ask whether that information should alter a marker’s prior probability of being active or the expected scale of an active effect.\nFor marker (i) and trait (t), useful prior quantities include:\n\\[\n\\pi_{it} = P(d_{it}=1),\n\\qquad\nv_{b,it} = \\operatorname{Var}(b_{it}\\mid d_{it}=1),\n\\]\nand, for mixture models, component probabilities ({itc}=P(c{it}=c)). In proposed multi-trait extensions, annotations could additionally influence marker-specific sharing-model probabilities or effect covariance matrices.\nAnnotation information can enter at different stages:\n\nfixed/external: marker-specific priors are supplied before fitting;\nempirical Bayes: priors are estimated from an earlier genomic or annotation-level analysis, then treated as fixed;\ndirect learned: annotation coefficients are updated inside the genomic sampler;\ngrouped: markers share parameters within one mutually exclusive group;\nmixture-based: annotations determine probabilities of null and active effect-size components.\n\nThese approaches answer different questions and propagate different amounts of uncertainty. None makes annotation membership causal by itself."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#annotation-matrix-overlap-centering-and-marker-ordering",
+    "href": "notes/annotation_informed_models.html#annotation-matrix-overlap-centering-and-marker-ordering",
+    "title": "Annotation-Informed Models",
+    "section": "2 Annotation Matrix, Overlap, Centering, and Marker Ordering",
+    "text": "2 Annotation Matrix, Overlap, Centering, and Marker Ordering\nLet (A) be an (m K) annotation matrix:\n\\[\nA =\n\\begin{bmatrix}\nA_{11} & \\cdots & A_{1K}\\\\\n\\vdots &        & \\vdots\\\\\nA_{m1} & \\cdots & A_{mK}\n\\end{bmatrix},\n\\]\nwhere rows are markers and columns are annotations. Binary entries can encode set membership, while continuous columns can encode scores or measurements. Annotations may overlap: a marker can belong to several biological categories simultaneously.\nOverlap is scientifically useful but complicates interpretation. A direct sum over each annotation double-counts markers in multiple sets and is not a strict variance partition. Conditional annotation models instead use the whole row (A_i) to estimate the contribution of one annotation while accounting for the others. Strongly correlated annotation columns can still make individual coefficients weakly identified.\nAll public annotation wrappers prepare A with the package’s annotation matrix helper. It:\n\nrequires one row per model marker;\nreorders named rows to marker names when all names are available;\nrejects non-finite values;\ncan add an intercept column;\ncan standardize non-binary columns;\noptionally centers and standardizes binary columns.\n\nRow order remains a hard correctness condition:\nrow i of A\n    = row i of stats$wy and stats$ww\n    = row/column i of sparse LD\n    = row i of fit$bm and fit$dm\nThe workflow makes this explicit:\nmarker_id &lt;- Glist$rsidsLD[[chr]]\nA &lt;- sim$annot\nrownames(A) &lt;- marker_id\nstopifnot(nrow(A) == length(marker_id),\n          identical(rownames(A), marker_id))\nPreparation of stats, sparse LD, and marker order is described in Sparse-LD and BED workflows.\nCentering has a statistical role beyond numerical convenience. If (z_{it}=A_i_t), a centered predictor is\n\\[\nz_{it}^{\\mathrm{centered}}\n=\nA_i\\eta_t-\\frac{1}{m}\\sum_{j=1}^m A_j\\eta_t.\n\\]\nCombining a centered annotation predictor with a global prior tends to redistribute prior mass across markers rather than allowing annotations to change the overall sparsity or variance scale without constraint."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#plainglobal-prior-baseline",
+    "href": "notes/annotation_informed_models.html#plainglobal-prior-baseline",
+    "title": "Annotation-Informed Models",
+    "section": "3 Plain/Global Prior Baseline",
+    "text": "3 Plain/Global Prior Baseline\nThe baseline BayesC-style sparse prior gives markers a common active probability and active-effect variance:\n\\[\nd_{it}\\sim\\operatorname{Bernoulli}(\\pi_t),\n\\qquad\nb_{it}\\mid d_{it}=1\\sim N(0,v_{b,t}),\n\\qquad\nb_{it}\\mid d_{it}=0=0.\n\\]\nEquivalently,\n\\[\nb_{it}\\sim(1-\\pi_t)\\delta_0+\\pi_tN(0,v_{b,t}).\n\\]\nThis is the comparison model for annotation-aware priors. If annotations have no effect, fixed marker priors reduce to common values, learned annotation coefficients remain near zero, all group parameters become similar, and SBayesRC-style component probabilities do not vary meaningfully by annotation profile.\nAnnotation models should therefore be compared with a plain CSR fit using compatible markers, LD, priors, and MCMC settings. Differences should not be attributed to annotations when the underlying data preparation or global architecture changed at the same time."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#fixed-marker-specific-priors",
+    "href": "notes/annotation_informed_models.html#fixed-marker-specific-priors",
+    "title": "Annotation-Informed Models",
+    "section": "4 Fixed Marker-Specific Priors",
+    "text": "4 Fixed Marker-Specific Priors\nstblr_csr_prior_annot() fits CSR ST-BLR using fixed marker-specific inclusion probabilities, fixed variance multipliers, or both. It supports two routes:\n\nsupply fixed_pi_marker and fixed_vb_multiplier directly; or\nsupply A with fixed coefficients beta_pi and beta_vb, from which the wrapper constructs marker-specific priors.\n\nFor fixed annotation coefficients, the implemented construction centers the annotation linear predictors:\n\\[\n\\ell^{\\pi}_{it}\n=\nA_i\\beta_{\\pi,t}\n-\\frac{1}{m}\\sum_j A_j\\beta_{\\pi,t},\n\\]\nthen computes\n\\[\n\\pi_{it}\n=\n\\operatorname{logit}^{-1}\n\\left\\{\\operatorname{logit}(\\pi_t)+\\ell^\\pi_{it}\\right\\},\n\\]\nbounded to pi_min and pi_max. The variance multiplier is\n\\[\n\\lambda_{it}\n=\n\\exp\\left(\nA_i\\beta_{v,t}-\\frac{1}{m}\\sum_j A_j\\beta_{v,t}\n\\right),\n\\]\nbounded to vb_multiplier_min and vb_multiplier_max, with (v_{b,it}=v_{b,t}_{it}).\nThe direct route is illustrated by the annotation workflow:\nfit_fixed &lt;- stblr_csr_prior_annot(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  A = A,\n  fixed_pi_marker = sim$pi_marker,\n  fixed_vb_multiplier = sim$vb_multiplier,\n  use_pi_marker = TRUE,\n  use_vb_multiplier = TRUE\n)\nFixed priors are appropriate when prior values come from external biological knowledge, an independent study, cross-fitted estimates, or a deliberately separate empirical-Bayes stage. They are also the simplest way to test whether the sampler responds sensibly to known marker-specific prior structure.\nThe key limitation is uncertainty: once supplied, these values are treated as fixed during the genomic fit. If they were estimated from the same data, the final posterior does not automatically propagate that first-stage uncertainty."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#direct-learned-annotation-effects",
+    "href": "notes/annotation_informed_models.html#direct-learned-annotation-effects",
+    "title": "Annotation-Informed Models",
+    "section": "5 Direct Learned Annotation Effects",
+    "text": "5 Direct Learned Annotation Effects\nstblr_csr_learn_annot() learns annotation effects while fitting marker effects. For each trait, it maintains annotation coefficient vectors ({,t}) and ({v,t}). The implemented marker-specific prior is conceptually\n\\[\n\\operatorname{logit}(\\pi_{it})\n=\n\\operatorname{logit}(\\pi_t)\n+\\operatorname{center}_i(A_i\\eta_{\\pi,t}),\n\\]\nand\n\\[\nv_{b,it}\n=\nv_{b,t}\n\\exp\\{\\operatorname{center}_i(A_i\\eta_{v,t})\\}.\n\\]\nIn the second expression, the exponential term is a multiplier of the global effect variance. The implementation caps probabilities and multipliers:\n\\[\n\\pi_{it}\\in[\\pi_{\\min},\\pi_{\\max}],\n\\qquad\n\\frac{v_{b,it}}{v_{b,t}}\n\\in[\\lambda_{\\min},\\lambda_{\\max}].\n\\]\nThe sampler alternates between marker updates under current marker-specific priors and annotation-coefficient updates. At intervals controlled by annot_update_every, random-walk proposals perturb ({,t}) or ({v,t}). The inclusion-coefficient target uses current inclusion states, while the variance-coefficient target uses current active effects. Gaussian shrinkage scales sigma_eta_pi and sigma_eta_vb regularize the coefficients; proposal scales rw_sd_eta_pi and rw_sd_eta_vb control Metropolis movement.\nfit_learned &lt;- stblr_csr_learn_annot(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  A = A,\n  learn_pi_annot = TRUE,\n  learn_vb_annot = TRUE,\n  rw_sd_eta_pi = 0.02,\n  rw_sd_eta_vb = 0.02,\n  annot_update_every = 10\n)\nThe fit reports posterior annotation coefficients as eta_pi and eta_vb. They should be interpreted jointly with annotation scaling, coefficient shrinkage, bounds, proposal behavior, marker-level posterior summaries, and convergence diagnostics.\nUse the learned model when annotation effects are genuinely part of the inferential target and there is enough information to estimate them. It is more coherent than treating same-data estimates as fixed, but also more demanding: overlapping annotations, weak signals, poor proposal scales, and short chains can produce unstable or poorly mixed coefficient estimates."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#group-priors",
+    "href": "notes/annotation_informed_models.html#group-priors",
+    "title": "Annotation-Informed Models",
+    "section": "6 Group Priors",
+    "text": "6 Group Priors\nstblr_csr_group_annot() assigns every marker to exactly one group and gives each group trait-specific prior parameters. If (g(i)) is marker (i)’s group index, the prior is\n\\[\nd_{it}\\sim\\operatorname{Bernoulli}(\\pi_{g(i),t}),\n\\qquad\nb_{it}\\mid d_{it}=1\n\\sim N\\left(0,v_{b,t}\\lambda_{g(i),t}\\right).\n\\]\nThe R wrapper accepts a length-(m) group vector, optionally named by marker. It converts group labels into an internal zero-based group_index, records group names and sizes, initializes group_pi and group_vb_multiplier, and returns group-level posterior summaries including included-marker counts.\ngroup &lt;- ifelse(A[, \"Anno1\"] != 0, \"annotated\", \"background\")\nnames(group) &lt;- rownames(A)\n\nfit_group &lt;- stblr_csr_group_annot(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  group = group,\n  group_pi_init = c(0.002, 0.001),\n  group_vb_multiplier_init = c(1.1, 1.0),\n  updatePi = TRUE,\n  updateGroupVb = TRUE\n)\nGroup inclusion probabilities have group-specific beta-prior controls. Variance multipliers can be updated and optionally normalized. Small groups need especially strong regularization because their inclusion counts and variance estimates are noisy.\nGroup priors are useful when categories are naturally mutually exclusive or when a simple, auditable model is preferred. They are also a practical simplification of overlapping annotations: define a deterministic hierarchy or a small set of combined categories, then fit one group per marker. That simplification discards overlap structure and makes results depend on the assignment rule. When overlap itself is scientifically important, learned matrix-based or SBayesRC-style models are usually more appropriate."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#sbayesrc-style-overlapping-annotation-mixture-priors",
+    "href": "notes/annotation_informed_models.html#sbayesrc-style-overlapping-annotation-mixture-priors",
+    "title": "Annotation-Informed Models",
+    "section": "7 SBayesRC-Style Overlapping-Annotation Mixture Priors",
+    "text": "7 SBayesRC-Style Overlapping-Annotation Mixture Priors\nstblr_csr_sbayesrc_generic() replaces a single active-effect distribution with multiple variance components. Let\n\\[\n\\gamma=(\\gamma_1,\\ldots,\\gamma_C),\n\\qquad\n\\gamma_1=0,\\quad \\gamma_c&gt;0\\text{ for }c&gt;1,\n\\]\nwhere the zero component is null and active components scale the marker-effect variance. A common workflow choice is gamma = c(0, 0.01, 0.1, 1).\nThis is an SBayesRC-style annotation-dependent BayesR prior. Its core prior family is closely aligned with the published SBayesRC prior structure: marker effects follow a BayesR-like mixture, and marker-specific component probabilities use conditional probit stick-breaking regressions on annotations. It is not an exact reproduction of GCTB SBayesRC as exposed by default. The public wrapper uses the four-component gamma grid above, whereas published SBayesRC uses c(0, 0.001, 0.01, 0.1, 1). In addition, sblr uses a CSR sparse-LD likelihood rather than GCTB’s low-rank rotated summary-statistics likelihood. Users can explicitly request the published gamma grid:\nfit_sbayesrc_published_gamma &lt;- stblr_csr_sbayesrc_generic(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  A = A,\n  gamma = c(0, 0.001, 0.01, 0.1, 1)\n)\nMatching the gamma grid aligns that part of the prior specification; it does not make the complete implementation identical to GCTB SBayesRC.\nFor marker (i), annotations determine component probabilities through a generalized probit stick-breaking construction. Let\n\\[\n\\eta_i=A_i\\alpha,\n\\qquad\np_{ij}=\\Phi(\\eta_{ij}),\n\\]\nfor (C-1) stick-breaking steps. Then\n\\[\n\\begin{aligned}\n\\pi_{i1} &= 1-p_{i1},\\\\\n\\pi_{i2} &= p_{i1}(1-p_{i2}),\\\\\n&\\ \\vdots\\\\\n\\pi_{iC} &= \\prod_{j=1}^{C-1}p_{ij}.\n\\end{aligned}\n\\]\nThe probabilities are non-negative and sum to one. The native sampler floors and renormalizes them for numerical stability. Marker (i)’s expected gamma multiplier is\n\\[\nE(\\gamma_i\\mid A_i,\\alpha)\n=\n\\sum_{c=1}^C\\pi_{ic}\\gamma_c.\n\\]\nmake_sbayesrc_alpha_init() creates deterministic initial values. It distributes the initial active probability across non-null components, converts those marginal probabilities into conditional stick-breaking probabilities, and, when an all-ones intercept exists, encodes the baseline in that intercept row of alpha_init. Other coefficients begin at zero unless supplied.\nfit_sbayesrc &lt;- stblr_csr_sbayesrc_generic(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  A = A,\n  gamma = c(0, 0.01, 0.1, 1),\n  updateAlpha = TRUE,\n  alpha_update_every = 10\n)\nThe fit contains annotation coefficients alpha, annotation-effect variances sigmaSqAlpha, marker component probabilities comp_prob, and component counts ncomp.\nThe exported diagnostic helpers convert fitted coefficients into compact, deterministic summaries:\n\nsbayesrc_annotation_pi(alpha, gamma) applies stick-breaking to each annotation coefficient row;\nsbayesrc_annotation_gamma_mean(alpha, gamma) returns expected gamma per annotation row;\nsbayesrc_marker_pi(A, alpha, gamma) applies stick-breaking to (A), returning marker-level component probabilities;\nsbayesrc_marker_gamma_mean(A, alpha, gamma) returns expected gamma per marker.\n\nAnnotation-row diagnostics isolate one coefficient row and are not the same as marker-level predictions under overlapping annotation profiles. For biological interpretation, inspect both, and compare marker expected gamma with posterior inclusion probabilities without assuming they should be identical.\nUse the SBayesRC-style model when annotations may overlap and the scientific question concerns how annotations shift probability among null, small, moderate, and larger effect components. It is more expressive than a binary active/null model and correspondingly needs careful prior, mixing, and identifiability diagnostics."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#annotation-workflow",
+    "href": "notes/annotation_informed_models.html#annotation-workflow",
+    "title": "Annotation-Informed Models",
+    "section": "8 Annotation Workflow",
+    "text": "8 Annotation Workflow\nThe current workflow connects simulation, CSR preparation, four models, and compact diagnostics:\nmtsim_annotation()\n    -&gt; summarize_annotation_signal()\n    -&gt; bed_xtx_xty() + sparseLD_stream_CSR()\n    -&gt; align A with stats and sparse LD\n    -&gt; stblr_csr_prior_annot()\n    -&gt; stblr_csr_learn_annot()\n    -&gt; stblr_csr_group_annot()\n    -&gt; stblr_csr_sbayesrc_generic()\n    -&gt; compact fit, annotation, and expected-gamma summaries\nmtsim_annotation() simulates phenotypes, marker effects, overlapping annotations, enriched causal-marker sampling, and marker-specific prior values. It supports known-truth checks but does not represent a real-data validation by itself.\nsummarize_annotation_signal(sim) reports annotation sizes, causal counts, and causal rates. With a fit, it can add trait-specific mean posterior inclusion and mean absolute posterior effect summaries. These summaries are descriptive: annotation overlap and LD mean they are not additive variance partitions.\nThe workflow then constructs stats and ld_prefix from the same BED marker order, verifies A, and fits all four prior families. Full marker matrices remain available in fit objects, while compact summaries prevent marker-scale output from flooding the console. See Workflows and outputs for reporting patterns."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#empirical-bayes-annotation-workflows",
+    "href": "notes/annotation_informed_models.html#empirical-bayes-annotation-workflows",
+    "title": "Annotation-Informed Models",
+    "section": "9 Empirical-Bayes Annotation Workflows",
+    "text": "9 Empirical-Bayes Annotation Workflows\nThe archived annotation draft describes a broader staged strategy:\n\\[\n\\text{genomic STBLR/MTBLR}\n\\rightarrow\n\\text{marker-level posterior summaries}\n\\rightarrow\n\\text{annotation-level model}\n\\rightarrow\n\\text{annotation-informed priors}\n\\rightarrow\n\\text{next genomic fit}.\n\\]\nFirst-stage summaries can include posterior means (b_{it}), posterior inclusion probabilities (_{it}), residual scores, and set-specific genomic variance contributions. For an annotation set (S_k), a smoothed inclusion estimate is\n\\[\n\\widehat\\pi_{k,t}\n=\n\\frac{\\alpha+\\sum_{i\\in S_k}\\widehat{dm}_{it}}\n{2\\alpha+|S_k|}.\n\\]\nAn effect-scale estimate can use the estimated set contribution\n\\[\n\\widehat V_{G,k,t}\n=\n\\frac{1}{n}\\sum_{i\\in S_k}\n\\widehat b_{it}(wy_{it}-r_{it})\n\\]\nand divide by an effective number of active markers,\n\\[\nm^{\\mathrm{eff}}_{k,t}\n=\n\\sum_{i\\in S_k}\\widehat{dm}_{it},\n\\qquad\n\\widehat\\sigma^2_{b,k,t}\n=\n\\frac{\\widehat V_{G,k,t}}\n{\\max(m^{\\mathrm{eff}}_{k,t},c)}.\n\\]\nFor overlapping annotations, marker-level responses such as ({it}), (b{it}^2), or estimated variance contributions can be regressed jointly on (A). The resulting coefficients can construct marker-specific priors on logit or log scales.\nThis strategy preserves useful technical ideas for prior learning, annotation-level STBLR/MTBLR, multi-trait sharing priors, and warm starts. However, it is not identical to the four implemented direct workflow wrappers. When the same data estimate priors and evaluate the final model, uncertainty can be understated. Sample splitting, chromosome-wise cross-fitting, external estimates, or a fully hierarchical model are more conservative alternatives."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#choosing-an-annotation-model",
+    "href": "notes/annotation_informed_models.html#choosing-an-annotation-model",
+    "title": "Annotation-Informed Models",
+    "section": "10 Choosing an Annotation Model",
+    "text": "10 Choosing an Annotation Model\n\n\n\n\n\n\n\n\n\nModel\nUse when\nMain advantage\nMain caution\n\n\n\n\nFixed marker-specific prior\nReliable external, cross-fitted, or deliberately staged priors already exist; or a known-prior simulation is being checked.\nStable and auditable; simplest marker-specific model.\nTreats prior values as known and does not propagate their estimation uncertainty.\n\n\nLearned annotation coefficients\nInclusion or effect-scale annotation effects are inferential targets and sufficient signal exists to estimate them.\nLearns annotation effects jointly with marker effects.\nRequires careful shrinkage, proposal tuning, bounds, and convergence assessment.\n\n\nGroup prior\nMarkers belong to one meaningful category each, or a simple mutually exclusive approximation is acceptable.\nEasy to interpret and computationally direct.\nDiscards or arbitrarily resolves overlapping annotations; small groups are unstable.\n\n\nSBayesRC-style mixture prior\nOverlapping annotations should shift probability among null and multiple active-effect scales.\nFlexible effect-size architecture with marker-level mixture probabilities.\nMore parameters and more difficult identifiability and mixing diagnostics.\n\n\nEmpirical-Bayes staged prior\nFirst-stage genomic evidence should inform later fits or proposed MTBLR extensions.\nFlexible bridge between posterior summaries and future priors.\nSame-data reuse can be optimistic; many draft components remain research-stage.\n\n\n\nStart with the simplest model that matches the scientific question. More expressive annotation models do not automatically produce more reliable biological conclusions."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#regularization-caps-shrinkage-and-overfitting",
+    "href": "notes/annotation_informed_models.html#regularization-caps-shrinkage-and-overfitting",
+    "title": "Annotation-Informed Models",
+    "section": "11 Regularization, Caps, Shrinkage, and Overfitting",
+    "text": "11 Regularization, Caps, Shrinkage, and Overfitting\nAnnotation-informed priors can become aggressive because probabilities and variance scales enter marker updates repeatedly. The following controls are part of the model, not merely numerical safeguards:\n\ncenter annotation linear predictors around their marker average;\nstandardize continuous annotations so coefficient scales are comparable;\ndecide deliberately whether binary annotations should remain 0/1 or be centered and standardized;\nshrink annotation coefficients toward zero;\nbound marker inclusion probabilities away from zero and one;\ncap variance multipliers to avoid extreme marker scales;\nuse pseudo-counts and shrinkage for small annotation sets;\ninspect correlated annotation columns and unstable coefficient directions;\nuse cross-fitting or external estimates for formal empirical-Bayes inference.\n\nThe default bounds in current wrappers are intentionally broad and are not scientific defaults for every analysis. Sensitivity to bounds, prior scales, annotation preprocessing, and LD construction should be reported."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#interpretation-and-causal-limits",
+    "href": "notes/annotation_informed_models.html#interpretation-and-causal-limits",
+    "title": "Annotation-Informed Models",
+    "section": "12 Interpretation and Causal Limits",
+    "text": "12 Interpretation and Causal Limits\nAnnotation-informed models estimate how annotation structure relates to prior architecture and posterior genomic evidence under the fitted model. They can identify annotations associated with higher posterior inclusion, different effect scales, or different mixture-component probabilities. They can support biological prioritization and generate hypotheses.\nThey do not prove that an annotation, gene, tissue, or regulatory mechanism causes a phenotype. Apparent enrichment can reflect:\n\nLD between annotated and causal markers;\nmarker density and annotation size;\ncorrelated or overlapping annotations;\nphenotype architecture and model misspecification;\nsparse-LD approximation and marker filtering;\nwinner’s curse or reuse of the same data to estimate and evaluate priors.\n\nGenetic sharing across traits is also not causal direction. Colocalization, Mendelian randomization, functional experiments, and external replication ask different questions and require their own assumptions.\nRow alignment is essential: a misordered annotation matrix produces a well-formed but biologically meaningless prior. Short demonstration chains are only execution examples. Real analyses need longer chains, convergence and proposal diagnostics, sensitivity analysis, posterior predictive checks, and clear documentation of annotation preprocessing and prior construction."
+  },
+  {
+    "objectID": "notes/annotation_informed_models.html#related-notes-and-sources",
+    "href": "notes/annotation_informed_models.html#related-notes-and-sources",
+    "title": "Annotation-Informed Models",
+    "section": "13 Related Notes and Sources",
+    "text": "13 Related Notes and Sources\n\nModel overview\nSparse-LD and BED workflows\nWorkflows and outputs\nMulti-trait models\nTechnical annotation priors\nTechnical SBayesRC-style annotations\nComplete annotation workflow\nArchived annotation-prior draft"
+  },
+  {
+    "objectID": "notes/data_representations.html",
+    "href": "notes/data_representations.html",
+    "title": "Data Representations",
+    "section": "",
+    "text": "sblr can fit Bayesian linear regression models from two broad forms of genomic data:\nThese are two representations of closely related regression calculations, not two unrelated model families. The representation determines what must be stored, what can be recomputed during sampling, and which alignment and sample-overlap assumptions must be made explicit."
+  },
+  {
+    "objectID": "notes/data_representations.html#individual-level-plink-bed-representation",
+    "href": "notes/data_representations.html#individual-level-plink-bed-representation",
+    "title": "Data Representations",
+    "section": "1 Individual-Level PLINK BED Representation",
+    "text": "1 Individual-Level PLINK BED Representation\nLet (X) be an (n m) genotype matrix for (n) individuals and (m) markers, and let (Y) be an (n n_t) phenotype matrix for (n_t) traits. For one trait, (Y) reduces to a vector (y). A Bayesian linear regression model can be written as\n\\[\nY = XB + E,\n\\]\nwhere (B) contains marker effects and (E) contains residuals. In a single-trait model, this is (y = Xb + e).\nWith individual-level data, a marker update can read the observed genotype column (x_j) and evaluate quantities such as\n\\[\nx_j^\\top x_j\n\\quad\\text{and}\\quad\nx_j^\\top e\n=\nx_j^\\top(y-Xb).\n\\]\nThe sampler can therefore update effects from observed marker values and current individual-level residuals. It does not need a separately supplied LD matrix because correlations among markers are implicit in (X).\nPLINK BED files store genotype calls compactly on disk rather than as an in-memory numeric matrix. In the package workflow, a qgg Glist supplies the BED file paths and related metadata:\n\nGlist$bedfiles identifies the BED files;\nGlist$n gives the number of individuals;\nGlist$rsids identifies the marker columns in each BED file;\nGlist$af supplies allele frequencies used when markers are standardized;\nGlist$rsidsLD identifies the selected markers and their intended LD order.\n\nstblr_bed_marker() fits directly from this representation. It receives the Glist, phenotype vector or matrix y, chromosome selection, and marker column indices cls. Its BED samplers read marker blocks from disk and perform marker updates without first materializing all of (X) or a full (X^X) matrix. Optional rows select 1-based individual indices, and scale = TRUE standardizes markers using the corresponding allele frequencies.\nThe individual-level representation is information-rich: if the same individuals have multiple measured traits, cross-trait phenotype and residual cross-products can be calculated directly. Its main costs are access to sensitive individual-level data and repeated genotype reading during model fitting."
+  },
+  {
+    "objectID": "notes/data_representations.html#dense-summary-statistic-representation",
+    "href": "notes/data_representations.html#dense-summary-statistic-representation",
+    "title": "Data Representations",
+    "section": "2 Dense Summary-Statistic Representation",
+    "text": "2 Dense Summary-Statistic Representation\nThe Gaussian linear model likelihood and marker-update calculations can be expressed using cross-products. For one trait, the central quantities are\n\\[\nwy = X^\\top y,\n\\qquad\nXX = X^\\top X,\n\\qquad\nyy = y^\\top y,\n\\]\ntogether with the sample size (n). For multiple traits,\n\\[\nWY = X^\\top Y\n\\]\ncontains one marker-trait cross-product column per trait.\nThe matrix (X^X) describes both marker sums of squares on its diagonal and marker-marker LD in its off-diagonal entries. In package interfaces, ww denotes per-trait marker sums of squares or corresponding diagonal information, while LD supplies the off-diagonal relationships needed to propagate an effect update to correlated markers. Depending on scaling and the producing function, LD may be represented in correlation units or as the corresponding genotype cross-products. The statistics and LD representation must use the same marker scaling and order.\nThese quantities are sufficient for many marker updates because the current marker-residual score can be represented as\n\\[\nr = X^\\top(y-Xb) = wy - X^\\top Xb.\n\\]\nIf marker (j)’s effect changes by (b_j), the updated score can be calculated from column (j) of (X^X):\n\\[\nr_{\\text{new}}\n=\nr_{\\text{old}} - (X^\\top X)_{\\cdot j}\\Delta b_j.\n\\]\nThis is why a summary-statistics sampler needs more than marginal genotype-phenotype associations. It needs enough information to reproduce the cross-products used by the marker-update and variance calculations. Marginal wy values without compatible LD cannot account for correlated markers, and LD without wy, yy, and (n) does not define the phenotype side of the likelihood.\nA dense representation stores all of (X^X), which requires (O(m^2)) entries. That becomes impractical for large marker sets. The disk-backed sparse-LD representation retains the same conceptual role while dropping small or distant marker-marker entries."
+  },
+  {
+    "objectID": "notes/data_representations.html#disk-backed-csr-sparse-ld-representation",
+    "href": "notes/data_representations.html#disk-backed-csr-sparse-ld-representation",
+    "title": "Data Representations",
+    "section": "3 Disk-Backed CSR Sparse-LD Representation",
+    "text": "3 Disk-Backed CSR Sparse-LD Representation\nCompressed sparse row (CSR) format stores only retained entries of a sparse matrix. Conceptually, it records:\n\na vector of row pointers delimiting each matrix row;\ncolumn indices for retained entries; and\nthe retained LD or cross-product values.\n\nsparseLD_stream_CSR() computes sparse LD directly from one or more PLINK BED files and writes a disk-backed CSR representation at out_prefix. The selected marker columns are supplied as a list through cls, one vector per BED file. Optional rows and af must describe the same individuals and marker scaling used for the sufficient statistics.\nSparsification is controlled by:\n\nr2_threshold, which removes pairs below a squared-correlation threshold;\nmax_distance_bp, which can restrict pairs by base-pair distance;\nmax_distance_variants, which can restrict pairs by marker-index distance;\nblock_size and nthreads, which control construction rather than the statistical definition.\n\nThe sparse representation approximates (X^X). It reduces memory and disk requirements when most long-range or weak marker relationships can be ignored, but the threshold and distance rules become part of the analysis. Two fits using different sparse-LD construction rules do not have identical inputs even if they began from the same BED file.\nsparseLD_read_CSR() reads files written by sparseLD_stream_CSR() and returns row pointers, column indices, and values. Its one_based option controls the indexing convention of returned column indices. This reader is useful for checking dimensions, indexing, and retained entries; stblr_csr() uses the disk-backed prefix directly.\nDetailed storage and construction contracts belong in Technical sparse LD and CSR."
+  },
+  {
+    "objectID": "notes/data_representations.html#sufficient-statistics-wy-ww-and-yy",
+    "href": "notes/data_representations.html#sufficient-statistics-wy-ww-and-yy",
+    "title": "Data Representations",
+    "section": "4 Sufficient Statistics: wy, ww, and yy",
+    "text": "4 Sufficient Statistics: wy, ww, and yy\nbed_xtx_xty() is the package bridge from individual-level BED data and phenotypes to the sufficient statistics consumed by stblr_csr(). It accepts a BED file, the total number of individuals, selected BED marker columns cls, corresponding allele frequencies af, and a phenotype matrix y. Optional rows and scale determine which individuals and marker standardization are used.\nThe returned stats object contains the marker-trait cross-products and related quantities required by the ST-BLR wrapper:\n\nstats$wy: (X^Y), represented by trait;\nstats$ww: marker sums of squares or diagonal genotype cross-product information, represented by trait;\nstats$yy: (y_t^y_t) for each trait;\nstats$n and stats$m, when available, for sample and marker counts.\n\nstblr_csr() combines this object with ld_prefix, the prefix written by sparseLD_stream_CSR(). The wrapper initializes per-trait variance quantities using stats$yy, (n), and (m), then passes wy, ww, yy, and the CSR prefix to the sparse-LD sampler.\nThe complete conceptual bridge is:\nBED files + aligned phenotypes\n          |\n          +--&gt; bed_xtx_xty() --------&gt; wy, ww, yy, n\n          |\n          +--&gt; sparseLD_stream_CSR() -&gt; disk-backed sparse X'X / LD\n                                         |\n                                         v\n                         stblr_csr() summary-statistics model\nThe two branches must be produced from the same marker selection, sample selection, allele frequencies, and scaling convention. In contrast, stblr_bed_marker() follows a direct branch from BED files and phenotypes to the individual-level sampler. The worked comparison is described in Sparse-LD and BED workflows."
+  },
+  {
+    "objectID": "notes/data_representations.html#multi-trait-cross-products-sample-overlap-and-ssy",
+    "href": "notes/data_representations.html#multi-trait-cross-products-sample-overlap-and-ssy",
+    "title": "Data Representations",
+    "section": "5 Multi-Trait Cross-Products, Sample Overlap, and SSY",
+    "text": "5 Multi-Trait Cross-Products, Sample Overlap, and SSY\nThe phrase “multi-trait summary statistics” can refer to two different levels of information.\nFirst, traits can be fitted as separate or parallel single-trait regressions. For trait (t), the phenotype sum of squares is\n\\[\nyy_t = y_t^\\top y_t = \\sum_i y_{it}^2.\n\\]\nA vector of yy values, with corresponding columns of (X^Y), is enough to initialize and fit per-trait likelihood calculations that do not require observed cross-trait phenotype products. The current stblr_csr() wrapper uses this per-trait representation: it infers the number of traits from length(stats$yy) and uses each yy_t to initialize trait-specific variances.\nSecond, a genuinely joint multi-trait likelihood with a full residual covariance matrix requires the cross-trait phenotype matrix\n\\[\n\\mathrm{SSY} = Y^\\top Y,\n\\qquad\n\\mathrm{SSY}_{ts}\n=\n\\sum_{i \\in \\mathcal I_{ts}} y_{it}y_{is},\n\\]\nwhere (I_{ts}) is the set of individuals observed for both traits. The diagonal entries are the univariate yy_t; the off-diagonal entries contain information that a vector of yy values does not preserve.\nWith individual-level (Y), SSY and the effective overlap counts can be calculated from observed individuals. With summary statistics, they must be provided or reconstructed. If (N_{ts}) is the number of individuals shared by traits (t) and (s), and (R_y) is a phenotypic correlation matrix, a common approximation is\n\\[\n\\widehat{\\mathrm{SSY}}\n=\nN \\odot \\widehat{\\operatorname{Cov}}(Y),\n\\]\nwith diagonals forced to the observed yy_t. This approximation assumes that overlap counts and phenotypic covariance information are meaningful for the study design. Full overlap, partial overlap, missingness, and meta-analysis can imply materially different (N) matrices.\nWithout cross-trait SSY and overlap information, a summary-statistics model cannot reconstruct the cross-products needed for full residual covariance updates. The complete derivation and assumptions are preserved in Technical multi-trait sample overlap."
+  },
+  {
+    "objectID": "notes/data_representations.html#marker-ordering-and-annotation-alignment",
+    "href": "notes/data_representations.html#marker-ordering-and-annotation-alignment",
+    "title": "Data Representations",
+    "section": "6 Marker Ordering and Annotation Alignment",
+    "text": "6 Marker Ordering and Annotation Alignment\nMarker order is a correctness condition, not presentation metadata. Every marker-indexed object must refer to the same biological marker at position (j):\nBED marker column selected by cls\n    = Glist$rsidsLD marker j\n    = sufficient-statistic row j\n    = sparse-LD row and column j\n    = annotation-matrix row j\n    = posterior-summary row j\nIn the workflows, the intended LD marker order is established by Glist$rsidsLD[[chr]]. The BED column indices are derived with\ncls &lt;- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])\nstopifnot(!anyNA(cls))\nThe same cls is then supplied to bed_xtx_xty() and, as a list, sparseLD_stream_CSR(). Allele frequencies are subset with the same indices. For annotation models, the (m K) annotation matrix A must have one row per selected marker in exactly this order. The annotation workflow makes that contract explicit by assigning Glist$rsidsLD[[chr]] as row names and checking that they are identical to the expected marker IDs.\nPosterior matrices such as fit$bm and fit$dm inherit the marker ordering used by the model input. A plausible-looking result is still invalid if its rows are joined to annotations or marker metadata in a different order.\nSample alignment is equally important. When rows is used, the phenotype rows and every BED-derived object must describe the same individuals. Sufficient statistics generated from one sample subset cannot be combined with sparse LD generated from another without changing the implied model."
+  },
+  {
+    "objectID": "notes/data_representations.html#representation-specific-limitations-and-validation-checks",
+    "href": "notes/data_representations.html#representation-specific-limitations-and-validation-checks",
+    "title": "Data Representations",
+    "section": "7 Representation-Specific Limitations and Validation Checks",
+    "text": "7 Representation-Specific Limitations and Validation Checks\nIndividual-level and summary-statistics representations have different failure modes.\nIndividual-level BED fitting\n\nrequires access to individual genotypes and aligned phenotypes;\nreads genotype blocks repeatedly during fitting;\ncan calculate observed phenotype and residual cross-products when data are jointly available;\nstill requires correct cls, rows, allele frequencies, and scaling.\n\nSummary statistics plus sparse LD\n\ncan avoid repeated access to individual-level genotypes after preparation;\nreplaces the full (X^X) matrix with an explicit LD approximation;\nrequires compatible wy, ww, yy, (n), and LD;\nrequires SSY and overlap information for full joint multi-trait residual covariance calculations;\ncannot recover information omitted during summarization or sparsification.\n\nAt minimum, validate the following before fitting:\n\ncls contains no missing marker matches and has the expected length.\nAllele frequencies correspond to the selected marker columns.\nbed_xtx_xty() and sparseLD_stream_CSR() use identical marker order, sample rows, and scaling choices.\nCSR dimensions and indexing are consistent with the number of markers.\nAnnotation rows and marker/group vectors use the same marker order.\nstats$wy, stats$ww, and posterior marker matrices have compatible dimensions.\nTrait names, stats$yy, and phenotype columns are aligned.\nMulti-trait summary analyses state how SSY and sample overlap were observed, assumed, or reconstructed.\n\nComparing posterior summaries from stblr_bed_marker() and stblr_csr() on the same prepared data is a useful integration check, but exact numerical agreement is not expected automatically. Sparse-LD approximation, scaling, sampler scheduling, finite MCMC error, and prior settings can all affect the comparison."
+  },
+  {
+    "objectID": "notes/data_representations.html#related-notes",
+    "href": "notes/data_representations.html#related-notes",
+    "title": "Data Representations",
+    "section": "8 Related Notes",
+    "text": "8 Related Notes\n\nSparse-LD and BED workflows\nTechnical summary statistics\nTechnical multi-trait sample overlap\nTechnical sparse LD and CSR"
+  },
+  {
+    "objectID": "notes/model_overview.html",
+    "href": "notes/model_overview.html",
+    "title": "Model Overview",
+    "section": "",
+    "text": "sblr is an experimental R package for Bayesian linear regression of genomic marker effects. Its models estimate marker effects, posterior inclusion probabilities, and variance or covariance components from either individual-level PLINK BED data or summary statistics combined with linkage disequilibrium (LD).\nThe package landscape is easiest to understand along three axes:\nThese axes describe different choices. For example, a model can be single-trait, use summary statistics with disk-backed sparse LD, and use an annotation-informed prior. This note maps those choices to the current public functions and to the notes that explain them in detail."
+  },
+  {
+    "objectID": "notes/model_overview.html#common-model-y-xb-e",
+    "href": "notes/model_overview.html#common-model-y-xb-e",
+    "title": "Model Overview",
+    "section": "1 Common Model: (y = Xb + e)",
+    "text": "1 Common Model: (y = Xb + e)\nFor one trait, the common regression model is\n\\[\ny = Xb + e,\n\\]\nwhere (X) is an (n m) genotype matrix, (b) is a vector of marker effects, and (e) is residual variation. Bayesian genomic regression combines this likelihood with a prior on marker effects and, often, latent inclusion indicators.\nFor (n_t) traits, the model becomes\n\\[\nY = XB + E,\n\\]\nwhere each row of (B) is a marker-effect vector across traits. A genuinely joint multi-trait model can describe covariance among effects, residuals, or trait-sharing patterns. Running one single-trait model per phenotype can be useful and parallelizable, but it is not equivalent to a joint multi-trait likelihood.\nThe main posterior marker summaries are:\n\\[\n\\widehat b_{it} = E(b_{it}\\mid\\text{data})\n\\quad\\text{and}\\quad\n\\widehat{dm}_{it} = P(d_{it}=1\\mid\\text{data}),\n\\]\nrepresented in fitted objects by bm and dm. Depending on the wrapper, fits also contain sampled effects and indicators, variance traces, covariance summaries, prior parameters, and model-specific annotation diagnostics."
+  },
+  {
+    "objectID": "notes/model_overview.html#three-axes-for-choosing-a-model",
+    "href": "notes/model_overview.html#three-axes-for-choosing-a-model",
+    "title": "Model Overview",
+    "section": "2 Three Axes for Choosing a Model",
+    "text": "2 Three Axes for Choosing a Model\n\n2.1 Single-Trait Versus Multi-Trait\nSingle-trait BLR/ST-BLR estimates scalar effects and inclusion probabilities for one phenotype. Current BED, CSR, and annotation workflow examples are centered on this model family. Several ST-BLR wrappers accept a phenotype matrix or multiple trait-specific sufficient-statistic columns, but their marker-update structure should not automatically be interpreted as a full joint MTBLR sharing model.\nMulti-trait BLR (MTBLR) treats marker effects as vectors and can model effect covariance, residual covariance, and explicit trait-sharing models. The public sblr() interface accepts summary-statistics inputs such as a trait cross-product matrix yy, marker-trait cross-products Xy, LD or marker cross-products XX, and optional multi-trait inclusion models. Full summary-statistics residual-covariance modeling additionally depends on cross-trait phenotype products and sample-overlap assumptions.\nThe current most polished end-to-end workflows are BED/CSR ST-BLR and annotation-informed CSR ST-BLR. Multi-trait theory remains central to the package and motivates the covariance outputs, simulation tools, and proposed annotation-aware extensions. Read Multi-trait models before interpreting trait sharing or covariance as a joint model result.\n\n\n2.2 Individual-Level Versus Summary Statistics\nWith individual-level data, the sampler can read observed genotype columns from BED files and calculate marker-update quantities directly. The principal public interface is stblr_bed_marker().\nWith summary statistics, the sampler instead receives cross-products:\n\\[\nwy = X^\\top y,\n\\qquad\nww_j = x_j^\\top x_j,\n\\qquad\nyy = y^\\top y,\n\\]\nplus compatible LD and sample size (n). The residual score can be maintained as\n\\[\nr = X^\\top y - X^\\top Xb.\n\\]\nstblr_csr() uses sufficient statistics from bed_xtx_xty() with a disk-backed sparse-LD prefix written by sparseLD_stream_CSR(). The public sblr() interface represents the broader summary-statistics model family and accepts dense or sparse marker cross-product structures through XX.\nThese representations, their information requirements, and sample-overlap issues are covered in Data representations. The practical BED-to-CSR handoff is covered in Sparse-LD and BED workflows.\n\n\n2.3 Plain Versus Annotation-Informed Priors\nA plain/global prior gives markers a common prior architecture, such as a global inclusion probability and marker-effect variance. A BayesC-style spike-and-slab representation is\n\\[\nd_{it} \\sim \\operatorname{Bernoulli}(\\pi_t),\n\\qquad\nb_{it}\\mid d_{it}=1 \\sim N(0,v_{b,t}),\n\\qquad\nb_{it}\\mid d_{it}=0 = 0.\n\\]\nAn annotation-informed prior allows prior inclusion probabilities, variance scales, or mixture-component probabilities to vary by marker, marker group, or annotation profile. Current public CSR wrappers distinguish four implemented forms:\n\nfixed marker-specific inclusion probabilities or variance multipliers;\ngroup-level priors;\ndirectly learned annotation effects on inclusion or variance;\nSBayesRC-style mixture probabilities learned from overlapping annotations.\n\nThese models use annotation information as a prior or evidence structure. They do not by themselves establish that an annotation is causal. The empirical-Bayes and proposed multi-trait annotation extensions in the source drafts remain important technical directions, but they should be distinguished from currently implemented public wrappers."
+  },
+  {
+    "objectID": "notes/model_overview.html#sparse-mixture-priors-and-posterior-outputs",
+    "href": "notes/model_overview.html#sparse-mixture-priors-and-posterior-outputs",
+    "title": "Model Overview",
+    "section": "3 Sparse Mixture Priors and Posterior Outputs",
+    "text": "3 Sparse Mixture Priors and Posterior Outputs\nSparse Bayesian regression allows many markers to have exactly zero current effects while a subset belongs to active components. The inclusion indicator (d_{it}) records whether marker (i) is active for trait (t). Across MCMC samples:\n\ndm[i, t] estimates the posterior inclusion probability;\nbm[i, t] estimates the posterior mean marker effect;\nb and d may retain current or sampled marker states;\nvbs, vgs, and ves record variance-component traces;\ncovb, covg, and cove summarize effect, genetic, and residual covariance where available.\n\nAnnotation models change how prior mass or effect scale is distributed before and during these updates. They do not change the requirement that marker rows in statistics, LD, annotations, and posterior summaries remain aligned.\nThe full marker-update algebra and annotation-prior derivations are deferred to Technical summary statistics and Technical annotation priors."
+  },
+  {
+    "objectID": "notes/model_overview.html#practical-workflow-families",
+    "href": "notes/model_overview.html#practical-workflow-families",
+    "title": "Model Overview",
+    "section": "4 Practical Workflow Families",
+    "text": "4 Practical Workflow Families\nThe package’s current workflows can be read as five connected families.\n\n4.1 Direct BED Individual-Level ST-BLR\nUse stblr_bed_marker() when BED genotypes and aligned phenotypes remain available during fitting. Genotypes are read in blocks, and a separate LD artifact is not required.\n\n\n4.2 BED to Sufficient Statistics and Sparse LD\nUse bed_xtx_xty() to derive wy, ww, and yy from BED data and phenotypes. Use sparseLD_stream_CSR() to derive disk-backed sparse LD from the same markers, samples, allele frequencies, and scaling convention. This preparation workflow creates reusable inputs for CSR models.\n\n\n4.3 CSR Summary-Statistics ST-BLR\nUse stblr_csr() with the sufficient-statistics object and sparse-LD prefix. This path is appropriate when the prepared cross-products and LD files should be reused without repeated BED access during fitting.\n\n\n4.4 Annotation-Informed CSR ST-BLR\nStart from the same stats and ld_prefix, then add marker-aligned annotation information or marker-specific priors. Choose among fixed, learned, group, and SBayesRC-style wrappers according to the intended prior architecture.\n\n\n4.5 Simulation and Model Checking\nUse mtsim() to simulate multi-trait phenotypes, marker effects, and known shared or trait-specific signals. Use mtsim_annotation() to additionally simulate overlapping annotations, causal enrichment, and marker-specific prior values. Simulation outputs provide known truth for checking marker recovery, annotation summaries, model behavior, and BED-versus-CSR preparation.\nSimulation is a model-checking tool, not evidence that the same assumptions hold in real data."
+  },
+  {
+    "objectID": "notes/model_overview.html#model-and-function-map",
+    "href": "notes/model_overview.html#model-and-function-map",
+    "title": "Model Overview",
+    "section": "5 Model and Function Map",
+    "text": "5 Model and Function Map\n\n\n\nFunction\nPrimary role\nData representation\nTrait/prior emphasis\nRead next\n\n\n\n\nstblr_bed_marker()\nFit ST-BLR directly from selected PLINK BED markers and phenotypes.\nIndividual-level BED\nPlain/global ST-BLR; accepts one or more phenotype columns.\nSparse-LD and BED workflows, Single-trait models\n\n\nbed_xtx_xty()\nDerive marker-trait and phenotype sufficient statistics from BED data.\nBED to summary statistics\nPreparation, not a fitted model.\nData representations\n\n\nsparseLD_stream_CSR()\nConstruct disk-backed sparse LD from BED data.\nBED to CSR LD\nPreparation, not a fitted model.\nSparse-LD and BED workflows, Technical sparse LD and CSR\n\n\nstblr_csr()\nFit ST-BLR from stats and a CSR LD prefix.\nSummary statistics plus disk-backed sparse LD\nPlain/global ST-BLR.\nSingle-trait models\n\n\nstblr_csr_prior_annot()\nFit CSR ST-BLR with fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients.\nSummary statistics plus CSR LD and optional annotations\nFixed annotation-informed prior.\nAnnotation-informed models\n\n\nstblr_csr_learn_annot()\nLearn annotation effects on marker inclusion and optionally effect-variance multipliers during CSR fitting.\nSummary statistics plus CSR LD and annotations\nDirect learned annotation prior.\nAnnotation-informed models, Technical annotation priors\n\n\nstblr_csr_group_annot()\nFit CSR ST-BLR with group-level inclusion probabilities and variance multipliers.\nSummary statistics plus CSR LD and marker groups\nGroup prior.\nAnnotation-informed models\n\n\nstblr_csr_sbayesrc_generic()\nFit an SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. It is not an exact reproduction of GCTB SBayesRC as exposed by default.\nSummary statistics plus CSR LD and overlapping annotations\nProbit stick-breaking mixture prior.\nAnnotation-informed models, Technical SBayesRC-style annotations\n\n\nsblr()\nFit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models.\nSummary statistics plus marker cross-products/LD\nPlain single- or multi-trait model components.\nMulti-trait models\n\n\nmtsim()\nSimulate multi-trait phenotypes and marker effects with shared and trait-specific signals.\nSimulated matrix or Glist genotypes\nModel checking and multi-trait truth.\nWorkflows and outputs\n\n\nmtsim_annotation()\nSimulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors.\nSimulated matrix or Glist genotypes plus annotations\nAnnotation-model checking.\nAnnotation-informed models, Workflows and outputs"
+  },
+  {
+    "objectID": "notes/model_overview.html#implemented-models-and-research-extensions",
+    "href": "notes/model_overview.html#implemented-models-and-research-extensions",
+    "title": "Model Overview",
+    "section": "6 Implemented Models and Research Extensions",
+    "text": "6 Implemented Models and Research Extensions\nThe model/function map above describes current public interfaces. The archived technical drafts also contain deeper or proposed directions, including:\n\nempirical-Bayes loops that use first-stage marker summaries to estimate annotation-level priors for later genomic fits;\ndirect annotation-aware MTBLR sharing-model priors and covariance models;\nsparse annotation representations and sampler implementation sketches;\nwarm-started regional MTBLR workflows;\nreconstruction of cross-trait SSY and overlap matrices for joint summary-statistics models.\n\nThese ideas should be preserved because they explain the intended model landscape, but they must be labeled as implemented, experimental, or proposed when moved into maintained notes. Public function availability alone also does not guarantee that every model path has an equally polished end-to-end workflow."
+  },
+  {
+    "objectID": "notes/model_overview.html#what-is-not-guaranteed",
+    "href": "notes/model_overview.html#what-is-not-guaranteed",
+    "title": "Model Overview",
+    "section": "7 What Is Not Guaranteed",
+    "text": "7 What Is Not Guaranteed\n\nBED and CSR fits are not exactly equal. Under matched markers, rows, scaling, priors, and MCMC settings they should agree qualitatively, but sparse-LD approximation, update scheduling, floating-point precision, and Monte Carlo variation prevent exact equality.\nCSR disk internals are not a manual file-format API. Use package writers, readers, and model wrappers rather than editing row-pointer, column-index, value, or metadata files directly.\nAnnotation effects are not causal proof. Enrichment, learned prior coefficients, posterior inclusion, and shared genetic signals can generate hypotheses but do not identify causal biological mechanisms by themselves.\nShort workflow chains are not final inference. Demonstration settings establish object handoffs and model execution. Real analyses require longer chains, convergence assessment, sensitivity analysis, and posterior predictive checks."
+  },
+  {
+    "objectID": "notes/model_overview.html#how-to-read-these-notes",
+    "href": "notes/model_overview.html#how-to-read-these-notes",
+    "title": "Model Overview",
+    "section": "8 How to Read These Notes",
+    "text": "8 How to Read These Notes\nChoose the next note according to the question:\n\nTo understand what BED, sufficient statistics, sparse LD, yy, and SSY represent, read Data representations.\nTo prepare aligned BED-derived statistics and disk-backed CSR LD, read Sparse-LD and BED workflows.\nTo understand plain BED and CSR ST-BLR models, read Single-trait models.\nTo understand joint effects, covariance, trait sharing, and sample overlap, read Multi-trait models.\nTo choose among fixed, group, learned, empirical-Bayes, and SBayesRC-style priors, read Annotation-informed models.\nTo run workflows and interpret compact fit summaries, read Workflows and outputs.\n\nFor full derivations and implementation-sensitive contracts, use the technical appendices:\n\nTechnical summary statistics\nTechnical multi-trait sample overlap\nTechnical sparse LD and CSR\nTechnical annotation priors\nTechnical SBayesRC-style annotations"
+  },
+  {
+    "objectID": "notes/single_trait_models.html",
+    "href": "notes/single_trait_models.html",
+    "title": "Single-Trait Models",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis note will explain single-trait BLR/ST-BLR models, prior interpretation, and the distinction between direct BED and summary-statistics CSR fitting."
+  },
+  {
+    "objectID": "notes/single_trait_models.html#single-trait-blr-model",
+    "href": "notes/single_trait_models.html#single-trait-blr-model",
+    "title": "Single-Trait Models",
+    "section": "1 Single-Trait BLR Model",
+    "text": "1 Single-Trait BLR Model"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#global-bayesc-style-prior",
+    "href": "notes/single_trait_models.html#global-bayesc-style-prior",
+    "title": "Single-Trait Models",
+    "section": "2 Global BayesC-Style Prior",
+    "text": "2 Global BayesC-Style Prior"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#individual-level-bed-workflow",
+    "href": "notes/single_trait_models.html#individual-level-bed-workflow",
+    "title": "Single-Trait Models",
+    "section": "3 Individual-Level BED Workflow",
+    "text": "3 Individual-Level BED Workflow"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#summary-statistics-csr-workflow",
+    "href": "notes/single_trait_models.html#summary-statistics-csr-workflow",
+    "title": "Single-Trait Models",
+    "section": "4 Summary-Statistics CSR Workflow",
+    "text": "4 Summary-Statistics CSR Workflow"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#scheduled-sparse-updates-and-runtime-controls",
+    "href": "notes/single_trait_models.html#scheduled-sparse-updates-and-runtime-controls",
+    "title": "Single-Trait Models",
+    "section": "5 Scheduled Sparse Updates and Runtime Controls",
+    "text": "5 Scheduled Sparse Updates and Runtime Controls"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#posterior-outputs-and-diagnostics",
+    "href": "notes/single_trait_models.html#posterior-outputs-and-diagnostics",
+    "title": "Single-Trait Models",
+    "section": "6 Posterior Outputs and Diagnostics",
+    "text": "6 Posterior Outputs and Diagnostics"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#transition-from-plain-to-annotation-informed-priors",
+    "href": "notes/single_trait_models.html#transition-from-plain-to-annotation-informed-priors",
+    "title": "Single-Trait Models",
+    "section": "7 Transition From Plain to Annotation-Informed Priors",
+    "text": "7 Transition From Plain to Annotation-Informed Priors"
+  },
+  {
+    "objectID": "notes/single_trait_models.html#related-notes",
+    "href": "notes/single_trait_models.html#related-notes",
+    "title": "Single-Trait Models",
+    "section": "8 Related Notes",
+    "text": "8 Related Notes\n\nSparse-LD and BED workflows\nAnnotation-informed models\nTechnical summary statistics\nTechnical sparse-LD CSR\nTechnical annotation priors"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html",
+    "href": "notes/technical_annotation_priors.html",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will preserve the detailed derivations, implementations, uncertainty considerations, and proposed extensions for annotation-informed STBLR and MTBLR priors."
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#annotation-level-posterior-summaries-and-overlap",
+    "href": "notes/technical_annotation_priors.html#annotation-level-posterior-summaries-and-overlap",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "1 Annotation-Level Posterior Summaries and Overlap",
+    "text": "1 Annotation-Level Posterior Summaries and Overlap"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#pip-enrichment-and-variance-attribution",
+    "href": "notes/technical_annotation_priors.html#pip-enrichment-and-variance-attribution",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "2 PIP Enrichment and Variance Attribution",
+    "text": "2 PIP Enrichment and Variance Attribution"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#empirical-bayes-inclusion-and-variance-priors",
+    "href": "notes/technical_annotation_priors.html#empirical-bayes-inclusion-and-variance-priors",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "3 Empirical-Bayes Inclusion and Variance Priors",
+    "text": "3 Empirical-Bayes Inclusion and Variance Priors"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#marker-specific-prior-scale-construction",
+    "href": "notes/technical_annotation_priors.html#marker-specific-prior-scale-construction",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "4 Marker-Specific Prior Scale Construction",
+    "text": "4 Marker-Specific Prior Scale Construction"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#full-stblr-marker-update-derivation-with-marker-specific-priors",
+    "href": "notes/technical_annotation_priors.html#full-stblr-marker-update-derivation-with-marker-specific-priors",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "5 Full STBLR Marker-Update Derivation With Marker-Specific Priors",
+    "text": "5 Full STBLR Marker-Update Derivation With Marker-Specific Priors"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#annotation-specific-mtblr-covariance-and-sharing-model-priors",
+    "href": "notes/technical_annotation_priors.html#annotation-specific-mtblr-covariance-and-sharing-model-priors",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "6 Annotation-Specific MTBLR Covariance and Sharing-Model Priors",
+    "text": "6 Annotation-Specific MTBLR Covariance and Sharing-Model Priors"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#annotation-level-stblrmtblr-as-a-prior-learning-stage",
+    "href": "notes/technical_annotation_priors.html#annotation-level-stblrmtblr-as-a-prior-learning-stage",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "7 Annotation-Level STBLR/MTBLR as a Prior-Learning Stage",
+    "text": "7 Annotation-Level STBLR/MTBLR as a Prior-Learning Stage"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#direct-hierarchical-annotation-models",
+    "href": "notes/technical_annotation_priors.html#direct-hierarchical-annotation-models",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "8 Direct Hierarchical Annotation Models",
+    "text": "8 Direct Hierarchical Annotation Models"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#fixed-versus-jointly-updated-annotation-coefficients",
+    "href": "notes/technical_annotation_priors.html#fixed-versus-jointly-updated-annotation-coefficients",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "9 Fixed Versus Jointly Updated Annotation Coefficients",
+    "text": "9 Fixed Versus Jointly Updated Annotation Coefficients"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#proposed-c-changes-and-sparse-annotation-representation",
+    "href": "notes/technical_annotation_priors.html#proposed-c-changes-and-sparse-annotation-representation",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "10 Proposed C++ Changes and Sparse Annotation Representation",
+    "text": "10 Proposed C++ Changes and Sparse Annotation Representation"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#centering-shrinkage-caps-cross-fitting-and-uncertainty",
+    "href": "notes/technical_annotation_priors.html#centering-shrinkage-caps-cross-fitting-and-uncertainty",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "11 Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty",
+    "text": "11 Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#warm-started-regional-mtblr",
+    "href": "notes/technical_annotation_priors.html#warm-started-regional-mtblr",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "12 Warm-Started Regional MTBLR",
+    "text": "12 Warm-Started Regional MTBLR"
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#related-notes-and-sources",
+    "href": "notes/technical_annotation_priors.html#related-notes-and-sources",
+    "title": "Technical Appendix: Annotation Priors",
+    "section": "13 Related Notes and Sources",
+    "text": "13 Related Notes and Sources\n\nAnnotation-informed models\nMulti-trait models\nWorkflows and outputs\nTechnical SBayesRC-style annotations\nArchived annotation-prior draft"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html",
+    "href": "notes/technical_sbayesrc_annotations.html",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will explain the implemented SBayesRC-style annotation-dependent BayesR prior, generalized probit stick-breaking construction, and diagnostic helpers in full mathematical detail. The core prior family is closely aligned with the published SBayesRC prior structure, but the exposed default gamma grid and CSR sparse-LD likelihood differ from the published GCTB implementation."
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#mixture-components-and-gamma-multipliers",
+    "href": "notes/technical_sbayesrc_annotations.html#mixture-components-and-gamma-multipliers",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "1 Mixture Components and Gamma Multipliers",
+    "text": "1 Mixture Components and Gamma Multipliers"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#annotation-coefficient-matrix-alpha",
+    "href": "notes/technical_sbayesrc_annotations.html#annotation-coefficient-matrix-alpha",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "2 Annotation Coefficient Matrix alpha",
+    "text": "2 Annotation Coefficient Matrix alpha"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#generalized-probit-stick-breaking-probabilities",
+    "href": "notes/technical_sbayesrc_annotations.html#generalized-probit-stick-breaking-probabilities",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "3 Generalized Probit Stick-Breaking Probabilities",
+    "text": "3 Generalized Probit Stick-Breaking Probabilities"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#marker-predictors-a",
+    "href": "notes/technical_sbayesrc_annotations.html#marker-predictors-a",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "4 Marker Predictors (A)",
+    "text": "4 Marker Predictors (A)"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#annotation--and-marker-level-expected-gamma",
+    "href": "notes/technical_sbayesrc_annotations.html#annotation--and-marker-level-expected-gamma",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "5 Annotation- and Marker-Level Expected Gamma",
+    "text": "5 Annotation- and Marker-Level Expected Gamma"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#initialization-with-make_sbayesrc_alpha_init",
+    "href": "notes/technical_sbayesrc_annotations.html#initialization-with-make_sbayesrc_alpha_init",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "6 Initialization With make_sbayesrc_alpha_init()",
+    "text": "6 Initialization With make_sbayesrc_alpha_init()"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#fit-outputs-alpha-sigmasqalpha-comp_prob-and-ncomp",
+    "href": "notes/technical_sbayesrc_annotations.html#fit-outputs-alpha-sigmasqalpha-comp_prob-and-ncomp",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "7 Fit Outputs: alpha, sigmaSqAlpha, comp_prob, and ncomp",
+    "text": "7 Fit Outputs: alpha, sigmaSqAlpha, comp_prob, and ncomp"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#diagnostic-helper-contracts-and-compact-summaries",
+    "href": "notes/technical_sbayesrc_annotations.html#diagnostic-helper-contracts-and-compact-summaries",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "8 Diagnostic Helper Contracts and Compact Summaries",
+    "text": "8 Diagnostic Helper Contracts and Compact Summaries"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#interpretation-and-limits",
+    "href": "notes/technical_sbayesrc_annotations.html#interpretation-and-limits",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "9 Interpretation and Limits",
+    "text": "9 Interpretation and Limits"
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#related-notes-and-sources",
+    "href": "notes/technical_sbayesrc_annotations.html#related-notes-and-sources",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "10 Related Notes and Sources",
+    "text": "10 Related Notes and Sources\n\nAnnotation-informed models\nWorkflows and outputs\nTechnical annotation priors\nComplete annotation workflow"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html",
+    "href": "notes/technical_summary_statistics.html",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "",
+    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will preserve the full algebra connecting individual-level models to summary-statistic residual calculations and derived genomic quantities."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#summary-statistic-notation-wy-ww-ld-and-r",
+    "href": "notes/technical_summary_statistics.html#summary-statistic-notation-wy-ww-ld-and-r",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "1 Summary-Statistic Notation: wy, ww, LD, and r",
+    "text": "1 Summary-Statistic Notation: wy, ww, LD, and r"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#identity-xxb-wy-r",
+    "href": "notes/technical_summary_statistics.html#identity-xxb-wy-r",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "2 Identity (X^Xb = wy-r)",
+    "text": "2 Identity (X^Xb = wy-r)"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#genomic-variance-and-covariance-from-residual-scores",
+    "href": "notes/technical_summary_statistics.html#genomic-variance-and-covariance-from-residual-scores",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "3 Genomic Variance and Covariance From Residual Scores",
+    "text": "3 Genomic Variance and Covariance From Residual Scores"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#set-specific-and-weighted-genomic-variance-contributions",
+    "href": "notes/technical_summary_statistics.html#set-specific-and-weighted-genomic-variance-contributions",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "4 Set-Specific and Weighted Genomic Variance Contributions",
+    "text": "4 Set-Specific and Weighted Genomic Variance Contributions"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#assumptions-and-numerical-caveats",
+    "href": "notes/technical_summary_statistics.html#assumptions-and-numerical-caveats",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "5 Assumptions and Numerical Caveats",
+    "text": "5 Assumptions and Numerical Caveats"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#r-helper-implementations-and-package-status",
+    "href": "notes/technical_summary_statistics.html#r-helper-implementations-and-package-status",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "6 R Helper Implementations and Package Status",
+    "text": "6 R Helper Implementations and Package Status"
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#related-notes",
+    "href": "notes/technical_summary_statistics.html#related-notes",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "7 Related Notes",
+    "text": "7 Related Notes\n\nData representations\nSparse-LD and BED workflows\nSingle-trait models\nTechnical sparse-LD CSR"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "",
+    "text": "In sparse Bayesian regression models fitted to genome-wide summary statistics, single-trait Bayesian linear regression (STBLR) can be used as a stable first-stage model. The resulting posterior marker summaries, especially posterior mean marker effects and posterior inclusion probabilities, can then be used to inform a second-stage multi-trait Bayesian linear regression (MTBLR) model.\nThe main idea is to use first-stage posterior summaries together with marker annotations or marker sets to construct annotation-informed prior parameters. These parameters can then be used in later STBLR or MTBLR analyses.\nTypical first-stage outputs are:\n\\[\n\\hat b_{it} = E(b_{it} \\mid \\text{data}),\n\\]\nand\n\\[\n\\widehat{dm}_{it} = P(d_{it}=1 \\mid \\text{data}),\n\\]\nwhere marker \\(i = 1, \\ldots, m\\) and trait \\(t = 1, \\ldots, T\\).\nLet \\(A\\) denote an annotation matrix:\n\\[\nA_{ik} =\n\\begin{cases}\n1, & \\text{if marker } i \\text{ belongs to annotation } k, \\\\\n0, & \\text{otherwise}.\n\\end{cases}\n\\]\nThe annotation columns may overlap. For example, a marker may be coding, close to a gene, and located inside a QTL region at the same time.\nThe goal is to derive annotation-specific or marker-specific prior parameters such as:\n\\[\n\\pi_{k,t}, \\qquad \\sigma^2_{b,k,t}, \\qquad B_k, \\qquad \\pi_{k,m},\n\\]\nwhere \\(k\\) indexes an annotation class or marker set, \\(t\\) indexes a trait, and \\(m\\) indexes a multi-trait sharing model."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "3.1 R implementation",
+    "text": "3.1 R implementation\nestimate_vg_by_set &lt;- function(fit, sets, n) {\n  b &lt;- fit$bm\n  q &lt;- fit$wy - fit$r\n\n  out &lt;- matrix(NA_real_, nrow = length(sets), ncol = ncol(b))\n  rownames(out) &lt;- names(sets)\n  colnames(out) &lt;- colnames(b)\n\n  for (s in seq_along(sets)) {\n    idx &lt;- sets[[s]]\n\n    for (t in seq_len(ncol(b))) {\n      out[s, t] &lt;- sum(b[idx, t] * q[idx, t]) / n\n    }\n  }\n\n  out\n}\nA proportion of total genomic variance can be computed as\nvg_set &lt;- estimate_vg_by_set(fitST, sets, n)\nprop_of_vg &lt;- sweep(vg_set, 2, colMeans(fitST$vgs), \"/\")\nIf phenotypes are standardized to variance approximately one, the values themselves can also be interpreted as approximate proportions of phenotypic variance."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-1",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-1",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "4.1 R implementation",
+    "text": "4.1 R implementation\nestimate_pip_enrichment &lt;- function(dm, sets) {\n  out &lt;- matrix(NA_real_, nrow = length(sets), ncol = ncol(dm))\n  rownames(out) &lt;- names(sets)\n  colnames(out) &lt;- colnames(dm)\n\n  all_idx &lt;- seq_len(nrow(dm))\n\n  for (s in seq_along(sets)) {\n    idx &lt;- sets[[s]]\n    bg &lt;- setdiff(all_idx, idx)\n\n    for (t in seq_len(ncol(dm))) {\n      mean_in &lt;- mean(dm[idx, t])\n      mean_bg &lt;- mean(dm[bg, t])\n      out[s, t] &lt;- mean_in / mean_bg\n    }\n  }\n\n  out\n}\nThis is not a variance decomposition. It measures whether posterior inclusion probability is enriched in a marker set."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-2",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-2",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "5.1 R implementation",
+    "text": "5.1 R implementation\nestimate_weighted_vg_by_set &lt;- function(fit, sets, n) {\n  b &lt;- fit$bm\n  dm &lt;- fit$dm\n  q &lt;- fit$wy - fit$r\n\n  out &lt;- matrix(NA_real_, nrow = length(sets), ncol = ncol(b))\n  rownames(out) &lt;- names(sets)\n  colnames(out) &lt;- colnames(b)\n\n  for (s in seq_along(sets)) {\n    idx &lt;- sets[[s]]\n\n    for (t in seq_len(ncol(b))) {\n      out[s, t] &lt;- sum(dm[idx, t] * b[idx, t] * q[idx, t]) / n\n    }\n  }\n\n  out\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-linear-model-on-variance-contribution",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-linear-model-on-variance-contribution",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "6.1 R implementation: linear model on variance contribution",
+    "text": "6.1 R implementation: linear model on variance contribution\nannotation_lm_vg &lt;- function(fit, annot, trait, n) {\n  b &lt;- fit$bm[, trait]\n  q &lt;- fit$wy[, trait] - fit$r[, trait]\n\n  y &lt;- b * q / n\n  X &lt;- as.data.frame(annot)\n\n  lm(y ~ ., data = X)\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-weighted-linear-model",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-weighted-linear-model",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "6.2 R implementation: weighted linear model",
+    "text": "6.2 R implementation: weighted linear model\nannotation_lm_vg_weighted &lt;- function(fit, annot, trait, n, eps = 1e-6) {\n  b &lt;- fit$bm[, trait]\n  dm &lt;- fit$dm[, trait]\n  q &lt;- fit$wy[, trait] - fit$r[, trait]\n\n  y &lt;- b * q / n\n  w &lt;- pmax(dm, eps)\n  X &lt;- as.data.frame(annot)\n\n  lm(y ~ ., data = X, weights = w)\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-fractional-response-model-for-pip",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-fractional-response-model-for-pip",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "6.3 R implementation: fractional response model for PIP",
+    "text": "6.3 R implementation: fractional response model for PIP\nannotation_glm_dm &lt;- function(dm, annot, trait, eps = 1e-6) {\n  p &lt;- pmin(pmax(dm[, trait], eps), 1 - eps)\n  X &lt;- as.data.frame(annot)\n\n  glm(p ~ ., data = X, family = quasibinomial())\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-3",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-3",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "8.1 R implementation",
+    "text": "8.1 R implementation\nestimate_annotation_pi &lt;- function(dm, sets, alpha = 1) {\n  nt &lt;- ncol(dm)\n  K &lt;- length(sets)\n\n  pi_ann &lt;- matrix(NA_real_, K, nt)\n  rownames(pi_ann) &lt;- names(sets)\n  colnames(pi_ann) &lt;- colnames(dm)\n\n  for (k in seq_along(sets)) {\n    idx &lt;- sets[[k]]\n\n    for (t in seq_len(nt)) {\n      pi_ann[k, t] &lt;- (alpha + sum(dm[idx, t])) / (2 * alpha + length(idx))\n    }\n  }\n\n  pmin(pmax(pi_ann, 1e-8), 1 - 1e-8)\n}\nFor marker-specific priors, assign each marker to an annotation or compute a marker-specific value from overlapping annotations."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-4",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-4",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "9.1 R implementation",
+    "text": "9.1 R implementation\nestimate_annotation_vb &lt;- function(fit, sets, n, min_eff = 1, shrink = 0.5) {\n  b  &lt;- fit$bm\n  dm &lt;- fit$dm\n  q  &lt;- fit$wy - fit$r\n\n  nt &lt;- ncol(b)\n  K &lt;- length(sets)\n\n  vb_ann &lt;- matrix(NA_real_, K, nt)\n  vg_ann &lt;- matrix(NA_real_, K, nt)\n  meff   &lt;- matrix(NA_real_, K, nt)\n\n  rownames(vb_ann) &lt;- rownames(vg_ann) &lt;- rownames(meff) &lt;- names(sets)\n  colnames(vb_ann) &lt;- colnames(vg_ann) &lt;- colnames(meff) &lt;- colnames(b)\n\n  for (k in seq_along(sets)) {\n    idx &lt;- sets[[k]]\n\n    for (t in seq_len(nt)) {\n      vg &lt;- sum(b[idx, t] * q[idx, t]) / n\n      neff &lt;- sum(dm[idx, t])\n\n      vg_ann[k, t] &lt;- max(vg, 0)\n      meff[k, t] &lt;- neff\n      vb_ann[k, t] &lt;- max(vg_ann[k, t] / max(neff, min_eff), 1e-12)\n    }\n  }\n\n  # Shrink annotation-specific scales toward a global scale.\n  vb_global &lt;- colMeans(vb_ann, na.rm = TRUE)\n\n  for (t in seq_len(nt)) {\n    vb_ann[, t] &lt;- shrink * vb_ann[, t] + (1 - shrink) * vb_global[t]\n  }\n\n  list(vb = vb_ann, vg = vg_ann, meff = meff)\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-5",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-5",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "10.1 R implementation",
+    "text": "10.1 R implementation\nderive_marker_vb_from_annotation_model &lt;- function(global_vb, annot, gamma,\n                                                   cap = c(0.25, 4)) {\n  # annot: m x K annotation matrix\n  # gamma: K x nt annotation coefficients on log scale\n  # global_vb: length nt\n\n  eta &lt;- annot %*% gamma\n  vb_marker &lt;- matrix(NA_real_, nrow(annot), ncol(gamma))\n\n  for (t in seq_len(ncol(gamma))) {\n    mult &lt;- exp(eta[, t])\n    mult &lt;- pmin(pmax(mult, cap[1]), cap[2])\n    vb_marker[, t] &lt;- global_vb[t] * mult\n  }\n\n  colnames(vb_marker) &lt;- colnames(gamma)\n  vb_marker\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-6",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-6",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "12.1 R implementation",
+    "text": "12.1 R implementation\nestimate_annotation_B &lt;- function(bm, dm, sets, ridge = 1e-8, shrink = 0.5) {\n  nt &lt;- ncol(bm)\n  K &lt;- length(sets)\n\n  B_list &lt;- vector(\"list\", K)\n  names(B_list) &lt;- names(sets)\n\n  # Global covariance from posterior mean effects.\n  w_global &lt;- pmax(apply(dm, 1, max), 1e-6)\n  B_global &lt;- crossprod(bm * sqrt(w_global)) / sum(w_global)\n  B_global &lt;- B_global + diag(ridge, nt)\n\n  for (k in seq_along(sets)) {\n    idx &lt;- sets[[k]]\n    w &lt;- pmax(apply(dm[idx, , drop = FALSE], 1, max), 1e-6)\n\n    Bk &lt;- crossprod(bm[idx, , drop = FALSE] * sqrt(w)) / sum(w)\n    Bk &lt;- shrink * Bk + (1 - shrink) * B_global\n    Bk &lt;- 0.5 * (Bk + t(Bk))\n    diag(Bk) &lt;- pmax(diag(Bk), ridge)\n\n    B_list[[k]] &lt;- Bk\n  }\n\n  B_list\n}"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-7",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#r-implementation-7",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "13.1 R implementation",
+    "text": "13.1 R implementation\nestimate_annotation_model_pi &lt;- function(dm, models, sets, alpha = 1) {\n  M &lt;- nrow(dm)\n  nt &lt;- ncol(dm)\n  K &lt;- length(sets)\n  nmodels &lt;- length(models)\n\n  W &lt;- matrix(0, M, nmodels)\n\n  for (j in seq_len(nmodels)) {\n    model &lt;- models[[j]]\n    p &lt;- rep(1, M)\n\n    for (t in seq_len(nt)) {\n      dmt &lt;- pmin(pmax(dm[, t], 1e-6), 1 - 1e-6)\n      p &lt;- p * if (model[t] == 1) dmt else (1 - dmt)\n    }\n\n    W[, j] &lt;- p\n  }\n\n  pi_ann &lt;- matrix(NA_real_, K, nmodels)\n  rownames(pi_ann) &lt;- names(sets)\n  colnames(pi_ann) &lt;- sapply(models, paste, collapse = \"_\")\n\n  for (k in seq_along(sets)) {\n    idx &lt;- sets[[k]]\n    counts &lt;- colSums(W[idx, , drop = FALSE]) + alpha\n    pi_ann[k, ] &lt;- counts / sum(counts)\n  }\n\n  pi_ann\n}\nIn the MTBLR marker update, a global model prior\nloglik[k] = std::log(pi[k]) - 0.5 * logdet + 0.5 * quad;\ncan be replaced by an annotation-specific model prior:\nloglik[k] = std::log(pi_annotation[ann_i][k]) - 0.5 * logdet + 0.5 * quad;\nor a marker-specific prior:\nloglik[k] = std::log(pi_marker(i, k)) - 0.5 * logdet + 0.5 * quad;"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-1-stblr-genome-wide-screening",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-1-stblr-genome-wide-screening",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "15.1 Stage 1: STBLR genome-wide screening",
+    "text": "15.1 Stage 1: STBLR genome-wide screening\nRun STBLR for each trait to obtain:\n\\[\n\\hat b_{it}, \\qquad \\widehat{dm}_{it}, \\qquad r_{it}.\n\\]\nThese are used to estimate annotation effects, variance contributions, and sharing patterns."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-2-annotation-summary-and-decomposition",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-2-annotation-summary-and-decomposition",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "15.2 Stage 2: Annotation summary and decomposition",
+    "text": "15.2 Stage 2: Annotation summary and decomposition\nCompute:\n\\[\n\\widehat V_{G,k,t},\n\\]\nPIP enrichment,\n\\[\n\\text{enrichment}_{k,t},\n\\]\nand, if desired, fit annotation-level STBLR or MTBLR models."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-3-derive-prior-parameters",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-3-derive-prior-parameters",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "15.3 Stage 3: Derive prior parameters",
+    "text": "15.3 Stage 3: Derive prior parameters\nEstimate:\n\\[\n\\pi_{k,t},\n\\]\n\\[\n\\sigma^2_{b,k,t},\n\\]\n\\[\nB_k,\n\\]\nand\n\\[\n\\pi_{k,m}.\n\\]\nFor overlapping annotations, derive marker-specific priors using log-linear or logistic annotation models."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-4-annotation-informed-stblr-or-mtblr",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#stage-4-annotation-informed-stblr-or-mtblr",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "15.4 Stage 4: Annotation-informed STBLR or MTBLR",
+    "text": "15.4 Stage 4: Annotation-informed STBLR or MTBLR\nUse the derived priors in a second-stage model:\n\\[\nb_{it} \\sim (1-\\pi_{it})\\delta_0 + \\pi_{it}N(0, v_{b,it})\n\\]\nfor STBLR, or\n\\[\n\\mathbf b_i \\sim \\sum_m \\pi_{i,m} N_m(0, B_i)\n\\]\nfor MTBLR."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#first-stage-genomic-fit",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#first-stage-genomic-fit",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.1 First-stage genomic fit",
+    "text": "20.1 First-stage genomic fit\nThe first-stage genomic model is fitted using the ordinary summary-statistic inputs:\n\\[\nwy, \\quad ww, \\quad yy, \\quad LD.\n\\]\nIt produces marker-level posterior summaries:\n\\[\n\\hat b_{it}, \\qquad dm_{it}, \\qquad r_{it}, \\qquad q_{it}=wy_{it}-r_{it}.\n\\]\nHere \\(\\hat b_{it}\\) is the posterior mean marker effect, \\(dm_{it}\\) is the posterior inclusion probability, and \\(q_{it}\\) is the fitted marker score implied by the current posterior mean effects.\nUseful marker-level response matrices include:\n\\[\nS^{(b)}_{it} = \\hat b_{it},\n\\]\n\\[\nS^{(pip)}_{it} = \\operatorname{logit}(dm_{it}),\n\\]\nand\n\\[\nS^{(vg)}_{it}\n=\n\\frac{\\hat b_{it}(wy_{it}-r_{it})}{n}.\n\\]\nThe third response is LD-aware and directly related to the marker-level contribution to genomic variance.\nIn R:\nS_b &lt;- fit0$bm\nS_pip &lt;- qlogis(pmin(pmax(fit0$dm, 1e-6), 1 - 1e-6))\nS_vg &lt;- fit0$bm * (fit0$wy - fit0$r) / n"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#annotation-level-stblr",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#annotation-level-stblr",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.2 Annotation-level STBLR",
+    "text": "20.2 Annotation-level STBLR\nLet \\(A\\) be the marker-by-annotation matrix. A single-trait annotation model is:\n\\[\nS_t = A\\gamma_t + e_t,\n\\]\nwhere \\(S_t\\) is one column of a marker-level response matrix, and \\(\\gamma_t\\) is a vector of annotation effects for trait \\(t\\).\nUsing a BayesC-like prior,\n\\[\n\\gamma_{kt} = \\delta_{kt}\\alpha_{kt},\n\\]\n\\[\n\\delta_{kt} \\sim \\operatorname{Bernoulli}(\\pi_{\\gamma,t}),\n\\]\nand\n\\[\n\\alpha_{kt} \\mid \\delta_{kt}=1\n\\sim\nN(0, \\sigma^2_{\\gamma,t}).\n\\]\nThe annotation-level STBLR posterior gives:\n\\[\nE(\\gamma_{kt} \\mid S),\n\\]\nand\n\\[\nP(\\delta_{kt}=1 \\mid S).\n\\]\nThese quantities measure whether annotation \\(k\\) explains marker-level evidence for trait \\(t\\), conditional on other overlapping annotations."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#annotation-level-mtblr",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#annotation-level-mtblr",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.3 Annotation-level MTBLR",
+    "text": "20.3 Annotation-level MTBLR\nFor multiple traits, use:\n\\[\nS = A\\Gamma + E,\n\\]\nwhere \\(S\\) is an \\(m \\times T\\) marker-level response matrix and \\(\\Gamma\\) is a \\(K \\times T\\) matrix of annotation effects.\nFor annotation \\(k\\):\n\\[\n\\boldsymbol{\\gamma}_k\n=\n(\\gamma_{k1},\\ldots,\\gamma_{kT})^\\top.\n\\]\nAn MTBLR prior can be used to infer annotation sharing patterns:\n\\[\n\\boldsymbol{\\gamma}_k\n\\sim\n\\sum_m \\pi_{\\gamma,m} N_m(0, B_\\gamma),\n\\]\nwhere \\(m\\) indexes trait-sharing models such as:\n000, 100, 010, 001, 110, 101, 011, 111\nfor three traits. The posterior model probabilities indicate whether an annotation contributes to one trait, several traits, or all traits."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-marker-specific-inclusion-priors",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-marker-specific-inclusion-priors",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.4 Deriving marker-specific inclusion priors",
+    "text": "20.4 Deriving marker-specific inclusion priors\nFrom an annotation model fitted to \\(S^{(pip)}\\), construct a marker-specific annotation score:\n\\[\n\\eta_{it}\n=\n\\eta_{0t} + \\sum_k A_{ik}\\hat\\gamma_{kt}.\n\\]\nThen transform it to a marker-specific prior inclusion probability:\n\\[\n\\pi_{it}\n=\n\\operatorname{logit}^{-1}(\\eta_{it}).\n\\]\nThe annotation contribution should usually be centered so the genome-wide mean prior inclusion probability remains close to the original base rate.\nderive_pi_marker &lt;- function(A, gamma, base_pi, cap = c(1e-8, 0.05)) {\n  A &lt;- as.matrix(A)\n  gamma &lt;- as.matrix(gamma)\n\n  eta &lt;- A %*% gamma\n\n  # Center annotation contribution so the genome-wide mean stays near base_pi.\n  eta &lt;- sweep(eta, 2, colMeans(eta, na.rm = TRUE), \"-\")\n  eta &lt;- sweep(eta, 2, qlogis(base_pi), \"+\")\n\n  pi_marker &lt;- plogis(eta)\n  pmin(pmax(pi_marker, cap[1]), cap[2])\n}\nA reasonable base rate is:\nbase_pi &lt;- colMeans(fit0$dm)\nThen:\npi_marker &lt;- derive_pi_marker(\n  A = annot,\n  gamma = fitAnn_pip$bm,\n  base_pi = base_pi,\n  cap = c(1e-8, 0.05)\n)\nIn the next genomic STBLR, marker \\(i\\) and trait \\(t\\) use \\(\\pi_{it}\\) instead of a global \\(\\pi_t\\)."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-marker-specific-prior-effect-variances",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-marker-specific-prior-effect-variances",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.5 Deriving marker-specific prior effect variances",
+    "text": "20.5 Deriving marker-specific prior effect variances\nFrom an annotation model fitted to \\(S^{(vg)}\\) or \\(S^{(b^2)}\\), construct marker-specific prior effect variances:\n\\[\n\\log v_{b,it}\n=\n\\log v_{b,t}^{global}\n+\n\\sum_k A_{ik}\\hat\\theta_{kt}.\n\\]\nThus:\n\\[\nv_{b,it}\n=\nv_{b,t}^{global}\n\\exp\\left(\\sum_k A_{ik}\\hat\\theta_{kt}\\right).\n\\]\nAgain, the annotation contribution should be centered and capped.\nderive_vb_marker &lt;- function(A, theta, global_vb, cap = c(0.25, 4)) {\n  A &lt;- as.matrix(A)\n  theta &lt;- as.matrix(theta)\n\n  eta &lt;- A %*% theta\n  eta &lt;- sweep(eta, 2, colMeans(eta, na.rm = TRUE), \"-\")\n\n  mult &lt;- exp(eta)\n  mult &lt;- pmin(pmax(mult, cap[1]), cap[2])\n\n  vb_marker &lt;- sweep(mult, 2, global_vb, \"*\")\n  pmax(vb_marker, 1e-12)\n}\nFor example:\nglobal_vb &lt;- colMeans(fit0$vbs)\n\nvb_marker &lt;- derive_vb_marker(\n  A = annot,\n  theta = fitAnn_vg$bm,\n  global_vb = global_vb,\n  cap = c(0.25, 4)\n)\nThese marker-specific prior variances can be used in the next genomic STBLR by replacing the global \\(v_b\\) with \\(v_{b,it}\\)."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-mtblr-marker-specific-sharing-model-priors",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-mtblr-marker-specific-sharing-model-priors",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.6 Deriving MTBLR marker-specific sharing-model priors",
+    "text": "20.6 Deriving MTBLR marker-specific sharing-model priors\nFor MTBLR, annotation-level MTBLR can be used to derive marker-specific priors over sharing models.\nLet \\(\\eta_{km}\\) be the annotation-level effect of annotation \\(k\\) on sharing model \\(m\\). Then for marker \\(i\\):\n\\[\n\\log \\pi_{im}\n=\n\\log \\pi_m^{global}\n+\n\\sum_k A_{ik}\\eta_{km}.\n\\]\nNormalize across models:\n\\[\n\\pi_{im}\n=\n\\frac{\\exp(\\log \\pi_{im})}\n{\\sum_l \\exp(\\log \\pi_{il})}.\n\\]\nderive_model_pi_marker &lt;- function(A, eta_model, base_pi, eps = 1e-12) {\n  A &lt;- as.matrix(A)\n  eta_model &lt;- as.matrix(eta_model)\n\n  log_pi &lt;- A %*% eta_model\n  log_pi &lt;- sweep(log_pi, 2, colMeans(log_pi, na.rm = TRUE), \"-\")\n  log_pi &lt;- sweep(log_pi, 2, log(pmax(base_pi, eps)), \"+\")\n\n  log_pi &lt;- sweep(log_pi, 1, apply(log_pi, 1, max), \"-\")\n  pi_marker &lt;- exp(log_pi)\n  pi_marker &lt;- sweep(pi_marker, 1, rowSums(pi_marker), \"/\")\n\n  pmax(pi_marker, eps)\n}\nIn the genomic MTBLR C++ marker sampler, this changes the model prior term from:\nloglik[k] = std::log(pi[k]) - 0.5 * logdet + 0.5 * quad;\nto:\nloglik[k] = std::log(pi_marker(i, k)) - 0.5 * logdet + 0.5 * quad;\nThis allows annotations to influence whether a marker is more likely to be trait-specific or pleiotropic."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-a-global-mtblr-prior-covariance-matrix-from-annotations",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#deriving-a-global-mtblr-prior-covariance-matrix-from-annotations",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.7 Deriving a global MTBLR prior covariance matrix from annotations",
+    "text": "20.7 Deriving a global MTBLR prior covariance matrix from annotations\nAn annotation-level MTBLR also gives annotation effect estimates across traits. These can be used to estimate a global prior covariance matrix for the next genomic MTBLR run.\nLet \\(\\hat\\Gamma\\) be the matrix of annotation posterior mean effects. A weighted covariance estimate is:\n\\[\nB_{ann}\n=\n\\frac{\\sum_k w_k \\hat{\\boldsymbol\\gamma}_k\\hat{\\boldsymbol\\gamma}_k^\\top}\n{\\sum_k w_k},\n\\]\nwhere \\(w_k\\) can be an annotation-level posterior inclusion weight, for example:\n\\[\nw_k = \\max_t dm^{ann}_{kt}.\n\\]\nestimate_B_from_annotation_model &lt;- function(gamma, dm, ridge = 1e-8) {\n  gamma &lt;- as.matrix(gamma)\n  w &lt;- pmax(apply(dm, 1, max), 1e-6)\n\n  B &lt;- crossprod(gamma * sqrt(w)) / sum(w)\n  B &lt;- 0.5 * (B + t(B))\n  diag(B) &lt;- pmax(diag(B), ridge)\n\n  B\n}\nThis matrix can be used as the initial global \\(B\\) matrix in the next MTBLR run."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#recommended-empirical-bayes-workflow",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#recommended-empirical-bayes-workflow",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.8 Recommended empirical-Bayes workflow",
+    "text": "20.8 Recommended empirical-Bayes workflow\n# ------------------------------------------------------------\n# Round 1: genomic STBLR or MTBLR\n# ------------------------------------------------------------\nfit0 &lt;- stblr_cpg_omp_csr(...)\n# or:\n# fit0 &lt;- mtblr_cpg_omp_csr(...)\n\n# Marker-level responses\nS_b   &lt;- fit0$bm\nS_pip &lt;- qlogis(pmin(pmax(fit0$dm, 1e-6), 1 - 1e-6))\nS_vg  &lt;- fit0$bm * (fit0$wy - fit0$r) / n\n\n# ------------------------------------------------------------\n# Round 2: annotation-level STBLR or MTBLR\n# ------------------------------------------------------------\n# Here annot is the marker-by-annotation design matrix.\nfitAnn_pip &lt;- stblr_annotation(\n  y = S_pip,\n  X = annot\n)\n\nfitAnn_vg &lt;- stblr_annotation(\n  y = S_vg,\n  X = annot\n)\n\n# Optional multi-trait annotation model.\nfitAnn_mt &lt;- mtblr_annotation(\n  Y = S_vg,\n  X = annot,\n  models = models\n)\n\n# ------------------------------------------------------------\n# Derive annotation-informed genomic priors\n# ------------------------------------------------------------\npi_marker &lt;- derive_pi_marker(\n  A = annot,\n  gamma = fitAnn_pip$bm,\n  base_pi = colMeans(fit0$dm),\n  cap = c(1e-8, 0.05)\n)\n\nvb_marker &lt;- derive_vb_marker(\n  A = annot,\n  theta = fitAnn_vg$bm,\n  global_vb = colMeans(fit0$vbs),\n  cap = c(0.25, 4)\n)\n\nB_init &lt;- estimate_B_from_annotation_model(\n  gamma = fitAnn_mt$bm,\n  dm = fitAnn_mt$dm\n)\n\n# ------------------------------------------------------------\n# Round 3: genomic STBLR or MTBLR with annotation-informed priors\n# ------------------------------------------------------------\nfit1 &lt;- stblr_cpg_omp_csr(\n  ...,\n  pi_marker = pi_marker,\n  vb_marker = vb_marker\n)\n\nfit1_mt &lt;- mtblr_cpg_omp_csr(\n  ...,\n  B = B_init,\n  pi_marker_model = pi_marker_model,\n  adjE = 0.9\n)"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#interpretation",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#interpretation",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.9 Interpretation",
+    "text": "20.9 Interpretation\nThe annotation-level BLR or MTBLR does not estimate marker effects directly. It estimates how annotations explain marker-level evidence from the first genomic model. The resulting priors are therefore empirical-Bayes priors. They are useful for stabilizing later genomic analyses, improving initialization, guiding sharing-model probabilities, and incorporating biological information.\nThe most useful derived quantities are:\n\\[\n\\pi_{it},\n\\]\nmarker-specific inclusion probabilities,\n\\[\nv_{b,it},\n\\]\nmarker-specific prior effect variances,\n\\[\n\\pi_{im},\n\\]\nmarker-specific MTBLR sharing-model probabilities, and\n\\[\nB_{ann},\n\\]\nan annotation-informed global MTBLR prior covariance matrix."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#cross-fitting-and-overfitting",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#cross-fitting-and-overfitting",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "20.10 Cross-fitting and overfitting",
+    "text": "20.10 Cross-fitting and overfitting\nBecause the same data may be used to estimate marker summaries and then to construct priors, the procedure is empirical Bayes and can be optimistic if used for formal inference. A more conservative strategy is chromosome-wise cross-fitting:\nfor (chr in chromosomes) {\n  # 1. Fit or summarize annotation model using all chromosomes except chr.\n  # 2. Derive priors for markers on chr.\n  # 3. Refit genomic STBLR or MTBLR on chr using those priors.\n}\nThis avoids using the same markers both to estimate their annotation-informed priors and to evaluate their posterior evidence."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#direct-annotation-informed-stblr",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#direct-annotation-informed-stblr",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.1 Direct annotation-informed STBLR",
+    "text": "21.1 Direct annotation-informed STBLR\nIn a single-trait BayesC-style STBLR model, marker effects can be written as:\n\\[\nb_{it} = d_{it}\\alpha_{it},\n\\]\nwhere\n\\[\nd_{it} \\sim \\mathrm{Bernoulli}(\\pi_{it}),\n\\]\nand\n\\[\n\\alpha_{it} \\mid d_{it}=1 \\sim N(0, v_{b,it}).\n\\]\nThe annotation matrix can be used to model the prior inclusion probability as:\n\\[\n\\mathrm{logit}(\\pi_{it}) = \\mu_{\\pi,t} + A_i \\eta_{\\pi,t},\n\\]\nwhere \\(\\eta_{\\pi,t}\\) is a vector of annotation effects on inclusion probability for trait \\(t\\).\nSimilarly, the marker-specific prior effect variance can be modelled as:\n\\[\n\\log(v_{b,it}) = \\mu_{v,t} + A_i \\eta_{v,t}.\n\\]\nEquivalently,\n\\[\nv_{b,it} = \\exp(\\mu_{v,t} + A_i\\eta_{v,t}).\n\\]\nThis gives an annotation-aware STBLR model:\n\\[\nb_{it} \\sim (1-\\pi_{it})\\delta_0 + \\pi_{it}N(0,v_{b,it}).\n\\]\nThis is a direct extension of the usual global-prior STBLR model, where all markers share the same \\(\\pi_t\\) and \\(v_{b,t}\\)."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#modified-stblr-marker-update",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#modified-stblr-marker-update",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.2 Modified STBLR marker update",
+    "text": "21.2 Modified STBLR marker update\nFor marker \\(i\\), define the partial residual score:\n\\[\ns_{it} = r_{it} + w_{it}b_{it},\n\\]\nwhere \\(w_{it}=x_i^\\top x_i\\) for trait \\(t\\).\nWith marker-specific prior variance \\(v_{b,it}\\) and residual variance \\(v_{e,t}\\), the Bayes factor for inclusion becomes:\n\\[\n\\log BF_{it}\n=\n\\frac{1}{2}\\log\\left(\\frac{v_{e,t}}{v_{e,t}+w_{it}v_{b,it}}\\right)\n+\n\\frac{1}{2}\\frac{s_{it}^2v_{b,it}}{v_{e,t}(v_{e,t}+w_{it}v_{b,it})}.\n\\]\nThe posterior inclusion probability is:\n\\[\nP(d_{it}=1 \\mid -)\n=\n\\frac{\\pi_{it}BF_{it}}{(1-\\pi_{it})+\\pi_{it}BF_{it}}.\n\\]\nConditional on inclusion, the posterior draw is:\n\\[\nb_{it} \\mid d_{it}=1,- \\sim N(m_{it}, s^2_{it}),\n\\]\nwhere\n\\[\nm_{it} = \\frac{s_{it}}{w_{it}+v_{e,t}/v_{b,it}},\n\\]\nand\n\\[\ns^2_{it} = \\frac{v_{e,t}}{w_{it}+v_{e,t}/v_{b,it}}.\n\\]\nThus, the only change in the existing STBLR sampler is to replace the global \\(\\pi_t\\) and \\(v_{b,t}\\) by marker-specific values \\(\\pi_{it}\\) and \\(v_{b,it}\\).\nA corresponding C++ change is conceptually:\nconst double pi1 = pi_marker(i);\nconst double pi0 = 1.0 - pi1;\nconst double vbi = vb_marker(i);\n\nconst double denom = ve + wi * vbi;\n\nconst double logBF =\n  0.5 * std::log(ve / denom) +\n  0.5 * score * score * vbi / (ve * denom);\n\nconst double lhs = wi + ve / vbi;\nconst double mean = score / lhs;\nconst double sd = std::sqrt(ve / lhs);\nFor multiple traits running in parallel STBLR, \\(\\pi_{it}\\) and \\(v_{b,it}\\) can be stored as marker-by-trait matrices:\nconst double pi1 = pi_marker(i, t);\nconst double vbi = vb_marker(i, t);"
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#estimating-annotation-effects-inside-the-sampler",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#estimating-annotation-effects-inside-the-sampler",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.3 Estimating annotation effects inside the sampler",
+    "text": "21.3 Estimating annotation effects inside the sampler\nThere are two main ways to handle the annotation coefficients \\(\\eta_{\\pi,t}\\) and \\(\\eta_{v,t}\\).\n\n21.3.1 Fixed annotation effects\nThe simplest approach is to estimate \\(\\eta_{\\pi,t}\\) and \\(\\eta_{v,t}\\) before the genomic sampler, for example from a previous STBLR/MTBLR annotation analysis, and then treat them as fixed during the next genomic run.\nThis gives a stable empirical-Bayes model:\n\\[\n\\widehat\\eta_{\\pi,t}, \\widehat\\eta_{v,t}\n\\quad \\Rightarrow \\quad\n\\pi_{it}, v_{b,it}\n\\quad \\Rightarrow \\quad\n\\text{annotation-informed genomic STBLR}.\n\\]\nThis is the easiest and safest implementation.\n\n\n21.3.2 Updating annotation effects during sampling\nA more ambitious approach is to update the annotation effects inside the sampler. For example, one could place priors on annotation effects:\n\\[\n\\eta_{\\pi,kt} \\sim N(0, \\sigma^2_{\\eta_\\pi,t}),\n\\]\nand\n\\[\n\\eta_{v,kt} \\sim N(0, \\sigma^2_{\\eta_v,t}).\n\\]\nThe sampler would then alternate between:\n\nmarker-effect updates using current \\(\\pi_{it}\\) and \\(v_{b,it}\\),\nannotation-effect updates using current marker inclusion states \\(d_{it}\\) and marker effects \\(b_{it}\\),\nvariance component updates.\n\nFor inclusion probabilities, the annotation update can be viewed as a Bayesian logistic regression:\n\\[\nd_{it} \\sim \\mathrm{Bernoulli}(\\pi_{it}),\n\\]\nwith\n\\[\n\\mathrm{logit}(\\pi_{it}) = \\mu_{\\pi,t} + A_i\\eta_{\\pi,t}.\n\\]\nFor effect variances, active marker effects can inform a log-variance regression:\n\\[\n\\log(b_{it}^2 + \\epsilon) \\approx \\mu_{v,t} + A_i\\eta_{v,t} + e_{it},\n\\]\nusing only markers with \\(d_{it}=1\\), or using weights based on posterior inclusion probabilities.\nThis fully Bayesian version is more elegant, but also more complicated and more prone to mixing issues. For implementation, it is usually better to start with fixed annotation-derived priors."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#direct-annotation-informed-mtblr",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#direct-annotation-informed-mtblr",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.4 Direct annotation-informed MTBLR",
+    "text": "21.4 Direct annotation-informed MTBLR\nIn MTBLR, each marker has a vector of trait effects:\n\\[\n\\mathbf b_i = (b_{i1},\\ldots,b_{iT})^\\top.\n\\]\nThe usual MTBLR model uses a set of sharing models \\(M_m\\). For example, with three traits the model space may be:\n\\[\n000, 100, 010, 001, 110, 101, 011, 111.\n\\]\nA direct annotation-aware MTBLR model lets the annotation profile \\(A_i\\) determine the prior probability of each sharing model:\n\\[\nP(M_i=m \\mid A_i) = \\pi_{im}.\n\\]\nA convenient parameterization is a multinomial-logit model:\n\\[\n\\log \\pi_{im} = c_m + A_i\\eta_m - C_i,\n\\]\nwhere \\(C_i\\) is the normalizing constant:\n\\[\nC_i = \\log\\left(\\sum_l \\exp(c_l + A_i\\eta_l)\\right).\n\\]\nEquivalently,\n\\[\n\\pi_{im}\n=\n\\frac{\\exp(c_m + A_i\\eta_m)}\n{\\sum_l \\exp(c_l + A_i\\eta_l)}.\n\\]\nThe annotation matrix can therefore make coding markers more likely to follow a shared model, promoter markers more likely to be trait-specific, or QTL markers more likely to have non-null effects across several traits."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#mtblr-model-prior-in-the-marker-update",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#mtblr-model-prior-in-the-marker-update",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.5 MTBLR model prior in the marker update",
+    "text": "21.5 MTBLR model prior in the marker update\nIn the MTBLR marker sampler, the model posterior weight for marker \\(i\\) and model \\(m\\) typically has the form:\n\\[\n\\log w_{im}\n=\n\\log \\pi_m + \\log L_{im},\n\\]\nwhere \\(\\log L_{im}\\) is the marginal likelihood contribution under sharing model \\(m\\).\nWith annotation-informed marker-specific model priors, this becomes:\n\\[\n\\log w_{im}\n=\n\\log \\pi_{im} + \\log L_{im}.\n\\]\nThus, the existing sampler only needs to replace the global model prior \\(\\pi_m\\) with marker-specific priors \\(\\pi_{im}\\).\nIn C++ this corresponds to replacing:\nloglik[k] = std::log(pi[k]) - 0.5 * logdet + 0.5 * quad;\nwith:\nloglik[k] = std::log(pi_marker_model(i, k)) - 0.5 * logdet + 0.5 * quad;\nThis is likely the most useful direct annotation extension for MTBLR, because it lets annotations guide the sharing model while still allowing the multivariate likelihood to override the prior when the data are strong."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#annotation-informed-mtblr-effect-covariance",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#annotation-informed-mtblr-effect-covariance",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.6 Annotation-informed MTBLR effect covariance",
+    "text": "21.6 Annotation-informed MTBLR effect covariance\nAnnotations can also affect the prior covariance matrix of marker effects. A global MTBLR model may use:\n\\[\n\\mathbf b_i \\mid M_i=m \\sim N_m(0,B),\n\\]\nwhere \\(N_m(0,B)\\) denotes a multivariate normal distribution restricted to the active traits in model \\(m\\).\nAn annotation-aware version can use marker-specific or annotation-specific covariance matrices:\n\\[\n\\mathbf b_i \\mid M_i=m,A_i \\sim N_m(0,B_i).\n\\]\nA log-linear construction for trait-specific prior variances is:\n\\[\n\\log B_{i,tt} = \\mu_{B,t} + A_i\\eta_{B,t}.\n\\]\nFor cross-trait covariances, one can either use a global correlation matrix \\(R\\) and annotation-specific standard deviations:\n\\[\nB_i = D_i R D_i,\n\\]\nwhere\n\\[\nD_i = \\mathrm{diag}(\\sqrt{B_{i,11}},\\ldots,\\sqrt{B_{i,TT}}),\n\\]\nor use annotation-specific full covariance matrices \\(B_k\\).\nThe first approach is more stable:\n\\[\nB_i = D_i R D_i.\n\\]\nIt lets annotations change the amount of prior variance per trait while preserving a globally estimated cross-trait correlation structure.\nThe second approach is more flexible:\n\\[\nB_i = \\sum_k w_{ik}B_k,\n\\]\nwhere \\(w_{ik}\\) are normalized annotation weights for marker \\(i\\). However, this can be unstable if annotations are sparse or highly overlapping."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#direct-annotation-aware-stblr-and-mtblr-as-hierarchical-models",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#direct-annotation-aware-stblr-and-mtblr-as-hierarchical-models",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.7 Direct annotation-aware STBLR and MTBLR as hierarchical models",
+    "text": "21.7 Direct annotation-aware STBLR and MTBLR as hierarchical models\nThe direct annotation model can be summarized as a hierarchical prior.\nFor STBLR:\n\\[\n\\begin{aligned}\n\\mathrm{logit}(\\pi_{it}) &= \\mu_{\\pi,t} + A_i\\eta_{\\pi,t}, \\\\\n\\log(v_{b,it}) &= \\mu_{v,t} + A_i\\eta_{v,t}, \\\\\nd_{it} &\\sim \\mathrm{Bernoulli}(\\pi_{it}), \\\\\nb_{it} \\mid d_{it}=1 &\\sim N(0,v_{b,it}), \\\\\nb_{it} \\mid d_{it}=0 &= 0.\n\\end{aligned}\n\\]\nFor MTBLR:\n\\[\n\\begin{aligned}\n\\pi_{im}\n&=\n\\frac{\\exp(c_m + A_i\\eta_m)}\n{\\sum_l \\exp(c_l + A_i\\eta_l)}, \\\\\nM_i &\\sim \\mathrm{Categorical}(\\pi_{i1},\\ldots,\\pi_{iM}), \\\\\n\\mathbf b_i \\mid M_i=m,A_i &\\sim N_m(0,B_i).\n\\end{aligned}\n\\]\nThese formulations are direct annotation-informed genomic models rather than post hoc annotation analyses."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#practical-implementation-strategy",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#practical-implementation-strategy",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.8 Practical implementation strategy",
+    "text": "21.8 Practical implementation strategy\nA good implementation path is incremental.\n\n21.8.1 Step 1: Fixed marker-specific priors\nFirst, compute \\(\\pi_{it}\\), \\(v_{b,it}\\), and \\(\\pi_{im}\\) outside the sampler, then pass them as inputs:\nfit &lt;- stblr_cpg_omp_csr(\n  ...,\n  pi_marker = pi_marker,\n  vb_marker = vb_marker\n)\n\nfit_mt &lt;- mtblr_cpg_omp_csr(\n  ...,\n  pi_marker_model = pi_marker_model\n)\nThis only requires small changes to the marker-update functions.\n\n\n21.8.2 Step 2: Annotation matrix as input, fixed annotation coefficients\nInstead of passing full marker-specific prior matrices, pass the annotation matrix and annotation coefficients:\nfit &lt;- stblr_cpg_omp_csr(\n  ...,\n  annot = A,\n  eta_pi = eta_pi,\n  eta_vb = eta_vb\n)\nThen compute marker-specific priors inside C++:\n\\[\n\\pi_{it} = \\mathrm{logit}^{-1}(\\mu_{\\pi,t}+A_i\\eta_{\\pi,t}),\n\\]\nand\n\\[\nv_{b,it} = \\exp(\\mu_{v,t}+A_i\\eta_{v,t}).\n\\]\nThis saves memory if \\(m\\) is large and the annotation matrix is sparse.\n\n\n21.8.3 Step 3: Update annotation coefficients\nFinally, update \\(\\eta_{\\pi,t}\\), \\(\\eta_{v,t}\\), or \\(\\eta_m\\) inside the sampler. This creates a fully hierarchical annotation-informed BLR/MTBLR model, but requires additional MCMC steps, careful priors, and good diagnostics."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#sparse-annotation-matrix-implementation",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#sparse-annotation-matrix-implementation",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.9 Sparse annotation matrix implementation",
+    "text": "21.9 Sparse annotation matrix implementation\nFor large numbers of markers and annotations, the annotation matrix \\(A\\) should be stored sparsely. For each marker \\(i\\), store the list of active annotations:\nstruct AnnotationNeighbor {\n  int k;\n  float value;\n};\n\nusing AnnotationRows = std::vector&lt;std::vector&lt;AnnotationNeighbor&gt;&gt;;\nThen the linear predictor for marker \\(i\\) is:\ndouble eta_i = intercept;\nfor (const auto& a : annot_rows[i]) {\n  eta_i += static_cast&lt;double&gt;(a.value) * eta[a.k];\n}\nFor STBLR:\nconst double pi_i = inv_logit(eta_pi_i);\nconst double vb_i = std::exp(eta_vb_i);\nFor MTBLR sharing models:\nfor (int model = 0; model &lt; nmodels; ++model) {\n  log_pi_model[model] = base_log_pi[model];\n  for (const auto& a : annot_rows[i]) {\n    log_pi_model[model] += a.value * eta_model(a.k, model);\n  }\n}\n\n// Then apply softmax to get pi_marker_model[i, model].\nThis avoids constructing dense marker-by-model or marker-by-trait prior matrices when \\(m\\) is large."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#centering-shrinkage-and-caps",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#centering-shrinkage-and-caps",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.10 Centering, shrinkage, and caps",
+    "text": "21.10 Centering, shrinkage, and caps\nDirect annotation priors can be powerful but need regularization. The annotation contribution should usually be centered so that it redistributes prior mass rather than changing the total prior sparsity too aggressively.\nFor inclusion probabilities:\n\\[\n\\eta_{it}^{centered}\n=\nA_i\\eta_{\\pi,t}\n-\\frac{1}{m}\\sum_{j=1}^m A_j\\eta_{\\pi,t}.\n\\]\nThen:\n\\[\n\\mathrm{logit}(\\pi_{it})\n=\n\\mathrm{logit}(\\pi_t^{global})+\n\\eta_{it}^{centered}.\n\\]\nFor prior variances:\n\\[\n\\log(v_{b,it})\n=\n\\log(v_{b,t}^{global})+\n\\xi_{it}^{centered},\n\\]\nwhere\n\\[\n\\xi_{it}^{centered}\n=\nA_i\\eta_{v,t}\n-\n\\frac{1}{m}\\sum_{j=1}^m A_j\\eta_{v,t}.\n\\] The resulting multipliers should be capped:\n\\[\n\\frac{v_{b,it}}{v_{b,t}^{global}} \\in [c_{min},c_{max}],\n\\]\nfor example:\n\\[\n[c_{min},c_{max}] = [0.25,4].\n\\]\nSimilarly, marker-specific inclusion probabilities should be bounded:\n\\[\n\\pi_{it} \\in [\\epsilon, \\pi_{max}],\n\\]\nfor example:\n\\[\n\\epsilon = 10^{-8}, \\qquad \\pi_{max}=0.05.\n\\]\nThese constraints prevent a highly enriched annotation from overwhelming the likelihood or causing too many markers to enter the model."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#recommended-first-direct-model",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#recommended-first-direct-model",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.11 Recommended first direct model",
+    "text": "21.11 Recommended first direct model\nThe most practical first direct annotation model is:\n\\[\n\\mathrm{logit}(\\pi_{it}) = \\mathrm{logit}(\\pi_t^{global}) + A_i\\eta_{\\pi,t}^{centered},\n\\]\nwith a global \\(v_{b,t}\\) unchanged.\nFor MTBLR, the most practical first model is:\n\\[\n\\log \\pi_{im} = \\log \\pi_m^{global} + A_i\\eta_m^{centered} - C_i.\n\\]\nThese two extensions are simple, interpretable, and likely to be stable. Marker-specific prior variances \\(v_{b,it}\\) and marker-specific covariance matrices \\(B_i\\) are useful next steps, but they should be introduced with shrinkage and caps."
+  },
+  {
+    "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#causal-interpretation-and-causal-hypothesis-generation",
+    "href": "notes/drafts/annotation_informed_priors_stblr_mtblr.html#causal-interpretation-and-causal-hypothesis-generation",
+    "title": "Annotation-Informed Prior Scales for STBLR and MTBLR",
+    "section": "21.12 Causal interpretation and causal-hypothesis generation",
+    "text": "21.12 Causal interpretation and causal-hypothesis generation\nThe annotation-informed STBLR/MTBLR framework can provide evidence for genetic sharing, annotation enrichment, and plausible biological mechanisms, but it does not by itself identify causal relationships in the intervention sense. The model can estimate posterior quantities such as\n\\[\nP(d_{it}=1 \\mid \\text{data}),\n\\]\nwhere \\(d_{it}\\) indicates that marker \\(i\\) is active for trait \\(t\\), and in the multivariate case\n\\[\nP(M_i=m \\mid A_i, \\text{data}),\n\\]\nwhere \\(M_i\\) is a trait-sharing model and \\(A_i\\) denotes the annotation profile of marker \\(i\\). These are statements about which genetic effects and annotation patterns best explain the observed summary statistics. They are not, by themselves, causal effects such as\n\\[\n\\text{annotation} \\rightarrow \\text{trait},\n\\]\nor\n\\[\n\\text{trait 1} \\rightarrow \\text{trait 2}.\n\\]\nA careful interpretation is that the model identifies annotations, regions, and marker-sharing configurations that are enriched for genetic signal. For example, if annotation \\(A\\) has high posterior support for shared effects on traits \\(t_1\\) and \\(t_2\\), then the model supports the statement\n\\[\nA \\text{ is enriched for shared genetic effects on } t_1 \\text{ and } t_2.\n\\]\nThis is a genetic-architecture statement, not a direct causal claim. It can, however, motivate causal hypotheses about biological mechanisms.\n\n21.12.1 Genetic sharing versus causal direction\nMTBLR can help distinguish different forms of genetic sharing. For example, a marker may support a sharing model such as\n\\[\nM_i = 110,\n\\]\nwhich indicates an effect on traits 1 and 2 but not trait 3. If this sharing pattern is enriched in annotation \\(A\\), then\n\\[\nP(M_i=110 \\mid A_i, \\text{data})\n\\]\nmay be larger than the genome-wide background probability. This suggests that annotation \\(A\\) may tag a biological mechanism relevant to both traits.\nHowever, this does not determine whether the relationship is\n\\[\nG \\rightarrow t_1 \\rightarrow t_2,\n\\]\nor\n\\[\nG \\rightarrow t_2 \\rightarrow t_1,\n\\]\nor horizontal pleiotropy,\n\\[\nG \\rightarrow t_1\n\\quad \\text{and} \\quad\nG \\rightarrow t_2,\n\\]\nthrough separate biological pathways. Additional information is required to infer directionality.\n\n\n21.12.2 What can be inferred directly\nThe framework can directly support posterior statements such as:\n\\[\nP(\\text{marker } i \\text{ is active for trait } t \\mid \\text{data}),\n\\]\n\\[\nP(\\text{marker } i \\text{ has a shared effect across traits} \\mid \\text{data}),\n\\]\n\\[\nP(\\text{annotation } k \\text{ is enriched for effects} \\mid \\text{data}),\n\\]\nand\n\\[\nP(M_i=m \\mid A_i, \\text{data}).\n\\]\nThese quantities can be used to prioritize markers, regions, annotations, and biological pathways for downstream causal analyses. They should be interpreted as posterior evidence for association and sharing, not as proof of causation.\n\n\n21.12.3 Connection to colocalization\nA natural downstream analysis is colocalization. Suppose a genomic region shows a strong MTBLR sharing signal between a molecular trait \\(x\\) and a complex trait \\(y\\). If fine-mapping and colocalization support the same causal variant for both traits, then this strengthens the hypothesis\n\\[\nG \\rightarrow x \\rightarrow y.\n\\]\nIn this setting, annotation-aware MTBLR can be used as a prioritization step. It can identify regions and annotations where shared effects are likely, and colocalization can then test whether the same underlying variant is responsible for the molecular and complex-trait associations.\n\n\n21.12.4 Connection to Mendelian randomization\nMendelian randomization can be used to test directional hypotheses such as\n\\[\nx \\rightarrow y,\n\\]\nusing genetic variants as instruments. The validity of this interpretation depends on instrumental-variable assumptions. In particular, the genetic instruments should be associated with the exposure, should not be associated with confounders of the exposure-outcome relationship, and should affect the outcome only through the exposure.\nAnnotation-aware MTBLR can help select or classify candidate instruments. For example, variants that appear trait-specific for exposure \\(x\\) may be more useful as instruments than variants with strong evidence of broad horizontal pleiotropy. Conversely, markers assigned to shared-effect models may indicate biological pleiotropy and should be handled carefully in causal analyses.\n\n\n21.12.5 Annotation-specific causal hypotheses\nThe most useful causal-hypothesis output from the framework may be annotation-specific sharing probabilities. For example, for annotation \\(k\\), one can estimate\n\\[\nP(M=110 \\mid A_k=1, \\text{data}),\n\\]\nor compare it to the background probability\n\\[\nP(M=110 \\mid \\text{data}).\n\\]\nIf\n\\[\nP(M=110 \\mid A_k=1, \\text{data})\n&gt;\nP(M=110 \\mid \\text{data}),\n\\]\nthen annotation \\(k\\) is enriched for variants with shared effects on traits 1 and 2. This can motivate a biological hypothesis that the functional class represented by annotation \\(k\\) is involved in a mechanism linking the two traits.\nSimilarly, if annotation \\(k\\) is enriched for trait-specific models, such as\n\\[\nM=100,\n\\]\nthen the annotation may be more relevant to a trait-specific pathway than to a shared pathway.\n\n\n21.12.6 Practical causal workflow\nA practical workflow is:\n\nFit STBLR or MTBLR using GWAS summary statistics and sparse LD.\nEstimate marker-level posterior summaries such as \\(bm\\), \\(dm\\), and sharing-model probabilities.\nUse annotation-aware STBLR/MTBLR to identify annotations enriched for trait-specific or shared genetic effects.\nUse the enriched annotations and regions to define candidate mechanisms.\nPerform regional fine-mapping to construct credible sets.\nTest colocalization with molecular QTL data, such as expression, methylation, protein, metabolite, or microbiome QTL.\nUse Mendelian randomization, mediation analysis, perturbation data, or experimental validation to test directional causal hypotheses.\n\nThus, the annotation-informed STBLR/MTBLR framework is best viewed as a mechanism-discovery and hypothesis-prioritization layer. It can point to annotations and regions that are likely to be biologically relevant, but causal interpretation requires additional assumptions or external evidence.\nA suitable manuscript statement is:\n\nThe annotation-informed STBLR/MTBLR framework identifies annotations and genomic regions enriched for trait-specific or shared genetic effects. These results can prioritize plausible causal mechanisms and candidate mediators. However, causal interpretation requires additional assumptions or complementary analyses, such as fine-mapping, colocalization, Mendelian randomization, mediation analysis, perturbation experiments, or external functional validation."
+  }
+]

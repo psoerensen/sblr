@@ -1,272 +1,806 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Technical Appendix: Sparse LD and CSR</title>
-  <style>
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-  </style>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Peter Sørensen">
+
+<title>Technical Appendix: Sparse LD and CSR – sblr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-234273d1456647dabc34a594ac50e507.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-3f1ceb0eb11a066e0501c9e2d1de2658.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
 </head>
-<body>
-<header id="title-block-header">
-<h1 class="title">Technical Appendix: Sparse LD and CSR</h1>
-</header>
-<nav id="TOC" role="doc-toc">
-<ul>
-<li><a href="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"
-id="toc-from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From
-BED Genotypes to Sufficient Statistics and Sparse LD</a></li>
-<li><a href="#sparse-approximation-to-xx-threshold-and-distance-choices"
-id="toc-sparse-approximation-to-xx-threshold-and-distance-choices">Sparse
-Approximation to (X^X): Threshold and Distance Choices</a></li>
-<li><a href="#csr-representation-row-pointers-column-indices-and-values"
-id="toc-csr-representation-row-pointers-column-indices-and-values">CSR
-Representation: Row Pointers, Column Indices, and Values</a></li>
-<li><a href="#disk-backed-prefix-and-file-contract"
-id="toc-disk-backed-prefix-and-file-contract">Disk-Backed Prefix and
-File Contract</a></li>
-<li><a
-href="#one-based-r-marker-identities-versus-internal-csr-indexing"
-id="toc-one-based-r-marker-identities-versus-internal-csr-indexing">One-Based
-R Marker Identities Versus Internal CSR Indexing</a></li>
-<li><a
-href="#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants"
-id="toc-marker-ordering-sample-rows-allele-frequency-and-scaling-invariants">Marker
-Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</a></li>
-<li><a
-href="#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs"
-id="toc-streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs">Streaming
-and Blocking Behavior, Memory Use, and Disk Tradeoffs</a></li>
-<li><a href="#reading-and-validating-csr-with-sparseld_read_csr"
-id="toc-reading-and-validating-csr-with-sparseld_read_csr">Reading and
-Validating CSR With <code>sparseLD_read_CSR()</code></a></li>
-<li><a href="#how-stblr_csr-consumes-statistics-and-the-csr-prefix"
-id="toc-how-stblr_csr-consumes-statistics-and-the-csr-prefix">How
-<code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</a></li>
-<li><a href="#scheduled-sparse-updates-and-performance-controls"
-id="toc-scheduled-sparse-updates-and-performance-controls">Scheduled
-Sparse Updates and Performance Controls</a></li>
-<li><a
-href="#numerical-approximation-reproducibility-and-bed-versus-csr-comparison"
-id="toc-numerical-approximation-reproducibility-and-bed-versus-csr-comparison">Numerical
-Approximation, Reproducibility, and BED-Versus-CSR Comparison</a></li>
-<li><a href="#related-notes-and-sources"
-id="toc-related-notes-and-sources">Related Notes and Sources</a></li>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">sblr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../notes/index.html"> 
+<span class="menu-text">Notes</span></a>
+  </li>  
 </ul>
-</nav>
-<p>This appendix will preserve the storage, construction, alignment, and
-computational contracts behind disk-backed sparse LD used by CSR BLR
-workflows.</p>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="https://github.com/psoerensen/sblr"> 
+<span class="menu-text">GitHub</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" id="toc-from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="nav-link active" data-scroll-target="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">1</span> From BED Genotypes to Sufficient Statistics and Sparse LD</a></li>
+  <li><a href="#sparse-approximation-to-xx-threshold-and-distance-choices" id="toc-sparse-approximation-to-xx-threshold-and-distance-choices" class="nav-link" data-scroll-target="#sparse-approximation-to-xx-threshold-and-distance-choices"><span class="header-section-number">2</span> Sparse Approximation to (X^X): Threshold and Distance Choices</a></li>
+  <li><a href="#csr-representation-row-pointers-column-indices-and-values" id="toc-csr-representation-row-pointers-column-indices-and-values" class="nav-link" data-scroll-target="#csr-representation-row-pointers-column-indices-and-values"><span class="header-section-number">3</span> CSR Representation: Row Pointers, Column Indices, and Values</a></li>
+  <li><a href="#disk-backed-prefix-and-file-contract" id="toc-disk-backed-prefix-and-file-contract" class="nav-link" data-scroll-target="#disk-backed-prefix-and-file-contract"><span class="header-section-number">4</span> Disk-Backed Prefix and File Contract</a></li>
+  <li><a href="#one-based-r-marker-identities-versus-internal-csr-indexing" id="toc-one-based-r-marker-identities-versus-internal-csr-indexing" class="nav-link" data-scroll-target="#one-based-r-marker-identities-versus-internal-csr-indexing"><span class="header-section-number">5</span> One-Based R Marker Identities Versus Internal CSR Indexing</a></li>
+  <li><a href="#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants" id="toc-marker-ordering-sample-rows-allele-frequency-and-scaling-invariants" class="nav-link" data-scroll-target="#marker-ordering-sample-rows-allele-frequency-and-scaling-invariants"><span class="header-section-number">6</span> Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</a></li>
+  <li><a href="#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs" id="toc-streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs" class="nav-link" data-scroll-target="#streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs"><span class="header-section-number">7</span> Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs</a></li>
+  <li><a href="#reading-and-validating-csr-with-sparseld_read_csr" id="toc-reading-and-validating-csr-with-sparseld_read_csr" class="nav-link" data-scroll-target="#reading-and-validating-csr-with-sparseld_read_csr"><span class="header-section-number">8</span> Reading and Validating CSR With <code>sparseLD_read_CSR()</code></a></li>
+  <li><a href="#how-stblr_csr-consumes-statistics-and-the-csr-prefix" id="toc-how-stblr_csr-consumes-statistics-and-the-csr-prefix" class="nav-link" data-scroll-target="#how-stblr_csr-consumes-statistics-and-the-csr-prefix"><span class="header-section-number">9</span> How <code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</a></li>
+  <li><a href="#scheduled-sparse-updates-and-performance-controls" id="toc-scheduled-sparse-updates-and-performance-controls" class="nav-link" data-scroll-target="#scheduled-sparse-updates-and-performance-controls"><span class="header-section-number">10</span> Scheduled Sparse Updates and Performance Controls</a></li>
+  <li><a href="#numerical-approximation-reproducibility-and-bed-versus-csr-comparison" id="toc-numerical-approximation-reproducibility-and-bed-versus-csr-comparison" class="nav-link" data-scroll-target="#numerical-approximation-reproducibility-and-bed-versus-csr-comparison"><span class="header-section-number">11</span> Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">12</span> Related Notes and Sources</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_sparse_ld_csr.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Technical Appendix: Sparse LD and CSR</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Author</div>
+  <div class="quarto-title-meta-heading">Affiliation</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Peter Sørensen </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Aarhus University
+          </p>
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This note is under active development. Some sections are structured outlines that will be expanded over time.</p>
+</div>
+</div>
+<p>This appendix will preserve the storage, construction, alignment, and computational contracts behind disk-backed sparse LD used by CSR BLR workflows.</p>
 <!-- Primary source: ../../examples/workflows/sparse_ld_bed_workflow.R.
 Later: align all contracts with public function help and label
 implementation-sensitive details explicitly. -->
-<h2 id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From
-BED Genotypes to Sufficient Statistics and Sparse LD</h2>
+<section id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">1</span> From BED Genotypes to Sufficient Statistics and Sparse LD</h2>
 <!-- Later: document the complete cross-layer data flow. -->
-<h2
-id="sparse-approximation-to-xx-threshold-and-distance-choices">Sparse
-Approximation to (X^X): Threshold and Distance Choices</h2>
+</section>
+<section id="sparse-approximation-to-xx-threshold-and-distance-choices" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="sparse-approximation-to-xx-threshold-and-distance-choices"><span class="header-section-number">2</span> Sparse Approximation to (X^X): Threshold and Distance Choices</h2>
 <!-- Later: explain approximation choices and consequences. -->
-<h2 id="csr-representation-row-pointers-column-indices-and-values">CSR
-Representation: Row Pointers, Column Indices, and Values</h2>
+</section>
+<section id="csr-representation-row-pointers-column-indices-and-values" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="csr-representation-row-pointers-column-indices-and-values"><span class="header-section-number">3</span> CSR Representation: Row Pointers, Column Indices, and Values</h2>
 <!-- Later: document the representation without assuming format stability. -->
-<h2 id="disk-backed-prefix-and-file-contract">Disk-Backed Prefix and
-File Contract</h2>
+</section>
+<section id="disk-backed-prefix-and-file-contract" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="disk-backed-prefix-and-file-contract"><span class="header-section-number">4</span> Disk-Backed Prefix and File Contract</h2>
 <!-- Later: identify current files and stable versus internal details. -->
-<h2
-id="one-based-r-marker-identities-versus-internal-csr-indexing">One-Based
-R Marker Identities Versus Internal CSR Indexing</h2>
+</section>
+<section id="one-based-r-marker-identities-versus-internal-csr-indexing" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="one-based-r-marker-identities-versus-internal-csr-indexing"><span class="header-section-number">5</span> One-Based R Marker Identities Versus Internal CSR Indexing</h2>
 <!-- Later: document index conversion and validation requirements. -->
-<h2
-id="marker-ordering-sample-rows-allele-frequency-and-scaling-invariants">Marker
-Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</h2>
+</section>
+<section id="marker-ordering-sample-rows-allele-frequency-and-scaling-invariants" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="marker-ordering-sample-rows-allele-frequency-and-scaling-invariants"><span class="header-section-number">6</span> Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</h2>
 <!-- Later: preserve all workflow contracts and common mismatch failures. -->
-<h2
-id="streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs">Streaming
-and Blocking Behavior, Memory Use, and Disk Tradeoffs</h2>
+</section>
+<section id="streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="streaming-and-blocking-behavior-memory-use-and-disk-tradeoffs"><span class="header-section-number">7</span> Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs</h2>
 <!-- Later: explain sparseLD_stream_CSR() controls and tradeoffs. -->
-<h2 id="reading-and-validating-csr-with-sparseld_read_csr">Reading and
-Validating CSR With <code>sparseLD_read_CSR()</code></h2>
+</section>
+<section id="reading-and-validating-csr-with-sparseld_read_csr" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="reading-and-validating-csr-with-sparseld_read_csr"><span class="header-section-number">8</span> Reading and Validating CSR With <code>sparseLD_read_CSR()</code></h2>
 <!-- Later: preserve compact inspection and validation patterns. -->
-<h2 id="how-stblr_csr-consumes-statistics-and-the-csr-prefix">How
-<code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</h2>
+</section>
+<section id="how-stblr_csr-consumes-statistics-and-the-csr-prefix" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="how-stblr_csr-consumes-statistics-and-the-csr-prefix"><span class="header-section-number">9</span> How <code>stblr_csr()</code> Consumes Statistics and the CSR Prefix</h2>
 <!-- Later: document the handoff without changing sampler behavior. -->
-<h2 id="scheduled-sparse-updates-and-performance-controls">Scheduled
-Sparse Updates and Performance Controls</h2>
+</section>
+<section id="scheduled-sparse-updates-and-performance-controls" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="scheduled-sparse-updates-and-performance-controls"><span class="header-section-number">10</span> Scheduled Sparse Updates and Performance Controls</h2>
 <!-- Later: describe current controls as implementation-sensitive. -->
-<h2
-id="numerical-approximation-reproducibility-and-bed-versus-csr-comparison">Numerical
-Approximation, Reproducibility, and BED-Versus-CSR Comparison</h2>
+</section>
+<section id="numerical-approximation-reproducibility-and-bed-versus-csr-comparison" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="numerical-approximation-reproducibility-and-bed-versus-csr-comparison"><span class="header-section-number">11</span> Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison</h2>
 <!-- Later: preserve comparison logic and expected sources of disagreement. -->
-<h2 id="related-notes-and-sources">Related Notes and Sources</h2>
+</section>
+<section id="related-notes-and-sources" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">12</span> Related Notes and Sources</h2>
 <ul>
-<li><a href="data_representations.html">Data representations</a></li>
-<li><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED
-workflows</a></li>
-<li><a href="technical_summary_statistics.html">Technical summary
-statistics</a></li>
-<li><a href="../../examples/workflows/sparse_ld_bed_workflow.R">Complete
-sparse-LD/BED workflow</a></li>
+<li><a href="../notes/data_representations.html">Data representations</a></li>
+<li><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
+<li><a href="../notes/technical_summary_statistics.html">Technical summary statistics</a></li>
+<li><a href="../../examples/workflows/sparse_ld_bed_workflow.R">Complete sparse-LD/BED workflow</a></li>
 </ul>
-</body>
-</html>
+
+
+<!-- -->
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: Sparse LD and CSR"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">status:</span><span class="co"> "Draft"</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>This note is under active development. Some sections are structured outlines that will be expanded over time.</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>This appendix will preserve the storage, construction, alignment, and</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>computational contracts behind disk-backed sparse LD used by CSR BLR</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>workflows.</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Primary source: ../../examples/workflows/sparse_ld_bed_workflow.R.</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">Later: align all contracts with public function help and label</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">implementation-sensitive details explicitly. --&gt;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## From BED Genotypes to Sufficient Statistics and Sparse LD</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document the complete cross-layer data flow. --&gt;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sparse Approximation to \(X^\top X\): Threshold and Distance Choices</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: explain approximation choices and consequences. --&gt;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">## CSR Representation: Row Pointers, Column Indices, and Values</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document the representation without assuming format stability. --&gt;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## Disk-Backed Prefix and File Contract</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: identify current files and stable versus internal details. --&gt;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="fu">## One-Based R Marker Identities Versus Internal CSR Indexing</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document index conversion and validation requirements. --&gt;</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker Ordering, Sample Rows, Allele Frequency, and Scaling Invariants</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve all workflow contracts and common mismatch failures. --&gt;</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="fu">## Streaming and Blocking Behavior, Memory Use, and Disk Tradeoffs</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: explain sparseLD_stream_CSR() controls and tradeoffs. --&gt;</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## Reading and Validating CSR With `sparseLD_read_CSR()`</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve compact inspection and validation patterns. --&gt;</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="fu">## How `stblr_csr()` Consumes Statistics and the CSR Prefix</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: document the handoff without changing sampler behavior. --&gt;</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="fu">## Scheduled Sparse Updates and Performance Controls</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: describe current controls as implementation-sensitive. --&gt;</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## Numerical Approximation, Reproducibility, and BED-Versus-CSR Comparison</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve comparison logic and expected sources of disagreement. --&gt;</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical summary statistics</span><span class="co">](technical_summary_statistics.qmd)</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Complete sparse-LD/BED workflow</span><span class="co">](../../examples/workflows/sparse_ld_bed_workflow.R)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
