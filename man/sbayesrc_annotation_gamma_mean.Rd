@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbayesrc-helpers.R
 \name{sbayesrc_annotation_gamma_mean}
 \alias{sbayesrc_annotation_gamma_mean}
-\title{Calculate Expected SBayesRC Gamma by Annotation}
+\title{Calculate Expected SBayesRC-Style Gamma by Annotation}
 \usage{
 sbayesrc_annotation_gamma_mean(alpha, gamma = c(0, 0.01, 0.1, 1))
 }
@@ -17,5 +17,5 @@ zero and all remaining values must be positive.}
 A named numeric vector containing expected gamma per annotation.
 }
 \description{
-Calculate Expected SBayesRC Gamma by Annotation
+Calculate Expected SBayesRC-Style Gamma by Annotation
 }

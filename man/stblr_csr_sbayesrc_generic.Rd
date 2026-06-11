@@ -2,7 +2,7 @@
 % Please edit documentation in R/stblr-csr-sbayesrc.R
 \name{stblr_csr_sbayesrc_generic}
 \alias{stblr_csr_sbayesrc_generic}
-\title{Fit SBayesRC ST-BLR with Overlapping Annotations}
+\title{Fit an SBayesRC-Style Annotation-Dependent BayesR Prior}
 \usage{
 stblr_csr_sbayesrc_generic(
   stats,
@@ -126,11 +126,14 @@ controls.}
 \item{alpha_update_every}{Iterations between annotation-effect updates.}
 }
 \value{
-A formatted SBayesRC ST-BLR fit with annotation and mixture-component
-  posterior summaries.
+A formatted SBayesRC-style ST-BLR fit with annotation and
+  mixture-component posterior summaries.
 }
 \description{
-Fits the continuous overlapping-annotation SBayesRC CSR sampler. Marker
-mixture probabilities are modeled through probit stick-breaking regressions
-on an annotation matrix.
+Fits a CSR ST-BLR model with an SBayesRC-style annotation-dependent BayesR
+prior. Marker mixture probabilities are modeled through probit
+stick-breaking regressions on an annotation matrix. The core prior family is
+closely aligned with the published SBayesRC prior structure, but the exposed
+default gamma grid and CSR sparse-LD likelihood differ from the published
+GCTB SBayesRC implementation.
 }

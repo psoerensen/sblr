@@ -22,7 +22,7 @@ broader empirical-Bayes and multi-trait framework preserved in the archived
 annotation draft. Full marker-update derivations and implementation sketches
 belong in [Technical annotation priors](technical_annotation_priors.qmd);
 full stick-breaking details belong in
-[Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd).
+[Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd).
 
 ## Why Annotations Inform Priors
 
@@ -152,7 +152,7 @@ $$
 This is the comparison model for annotation-aware priors. If annotations have
 no effect, fixed marker priors reduce to common values, learned annotation
 coefficients remain near zero, all group parameters become similar, and
-SBayesRC component probabilities do not vary meaningfully by annotation
+SBayesRC-style component probabilities do not vary meaningfully by annotation
 profile.
 
 Annotation models should therefore be compared with a plain CSR fit using
@@ -353,6 +353,29 @@ where the zero component is null and active components scale the marker-effect
 variance. A common workflow choice is
 `gamma = c(0, 0.01, 0.1, 1)`.
 
+This is an **SBayesRC-style annotation-dependent BayesR prior**. Its core prior
+family is closely aligned with the published SBayesRC prior structure:
+marker effects follow a BayesR-like mixture, and marker-specific component
+probabilities use conditional probit stick-breaking regressions on
+annotations. It is not an exact reproduction of GCTB SBayesRC as exposed by
+default. The public wrapper uses the four-component gamma grid above, whereas
+published SBayesRC uses `c(0, 0.001, 0.01, 0.1, 1)`. In addition, `sblr` uses a
+CSR sparse-LD likelihood rather than GCTB's low-rank rotated
+summary-statistics likelihood. Users can explicitly request the published
+gamma grid:
+
+```r
+fit_sbayesrc_published_gamma <- stblr_csr_sbayesrc_generic(
+  stats = stats,
+  ld_prefix = ld_prefix,
+  A = A,
+  gamma = c(0, 0.001, 0.01, 0.1, 1)
+)
+```
+
+Matching the gamma grid aligns that part of the prior specification; it does
+not make the complete implementation identical to GCTB SBayesRC.
+
 For marker \(i\), annotations determine component probabilities through a
 generalized probit stick-breaking construction. Let
 
@@ -373,8 +396,9 @@ $$
 \end{aligned}
 $$
 
-The probabilities are non-negative and sum to one. Marker \(i\)'s expected
-gamma multiplier is
+The probabilities are non-negative and sum to one. The native sampler floors
+and renormalizes them for numerical stability. Marker \(i\)'s expected gamma
+multiplier is
 
 $$
 E(\gamma_i\mid A_i,\alpha)
@@ -595,6 +619,6 @@ clear documentation of annotation preprocessing and prior construction.
 - [Workflows and outputs](workflows_and_outputs.qmd)
 - [Multi-trait models](multi_trait_models.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
-- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
+- [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd)
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
 - [Archived annotation-prior draft](drafts/annotation_informed_priors_stblr_mtblr.qmd)

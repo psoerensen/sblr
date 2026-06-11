@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbayesrc-helpers.R
 \name{make_sbayesrc_alpha_init}
 \alias{make_sbayesrc_alpha_init}
-\title{Initialize SBayesRC Annotation Mixture Probabilities}
+\title{Initialize SBayesRC-Style Annotation Mixture Probabilities}
 \usage{
 make_sbayesrc_alpha_init(
   A,
@@ -40,9 +40,9 @@ A list containing the initialized coefficients, variances, component
 }
 \description{
 Creates deterministic initial values for the probit stick-breaking
-annotation model used by the SBayesRC CSR sampler. The requested overall
-active probability is distributed across the non-null mixture components,
-then converted to conditional stick-breaking probabilities.
+annotation model used by the SBayesRC-style CSR sampler. The requested
+overall active probability is distributed across the non-null mixture
+components, then converted to conditional stick-breaking probabilities.
 }
 \details{
 When `A` contains an all-ones column, that column receives probit

@@ -46,7 +46,7 @@ labeling experimental proposals. -->
 
 <!-- Later: reuse annotation_model_summary() and summarize_annotation_signal(). -->
 
-## SBayesRC Prior-Architecture Diagnostics
+## SBayesRC-Style Prior-Architecture Diagnostics
 
 <!-- Later: reuse expected-gamma diagnostics and link their derivation. -->
 
@@ -61,5 +61,4 @@ labeling experimental proposals. -->
 - [Complete sparse-LD/BED workflow](../../examples/workflows/sparse_ld_bed_workflow.R)
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
 - [Technical annotation priors](technical_annotation_priors.qmd)
-- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
-
+- [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd)

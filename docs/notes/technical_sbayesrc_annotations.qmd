@@ -1,10 +1,13 @@
 ---
-title: "Technical Appendix: SBayesRC Annotation Priors"
+title: "Technical Appendix: SBayesRC-Style Annotation Priors"
 ---
 
-This appendix will explain the implemented SBayesRC-style annotation prior,
-generalized probit stick-breaking construction, and diagnostic helpers in full
-mathematical detail.
+This appendix will explain the implemented SBayesRC-style
+annotation-dependent BayesR prior, generalized probit stick-breaking
+construction, and diagnostic helpers in full mathematical detail. The core
+prior family is closely aligned with the published SBayesRC prior structure,
+but the exposed default gamma grid and CSR sparse-LD likelihood differ from
+the published GCTB implementation.
 
 <!-- Sources to integrate later: relevant mixture/direct-model concepts from
 drafts/annotation_informed_priors_stblr_mtblr.qmd, current public helper
@@ -52,4 +55,3 @@ contracts, and diagnostics in ../../examples/workflows/annotation_based_models.R
 - [Workflows and outputs](workflows_and_outputs.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
-

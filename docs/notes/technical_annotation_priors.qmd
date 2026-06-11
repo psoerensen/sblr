@@ -63,6 +63,5 @@ and cautions except SBayesRC-specific material, which has its own appendix. -->
 - [Annotation-informed models](annotation_informed_models.qmd)
 - [Multi-trait models](multi_trait_models.qmd)
 - [Workflows and outputs](workflows_and_outputs.qmd)
-- [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
+- [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd)
 - [Archived annotation-prior draft](drafts/annotation_informed_priors_stblr_mtblr.qmd)
-

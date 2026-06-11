@@ -294,7 +294,7 @@ in the archived annotation draft. Full marker-update derivations and
 implementation sketches belong in <a
 href="technical_annotation_priors.html">Technical annotation priors</a>;
 full stick-breaking details belong in <a
-href="technical_sbayesrc_annotations.html">Technical SBayesRC
+href="technical_sbayesrc_annotations.html">Technical SBayesRC-style
 annotations</a>.</p>
 <h2 id="why-annotations-inform-priors">Why Annotations Inform
 Priors</h2>
@@ -407,7 +407,7 @@ b_{it}\sim(1-\pi_t)\delta_0+\pi_tN(0,v_{b,t}).
 <p>This is the comparison model for annotation-aware priors. If
 annotations have no effect, fixed marker priors reduce to common values,
 learned annotation coefficients remain near zero, all group parameters
-become similar, and SBayesRC component probabilities do not vary
+become similar, and SBayesRC-style component probabilities do not vary
 meaningfully by annotation profile.</p>
 <p>Annotation models should therefore be compared with a plain CSR fit
 using compatible markers, LD, priors, and MCMC settings. Differences
@@ -580,6 +580,26 @@ active-effect distribution with multiple variance components. Let</p>
 <p>where the zero component is null and active components scale the
 marker-effect variance. A common workflow choice is
 <code>gamma = c(0, 0.01, 0.1, 1)</code>.</p>
+<p>This is an <strong>SBayesRC-style annotation-dependent BayesR
+prior</strong>. Its core prior family is closely aligned with the
+published SBayesRC prior structure: marker effects follow a BayesR-like
+mixture, and marker-specific component probabilities use conditional
+probit stick-breaking regressions on annotations. It is not an exact
+reproduction of GCTB SBayesRC as exposed by default. The public wrapper
+uses the four-component gamma grid above, whereas published SBayesRC
+uses <code>c(0, 0.001, 0.01, 0.1, 1)</code>. In addition,
+<code>sblr</code> uses a CSR sparse-LD likelihood rather than GCTB’s
+low-rank rotated summary-statistics likelihood. Users can explicitly
+request the published gamma grid:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_sbayesrc_published_gamma <span class="ot">&lt;-</span> <span class="fu">stblr_csr_sbayesrc_generic</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>Matching the gamma grid aligns that part of the prior specification;
+it does not make the complete implementation identical to GCTB
+SBayesRC.</p>
 <p>For marker (i), annotations determine component probabilities through
 a generalized probit stick-breaking construction. Let</p>
 <p><span class="math display">\[
@@ -596,7 +616,8 @@ p_{ij}=\Phi(\eta_{ij}),
 \pi_{iC} &amp;= \prod_{j=1}^{C-1}p_{ij}.
 \end{aligned}
 \]</span></p>
-<p>The probabilities are non-negative and sum to one. Marker (i)’s
+<p>The probabilities are non-negative and sum to one. The native sampler
+floors and renormalizes them for numerical stability. Marker (i)’s
 expected gamma multiplier is</p>
 <p><span class="math display">\[
 E(\gamma_i\mid A_i,\alpha)
@@ -609,14 +630,14 @@ components, converts those marginal probabilities into conditional
 stick-breaking probabilities, and, when an all-ones intercept exists,
 encodes the baseline in that intercept row of <code>alpha_init</code>.
 Other coefficients begin at zero unless supplied.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_sbayesrc <span class="ot">&lt;-</span> <span class="fu">stblr_csr_sbayesrc_generic</span>(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>),</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">updateAlpha =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">alpha_update_every =</span> <span class="dv">10</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit_sbayesrc <span class="ot">&lt;-</span> <span class="fu">stblr_csr_sbayesrc_generic</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">updateAlpha =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">alpha_update_every =</span> <span class="dv">10</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <p>The fit contains annotation coefficients <code>alpha</code>,
 annotation-effect variances <code>sigmaSqAlpha</code>, marker component
 probabilities <code>comp_prob</code>, and component counts
@@ -854,8 +875,8 @@ workflows</a></li>
 <li><a href="multi_trait_models.html">Multi-trait models</a></li>
 <li><a href="technical_annotation_priors.html">Technical annotation
 priors</a></li>
-<li><a href="technical_sbayesrc_annotations.html">Technical SBayesRC
-annotations</a></li>
+<li><a href="technical_sbayesrc_annotations.html">Technical
+SBayesRC-style annotations</a></li>
 <li><a
 href="../../examples/workflows/annotation_based_models.R">Complete
 annotation workflow</a></li>

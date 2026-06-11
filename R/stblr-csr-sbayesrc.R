@@ -1,8 +1,11 @@
-#' Fit SBayesRC ST-BLR with Overlapping Annotations
+#' Fit an SBayesRC-Style Annotation-Dependent BayesR Prior
 #'
-#' Fits the continuous overlapping-annotation SBayesRC CSR sampler. Marker
-#' mixture probabilities are modeled through probit stick-breaking regressions
-#' on an annotation matrix.
+#' Fits a CSR ST-BLR model with an SBayesRC-style annotation-dependent BayesR
+#' prior. Marker mixture probabilities are modeled through probit
+#' stick-breaking regressions on an annotation matrix. The core prior family is
+#' closely aligned with the published SBayesRC prior structure, but the exposed
+#' default gamma grid and CSR sparse-LD likelihood differ from the published
+#' GCTB SBayesRC implementation.
 #'
 #' @param stats Sufficient statistics returned by [bed_xtx_xty()].
 #' @param ld_prefix Prefix of the disk-backed CSR LD files.
@@ -44,8 +47,8 @@
 #' @param pi_floor Lower probability bound used by the sampler.
 #' @param alpha_update_every Iterations between annotation-effect updates.
 #'
-#' @return A formatted SBayesRC ST-BLR fit with annotation and mixture-component
-#'   posterior summaries.
+#' @return A formatted SBayesRC-style ST-BLR fit with annotation and
+#'   mixture-component posterior summaries.
 #' @export
 stblr_csr_sbayesrc_generic <- function(
   stats,

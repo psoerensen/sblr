@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbayesrc-helpers.R
 \name{sbayesrc_marker_pi}
 \alias{sbayesrc_marker_pi}
-\title{Convert SBayesRC Marker Annotations to Component Probabilities}
+\title{Convert SBayesRC-Style Marker Annotations to Component Probabilities}
 \usage{
 sbayesrc_marker_pi(A, alpha, gamma = c(0, 0.01, 0.1, 1))
 }
@@ -20,6 +20,6 @@ zero and all remaining values must be positive.}
 A marker by mixture-component probability matrix.
 }
 \description{
-Combines marker annotations with SBayesRC annotation coefficients, then
-applies the generalized probit stick-breaking transform.
+Combines marker annotations with SBayesRC-style annotation coefficients,
+then applies the generalized probit stick-breaking transform.
 }

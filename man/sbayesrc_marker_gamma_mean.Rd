@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbayesrc-helpers.R
 \name{sbayesrc_marker_gamma_mean}
 \alias{sbayesrc_marker_gamma_mean}
-\title{Calculate Expected SBayesRC Gamma by Marker}
+\title{Calculate Expected SBayesRC-Style Gamma by Marker}
 \usage{
 sbayesrc_marker_gamma_mean(A, alpha, gamma = c(0, 0.01, 0.1, 1))
 }
@@ -20,5 +20,5 @@ zero and all remaining values must be positive.}
 A named numeric vector containing expected gamma per marker.
 }
 \description{
-Calculate Expected SBayesRC Gamma by Marker
+Calculate Expected SBayesRC-Style Gamma by Marker
 }

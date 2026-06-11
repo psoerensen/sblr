@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Technical Appendix: SBayesRC Annotation Priors</title>
+  <title>Technical Appendix: SBayesRC-Style Annotation Priors</title>
   <style>
     html {
       color: #1a1a1a;
@@ -169,7 +169,8 @@
 </head>
 <body>
 <header id="title-block-header">
-<h1 class="title">Technical Appendix: SBayesRC Annotation Priors</h1>
+<h1 class="title">Technical Appendix: SBayesRC-Style Annotation
+Priors</h1>
 </header>
 <nav id="TOC" role="doc-toc">
 <ul>
@@ -203,9 +204,12 @@ id="toc-interpretation-and-limits">Interpretation and Limits</a></li>
 id="toc-related-notes-and-sources">Related Notes and Sources</a></li>
 </ul>
 </nav>
-<p>This appendix will explain the implemented SBayesRC-style annotation
-prior, generalized probit stick-breaking construction, and diagnostic
-helpers in full mathematical detail.</p>
+<p>This appendix will explain the implemented SBayesRC-style
+annotation-dependent BayesR prior, generalized probit stick-breaking
+construction, and diagnostic helpers in full mathematical detail. The
+core prior family is closely aligned with the published SBayesRC prior
+structure, but the exposed default gamma grid and CSR sparse-LD
+likelihood differ from the published GCTB implementation.</p>
 <!-- Sources to integrate later: relevant mixture/direct-model concepts from
 drafts/annotation_informed_priors_stblr_mtblr.qmd, current public helper
 contracts, and diagnostics in ../../examples/workflows/annotation_based_models.R. -->

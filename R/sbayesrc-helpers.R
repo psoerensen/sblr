@@ -1,9 +1,9 @@
-#' Initialize SBayesRC Annotation Mixture Probabilities
+#' Initialize SBayesRC-Style Annotation Mixture Probabilities
 #'
 #' Creates deterministic initial values for the probit stick-breaking
-#' annotation model used by the SBayesRC CSR sampler. The requested overall
-#' active probability is distributed across the non-null mixture components,
-#' then converted to conditional stick-breaking probabilities.
+#' annotation model used by the SBayesRC-style CSR sampler. The requested
+#' overall active probability is distributed across the non-null mixture
+#' components, then converted to conditional stick-breaking probabilities.
 #'
 #' When `A` contains an all-ones column, that column receives probit
 #' coefficients encoding the baseline stick-breaking probabilities and all
@@ -219,7 +219,7 @@ make_sbayesrc_alpha_init <- function(
  out
 }
 
-#' Convert SBayesRC Annotation Coefficients to Component Probabilities
+#' Convert SBayesRC-Style Annotation Coefficients to Component Probabilities
 #'
 #' Applies the generalized probit stick-breaking transform to annotation
 #' coefficient rows.
@@ -237,7 +237,7 @@ sbayesrc_annotation_pi <- function(alpha, gamma = c(0, 0.01, 0.1, 1)) {
  .sbayesrc_stick_breaking_pi(alpha, gamma)
 }
 
-#' Calculate Expected SBayesRC Gamma by Annotation
+#' Calculate Expected SBayesRC-Style Gamma by Annotation
 #'
 #' @inheritParams sbayesrc_annotation_pi
 #'
@@ -254,10 +254,10 @@ sbayesrc_annotation_gamma_mean <- function(
  out
 }
 
-#' Convert SBayesRC Marker Annotations to Component Probabilities
+#' Convert SBayesRC-Style Marker Annotations to Component Probabilities
 #'
-#' Combines marker annotations with SBayesRC annotation coefficients, then
-#' applies the generalized probit stick-breaking transform.
+#' Combines marker annotations with SBayesRC-style annotation coefficients,
+#' then applies the generalized probit stick-breaking transform.
 #'
 #' @param A Numeric marker annotation matrix with markers in rows and
 #'   annotations in columns.
@@ -280,7 +280,7 @@ sbayesrc_marker_pi <- function(A, alpha, gamma = c(0, 0.01, 0.1, 1)) {
  .sbayesrc_stick_breaking_pi(eta, gamma)
 }
 
-#' Calculate Expected SBayesRC Gamma by Marker
+#' Calculate Expected SBayesRC-Style Gamma by Marker
 #'
 #' @inheritParams sbayesrc_marker_pi
 #'

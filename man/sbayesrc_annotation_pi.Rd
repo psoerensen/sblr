@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbayesrc-helpers.R
 \name{sbayesrc_annotation_pi}
 \alias{sbayesrc_annotation_pi}
-\title{Convert SBayesRC Annotation Coefficients to Component Probabilities}
+\title{Convert SBayesRC-Style Annotation Coefficients to Component Probabilities}
 \usage{
 sbayesrc_annotation_pi(alpha, gamma = c(0, 0.01, 0.1, 1))
 }
