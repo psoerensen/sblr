@@ -3,6 +3,7 @@
 #' Export selected Rcpp-generated helpers used by the core sparse-LD and PLINK
 #' BED workflow.
 #'
+#' @name sparse_ld_bed_helpers
 #' @export bed_xtx_xty
 #' @export sparseLD_stream_CSR
 #' @export sparseLD_read_CSR
