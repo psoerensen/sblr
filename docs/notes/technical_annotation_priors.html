@@ -8,7 +8,7 @@
 
 <meta name="author" content="Peter Sørensen">
 
-<title>Technical Appendix: Annotation Priors – sblr</title>
+<title>Technical Appendix: Annotation-Informed Priors – sblr</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -104,6 +104,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -154,19 +183,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#annotation-level-posterior-summaries-and-overlap" id="toc-annotation-level-posterior-summaries-and-overlap" class="nav-link active" data-scroll-target="#annotation-level-posterior-summaries-and-overlap"><span class="header-section-number">1</span> Annotation-Level Posterior Summaries and Overlap</a></li>
-  <li><a href="#pip-enrichment-and-variance-attribution" id="toc-pip-enrichment-and-variance-attribution" class="nav-link" data-scroll-target="#pip-enrichment-and-variance-attribution"><span class="header-section-number">2</span> PIP Enrichment and Variance Attribution</a></li>
-  <li><a href="#empirical-bayes-inclusion-and-variance-priors" id="toc-empirical-bayes-inclusion-and-variance-priors" class="nav-link" data-scroll-target="#empirical-bayes-inclusion-and-variance-priors"><span class="header-section-number">3</span> Empirical-Bayes Inclusion and Variance Priors</a></li>
-  <li><a href="#marker-specific-prior-scale-construction" id="toc-marker-specific-prior-scale-construction" class="nav-link" data-scroll-target="#marker-specific-prior-scale-construction"><span class="header-section-number">4</span> Marker-Specific Prior Scale Construction</a></li>
-  <li><a href="#full-stblr-marker-update-derivation-with-marker-specific-priors" id="toc-full-stblr-marker-update-derivation-with-marker-specific-priors" class="nav-link" data-scroll-target="#full-stblr-marker-update-derivation-with-marker-specific-priors"><span class="header-section-number">5</span> Full STBLR Marker-Update Derivation With Marker-Specific Priors</a></li>
-  <li><a href="#annotation-specific-mtblr-covariance-and-sharing-model-priors" id="toc-annotation-specific-mtblr-covariance-and-sharing-model-priors" class="nav-link" data-scroll-target="#annotation-specific-mtblr-covariance-and-sharing-model-priors"><span class="header-section-number">6</span> Annotation-Specific MTBLR Covariance and Sharing-Model Priors</a></li>
-  <li><a href="#annotation-level-stblrmtblr-as-a-prior-learning-stage" id="toc-annotation-level-stblrmtblr-as-a-prior-learning-stage" class="nav-link" data-scroll-target="#annotation-level-stblrmtblr-as-a-prior-learning-stage"><span class="header-section-number">7</span> Annotation-Level STBLR/MTBLR as a Prior-Learning Stage</a></li>
-  <li><a href="#direct-hierarchical-annotation-models" id="toc-direct-hierarchical-annotation-models" class="nav-link" data-scroll-target="#direct-hierarchical-annotation-models"><span class="header-section-number">8</span> Direct Hierarchical Annotation Models</a></li>
-  <li><a href="#fixed-versus-jointly-updated-annotation-coefficients" id="toc-fixed-versus-jointly-updated-annotation-coefficients" class="nav-link" data-scroll-target="#fixed-versus-jointly-updated-annotation-coefficients"><span class="header-section-number">9</span> Fixed Versus Jointly Updated Annotation Coefficients</a></li>
-  <li><a href="#proposed-c-changes-and-sparse-annotation-representation" id="toc-proposed-c-changes-and-sparse-annotation-representation" class="nav-link" data-scroll-target="#proposed-c-changes-and-sparse-annotation-representation"><span class="header-section-number">10</span> Proposed C++ Changes and Sparse Annotation Representation</a></li>
-  <li><a href="#centering-shrinkage-caps-cross-fitting-and-uncertainty" id="toc-centering-shrinkage-caps-cross-fitting-and-uncertainty" class="nav-link" data-scroll-target="#centering-shrinkage-caps-cross-fitting-and-uncertainty"><span class="header-section-number">11</span> Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty</a></li>
-  <li><a href="#warm-started-regional-mtblr" id="toc-warm-started-regional-mtblr" class="nav-link" data-scroll-target="#warm-started-regional-mtblr"><span class="header-section-number">12</span> Warm-Started Regional MTBLR</a></li>
-  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">13</span> Related Notes and Sources</a></li>
+  <li><a href="#annotation-matrix-and-preprocessing" id="toc-annotation-matrix-and-preprocessing" class="nav-link active" data-scroll-target="#annotation-matrix-and-preprocessing"><span class="header-section-number">1</span> Annotation Matrix and Preprocessing</a>
+  <ul class="collapse">
+  <li><a href="#intercepts-binary-columns-and-quantitative-columns" id="toc-intercepts-binary-columns-and-quantitative-columns" class="nav-link" data-scroll-target="#intercepts-binary-columns-and-quantitative-columns"><span class="header-section-number">1.1</span> Intercepts, binary columns, and quantitative columns</a></li>
+  </ul></li>
+  <li><a href="#baseline-sparse-prior" id="toc-baseline-sparse-prior" class="nav-link" data-scroll-target="#baseline-sparse-prior"><span class="header-section-number">2</span> Baseline Sparse Prior</a></li>
+  <li><a href="#marker-specific-prior-construction" id="toc-marker-specific-prior-construction" class="nav-link" data-scroll-target="#marker-specific-prior-construction"><span class="header-section-number">3</span> Marker-Specific Prior Construction</a>
+  <ul class="collapse">
+  <li><a href="#inclusion-probabilities" id="toc-inclusion-probabilities" class="nav-link" data-scroll-target="#inclusion-probabilities"><span class="header-section-number">3.1</span> Inclusion probabilities</a></li>
+  <li><a href="#effect-variance-multipliers" id="toc-effect-variance-multipliers" class="nav-link" data-scroll-target="#effect-variance-multipliers"><span class="header-section-number">3.2</span> Effect-variance multipliers</a></li>
+  <li><a href="#consequences-for-a-single-marker-update" id="toc-consequences-for-a-single-marker-update" class="nav-link" data-scroll-target="#consequences-for-a-single-marker-update"><span class="header-section-number">3.3</span> Consequences for a single-marker update</a></li>
+  </ul></li>
+  <li><a href="#annotation-level-posterior-summaries" id="toc-annotation-level-posterior-summaries" class="nav-link" data-scroll-target="#annotation-level-posterior-summaries"><span class="header-section-number">4</span> Annotation-Level Posterior Summaries</a></li>
+  <li><a href="#empirical-bayes-prior-construction" id="toc-empirical-bayes-prior-construction" class="nav-link" data-scroll-target="#empirical-bayes-prior-construction"><span class="header-section-number">5</span> Empirical-Bayes Prior Construction</a>
+  <ul class="collapse">
+  <li><a href="#set-based-estimates" id="toc-set-based-estimates" class="nav-link" data-scroll-target="#set-based-estimates"><span class="header-section-number">5.1</span> Set-based estimates</a></li>
+  <li><a href="#conditional-annotation-models" id="toc-conditional-annotation-models" class="nav-link" data-scroll-target="#conditional-annotation-models"><span class="header-section-number">5.2</span> Conditional annotation models</a></li>
+  <li><a href="#data-reuse-and-cross-fitting" id="toc-data-reuse-and-cross-fitting" class="nav-link" data-scroll-target="#data-reuse-and-cross-fitting"><span class="header-section-number">5.3</span> Data reuse and cross-fitting</a></li>
+  </ul></li>
+  <li><a href="#fixed-marker-specific-prior-wrapper" id="toc-fixed-marker-specific-prior-wrapper" class="nav-link" data-scroll-target="#fixed-marker-specific-prior-wrapper"><span class="header-section-number">6</span> Fixed Marker-Specific Prior Wrapper</a></li>
+  <li><a href="#learned-annotation-effects" id="toc-learned-annotation-effects" class="nav-link" data-scroll-target="#learned-annotation-effects"><span class="header-section-number">7</span> Learned Annotation Effects</a></li>
+  <li><a href="#group-priors" id="toc-group-priors" class="nav-link" data-scroll-target="#group-priors"><span class="header-section-number">8</span> Group Priors</a></li>
+  <li><a href="#simulation-helpers-and-known-truth-diagnostics" id="toc-simulation-helpers-and-known-truth-diagnostics" class="nav-link" data-scroll-target="#simulation-helpers-and-known-truth-diagnostics"><span class="header-section-number">9</span> Simulation Helpers and Known-Truth Diagnostics</a></li>
+  <li><a href="#overlap-identifiability-and-double-counting" id="toc-overlap-identifiability-and-double-counting" class="nav-link" data-scroll-target="#overlap-identifiability-and-double-counting"><span class="header-section-number">10</span> Overlap, Identifiability, and Double Counting</a></li>
+  <li><a href="#research-stage-multi-trait-extensions" id="toc-research-stage-multi-trait-extensions" class="nav-link" data-scroll-target="#research-stage-multi-trait-extensions"><span class="header-section-number">11</span> Research-Stage Multi-Trait Extensions</a></li>
+  <li><a href="#regularization-bounds-and-uncertainty" id="toc-regularization-bounds-and-uncertainty" class="nav-link" data-scroll-target="#regularization-bounds-and-uncertainty"><span class="header-section-number">12</span> Regularization, Bounds, and Uncertainty</a></li>
+  <li><a href="#interpretation-and-causal-limits" id="toc-interpretation-and-causal-limits" class="nav-link" data-scroll-target="#interpretation-and-causal-limits"><span class="header-section-number">13</span> Interpretation and Causal Limits</a></li>
+  <li><a href="#implementation-checklist" id="toc-implementation-checklist" class="nav-link" data-scroll-target="#implementation-checklist"><span class="header-section-number">14</span> Implementation Checklist</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">15</span> Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_annotation_priors.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -175,7 +219,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<div class="quarto-title-block"><div><h1 class="title">Technical Appendix: Annotation Priors</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+<div class="quarto-title-block"><div><h1 class="title">Technical Appendix: Annotation-Informed Priors</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
 </div>
 
 
@@ -205,80 +249,254 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This note is under active development. Some sections are structured outlines that will be expanded over time.</p>
-</div>
-</div>
-<p>This appendix will preserve the detailed derivations, implementations, uncertainty considerations, and proposed extensions for annotation-informed STBLR and MTBLR priors.</p>
-<!-- Primary source: drafts/annotation_informed_priors_stblr_mtblr.qmd.
-Migrate all mapped equations, R implementations, C++ sketches, assumptions,
-and cautions except SBayesRC-specific material, which has its own appendix. -->
-<section id="annotation-level-posterior-summaries-and-overlap" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="annotation-level-posterior-summaries-and-overlap"><span class="header-section-number">1</span> Annotation-Level Posterior Summaries and Overlap</h2>
-<!-- Later: migrate set summaries, overlap handling, and implementations. -->
-</section>
-<section id="pip-enrichment-and-variance-attribution" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="pip-enrichment-and-variance-attribution"><span class="header-section-number">2</span> PIP Enrichment and Variance Attribution</h2>
-<!-- Later: preserve full enrichment and attribution derivations. -->
-</section>
-<section id="empirical-bayes-inclusion-and-variance-priors" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="empirical-bayes-inclusion-and-variance-priors"><span class="header-section-number">3</span> Empirical-Bayes Inclusion and Variance Priors</h2>
-<!-- Later: migrate staged prior-learning equations and uncertainty caveats. -->
-</section>
-<section id="marker-specific-prior-scale-construction" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="marker-specific-prior-scale-construction"><span class="header-section-number">4</span> Marker-Specific Prior Scale Construction</h2>
-<!-- Later: preserve overlapping-annotation scale construction. -->
-</section>
-<section id="full-stblr-marker-update-derivation-with-marker-specific-priors" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="full-stblr-marker-update-derivation-with-marker-specific-priors"><span class="header-section-number">5</span> Full STBLR Marker-Update Derivation With Marker-Specific Priors</h2>
-<!-- Later: migrate the complete derivation and implementation sketch. -->
-</section>
-<section id="annotation-specific-mtblr-covariance-and-sharing-model-priors" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="annotation-specific-mtblr-covariance-and-sharing-model-priors"><span class="header-section-number">6</span> Annotation-Specific MTBLR Covariance and Sharing-Model Priors</h2>
-<!-- Later: preserve all MTBLR prior equations and R implementations. -->
-</section>
-<section id="annotation-level-stblrmtblr-as-a-prior-learning-stage" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="annotation-level-stblrmtblr-as-a-prior-learning-stage"><span class="header-section-number">7</span> Annotation-Level STBLR/MTBLR as a Prior-Learning Stage</h2>
-<!-- Later: migrate empirical-Bayes annotation-level model material. -->
-</section>
-<section id="direct-hierarchical-annotation-models" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="direct-hierarchical-annotation-models"><span class="header-section-number">8</span> Direct Hierarchical Annotation Models</h2>
-<!-- Later: preserve direct-model definitions and hierarchical interpretation. -->
-</section>
-<section id="fixed-versus-jointly-updated-annotation-coefficients" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="fixed-versus-jointly-updated-annotation-coefficients"><span class="header-section-number">9</span> Fixed Versus Jointly Updated Annotation Coefficients</h2>
-<!-- Later: preserve fixed and sampling-update alternatives. -->
-</section>
-<section id="proposed-c-changes-and-sparse-annotation-representation" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="proposed-c-changes-and-sparse-annotation-representation"><span class="header-section-number">10</span> Proposed C++ Changes and Sparse Annotation Representation</h2>
-<!-- Later: retain design sketches, clearly labeled as proposed. -->
-</section>
-<section id="centering-shrinkage-caps-cross-fitting-and-uncertainty" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="centering-shrinkage-caps-cross-fitting-and-uncertainty"><span class="header-section-number">11</span> Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty</h2>
-<!-- Later: preserve all regularization and overfitting cautions. -->
-</section>
-<section id="warm-started-regional-mtblr" class="level2" data-number="12">
-<h2 data-number="12" class="anchored" data-anchor-id="warm-started-regional-mtblr"><span class="header-section-number">12</span> Warm-Started Regional MTBLR</h2>
-<!-- Later: retain as proposed/experimental unless a stable wrapper exists. -->
-</section>
-<section id="related-notes-and-sources" class="level2" data-number="13">
-<h2 data-number="13" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">13</span> Related Notes and Sources</h2>
+<p>This appendix describes how <code>sblr</code> transfers marker annotations into sparse Bayesian linear-regression priors. It develops marker-specific inclusion probabilities and effect-variance scales, explains the fixed, learned, and group-prior CSR wrappers, and records empirical-Bayes constructions from the original annotation-prior draft. The emphasis is on the prior and its implementation contract; the CSR likelihood and sparse-LD representation are covered elsewhere.</p>
+<section id="annotation-matrix-and-preprocessing" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="annotation-matrix-and-preprocessing"><span class="header-section-number">1</span> Annotation Matrix and Preprocessing</h2>
+<p>Let</p>
+[ A =
+<span class="math display">\[\begin{bmatrix}
+A_{11} &amp; \cdots &amp; A_{1K}\\
+\vdots &amp; \ddots &amp; \vdots\\
+A_{m1} &amp; \cdots &amp; A_{mK}
+\end{bmatrix}\]</span>
+<p>]</p>
+<p>be an (m K) marker-by-annotation matrix. Row (A_i) describes marker (i), and column (k) describes an annotation. Binary annotations may encode membership in functional sets; quantitative annotations may encode continuous scores. A marker may belong to several annotations, so the columns generally do not define a partition.</p>
+<p>The marker-row contract is strict. Rows of (A) must correspond, in the same order, to:</p>
 <ul>
-<li><a href="../notes/annotation_informed_models.html">Annotation-informed models</a></li>
-<li><a href="../notes/multi_trait_models.html">Multi-trait models</a></li>
-<li><a href="../notes/workflows_and_outputs.html">Workflows and outputs</a></li>
-<li><a href="../notes/technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a></li>
-<li><a href="../notes/drafts/annotation_informed_priors_stblr_mtblr.html">Archived annotation-prior draft</a></li>
+<li>the markers used to compute <code>wy</code> and <code>ww</code>;</li>
+<li>rows and columns of the sparse-LD matrix;</li>
+<li>marker names represented by <code>cls</code> and <code>Glist$rsidsLD</code>; and</li>
+<li>rows of posterior marker summaries such as <code>bm</code> and <code>dm</code>.</li>
 </ul>
+<p>When row names and marker names are both available, the annotation preparation helper can reorder rows by name. Names are not a substitute for checking the alignment: duplicated, incomplete, or stale names can still produce an incorrect analysis.</p>
+<section id="intercepts-binary-columns-and-quantitative-columns" class="level3" data-number="1.1">
+<h3 data-number="1.1" class="anchored" data-anchor-id="intercepts-binary-columns-and-quantitative-columns"><span class="header-section-number">1.1</span> Intercepts, binary columns, and quantitative columns</h3>
+<p>The annotation-aware wrappers use <code>.stblr_prepare_annotation_matrix()</code> to validate and preprocess (A). Its relevant behavior is:</p>
+<ul>
+<li>values must be numeric and finite;</li>
+<li>an intercept is recognized when the first column is all ones;</li>
+<li><code>add_intercept = TRUE</code> prepends an intercept if one is not recognized;</li>
+<li>with <code>standardize = TRUE</code>, nonbinary, non-intercept columns are centered and scaled;</li>
+<li>binary columns are left unchanged unless <code>center_binary = TRUE</code>.</li>
+</ul>
+<p>An intercept lets the model express a baseline prior independently of the annotation contrasts. Centering quantitative columns makes their coefficients more comparable and reduces confounding between the intercept and annotation effects. Leaving a binary indicator uncentered gives its coefficient the interpretation of a contrast against markers outside that annotation.</p>
+<p>These choices are part of the model specification and should be reported. Automatic standardization is convenient, but users should retain the preprocessing metadata needed to apply the same transformation in sensitivity analyses or prediction data.</p>
+</section>
+</section>
+<section id="baseline-sparse-prior" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="baseline-sparse-prior"><span class="header-section-number">2</span> Baseline Sparse Prior</h2>
+<p>For a single trait, the baseline sparse prior introduces a marker inclusion indicator (d_i):</p>
+[
+<span class="math display">\[\begin{aligned}
+b_i \mid d_i = 0 &amp;= 0,\\
+b_i \mid d_i = 1 &amp;\sim N(0, v_b),\\
+\Pr(d_i = 1) &amp;= \pi.
+\end{aligned}\]</span>
+<p>]</p>
+<p>Here (b_i) is the effect of marker (i), (v_b) is the active-marker variance, and () is a global inclusion probability. The posterior inclusion probability (PIP) is</p>
+<p>[ (d_i = 1 ), ]</p>
+<p>which is summarized by <code>dm</code> when returned by a fitted model.</p>
+<p>The annotation-informed models retain this sparse-prior logic but replace one or both global quantities with structured marker-specific quantities:</p>
+<p>[ (d_i = 1) = _i, b_i d_i = 1 N(0, v_b w_i), ]</p>
+<p>where (w_i &gt; 0) is a marker-specific variance multiplier.</p>
+</section>
+<section id="marker-specific-prior-construction" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="marker-specific-prior-construction"><span class="header-section-number">3</span> Marker-Specific Prior Construction</h2>
+<section id="inclusion-probabilities" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="inclusion-probabilities"><span class="header-section-number">3.1</span> Inclusion probabilities</h3>
+<p>A common annotation construction places annotation effects on the log-odds scale:</p>
+<p>[ (_i) = (<em>0) + A_i </em>, ]</p>
+<p>where (<em>0) is a baseline inclusion probability and (</em>) contains annotation coefficients. Positive values of (A_i_) increase prior inclusion odds; negative values reduce them.</p>
+<p>The fixed-prior helper used by the wrappers centers the linear predictor before combining it with the baseline:</p>
+<p>[ <em>{i} = A_i</em>- <em>{j=1}^m A_j</em>, _i = ^{-1} {(<em>0)+</em>{i}}. ]</p>
+<p>Centering makes the annotation effects primarily redistribute prior inclusion probability across markers rather than changing its genome-wide location. The resulting values are clamped to user-specified lower and upper bounds for numerical and inferential stability.</p>
+</section>
+<section id="effect-variance-multipliers" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="effect-variance-multipliers"><span class="header-section-number">3.2</span> Effect-variance multipliers</h3>
+<p>Annotation effects on active-marker variance naturally use a log scale:</p>
+<p>[ w_i = A_i_v, w_i = (A_i_v). ]</p>
+<p>As with inclusion probabilities, the wrapper centers the linear predictor:</p>
+<p>[ _{v i} = A_i<em>v-</em>{j=1}^m A_j<em>v, w_i=(</em>{v i}). ]</p>
+<p>This construction makes (w_i) a relative multiplier around the global active-marker variance (v_b). Lower and upper bounds prevent extreme annotation combinations from creating nearly degenerate or unreasonably diffuse marker priors.</p>
+</section>
+<section id="consequences-for-a-single-marker-update" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="consequences-for-a-single-marker-update"><span class="header-section-number">3.3</span> Consequences for a single-marker update</h3>
+<p>The marker-specific quantities enter the standard sparse BLR update directly. Let (w_i^{XX}) denote the diagonal marker cross-product and let</p>
+<p>[ s_i = r_i + w_i^{XX} b_i ]</p>
+<p>be the marker score formed from the current residual state. To avoid confusing the cross-product with the prior multiplier, write (v_{b,i}=v_b w_i). The log Bayes factor for the active versus null component is</p>
+<p>[ BF_i = ( ) + {v_e(v_e+w_i^{XX}v_{b,i})}. ]</p>
+<p>The conditional inclusion probability is</p>
+<p>[ (d_i=1) = . ]</p>
+<p>Conditional on inclusion,</p>
+<p>[ b_id_i=1, N( , ). ]</p>
+<p>Thus, (_i) alters prior odds of inclusion, whereas (w_i) alters the active effect distribution and its shrinkage. These mechanisms should not be interpreted as interchangeable.</p>
+</section>
+</section>
+<section id="annotation-level-posterior-summaries" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="annotation-level-posterior-summaries"><span class="header-section-number">4</span> Annotation-Level Posterior Summaries</h2>
+<p>Posterior marker summaries can be aggregated to describe signal associated with an annotation set (S_k={i:A_{ik}}). Useful descriptive summaries include:</p>
+<p>[ m_{,k} = _{iS_k}(d_i=1), ]</p>
+<p>the expected number of included markers in the set, and the PIP enrichment ratio</p>
+<p>[ E_k = {|S_k<sup>c|</sup>{-1}_{iS_k}(d_i=1)}. ]</p>
+<p>For summary-statistics fits, a marker-level contribution estimate may be written</p>
+<p>[ c_i = , ]</p>
+<p>with an optional PIP-weighted version. An annotation-level genetic-variance summary is then</p>
+<p>[ V_{G,k} = _{iS_k} c_i. ]</p>
+<p>These set summaries are deliberately descriptive. When annotations overlap, their totals are not additive and the same marker contribution may appear in several sets. <code>summarize_annotation_signal()</code> follows this descriptive set-based approach for known simulation truth and, when a fit is supplied, adds within-set means of <code>dm</code> and absolute <code>bm</code>.</p>
+<p>For conditional interpretation with overlapping annotations, one can regress a marker-level posterior response (s_i) on all annotation columns:</p>
+<p>[ s_i = + <em>{k=1}^K A</em>{ik}_k+_i. ]</p>
+<p>Possible responses include a PIP, squared posterior mean effect, or estimated marker contribution. Such a regression estimates conditional associations among annotations, but it does not establish that an annotation causes the genetic signal.</p>
+</section>
+<section id="empirical-bayes-prior-construction" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="empirical-bayes-prior-construction"><span class="header-section-number">5</span> Empirical-Bayes Prior Construction</h2>
+<p>An empirical-Bayes workflow estimates annotation signal from one genomic fit and uses it to construct priors for a subsequent fit:</p>
+<p>[ {_i,w_i} . ]</p>
+<p>This approach separates prior construction from the genomic sampler. It is useful when annotation effects should be estimated with a dedicated model or when fixed marker priors must be inspected before fitting.</p>
+<section id="set-based-estimates" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="set-based-estimates"><span class="header-section-number">5.1</span> Set-based estimates</h3>
+<p>A smoothed set-level inclusion probability can be estimated from PIPs:</p>
+<p>[ _k = , ]</p>
+<p>where (a&gt;0) supplies symmetric pseudo-count shrinkage. A rough active-effect variance estimate is</p>
+<p>[ v_{b,k} = {(m_{,k},c)}, ]</p>
+<p>where (c&gt;0) prevents instability when the expected number of active markers is very small. Both estimates should generally be shrunk toward genome-wide values before they are converted into marker priors.</p>
+<p>These formulas are easiest to interpret for disjoint sets. With overlapping annotations, directly assigning each set estimate to its member markers can double-count evidence.</p>
+</section>
+<section id="conditional-annotation-models" class="level3" data-number="5.2">
+<h3 data-number="5.2" class="anchored" data-anchor-id="conditional-annotation-models"><span class="header-section-number">5.2</span> Conditional annotation models</h3>
+<p>For overlapping annotations, an annotation-level regression or BLR can map marker summaries to annotation coefficients. Candidate marker-level responses from the archived design include:</p>
+<ul>
+<li>posterior mean effects, (b_i);</li>
+<li>transformed PIPs, such as a bounded ((dm_i));</li>
+<li>squared effects or absolute effects; and</li>
+<li>marker contribution estimates, (b_i(wy_i-r_i)/n).</li>
+</ul>
+<p>The fitted annotation effects can then be transformed through the centered logit and log-scale constructions above. Regularization is essential because annotation columns can be numerous, correlated, imbalanced, or nearly redundant.</p>
+</section>
+<section id="data-reuse-and-cross-fitting" class="level3" data-number="5.3">
+<h3 data-number="5.3" class="anchored" data-anchor-id="data-reuse-and-cross-fitting"><span class="header-section-number">5.3</span> Data reuse and cross-fitting</h3>
+<p>When the same phenotype data are used both to estimate annotation enrichment and to fit the annotation-informed model, the resulting prior is data-dependent. This can improve adaptation but can also exaggerate evidence if uncertainty in the first-stage estimate is ignored.</p>
+<p>Useful safeguards include:</p>
+<ul>
+<li>shrink annotation coefficients toward zero;</li>
+<li>clamp (_i) and (w_i) to defensible ranges;</li>
+<li>compare against an unannotated baseline;</li>
+<li>split markers into approximately LD-independent folds and construct priors out of fold; and</li>
+<li>assess sensitivity to the annotation model and prior bounds.</li>
+</ul>
+<p>The current fixed-prior wrapper supports the final marker-prior fitting stage. Cross-fitting and a full empirical-Bayes pipeline remain analysis-level responsibilities rather than a single exported package workflow.</p>
+</section>
+</section>
+<section id="fixed-marker-specific-prior-wrapper" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="fixed-marker-specific-prior-wrapper"><span class="header-section-number">6</span> Fixed Marker-Specific Prior Wrapper</h2>
+<p><code>stblr_csr_prior_annot()</code> fits a CSR summary-statistics model with fixed marker-specific inclusion probabilities and effect-variance multipliers. Users may either supply <code>fixed_pi_marker</code> and <code>fixed_vb_multiplier</code> directly, or supply (A) and fixed annotation coefficients from which the wrapper constructs them.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>fit_fixed <span class="ot">&lt;-</span> <span class="fu">stblr_csr_prior_annot</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> n,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">yy =</span> stats<span class="sc">$</span>yy,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">wy =</span> stats<span class="sc">$</span>wy,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">ww =</span> stats<span class="sc">$</span>ww,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">beta_pi =</span> beta_pi,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">beta_vb =</span> beta_vb</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The annotation-derived marker priors remain fixed during sampling. Marker effects, inclusion states, residual variance, global variance parameters, and other sampler states may still be updated according to the wrapper’s update flags. Fixed therefore refers to the annotation-to-marker prior mapping, not to the whole fitted model.</p>
+<p>This wrapper is appropriate when priors come from external evidence, a separate training analysis, or a deliberately staged empirical-Bayes procedure.</p>
+</section>
+<section id="learned-annotation-effects" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="learned-annotation-effects"><span class="header-section-number">7</span> Learned Annotation Effects</h2>
+<p><code>stblr_csr_learn_annot()</code> learns annotation coefficients jointly with the marker model. For trait (t), the implemented construction is conceptually</p>
+<p>[ (_{it}) = (<em>t) + (A_i</em>{,t}), ]</p>
+<p>and</p>
+<p>[ v_{b,it} = v_{b,t} {(A_i_{v,t})}. ]</p>
+<p>The annotation effects are initialized by <code>eta_pi_init</code> and <code>eta_vb_init</code>, with zero matrices used by default. Gaussian shrinkage scales <code>sigma_eta_pi</code> and <code>sigma_eta_vb</code> regularize the coefficients.</p>
+<p>The native sampler uses random-walk Metropolis-Hastings updates at the <code>annot_update_every</code> schedule. The inclusion-coefficient target is informed by the current inclusion states; the variance-coefficient target is informed by the current active effects and inclusion states. Proposal scales are controlled by <code>rw_sd_eta_pi</code> and <code>rw_sd_eta_vb</code>. Marker-level inclusion probabilities and variance multipliers are bounded during construction.</p>
+<p>This is a direct learned-prior model rather than a separate two-stage empirical-Bayes fit. The posterior annotation coefficients summarize how the model adapts prior inclusion and active-effect variance, conditional on all other annotations and the sampler specification.</p>
+</section>
+<section id="group-priors" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="group-priors"><span class="header-section-number">8</span> Group Priors</h2>
+<p><code>stblr_csr_group_annot()</code> assigns each marker to exactly one group through <code>group_index</code>. Group (g) receives a group-specific inclusion probability and variance multiplier:</p>
+<p>[ (d_i=1)=<em>{g(i)}, b_id_i=1 N{0,v_b w</em>{g(i)}}. ]</p>
+<p>Group inclusion probabilities have beta-prior shape parameters derived from a prior mean and strength. Group variance multipliers may also be updated, depending on <code>updateGroupVb</code>, and can be normalized around a common scale.</p>
+<p>The group construction is a simplification of overlapping annotation models: it creates an unambiguous partition and directly pools evidence within groups, but it cannot represent a marker’s simultaneous membership in several functional categories. It is useful when annotations naturally define mutually exclusive strata or when a simpler, more stable model is preferred.</p>
+<p>The preparation helper verifies that every marker has one nonmissing group, that requested group names define the ordering, and that every represented group is nonempty. The native interface receives a zero-based group index; users should supply ordinary R group labels and let the wrapper handle that conversion.</p>
+</section>
+<section id="simulation-helpers-and-known-truth-diagnostics" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="simulation-helpers-and-known-truth-diagnostics"><span class="header-section-number">9</span> Simulation Helpers and Known-Truth Diagnostics</h2>
+<p>The annotation simulation helpers support controlled checks of whether an annotation-informed model recovers known architecture.</p>
+<p><code>make_overlapping_annotations()</code> creates binary annotation columns using independent membership probabilities. Overlap is allowed, and an option can ensure that every marker belongs to at least one annotation.</p>
+<p><code>make_marker_priors_from_annotations()</code> constructs marker-level inclusion probabilities and variance multipliers from specified enriched annotations. It uses log inclusion-odds and log variance-multiplier effects, optionally centers the linear predictors, and caps the resulting marker priors.</p>
+<p><code>sample_causal_pool_weighted()</code> samples causal markers without replacement, giving markers in selected annotations increased sampling weight.</p>
+<p><code>mtsim_annotation()</code> combines annotation generation, weighted causal-marker sampling, and marker-prior construction with multi-trait phenotype simulation. Its returned truth allows direct comparison of simulated architecture and posterior summaries.</p>
+<p><code>summarize_annotation_signal()</code> reports annotation size, causal-marker counts, and causal rates. If a fit is supplied, it can also report within-annotation mean PIPs and mean absolute posterior marker effects. Because annotation sets may overlap, these summaries should be read one annotation at a time rather than summed across rows.</p>
+</section>
+<section id="overlap-identifiability-and-double-counting" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="overlap-identifiability-and-double-counting"><span class="header-section-number">10</span> Overlap, Identifiability, and Double Counting</h2>
+<p>Overlapping annotations are biologically natural but statistically difficult. If two columns of (A) identify nearly the same markers, their separate coefficients may be weakly identified even when their joint signal is clear. Rare annotations can produce unstable estimates, whereas very broad annotations may largely reproduce the intercept.</p>
+<p>Additive constructions on the logit and log scales provide a coherent way to combine overlap:</p>
+<p>[ (_i) = (<em>0)+A_i</em>, w_i=A_i_v. ]</p>
+<p>However, additive predictors can still create extreme priors when a marker belongs to many enriched sets. Centering, coefficient shrinkage, and explicit bounds are therefore structural safeguards, not merely numerical conveniences.</p>
+<p>Interpretation is conditional: an annotation coefficient measures the association remaining after the other included annotations and preprocessing choices are accounted for. Marginal set enrichment and conditional annotation coefficients answer different questions and need not agree.</p>
+</section>
+<section id="research-stage-multi-trait-extensions" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="research-stage-multi-trait-extensions"><span class="header-section-number">11</span> Research-Stage Multi-Trait Extensions</h2>
+<p>The archived annotation draft also develops extensions beyond the currently exposed fixed, learned, and group CSR wrappers. They are retained here as design directions rather than claims about the public API.</p>
+<p>For multiple traits, marker-specific annotation priors can vary by trait:</p>
+<p>[ (<em>{it}) = (</em>{0t})+A_i<em>{,t}, w</em>{it}=A_i_{v,t}. ]</p>
+<p>Annotations could also influence cross-trait sharing. For example, a softmax model could assign marker-specific probabilities to patterns such as null, trait-specific, and shared effects. A further extension could let annotation sets influence the covariance of active multi-trait effects. These models require strong regularization because annotation effects, sharing probabilities, and trait covariance can otherwise be difficult to identify.</p>
+<p>The draft additionally proposes warm-started regional multi-trait fits: genome-wide annotation summaries construct priors, and selected regions are then fitted with more detailed multi-trait models. Such a workflow may be computationally useful, but prior reuse, region selection, and uncertainty propagation must be handled explicitly.</p>
+</section>
+<section id="regularization-bounds-and-uncertainty" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="regularization-bounds-and-uncertainty"><span class="header-section-number">12</span> Regularization, Bounds, and Uncertainty</h2>
+<p>Annotation-informed priors add flexibility and therefore add failure modes. The following controls address distinct problems:</p>
+<ul>
+<li><strong>Centering</strong> separates relative marker enrichment from the genome-wide baseline.</li>
+<li><strong>Standardization</strong> places quantitative annotations on comparable scales.</li>
+<li><strong>Coefficient shrinkage</strong> limits overfitting in correlated or high-dimensional annotation matrices.</li>
+<li><strong>Probability bounds</strong> prevent prior inclusion probabilities from collapsing to zero or one.</li>
+<li><strong>Variance-multiplier bounds</strong> prevent extreme prior scales.</li>
+<li><strong>Cross-fitting or external training</strong> reduces optimism from empirical-Bayes data reuse.</li>
+<li><strong>Sensitivity analyses</strong> reveal dependence on bounds, annotation definitions, LD settings, and prior choices.</li>
+</ul>
+<p>Posterior uncertainty conditional on a fixed empirical-Bayes prior does not include uncertainty from estimating that prior. This distinction should be made explicit when reporting results.</p>
+</section>
+<section id="interpretation-and-causal-limits" class="level2" data-number="13">
+<h2 data-number="13" class="anchored" data-anchor-id="interpretation-and-causal-limits"><span class="header-section-number">13</span> Interpretation and Causal Limits</h2>
+<p>Annotation coefficients, set enrichments, and marker-specific priors describe how external information interacts with the fitted prior and observed genetic evidence. They do not prove that an annotation or annotated marker is causal.</p>
+<p>Apparent enrichment can reflect:</p>
+<ul>
+<li>LD between annotated and causal markers;</li>
+<li>differences in marker density and allele frequency;</li>
+<li>correlated or overlapping annotation definitions;</li>
+<li>phenotype architecture and sample size;</li>
+<li>sparse-LD approximation and marker filtering; and</li>
+<li>model, regularization, and prior-bound choices.</li>
+</ul>
+<p>Top markers and enriched annotations should therefore be treated as model-dependent evidence. Comparisons against unannotated models and sensitivity analyses are central to interpretation.</p>
+</section>
+<section id="implementation-checklist" class="level2" data-number="14">
+<h2 data-number="14" class="anchored" data-anchor-id="implementation-checklist"><span class="header-section-number">14</span> Implementation Checklist</h2>
+<p>Before fitting an annotation-informed model:</p>
+<ul>
+<li>verify marker-row alignment across annotations, sufficient statistics, sparse LD, and posterior outputs;</li>
+<li>inspect annotation column prevalence, ranges, missingness, and correlation;</li>
+<li>reconsider all-zero, all-one, extremely rare, or nearly duplicate columns;</li>
+<li>record intercept, centering, standardization, and binary-column choices;</li>
+<li>record inclusion-probability and variance-multiplier bounds;</li>
+<li>decide whether priors are external, empirically constructed, jointly learned, or group based;</li>
+<li>use cross-fitting or external data when empirical-Bayes reuse is a concern;</li>
+<li>compare prior annotation summaries with posterior annotation summaries; and</li>
+<li>report sensitivity to priors, annotation preprocessing, and LD settings.</li>
+</ul>
+</section>
+<section id="related-notes-and-sources" class="level2" data-number="15">
+<h2 data-number="15" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">15</span> Related Notes and Sources</h2>
+<ul>
+<li><a href="annotation_informed_models.html">Annotation-informed models</a> gives the main conceptual and practical path through the annotation-aware wrappers.</li>
+<li><a href="technical_sbayesrc_annotations.html">Technical SBayesRC-style annotations</a> covers the separate annotation-dependent BayesR mixture prior.</li>
+<li><a href="workflows_and_outputs.html">Workflows and outputs</a> explains compact posterior summaries and the annotation workflow.</li>
+<li><a href="data_representations.html">Data representations</a> defines the marker-order and summary-statistics contracts used here.</li>
+</ul>
+<p>This appendix preserves and reorganizes the prior-construction derivations from the archived annotation-prior draft. Current wrapper behavior is distinguished from empirical-Bayes and multi-trait designs that remain research-stage extensions.</p>
 
 
 <!-- -->
@@ -736,78 +954,618 @@ and cautions except SBayesRC-specific material, which has its own appendix. -->
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: Annotation Priors"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">status:</span><span class="co"> "Draft"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>This note is under active development. Some sections are structured outlines that will be expanded over time.</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>This appendix will preserve the detailed derivations, implementations,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>uncertainty considerations, and proposed extensions for annotation-informed</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>STBLR and MTBLR priors.</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Primary source: drafts/annotation_informed_priors_stblr_mtblr.qmd.</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">Migrate all mapped equations, R implementations, C++ sketches, assumptions,</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">and cautions except SBayesRC-specific material, which has its own appendix. --&gt;</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Level Posterior Summaries and Overlap</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: migrate set summaries, overlap handling, and implementations. --&gt;</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## PIP Enrichment and Variance Attribution</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve full enrichment and attribution derivations. --&gt;</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">## Empirical-Bayes Inclusion and Variance Priors</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: migrate staged prior-learning equations and uncertainty caveats. --&gt;</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker-Specific Prior Scale Construction</span></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve overlapping-annotation scale construction. --&gt;</span></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="fu">## Full STBLR Marker-Update Derivation With Marker-Specific Priors</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: migrate the complete derivation and implementation sketch. --&gt;</span></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Specific MTBLR Covariance and Sharing-Model Priors</span></span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve all MTBLR prior equations and R implementations. --&gt;</span></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Level STBLR/MTBLR as a Prior-Learning Stage</span></span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: migrate empirical-Bayes annotation-level model material. --&gt;</span></span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## Direct Hierarchical Annotation Models</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve direct-model definitions and hierarchical interpretation. --&gt;</span></span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fixed Versus Jointly Updated Annotation Coefficients</span></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve fixed and sampling-update alternatives. --&gt;</span></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="fu">## Proposed C++ Changes and Sparse Annotation Representation</span></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: retain design sketches, clearly labeled as proposed. --&gt;</span></span>
-<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty</span></span>
-<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: preserve all regularization and overfitting cautions. --&gt;</span></span>
-<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="fu">## Warm-Started Regional MTBLR</span></span>
-<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Later: retain as proposed/experimental unless a stable wrapper exists. --&gt;</span></span>
-<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
-<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span></span>
-<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.qmd)</span></span>
-<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span></span>
-<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.qmd)</span></span>
-<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Archived annotation-prior draft</span><span class="co">](drafts/annotation_informed_priors_stblr_mtblr.qmd)</span></span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: Annotation-Informed Priors"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>This appendix describes how <span class="in">`sblr`</span> transfers marker annotations into sparse</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>Bayesian linear-regression priors. It develops marker-specific inclusion</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>probabilities and effect-variance scales, explains the fixed, learned, and</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>group-prior CSR wrappers, and records empirical-Bayes constructions from the</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>original annotation-prior draft. The emphasis is on the prior and its</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>implementation contract; the CSR likelihood and sparse-LD representation are</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>covered elsewhere.</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation Matrix and Preprocessing</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>Let</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>A =</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>A_{11} &amp; \cdots &amp; A_{1K}<span class="sc">\\</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>\vdots &amp; \ddots &amp; \vdots<span class="sc">\\</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>A_{m1} &amp; \cdots &amp; A_{mK}</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>be an <span class="sc">\(</span>m \times K<span class="sc">\)</span> marker-by-annotation matrix. Row <span class="sc">\(</span>A_i<span class="sc">\)</span> describes marker</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>i<span class="sc">\)</span>, and column <span class="sc">\(</span>k<span class="sc">\)</span> describes an annotation. Binary annotations may encode</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>membership in functional sets; quantitative annotations may encode continuous</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>scores. A marker may belong to several annotations, so the columns generally</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>do not define a partition.</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>The marker-row contract is strict. Rows of <span class="sc">\(</span>A<span class="sc">\)</span> must correspond, in the same</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>order, to:</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the markers used to compute <span class="in">`wy`</span> and <span class="in">`ww`</span>;</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>rows and columns of the sparse-LD matrix;</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker names represented by <span class="in">`cls`</span> and <span class="in">`Glist$rsidsLD`</span>; and</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>rows of posterior marker summaries such as <span class="in">`bm`</span> and <span class="in">`dm`</span>.</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>When row names and marker names are both available, the annotation preparation</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>helper can reorder rows by name. Names are not a substitute for checking the</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>alignment: duplicated, incomplete, or stale names can still produce an</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>incorrect analysis.</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="fu">### Intercepts, binary columns, and quantitative columns</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>The annotation-aware wrappers use <span class="in">`.stblr_prepare_annotation_matrix()`</span> to</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>validate and preprocess <span class="sc">\(</span>A<span class="sc">\)</span>. Its relevant behavior is:</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>values must be numeric and finite;</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>an intercept is recognized when the first column is all ones;</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`add_intercept = TRUE`</span> prepends an intercept if one is not recognized;</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>with <span class="in">`standardize = TRUE`</span>, nonbinary, non-intercept columns are centered and</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>  scaled;</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>binary columns are left unchanged unless <span class="in">`center_binary = TRUE`</span>.</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>An intercept lets the model express a baseline prior independently of the</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>annotation contrasts. Centering quantitative columns makes their coefficients</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>more comparable and reduces confounding between the intercept and annotation</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>effects. Leaving a binary indicator uncentered gives its coefficient the</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>interpretation of a contrast against markers outside that annotation.</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>These choices are part of the model specification and should be reported.</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>Automatic standardization is convenient, but users should retain the</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>preprocessing metadata needed to apply the same transformation in sensitivity</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>analyses or prediction data.</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="fu">## Baseline Sparse Prior</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>For a single trait, the baseline sparse prior introduces a marker inclusion</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>indicator <span class="sc">\(</span>d_i<span class="sc">\)</span>:</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>\begin{aligned}</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>b_i \mid d_i = 0 &amp;= 0,<span class="sc">\\</span></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>b_i \mid d_i = 1 &amp;\sim N(0, v_b),<span class="sc">\\</span></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>\Pr(d_i = 1) &amp;= \pi.</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>\end{aligned}</span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>Here <span class="sc">\(</span>b_i<span class="sc">\)</span> is the effect of marker <span class="sc">\(</span>i<span class="sc">\)</span>, <span class="sc">\(</span>v_b<span class="sc">\)</span> is the active-marker</span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>variance, and <span class="sc">\(</span>\pi<span class="sc">\)</span> is a global inclusion probability. The posterior</span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>inclusion probability (PIP) is</span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>\Pr(d_i = 1 \mid \text{data}),</span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>which is summarized by <span class="in">`dm`</span> when returned by a fitted model.</span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>The annotation-informed models retain this sparse-prior logic but replace one</span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>or both global quantities with structured marker-specific quantities:</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>\Pr(d_i = 1) = \pi_i,</span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>b_i \mid d_i = 1 \sim N(0, v_b w_i),</span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>w_i &gt; 0<span class="sc">\)</span> is a marker-specific variance multiplier.</span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker-Specific Prior Construction</span></span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a><span class="fu">### Inclusion probabilities</span></span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>A common annotation construction places annotation effects on the log-odds</span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>scale:</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_i)</span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_0) + A_i \eta_\pi,</span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>\pi_0<span class="sc">\)</span> is a baseline inclusion probability and <span class="sc">\(</span>\eta_\pi<span class="sc">\)</span> contains</span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>annotation coefficients. Positive values of <span class="sc">\(</span>A_i\eta_\pi<span class="sc">\)</span> increase prior</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>inclusion odds; negative values reduce them.</span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>The fixed-prior helper used by the wrappers centers the linear predictor before</span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>combining it with the baseline:</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>\widetilde{\ell}_{\pi i}</span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>A_i\eta_\pi - \frac{1}{m}\sum_{j=1}^m A_j\eta_\pi,</span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>\pi_i</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}^{-1}</span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>\left<span class="sc">\{</span>\operatorname{logit}(\pi_0)+\widetilde{\ell}_{\pi i}\right<span class="sc">\}</span>.</span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>Centering makes the annotation effects primarily redistribute prior inclusion</span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>probability across markers rather than changing its genome-wide location.</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>The resulting values are clamped to user-specified lower and upper bounds for</span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>numerical and inferential stability.</span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a><span class="fu">### Effect-variance multipliers</span></span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>Annotation effects on active-marker variance naturally use a log scale:</span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>\log w_i = A_i\eta_v,</span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a>w_i = \exp(A_i\eta_v).</span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a>As with inclusion probabilities, the wrapper centers the linear predictor:</span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a>\widetilde{\ell}_{v i}</span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a>A_i\eta_v-\frac{1}{m}\sum_{j=1}^m A_j\eta_v,</span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>w_i=\exp(\widetilde{\ell}_{v i}).</span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a>This construction makes <span class="sc">\(</span>w_i<span class="sc">\)</span> a relative multiplier around the global</span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>active-marker variance <span class="sc">\(</span>v_b<span class="sc">\)</span>. Lower and upper bounds prevent extreme</span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>annotation combinations from creating nearly degenerate or unreasonably</span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>diffuse marker priors.</span>
+<span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a><span class="fu">### Consequences for a single-marker update</span></span>
+<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a>The marker-specific quantities enter the standard sparse BLR update directly.</span>
+<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>Let <span class="sc">\(</span>w_i^{XX}<span class="sc">\)</span> denote the diagonal marker cross-product and let</span>
+<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>s_i = r_i + w_i^{XX} b_i</span>
+<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a>be the marker score formed from the current residual state. To avoid confusing</span>
+<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a>the cross-product with the prior multiplier, write</span>
+<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a><span class="sc">\(</span>v_{b,i}=v_b w_i<span class="sc">\)</span>. The log Bayes factor for the active versus null component</span>
+<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a>is</span>
+<span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a>\log BF_i</span>
+<span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-180"><a href="#cb2-180" aria-hidden="true" tabindex="-1"></a>\frac{1}{2}\log\left(</span>
+<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a>\frac{v_e}{v_e+w_i^{XX}v_{b,i}}</span>
+<span id="cb2-182"><a href="#cb2-182" aria-hidden="true" tabindex="-1"></a>\right)</span>
+<span id="cb2-183"><a href="#cb2-183" aria-hidden="true" tabindex="-1"></a>+</span>
+<span id="cb2-184"><a href="#cb2-184" aria-hidden="true" tabindex="-1"></a>\frac{1}{2}</span>
+<span id="cb2-185"><a href="#cb2-185" aria-hidden="true" tabindex="-1"></a>\frac{s_i^2v_{b,i}}</span>
+<span id="cb2-186"><a href="#cb2-186" aria-hidden="true" tabindex="-1"></a>{v_e(v_e+w_i^{XX}v_{b,i})}.</span>
+<span id="cb2-187"><a href="#cb2-187" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-188"><a href="#cb2-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-189"><a href="#cb2-189" aria-hidden="true" tabindex="-1"></a>The conditional inclusion probability is</span>
+<span id="cb2-190"><a href="#cb2-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a>\Pr(d_i=1\mid\cdot)</span>
+<span id="cb2-193"><a href="#cb2-193" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-194"><a href="#cb2-194" aria-hidden="true" tabindex="-1"></a>\frac{\pi_i BF_i}{(1-\pi_i)+\pi_i BF_i}.</span>
+<span id="cb2-195"><a href="#cb2-195" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-196"><a href="#cb2-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-197"><a href="#cb2-197" aria-hidden="true" tabindex="-1"></a>Conditional on inclusion,</span>
+<span id="cb2-198"><a href="#cb2-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-199"><a href="#cb2-199" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-200"><a href="#cb2-200" aria-hidden="true" tabindex="-1"></a>b_i\mid d_i=1,\cdot</span>
+<span id="cb2-201"><a href="#cb2-201" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb2-202"><a href="#cb2-202" aria-hidden="true" tabindex="-1"></a>N\left(</span>
+<span id="cb2-203"><a href="#cb2-203" aria-hidden="true" tabindex="-1"></a>\frac{s_i}{w_i^{XX}+v_e/v_{b,i}},</span>
+<span id="cb2-204"><a href="#cb2-204" aria-hidden="true" tabindex="-1"></a>\frac{v_e}{w_i^{XX}+v_e/v_{b,i}}</span>
+<span id="cb2-205"><a href="#cb2-205" aria-hidden="true" tabindex="-1"></a>\right).</span>
+<span id="cb2-206"><a href="#cb2-206" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-207"><a href="#cb2-207" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-208"><a href="#cb2-208" aria-hidden="true" tabindex="-1"></a>Thus, <span class="sc">\(</span>\pi_i<span class="sc">\)</span> alters prior odds of inclusion, whereas <span class="sc">\(</span>w_i<span class="sc">\)</span> alters the</span>
+<span id="cb2-209"><a href="#cb2-209" aria-hidden="true" tabindex="-1"></a>active effect distribution and its shrinkage. These mechanisms should not be</span>
+<span id="cb2-210"><a href="#cb2-210" aria-hidden="true" tabindex="-1"></a>interpreted as interchangeable.</span>
+<span id="cb2-211"><a href="#cb2-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-212"><a href="#cb2-212" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Level Posterior Summaries</span></span>
+<span id="cb2-213"><a href="#cb2-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-214"><a href="#cb2-214" aria-hidden="true" tabindex="-1"></a>Posterior marker summaries can be aggregated to describe signal associated</span>
+<span id="cb2-215"><a href="#cb2-215" aria-hidden="true" tabindex="-1"></a>with an annotation set <span class="sc">\(</span>S_k=<span class="sc">\{</span>i:A_{ik}\ne0<span class="sc">\}\)</span>. Useful descriptive summaries</span>
+<span id="cb2-216"><a href="#cb2-216" aria-hidden="true" tabindex="-1"></a>include:</span>
+<span id="cb2-217"><a href="#cb2-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-218"><a href="#cb2-218" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-219"><a href="#cb2-219" aria-hidden="true" tabindex="-1"></a>m_{\mathrm{eff},k}</span>
+<span id="cb2-220"><a href="#cb2-220" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-221"><a href="#cb2-221" aria-hidden="true" tabindex="-1"></a>\sum_{i\in S_k}\widehat{\Pr}(d_i=1\mid\text{data}),</span>
+<span id="cb2-222"><a href="#cb2-222" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-223"><a href="#cb2-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-224"><a href="#cb2-224" aria-hidden="true" tabindex="-1"></a>the expected number of included markers in the set, and the PIP enrichment</span>
+<span id="cb2-225"><a href="#cb2-225" aria-hidden="true" tabindex="-1"></a>ratio</span>
+<span id="cb2-226"><a href="#cb2-226" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-227"><a href="#cb2-227" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-228"><a href="#cb2-228" aria-hidden="true" tabindex="-1"></a>E_k</span>
+<span id="cb2-229"><a href="#cb2-229" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-230"><a href="#cb2-230" aria-hidden="true" tabindex="-1"></a>\frac{|S_k|^{-1}\sum_{i\in S_k}\widehat{\Pr}(d_i=1\mid\text{data})}</span>
+<span id="cb2-231"><a href="#cb2-231" aria-hidden="true" tabindex="-1"></a>{|S_k^c|^{-1}\sum_{i\notin S_k}\widehat{\Pr}(d_i=1\mid\text{data})}.</span>
+<span id="cb2-232"><a href="#cb2-232" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-233"><a href="#cb2-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-234"><a href="#cb2-234" aria-hidden="true" tabindex="-1"></a>For summary-statistics fits, a marker-level contribution estimate may be</span>
+<span id="cb2-235"><a href="#cb2-235" aria-hidden="true" tabindex="-1"></a>written</span>
+<span id="cb2-236"><a href="#cb2-236" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-237"><a href="#cb2-237" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-238"><a href="#cb2-238" aria-hidden="true" tabindex="-1"></a>c_i</span>
+<span id="cb2-239"><a href="#cb2-239" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-240"><a href="#cb2-240" aria-hidden="true" tabindex="-1"></a>\frac{\widehat b_i<span class="sc">\{</span>wy_i-r_i<span class="sc">\}</span>}{n},</span>
+<span id="cb2-241"><a href="#cb2-241" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-242"><a href="#cb2-242" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-243"><a href="#cb2-243" aria-hidden="true" tabindex="-1"></a>with an optional PIP-weighted version. An annotation-level genetic-variance</span>
+<span id="cb2-244"><a href="#cb2-244" aria-hidden="true" tabindex="-1"></a>summary is then</span>
+<span id="cb2-245"><a href="#cb2-245" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-246"><a href="#cb2-246" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-247"><a href="#cb2-247" aria-hidden="true" tabindex="-1"></a>\widehat V_{G,k}</span>
+<span id="cb2-248"><a href="#cb2-248" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-249"><a href="#cb2-249" aria-hidden="true" tabindex="-1"></a>\sum_{i\in S_k} c_i.</span>
+<span id="cb2-250"><a href="#cb2-250" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-251"><a href="#cb2-251" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-252"><a href="#cb2-252" aria-hidden="true" tabindex="-1"></a>These set summaries are deliberately descriptive. When annotations overlap,</span>
+<span id="cb2-253"><a href="#cb2-253" aria-hidden="true" tabindex="-1"></a>their totals are not additive and the same marker contribution may appear in</span>
+<span id="cb2-254"><a href="#cb2-254" aria-hidden="true" tabindex="-1"></a>several sets. <span class="in">`summarize_annotation_signal()`</span> follows this descriptive</span>
+<span id="cb2-255"><a href="#cb2-255" aria-hidden="true" tabindex="-1"></a>set-based approach for known simulation truth and, when a fit is supplied,</span>
+<span id="cb2-256"><a href="#cb2-256" aria-hidden="true" tabindex="-1"></a>adds within-set means of <span class="in">`dm`</span> and absolute <span class="in">`bm`</span>.</span>
+<span id="cb2-257"><a href="#cb2-257" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-258"><a href="#cb2-258" aria-hidden="true" tabindex="-1"></a>For conditional interpretation with overlapping annotations, one can regress a</span>
+<span id="cb2-259"><a href="#cb2-259" aria-hidden="true" tabindex="-1"></a>marker-level posterior response <span class="sc">\(</span>s_i<span class="sc">\)</span> on all annotation columns:</span>
+<span id="cb2-260"><a href="#cb2-260" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-261"><a href="#cb2-261" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-262"><a href="#cb2-262" aria-hidden="true" tabindex="-1"></a>s_i = \alpha + \sum_{k=1}^K A_{ik}\gamma_k+\epsilon_i.</span>
+<span id="cb2-263"><a href="#cb2-263" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-264"><a href="#cb2-264" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-265"><a href="#cb2-265" aria-hidden="true" tabindex="-1"></a>Possible responses include a PIP, squared posterior mean effect, or estimated</span>
+<span id="cb2-266"><a href="#cb2-266" aria-hidden="true" tabindex="-1"></a>marker contribution. Such a regression estimates conditional associations</span>
+<span id="cb2-267"><a href="#cb2-267" aria-hidden="true" tabindex="-1"></a>among annotations, but it does not establish that an annotation causes the</span>
+<span id="cb2-268"><a href="#cb2-268" aria-hidden="true" tabindex="-1"></a>genetic signal.</span>
+<span id="cb2-269"><a href="#cb2-269" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-270"><a href="#cb2-270" aria-hidden="true" tabindex="-1"></a><span class="fu">## Empirical-Bayes Prior Construction</span></span>
+<span id="cb2-271"><a href="#cb2-271" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-272"><a href="#cb2-272" aria-hidden="true" tabindex="-1"></a>An empirical-Bayes workflow estimates annotation signal from one genomic fit</span>
+<span id="cb2-273"><a href="#cb2-273" aria-hidden="true" tabindex="-1"></a>and uses it to construct priors for a subsequent fit:</span>
+<span id="cb2-274"><a href="#cb2-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-275"><a href="#cb2-275" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-276"><a href="#cb2-276" aria-hidden="true" tabindex="-1"></a>\text{initial genomic fit}</span>
+<span id="cb2-277"><a href="#cb2-277" aria-hidden="true" tabindex="-1"></a>\rightarrow</span>
+<span id="cb2-278"><a href="#cb2-278" aria-hidden="true" tabindex="-1"></a>\text{marker summaries}</span>
+<span id="cb2-279"><a href="#cb2-279" aria-hidden="true" tabindex="-1"></a>\rightarrow</span>
+<span id="cb2-280"><a href="#cb2-280" aria-hidden="true" tabindex="-1"></a>\text{annotation model}</span>
+<span id="cb2-281"><a href="#cb2-281" aria-hidden="true" tabindex="-1"></a>\rightarrow</span>
+<span id="cb2-282"><a href="#cb2-282" aria-hidden="true" tabindex="-1"></a><span class="sc">\{</span>\pi_i,w_i<span class="sc">\}</span></span>
+<span id="cb2-283"><a href="#cb2-283" aria-hidden="true" tabindex="-1"></a>\rightarrow</span>
+<span id="cb2-284"><a href="#cb2-284" aria-hidden="true" tabindex="-1"></a>\text{updated genomic fit}.</span>
+<span id="cb2-285"><a href="#cb2-285" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-286"><a href="#cb2-286" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-287"><a href="#cb2-287" aria-hidden="true" tabindex="-1"></a>This approach separates prior construction from the genomic sampler. It is</span>
+<span id="cb2-288"><a href="#cb2-288" aria-hidden="true" tabindex="-1"></a>useful when annotation effects should be estimated with a dedicated model or</span>
+<span id="cb2-289"><a href="#cb2-289" aria-hidden="true" tabindex="-1"></a>when fixed marker priors must be inspected before fitting.</span>
+<span id="cb2-290"><a href="#cb2-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-291"><a href="#cb2-291" aria-hidden="true" tabindex="-1"></a><span class="fu">### Set-based estimates</span></span>
+<span id="cb2-292"><a href="#cb2-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-293"><a href="#cb2-293" aria-hidden="true" tabindex="-1"></a>A smoothed set-level inclusion probability can be estimated from PIPs:</span>
+<span id="cb2-294"><a href="#cb2-294" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-295"><a href="#cb2-295" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-296"><a href="#cb2-296" aria-hidden="true" tabindex="-1"></a>\widehat\pi_k</span>
+<span id="cb2-297"><a href="#cb2-297" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-298"><a href="#cb2-298" aria-hidden="true" tabindex="-1"></a>\frac{a+\sum_{i\in S_k} dm_i}{2a+|S_k|},</span>
+<span id="cb2-299"><a href="#cb2-299" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-300"><a href="#cb2-300" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-301"><a href="#cb2-301" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>a&gt;0<span class="sc">\)</span> supplies symmetric pseudo-count shrinkage. A rough active-effect</span>
+<span id="cb2-302"><a href="#cb2-302" aria-hidden="true" tabindex="-1"></a>variance estimate is</span>
+<span id="cb2-303"><a href="#cb2-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-304"><a href="#cb2-304" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-305"><a href="#cb2-305" aria-hidden="true" tabindex="-1"></a>\widehat v_{b,k}</span>
+<span id="cb2-306"><a href="#cb2-306" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-307"><a href="#cb2-307" aria-hidden="true" tabindex="-1"></a>\frac{\widehat V_{G,k}}</span>
+<span id="cb2-308"><a href="#cb2-308" aria-hidden="true" tabindex="-1"></a>{\max(m_{\mathrm{eff},k},c)},</span>
+<span id="cb2-309"><a href="#cb2-309" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-310"><a href="#cb2-310" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-311"><a href="#cb2-311" aria-hidden="true" tabindex="-1"></a>where <span class="sc">\(</span>c&gt;0<span class="sc">\)</span> prevents instability when the expected number of active markers</span>
+<span id="cb2-312"><a href="#cb2-312" aria-hidden="true" tabindex="-1"></a>is very small. Both estimates should generally be shrunk toward genome-wide</span>
+<span id="cb2-313"><a href="#cb2-313" aria-hidden="true" tabindex="-1"></a>values before they are converted into marker priors.</span>
+<span id="cb2-314"><a href="#cb2-314" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-315"><a href="#cb2-315" aria-hidden="true" tabindex="-1"></a>These formulas are easiest to interpret for disjoint sets. With overlapping</span>
+<span id="cb2-316"><a href="#cb2-316" aria-hidden="true" tabindex="-1"></a>annotations, directly assigning each set estimate to its member markers can</span>
+<span id="cb2-317"><a href="#cb2-317" aria-hidden="true" tabindex="-1"></a>double-count evidence.</span>
+<span id="cb2-318"><a href="#cb2-318" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-319"><a href="#cb2-319" aria-hidden="true" tabindex="-1"></a><span class="fu">### Conditional annotation models</span></span>
+<span id="cb2-320"><a href="#cb2-320" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-321"><a href="#cb2-321" aria-hidden="true" tabindex="-1"></a>For overlapping annotations, an annotation-level regression or BLR can map</span>
+<span id="cb2-322"><a href="#cb2-322" aria-hidden="true" tabindex="-1"></a>marker summaries to annotation coefficients. Candidate marker-level responses</span>
+<span id="cb2-323"><a href="#cb2-323" aria-hidden="true" tabindex="-1"></a>from the archived design include:</span>
+<span id="cb2-324"><a href="#cb2-324" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-325"><a href="#cb2-325" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>posterior mean effects, <span class="sc">\(</span>\widehat b_i<span class="sc">\)</span>;</span>
+<span id="cb2-326"><a href="#cb2-326" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>transformed PIPs, such as a bounded <span class="sc">\(</span>\operatorname{logit}(dm_i)<span class="sc">\)</span>;</span>
+<span id="cb2-327"><a href="#cb2-327" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>squared effects or absolute effects; and</span>
+<span id="cb2-328"><a href="#cb2-328" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>marker contribution estimates,</span>
+<span id="cb2-329"><a href="#cb2-329" aria-hidden="true" tabindex="-1"></a>  <span class="sc">\(</span>\widehat b_i(wy_i-r_i)/n<span class="sc">\)</span>.</span>
+<span id="cb2-330"><a href="#cb2-330" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-331"><a href="#cb2-331" aria-hidden="true" tabindex="-1"></a>The fitted annotation effects can then be transformed through the centered</span>
+<span id="cb2-332"><a href="#cb2-332" aria-hidden="true" tabindex="-1"></a>logit and log-scale constructions above. Regularization is essential because</span>
+<span id="cb2-333"><a href="#cb2-333" aria-hidden="true" tabindex="-1"></a>annotation columns can be numerous, correlated, imbalanced, or nearly</span>
+<span id="cb2-334"><a href="#cb2-334" aria-hidden="true" tabindex="-1"></a>redundant.</span>
+<span id="cb2-335"><a href="#cb2-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-336"><a href="#cb2-336" aria-hidden="true" tabindex="-1"></a><span class="fu">### Data reuse and cross-fitting</span></span>
+<span id="cb2-337"><a href="#cb2-337" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-338"><a href="#cb2-338" aria-hidden="true" tabindex="-1"></a>When the same phenotype data are used both to estimate annotation enrichment</span>
+<span id="cb2-339"><a href="#cb2-339" aria-hidden="true" tabindex="-1"></a>and to fit the annotation-informed model, the resulting prior is</span>
+<span id="cb2-340"><a href="#cb2-340" aria-hidden="true" tabindex="-1"></a>data-dependent. This can improve adaptation but can also exaggerate evidence</span>
+<span id="cb2-341"><a href="#cb2-341" aria-hidden="true" tabindex="-1"></a>if uncertainty in the first-stage estimate is ignored.</span>
+<span id="cb2-342"><a href="#cb2-342" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-343"><a href="#cb2-343" aria-hidden="true" tabindex="-1"></a>Useful safeguards include:</span>
+<span id="cb2-344"><a href="#cb2-344" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-345"><a href="#cb2-345" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>shrink annotation coefficients toward zero;</span>
+<span id="cb2-346"><a href="#cb2-346" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>clamp <span class="sc">\(</span>\pi_i<span class="sc">\)</span> and <span class="sc">\(</span>w_i<span class="sc">\)</span> to defensible ranges;</span>
+<span id="cb2-347"><a href="#cb2-347" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>compare against an unannotated baseline;</span>
+<span id="cb2-348"><a href="#cb2-348" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>split markers into approximately LD-independent folds and construct priors</span>
+<span id="cb2-349"><a href="#cb2-349" aria-hidden="true" tabindex="-1"></a>  out of fold; and</span>
+<span id="cb2-350"><a href="#cb2-350" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>assess sensitivity to the annotation model and prior bounds.</span>
+<span id="cb2-351"><a href="#cb2-351" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-352"><a href="#cb2-352" aria-hidden="true" tabindex="-1"></a>The current fixed-prior wrapper supports the final marker-prior fitting stage.</span>
+<span id="cb2-353"><a href="#cb2-353" aria-hidden="true" tabindex="-1"></a>Cross-fitting and a full empirical-Bayes pipeline remain analysis-level</span>
+<span id="cb2-354"><a href="#cb2-354" aria-hidden="true" tabindex="-1"></a>responsibilities rather than a single exported package workflow.</span>
+<span id="cb2-355"><a href="#cb2-355" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-356"><a href="#cb2-356" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fixed Marker-Specific Prior Wrapper</span></span>
+<span id="cb2-357"><a href="#cb2-357" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-358"><a href="#cb2-358" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr_prior_annot()`</span> fits a CSR summary-statistics model with fixed</span>
+<span id="cb2-359"><a href="#cb2-359" aria-hidden="true" tabindex="-1"></a>marker-specific inclusion probabilities and effect-variance multipliers.</span>
+<span id="cb2-360"><a href="#cb2-360" aria-hidden="true" tabindex="-1"></a>Users may either supply <span class="in">`fixed_pi_marker`</span> and <span class="in">`fixed_vb_multiplier`</span> directly,</span>
+<span id="cb2-361"><a href="#cb2-361" aria-hidden="true" tabindex="-1"></a>or supply <span class="sc">\(</span>A<span class="sc">\)</span> and fixed annotation coefficients from which the wrapper</span>
+<span id="cb2-362"><a href="#cb2-362" aria-hidden="true" tabindex="-1"></a>constructs them.</span>
+<span id="cb2-363"><a href="#cb2-363" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-364"><a href="#cb2-364" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb2-365"><a href="#cb2-365" aria-hidden="true" tabindex="-1"></a>fit_fixed <span class="ot">&lt;-</span> <span class="fu">stblr_csr_prior_annot</span>(</span>
+<span id="cb2-366"><a href="#cb2-366" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
+<span id="cb2-367"><a href="#cb2-367" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> n,</span>
+<span id="cb2-368"><a href="#cb2-368" aria-hidden="true" tabindex="-1"></a>  <span class="at">yy =</span> stats<span class="sc">$</span>yy,</span>
+<span id="cb2-369"><a href="#cb2-369" aria-hidden="true" tabindex="-1"></a>  <span class="at">wy =</span> stats<span class="sc">$</span>wy,</span>
+<span id="cb2-370"><a href="#cb2-370" aria-hidden="true" tabindex="-1"></a>  <span class="at">ww =</span> stats<span class="sc">$</span>ww,</span>
+<span id="cb2-371"><a href="#cb2-371" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
+<span id="cb2-372"><a href="#cb2-372" aria-hidden="true" tabindex="-1"></a>  <span class="at">beta_pi =</span> beta_pi,</span>
+<span id="cb2-373"><a href="#cb2-373" aria-hidden="true" tabindex="-1"></a>  <span class="at">beta_vb =</span> beta_vb</span>
+<span id="cb2-374"><a href="#cb2-374" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-375"><a href="#cb2-375" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-376"><a href="#cb2-376" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-377"><a href="#cb2-377" aria-hidden="true" tabindex="-1"></a>The annotation-derived marker priors remain fixed during sampling. Marker</span>
+<span id="cb2-378"><a href="#cb2-378" aria-hidden="true" tabindex="-1"></a>effects, inclusion states, residual variance, global variance parameters, and</span>
+<span id="cb2-379"><a href="#cb2-379" aria-hidden="true" tabindex="-1"></a>other sampler states may still be updated according to the wrapper's update</span>
+<span id="cb2-380"><a href="#cb2-380" aria-hidden="true" tabindex="-1"></a>flags. Fixed therefore refers to the annotation-to-marker prior mapping, not to</span>
+<span id="cb2-381"><a href="#cb2-381" aria-hidden="true" tabindex="-1"></a>the whole fitted model.</span>
+<span id="cb2-382"><a href="#cb2-382" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-383"><a href="#cb2-383" aria-hidden="true" tabindex="-1"></a>This wrapper is appropriate when priors come from external evidence, a</span>
+<span id="cb2-384"><a href="#cb2-384" aria-hidden="true" tabindex="-1"></a>separate training analysis, or a deliberately staged empirical-Bayes</span>
+<span id="cb2-385"><a href="#cb2-385" aria-hidden="true" tabindex="-1"></a>procedure.</span>
+<span id="cb2-386"><a href="#cb2-386" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-387"><a href="#cb2-387" aria-hidden="true" tabindex="-1"></a><span class="fu">## Learned Annotation Effects</span></span>
+<span id="cb2-388"><a href="#cb2-388" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-389"><a href="#cb2-389" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr_learn_annot()`</span> learns annotation coefficients jointly with the</span>
+<span id="cb2-390"><a href="#cb2-390" aria-hidden="true" tabindex="-1"></a>marker model. For trait <span class="sc">\(</span>t<span class="sc">\)</span>, the implemented construction is conceptually</span>
+<span id="cb2-391"><a href="#cb2-391" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-392"><a href="#cb2-392" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-393"><a href="#cb2-393" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_{it})</span>
+<span id="cb2-394"><a href="#cb2-394" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-395"><a href="#cb2-395" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_t)</span>
+<span id="cb2-396"><a href="#cb2-396" aria-hidden="true" tabindex="-1"></a>+</span>
+<span id="cb2-397"><a href="#cb2-397" aria-hidden="true" tabindex="-1"></a>\operatorname{center}(A_i\eta_{\pi,t}),</span>
+<span id="cb2-398"><a href="#cb2-398" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-399"><a href="#cb2-399" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-400"><a href="#cb2-400" aria-hidden="true" tabindex="-1"></a>and</span>
+<span id="cb2-401"><a href="#cb2-401" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-402"><a href="#cb2-402" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-403"><a href="#cb2-403" aria-hidden="true" tabindex="-1"></a>v_{b,it}</span>
+<span id="cb2-404"><a href="#cb2-404" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-405"><a href="#cb2-405" aria-hidden="true" tabindex="-1"></a>v_{b,t}</span>
+<span id="cb2-406"><a href="#cb2-406" aria-hidden="true" tabindex="-1"></a>\exp<span class="sc">\{</span>\operatorname{center}(A_i\eta_{v,t})<span class="sc">\}</span>.</span>
+<span id="cb2-407"><a href="#cb2-407" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-408"><a href="#cb2-408" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-409"><a href="#cb2-409" aria-hidden="true" tabindex="-1"></a>The annotation effects are initialized by <span class="in">`eta_pi_init`</span> and <span class="in">`eta_vb_init`</span>,</span>
+<span id="cb2-410"><a href="#cb2-410" aria-hidden="true" tabindex="-1"></a>with zero matrices used by default. Gaussian shrinkage scales</span>
+<span id="cb2-411"><a href="#cb2-411" aria-hidden="true" tabindex="-1"></a><span class="in">`sigma_eta_pi`</span> and <span class="in">`sigma_eta_vb`</span> regularize the coefficients.</span>
+<span id="cb2-412"><a href="#cb2-412" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-413"><a href="#cb2-413" aria-hidden="true" tabindex="-1"></a>The native sampler uses random-walk Metropolis-Hastings updates at the</span>
+<span id="cb2-414"><a href="#cb2-414" aria-hidden="true" tabindex="-1"></a><span class="in">`annot_update_every`</span> schedule. The inclusion-coefficient target is informed by</span>
+<span id="cb2-415"><a href="#cb2-415" aria-hidden="true" tabindex="-1"></a>the current inclusion states; the variance-coefficient target is informed by</span>
+<span id="cb2-416"><a href="#cb2-416" aria-hidden="true" tabindex="-1"></a>the current active effects and inclusion states. Proposal scales are controlled</span>
+<span id="cb2-417"><a href="#cb2-417" aria-hidden="true" tabindex="-1"></a>by <span class="in">`rw_sd_eta_pi`</span> and <span class="in">`rw_sd_eta_vb`</span>. Marker-level inclusion probabilities and</span>
+<span id="cb2-418"><a href="#cb2-418" aria-hidden="true" tabindex="-1"></a>variance multipliers are bounded during construction.</span>
+<span id="cb2-419"><a href="#cb2-419" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-420"><a href="#cb2-420" aria-hidden="true" tabindex="-1"></a>This is a direct learned-prior model rather than a separate two-stage</span>
+<span id="cb2-421"><a href="#cb2-421" aria-hidden="true" tabindex="-1"></a>empirical-Bayes fit. The posterior annotation coefficients summarize how the</span>
+<span id="cb2-422"><a href="#cb2-422" aria-hidden="true" tabindex="-1"></a>model adapts prior inclusion and active-effect variance, conditional on all</span>
+<span id="cb2-423"><a href="#cb2-423" aria-hidden="true" tabindex="-1"></a>other annotations and the sampler specification.</span>
+<span id="cb2-424"><a href="#cb2-424" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-425"><a href="#cb2-425" aria-hidden="true" tabindex="-1"></a><span class="fu">## Group Priors</span></span>
+<span id="cb2-426"><a href="#cb2-426" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-427"><a href="#cb2-427" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr_group_annot()`</span> assigns each marker to exactly one group through</span>
+<span id="cb2-428"><a href="#cb2-428" aria-hidden="true" tabindex="-1"></a><span class="in">`group_index`</span>. Group <span class="sc">\(</span>g<span class="sc">\)</span> receives a group-specific inclusion probability and</span>
+<span id="cb2-429"><a href="#cb2-429" aria-hidden="true" tabindex="-1"></a>variance multiplier:</span>
+<span id="cb2-430"><a href="#cb2-430" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-431"><a href="#cb2-431" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-432"><a href="#cb2-432" aria-hidden="true" tabindex="-1"></a>\Pr(d_i=1)=\pi_{g(i)},</span>
+<span id="cb2-433"><a href="#cb2-433" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-434"><a href="#cb2-434" aria-hidden="true" tabindex="-1"></a>b_i\mid d_i=1</span>
+<span id="cb2-435"><a href="#cb2-435" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb2-436"><a href="#cb2-436" aria-hidden="true" tabindex="-1"></a>N<span class="sc">\{</span>0,v_b w_{g(i)}<span class="sc">\}</span>.</span>
+<span id="cb2-437"><a href="#cb2-437" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-438"><a href="#cb2-438" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-439"><a href="#cb2-439" aria-hidden="true" tabindex="-1"></a>Group inclusion probabilities have beta-prior shape parameters derived from a</span>
+<span id="cb2-440"><a href="#cb2-440" aria-hidden="true" tabindex="-1"></a>prior mean and strength. Group variance multipliers may also be updated,</span>
+<span id="cb2-441"><a href="#cb2-441" aria-hidden="true" tabindex="-1"></a>depending on <span class="in">`updateGroupVb`</span>, and can be normalized around a common scale.</span>
+<span id="cb2-442"><a href="#cb2-442" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-443"><a href="#cb2-443" aria-hidden="true" tabindex="-1"></a>The group construction is a simplification of overlapping annotation models:</span>
+<span id="cb2-444"><a href="#cb2-444" aria-hidden="true" tabindex="-1"></a>it creates an unambiguous partition and directly pools evidence within groups,</span>
+<span id="cb2-445"><a href="#cb2-445" aria-hidden="true" tabindex="-1"></a>but it cannot represent a marker's simultaneous membership in several</span>
+<span id="cb2-446"><a href="#cb2-446" aria-hidden="true" tabindex="-1"></a>functional categories. It is useful when annotations naturally define</span>
+<span id="cb2-447"><a href="#cb2-447" aria-hidden="true" tabindex="-1"></a>mutually exclusive strata or when a simpler, more stable model is preferred.</span>
+<span id="cb2-448"><a href="#cb2-448" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-449"><a href="#cb2-449" aria-hidden="true" tabindex="-1"></a>The preparation helper verifies that every marker has one nonmissing group,</span>
+<span id="cb2-450"><a href="#cb2-450" aria-hidden="true" tabindex="-1"></a>that requested group names define the ordering, and that every represented</span>
+<span id="cb2-451"><a href="#cb2-451" aria-hidden="true" tabindex="-1"></a>group is nonempty. The native interface receives a zero-based group index;</span>
+<span id="cb2-452"><a href="#cb2-452" aria-hidden="true" tabindex="-1"></a>users should supply ordinary R group labels and let the wrapper handle that</span>
+<span id="cb2-453"><a href="#cb2-453" aria-hidden="true" tabindex="-1"></a>conversion.</span>
+<span id="cb2-454"><a href="#cb2-454" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-455"><a href="#cb2-455" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulation Helpers and Known-Truth Diagnostics</span></span>
+<span id="cb2-456"><a href="#cb2-456" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-457"><a href="#cb2-457" aria-hidden="true" tabindex="-1"></a>The annotation simulation helpers support controlled checks of whether an</span>
+<span id="cb2-458"><a href="#cb2-458" aria-hidden="true" tabindex="-1"></a>annotation-informed model recovers known architecture.</span>
+<span id="cb2-459"><a href="#cb2-459" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-460"><a href="#cb2-460" aria-hidden="true" tabindex="-1"></a><span class="in">`make_overlapping_annotations()`</span> creates binary annotation columns using</span>
+<span id="cb2-461"><a href="#cb2-461" aria-hidden="true" tabindex="-1"></a>independent membership probabilities. Overlap is allowed, and an option can</span>
+<span id="cb2-462"><a href="#cb2-462" aria-hidden="true" tabindex="-1"></a>ensure that every marker belongs to at least one annotation.</span>
+<span id="cb2-463"><a href="#cb2-463" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-464"><a href="#cb2-464" aria-hidden="true" tabindex="-1"></a><span class="in">`make_marker_priors_from_annotations()`</span> constructs marker-level inclusion</span>
+<span id="cb2-465"><a href="#cb2-465" aria-hidden="true" tabindex="-1"></a>probabilities and variance multipliers from specified enriched annotations. It</span>
+<span id="cb2-466"><a href="#cb2-466" aria-hidden="true" tabindex="-1"></a>uses log inclusion-odds and log variance-multiplier effects, optionally centers</span>
+<span id="cb2-467"><a href="#cb2-467" aria-hidden="true" tabindex="-1"></a>the linear predictors, and caps the resulting marker priors.</span>
+<span id="cb2-468"><a href="#cb2-468" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-469"><a href="#cb2-469" aria-hidden="true" tabindex="-1"></a><span class="in">`sample_causal_pool_weighted()`</span> samples causal markers without replacement,</span>
+<span id="cb2-470"><a href="#cb2-470" aria-hidden="true" tabindex="-1"></a>giving markers in selected annotations increased sampling weight.</span>
+<span id="cb2-471"><a href="#cb2-471" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-472"><a href="#cb2-472" aria-hidden="true" tabindex="-1"></a><span class="in">`mtsim_annotation()`</span> combines annotation generation, weighted causal-marker</span>
+<span id="cb2-473"><a href="#cb2-473" aria-hidden="true" tabindex="-1"></a>sampling, and marker-prior construction with multi-trait phenotype simulation.</span>
+<span id="cb2-474"><a href="#cb2-474" aria-hidden="true" tabindex="-1"></a>Its returned truth allows direct comparison of simulated architecture and</span>
+<span id="cb2-475"><a href="#cb2-475" aria-hidden="true" tabindex="-1"></a>posterior summaries.</span>
+<span id="cb2-476"><a href="#cb2-476" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-477"><a href="#cb2-477" aria-hidden="true" tabindex="-1"></a><span class="in">`summarize_annotation_signal()`</span> reports annotation size, causal-marker counts,</span>
+<span id="cb2-478"><a href="#cb2-478" aria-hidden="true" tabindex="-1"></a>and causal rates. If a fit is supplied, it can also report within-annotation</span>
+<span id="cb2-479"><a href="#cb2-479" aria-hidden="true" tabindex="-1"></a>mean PIPs and mean absolute posterior marker effects. Because annotation sets</span>
+<span id="cb2-480"><a href="#cb2-480" aria-hidden="true" tabindex="-1"></a>may overlap, these summaries should be read one annotation at a time rather</span>
+<span id="cb2-481"><a href="#cb2-481" aria-hidden="true" tabindex="-1"></a>than summed across rows.</span>
+<span id="cb2-482"><a href="#cb2-482" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-483"><a href="#cb2-483" aria-hidden="true" tabindex="-1"></a><span class="fu">## Overlap, Identifiability, and Double Counting</span></span>
+<span id="cb2-484"><a href="#cb2-484" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-485"><a href="#cb2-485" aria-hidden="true" tabindex="-1"></a>Overlapping annotations are biologically natural but statistically difficult.</span>
+<span id="cb2-486"><a href="#cb2-486" aria-hidden="true" tabindex="-1"></a>If two columns of <span class="sc">\(</span>A<span class="sc">\)</span> identify nearly the same markers, their separate</span>
+<span id="cb2-487"><a href="#cb2-487" aria-hidden="true" tabindex="-1"></a>coefficients may be weakly identified even when their joint signal is clear.</span>
+<span id="cb2-488"><a href="#cb2-488" aria-hidden="true" tabindex="-1"></a>Rare annotations can produce unstable estimates, whereas very broad</span>
+<span id="cb2-489"><a href="#cb2-489" aria-hidden="true" tabindex="-1"></a>annotations may largely reproduce the intercept.</span>
+<span id="cb2-490"><a href="#cb2-490" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-491"><a href="#cb2-491" aria-hidden="true" tabindex="-1"></a>Additive constructions on the logit and log scales provide a coherent way to</span>
+<span id="cb2-492"><a href="#cb2-492" aria-hidden="true" tabindex="-1"></a>combine overlap:</span>
+<span id="cb2-493"><a href="#cb2-493" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-494"><a href="#cb2-494" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-495"><a href="#cb2-495" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_i)</span>
+<span id="cb2-496"><a href="#cb2-496" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-497"><a href="#cb2-497" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_0)+A_i\eta_\pi,</span>
+<span id="cb2-498"><a href="#cb2-498" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-499"><a href="#cb2-499" aria-hidden="true" tabindex="-1"></a>\log w_i=A_i\eta_v.</span>
+<span id="cb2-500"><a href="#cb2-500" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-501"><a href="#cb2-501" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-502"><a href="#cb2-502" aria-hidden="true" tabindex="-1"></a>However, additive predictors can still create extreme priors when a marker</span>
+<span id="cb2-503"><a href="#cb2-503" aria-hidden="true" tabindex="-1"></a>belongs to many enriched sets. Centering, coefficient shrinkage, and explicit</span>
+<span id="cb2-504"><a href="#cb2-504" aria-hidden="true" tabindex="-1"></a>bounds are therefore structural safeguards, not merely numerical</span>
+<span id="cb2-505"><a href="#cb2-505" aria-hidden="true" tabindex="-1"></a>conveniences.</span>
+<span id="cb2-506"><a href="#cb2-506" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-507"><a href="#cb2-507" aria-hidden="true" tabindex="-1"></a>Interpretation is conditional: an annotation coefficient measures the</span>
+<span id="cb2-508"><a href="#cb2-508" aria-hidden="true" tabindex="-1"></a>association remaining after the other included annotations and preprocessing</span>
+<span id="cb2-509"><a href="#cb2-509" aria-hidden="true" tabindex="-1"></a>choices are accounted for. Marginal set enrichment and conditional annotation</span>
+<span id="cb2-510"><a href="#cb2-510" aria-hidden="true" tabindex="-1"></a>coefficients answer different questions and need not agree.</span>
+<span id="cb2-511"><a href="#cb2-511" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-512"><a href="#cb2-512" aria-hidden="true" tabindex="-1"></a><span class="fu">## Research-Stage Multi-Trait Extensions</span></span>
+<span id="cb2-513"><a href="#cb2-513" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-514"><a href="#cb2-514" aria-hidden="true" tabindex="-1"></a>The archived annotation draft also develops extensions beyond the currently</span>
+<span id="cb2-515"><a href="#cb2-515" aria-hidden="true" tabindex="-1"></a>exposed fixed, learned, and group CSR wrappers. They are retained here as</span>
+<span id="cb2-516"><a href="#cb2-516" aria-hidden="true" tabindex="-1"></a>design directions rather than claims about the public API.</span>
+<span id="cb2-517"><a href="#cb2-517" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-518"><a href="#cb2-518" aria-hidden="true" tabindex="-1"></a>For multiple traits, marker-specific annotation priors can vary by trait:</span>
+<span id="cb2-519"><a href="#cb2-519" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-520"><a href="#cb2-520" aria-hidden="true" tabindex="-1"></a><span class="sc">\[</span></span>
+<span id="cb2-521"><a href="#cb2-521" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_{it})</span>
+<span id="cb2-522"><a href="#cb2-522" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb2-523"><a href="#cb2-523" aria-hidden="true" tabindex="-1"></a>\operatorname{logit}(\pi_{0t})+A_i\eta_{\pi,t},</span>
+<span id="cb2-524"><a href="#cb2-524" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb2-525"><a href="#cb2-525" aria-hidden="true" tabindex="-1"></a>\log w_{it}=A_i\eta_{v,t}.</span>
+<span id="cb2-526"><a href="#cb2-526" aria-hidden="true" tabindex="-1"></a><span class="sc">\]</span></span>
+<span id="cb2-527"><a href="#cb2-527" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-528"><a href="#cb2-528" aria-hidden="true" tabindex="-1"></a>Annotations could also influence cross-trait sharing. For example, a softmax</span>
+<span id="cb2-529"><a href="#cb2-529" aria-hidden="true" tabindex="-1"></a>model could assign marker-specific probabilities to patterns such as null,</span>
+<span id="cb2-530"><a href="#cb2-530" aria-hidden="true" tabindex="-1"></a>trait-specific, and shared effects. A further extension could let annotation</span>
+<span id="cb2-531"><a href="#cb2-531" aria-hidden="true" tabindex="-1"></a>sets influence the covariance of active multi-trait effects. These models</span>
+<span id="cb2-532"><a href="#cb2-532" aria-hidden="true" tabindex="-1"></a>require strong regularization because annotation effects, sharing</span>
+<span id="cb2-533"><a href="#cb2-533" aria-hidden="true" tabindex="-1"></a>probabilities, and trait covariance can otherwise be difficult to identify.</span>
+<span id="cb2-534"><a href="#cb2-534" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-535"><a href="#cb2-535" aria-hidden="true" tabindex="-1"></a>The draft additionally proposes warm-started regional multi-trait fits:</span>
+<span id="cb2-536"><a href="#cb2-536" aria-hidden="true" tabindex="-1"></a>genome-wide annotation summaries construct priors, and selected regions are</span>
+<span id="cb2-537"><a href="#cb2-537" aria-hidden="true" tabindex="-1"></a>then fitted with more detailed multi-trait models. Such a workflow may be</span>
+<span id="cb2-538"><a href="#cb2-538" aria-hidden="true" tabindex="-1"></a>computationally useful, but prior reuse, region selection, and uncertainty</span>
+<span id="cb2-539"><a href="#cb2-539" aria-hidden="true" tabindex="-1"></a>propagation must be handled explicitly.</span>
+<span id="cb2-540"><a href="#cb2-540" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-541"><a href="#cb2-541" aria-hidden="true" tabindex="-1"></a><span class="fu">## Regularization, Bounds, and Uncertainty</span></span>
+<span id="cb2-542"><a href="#cb2-542" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-543"><a href="#cb2-543" aria-hidden="true" tabindex="-1"></a>Annotation-informed priors add flexibility and therefore add failure modes.</span>
+<span id="cb2-544"><a href="#cb2-544" aria-hidden="true" tabindex="-1"></a>The following controls address distinct problems:</span>
+<span id="cb2-545"><a href="#cb2-545" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-546"><a href="#cb2-546" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Centering** separates relative marker enrichment from the genome-wide</span>
+<span id="cb2-547"><a href="#cb2-547" aria-hidden="true" tabindex="-1"></a>  baseline.</span>
+<span id="cb2-548"><a href="#cb2-548" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Standardization** places quantitative annotations on comparable scales.</span>
+<span id="cb2-549"><a href="#cb2-549" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Coefficient shrinkage** limits overfitting in correlated or high-dimensional</span>
+<span id="cb2-550"><a href="#cb2-550" aria-hidden="true" tabindex="-1"></a>  annotation matrices.</span>
+<span id="cb2-551"><a href="#cb2-551" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Probability bounds** prevent prior inclusion probabilities from collapsing</span>
+<span id="cb2-552"><a href="#cb2-552" aria-hidden="true" tabindex="-1"></a>  to zero or one.</span>
+<span id="cb2-553"><a href="#cb2-553" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Variance-multiplier bounds** prevent extreme prior scales.</span>
+<span id="cb2-554"><a href="#cb2-554" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Cross-fitting or external training** reduces optimism from empirical-Bayes</span>
+<span id="cb2-555"><a href="#cb2-555" aria-hidden="true" tabindex="-1"></a>  data reuse.</span>
+<span id="cb2-556"><a href="#cb2-556" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Sensitivity analyses** reveal dependence on bounds, annotation definitions,</span>
+<span id="cb2-557"><a href="#cb2-557" aria-hidden="true" tabindex="-1"></a>  LD settings, and prior choices.</span>
+<span id="cb2-558"><a href="#cb2-558" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-559"><a href="#cb2-559" aria-hidden="true" tabindex="-1"></a>Posterior uncertainty conditional on a fixed empirical-Bayes prior does not</span>
+<span id="cb2-560"><a href="#cb2-560" aria-hidden="true" tabindex="-1"></a>include uncertainty from estimating that prior. This distinction should be</span>
+<span id="cb2-561"><a href="#cb2-561" aria-hidden="true" tabindex="-1"></a>made explicit when reporting results.</span>
+<span id="cb2-562"><a href="#cb2-562" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-563"><a href="#cb2-563" aria-hidden="true" tabindex="-1"></a><span class="fu">## Interpretation and Causal Limits</span></span>
+<span id="cb2-564"><a href="#cb2-564" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-565"><a href="#cb2-565" aria-hidden="true" tabindex="-1"></a>Annotation coefficients, set enrichments, and marker-specific priors describe</span>
+<span id="cb2-566"><a href="#cb2-566" aria-hidden="true" tabindex="-1"></a>how external information interacts with the fitted prior and observed genetic</span>
+<span id="cb2-567"><a href="#cb2-567" aria-hidden="true" tabindex="-1"></a>evidence. They do not prove that an annotation or annotated marker is causal.</span>
+<span id="cb2-568"><a href="#cb2-568" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-569"><a href="#cb2-569" aria-hidden="true" tabindex="-1"></a>Apparent enrichment can reflect:</span>
+<span id="cb2-570"><a href="#cb2-570" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-571"><a href="#cb2-571" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>LD between annotated and causal markers;</span>
+<span id="cb2-572"><a href="#cb2-572" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>differences in marker density and allele frequency;</span>
+<span id="cb2-573"><a href="#cb2-573" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>correlated or overlapping annotation definitions;</span>
+<span id="cb2-574"><a href="#cb2-574" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>phenotype architecture and sample size;</span>
+<span id="cb2-575"><a href="#cb2-575" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sparse-LD approximation and marker filtering; and</span>
+<span id="cb2-576"><a href="#cb2-576" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>model, regularization, and prior-bound choices.</span>
+<span id="cb2-577"><a href="#cb2-577" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-578"><a href="#cb2-578" aria-hidden="true" tabindex="-1"></a>Top markers and enriched annotations should therefore be treated as</span>
+<span id="cb2-579"><a href="#cb2-579" aria-hidden="true" tabindex="-1"></a>model-dependent evidence. Comparisons against unannotated models and</span>
+<span id="cb2-580"><a href="#cb2-580" aria-hidden="true" tabindex="-1"></a>sensitivity analyses are central to interpretation.</span>
+<span id="cb2-581"><a href="#cb2-581" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-582"><a href="#cb2-582" aria-hidden="true" tabindex="-1"></a><span class="fu">## Implementation Checklist</span></span>
+<span id="cb2-583"><a href="#cb2-583" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-584"><a href="#cb2-584" aria-hidden="true" tabindex="-1"></a>Before fitting an annotation-informed model:</span>
+<span id="cb2-585"><a href="#cb2-585" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-586"><a href="#cb2-586" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>verify marker-row alignment across annotations, sufficient statistics,</span>
+<span id="cb2-587"><a href="#cb2-587" aria-hidden="true" tabindex="-1"></a>  sparse LD, and posterior outputs;</span>
+<span id="cb2-588"><a href="#cb2-588" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>inspect annotation column prevalence, ranges, missingness, and correlation;</span>
+<span id="cb2-589"><a href="#cb2-589" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>reconsider all-zero, all-one, extremely rare, or nearly duplicate columns;</span>
+<span id="cb2-590"><a href="#cb2-590" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>record intercept, centering, standardization, and binary-column choices;</span>
+<span id="cb2-591"><a href="#cb2-591" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>record inclusion-probability and variance-multiplier bounds;</span>
+<span id="cb2-592"><a href="#cb2-592" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>decide whether priors are external, empirically constructed, jointly learned,</span>
+<span id="cb2-593"><a href="#cb2-593" aria-hidden="true" tabindex="-1"></a>  or group based;</span>
+<span id="cb2-594"><a href="#cb2-594" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>use cross-fitting or external data when empirical-Bayes reuse is a concern;</span>
+<span id="cb2-595"><a href="#cb2-595" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>compare prior annotation summaries with posterior annotation summaries; and</span>
+<span id="cb2-596"><a href="#cb2-596" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>report sensitivity to priors, annotation preprocessing, and LD settings.</span>
+<span id="cb2-597"><a href="#cb2-597" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-598"><a href="#cb2-598" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb2-599"><a href="#cb2-599" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-600"><a href="#cb2-600" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span> gives the main</span>
+<span id="cb2-601"><a href="#cb2-601" aria-hidden="true" tabindex="-1"></a>  conceptual and practical path through the annotation-aware wrappers.</span>
+<span id="cb2-602"><a href="#cb2-602" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.html)</span></span>
+<span id="cb2-603"><a href="#cb2-603" aria-hidden="true" tabindex="-1"></a>  covers the separate annotation-dependent BayesR mixture prior.</span>
+<span id="cb2-604"><a href="#cb2-604" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.html)</span> explains compact posterior</span>
+<span id="cb2-605"><a href="#cb2-605" aria-hidden="true" tabindex="-1"></a>  summaries and the annotation workflow.</span>
+<span id="cb2-606"><a href="#cb2-606" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.html)</span> defines the marker-order and</span>
+<span id="cb2-607"><a href="#cb2-607" aria-hidden="true" tabindex="-1"></a>  summary-statistics contracts used here.</span>
+<span id="cb2-608"><a href="#cb2-608" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-609"><a href="#cb2-609" aria-hidden="true" tabindex="-1"></a>This appendix preserves and reorganizes the prior-construction derivations from</span>
+<span id="cb2-610"><a href="#cb2-610" aria-hidden="true" tabindex="-1"></a>the archived annotation-prior draft. Current wrapper behavior is distinguished</span>
+<span id="cb2-611"><a href="#cb2-611" aria-hidden="true" tabindex="-1"></a>from empirical-Bayes and multi-trait designs that remain research-stage</span>
+<span id="cb2-612"><a href="#cb2-612" aria-hidden="true" tabindex="-1"></a>extensions.</span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 

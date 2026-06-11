@@ -884,100 +884,114 @@
   {
     "objectID": "notes/technical_annotation_priors.html",
     "href": "notes/technical_annotation_priors.html",
-    "title": "Technical Appendix: Annotation Priors",
+    "title": "Technical Appendix: Annotation-Informed Priors",
     "section": "",
-    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will preserve the detailed derivations, implementations, uncertainty considerations, and proposed extensions for annotation-informed STBLR and MTBLR priors."
+    "text": "This appendix describes how sblr transfers marker annotations into sparse Bayesian linear-regression priors. It develops marker-specific inclusion probabilities and effect-variance scales, explains the fixed, learned, and group-prior CSR wrappers, and records empirical-Bayes constructions from the original annotation-prior draft. The emphasis is on the prior and its implementation contract; the CSR likelihood and sparse-LD representation are covered elsewhere."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#annotation-level-posterior-summaries-and-overlap",
-    "href": "notes/technical_annotation_priors.html#annotation-level-posterior-summaries-and-overlap",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "1 Annotation-Level Posterior Summaries and Overlap",
-    "text": "1 Annotation-Level Posterior Summaries and Overlap"
+    "objectID": "notes/technical_annotation_priors.html#annotation-matrix-and-preprocessing",
+    "href": "notes/technical_annotation_priors.html#annotation-matrix-and-preprocessing",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "1 Annotation Matrix and Preprocessing",
+    "text": "1 Annotation Matrix and Preprocessing\nLet\n[ A =\n\\[\\begin{bmatrix}\nA_{11} & \\cdots & A_{1K}\\\\\n\\vdots & \\ddots & \\vdots\\\\\nA_{m1} & \\cdots & A_{mK}\n\\end{bmatrix}\\]\n]\nbe an (m K) marker-by-annotation matrix. Row (A_i) describes marker (i), and column (k) describes an annotation. Binary annotations may encode membership in functional sets; quantitative annotations may encode continuous scores. A marker may belong to several annotations, so the columns generally do not define a partition.\nThe marker-row contract is strict. Rows of (A) must correspond, in the same order, to:\n\nthe markers used to compute wy and ww;\nrows and columns of the sparse-LD matrix;\nmarker names represented by cls and Glist$rsidsLD; and\nrows of posterior marker summaries such as bm and dm.\n\nWhen row names and marker names are both available, the annotation preparation helper can reorder rows by name. Names are not a substitute for checking the alignment: duplicated, incomplete, or stale names can still produce an incorrect analysis.\n\n1.1 Intercepts, binary columns, and quantitative columns\nThe annotation-aware wrappers use .stblr_prepare_annotation_matrix() to validate and preprocess (A). Its relevant behavior is:\n\nvalues must be numeric and finite;\nan intercept is recognized when the first column is all ones;\nadd_intercept = TRUE prepends an intercept if one is not recognized;\nwith standardize = TRUE, nonbinary, non-intercept columns are centered and scaled;\nbinary columns are left unchanged unless center_binary = TRUE.\n\nAn intercept lets the model express a baseline prior independently of the annotation contrasts. Centering quantitative columns makes their coefficients more comparable and reduces confounding between the intercept and annotation effects. Leaving a binary indicator uncentered gives its coefficient the interpretation of a contrast against markers outside that annotation.\nThese choices are part of the model specification and should be reported. Automatic standardization is convenient, but users should retain the preprocessing metadata needed to apply the same transformation in sensitivity analyses or prediction data."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#pip-enrichment-and-variance-attribution",
-    "href": "notes/technical_annotation_priors.html#pip-enrichment-and-variance-attribution",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "2 PIP Enrichment and Variance Attribution",
-    "text": "2 PIP Enrichment and Variance Attribution"
+    "objectID": "notes/technical_annotation_priors.html#baseline-sparse-prior",
+    "href": "notes/technical_annotation_priors.html#baseline-sparse-prior",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "2 Baseline Sparse Prior",
+    "text": "2 Baseline Sparse Prior\nFor a single trait, the baseline sparse prior introduces a marker inclusion indicator (d_i):\n[\n\\[\\begin{aligned}\nb_i \\mid d_i = 0 &= 0,\\\\\nb_i \\mid d_i = 1 &\\sim N(0, v_b),\\\\\n\\Pr(d_i = 1) &= \\pi.\n\\end{aligned}\\]\n]\nHere (b_i) is the effect of marker (i), (v_b) is the active-marker variance, and () is a global inclusion probability. The posterior inclusion probability (PIP) is\n[ (d_i = 1 ), ]\nwhich is summarized by dm when returned by a fitted model.\nThe annotation-informed models retain this sparse-prior logic but replace one or both global quantities with structured marker-specific quantities:\n[ (d_i = 1) = _i, b_i d_i = 1 N(0, v_b w_i), ]\nwhere (w_i &gt; 0) is a marker-specific variance multiplier."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#empirical-bayes-inclusion-and-variance-priors",
-    "href": "notes/technical_annotation_priors.html#empirical-bayes-inclusion-and-variance-priors",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "3 Empirical-Bayes Inclusion and Variance Priors",
-    "text": "3 Empirical-Bayes Inclusion and Variance Priors"
+    "objectID": "notes/technical_annotation_priors.html#marker-specific-prior-construction",
+    "href": "notes/technical_annotation_priors.html#marker-specific-prior-construction",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "3 Marker-Specific Prior Construction",
+    "text": "3 Marker-Specific Prior Construction\n\n3.1 Inclusion probabilities\nA common annotation construction places annotation effects on the log-odds scale:\n[ (_i) = (0) + A_i , ]\nwhere (0) is a baseline inclusion probability and () contains annotation coefficients. Positive values of (A_i_) increase prior inclusion odds; negative values reduce them.\nThe fixed-prior helper used by the wrappers centers the linear predictor before combining it with the baseline:\n[ {i} = A_i- {j=1}^m A_j, _i = ^{-1} {(0)+{i}}. ]\nCentering makes the annotation effects primarily redistribute prior inclusion probability across markers rather than changing its genome-wide location. The resulting values are clamped to user-specified lower and upper bounds for numerical and inferential stability.\n\n\n3.2 Effect-variance multipliers\nAnnotation effects on active-marker variance naturally use a log scale:\n[ w_i = A_i_v, w_i = (A_i_v). ]\nAs with inclusion probabilities, the wrapper centers the linear predictor:\n[ _{v i} = A_iv-{j=1}^m A_jv, w_i=({v i}). ]\nThis construction makes (w_i) a relative multiplier around the global active-marker variance (v_b). Lower and upper bounds prevent extreme annotation combinations from creating nearly degenerate or unreasonably diffuse marker priors.\n\n\n3.3 Consequences for a single-marker update\nThe marker-specific quantities enter the standard sparse BLR update directly. Let (w_i^{XX}) denote the diagonal marker cross-product and let\n[ s_i = r_i + w_i^{XX} b_i ]\nbe the marker score formed from the current residual state. To avoid confusing the cross-product with the prior multiplier, write (v_{b,i}=v_b w_i). The log Bayes factor for the active versus null component is\n[ BF_i = ( ) + {v_e(v_e+w_i^{XX}v_{b,i})}. ]\nThe conditional inclusion probability is\n[ (d_i=1) = . ]\nConditional on inclusion,\n[ b_id_i=1, N( , ). ]\nThus, (_i) alters prior odds of inclusion, whereas (w_i) alters the active effect distribution and its shrinkage. These mechanisms should not be interpreted as interchangeable."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#marker-specific-prior-scale-construction",
-    "href": "notes/technical_annotation_priors.html#marker-specific-prior-scale-construction",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "4 Marker-Specific Prior Scale Construction",
-    "text": "4 Marker-Specific Prior Scale Construction"
+    "objectID": "notes/technical_annotation_priors.html#annotation-level-posterior-summaries",
+    "href": "notes/technical_annotation_priors.html#annotation-level-posterior-summaries",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "4 Annotation-Level Posterior Summaries",
+    "text": "4 Annotation-Level Posterior Summaries\nPosterior marker summaries can be aggregated to describe signal associated with an annotation set (S_k={i:A_{ik}}). Useful descriptive summaries include:\n[ m_{,k} = _{iS_k}(d_i=1), ]\nthe expected number of included markers in the set, and the PIP enrichment ratio\n[ E_k = {|S_kc|{-1}_{iS_k}(d_i=1)}. ]\nFor summary-statistics fits, a marker-level contribution estimate may be written\n[ c_i = , ]\nwith an optional PIP-weighted version. An annotation-level genetic-variance summary is then\n[ V_{G,k} = _{iS_k} c_i. ]\nThese set summaries are deliberately descriptive. When annotations overlap, their totals are not additive and the same marker contribution may appear in several sets. summarize_annotation_signal() follows this descriptive set-based approach for known simulation truth and, when a fit is supplied, adds within-set means of dm and absolute bm.\nFor conditional interpretation with overlapping annotations, one can regress a marker-level posterior response (s_i) on all annotation columns:\n[ s_i = + {k=1}^K A{ik}_k+_i. ]\nPossible responses include a PIP, squared posterior mean effect, or estimated marker contribution. Such a regression estimates conditional associations among annotations, but it does not establish that an annotation causes the genetic signal."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#full-stblr-marker-update-derivation-with-marker-specific-priors",
-    "href": "notes/technical_annotation_priors.html#full-stblr-marker-update-derivation-with-marker-specific-priors",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "5 Full STBLR Marker-Update Derivation With Marker-Specific Priors",
-    "text": "5 Full STBLR Marker-Update Derivation With Marker-Specific Priors"
+    "objectID": "notes/technical_annotation_priors.html#empirical-bayes-prior-construction",
+    "href": "notes/technical_annotation_priors.html#empirical-bayes-prior-construction",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "5 Empirical-Bayes Prior Construction",
+    "text": "5 Empirical-Bayes Prior Construction\nAn empirical-Bayes workflow estimates annotation signal from one genomic fit and uses it to construct priors for a subsequent fit:\n[ {_i,w_i} . ]\nThis approach separates prior construction from the genomic sampler. It is useful when annotation effects should be estimated with a dedicated model or when fixed marker priors must be inspected before fitting.\n\n5.1 Set-based estimates\nA smoothed set-level inclusion probability can be estimated from PIPs:\n[ _k = , ]\nwhere (a&gt;0) supplies symmetric pseudo-count shrinkage. A rough active-effect variance estimate is\n[ v_{b,k} = {(m_{,k},c)}, ]\nwhere (c&gt;0) prevents instability when the expected number of active markers is very small. Both estimates should generally be shrunk toward genome-wide values before they are converted into marker priors.\nThese formulas are easiest to interpret for disjoint sets. With overlapping annotations, directly assigning each set estimate to its member markers can double-count evidence.\n\n\n5.2 Conditional annotation models\nFor overlapping annotations, an annotation-level regression or BLR can map marker summaries to annotation coefficients. Candidate marker-level responses from the archived design include:\n\nposterior mean effects, (b_i);\ntransformed PIPs, such as a bounded ((dm_i));\nsquared effects or absolute effects; and\nmarker contribution estimates, (b_i(wy_i-r_i)/n).\n\nThe fitted annotation effects can then be transformed through the centered logit and log-scale constructions above. Regularization is essential because annotation columns can be numerous, correlated, imbalanced, or nearly redundant.\n\n\n5.3 Data reuse and cross-fitting\nWhen the same phenotype data are used both to estimate annotation enrichment and to fit the annotation-informed model, the resulting prior is data-dependent. This can improve adaptation but can also exaggerate evidence if uncertainty in the first-stage estimate is ignored.\nUseful safeguards include:\n\nshrink annotation coefficients toward zero;\nclamp (_i) and (w_i) to defensible ranges;\ncompare against an unannotated baseline;\nsplit markers into approximately LD-independent folds and construct priors out of fold; and\nassess sensitivity to the annotation model and prior bounds.\n\nThe current fixed-prior wrapper supports the final marker-prior fitting stage. Cross-fitting and a full empirical-Bayes pipeline remain analysis-level responsibilities rather than a single exported package workflow."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#annotation-specific-mtblr-covariance-and-sharing-model-priors",
-    "href": "notes/technical_annotation_priors.html#annotation-specific-mtblr-covariance-and-sharing-model-priors",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "6 Annotation-Specific MTBLR Covariance and Sharing-Model Priors",
-    "text": "6 Annotation-Specific MTBLR Covariance and Sharing-Model Priors"
+    "objectID": "notes/technical_annotation_priors.html#fixed-marker-specific-prior-wrapper",
+    "href": "notes/technical_annotation_priors.html#fixed-marker-specific-prior-wrapper",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "6 Fixed Marker-Specific Prior Wrapper",
+    "text": "6 Fixed Marker-Specific Prior Wrapper\nstblr_csr_prior_annot() fits a CSR summary-statistics model with fixed marker-specific inclusion probabilities and effect-variance multipliers. Users may either supply fixed_pi_marker and fixed_vb_multiplier directly, or supply (A) and fixed annotation coefficients from which the wrapper constructs them.\nfit_fixed &lt;- stblr_csr_prior_annot(\n  ld_prefix = ld_prefix,\n  n = n,\n  yy = stats$yy,\n  wy = stats$wy,\n  ww = stats$ww,\n  A = A,\n  beta_pi = beta_pi,\n  beta_vb = beta_vb\n)\nThe annotation-derived marker priors remain fixed during sampling. Marker effects, inclusion states, residual variance, global variance parameters, and other sampler states may still be updated according to the wrapper’s update flags. Fixed therefore refers to the annotation-to-marker prior mapping, not to the whole fitted model.\nThis wrapper is appropriate when priors come from external evidence, a separate training analysis, or a deliberately staged empirical-Bayes procedure."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#annotation-level-stblrmtblr-as-a-prior-learning-stage",
-    "href": "notes/technical_annotation_priors.html#annotation-level-stblrmtblr-as-a-prior-learning-stage",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "7 Annotation-Level STBLR/MTBLR as a Prior-Learning Stage",
-    "text": "7 Annotation-Level STBLR/MTBLR as a Prior-Learning Stage"
+    "objectID": "notes/technical_annotation_priors.html#learned-annotation-effects",
+    "href": "notes/technical_annotation_priors.html#learned-annotation-effects",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "7 Learned Annotation Effects",
+    "text": "7 Learned Annotation Effects\nstblr_csr_learn_annot() learns annotation coefficients jointly with the marker model. For trait (t), the implemented construction is conceptually\n[ (_{it}) = (t) + (A_i{,t}), ]\nand\n[ v_{b,it} = v_{b,t} {(A_i_{v,t})}. ]\nThe annotation effects are initialized by eta_pi_init and eta_vb_init, with zero matrices used by default. Gaussian shrinkage scales sigma_eta_pi and sigma_eta_vb regularize the coefficients.\nThe native sampler uses random-walk Metropolis-Hastings updates at the annot_update_every schedule. The inclusion-coefficient target is informed by the current inclusion states; the variance-coefficient target is informed by the current active effects and inclusion states. Proposal scales are controlled by rw_sd_eta_pi and rw_sd_eta_vb. Marker-level inclusion probabilities and variance multipliers are bounded during construction.\nThis is a direct learned-prior model rather than a separate two-stage empirical-Bayes fit. The posterior annotation coefficients summarize how the model adapts prior inclusion and active-effect variance, conditional on all other annotations and the sampler specification."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#direct-hierarchical-annotation-models",
-    "href": "notes/technical_annotation_priors.html#direct-hierarchical-annotation-models",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "8 Direct Hierarchical Annotation Models",
-    "text": "8 Direct Hierarchical Annotation Models"
+    "objectID": "notes/technical_annotation_priors.html#group-priors",
+    "href": "notes/technical_annotation_priors.html#group-priors",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "8 Group Priors",
+    "text": "8 Group Priors\nstblr_csr_group_annot() assigns each marker to exactly one group through group_index. Group (g) receives a group-specific inclusion probability and variance multiplier:\n[ (d_i=1)={g(i)}, b_id_i=1 N{0,v_b w{g(i)}}. ]\nGroup inclusion probabilities have beta-prior shape parameters derived from a prior mean and strength. Group variance multipliers may also be updated, depending on updateGroupVb, and can be normalized around a common scale.\nThe group construction is a simplification of overlapping annotation models: it creates an unambiguous partition and directly pools evidence within groups, but it cannot represent a marker’s simultaneous membership in several functional categories. It is useful when annotations naturally define mutually exclusive strata or when a simpler, more stable model is preferred.\nThe preparation helper verifies that every marker has one nonmissing group, that requested group names define the ordering, and that every represented group is nonempty. The native interface receives a zero-based group index; users should supply ordinary R group labels and let the wrapper handle that conversion."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#fixed-versus-jointly-updated-annotation-coefficients",
-    "href": "notes/technical_annotation_priors.html#fixed-versus-jointly-updated-annotation-coefficients",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "9 Fixed Versus Jointly Updated Annotation Coefficients",
-    "text": "9 Fixed Versus Jointly Updated Annotation Coefficients"
+    "objectID": "notes/technical_annotation_priors.html#simulation-helpers-and-known-truth-diagnostics",
+    "href": "notes/technical_annotation_priors.html#simulation-helpers-and-known-truth-diagnostics",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "9 Simulation Helpers and Known-Truth Diagnostics",
+    "text": "9 Simulation Helpers and Known-Truth Diagnostics\nThe annotation simulation helpers support controlled checks of whether an annotation-informed model recovers known architecture.\nmake_overlapping_annotations() creates binary annotation columns using independent membership probabilities. Overlap is allowed, and an option can ensure that every marker belongs to at least one annotation.\nmake_marker_priors_from_annotations() constructs marker-level inclusion probabilities and variance multipliers from specified enriched annotations. It uses log inclusion-odds and log variance-multiplier effects, optionally centers the linear predictors, and caps the resulting marker priors.\nsample_causal_pool_weighted() samples causal markers without replacement, giving markers in selected annotations increased sampling weight.\nmtsim_annotation() combines annotation generation, weighted causal-marker sampling, and marker-prior construction with multi-trait phenotype simulation. Its returned truth allows direct comparison of simulated architecture and posterior summaries.\nsummarize_annotation_signal() reports annotation size, causal-marker counts, and causal rates. If a fit is supplied, it can also report within-annotation mean PIPs and mean absolute posterior marker effects. Because annotation sets may overlap, these summaries should be read one annotation at a time rather than summed across rows."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#proposed-c-changes-and-sparse-annotation-representation",
-    "href": "notes/technical_annotation_priors.html#proposed-c-changes-and-sparse-annotation-representation",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "10 Proposed C++ Changes and Sparse Annotation Representation",
-    "text": "10 Proposed C++ Changes and Sparse Annotation Representation"
+    "objectID": "notes/technical_annotation_priors.html#overlap-identifiability-and-double-counting",
+    "href": "notes/technical_annotation_priors.html#overlap-identifiability-and-double-counting",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "10 Overlap, Identifiability, and Double Counting",
+    "text": "10 Overlap, Identifiability, and Double Counting\nOverlapping annotations are biologically natural but statistically difficult. If two columns of (A) identify nearly the same markers, their separate coefficients may be weakly identified even when their joint signal is clear. Rare annotations can produce unstable estimates, whereas very broad annotations may largely reproduce the intercept.\nAdditive constructions on the logit and log scales provide a coherent way to combine overlap:\n[ (_i) = (0)+A_i, w_i=A_i_v. ]\nHowever, additive predictors can still create extreme priors when a marker belongs to many enriched sets. Centering, coefficient shrinkage, and explicit bounds are therefore structural safeguards, not merely numerical conveniences.\nInterpretation is conditional: an annotation coefficient measures the association remaining after the other included annotations and preprocessing choices are accounted for. Marginal set enrichment and conditional annotation coefficients answer different questions and need not agree."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#centering-shrinkage-caps-cross-fitting-and-uncertainty",
-    "href": "notes/technical_annotation_priors.html#centering-shrinkage-caps-cross-fitting-and-uncertainty",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "11 Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty",
-    "text": "11 Centering, Shrinkage, Caps, Cross-Fitting, and Uncertainty"
+    "objectID": "notes/technical_annotation_priors.html#research-stage-multi-trait-extensions",
+    "href": "notes/technical_annotation_priors.html#research-stage-multi-trait-extensions",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "11 Research-Stage Multi-Trait Extensions",
+    "text": "11 Research-Stage Multi-Trait Extensions\nThe archived annotation draft also develops extensions beyond the currently exposed fixed, learned, and group CSR wrappers. They are retained here as design directions rather than claims about the public API.\nFor multiple traits, marker-specific annotation priors can vary by trait:\n[ ({it}) = ({0t})+A_i{,t}, w{it}=A_i_{v,t}. ]\nAnnotations could also influence cross-trait sharing. For example, a softmax model could assign marker-specific probabilities to patterns such as null, trait-specific, and shared effects. A further extension could let annotation sets influence the covariance of active multi-trait effects. These models require strong regularization because annotation effects, sharing probabilities, and trait covariance can otherwise be difficult to identify.\nThe draft additionally proposes warm-started regional multi-trait fits: genome-wide annotation summaries construct priors, and selected regions are then fitted with more detailed multi-trait models. Such a workflow may be computationally useful, but prior reuse, region selection, and uncertainty propagation must be handled explicitly."
   },
   {
-    "objectID": "notes/technical_annotation_priors.html#warm-started-regional-mtblr",
-    "href": "notes/technical_annotation_priors.html#warm-started-regional-mtblr",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "12 Warm-Started Regional MTBLR",
-    "text": "12 Warm-Started Regional MTBLR"
+    "objectID": "notes/technical_annotation_priors.html#regularization-bounds-and-uncertainty",
+    "href": "notes/technical_annotation_priors.html#regularization-bounds-and-uncertainty",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "12 Regularization, Bounds, and Uncertainty",
+    "text": "12 Regularization, Bounds, and Uncertainty\nAnnotation-informed priors add flexibility and therefore add failure modes. The following controls address distinct problems:\n\nCentering separates relative marker enrichment from the genome-wide baseline.\nStandardization places quantitative annotations on comparable scales.\nCoefficient shrinkage limits overfitting in correlated or high-dimensional annotation matrices.\nProbability bounds prevent prior inclusion probabilities from collapsing to zero or one.\nVariance-multiplier bounds prevent extreme prior scales.\nCross-fitting or external training reduces optimism from empirical-Bayes data reuse.\nSensitivity analyses reveal dependence on bounds, annotation definitions, LD settings, and prior choices.\n\nPosterior uncertainty conditional on a fixed empirical-Bayes prior does not include uncertainty from estimating that prior. This distinction should be made explicit when reporting results."
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#interpretation-and-causal-limits",
+    "href": "notes/technical_annotation_priors.html#interpretation-and-causal-limits",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "13 Interpretation and Causal Limits",
+    "text": "13 Interpretation and Causal Limits\nAnnotation coefficients, set enrichments, and marker-specific priors describe how external information interacts with the fitted prior and observed genetic evidence. They do not prove that an annotation or annotated marker is causal.\nApparent enrichment can reflect:\n\nLD between annotated and causal markers;\ndifferences in marker density and allele frequency;\ncorrelated or overlapping annotation definitions;\nphenotype architecture and sample size;\nsparse-LD approximation and marker filtering; and\nmodel, regularization, and prior-bound choices.\n\nTop markers and enriched annotations should therefore be treated as model-dependent evidence. Comparisons against unannotated models and sensitivity analyses are central to interpretation."
+  },
+  {
+    "objectID": "notes/technical_annotation_priors.html#implementation-checklist",
+    "href": "notes/technical_annotation_priors.html#implementation-checklist",
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "14 Implementation Checklist",
+    "text": "14 Implementation Checklist\nBefore fitting an annotation-informed model:\n\nverify marker-row alignment across annotations, sufficient statistics, sparse LD, and posterior outputs;\ninspect annotation column prevalence, ranges, missingness, and correlation;\nreconsider all-zero, all-one, extremely rare, or nearly duplicate columns;\nrecord intercept, centering, standardization, and binary-column choices;\nrecord inclusion-probability and variance-multiplier bounds;\ndecide whether priors are external, empirically constructed, jointly learned, or group based;\nuse cross-fitting or external data when empirical-Bayes reuse is a concern;\ncompare prior annotation summaries with posterior annotation summaries; and\nreport sensitivity to priors, annotation preprocessing, and LD settings."
   },
   {
     "objectID": "notes/technical_annotation_priors.html#related-notes-and-sources",
     "href": "notes/technical_annotation_priors.html#related-notes-and-sources",
-    "title": "Technical Appendix: Annotation Priors",
-    "section": "13 Related Notes and Sources",
-    "text": "13 Related Notes and Sources\n\nAnnotation-informed models\nMulti-trait models\nWorkflows and outputs\nTechnical SBayesRC-style annotations\nArchived annotation-prior draft"
+    "title": "Technical Appendix: Annotation-Informed Priors",
+    "section": "15 Related Notes and Sources",
+    "text": "15 Related Notes and Sources\n\nAnnotation-informed models gives the main conceptual and practical path through the annotation-aware wrappers.\nTechnical SBayesRC-style annotations covers the separate annotation-dependent BayesR mixture prior.\nWorkflows and outputs explains compact posterior summaries and the annotation workflow.\nData representations defines the marker-order and summary-statistics contracts used here.\n\nThis appendix preserves and reorganizes the prior-construction derivations from the archived annotation-prior draft. Current wrapper behavior is distinguished from empirical-Bayes and multi-trait designs that remain research-stage extensions."
   },
   {
     "objectID": "notes/technical_sbayesrc_annotations.html",
