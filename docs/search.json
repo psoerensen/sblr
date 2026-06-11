@@ -998,133 +998,231 @@
     "href": "notes/technical_sbayesrc_annotations.html",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
     "section": "",
-    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will explain the implemented SBayesRC-style annotation-dependent BayesR prior, generalized probit stick-breaking construction, and diagnostic helpers in full mathematical detail. The core prior family is closely aligned with the published SBayesRC prior structure, but the exposed default gamma grid and CSR sparse-LD likelihood differ from the published GCTB implementation."
+    "text": "This appendix describes the SBayesRC-style annotation-dependent BayesR prior implemented by stblr_csr_sbayesrc_generic(). The core prior family is closely aligned with published SBayesRC: marker effects follow a multi-normal mixture, and marker-specific mixture probabilities are determined by conditional probit stick-breaking regressions on annotations. The exposed sblr model is not an exact reproduction of the published GCTB SBayesRC implementation. Its default gamma grid differs, and it uses a CSR sparse-LD likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.\nThis note focuses on the annotation-dependent prior and its diagnostics. It does not claim computational equivalence between the two likelihood implementations."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#mixture-components-and-gamma-multipliers",
-    "href": "notes/technical_sbayesrc_annotations.html#mixture-components-and-gamma-multipliers",
+    "objectID": "notes/technical_sbayesrc_annotations.html#model-definition",
+    "href": "notes/technical_sbayesrc_annotations.html#model-definition",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "1 Mixture Components and Gamma Multipliers",
-    "text": "1 Mixture Components and Gamma Multipliers"
+    "section": "1 Model Definition",
+    "text": "1 Model Definition\nFor marker (i), let (z_i {1,,C}) identify one of (C) mixture components. Conditional on (z_i=k), the marker effect is\n[ _i z_i=k, v_b, N(0,_k v_b). ]\nThe vector\n[ =(_1,,_C) ]\ncontains fixed variance multipliers, while (v_b) is the sampled global active-effect variance scale. The implementation requires\n[ _1=0, _k&gt;0 k&gt;1. ]\nThe first component is therefore an exact null component:\n[ _i=0 z_i=1. ]\nThe remaining components represent increasingly diffuse active-effect distributions when their gamma multipliers increase.\nFor multiple traits supplied to the wrapper, this mixture construction and its annotation coefficients are fitted separately by trait. The formatted fit therefore stores one alpha matrix and one set of marker component summaries per trait."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#annotation-coefficient-matrix-alpha",
-    "href": "notes/technical_sbayesrc_annotations.html#annotation-coefficient-matrix-alpha",
+    "objectID": "notes/technical_sbayesrc_annotations.html#gamma-grids",
+    "href": "notes/technical_sbayesrc_annotations.html#gamma-grids",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "2 Annotation Coefficient Matrix alpha",
-    "text": "2 Annotation Coefficient Matrix alpha"
+    "section": "2 Gamma Grids",
+    "text": "2 Gamma Grids\nThe public sblr default is:\ngamma = c(0, 0.01, 0.1, 1)\nPublished SBayesRC uses the five-component grid:\ngamma = c(0, 0.001, 0.01, 0.1, 1)\nUsers can request that published gamma grid explicitly:\nfit &lt;- stblr_csr_sbayesrc_generic(\n  stats = stats,\n  ld_prefix = ld_prefix,\n  A = A,\n  gamma = c(0, 0.001, 0.01, 0.1, 1)\n)\nMatching the gamma grid aligns this part of the prior specification. It does not make the complete sblr model identical to GCTB SBayesRC because the likelihood, sparse-LD representation, exposed defaults, and implementation details remain distinct."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#generalized-probit-stick-breaking-probabilities",
-    "href": "notes/technical_sbayesrc_annotations.html#generalized-probit-stick-breaking-probabilities",
+    "objectID": "notes/technical_sbayesrc_annotations.html#annotation-dependent-component-probabilities",
+    "href": "notes/technical_sbayesrc_annotations.html#annotation-dependent-component-probabilities",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "3 Generalized Probit Stick-Breaking Probabilities",
-    "text": "3 Generalized Probit Stick-Breaking Probabilities"
+    "section": "3 Annotation-Dependent Component Probabilities",
+    "text": "3 Annotation-Dependent Component Probabilities\nLet (A) be an (m K) marker-by-annotation matrix. For (C) mixture components, let () be a (K (C-1)) coefficient matrix. Column (_j) controls conditional stick-breaking step (j).\nFor marker (i) and step (j), the linear predictor and conditional continuation probability are\n[ {ij}=A_ij, p{ij}=({ij}), ]\nwhere () is the standard normal distribution function. The marker-level component probabilities are\n[\n\\[\\begin{aligned}\n\\pi_{i1} &= 1-p_{i1},\\\\\n\\pi_{i2} &= p_{i1}(1-p_{i2}),\\\\\n\\pi_{i3} &= p_{i1}p_{i2}(1-p_{i3}),\\\\\n&\\ \\vdots\\\\\n\\pi_{iC} &= \\prod_{j=1}^{C-1}p_{ij}.\n\\end{aligned}\\]\n]\nEquivalently, component (k&lt;C) receives the probability of continuing through all earlier steps and stopping at step (k); the final component receives the probability of continuing through every step.\n\n3.1 Why the probabilities sum to one\nFor a marker with step probabilities (p_1,,p_{C-1}),\n[ {k=1}{C}k = (1-p_1) +p_1(1-p_2) ++ ({j=1}{C-2}p_j)(1-p{C-1}) +_{j=1}^{C-1}p_j =1. ]\nThe expression telescopes: probability either stops at one of the first (C-1) steps or reaches the final component.\n\n\n3.2 Numerical flooring and renormalization\nThe native sampler computes these probabilities from (A), floors each component probability at pi_floor, and renormalizes each marker row to sum to one. The public default is pi_floor = 1e-12.\nFlooring prevents exact numerical zero probabilities when probit predictors are extreme. Because flooring slightly changes the unnormalized stick-breaking probabilities, the subsequent row renormalization is required. This is a numerical-stability adjustment, not a different conceptual link function.\nThe deterministic R diagnostic helpers apply the mathematical stick-breaking transform without the native sampler’s floor-and-renormalize step. For ordinary finite coefficients, their rows sum to one up to numerical tolerance."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#marker-predictors-a",
-    "href": "notes/technical_sbayesrc_annotations.html#marker-predictors-a",
+    "objectID": "notes/technical_sbayesrc_annotations.html#annotation-matrix-and-preprocessing",
+    "href": "notes/technical_sbayesrc_annotations.html#annotation-matrix-and-preprocessing",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "4 Marker Predictors (A)",
-    "text": "4 Marker Predictors (A)"
+    "section": "4 Annotation Matrix and Preprocessing",
+    "text": "4 Annotation Matrix and Preprocessing\nRows of (A) must be aligned with the markers in the sufficient statistics, CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or quantitative annotations, and overlap is allowed.\nBefore fitting, stblr_csr_sbayesrc_generic() calls the shared annotation preparation helper using these controls:\n\nadd_intercept = TRUE adds an all-ones first column when one is not already recognized;\nstandardize_annotations = TRUE centers and scales nonbinary quantitative annotations;\ncenter_binary_annotations = FALSE leaves binary columns unchanged by default;\nrow names can be used to reorder (A) to known marker names when all names are available.\n\nThe preprocessing choices determine the meaning and scale of alpha. Quantitative coefficients are effects per standardized annotation unit under the defaults. An unchanged binary coefficient is a contrast associated with membership in that annotation, conditional on the remaining columns.\n\n4.1 Intercept prior\nWith intercept_flat = TRUE, the first annotation coefficient at every stick-breaking step receives a flat prior in the native alpha update. This assumes the first column is the intercept, which is the arrangement produced when the wrapper adds it. All other annotation coefficients receive the normal prior described below.\nIf a custom matrix already contains an intercept, place it first when relying on intercept_flat = TRUE. An all-ones column elsewhere in the matrix is not treated as the flat-prior intercept by the native update."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#annotation--and-marker-level-expected-gamma",
-    "href": "notes/technical_sbayesrc_annotations.html#annotation--and-marker-level-expected-gamma",
+    "objectID": "notes/technical_sbayesrc_annotations.html#alpha-and-sigmasqalpha-priors",
+    "href": "notes/technical_sbayesrc_annotations.html#alpha-and-sigmasqalpha-priors",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "5 Annotation- and Marker-Level Expected Gamma",
-    "text": "5 Annotation- and Marker-Level Expected Gamma"
+    "section": "5 Alpha and SigmaSqAlpha Priors",
+    "text": "5 Alpha and SigmaSqAlpha Priors\nFor non-intercept annotation coefficient (k) at stick-breaking step (j), the implemented prior is\n[ {kj}{,j}^2 N(0,_{,j}^2). ]\nEach step has its own annotation-effect variance (_{,j}^2), represented by sigmaSqAlpha[j]. Under intercept_flat = TRUE, the first coefficient is excluded from this normal shrinkage prior and from the variance update.\nThe variance update has scaled-inverse-chi-square or inverse-gamma family form:\n[ _{,j}^2 = , ]\nwhere () contains coefficients subject to shrinkage, sigmaSqAlpha_a supplies (a_), and sigmaSqAlpha_b supplies (b_). Both public defaults are 2.\nThis construction is aligned with the published SBayesRC use of normal annotation-coefficient priors and a scaled-inverse-chi-square-family variance prior. The exact published hyperparameter specification should not be inferred from the sblr defaults. Users should report the values supplied to sigmaSqAlpha_a, sigmaSqAlpha_b, sigmaSqAlpha_init, and intercept_flat."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#initialization-with-make_sbayesrc_alpha_init",
-    "href": "notes/technical_sbayesrc_annotations.html#initialization-with-make_sbayesrc_alpha_init",
+    "objectID": "notes/technical_sbayesrc_annotations.html#gibbs-style-alpha-updating",
+    "href": "notes/technical_sbayesrc_annotations.html#gibbs-style-alpha-updating",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "6 Initialization With make_sbayesrc_alpha_init()",
-    "text": "6 Initialization With make_sbayesrc_alpha_init()"
+    "section": "6 Gibbs-Style Alpha Updating",
+    "text": "6 Gibbs-Style Alpha Updating\nWhen updateAlpha = TRUE, the native sampler updates alpha every alpha_update_every iterations. The public default interval is 10.\nThe update uses conditional probit data augmentation. At stick-breaking step (j), only markers that reached that step are included. A latent normal variable is sampled for each eligible marker:\n[ _{ij}_j N(A_i_j,1), ]\ntruncated above zero when the marker continues beyond step (j), and truncated at or below zero when it stops at that step.\nConditional on the latent variables and the other coefficients, each annotation coefficient has a normal full conditional. For a non-intercept coefficient, the prior precision (1/_{,j}^2) is added to the data precision. With intercept_flat = TRUE, the first coefficient omits that prior precision. After the coefficients for a step are updated, sigmaSqAlpha[j] is drawn from the scaled-inverse-chi-square-family update.\nThis is a Gibbs-style conditional update using truncated-normal augmentation and normal draws. It is not a random-walk Metropolis-Hastings alpha update. After an alpha update, the native sampler recomputes all marker-specific prior component probabilities from (A)."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#fit-outputs-alpha-sigmasqalpha-comp_prob-and-ncomp",
-    "href": "notes/technical_sbayesrc_annotations.html#fit-outputs-alpha-sigmasqalpha-comp_prob-and-ncomp",
+    "objectID": "notes/technical_sbayesrc_annotations.html#initialization",
+    "href": "notes/technical_sbayesrc_annotations.html#initialization",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "7 Fit Outputs: alpha, sigmaSqAlpha, comp_prob, and ncomp",
-    "text": "7 Fit Outputs: alpha, sigmaSqAlpha, comp_prob, and ncomp"
+    "section": "7 Initialization",
+    "text": "7 Initialization\nmake_sbayesrc_alpha_init() creates deterministic initial values for the annotation-dependent mixture architecture.\nGiven an initial overall active probability pi_init, it distributes active mass across the (C-1) non-null components using normalized active_comp_weights. This produces initial marginal component probabilities\n[ ^{(0)} = ( 1-{}, {}w_2, , _{}w_C ). ]\nThe helper then converts these marginal probabilities to conditional continuation probabilities for the stick-breaking representation. When (A) contains an all-ones column, the first such column receives intercept coefficients\n[ _{0j}^{(0)} = {-1}{p_j{(0)}}, ]\nand all other coefficients begin at zero. If no all-ones column exists, all default coefficients are zero. Supplied alpha_init and sigmaSqAlpha_init values are accepted after dimension and finite-value validation.\nThe helper also returns named initial component probabilities, normalized active-component weights, conditional step probabilities, gamma values, and component names. These make initialization auditable without running the sampler."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#diagnostic-helper-contracts-and-compact-summaries",
-    "href": "notes/technical_sbayesrc_annotations.html#diagnostic-helper-contracts-and-compact-summaries",
+    "objectID": "notes/technical_sbayesrc_annotations.html#marker-effect-and-component-updates",
+    "href": "notes/technical_sbayesrc_annotations.html#marker-effect-and-component-updates",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "8 Diagnostic Helper Contracts and Compact Summaries",
-    "text": "8 Diagnostic Helper Contracts and Compact Summaries"
+    "section": "8 Marker-Effect and Component Updates",
+    "text": "8 Marker-Effect and Component Updates\nFor each marker, the sampler combines the annotation-derived prior component probabilities with the summary-statistics likelihood. The exact null component has (_1=0) and leaves the marker effect at zero. For active component (k), the effect prior variance is\n[ v_{b,k}=_k v_b. ]\nThe sampler forms a component-specific Bayes factor using the current marker score, residual variance, marker diagonal cross-product, and (v_{b,k}). It samples a new component from the resulting posterior component probabilities, then samples the marker effect from its conditional normal distribution when the selected gamma is positive.\nThe global scale (v_b) may also be updated from currently active marker effects and their selected gamma values when updateB = TRUE. Thus gamma defines relative component scales, while (v_b) supplies the shared sampled scale."
   },
   {
-    "objectID": "notes/technical_sbayesrc_annotations.html#interpretation-and-limits",
-    "href": "notes/technical_sbayesrc_annotations.html#interpretation-and-limits",
+    "objectID": "notes/technical_sbayesrc_annotations.html#fit-outputs",
+    "href": "notes/technical_sbayesrc_annotations.html#fit-outputs",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "9 Interpretation and Limits",
-    "text": "9 Interpretation and Limits"
+    "section": "9 Fit Outputs",
+    "text": "9 Fit Outputs\nThe formatted fit exposes the standard marker and variance summaries together with SBayesRC-style architecture summaries.\n\n9.1 alpha\nfit$alpha is a list with one posterior-mean coefficient matrix per trait. Each matrix has annotations in rows and stick-breaking steps in columns. Because it is a posterior mean, applying a nonlinear probability transform to it gives a plug-in diagnostic, not the posterior mean of that transformed quantity.\n\n\n9.2 sigmaSqAlpha\nfit$sigmaSqAlpha is a trait-by-step matrix of posterior mean annotation-effect variance parameters. Large values permit more dispersion among non-intercept annotation coefficients at that stick-breaking step. They should be interpreted together with alpha coefficients, annotation scaling, and chain diagnostics.\n\n\n9.3 comp_prob\nfit$comp_prob is a list with one marker-by-component matrix per trait. It contains posterior frequencies of sampled component assignments after burn-in and thinning. It is not the same object as the annotation-derived prior probability matrix computed from (A).\n\n\n9.4 ncomp\nfit$ncomp is a trait-by-component matrix containing posterior mean counts of markers assigned to each component. Its row sum should equal the number of markers, subject only to numerical representation.\nThe usual outputs remain available when returned, including bm, dm, variance traces, covariance summaries, current effects, and residual state. Full marker-scale matrices should be retained for analysis rather than printed in full."
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#diagnostic-helpers",
+    "href": "notes/technical_sbayesrc_annotations.html#diagnostic-helpers",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "10 Diagnostic Helpers",
+    "text": "10 Diagnostic Helpers\nFour deterministic exported helpers translate alpha coefficients into compact prior-architecture diagnostics.\n\n10.1 Annotation-row diagnostics\nsbayesrc_annotation_pi(alpha, gamma) applies the probit stick-breaking transform separately to each row of alpha. It returns an annotation-by-component probability matrix.\nsbayesrc_annotation_gamma_mean(alpha, gamma) computes\n[ k^{} = {c=1}^{C}_{kc}_c ]\nfor each alpha row.\nThese are coefficient-row diagnostics. A binary annotation row, for example, is evaluated as a standalone predictor row. It does not automatically include the fitted intercept or the effects of correlated annotations. It should not be described as the literal component probability for every marker carrying that annotation.\n\n\n10.2 Marker-profile diagnostics\nsbayesrc_marker_pi(A, alpha, gamma) first computes (A), then applies the stick-breaking transform. It returns an (m C) marker-level prior component probability matrix.\nsbayesrc_marker_gamma_mean(A, alpha, gamma) computes the plug-in expected gamma for each marker:\n[ i^{} = {c=1}^{C}_{ic}_c. ]\nThese marker-profile helpers include the complete annotation combination in each row of (A). They are generally more directly relevant to the fitted prior architecture than standalone annotation-row summaries.\nalpha_t &lt;- fit$alpha[[1]]\nprior_pi &lt;- sbayesrc_marker_pi(fit$input$A, alpha_t, fit$input$gamma)\nexpected_gamma &lt;- sbayesrc_marker_gamma_mean(\n  fit$input$A, alpha_t, fit$input$gamma\n)\nBecause these diagnostics transform posterior mean alpha coefficients, they do not propagate the full posterior uncertainty in alpha. Compact reports can show annotation-row expected gamma, summary(expected_gamma), and the correlation between marker expected gamma and PIP. That correlation describes the fitted prior-posterior relationship; it is not a calibration statistic or causal estimate."
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#interpretation-of-annotation-effects",
+    "href": "notes/technical_sbayesrc_annotations.html#interpretation-of-annotation-effects",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "11 Interpretation of Annotation Effects",
+    "text": "11 Interpretation of Annotation Effects\nAn alpha coefficient changes a conditional continuation probability at one stick-breaking step. Its sign cannot be interpreted independently of component ordering:\n\na positive coefficient increases the probability of continuing past that step;\na negative coefficient increases the probability of stopping at that step;\nthe consequences for expected gamma depend on all later steps and the gamma grid.\n\nExpected gamma is a useful scalar summary of prior mixture allocation, but it compresses a complete component-probability vector. Two markers can have the same expected gamma while assigning probability to different components. Report component probabilities when those distinctions matter.\nAnnotation effects and expected-gamma differences are prior-architecture summaries, not proof of biological causality. They can reflect LD, marker density, annotation overlap, quantitative-annotation scaling, model misspecification, and finite-chain behavior. Interpretation should compare annotation-derived prior probabilities with posterior component frequencies and assess sensitivity to preprocessing, gamma grids, sparse-LD settings, and hyperparameters."
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#comparison-with-published-sbayesrc",
+    "href": "notes/technical_sbayesrc_annotations.html#comparison-with-published-sbayesrc",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "12 Comparison With Published SBayesRC",
+    "text": "12 Comparison With Published SBayesRC\n\n\n\n\n\n\n\n\nPublished SBayesRC feature\nsblr implementation\nAssessment\n\n\n\n\nBayesR-like multi-normal marker-effect mixture\n(_iz_i=k N(0,_kv_b))\nSame core prior family\n\n\nExact null component\nRequires gamma[1] == 0; null effects are exactly zero\nSame\n\n\nPublished gamma grid c(0, 0.001, 0.01, 0.1, 1)\nUser-supplied and supported\nSame when explicitly requested\n\n\nDefault gamma grid\nc(0, 0.01, 0.1, 1)\nDifferent exposed default\n\n\nMarker-specific mixture probabilities from annotations\nUses (A) for every marker\nSame core structure\n\n\nConditional probit stick-breaking\nUses (p_{ij}=(A_i_j)) and conditional continuation probabilities\nSame core structure\n\n\nIntercept and functional annotations\nAdds an intercept by default; accepts overlapping binary or quantitative annotations\nClosely aligned, with sblr preprocessing defaults\n\n\nQuantitative annotation handling\nStandardizes nonbinary annotations by default; leaves binary columns unchanged by default\nQualified implementation choice\n\n\nNormal alpha priors with step-specific variance\nNon-intercept coefficients use (N(0,_{,j}^2))\nSame prior family\n\n\nScaled inverse-chi-square prior on alpha variance\nUses a scaled-inverse-chi-square/inverse-gamma-family update controlled by sigmaSqAlpha_a and sigmaSqAlpha_b\nSame family; exact published hyperparameters not implied\n\n\nProbit alpha update\nLatent truncated-normal augmentation and conditional normal draws\nClosely aligned Gibbs-style update\n\n\nComponent-probability numerical handling\nFloors probabilities at pi_floor and renormalizes rows\nQualified numerical-stability detail\n\n\nSummary-statistics likelihood\nCSR sparse-LD likelihood\nDifferent from GCTB low-rank rotated likelihood\n\n\n\nThe most accurate description is therefore:\n\nstblr_csr_sbayesrc_generic() implements an SBayesRC-style, annotation-dependent BayesR prior that is closely aligned with the published SBayesRC prior structure, fitted with the sblr CSR sparse-LD likelihood.\n\nIt should not be described as an exact reproduction of published GCTB SBayesRC as exposed by default."
+  },
+  {
+    "objectID": "notes/technical_sbayesrc_annotations.html#practical-validation-checklist",
+    "href": "notes/technical_sbayesrc_annotations.html#practical-validation-checklist",
+    "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
+    "section": "13 Practical Validation Checklist",
+    "text": "13 Practical Validation Checklist\nBefore interpreting an SBayesRC-style fit:\n\nverify marker alignment among (A), sufficient statistics, CSR LD, and posterior summaries;\nrecord the gamma grid and distinguish the sblr default from the published grid;\nrecord intercept, standardization, and binary-centering choices;\ninspect annotation prevalence, scaling, overlap, and collinearity;\nreport sigmaSqAlpha_a, sigmaSqAlpha_b, intercept_flat, pi_floor, and alpha_update_every;\ncheck component counts, PIPs, variance traces, and chain behavior;\ndistinguish annotation-derived prior probabilities from posterior component frequencies in comp_prob;\ncompare annotation-row and full marker-profile diagnostics;\nassess sensitivity to gamma, sparse-LD thresholds, annotations, and hyperparameters; and\navoid causal claims from alpha coefficients or expected-gamma summaries."
   },
   {
     "objectID": "notes/technical_sbayesrc_annotations.html#related-notes-and-sources",
     "href": "notes/technical_sbayesrc_annotations.html#related-notes-and-sources",
     "title": "Technical Appendix: SBayesRC-Style Annotation Priors",
-    "section": "10 Related Notes and Sources",
-    "text": "10 Related Notes and Sources\n\nAnnotation-informed models\nWorkflows and outputs\nTechnical annotation priors\nComplete annotation workflow"
+    "section": "14 Related Notes and Sources",
+    "text": "14 Related Notes and Sources\n\nAnnotation-informed models compares this model with fixed, learned, and group annotation priors.\nTechnical annotation priors develops marker-specific inclusion and variance priors outside the BayesR mixture construction.\nWorkflows and outputs explains compact fit and expected-gamma reporting.\nModel overview places the model within the broader sblr model and workflow landscape.\n\nThe implementation contracts described here are based on the public wrapper, deterministic diagnostic helpers, helper tests, and native CSR sampler. The archived annotation draft supplies the broader motivation for direct annotation-dependent mixture priors."
   },
   {
     "objectID": "notes/technical_summary_statistics.html",
     "href": "notes/technical_summary_statistics.html",
     "title": "Technical Appendix: Summary Statistics",
     "section": "",
-    "text": "Note\n\n\n\nThis note is under active development. Some sections are structured outlines that will be expanded over time.\nThis appendix will preserve the full algebra connecting individual-level models to summary-statistic residual calculations and derived genomic quantities."
+    "text": "This appendix develops the summary-statistics representation used by sblr from the individual-level linear model. It explains why cross-products are sufficient for BLR-style marker updates, how BED-derived statistics and sparse LD are combined by the CSR samplers, and which assumptions are required for single- and multi-trait analyses.\nThe central principle is that the Gaussian regression likelihood depends on the observed data through a small set of cross-products. Replacing (X) and (y) with those cross-products can preserve the marker-update algebra, but only when marker order, sample definition, scaling, and LD are compatible."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#summary-statistic-notation-wy-ww-ld-and-r",
-    "href": "notes/technical_summary_statistics.html#summary-statistic-notation-wy-ww-ld-and-r",
+    "objectID": "notes/technical_summary_statistics.html#individual-level-model-and-cross-product-sufficiency",
+    "href": "notes/technical_summary_statistics.html#individual-level-model-and-cross-product-sufficiency",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "1 Summary-Statistic Notation: wy, ww, LD, and r",
-    "text": "1 Summary-Statistic Notation: wy, ww, LD, and r"
+    "section": "1 Individual-Level Model and Cross-Product Sufficiency",
+    "text": "1 Individual-Level Model and Cross-Product Sufficiency\nFor one centered phenotype, consider\n[ y=Xb+e, eN(0,v_eI_n), ]\nwhere (X) is an (nm) genotype matrix and (b) is an (m)-vector of marker effects. Conditional on (b) and (v_e), the Gaussian log likelihood is, up to constants,\n[ p(yb,v_e) = -(y-Xb)^(y-Xb). ]\nExpanding the residual sum of squares gives\n[\n\\[\\begin{aligned}\n(y-Xb)^\\top(y-Xb)\n&=\ny^\\top y\n-2b^\\top X^\\top y\n+b^\\top X^\\top Xb.\n\\end{aligned}\\]\n]\nThus, the likelihood does not require repeated access to every individual observation once the following quantities are available:\n[ y^y, X^y, X^X, n. ]\nThe prior can still require additional parameters, but BLR marker likelihood calculations can be expressed through these cross-products. This is the sense in which they are sufficient for the Gaussian regression layer."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#identity-xxb-wy-r",
-    "href": "notes/technical_summary_statistics.html#identity-xxb-wy-r",
+    "objectID": "notes/technical_summary_statistics.html#single-trait-summary-statistic-notation",
+    "href": "notes/technical_summary_statistics.html#single-trait-summary-statistic-notation",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "2 Identity (X^Xb = wy-r)",
-    "text": "2 Identity (X^Xb = wy-r)"
+    "section": "2 Single-Trait Summary-Statistic Notation",
+    "text": "2 Single-Trait Summary-Statistic Notation\nFor one trait, define\n[ wy=X^y, XX=X^X, yy=y^y. ]\nThe diagonal genotype cross-products are\n[ ww_i=XX_{ii}=x_i^x_i. ]\nIn sblr interfaces:\n\nwy is the marker-phenotype cross-product vector;\nww is the vector containing the diagonal of (XX);\nyy is the phenotype sum of squares;\nthe sparse-LD object represents retained off-diagonal structure; and\n(n) is the sample size associated with these quantities.\n\nThe dense matrix (XX) can be written as\n[ XX=D+O, ]\nwhere (D=(ww)) and (O) contains off-diagonal marker cross-products. The CSR samplers keep (D) explicitly through ww and reconstruct a sparse approximation to (O) from disk-backed LD correlations."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#genomic-variance-and-covariance-from-residual-scores",
-    "href": "notes/technical_summary_statistics.html#genomic-variance-and-covariance-from-residual-scores",
+    "objectID": "notes/technical_summary_statistics.html#residual-scores-and-marker-updates",
+    "href": "notes/technical_summary_statistics.html#residual-scores-and-marker-updates",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "3 Genomic Variance and Covariance From Residual Scores",
-    "text": "3 Genomic Variance and Covariance From Residual Scores"
+    "section": "3 Residual Scores and Marker Updates",
+    "text": "3 Residual Scores and Marker Updates\nDefine the marker-scale residual score vector\n[ r = X^(y-Xb) = wy-XXb. ]\nThis is not the individual-level residual vector (y-Xb). It is its projection onto all marker columns.\nFor marker (i), adding the current marker effect back to its score gives\n[ s_i=r_i+ww_i b_i. ]\nBecause\n[ r_i = x_i^y -x_i^x_i b_i -_{ji}x_i^x_jb_j, ]\nthe quantity (s_i) equals\n[ s_i = x_i^y -_{ji}x_i^x_jb_j, ]\nwhich is the marker’s cross-product with the residual excluding its own current effect. BayesC-style inclusion and effect updates depend on (s_i), (ww_i), the residual variance, and prior parameters.\nIf marker (i)’s effect changes by\n[ b_i=b_i{}-b_i{}, ]\nthen\n[ r^{} = r^{}-XX_{i}b_i. ]\nThe CSR implementation performs the diagonal part directly:\n[ r_i^{} = r_i^{}-ww_ib_i, ]\nthen updates retained LD neighbors using sparse off-diagonal (x_j^x_i) values. This avoids multiplying by a dense (XX) matrix on every marker update."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#set-specific-and-weighted-genomic-variance-contributions",
-    "href": "notes/technical_summary_statistics.html#set-specific-and-weighted-genomic-variance-contributions",
+    "objectID": "notes/technical_summary_statistics.html#the-identity-xxbwy-r",
+    "href": "notes/technical_summary_statistics.html#the-identity-xxbwy-r",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "4 Set-Specific and Weighted Genomic Variance Contributions",
-    "text": "4 Set-Specific and Weighted Genomic Variance Contributions"
+    "section": "4 The Identity (XXb=wy-r)",
+    "text": "4 The Identity (XXb=wy-r)\nRearranging the residual-score definition gives\n[ XXb=wy-r. ]\nThis identity is useful beyond marker updates. It permits likelihood, genetic-variance, and annotation-contribution calculations from summary statistics and the current marker effects.\n\n4.1 Residual sum of squares\nStarting from\n[ = yy-2bwy+bXXb ]\nand substituting (XXb=wy-r) yields\n[\n\\[\\begin{aligned}\n\\operatorname{SSE}\n&=\nyy-2b^\\top wy+b^\\top(wy-r)\\\\\n&=\nyy-b^\\top(wy+r).\n\\end{aligned}\\]\n]\nThe single-trait CSR residual-variance update uses this form. It combines yy with the current b, wy, and residual score r without returning to individual-level observations.\n\n\n4.2 Genetic variance\nFor centered genotypes, the realized genetic value is (g=Xb). Its quadratic form is\n[ g^g = b^XXb = b^(wy-r). ]\nThe corresponding sample-scaled genetic-variance quantity is\n[ V_G = b^(wy-r). ]\nThis is the identity used by the CSR implementation to calculate genetic variance from the current effects and residual scores."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#assumptions-and-numerical-caveats",
-    "href": "notes/technical_summary_statistics.html#assumptions-and-numerical-caveats",
+    "objectID": "notes/technical_summary_statistics.html#genotype-scaling-allele-frequencies-and-ww",
+    "href": "notes/technical_summary_statistics.html#genotype-scaling-allele-frequencies-and-ww",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "5 Assumptions and Numerical Caveats",
-    "text": "5 Assumptions and Numerical Caveats"
+    "section": "5 Genotype Scaling, Allele Frequencies, and ww",
+    "text": "5 Genotype Scaling, Allele Frequencies, and ww\nSummary statistics and LD are meaningful only relative to the genotype matrix that produced them. Let (g_{ki}{0,1,2}) be the dosage for individual (k) at marker (i), and let (p_i) be the supplied or estimated allele frequency.\nWith bed_xtx_xty(..., scale = TRUE), the implemented marker coding is\n[ x_{ki} = {}. ]\nMissing BED genotypes are mapped to zero on this standardized scale, which is mean imputation under the supplied allele frequency. For nondegenerate markers and a compatible sample, the expected marker variance is approximately one, so\n[ ww_i=x_i^x_i ]\nis often near the number of used individuals. It is not assumed to equal exactly (n): realized allele counts, missingness, external allele frequencies, and sample selection affect it.\nWith scale = FALSE, the implementation uses raw dosage coding and mean imputes missing values to (2p_i). This path is intentionally uncentered. Consequently, cross-products and regression interpretation differ from the standardized path unless centering is handled elsewhere.\nAllele frequencies therefore define more than metadata. They determine the genotype matrix used in wy, ww, and LD. Supplying inconsistent allele frequencies to sufficient-statistic and sparse-LD construction changes the implied (X)."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#r-helper-implementations-and-package-status",
-    "href": "notes/technical_summary_statistics.html#r-helper-implementations-and-package-status",
+    "objectID": "notes/technical_summary_statistics.html#dense-ld-correlation-ld-and-sparse-cross-products",
+    "href": "notes/technical_summary_statistics.html#dense-ld-correlation-ld-and-sparse-cross-products",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "6 R Helper Implementations and Package Status",
-    "text": "6 R Helper Implementations and Package Status"
+    "section": "6 Dense LD, Correlation LD, and Sparse Cross-Products",
+    "text": "6 Dense LD, Correlation LD, and Sparse Cross-Products\nThe dense genotype cross-product matrix has entries\n[ XX_{ij}=x_i^x_j. ]\nIts diagonal is supplied through ww. The disk-backed CSR files produced by the sparse-LD workflow store retained correlations (r_{ij}), not full cross-products. When the CSR sampler reads them, it reconstructs retained off-diagonal cross-products as\n[ {ij} = r{ij}. ]\nThe sampler symmetrizes the retained off-diagonal entries for marker-wise updates. It handles the diagonal separately using ww; diagonal treatment is therefore part of the interface contract and should not be recreated by manually inserting assumed values into the disk files.\nWith all correlations retained and compatible ww, the reconstruction can represent the corresponding dense (XX). In practice, sparse-LD construction uses thresholds and windows, producing\n[ XX. ]\nThe residual score maintained by the sparse sampler is consequently\n[ r = wy-b. ]\nWeak or distant omitted LD does not propagate effect changes through this approximate residual score. This approximation is the principal statistical difference between a complete cross-product representation and thresholded CSR LD.\nSee Technical sparse LD and CSR for storage, thresholding, and disk-contract details."
   },
   {
-    "objectID": "notes/technical_summary_statistics.html#related-notes",
-    "href": "notes/technical_summary_statistics.html#related-notes",
+    "objectID": "notes/technical_summary_statistics.html#computing-statistics-with-bed_xtx_xty",
+    "href": "notes/technical_summary_statistics.html#computing-statistics-with-bed_xtx_xty",
     "title": "Technical Appendix: Summary Statistics",
-    "section": "7 Related Notes",
-    "text": "7 Related Notes\n\nData representations\nSparse-LD and BED workflows\nSingle-trait models\nTechnical sparse-LD CSR"
+    "section": "7 Computing Statistics With bed_xtx_xty()",
+    "text": "7 Computing Statistics With bed_xtx_xty()\nbed_xtx_xty() computes sufficient statistics directly from selected markers in one PLINK BED file. A short call is:\nstats &lt;- bed_xtx_xty(\n  bed_file = Glist$bedfiles[chr],\n  n = Glist$n,\n  cls = cls,\n  af = Glist$af[[chr]][cls],\n  y = y,\n  rows = NULL,\n  scale = TRUE\n)\nIts principal inputs have the following contracts:\n\nbed_file identifies the PLINK BED file.\nn is the number of individuals represented by that BED file.\ncls contains positive one-based BED marker indices in the desired model order.\naf contains allele frequencies in exactly the cls order. If omitted, the implementation computes frequencies from selected individuals.\ny is an (n_{}n_t) phenotype matrix.\nrows optionally selects unique one-based BED rows; when supplied, y must contain exactly those selected individuals in that order.\nscale selects standardized or raw-dosage marker coding.\n\nFor each trait (t), the function returns:\n[ wy_t=X^y_t, ww_t=(X^X), yy_t=y_t^y_t. ]\nThe same ww vector is repeated across traits because the current function uses one selected genotype matrix (X) for all phenotype columns. Additional returned fields include xx, allele frequencies used, row-selection information, sample and marker counts, scaling status, and summaries of marker diagonal cross-products.\nThe output order is the input cls order. The function does not infer the intended biological marker order from IDs, so that ordering must be established before the call."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#combining-bed_xtx_xty-with-sparse-ld",
+    "href": "notes/technical_summary_statistics.html#combining-bed_xtx_xty-with-sparse-ld",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "8 Combining bed_xtx_xty() With Sparse LD",
+    "text": "8 Combining bed_xtx_xty() With Sparse LD\nThe sufficient-statistics and LD branches must describe the same genotype matrix:\nsame BED marker selection and order\n+ same selected individuals\n+ same allele frequencies and scaling\n    -&gt; compatible wy, ww, yy, and sparse LD\nsparseLD_stream_CSR() constructs retained marker correlations from BED data and writes them under ld_prefix. It must receive the same marker ordering, sample rows, allele frequencies, and scaling convention used to create the sufficient statistics.\nThe central workflow handoff is:\nBED + phenotype\n  -&gt; bed_xtx_xty()        -&gt; wy, ww, yy, n\n  -&gt; sparseLD_stream_CSR() -&gt; ld_prefix\n  -&gt; stblr_csr()\nThe complete operational sequence is documented in Sparse-LD and BED workflows."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#how-stblr_csr-consumes-the-statistics",
+    "href": "notes/technical_summary_statistics.html#how-stblr_csr-consumes-the-statistics",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "9 How stblr_csr() Consumes the Statistics",
+    "text": "9 How stblr_csr() Consumes the Statistics\nstblr_csr() accepts:\n\nstats$wy, one marker vector per trait;\nstats$ww, one positive marker-diagonal vector per trait;\nstats$yy, one phenotype sum of squares per trait;\n(n), supplied explicitly or taken from stats$n;\nld_prefix, identifying the compatible disk-backed sparse LD; and\nprior, variance-update, scheduling, and MCMC controls.\n\nThe wrapper uses yy/(n-1) to initialize phenotype-variance-related prior scales. The native sampler validates marker and trait dimensions, reconstructs retained off-diagonal cross-products from LD correlations and ww, initializes or rebuilds\n[ r=wy-b, ]\nand performs marker and variance updates from the resulting summary-statistic state.\nFor the current shared-LD single-trait-per-trait CSR path, ww and (n) must agree across traits. This reflects one common genotype sample and scaling scheme. Supplying trait-specific summary statistics from materially different samples requires a model and LD contract that explicitly supports those differences."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#multi-trait-summary-statistic-notation",
+    "href": "notes/technical_summary_statistics.html#multi-trait-summary-statistic-notation",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "10 Multi-Trait Summary-Statistic Notation",
+    "text": "10 Multi-Trait Summary-Statistic Notation\nFor (n_t) traits, collect phenotypes in\n[ Y=\n\\[\\begin{bmatrix}\ny_1 & \\cdots & y_{n_t}\n\\end{bmatrix}\\]\n]\nand marker effects in an (mn_t) matrix\n[ B=\n\\[\\begin{bmatrix}\nb_1 & \\cdots & b_{n_t}\n\\end{bmatrix}\\]\n. ]\nThe individual-level model is\n[ Y=XB+E_Y, ]\nwhere the rows of (E_Y) may have residual covariance matrix (_e). The central multi-trait cross-products are\n[ WY=X^Y ]\nand\n[ SSY=Y^Y. ]\nColumn (t) of (WY) is (wy_t=X^y_t). Entry (SSY_{ts}=y_t^y_s) is the observed cross-trait phenotype product among individuals shared by traits (t) and (s).\nFor a common (X), define the marker-score matrix\n[ R=X^(Y-XB)=WY-XXB. ]\nTrait by trait,\n[ XXb_t=wy_t-r_t. ]\nThis permits a symmetric genetic covariance estimate:\n[ G_{ts} = . ]\nWhen (t=s), this reduces to the single-trait genetic-variance expression. When all traits use the same (n), the denominator becomes (n)."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#cross-trait-phenotype-products-and-sample-overlap",
+    "href": "notes/technical_summary_statistics.html#cross-trait-phenotype-products-and-sample-overlap",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "11 Cross-Trait Phenotype Products and Sample Overlap",
+    "text": "11 Cross-Trait Phenotype Products and Sample Overlap\nThe diagonal of SSY contains the single-trait values:\n[ SSY_{tt}=yy_t. ]\nThe off-diagonals contain information not recoverable from separate yy values:\n[ SSY_{ts} = {iI{ts}}y_{it}y_{is}, ]\nwhere (I_{ts}) is the set of individuals observed for both traits. These terms are required for a full residual covariance update because\n[ (Y-XB)^(Y-XB) = SSY -Y^XB -BXY +B^XXB. ]\nWith individual-level data, SSY and overlap counts are directly observable. With summary statistics, they must be supplied or reconstructed. If (N_{ts}=|I_{ts}|) and the cross-trait phenotype covariance is (_{ts}), then under random missingness and covariance homogeneity,\n[ E(SSY_{ts})=N_{ts}_{ts}. ]\nGiven phenotype correlations (R_y) and approximate trait variances\n[ (y_t) , ]\none can form\n[ {ts} = R{y,ts} ]\nand reconstruct\n[ = N(Y), ]\nforcing the diagonal to the observed yy values.\nFull-overlap and fractional-overlap assumptions define different (N) matrices and therefore different reconstructed likelihood information. Missing or incorrect cross-trait information limits residual covariance inference even when every trait has valid marginal summary statistics. The complete derivation and sensitivity considerations belong in Technical multi-trait sample overlap."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#residual-and-genetic-covariance-from-summary-scores",
+    "href": "notes/technical_summary_statistics.html#residual-and-genetic-covariance-from-summary-scores",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "12 Residual and Genetic Covariance From Summary Scores",
+    "text": "12 Residual and Genetic Covariance From Summary Scores\nFor a joint multi-trait model, the residual cross-product matrix can be constructed from SSY, (WY), current effects, and residual scores. One orientation is\n[ S_e = SSY -B^WY -WY^B +B^XXB. ]\nUsing (XXB=WY-R),\n[ S_e = SSY -B^WY -WY^B +B^(WY-R). ]\nFinite precision, asymmetric inputs, or trait-specific constructions can make cross-trait expressions differ slightly by orientation. The native multi-trait CSR implementation symmetrizes off-diagonal residual and genetic covariance quantities before covariance updates.\nThese calculations require a compatible definition of (X), trait sample sizes, and cross-trait phenotype products. A vector of per-trait yy values supports separate trait-wise residual variance updates; it does not by itself identify a full residual covariance matrix."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#set-specific-and-weighted-genetic-contributions",
+    "href": "notes/technical_summary_statistics.html#set-specific-and-weighted-genetic-contributions",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "13 Set-Specific and Weighted Genetic Contributions",
+    "text": "13 Set-Specific and Weighted Genetic Contributions\nThe identity (XXb_t=wy_t-r_t) also supports marker-set summaries. For a marker set (S_k), define\n[ V_{G,k,t} = {iS_k} b{it}(wy_{it}-r_{it}). ]\nThe corresponding marker-level contribution is\n[ c_{it} = . ]\nAn optional posterior-inclusion-weighted version is\n[ c^{}_{it} = . ]\nThese are useful descriptive summaries for annotations or genomic regions. For disjoint sets, their sums can approximate a partition of the fitted genetic-variance expression. For overlapping sets, a marker contributes to every set containing it, so set totals are attributions rather than an additive partition.\nThe formulas also mix posterior summaries nonlinearly when posterior mean bm, PIP dm, and a returned residual score are combined. They should not be confused with exact posterior expectations unless calculated draw by draw."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#exact-equivalence-and-practical-differences",
+    "href": "notes/technical_summary_statistics.html#exact-equivalence-and-practical-differences",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "14 Exact Equivalence and Practical Differences",
+    "text": "14 Exact Equivalence and Practical Differences\nSuppose the following are all exact and compatible:\n\nthe same centered or otherwise identically coded (X);\nthe same phenotype (y);\ncomplete (wy=X^y), (yy=y^y), and (XX=X^X);\nthe same prior, initialization, and variance model; and\nan exact implementation of the same update schedule.\n\nThen individual-level and summary-statistics marker updates can target the same model family because their likelihood calculations are algebraically equivalent.\nPractical BED and CSR fits are not expected to be numerically identical:\n\nsparse LD omits weak or distant off-diagonal entries;\nstored correlations and reconstructed cross-products use finite precision;\nBED and CSR implementations can maintain residuals differently;\nupdate scheduling and marker order can differ;\nprior and residual-adjustment settings may differ; and\nMCMC output contains Monte Carlo variation.\n\nAgreement should therefore be assessed through posterior patterns, predictions, variance summaries, and sensitivity analyses rather than equality of individual draws."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#validation-and-diagnostics",
+    "href": "notes/technical_summary_statistics.html#validation-and-diagnostics",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "15 Validation and Diagnostics",
+    "text": "15 Validation and Diagnostics\nBefore fitting a summary-statistics model, check:\n\nEvery trait’s wy vector has length (m).\nEvery trait’s ww vector has length (m), contains finite positive values, and is compatible with the LD scaling.\nyy has one value per trait for parallel single-trait fitting, or SSY is a valid (n_tn_t) matrix for a full joint multi-trait likelihood.\nThe supplied (n) is the sample size used to calculate the corresponding statistics; trait-specific (n_t) values and overlap assumptions are recorded where relevant.\nSparse-LD dimensions equal (mm), and its marker order matches wy and ww.\ncls, allele frequencies, rows, and scale choices match between bed_xtx_xty() and sparse-LD construction.\nMarker names, annotation rows, and posterior output rows use the same order.\nPhenotypes are centered or the intercept/centering convention is otherwise explicit.\nww magnitude is plausible for the coding and sample size.\nLD thresholds, windows, precision, and reference-sample provenance are recorded.\n\nUseful diagnostics include inspecting stats$n, stats$m, stats$scale, stats$min_xx, stats$mean_xx, and stats$max_xx; reading CSR metadata with sparseLD_read_CSR(); and comparing BED-direct and CSR fits when the same individual-level data are available."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#limitations",
+    "href": "notes/technical_summary_statistics.html#limitations",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "16 Limitations",
+    "text": "16 Limitations\nSummary-statistics inference cannot recover information that was not retained or supplied.\n\nLD compatibility: wy and ww from one sample or scaling convention combined with LD from another imply an approximate and potentially biased likelihood.\nLD-reference mismatch: ancestry, allele frequencies, imputation quality, marker filtering, and sample selection can make reference LD differ from study LD.\nSparsification: thresholding and windowing deliberately remove off-diagonal information.\nPhenotype preprocessing: unrecorded centering, scaling, covariate adjustment, or residualization changes the meaning of wy and yy.\nMulti-trait information: marginal trait statistics do not identify cross-trait phenotype products or sample overlap.\nOverlap assumptions: incorrect (N) or phenotype covariance assumptions can distort full residual covariance inference.\nPosterior summaries: set contributions calculated from posterior means do not automatically propagate full posterior uncertainty.\n\nThese limitations should be treated as model-input assumptions, not merely implementation details."
+  },
+  {
+    "objectID": "notes/technical_summary_statistics.html#related-notes-and-sources",
+    "href": "notes/technical_summary_statistics.html#related-notes-and-sources",
+    "title": "Technical Appendix: Summary Statistics",
+    "section": "17 Related Notes and Sources",
+    "text": "17 Related Notes and Sources\n\nData representations introduces the two data representations and their alignment contracts.\nSparse-LD and BED workflows gives the practical BED-to-statistics-to-CSR sequence.\nTechnical sparse LD and CSR documents the disk-backed sparse-LD contract.\nTechnical multi-trait sample overlap preserves the full SSY and overlap reconstruction theory.\nSingle-trait models develops the sparse BLR prior and marker-update interpretation.\nMulti-trait models places cross-trait sufficient statistics within joint MTBLR models.\n\nThis appendix reorganizes the summary-statistic residual identities and set-contribution derivations from the archived annotation draft together with the SSY foundations from the archived theory draft, aligned to the current BED sufficient-statistics and CSR implementations."
   },
   {
     "objectID": "notes/drafts/annotation_informed_priors_stblr_mtblr.html",
