@@ -74,6 +74,90 @@ test_that("make_sbayesrc_alpha_init rejects invalid inputs", {
  )
 })
 
+test_that("SBayesRC annotation diagnostics return valid probabilities", {
+ gamma <- c(0, 0.01, 0.1, 1)
+ alpha <- matrix(
+  c(0, -0.5, 0.5, 1, 0.25, -1),
+  nrow = 2,
+  byrow = TRUE,
+  dimnames = list(c("intercept", "binary"), paste0("step_", 1:3))
+ )
+
+ pi <- sblr::sbayesrc_annotation_pi(alpha, gamma)
+ gamma_mean <- sblr::sbayesrc_annotation_gamma_mean(alpha, gamma)
+
+ expect_equal(dim(pi), c(nrow(alpha), length(gamma)))
+ expect_identical(rownames(pi), rownames(alpha))
+ expect_identical(
+  colnames(pi),
+  c("gamma_0.00", "gamma_0.01", "gamma_0.10", "gamma_1.00")
+ )
+ expect_equal(unname(rowSums(pi)), rep(1, nrow(alpha)), tolerance = 1e-14)
+ expect_true(all(pi >= 0 & pi <= 1))
+ expect_length(gamma_mean, nrow(alpha))
+ expect_identical(names(gamma_mean), rownames(alpha))
+ expect_true(all(gamma_mean >= min(gamma) & gamma_mean <= max(gamma)))
+})
+
+test_that("SBayesRC marker diagnostics preserve marker dimensions and names", {
+ gamma <- c(0, 0.01, 0.1, 1)
+ A <- matrix(
+  c(1, 0, 1, 1, 1, 0),
+  nrow = 3,
+  byrow = TRUE,
+  dimnames = list(paste0("marker_", 1:3), c("intercept", "binary"))
+ )
+ alpha <- matrix(
+  c(0, -0.5, 0.5, 1, 0.25, -1),
+  nrow = 2,
+  byrow = TRUE,
+  dimnames = list(colnames(A), paste0("step_", 1:3))
+ )
+
+ pi <- sblr::sbayesrc_marker_pi(A, alpha, gamma)
+ gamma_mean <- sblr::sbayesrc_marker_gamma_mean(A, alpha, gamma)
+
+ expect_equal(dim(pi), c(nrow(A), length(gamma)))
+ expect_identical(rownames(pi), rownames(A))
+ expect_equal(unname(rowSums(pi)), rep(1, nrow(A)), tolerance = 1e-14)
+ expect_true(all(pi >= 0 & pi <= 1))
+ expect_length(gamma_mean, nrow(A))
+ expect_identical(names(gamma_mean), rownames(A))
+ expect_true(all(gamma_mean >= min(gamma) & gamma_mean <= max(gamma)))
+})
+
+test_that("SBayesRC diagnostics reject invalid inputs and dimensions", {
+ gamma <- c(0, 0.01, 0.1, 1)
+ alpha <- matrix(0, nrow = 2, ncol = 3)
+ A <- matrix(1, nrow = 3, ncol = 2)
+
+ expect_error(
+  sblr::sbayesrc_annotation_pi(alpha, c(0.1, 1)),
+  "gamma\\[1\\]"
+ )
+ expect_error(
+  sblr::sbayesrc_annotation_pi(alpha, c(0, 0.1, 0)),
+  "positive"
+ )
+ expect_error(
+  sblr::sbayesrc_annotation_pi(matrix(0, 2, 2), gamma),
+  "ncol\\(alpha\\)"
+ )
+ expect_error(
+  sblr::sbayesrc_annotation_pi(matrix(Inf, 2, 3), gamma),
+  "finite numeric matrix"
+ )
+ expect_error(
+  sblr::sbayesrc_marker_pi(matrix(1, 3, 3), alpha, gamma),
+  "ncol\\(A\\)"
+ )
+ expect_error(
+  sblr::sbayesrc_marker_pi(matrix(Inf, 3, 2), alpha, gamma),
+  "finite numeric matrix"
+ )
+ expect_error(sblr::sbayesrc_marker_pi(as.data.frame(A), alpha, gamma), "matrix")
+})
+
 test_that("format_sbayesrc_csr_fit formats a synthetic sampler result", {
  nt <- 2L
  m <- 4L

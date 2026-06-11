@@ -302,16 +302,10 @@ for (model_name in c("fixed_prior", "learned_annotation", "group_annotation")) {
  print(annotation_model_summary(sim, fits[[model_name]], model_name))
 }
 
-# These optional diagnostics use helper functions from exploratory SBayesRC
-# workflows when they are available in the current R session.
-sbayesrc_helpers <- c(
- "sbayesrc_annotation_pi",
- "sbayesrc_annotation_gamma_mean",
- "sbayesrc_marker_gamma_mean"
-)
-if (all(vapply(sbayesrc_helpers, exists, logical(1), mode = "function")) &&
-    !is.null(fit_sbayesrc$alpha)) {
- gamma <- c(0, 0.01, 0.1, 1)
+# These exported helpers provide compact SBayesRC prior diagnostics.
+if (!is.null(fit_sbayesrc$alpha)) {
+ sbayesrc_A <- fit_sbayesrc$input$A
+ gamma <- fit_sbayesrc$input$gamma
  trait_names <- names(fit_sbayesrc$alpha)
  if (is.null(trait_names)) {
   trait_names <- paste0("T", seq_along(fit_sbayesrc$alpha))
@@ -325,7 +319,9 @@ if (all(vapply(sbayesrc_helpers, exists, logical(1), mode = "function")) &&
  marker_gamma_pip_correlation <- numeric(length(fit_sbayesrc$alpha))
 
  for (t in seq_along(fit_sbayesrc$alpha)) {
-  marker_gamma <- sbayesrc_marker_gamma_mean(A, fit_sbayesrc$alpha[[t]], gamma)
+  marker_gamma <- sbayesrc_marker_gamma_mean(
+   sbayesrc_A, fit_sbayesrc$alpha[[t]], gamma
+  )
   annotation_gamma[[trait_names[t]]] <- sbayesrc_annotation_gamma_mean(
    fit_sbayesrc$alpha[[t]], gamma
   )

@@ -174,6 +174,130 @@ make_sbayesrc_alpha_init <- function(
  )
 }
 
+.sbayesrc_validate_gamma <- function(gamma) {
+ if (!is.numeric(gamma) || length(gamma) < 2 ||
+     any(!is.finite(gamma))) {
+  stop("gamma must be a finite numeric vector with at least two elements.")
+ }
+ gamma <- as.numeric(gamma)
+ if (gamma[1] != 0) stop("gamma[1] must be 0.")
+ if (any(gamma[-1] <= 0)) stop("All active gamma values must be positive.")
+ gamma
+}
+
+.sbayesrc_validate_alpha <- function(alpha, gamma) {
+ if (!is.matrix(alpha) || !is.numeric(alpha) ||
+     any(!is.finite(alpha))) {
+  stop("alpha must be a finite numeric matrix.")
+ }
+ if (ncol(alpha) != length(gamma) - 1L) {
+  stop("ncol(alpha) must equal length(gamma) - 1.")
+ }
+ alpha
+}
+
+.sbayesrc_stick_breaking_pi <- function(eta, gamma) {
+ p <- stats::pnorm(eta)
+ n <- nrow(p)
+ ncomp <- length(gamma)
+ component_names <- paste0(
+  "gamma_", format(gamma, trim = TRUE, scientific = FALSE)
+ )
+ out <- matrix(
+  0,
+  nrow = n,
+  ncol = ncomp,
+  dimnames = list(rownames(eta), component_names)
+ )
+
+ remaining <- rep(1, n)
+ for (j in seq_len(ncomp - 1L)) {
+  out[, j] <- remaining * (1 - p[, j])
+  remaining <- remaining * p[, j]
+ }
+ out[, ncomp] <- remaining
+ out
+}
+
+#' Convert SBayesRC Annotation Coefficients to Component Probabilities
+#'
+#' Applies the generalized probit stick-breaking transform to annotation
+#' coefficient rows.
+#'
+#' @param alpha Numeric annotation coefficient matrix with one row per
+#'   annotation and `length(gamma) - 1` columns.
+#' @param gamma Numeric mixture variance multipliers. The first value must be
+#'   zero and all remaining values must be positive.
+#'
+#' @return An annotation by mixture-component probability matrix.
+#' @export
+sbayesrc_annotation_pi <- function(alpha, gamma = c(0, 0.01, 0.1, 1)) {
+ gamma <- .sbayesrc_validate_gamma(gamma)
+ alpha <- .sbayesrc_validate_alpha(alpha, gamma)
+ .sbayesrc_stick_breaking_pi(alpha, gamma)
+}
+
+#' Calculate Expected SBayesRC Gamma by Annotation
+#'
+#' @inheritParams sbayesrc_annotation_pi
+#'
+#' @return A named numeric vector containing expected gamma per annotation.
+#' @export
+sbayesrc_annotation_gamma_mean <- function(
+  alpha,
+  gamma = c(0, 0.01, 0.1, 1)
+) {
+ gamma <- .sbayesrc_validate_gamma(gamma)
+ pi <- sbayesrc_annotation_pi(alpha, gamma)
+ out <- as.numeric(pi %*% gamma)
+ names(out) <- rownames(pi)
+ out
+}
+
+#' Convert SBayesRC Marker Annotations to Component Probabilities
+#'
+#' Combines marker annotations with SBayesRC annotation coefficients, then
+#' applies the generalized probit stick-breaking transform.
+#'
+#' @param A Numeric marker annotation matrix with markers in rows and
+#'   annotations in columns.
+#' @inheritParams sbayesrc_annotation_pi
+#'
+#' @return A marker by mixture-component probability matrix.
+#' @export
+sbayesrc_marker_pi <- function(A, alpha, gamma = c(0, 0.01, 0.1, 1)) {
+ gamma <- .sbayesrc_validate_gamma(gamma)
+ alpha <- .sbayesrc_validate_alpha(alpha, gamma)
+ if (!is.matrix(A) || !is.numeric(A) || any(!is.finite(A))) {
+  stop("A must be a finite numeric matrix.")
+ }
+ if (ncol(A) != nrow(alpha)) {
+  stop("ncol(A) must equal nrow(alpha).")
+ }
+
+ eta <- A %*% alpha
+ rownames(eta) <- rownames(A)
+ .sbayesrc_stick_breaking_pi(eta, gamma)
+}
+
+#' Calculate Expected SBayesRC Gamma by Marker
+#'
+#' @inheritParams sbayesrc_marker_pi
+#'
+#' @return A named numeric vector containing expected gamma per marker.
+#' @export
+sbayesrc_marker_gamma_mean <- function(
+  A,
+  alpha,
+  gamma = c(0, 0.01, 0.1, 1)
+) {
+ gamma <- .sbayesrc_validate_gamma(gamma)
+ pi <- sbayesrc_marker_pi(A, alpha, gamma)
+ out <- as.numeric(pi %*% gamma)
+ names(out) <- rownames(pi)
+ out
+}
+
 format_sbayesrc_csr_fit <- function(
   fit,
   nt,
