@@ -2,48 +2,285 @@
 title: "Model Overview"
 ---
 
-This note will define the common Bayesian linear regression model and show how
-the implemented and proposed `sblr` model families differ.
+`sblr` is an experimental R package for Bayesian linear regression of genomic
+marker effects. Its models estimate marker effects, posterior inclusion
+probabilities, and variance or covariance components from either
+individual-level PLINK BED data or summary statistics combined with linkage
+disequilibrium (LD).
 
-<!-- Later: reuse high-level material from the annotation draft sections
-"Motivation", "Summary-statistic residual notation", and "Direct
-annotation-aware STBLR and MTBLR as hierarchical models". -->
+The package landscape is easiest to understand along three axes:
+
+1. **single-trait versus multi-trait modeling**;
+2. **individual-level versus summary-statistics inputs**; and
+3. **plain versus annotation-informed priors**.
+
+These axes describe different choices. For example, a model can be
+single-trait, use summary statistics with disk-backed sparse LD, and use an
+annotation-informed prior. This note maps those choices to the current public
+functions and to the notes that explain them in detail.
 
 ## Common Model: \(y = Xb + e\)
 
-<!-- Later: insert the defining model and notation. -->
+For one trait, the common regression model is
 
-## Summary-Statistic Form: `wy`, `ww`, LD, and Residual Score `r`
+$$
+y = Xb + e,
+$$
 
-<!-- Later: summarize the residual notation; retain full algebra in
-technical_summary_statistics.qmd. -->
+where \(X\) is an \(n \times m\) genotype matrix, \(b\) is a vector of marker
+effects, and \(e\) is residual variation. Bayesian genomic regression combines
+this likelihood with a prior on marker effects and, often, latent inclusion
+indicators.
 
-## Sparse Mixture Priors and Posterior Inclusion Probabilities
+For \(n_t\) traits, the model becomes
 
-<!-- Later: define BayesC-style spike-and-slab priors, bm, and dm. -->
+$$
+Y = XB + E,
+$$
 
-## Single-Trait, Parallel ST-BLR, and Joint MTBLR
+where each row of \(B\) is a marker-effect vector across traits. A genuinely
+joint multi-trait model can describe covariance among effects, residuals, or
+trait-sharing patterns. Running one single-trait model per phenotype can be
+useful and parallelizable, but it is not equivalent to a joint multi-trait
+likelihood.
 
-<!-- Later: distinguish parallel single-trait fits from joint multi-trait fits. -->
+The main posterior marker summaries are:
 
-## Global Versus Marker-, Group-, and Annotation-Specific Priors
+$$
+\widehat b_{it} = E(b_{it}\mid\text{data})
+\quad\text{and}\quad
+\widehat{dm}_{it} = P(d_{it}=1\mid\text{data}),
+$$
 
-<!-- Later: summarize prior families without collapsing their differences. -->
+represented in fitted objects by `bm` and `dm`. Depending on the wrapper, fits
+also contain sampled effects and indicators, variance traces, covariance
+summaries, prior parameters, and model-specific annotation diagnostics.
 
-## Implemented Models Versus Proposed Extensions
+## Three Axes for Choosing a Model
 
-<!-- Later: label current wrappers and research-stage ideas explicitly. -->
+### Single-Trait Versus Multi-Trait
 
-## Model Comparison Matrix
+**Single-trait BLR/ST-BLR** estimates scalar effects and inclusion
+probabilities for one phenotype. Current BED, CSR, and annotation workflow
+examples are centered on this model family. Several ST-BLR wrappers accept a
+phenotype matrix or multiple trait-specific sufficient-statistic columns, but
+their marker-update structure should not automatically be interpreted as a
+full joint MTBLR sharing model.
 
-<!-- Later: compare data, trait, prior, and estimation axes. -->
+**Multi-trait BLR (MTBLR)** treats marker effects as vectors and can model
+effect covariance, residual covariance, and explicit trait-sharing models.
+The public `sblr()` interface accepts summary-statistics inputs such as a trait
+cross-product matrix `yy`, marker-trait cross-products `Xy`, LD or marker
+cross-products `XX`, and optional multi-trait inclusion models. Full
+summary-statistics residual-covariance modeling additionally depends on
+cross-trait phenotype products and sample-overlap assumptions.
 
-## Related Notes
+The current most polished end-to-end workflows are BED/CSR ST-BLR and
+annotation-informed CSR ST-BLR. Multi-trait theory remains central to the
+package and motivates the covariance outputs, simulation tools, and proposed
+annotation-aware extensions. Read [Multi-trait models](multi_trait_models.qmd)
+before interpreting trait sharing or covariance as a joint model result.
 
-- [Single-trait models](single_trait_models.qmd)
-- [Multi-trait models](multi_trait_models.qmd)
-- [Annotation-informed models](annotation_informed_models.qmd)
+### Individual-Level Versus Summary Statistics
+
+With **individual-level data**, the sampler can read observed genotype columns
+from BED files and calculate marker-update quantities directly. The principal
+public interface is `stblr_bed_marker()`.
+
+With **summary statistics**, the sampler instead receives cross-products:
+
+$$
+wy = X^\top y,
+\qquad
+ww_j = x_j^\top x_j,
+\qquad
+yy = y^\top y,
+$$
+
+plus compatible LD and sample size \(n\). The residual score can be maintained
+as
+
+$$
+r = X^\top y - X^\top Xb.
+$$
+
+`stblr_csr()` uses sufficient statistics from `bed_xtx_xty()` with a
+disk-backed sparse-LD prefix written by `sparseLD_stream_CSR()`. The public
+`sblr()` interface represents the broader summary-statistics model family and
+accepts dense or sparse marker cross-product structures through `XX`.
+
+These representations, their information requirements, and sample-overlap
+issues are covered in [Data representations](data_representations.qmd). The
+practical BED-to-CSR handoff is covered in
+[Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd).
+
+### Plain Versus Annotation-Informed Priors
+
+A **plain/global prior** gives markers a common prior architecture, such as a
+global inclusion probability and marker-effect variance. A BayesC-style
+spike-and-slab representation is
+
+$$
+d_{it} \sim \operatorname{Bernoulli}(\pi_t),
+\qquad
+b_{it}\mid d_{it}=1 \sim N(0,v_{b,t}),
+\qquad
+b_{it}\mid d_{it}=0 = 0.
+$$
+
+An **annotation-informed prior** allows prior inclusion probabilities,
+variance scales, or mixture-component probabilities to vary by marker,
+marker group, or annotation profile. Current public CSR wrappers distinguish
+four implemented forms:
+
+- fixed marker-specific inclusion probabilities or variance multipliers;
+- group-level priors;
+- directly learned annotation effects on inclusion or variance;
+- SBayesRC-style mixture probabilities learned from overlapping annotations.
+
+These models use annotation information as a prior or evidence structure.
+They do not by themselves establish that an annotation is causal. The
+empirical-Bayes and proposed multi-trait annotation extensions in the source
+drafts remain important technical directions, but they should be distinguished
+from currently implemented public wrappers.
+
+## Sparse Mixture Priors and Posterior Outputs
+
+Sparse Bayesian regression allows many markers to have exactly zero current
+effects while a subset belongs to active components. The inclusion indicator
+\(d_{it}\) records whether marker \(i\) is active for trait \(t\). Across MCMC
+samples:
+
+- `dm[i, t]` estimates the posterior inclusion probability;
+- `bm[i, t]` estimates the posterior mean marker effect;
+- `b` and `d` may retain current or sampled marker states;
+- `vbs`, `vgs`, and `ves` record variance-component traces;
+- `covb`, `covg`, and `cove` summarize effect, genetic, and residual
+  covariance where available.
+
+Annotation models change how prior mass or effect scale is distributed before
+and during these updates. They do not change the requirement that marker rows
+in statistics, LD, annotations, and posterior summaries remain aligned.
+
+The full marker-update algebra and annotation-prior derivations are deferred to
+[Technical summary statistics](technical_summary_statistics.qmd) and
+[Technical annotation priors](technical_annotation_priors.qmd).
+
+## Practical Workflow Families
+
+The package's current workflows can be read as five connected families.
+
+### Direct BED Individual-Level ST-BLR
+
+Use `stblr_bed_marker()` when BED genotypes and aligned phenotypes remain
+available during fitting. Genotypes are read in blocks, and a separate LD
+artifact is not required.
+
+### BED to Sufficient Statistics and Sparse LD
+
+Use `bed_xtx_xty()` to derive `wy`, `ww`, and `yy` from BED data and
+phenotypes. Use `sparseLD_stream_CSR()` to derive disk-backed sparse LD from
+the same markers, samples, allele frequencies, and scaling convention. This
+preparation workflow creates reusable inputs for CSR models.
+
+### CSR Summary-Statistics ST-BLR
+
+Use `stblr_csr()` with the sufficient-statistics object and sparse-LD prefix.
+This path is appropriate when the prepared cross-products and LD files should
+be reused without repeated BED access during fitting.
+
+### Annotation-Informed CSR ST-BLR
+
+Start from the same `stats` and `ld_prefix`, then add marker-aligned
+annotation information or marker-specific priors. Choose among fixed,
+learned, group, and SBayesRC-style wrappers according to the intended prior
+architecture.
+
+### Simulation and Model Checking
+
+Use `mtsim()` to simulate multi-trait phenotypes, marker effects, and known
+shared or trait-specific signals. Use `mtsim_annotation()` to additionally
+simulate overlapping annotations, causal enrichment, and marker-specific prior
+values. Simulation outputs provide known truth for checking marker recovery,
+annotation summaries, model behavior, and BED-versus-CSR preparation.
+
+Simulation is a model-checking tool, not evidence that the same assumptions
+hold in real data.
+
+## Model and Function Map
+
+| Function | Primary role | Data representation | Trait/prior emphasis | Read next |
+|---|---|---|---|---|
+| `stblr_bed_marker()` | Fit ST-BLR directly from selected PLINK BED markers and phenotypes. | Individual-level BED | Plain/global ST-BLR; accepts one or more phenotype columns. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Single-trait models](single_trait_models.qmd) |
+| `bed_xtx_xty()` | Derive marker-trait and phenotype sufficient statistics from BED data. | BED to summary statistics | Preparation, not a fitted model. | [Data representations](data_representations.qmd) |
+| `sparseLD_stream_CSR()` | Construct disk-backed sparse LD from BED data. | BED to CSR LD | Preparation, not a fitted model. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd) |
+| `stblr_csr()` | Fit ST-BLR from `stats` and a CSR LD prefix. | Summary statistics plus disk-backed sparse LD | Plain/global ST-BLR. | [Single-trait models](single_trait_models.qmd) |
+| `stblr_csr_prior_annot()` | Fit CSR ST-BLR with fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. | Summary statistics plus CSR LD and optional annotations | Fixed annotation-informed prior. | [Annotation-informed models](annotation_informed_models.qmd) |
+| `stblr_csr_learn_annot()` | Learn annotation effects on marker inclusion and optionally effect-variance multipliers during CSR fitting. | Summary statistics plus CSR LD and annotations | Direct learned annotation prior. | [Annotation-informed models](annotation_informed_models.qmd), [Technical annotation priors](technical_annotation_priors.qmd) |
+| `stblr_csr_group_annot()` | Fit CSR ST-BLR with group-level inclusion probabilities and variance multipliers. | Summary statistics plus CSR LD and marker groups | Group prior. | [Annotation-informed models](annotation_informed_models.qmd) |
+| `stblr_csr_sbayesrc_generic()` | Fit an SBayesRC-style CSR model with annotation-dependent mixture probabilities. | Summary statistics plus CSR LD and overlapping annotations | Probit stick-breaking mixture prior. | [Annotation-informed models](annotation_informed_models.qmd), [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd) |
+| `sblr()` | Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models. | Summary statistics plus marker cross-products/LD | Plain single- or multi-trait model components. | [Multi-trait models](multi_trait_models.qmd) |
+| `mtsim()` | Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals. | Simulated matrix or `Glist` genotypes | Model checking and multi-trait truth. | [Workflows and outputs](workflows_and_outputs.qmd) |
+| `mtsim_annotation()` | Simulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors. | Simulated matrix or `Glist` genotypes plus annotations | Annotation-model checking. | [Annotation-informed models](annotation_informed_models.qmd), [Workflows and outputs](workflows_and_outputs.qmd) |
+
+## Implemented Models and Research Extensions
+
+The model/function map above describes current public interfaces. The archived
+technical drafts also contain deeper or proposed directions, including:
+
+- empirical-Bayes loops that use first-stage marker summaries to estimate
+  annotation-level priors for later genomic fits;
+- direct annotation-aware MTBLR sharing-model priors and covariance models;
+- sparse annotation representations and sampler implementation sketches;
+- warm-started regional MTBLR workflows;
+- reconstruction of cross-trait `SSY` and overlap matrices for joint
+  summary-statistics models.
+
+These ideas should be preserved because they explain the intended model
+landscape, but they must be labeled as implemented, experimental, or proposed
+when moved into maintained notes. Public function availability alone also does
+not guarantee that every model path has an equally polished end-to-end
+workflow.
+
+## What Is Not Guaranteed
+
+- **BED and CSR fits are not exactly equal.** Under matched markers, rows,
+  scaling, priors, and MCMC settings they should agree qualitatively, but
+  sparse-LD approximation, update scheduling, floating-point precision, and
+  Monte Carlo variation prevent exact equality.
+- **CSR disk internals are not a manual file-format API.** Use package writers,
+  readers, and model wrappers rather than editing row-pointer, column-index,
+  value, or metadata files directly.
+- **Annotation effects are not causal proof.** Enrichment, learned prior
+  coefficients, posterior inclusion, and shared genetic signals can generate
+  hypotheses but do not identify causal biological mechanisms by themselves.
+- **Short workflow chains are not final inference.** Demonstration settings
+  establish object handoffs and model execution. Real analyses require longer
+  chains, convergence assessment, sensitivity analysis, and posterior
+  predictive checks.
+
+## How to Read These Notes
+
+Choose the next note according to the question:
+
+- To understand what BED, sufficient statistics, sparse LD, `yy`, and `SSY`
+  represent, read [Data representations](data_representations.qmd).
+- To prepare aligned BED-derived statistics and disk-backed CSR LD, read
+  [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd).
+- To understand plain BED and CSR ST-BLR models, read
+  [Single-trait models](single_trait_models.qmd).
+- To understand joint effects, covariance, trait sharing, and sample overlap,
+  read [Multi-trait models](multi_trait_models.qmd).
+- To choose among fixed, group, learned, empirical-Bayes, and SBayesRC-style
+  priors, read [Annotation-informed models](annotation_informed_models.qmd).
+- To run workflows and interpret compact fit summaries, read
+  [Workflows and outputs](workflows_and_outputs.qmd).
+
+For full derivations and implementation-sensitive contracts, use the technical
+appendices:
+
 - [Technical summary statistics](technical_summary_statistics.qmd)
+- [Technical multi-trait sample overlap](technical_multitrait_overlap.qmd)
+- [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
 - [Technical SBayesRC annotations](technical_sbayesrc_annotations.qmd)
-
