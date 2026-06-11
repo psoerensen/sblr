@@ -183,14 +183,14 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#individual-level-plink-bed-representation" id="toc-individual-level-plink-bed-representation" class="nav-link active" data-scroll-target="#individual-level-plink-bed-representation"><span class="header-section-number">1</span> Individual-Level PLINK BED Representation</a></li>
-  <li><a href="#dense-summary-statistic-representation" id="toc-dense-summary-statistic-representation" class="nav-link" data-scroll-target="#dense-summary-statistic-representation"><span class="header-section-number">2</span> Dense Summary-Statistic Representation</a></li>
-  <li><a href="#disk-backed-csr-sparse-ld-representation" id="toc-disk-backed-csr-sparse-ld-representation" class="nav-link" data-scroll-target="#disk-backed-csr-sparse-ld-representation"><span class="header-section-number">3</span> Disk-Backed CSR Sparse-LD Representation</a></li>
-  <li><a href="#sufficient-statistics-wy-ww-and-yy" id="toc-sufficient-statistics-wy-ww-and-yy" class="nav-link" data-scroll-target="#sufficient-statistics-wy-ww-and-yy"><span class="header-section-number">4</span> Sufficient Statistics: <code>wy</code>, <code>ww</code>, and <code>yy</code></a></li>
-  <li><a href="#multi-trait-cross-products-sample-overlap-and-ssy" id="toc-multi-trait-cross-products-sample-overlap-and-ssy" class="nav-link" data-scroll-target="#multi-trait-cross-products-sample-overlap-and-ssy"><span class="header-section-number">5</span> Multi-Trait Cross-Products, Sample Overlap, and <code>SSY</code></a></li>
-  <li><a href="#marker-ordering-and-annotation-alignment" id="toc-marker-ordering-and-annotation-alignment" class="nav-link" data-scroll-target="#marker-ordering-and-annotation-alignment"><span class="header-section-number">6</span> Marker Ordering and Annotation Alignment</a></li>
-  <li><a href="#representation-specific-limitations-and-validation-checks" id="toc-representation-specific-limitations-and-validation-checks" class="nav-link" data-scroll-target="#representation-specific-limitations-and-validation-checks"><span class="header-section-number">7</span> Representation-Specific Limitations and Validation Checks</a></li>
-  <li><a href="#related-notes" id="toc-related-notes" class="nav-link" data-scroll-target="#related-notes"><span class="header-section-number">8</span> Related Notes</a></li>
+  <li><a href="#individual-level-plink-bed-representation" id="toc-individual-level-plink-bed-representation" class="nav-link active" data-scroll-target="#individual-level-plink-bed-representation">Individual-Level PLINK BED Representation</a></li>
+  <li><a href="#dense-summary-statistic-representation" id="toc-dense-summary-statistic-representation" class="nav-link" data-scroll-target="#dense-summary-statistic-representation">Dense Summary-Statistic Representation</a></li>
+  <li><a href="#disk-backed-csr-sparse-ld-representation" id="toc-disk-backed-csr-sparse-ld-representation" class="nav-link" data-scroll-target="#disk-backed-csr-sparse-ld-representation">Disk-Backed CSR Sparse-LD Representation</a></li>
+  <li><a href="#sufficient-statistics-wy-ww-and-yy" id="toc-sufficient-statistics-wy-ww-and-yy" class="nav-link" data-scroll-target="#sufficient-statistics-wy-ww-and-yy">Sufficient Statistics: <code>wy</code>, <code>ww</code>, and <code>yy</code></a></li>
+  <li><a href="#multi-trait-cross-products-sample-overlap-and-ssy" id="toc-multi-trait-cross-products-sample-overlap-and-ssy" class="nav-link" data-scroll-target="#multi-trait-cross-products-sample-overlap-and-ssy">Multi-Trait Cross-Products, Sample Overlap, and <code>SSY</code></a></li>
+  <li><a href="#marker-ordering-and-annotation-alignment" id="toc-marker-ordering-and-annotation-alignment" class="nav-link" data-scroll-target="#marker-ordering-and-annotation-alignment">Marker Ordering and Annotation Alignment</a></li>
+  <li><a href="#representation-specific-limitations-and-validation-checks" id="toc-representation-specific-limitations-and-validation-checks" class="nav-link" data-scroll-target="#representation-specific-limitations-and-validation-checks">Representation-Specific Limitations and Validation Checks</a></li>
+  <li><a href="#related-notes" id="toc-related-notes" class="nav-link" data-scroll-target="#related-notes">Related Notes</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="data_representations.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -235,8 +235,8 @@ window.Quarto = {
 <li><strong>summary statistics plus linkage disequilibrium (LD)</strong>, where the sampler receives cross-products that summarize the genotype-phenotype data rather than the full observed matrices.</li>
 </ol>
 <p>These are two representations of closely related regression calculations, not two unrelated model families. The representation determines what must be stored, what can be recomputed during sampling, and which alignment and sample-overlap assumptions must be made explicit.</p>
-<section id="individual-level-plink-bed-representation" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="individual-level-plink-bed-representation"><span class="header-section-number">1</span> Individual-Level PLINK BED Representation</h2>
+<section id="individual-level-plink-bed-representation" class="level2">
+<h2 class="anchored" data-anchor-id="individual-level-plink-bed-representation">Individual-Level PLINK BED Representation</h2>
 <p>Let (X) be an (n m) genotype matrix for (n) individuals and (m) markers, and let (Y) be an (n n_t) phenotype matrix for (n_t) traits. For one trait, (Y) reduces to a vector (y). A Bayesian linear regression model can be written as</p>
 <p><span class="math display">\[
 Y = XB + E,
@@ -262,8 +262,8 @@ x_j^\top(y-Xb).
 <p><code>stblr_bed_marker()</code> fits directly from this representation. It receives the <code>Glist</code>, phenotype vector or matrix <code>y</code>, chromosome selection, and marker column indices <code>cls</code>. Its BED samplers read marker blocks from disk and perform marker updates without first materializing all of (X) or a full (X^X) matrix. Optional <code>rows</code> select 1-based individual indices, and <code>scale = TRUE</code> standardizes markers using the corresponding allele frequencies.</p>
 <p>The individual-level representation is information-rich: if the same individuals have multiple measured traits, cross-trait phenotype and residual cross-products can be calculated directly. Its main costs are access to sensitive individual-level data and repeated genotype reading during model fitting.</p>
 </section>
-<section id="dense-summary-statistic-representation" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="dense-summary-statistic-representation"><span class="header-section-number">2</span> Dense Summary-Statistic Representation</h2>
+<section id="dense-summary-statistic-representation" class="level2">
+<h2 class="anchored" data-anchor-id="dense-summary-statistic-representation">Dense Summary-Statistic Representation</h2>
 <p>The Gaussian linear model likelihood and marker-update calculations can be expressed using cross-products. For one trait, the central quantities are</p>
 <p><span class="math display">\[
 wy = X^\top y,
@@ -291,8 +291,8 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 <p>This is why a summary-statistics sampler needs more than marginal genotype-phenotype associations. It needs enough information to reproduce the cross-products used by the marker-update and variance calculations. Marginal <code>wy</code> values without compatible LD cannot account for correlated markers, and LD without <code>wy</code>, <code>yy</code>, and (n) does not define the phenotype side of the likelihood.</p>
 <p>A dense representation stores all of (X^X), which requires (O(m^2)) entries. That becomes impractical for large marker sets. The disk-backed sparse-LD representation retains the same conceptual role while dropping small or distant marker-marker entries.</p>
 </section>
-<section id="disk-backed-csr-sparse-ld-representation" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="disk-backed-csr-sparse-ld-representation"><span class="header-section-number">3</span> Disk-Backed CSR Sparse-LD Representation</h2>
+<section id="disk-backed-csr-sparse-ld-representation" class="level2">
+<h2 class="anchored" data-anchor-id="disk-backed-csr-sparse-ld-representation">Disk-Backed CSR Sparse-LD Representation</h2>
 <p>Compressed sparse row (CSR) format stores only retained entries of a sparse matrix. Conceptually, it records:</p>
 <ul>
 <li>a vector of row pointers delimiting each matrix row;</li>
@@ -311,8 +311,8 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 <p><code>sparseLD_read_CSR()</code> reads files written by <code>sparseLD_stream_CSR()</code> and returns row pointers, column indices, and values. Its <code>one_based</code> option controls the indexing convention of returned column indices. This reader is useful for checking dimensions, indexing, and retained entries; <code>stblr_csr()</code> uses the disk-backed prefix directly.</p>
 <p>Detailed storage and construction contracts belong in <a href="../notes/technical_sparse_ld_csr.html">Technical sparse LD and CSR</a>.</p>
 </section>
-<section id="sufficient-statistics-wy-ww-and-yy" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="sufficient-statistics-wy-ww-and-yy"><span class="header-section-number">4</span> Sufficient Statistics: <code>wy</code>, <code>ww</code>, and <code>yy</code></h2>
+<section id="sufficient-statistics-wy-ww-and-yy" class="level2">
+<h2 class="anchored" data-anchor-id="sufficient-statistics-wy-ww-and-yy">Sufficient Statistics: <code>wy</code>, <code>ww</code>, and <code>yy</code></h2>
 <p><code>bed_xtx_xty()</code> is the package bridge from individual-level BED data and phenotypes to the sufficient statistics consumed by <code>stblr_csr()</code>. It accepts a BED file, the total number of individuals, selected BED marker columns <code>cls</code>, corresponding allele frequencies <code>af</code>, and a phenotype matrix <code>y</code>. Optional <code>rows</code> and <code>scale</code> determine which individuals and marker standardization are used.</p>
 <p>The returned <code>stats</code> object contains the marker-trait cross-products and related quantities required by the ST-BLR wrapper:</p>
 <ul>
@@ -333,8 +333,8 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
                          stblr_csr() summary-statistics model</code></pre>
 <p>The two branches must be produced from the same marker selection, sample selection, allele frequencies, and scaling convention. In contrast, <code>stblr_bed_marker()</code> follows a direct branch from BED files and phenotypes to the individual-level sampler. The worked comparison is described in <a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
 </section>
-<section id="multi-trait-cross-products-sample-overlap-and-ssy" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="multi-trait-cross-products-sample-overlap-and-ssy"><span class="header-section-number">5</span> Multi-Trait Cross-Products, Sample Overlap, and <code>SSY</code></h2>
+<section id="multi-trait-cross-products-sample-overlap-and-ssy" class="level2">
+<h2 class="anchored" data-anchor-id="multi-trait-cross-products-sample-overlap-and-ssy">Multi-Trait Cross-Products, Sample Overlap, and <code>SSY</code></h2>
 <p>The phrase “multi-trait summary statistics” can refer to two different levels of information.</p>
 <p>First, traits can be fitted as separate or parallel single-trait regressions. For trait (t), the phenotype sum of squares is</p>
 <p><span class="math display">\[
@@ -359,8 +359,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <p>with diagonals forced to the observed <code>yy_t</code>. This approximation assumes that overlap counts and phenotypic covariance information are meaningful for the study design. Full overlap, partial overlap, missingness, and meta-analysis can imply materially different (N) matrices.</p>
 <p>Without cross-trait <code>SSY</code> and overlap information, a summary-statistics model cannot reconstruct the cross-products needed for full residual covariance updates. The complete derivation and assumptions are preserved in <a href="../notes/technical_multitrait_overlap.html">Technical multi-trait sample overlap</a>.</p>
 </section>
-<section id="marker-ordering-and-annotation-alignment" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="marker-ordering-and-annotation-alignment"><span class="header-section-number">6</span> Marker Ordering and Annotation Alignment</h2>
+<section id="marker-ordering-and-annotation-alignment" class="level2">
+<h2 class="anchored" data-anchor-id="marker-ordering-and-annotation-alignment">Marker Ordering and Annotation Alignment</h2>
 <p>Marker order is a correctness condition, not presentation metadata. Every marker-indexed object must refer to the same biological marker at position (j):</p>
 <pre class="text"><code>BED marker column selected by cls
     = Glist$rsidsLD marker j
@@ -375,8 +375,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <p>Posterior matrices such as <code>fit$bm</code> and <code>fit$dm</code> inherit the marker ordering used by the model input. A plausible-looking result is still invalid if its rows are joined to annotations or marker metadata in a different order.</p>
 <p>Sample alignment is equally important. When <code>rows</code> is used, the phenotype rows and every BED-derived object must describe the same individuals. Sufficient statistics generated from one sample subset cannot be combined with sparse LD generated from another without changing the implied model.</p>
 </section>
-<section id="representation-specific-limitations-and-validation-checks" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="representation-specific-limitations-and-validation-checks"><span class="header-section-number">7</span> Representation-Specific Limitations and Validation Checks</h2>
+<section id="representation-specific-limitations-and-validation-checks" class="level2">
+<h2 class="anchored" data-anchor-id="representation-specific-limitations-and-validation-checks">Representation-Specific Limitations and Validation Checks</h2>
 <p>Individual-level and summary-statistics representations have different failure modes.</p>
 <p><strong>Individual-level BED fitting</strong></p>
 <ul>
@@ -406,8 +406,8 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 </ol>
 <p>Comparing posterior summaries from <code>stblr_bed_marker()</code> and <code>stblr_csr()</code> on the same prepared data is a useful integration check, but exact numerical agreement is not expected automatically. Sparse-LD approximation, scaling, sampler scheduling, finite MCMC error, and prior settings can all affect the comparison.</p>
 </section>
-<section id="related-notes" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="related-notes"><span class="header-section-number">8</span> Related Notes</h2>
+<section id="related-notes" class="level2">
+<h2 class="anchored" data-anchor-id="related-notes">Related Notes</h2>
 <ul>
 <li><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
 <li><a href="../notes/technical_summary_statistics.html">Technical summary statistics</a></li>

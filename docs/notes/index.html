@@ -154,11 +154,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#recommended-reading-order" id="toc-recommended-reading-order" class="nav-link active" data-scroll-target="#recommended-reading-order"><span class="header-section-number">1</span> Recommended Reading Order</a></li>
-  <li><a href="#main-explanatory-notes" id="toc-main-explanatory-notes" class="nav-link" data-scroll-target="#main-explanatory-notes"><span class="header-section-number">2</span> Main Explanatory Notes</a></li>
-  <li><a href="#practical-workflow-notes" id="toc-practical-workflow-notes" class="nav-link" data-scroll-target="#practical-workflow-notes"><span class="header-section-number">3</span> Practical Workflow Notes</a></li>
-  <li><a href="#technical-appendices" id="toc-technical-appendices" class="nav-link" data-scroll-target="#technical-appendices"><span class="header-section-number">4</span> Technical Appendices</a></li>
-  <li><a href="#draft-archive" id="toc-draft-archive" class="nav-link" data-scroll-target="#draft-archive"><span class="header-section-number">5</span> Draft Archive</a></li>
+  <li><a href="#recommended-reading-order" id="toc-recommended-reading-order" class="nav-link active" data-scroll-target="#recommended-reading-order">Recommended Reading Order</a></li>
+  <li><a href="#main-explanatory-notes" id="toc-main-explanatory-notes" class="nav-link" data-scroll-target="#main-explanatory-notes">Main Explanatory Notes</a></li>
+  <li><a href="#practical-workflow-notes" id="toc-practical-workflow-notes" class="nav-link" data-scroll-target="#practical-workflow-notes">Practical Workflow Notes</a></li>
+  <li><a href="#technical-appendices" id="toc-technical-appendices" class="nav-link" data-scroll-target="#technical-appendices">Technical Appendices</a></li>
+  <li><a href="#draft-archive" id="toc-draft-archive" class="nav-link" data-scroll-target="#draft-archive">Draft Archive</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -199,8 +199,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>These notes describe the statistical models, data representations, sparse-LD workflows, annotation-informed priors, and technical details behind <code>sblr</code>. They are organized as a readable main path supported by practical workflow notes and more detailed technical appendices.</p>
 <p><code>sblr</code> is an experimental research package. The notes distinguish current public workflows from lower-level or research-stage model components and identify the assumptions needed to interpret their outputs.</p>
-<section id="recommended-reading-order" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="recommended-reading-order"><span class="header-section-number">1</span> Recommended Reading Order</h2>
+<section id="recommended-reading-order" class="level2">
+<h2 class="anchored" data-anchor-id="recommended-reading-order">Recommended Reading Order</h2>
 <p>New readers can follow this sequence:</p>
 <ol type="1">
 <li><a href="model_overview.html">Model Overview</a> for the package landscape and model selection map.</li>
@@ -213,8 +213,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Consult the <a href="#technical-appendices">technical appendices</a> as needed for derivations, implementation contracts, and detailed assumptions.</li>
 </ol>
 </section>
-<section id="main-explanatory-notes" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="main-explanatory-notes"><span class="header-section-number">2</span> Main Explanatory Notes</h2>
+<section id="main-explanatory-notes" class="level2">
+<h2 class="anchored" data-anchor-id="main-explanatory-notes">Main Explanatory Notes</h2>
 <ul>
 <li><p><a href="model_overview.html">Model Overview</a> maps the main package axes: single-trait versus multi-trait, individual-level versus summary-statistics, and plain versus annotation-informed priors.</p></li>
 <li><p><a href="data_representations.html">Data Representations</a> explains individual-level genotype and phenotype inputs, sufficient statistics, LD, CSR storage, and marker-order alignment.</p></li>
@@ -223,16 +223,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p><a href="annotation_informed_models.html">Annotation-Informed Models</a> compares fixed marker-specific priors, learned annotation effects, group priors, and the SBayesRC-style annotation-dependent BayesR prior.</p></li>
 </ul>
 </section>
-<section id="practical-workflow-notes" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="practical-workflow-notes"><span class="header-section-number">3</span> Practical Workflow Notes</h2>
+<section id="practical-workflow-notes" class="level2">
+<h2 class="anchored" data-anchor-id="practical-workflow-notes">Practical Workflow Notes</h2>
 <ul>
 <li><p><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED Workflows</a> is the practical guide to aligning BED markers, deriving sufficient statistics, streaming sparse LD, fitting <code>stblr_csr()</code>, and cautiously comparing BED and CSR fits.</p></li>
 <li><p><a href="workflows_and_outputs.html">Workflows and Outputs</a> connects the executable workflow scripts to fit-object components, compact summaries, diagnostics, interpretation, and recommended reporting.</p></li>
 </ul>
 <p>The workflow scripts are runnable demonstrations and validation templates, not automatically lightweight package examples. Production analyses require appropriate MCMC settings, convergence checks, and sensitivity analyses.</p>
 </section>
-<section id="technical-appendices" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="technical-appendices"><span class="header-section-number">4</span> Technical Appendices</h2>
+<section id="technical-appendices" class="level2">
+<h2 class="anchored" data-anchor-id="technical-appendices">Technical Appendices</h2>
 <ul>
 <li><p><a href="technical_summary_statistics.html">Summary Statistics</a> derives the cross-product representation used by single- and multi-trait BLR and explains equivalence assumptions and practical limitations.</p></li>
 <li><p><a href="technical_sparse_ld_csr.html">Sparse LD and CSR</a> defines compressed sparse row storage, the disk-backed LD contract, indexing and diagonal conventions, construction settings, and validation checks.</p></li>
@@ -242,8 +242,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
 <p>Some appendices may still be expanded as the package API stabilizes.</p>
 </section>
-<section id="draft-archive" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="draft-archive"><span class="header-section-number">5</span> Draft Archive</h2>
+<section id="draft-archive" class="level2">
+<h2 class="anchored" data-anchor-id="draft-archive">Draft Archive</h2>
 <p>The archived source drafts preserve the original long-form theory and annotation-prior material used to build the maintained notes. They remain available for provenance and research context, but the maintained notes above are the recommended reading path.</p>
 <ul>
 <li><a href="drafts/sblr_theory.html">Archived sblr theory draft</a></li>

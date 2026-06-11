@@ -183,29 +183,29 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" id="toc-from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="nav-link active" data-scroll-target="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">1</span> From BED Genotypes to Sufficient Statistics and Sparse LD</a></li>
-  <li><a href="#matrix-represented-by-the-current-writer" id="toc-matrix-represented-by-the-current-writer" class="nav-link" data-scroll-target="#matrix-represented-by-the-current-writer"><span class="header-section-number">2</span> Matrix Represented by the Current Writer</a></li>
-  <li><a href="#what-csr-means" id="toc-what-csr-means" class="nav-link" data-scroll-target="#what-csr-means"><span class="header-section-number">3</span> What CSR Means</a></li>
-  <li><a href="#why-disk-backed-sparse-csr-is-used" id="toc-why-disk-backed-sparse-csr-is-used" class="nav-link" data-scroll-target="#why-disk-backed-sparse-csr-is-used"><span class="header-section-number">4</span> Why Disk-Backed Sparse CSR Is Used</a></li>
-  <li><a href="#stable-user-facing-contract" id="toc-stable-user-facing-contract" class="nav-link" data-scroll-target="#stable-user-facing-contract"><span class="header-section-number">5</span> Stable User-Facing Contract</a></li>
-  <li><a href="#ld_prefix-and-the-current-disk-artifact" id="toc-ld_prefix-and-the-current-disk-artifact" class="nav-link" data-scroll-target="#ld_prefix-and-the-current-disk-artifact"><span class="header-section-number">6</span> <code>ld_prefix</code> and the Current Disk Artifact</a></li>
-  <li><a href="#exported-and-internal-helpers" id="toc-exported-and-internal-helpers" class="nav-link" data-scroll-target="#exported-and-internal-helpers"><span class="header-section-number">7</span> Exported and Internal Helpers</a></li>
-  <li><a href="#sparse-ld-construction-settings" id="toc-sparse-ld-construction-settings" class="nav-link" data-scroll-target="#sparse-ld-construction-settings"><span class="header-section-number">8</span> Sparse-LD Construction Settings</a>
+  <li><a href="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" id="toc-from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="nav-link active" data-scroll-target="#from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From BED Genotypes to Sufficient Statistics and Sparse LD</a></li>
+  <li><a href="#matrix-represented-by-the-current-writer" id="toc-matrix-represented-by-the-current-writer" class="nav-link" data-scroll-target="#matrix-represented-by-the-current-writer">Matrix Represented by the Current Writer</a></li>
+  <li><a href="#what-csr-means" id="toc-what-csr-means" class="nav-link" data-scroll-target="#what-csr-means">What CSR Means</a></li>
+  <li><a href="#why-disk-backed-sparse-csr-is-used" id="toc-why-disk-backed-sparse-csr-is-used" class="nav-link" data-scroll-target="#why-disk-backed-sparse-csr-is-used">Why Disk-Backed Sparse CSR Is Used</a></li>
+  <li><a href="#stable-user-facing-contract" id="toc-stable-user-facing-contract" class="nav-link" data-scroll-target="#stable-user-facing-contract">Stable User-Facing Contract</a></li>
+  <li><a href="#ld_prefix-and-the-current-disk-artifact" id="toc-ld_prefix-and-the-current-disk-artifact" class="nav-link" data-scroll-target="#ld_prefix-and-the-current-disk-artifact"><code>ld_prefix</code> and the Current Disk Artifact</a></li>
+  <li><a href="#exported-and-internal-helpers" id="toc-exported-and-internal-helpers" class="nav-link" data-scroll-target="#exported-and-internal-helpers">Exported and Internal Helpers</a></li>
+  <li><a href="#sparse-ld-construction-settings" id="toc-sparse-ld-construction-settings" class="nav-link" data-scroll-target="#sparse-ld-construction-settings">Sparse-LD Construction Settings</a>
   <ul class="collapse">
-  <li><a href="#marker-and-sample-selection" id="toc-marker-and-sample-selection" class="nav-link" data-scroll-target="#marker-and-sample-selection"><span class="header-section-number">8.1</span> Marker and Sample Selection</a></li>
-  <li><a href="#threshold-and-window-settings" id="toc-threshold-and-window-settings" class="nav-link" data-scroll-target="#threshold-and-window-settings"><span class="header-section-number">8.2</span> Threshold and Window Settings</a></li>
-  <li><a href="#computational-settings" id="toc-computational-settings" class="nav-link" data-scroll-target="#computational-settings"><span class="header-section-number">8.3</span> Computational Settings</a></li>
-  <li><a href="#scaling" id="toc-scaling" class="nav-link" data-scroll-target="#scaling"><span class="header-section-number">8.4</span> Scaling</a></li>
+  <li><a href="#marker-and-sample-selection" id="toc-marker-and-sample-selection" class="nav-link" data-scroll-target="#marker-and-sample-selection">Marker and Sample Selection</a></li>
+  <li><a href="#threshold-and-window-settings" id="toc-threshold-and-window-settings" class="nav-link" data-scroll-target="#threshold-and-window-settings">Threshold and Window Settings</a></li>
+  <li><a href="#computational-settings" id="toc-computational-settings" class="nav-link" data-scroll-target="#computational-settings">Computational Settings</a></li>
+  <li><a href="#scaling" id="toc-scaling" class="nav-link" data-scroll-target="#scaling">Scaling</a></li>
   </ul></li>
-  <li><a href="#streaming-and-blocking-behavior" id="toc-streaming-and-blocking-behavior" class="nav-link" data-scroll-target="#streaming-and-blocking-behavior"><span class="header-section-number">9</span> Streaming and Blocking Behavior</a></li>
-  <li><a href="#index-bases-and-diagonal-convention" id="toc-index-bases-and-diagonal-convention" class="nav-link" data-scroll-target="#index-bases-and-diagonal-convention"><span class="header-section-number">10</span> Index Bases and Diagonal Convention</a></li>
-  <li><a href="#marker-order-sample-and-scaling-invariants" id="toc-marker-order-sample-and-scaling-invariants" class="nav-link" data-scroll-target="#marker-order-sample-and-scaling-invariants"><span class="header-section-number">11</span> Marker-Order, Sample, and Scaling Invariants</a></li>
-  <li><a href="#reading-and-validating-a-prefix" id="toc-reading-and-validating-a-prefix" class="nav-link" data-scroll-target="#reading-and-validating-a-prefix"><span class="header-section-number">12</span> Reading and Validating a Prefix</a></li>
-  <li><a href="#how-stblr_csr-consumes-the-prefix" id="toc-how-stblr_csr-consumes-the-prefix" class="nav-link" data-scroll-target="#how-stblr_csr-consumes-the-prefix"><span class="header-section-number">13</span> How <code>stblr_csr()</code> Consumes the Prefix</a></li>
-  <li><a href="#scheduled-sparse-updates" id="toc-scheduled-sparse-updates" class="nav-link" data-scroll-target="#scheduled-sparse-updates"><span class="header-section-number">14</span> Scheduled Sparse Updates</a></li>
-  <li><a href="#sparse-ld-as-an-approximation" id="toc-sparse-ld-as-an-approximation" class="nav-link" data-scroll-target="#sparse-ld-as-an-approximation"><span class="header-section-number">15</span> Sparse LD as an Approximation</a></li>
-  <li><a href="#bed-versus-csr-comparison-and-reproducibility" id="toc-bed-versus-csr-comparison-and-reproducibility" class="nav-link" data-scroll-target="#bed-versus-csr-comparison-and-reproducibility"><span class="header-section-number">16</span> BED-Versus-CSR Comparison and Reproducibility</a></li>
-  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">17</span> Related Notes and Sources</a></li>
+  <li><a href="#streaming-and-blocking-behavior" id="toc-streaming-and-blocking-behavior" class="nav-link" data-scroll-target="#streaming-and-blocking-behavior">Streaming and Blocking Behavior</a></li>
+  <li><a href="#index-bases-and-diagonal-convention" id="toc-index-bases-and-diagonal-convention" class="nav-link" data-scroll-target="#index-bases-and-diagonal-convention">Index Bases and Diagonal Convention</a></li>
+  <li><a href="#marker-order-sample-and-scaling-invariants" id="toc-marker-order-sample-and-scaling-invariants" class="nav-link" data-scroll-target="#marker-order-sample-and-scaling-invariants">Marker-Order, Sample, and Scaling Invariants</a></li>
+  <li><a href="#reading-and-validating-a-prefix" id="toc-reading-and-validating-a-prefix" class="nav-link" data-scroll-target="#reading-and-validating-a-prefix">Reading and Validating a Prefix</a></li>
+  <li><a href="#how-stblr_csr-consumes-the-prefix" id="toc-how-stblr_csr-consumes-the-prefix" class="nav-link" data-scroll-target="#how-stblr_csr-consumes-the-prefix">How <code>stblr_csr()</code> Consumes the Prefix</a></li>
+  <li><a href="#scheduled-sparse-updates" id="toc-scheduled-sparse-updates" class="nav-link" data-scroll-target="#scheduled-sparse-updates">Scheduled Sparse Updates</a></li>
+  <li><a href="#sparse-ld-as-an-approximation" id="toc-sparse-ld-as-an-approximation" class="nav-link" data-scroll-target="#sparse-ld-as-an-approximation">Sparse LD as an Approximation</a></li>
+  <li><a href="#bed-versus-csr-comparison-and-reproducibility" id="toc-bed-versus-csr-comparison-and-reproducibility" class="nav-link" data-scroll-target="#bed-versus-csr-comparison-and-reproducibility">BED-Versus-CSR Comparison and Reproducibility</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_sparse_ld_csr.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -253,8 +253,8 @@ window.Quarto = {
 <li>pass the same prefix to <code>stblr_csr()</code> or an annotation-aware CSR wrapper.</li>
 </ol>
 <p>The present file suffixes, integer widths, floating-point widths, metadata keys, and upper-triangle storage convention are documented here to explain behavior and support validation. They should not be treated as a guaranteed manual file-format API. Use package readers, writers, and samplers rather than editing or independently constructing these files.</p>
-<section id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld"><span class="header-section-number">1</span> From BED Genotypes to Sufficient Statistics and Sparse LD</h2>
+<section id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld" class="level2">
+<h2 class="anchored" data-anchor-id="from-bed-genotypes-to-sufficient-statistics-and-sparse-ld">From BED Genotypes to Sufficient Statistics and Sparse LD</h2>
 <p>For genotype matrix (X), phenotype vector (y), and marker effects (b), a summary-statistics marker sampler needs quantities including</p>
 <p><span class="math display">\[
 wy=X^\top y,
@@ -279,8 +279,8 @@ r=X^\top(y-Xb)=wy-X^\top Xb.
 <p><code>bed_xtx_xty()</code> supplies the phenotype cross-products and diagonal marker cross-products. <code>sparseLD_stream_CSR()</code> supplies retained off-diagonal marker correlations. During CSR model setup, the sampler combines the stored correlations with <code>stats$ww</code> to recover the corresponding off-diagonal cross-product scale.</p>
 <p>This split is important: the on-disk values are correlations, not raw (X_i^X_j), and the diagonal cross-products are supplied separately by <code>stats$ww</code>.</p>
 </section>
-<section id="matrix-represented-by-the-current-writer" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="matrix-represented-by-the-current-writer"><span class="header-section-number">2</span> Matrix Represented by the Current Writer</h2>
+<section id="matrix-represented-by-the-current-writer" class="level2">
+<h2 class="anchored" data-anchor-id="matrix-represented-by-the-current-writer">Matrix Represented by the Current Writer</h2>
 <p>The current BED sparse-LD writer standardizes each selected marker using its allele frequency, mean-imputes missing genotypes to zero on that standardized scale, computes marker cross-products, and normalizes off-diagonal entries to correlations:</p>
 <p><span class="math display">\[
 r_{ij}
@@ -310,8 +310,8 @@ r_{ij}\sqrt{ww_iww_j}.
 \]</span></p>
 <p>The diagonal contribution remains <code>ww[i]</code>. This is why the sparse-LD prefix and sufficient statistics must use compatible samples, marker scaling, and marker order. The current shared-LD ST-BLR setup also requires compatible <code>ww</code> across trait columns.</p>
 </section>
-<section id="what-csr-means" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="what-csr-means"><span class="header-section-number">3</span> What CSR Means</h2>
+<section id="what-csr-means" class="level2">
+<h2 class="anchored" data-anchor-id="what-csr-means">What CSR Means</h2>
 <p>Compressed sparse row format represents a sparse matrix without allocating all (m^2) entries. Three arrays describe the retained entries:</p>
 <table class="caption-top table">
 <colgroup>
@@ -356,8 +356,8 @@ col_idx = [1, 3, 3]
 values  = [0.40, -0.20, 0.15]</code></pre>
 <p><code>row_ptr</code> is always a cumulative pointer array. The <code>one_based</code> option of <code>sparseLD_read_CSR()</code> converts returned <strong>column indices</strong> for convenient R inspection; it does not convert the row pointers.</p>
 </section>
-<section id="why-disk-backed-sparse-csr-is-used" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="why-disk-backed-sparse-csr-is-used"><span class="header-section-number">4</span> Why Disk-Backed Sparse CSR Is Used</h2>
+<section id="why-disk-backed-sparse-csr-is-used" class="level2">
+<h2 class="anchored" data-anchor-id="why-disk-backed-sparse-csr-is-used">Why Disk-Backed Sparse CSR Is Used</h2>
 <p>A dense (mm) LD matrix requires (O(m^2)) storage. This becomes prohibitive for genome-scale marker sets even when most scientifically useful LD relationships are local or sufficiently strong.</p>
 <p>Sparse CSR reduces storage toward (O(m+)), where <code>nnz</code> is the number of retained off-diagonal upper-triangle entries. Disk-backed storage provides two additional advantages:</p>
 <ul>
@@ -366,8 +366,8 @@ values  = [0.40, -0.20, 0.15]</code></pre>
 </ul>
 <p><code>sparseLD_stream_CSR()</code> processes marker blocks, computes candidate cross-products for block pairs, applies distance and (r^2) rules, and writes retained entries incrementally. It still needs working memory for decoded genotype blocks and block cross-products, but it avoids constructing either a dense whole-genome LD matrix or the complete sparse result in R.</p>
 </section>
-<section id="stable-user-facing-contract" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="stable-user-facing-contract"><span class="header-section-number">5</span> Stable User-Facing Contract</h2>
+<section id="stable-user-facing-contract" class="level2">
+<h2 class="anchored" data-anchor-id="stable-user-facing-contract">Stable User-Facing Contract</h2>
 <p>The supported workflow treats the sparse-LD artifact as an opaque package- managed object identified by a prefix:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ld_prefix <span class="ot">&lt;-</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -392,8 +392,8 @@ values  = [0.40, -0.20, 0.15]</code></pre>
 </ul>
 <p>Analysis code should not assume that current suffixes, metadata keys, or binary encodings will remain unchanged. Independent tools that manually write these files depend on implementation details and can silently become incompatible after package changes.</p>
 </section>
-<section id="ld_prefix-and-the-current-disk-artifact" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="ld_prefix-and-the-current-disk-artifact"><span class="header-section-number">6</span> <code>ld_prefix</code> and the Current Disk Artifact</h2>
+<section id="ld_prefix-and-the-current-disk-artifact" class="level2">
+<h2 class="anchored" data-anchor-id="ld_prefix-and-the-current-disk-artifact"><code>ld_prefix</code> and the Current Disk Artifact</h2>
 <p><code>ld_prefix</code> is a common path prefix, not a single file and not an in-memory matrix. The current implementation derives several files from it. For example, a prefix <code>path/chr1_ld</code> currently identifies:</p>
 <pre class="text"><code>path/chr1_ld.row_ptr.u64.bin
 path/chr1_ld.col_idx.u32.0based.bin
@@ -409,8 +409,8 @@ path/chr1_ld.meta.txt</code></pre>
 <p>The metadata currently records fields such as marker count, <code>nnz</code>, triangle and diagonal conventions, value type, normalization, threshold, distance limits, block size, thread count, and used sample count.</p>
 <p>Treat the complete prefix as one artifact. Do not mix files from separate runs. Do not overwrite an important prefix when changing samples, marker sets, allele frequencies, distance windows, or thresholds. Prefer distinct, descriptive prefixes and retain construction provenance beside them.</p>
 </section>
-<section id="exported-and-internal-helpers" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="exported-and-internal-helpers"><span class="header-section-number">7</span> Exported and Internal Helpers</h2>
+<section id="exported-and-internal-helpers" class="level2">
+<h2 class="anchored" data-anchor-id="exported-and-internal-helpers">Exported and Internal Helpers</h2>
 <p>Current <code>NAMESPACE</code> and wrapper status distinguish the supported public path from lower-level generated functions:</p>
 <table class="caption-top table">
 <colgroup>
@@ -451,11 +451,11 @@ path/chr1_ld.meta.txt</code></pre>
 <p>The lower-level wrappers can be useful during development, but they are not the documented model handoff. In particular, <code>stblr_csr()</code> accepts <code>ld_prefix</code>, not an R list returned by <code>sparseLD_to_CSR()</code>.</p>
 <p>The package also contains older or separate CSR conversion code for other LD inputs. Its conventions should not be assumed to be identical to the BED-streamed prefix described here.</p>
 </section>
-<section id="sparse-ld-construction-settings" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="sparse-ld-construction-settings"><span class="header-section-number">8</span> Sparse-LD Construction Settings</h2>
+<section id="sparse-ld-construction-settings" class="level2">
+<h2 class="anchored" data-anchor-id="sparse-ld-construction-settings">Sparse-LD Construction Settings</h2>
 <p>Sparse-LD settings affect memory, runtime, disk use, and the statistical approximation. They should be selected deliberately and reported with model results.</p>
-<section id="marker-and-sample-selection" class="level3" data-number="8.1">
-<h3 data-number="8.1" class="anchored" data-anchor-id="marker-and-sample-selection"><span class="header-section-number">8.1</span> Marker and Sample Selection</h3>
+<section id="marker-and-sample-selection" class="level3">
+<h3 class="anchored" data-anchor-id="marker-and-sample-selection">Marker and Sample Selection</h3>
 <dl>
 <dt><code>bed_files</code></dt>
 <dd>
@@ -479,8 +479,8 @@ Optional list of allele frequencies aligned to <code>cls</code>. When omitted, t
 </dd>
 </dl>
 </section>
-<section id="threshold-and-window-settings" class="level3" data-number="8.2">
-<h3 data-number="8.2" class="anchored" data-anchor-id="threshold-and-window-settings"><span class="header-section-number">8.2</span> Threshold and Window Settings</h3>
+<section id="threshold-and-window-settings" class="level3">
+<h3 class="anchored" data-anchor-id="threshold-and-window-settings">Threshold and Window Settings</h3>
 <dl>
 <dt><code>r2_threshold</code></dt>
 <dd>
@@ -501,8 +501,8 @@ Optional list of marker base-pair positions aligned to <code>cls</code>. When ab
 </dl>
 <p>A pair must pass every enabled window rule before its (r^2) is tested. Disabling both distance restrictions permits all upper-triangle marker pairs to be considered and can be computationally expensive.</p>
 </section>
-<section id="computational-settings" class="level3" data-number="8.3">
-<h3 data-number="8.3" class="anchored" data-anchor-id="computational-settings"><span class="header-section-number">8.3</span> Computational Settings</h3>
+<section id="computational-settings" class="level3">
+<h3 class="anchored" data-anchor-id="computational-settings">Computational Settings</h3>
 <dl>
 <dt><code>block_size</code></dt>
 <dd>
@@ -514,16 +514,16 @@ Requested OpenMP thread count. It affects construction performance and may affec
 </dd>
 </dl>
 </section>
-<section id="scaling" class="level3" data-number="8.4">
-<h3 data-number="8.4" class="anchored" data-anchor-id="scaling"><span class="header-section-number">8.4</span> Scaling</h3>
+<section id="scaling" class="level3">
+<h3 class="anchored" data-anchor-id="scaling">Scaling</h3>
 <p><code>sparseLD_stream_CSR()</code> does not expose a <code>scale</code> argument. The current writer always constructs its correlation values from allele-frequency-standardized markers. By contrast, <code>bed_xtx_xty()</code> exposes <code>scale</code>. For the standard BED-to-CSR handoff, use compatible standardized marker statistics:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">bed_xtx_xty</span>(..., <span class="at">af =</span> af, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sparseLD_stream_CSR</span>(..., <span class="at">af =</span> <span class="fu">list</span>(af))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Using <code>bed_xtx_xty(..., scale = FALSE)</code> with the current standardized correlation writer changes the scale relationship assumed when the sampler combines <code>r_ij</code> with <code>stats$ww</code>. Such combinations require explicit validation rather than being assumed compatible.</p>
 </section>
 </section>
-<section id="streaming-and-blocking-behavior" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="streaming-and-blocking-behavior"><span class="header-section-number">9</span> Streaming and Blocking Behavior</h2>
+<section id="streaming-and-blocking-behavior" class="level2">
+<h2 class="anchored" data-anchor-id="streaming-and-blocking-behavior">Streaming and Blocking Behavior</h2>
 <p>The writer reads the selected BED markers into a packed representation, then works through pairs of marker blocks. For each eligible block pair it:</p>
 <ol type="1">
 <li>decodes standardized marker values into floating-point working buffers;</li>
@@ -535,8 +535,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <p>After each row, it writes the cumulative retained-entry count to <code>row_ptr</code>. Consequently, the final row pointer equals <code>nnz</code>.</p>
 <p>Streaming avoids holding the final <code>col_idx</code> and <code>values</code> arrays in R or in one complete native in-memory result. It does not eliminate all memory or runtime costs: the packed selected genotype matrix, diagonal cross-products, decoded blocks, and block cross-products still require resources. The number of candidate block pairs can also become large when windows are wide or disabled.</p>
 </section>
-<section id="index-bases-and-diagonal-convention" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="index-bases-and-diagonal-convention"><span class="header-section-number">10</span> Index Bases and Diagonal Convention</h2>
+<section id="index-bases-and-diagonal-convention" class="level2">
+<h2 class="anchored" data-anchor-id="index-bases-and-diagonal-convention">Index Bases and Diagonal Convention</h2>
 <p>Three conventions must be distinguished:</p>
 <ol type="1">
 <li><code>rows</code> and <code>cls</code> supplied from R use the documented R-facing indexing expected by their wrappers.</li>
@@ -547,8 +547,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <p>The current streamed artifact omits diagonal entries and reports <code>diag = "implicit_1"</code>. Downstream ST-BLR samplers use the supplied <code>stats$ww</code> for diagonal (X_i^X_i) contributions. Users inspecting the sparse arrays should not mistake absence of explicit diagonal entries for a zero diagonal.</p>
 <p>Package functions validate and handle these conventions. Manual index conversion or insertion of diagonal values risks corrupting the expected contract.</p>
 </section>
-<section id="marker-order-sample-and-scaling-invariants" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="marker-order-sample-and-scaling-invariants"><span class="header-section-number">11</span> Marker-Order, Sample, and Scaling Invariants</h2>
+<section id="marker-order-sample-and-scaling-invariants" class="level2">
+<h2 class="anchored" data-anchor-id="marker-order-sample-and-scaling-invariants">Marker-Order, Sample, and Scaling Invariants</h2>
 <p>Sparse arrays contain positional indices, not biological marker identifiers. The most important cross-layer invariant is:</p>
 <pre class="text"><code>Glist$rsids[[chr]][cls]
     == Glist$rsidsLD[[chr]]
@@ -570,8 +570,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>A permutation error can produce dimensionally valid CSR files and model fits while assigning LD or annotations to the wrong markers. Dimension checks alone cannot detect this error.</p>
 </section>
-<section id="reading-and-validating-a-prefix" class="level2" data-number="12">
-<h2 data-number="12" class="anchored" data-anchor-id="reading-and-validating-a-prefix"><span class="header-section-number">12</span> Reading and Validating a Prefix</h2>
+<section id="reading-and-validating-a-prefix" class="level2">
+<h2 class="anchored" data-anchor-id="reading-and-validating-a-prefix">Reading and Validating a Prefix</h2>
 <p>Use the exported reader to inspect a prefix without manually decoding the binary files:</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ld <span class="ot">&lt;-</span> <span class="fu">sparseLD_read_CSR</span>(ld_prefix, <span class="at">one_based =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -600,8 +600,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 </ol>
 <p>The reader can validate structural properties but cannot prove that the BED source, allele frequencies, sample rows, phenotypes, annotations, or marker identities are scientifically aligned. Retain that provenance separately.</p>
 </section>
-<section id="how-stblr_csr-consumes-the-prefix" class="level2" data-number="13">
-<h2 data-number="13" class="anchored" data-anchor-id="how-stblr_csr-consumes-the-prefix"><span class="header-section-number">13</span> How <code>stblr_csr()</code> Consumes the Prefix</h2>
+<section id="how-stblr_csr-consumes-the-prefix" class="level2">
+<h2 class="anchored" data-anchor-id="how-stblr_csr-consumes-the-prefix">How <code>stblr_csr()</code> Consumes the Prefix</h2>
 <p>The public model handoff is short:</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
@@ -621,8 +621,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <p>For marker effect (b_i), the diagonal residual contribution uses (ww_i b_i), while retained off-diagonal neighbors use the converted cross-product values. Missing off-diagonal entries are treated as zero in the sparse approximation.</p>
 <p>Annotation-aware CSR wrappers use the same LD prefix and marker-order contract. Their differences concern prior structure, not CSR construction.</p>
 </section>
-<section id="scheduled-sparse-updates" class="level2" data-number="14">
-<h2 data-number="14" class="anchored" data-anchor-id="scheduled-sparse-updates"><span class="header-section-number">14</span> Scheduled Sparse Updates</h2>
+<section id="scheduled-sparse-updates" class="level2">
+<h2 class="anchored" data-anchor-id="scheduled-sparse-updates">Scheduled Sparse Updates</h2>
 <p><code>stblr_csr(..., scheduled = TRUE)</code> uses a scheduled marker-update implementation that can revisit likely null markers less frequently and wake retained LD neighbors after an effect change. Settings such as <code>full_sweep_every</code>, <code>candidate_threshold</code>, <code>candidate_lifetime</code>, <code>null_skip_base</code>, <code>null_skip_max</code>, and LD-neighbor wake-up controls affect the sampler’s computational schedule.</p>
 <p>These controls are separate from CSR construction settings:</p>
 <ul>
@@ -631,8 +631,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 </ul>
 <p>Both can affect finite-run behavior and performance. The statistical prior is unchanged by choosing a scheduled path, but aggressive sparse scheduling must be checked for adequate mixing and sensitivity. See <a href="single_trait_models.html">Single-trait models</a> for the scheduling controls.</p>
 </section>
-<section id="sparse-ld-as-an-approximation" class="level2" data-number="15">
-<h2 data-number="15" class="anchored" data-anchor-id="sparse-ld-as-an-approximation"><span class="header-section-number">15</span> Sparse LD as an Approximation</h2>
+<section id="sparse-ld-as-an-approximation" class="level2">
+<h2 class="anchored" data-anchor-id="sparse-ld-as-an-approximation">Sparse LD as an Approximation</h2>
 <p>The sparse matrix replaces unretained off-diagonal relationships with zero. Approximation enters through:</p>
 <ul>
 <li>(r^2) thresholding;</li>
@@ -644,8 +644,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 </ul>
 <p>Increasing <code>r2_threshold</code> or narrowing windows usually reduces <code>nnz</code>, runtime, and disk use, but can remove LD needed to represent the conditional marker likelihood adequately. Lower thresholds and wider windows preserve more LD at greater computational cost. There is no universally correct threshold; its adequacy depends on marker density, LD structure, sample size, phenotype architecture, and inferential target.</p>
 </section>
-<section id="bed-versus-csr-comparison-and-reproducibility" class="level2" data-number="16">
-<h2 data-number="16" class="anchored" data-anchor-id="bed-versus-csr-comparison-and-reproducibility"><span class="header-section-number">16</span> BED-Versus-CSR Comparison and Reproducibility</h2>
+<section id="bed-versus-csr-comparison-and-reproducibility" class="level2">
+<h2 class="anchored" data-anchor-id="bed-versus-csr-comparison-and-reproducibility">BED-Versus-CSR Comparison and Reproducibility</h2>
 <p>When both paths use the same BED source, markers, samples, phenotype, standardization, and priors, <code>stblr_bed_marker()</code> and <code>stblr_csr()</code> should usually show qualitatively comparable posterior patterns. Exact equality is not expected because:</p>
 <ul>
 <li>the CSR path omits unretained LD;</li>
@@ -668,8 +668,8 @@ Requested OpenMP thread count. It affects construction performance and may affec
 </ul>
 <p>The current workflow scripts use demonstration-scale settings. Production analyses require sensitivity checks for LD construction and sampler settings, longer chains, and convergence diagnostics.</p>
 </section>
-<section id="related-notes-and-sources" class="level2" data-number="17">
-<h2 data-number="17" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">17</span> Related Notes and Sources</h2>
+<section id="related-notes-and-sources" class="level2">
+<h2 class="anchored" data-anchor-id="related-notes-and-sources">Related Notes and Sources</h2>
 <ul>
 <li><a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></li>
 <li><a href="data_representations.html">Data representations</a></li>

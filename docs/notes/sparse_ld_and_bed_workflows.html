@@ -183,22 +183,22 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#one-genotype-source-two-fitting-paths" id="toc-one-genotype-source-two-fitting-paths" class="nav-link active" data-scroll-target="#one-genotype-source-two-fitting-paths"><span class="header-section-number">1</span> One Genotype Source, Two Fitting Paths</a></li>
-  <li><a href="#selecting-samples-and-markers-from-a-bed-backed-glist" id="toc-selecting-samples-and-markers-from-a-bed-backed-glist" class="nav-link" data-scroll-target="#selecting-samples-and-markers-from-a-bed-backed-glist"><span class="header-section-number">2</span> Selecting Samples and Markers From a BED-Backed <code>Glist</code></a></li>
-  <li><a href="#simulating-or-supplying-aligned-phenotypes" id="toc-simulating-or-supplying-aligned-phenotypes" class="nav-link" data-scroll-target="#simulating-or-supplying-aligned-phenotypes"><span class="header-section-number">3</span> Simulating or Supplying Aligned Phenotypes</a></li>
-  <li><a href="#path-a-direct-individual-level-fitting-with-stblr_bed_marker" id="toc-path-a-direct-individual-level-fitting-with-stblr_bed_marker" class="nav-link" data-scroll-target="#path-a-direct-individual-level-fitting-with-stblr_bed_marker"><span class="header-section-number">4</span> Path A: Direct Individual-Level Fitting With <code>stblr_bed_marker()</code></a></li>
-  <li><a href="#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty" id="toc-path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty" class="nav-link" data-scroll-target="#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty"><span class="header-section-number">5</span> Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>bed_xtx_xty()</code></a></li>
-  <li><a href="#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" id="toc-path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" class="nav-link" data-scroll-target="#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr"><span class="header-section-number">6</span> Path B, Step 2: Streaming Sparse LD With <code>sparseLD_stream_CSR()</code></a>
+  <li><a href="#one-genotype-source-two-fitting-paths" id="toc-one-genotype-source-two-fitting-paths" class="nav-link active" data-scroll-target="#one-genotype-source-two-fitting-paths">One Genotype Source, Two Fitting Paths</a></li>
+  <li><a href="#selecting-samples-and-markers-from-a-bed-backed-glist" id="toc-selecting-samples-and-markers-from-a-bed-backed-glist" class="nav-link" data-scroll-target="#selecting-samples-and-markers-from-a-bed-backed-glist">Selecting Samples and Markers From a BED-Backed <code>Glist</code></a></li>
+  <li><a href="#simulating-or-supplying-aligned-phenotypes" id="toc-simulating-or-supplying-aligned-phenotypes" class="nav-link" data-scroll-target="#simulating-or-supplying-aligned-phenotypes">Simulating or Supplying Aligned Phenotypes</a></li>
+  <li><a href="#path-a-direct-individual-level-fitting-with-stblr_bed_marker" id="toc-path-a-direct-individual-level-fitting-with-stblr_bed_marker" class="nav-link" data-scroll-target="#path-a-direct-individual-level-fitting-with-stblr_bed_marker">Path A: Direct Individual-Level Fitting With <code>stblr_bed_marker()</code></a></li>
+  <li><a href="#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty" id="toc-path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty" class="nav-link" data-scroll-target="#path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty">Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>bed_xtx_xty()</code></a></li>
+  <li><a href="#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" id="toc-path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" class="nav-link" data-scroll-target="#path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr">Path B, Step 2: Streaming Sparse LD With <code>sparseLD_stream_CSR()</code></a>
   <ul class="collapse">
-  <li><a href="#related-sparse-ld-helpers" id="toc-related-sparse-ld-helpers" class="nav-link" data-scroll-target="#related-sparse-ld-helpers"><span class="header-section-number">6.1</span> Related Sparse-LD Helpers</a></li>
+  <li><a href="#related-sparse-ld-helpers" id="toc-related-sparse-ld-helpers" class="nav-link" data-scroll-target="#related-sparse-ld-helpers">Related Sparse-LD Helpers</a></li>
   </ul></li>
-  <li><a href="#inspecting-and-validating-csr-files-with-sparseld_read_csr" id="toc-inspecting-and-validating-csr-files-with-sparseld_read_csr" class="nav-link" data-scroll-target="#inspecting-and-validating-csr-files-with-sparseld_read_csr"><span class="header-section-number">7</span> Inspecting and Validating CSR Files With <code>sparseLD_read_CSR()</code></a></li>
-  <li><a href="#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr" id="toc-path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr" class="nav-link" data-scroll-target="#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr"><span class="header-section-number">8</span> Path B, Step 3: Fitting Summary-Statistics BLR With <code>stblr_csr()</code></a></li>
-  <li><a href="#comparing-bed-direct-and-csr-posterior-outputs" id="toc-comparing-bed-direct-and-csr-posterior-outputs" class="nav-link" data-scroll-target="#comparing-bed-direct-and-csr-posterior-outputs"><span class="header-section-number">9</span> Comparing BED-Direct and CSR Posterior Outputs</a></li>
-  <li><a href="#marker-order-allele-frequency-scaling-rows-and-ld-thresholds" id="toc-marker-order-allele-frequency-scaling-rows-and-ld-thresholds" class="nav-link" data-scroll-target="#marker-order-allele-frequency-scaling-rows-and-ld-thresholds"><span class="header-section-number">10</span> Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds</a></li>
-  <li><a href="#validation-checklist" id="toc-validation-checklist" class="nav-link" data-scroll-target="#validation-checklist"><span class="header-section-number">11</span> Validation Checklist</a></li>
-  <li><a href="#runtime-disk-reproducibility-and-convergence-cautions" id="toc-runtime-disk-reproducibility-and-convergence-cautions" class="nav-link" data-scroll-target="#runtime-disk-reproducibility-and-convergence-cautions"><span class="header-section-number">12</span> Runtime, Disk, Reproducibility, and Convergence Cautions</a></li>
-  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">13</span> Related Notes and Sources</a></li>
+  <li><a href="#inspecting-and-validating-csr-files-with-sparseld_read_csr" id="toc-inspecting-and-validating-csr-files-with-sparseld_read_csr" class="nav-link" data-scroll-target="#inspecting-and-validating-csr-files-with-sparseld_read_csr">Inspecting and Validating CSR Files With <code>sparseLD_read_CSR()</code></a></li>
+  <li><a href="#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr" id="toc-path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr" class="nav-link" data-scroll-target="#path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr">Path B, Step 3: Fitting Summary-Statistics BLR With <code>stblr_csr()</code></a></li>
+  <li><a href="#comparing-bed-direct-and-csr-posterior-outputs" id="toc-comparing-bed-direct-and-csr-posterior-outputs" class="nav-link" data-scroll-target="#comparing-bed-direct-and-csr-posterior-outputs">Comparing BED-Direct and CSR Posterior Outputs</a></li>
+  <li><a href="#marker-order-allele-frequency-scaling-rows-and-ld-thresholds" id="toc-marker-order-allele-frequency-scaling-rows-and-ld-thresholds" class="nav-link" data-scroll-target="#marker-order-allele-frequency-scaling-rows-and-ld-thresholds">Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds</a></li>
+  <li><a href="#validation-checklist" id="toc-validation-checklist" class="nav-link" data-scroll-target="#validation-checklist">Validation Checklist</a></li>
+  <li><a href="#runtime-disk-reproducibility-and-convergence-cautions" id="toc-runtime-disk-reproducibility-and-convergence-cautions" class="nav-link" data-scroll-target="#runtime-disk-reproducibility-and-convergence-cautions">Runtime, Disk, Reproducibility, and Convergence Cautions</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="sparse_ld_and_bed_workflows.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -239,8 +239,8 @@ window.Quarto = {
 
 <p>This note describes the practical bridge from individual-level PLINK BED genotypes and aligned phenotypes to a disk-backed sparse-LD representation and the sufficient statistics required by <code>stblr_csr()</code>. The same starting data can also be fitted directly with <code>stblr_bed_marker()</code>, making the workflow useful for understanding and checking the relationship between the individual-level and summary-statistics paths.</p>
 <p>The examples below are intentionally short. The complete executable sequence is in the <a href="../../examples/workflows/sparse_ld_bed_workflow.R">sparse-LD/BED workflow</a>. Its fitting steps are computationally expensive and its MCMC settings are demonstration settings rather than recommendations for real analysis.</p>
-<section id="one-genotype-source-two-fitting-paths" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="one-genotype-source-two-fitting-paths"><span class="header-section-number">1</span> One Genotype Source, Two Fitting Paths</h2>
+<section id="one-genotype-source-two-fitting-paths" class="level2">
+<h2 class="anchored" data-anchor-id="one-genotype-source-two-fitting-paths">One Genotype Source, Two Fitting Paths</h2>
 <p>The workflow begins with PLINK BED files, marker metadata, and one or more phenotypes. It then branches into two model-input representations:</p>
 <pre class="text"><code>BED files + phenotype y
         |
@@ -275,8 +275,8 @@ optional BED-versus-CSR posterior comparison</code></pre>
 <p>The CSR path converts individual-level data into reusable cross-products and sparse LD files. The direct BED path retains access to observed genotypes during sampling. Both paths represent related marker-update calculations, but they are not numerically identical by construction.</p>
 <p>The statistical role of each representation is developed in <a href="../notes/data_representations.html">Data representations</a>. This note focuses on object handoffs and practical contracts.</p>
 </section>
-<section id="selecting-samples-and-markers-from-a-bed-backed-glist" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="selecting-samples-and-markers-from-a-bed-backed-glist"><span class="header-section-number">2</span> Selecting Samples and Markers From a BED-Backed <code>Glist</code></h2>
+<section id="selecting-samples-and-markers-from-a-bed-backed-glist" class="level2">
+<h2 class="anchored" data-anchor-id="selecting-samples-and-markers-from-a-bed-backed-glist">Selecting Samples and Markers From a BED-Backed <code>Glist</code></h2>
 <p>A qgg <code>Glist</code> connects biological marker identities to BED file columns and allele frequencies. The principal objects are:</p>
 <table class="caption-top table">
 <colgroup>
@@ -336,8 +336,8 @@ optional BED-versus-CSR posterior comparison</code></pre>
 <p>For one BED file, <code>bed_xtx_xty()</code> receives <code>cls</code> as an integer vector. The sparse-LD helpers accept <code>bed_files</code> and <code>cls</code> as parallel collections, so <code>cls</code> is supplied as <code>list(cls)</code>. For multiple BED files, each <code>cls[[k]]</code> selects and orders markers from <code>bed_files[k]</code>; the concatenated selection is the model order.</p>
 <p><code>n</code> is the total number of BED rows. If <code>rows = NULL</code>, all BED rows are used and <code>y</code> should have <code>n</code> rows. If <code>rows</code> is supplied, it selects the individuals used to construct statistics and LD, and <code>y</code> must describe that same selected sample in the expected order. The same <code>rows</code> value must be used for both branches of CSR preparation.</p>
 </section>
-<section id="simulating-or-supplying-aligned-phenotypes" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="simulating-or-supplying-aligned-phenotypes"><span class="header-section-number">3</span> Simulating or Supplying Aligned Phenotypes</h2>
+<section id="simulating-or-supplying-aligned-phenotypes" class="level2">
+<h2 class="anchored" data-anchor-id="simulating-or-supplying-aligned-phenotypes">Simulating or Supplying Aligned Phenotypes</h2>
 <p>The workflow example simulates traits for <code>Glist$rsidsLD[[chr]]</code> and then scales the resulting phenotype matrix:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">mtsim</span>(<span class="at">Glist =</span> Glist, <span class="at">chr =</span> chr, <span class="at">rsids =</span> marker_id, <span class="at">nt =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">scale</span>(sim<span class="sc">$</span>y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -358,8 +358,8 @@ yy_t = y_t^\top y_t.
 \]</span></p>
 <p>The sparse-LD branch must use the same version of (X), including sample rows and marker scaling, that generated these statistics.</p>
 </section>
-<section id="path-a-direct-individual-level-fitting-with-stblr_bed_marker" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="path-a-direct-individual-level-fitting-with-stblr_bed_marker"><span class="header-section-number">4</span> Path A: Direct Individual-Level Fitting With <code>stblr_bed_marker()</code></h2>
+<section id="path-a-direct-individual-level-fitting-with-stblr_bed_marker" class="level2">
+<h2 class="anchored" data-anchor-id="path-a-direct-individual-level-fitting-with-stblr_bed_marker">Path A: Direct Individual-Level Fitting With <code>stblr_bed_marker()</code></h2>
 <p>Use <code>stblr_bed_marker()</code> when individual-level BED genotypes and aligned phenotypes remain available during fitting and a separate sparse-LD artifact is not required. The sampler reads selected genotype blocks from BED and uses observed marker values directly.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_bed <span class="ot">&lt;-</span> <span class="fu">stblr_bed_marker</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
@@ -384,8 +384,8 @@ yy_t = y_t^\top y_t.
 </ul>
 <p><code>stblr_bed_marker()</code> derives BED paths, allele frequencies, and marker names from <code>Glist</code>. If <code>cls</code> is omitted, the wrapper matches <code>Glist$rsidsLD</code> against <code>Glist$rsids</code>; supplying <code>cls</code> explicitly makes the comparison contract visible.</p>
 </section>
-<section id="path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty"><span class="header-section-number">5</span> Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>bed_xtx_xty()</code></h2>
+<section id="path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty" class="level2">
+<h2 class="anchored" data-anchor-id="path-b-step-1-deriving-wy-ww-and-yy-with-bed_xtx_xty">Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>bed_xtx_xty()</code></h2>
 <p><code>bed_xtx_xty()</code> converts the selected BED genotypes and phenotype matrix into sufficient statistics for ST-BLR fitting:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">bed_xtx_xty</span>(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">bed_file =</span> bed_files,</span>
@@ -435,8 +435,8 @@ yy_t = y_t^\top y_t.
 <p><code>stats$wy</code> and <code>stats$ww</code> must each describe the same (m) markers, in the same order later used by the CSR LD matrix. <code>stats$yy</code> has one entry per trait, not one entry per marker.</p>
 <p><code>bed_xtx_xty()</code> accepts a single BED file path and a single <code>cls</code> vector. Current multi-file sparse-LD preparation therefore needs statistics assembled with a compatible marker order and sample definition; the clean workflow uses one chromosome and one BED file.</p>
 </section>
-<section id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr"><span class="header-section-number">6</span> Path B, Step 2: Streaming Sparse LD With <code>sparseLD_stream_CSR()</code></h2>
+<section id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr" class="level2">
+<h2 class="anchored" data-anchor-id="path-b-step-2-streaming-sparse-ld-with-sparseld_stream_csr">Path B, Step 2: Streaming Sparse LD With <code>sparseLD_stream_CSR()</code></h2>
 <p><code>sparseLD_stream_CSR()</code> computes marker correlations from BED data, applies distance and (r^2) retention rules, and writes a disk-backed CSR representation:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ld_prefix <span class="ot">&lt;-</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -462,8 +462,8 @@ yy_t = y_t^\top y_t.
 </ul>
 <p>The disk format stores the upper triangle with an implicit unit diagonal and zero-based column indices. Package functions handle this storage contract; analysis code should not manually alter index bases or binary files.</p>
 <p><code>r2_threshold</code> controls which correlations are retained by squared magnitude. The distance arguments can additionally restrict candidate marker pairs. Values of zero disable the corresponding distance restriction in the example workflow. These settings change the LD approximation and should be recorded with analysis outputs.</p>
-<section id="related-sparse-ld-helpers" class="level3" data-number="6.1">
-<h3 data-number="6.1" class="anchored" data-anchor-id="related-sparse-ld-helpers"><span class="header-section-number">6.1</span> Related Sparse-LD Helpers</h3>
+<section id="related-sparse-ld-helpers" class="level3">
+<h3 class="anchored" data-anchor-id="related-sparse-ld-helpers">Related Sparse-LD Helpers</h3>
 <p>The package source currently contains four related Rcpp wrappers:</p>
 <table class="caption-top table">
 <colgroup>
@@ -504,8 +504,8 @@ yy_t = y_t^\top y_t.
 <p>Use <code>sparseLD_stream_CSR()</code> for the supported BED-to-disk workflow. The in-memory <code>sparseLD_to_CSR()</code> representation can be useful during development, but it materializes sparse arrays in R and is not the input contract used by <code>stblr_csr()</code>. The <code>sparseLD_write_CSR()</code> alias should not be treated as a separate stable public API while it remains unexported.</p>
 </section>
 </section>
-<section id="inspecting-and-validating-csr-files-with-sparseld_read_csr" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="inspecting-and-validating-csr-files-with-sparseld_read_csr"><span class="header-section-number">7</span> Inspecting and Validating CSR Files With <code>sparseLD_read_CSR()</code></h2>
+<section id="inspecting-and-validating-csr-files-with-sparseld_read_csr" class="level2">
+<h2 class="anchored" data-anchor-id="inspecting-and-validating-csr-files-with-sparseld_read_csr">Inspecting and Validating CSR Files With <code>sparseLD_read_CSR()</code></h2>
 <p>Before fitting, <code>sparseLD_read_CSR()</code> can inspect the files at <code>ld_prefix</code>:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ld <span class="ot">&lt;-</span> <span class="fu">sparseLD_read_CSR</span>(ld_prefix, <span class="at">one_based =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -525,8 +525,8 @@ yy_t = y_t^\top y_t.
 </ul>
 <p>The binary-file and metadata details are documented further in <a href="../notes/technical_sparse_ld_csr.html">Technical sparse LD and CSR</a>.</p>
 </section>
-<section id="path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr"><span class="header-section-number">8</span> Path B, Step 3: Fitting Summary-Statistics BLR With <code>stblr_csr()</code></h2>
+<section id="path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr" class="level2">
+<h2 class="anchored" data-anchor-id="path-b-step-3-fitting-summary-statistics-blr-with-stblr_csr">Path B, Step 3: Fitting Summary-Statistics BLR With <code>stblr_csr()</code></h2>
 <p><code>stblr_csr()</code> combines the sufficient-statistics object with the disk-backed LD prefix:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
@@ -548,8 +548,8 @@ stats$wy + stats$ww + ld_prefix
 <p>The wrapper infers the number of traits from <code>length(stats$yy)</code>. It takes <code>n</code> from the function argument or <code>stats$n</code>, and takes (m) from the function argument, <code>stats$m</code>, or <code>length(stats$ww[[1]])</code>. Explicitly supplying <code>n</code> and checking (m) before fitting makes the data contract easier to audit.</p>
 <p><code>stats$wy</code>, <code>stats$ww</code>, and <code>stats$yy</code> summarize the phenotype side and diagonal marker information. The files at <code>ld_prefix</code> provide the retained off-diagonal marker relationships needed to update residual scores after marker effects change. The summary-statistics path therefore depends on both objects; neither is sufficient by itself.</p>
 </section>
-<section id="comparing-bed-direct-and-csr-posterior-outputs" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="comparing-bed-direct-and-csr-posterior-outputs"><span class="header-section-number">9</span> Comparing BED-Direct and CSR Posterior Outputs</h2>
+<section id="comparing-bed-direct-and-csr-posterior-outputs" class="level2">
+<h2 class="anchored" data-anchor-id="comparing-bed-direct-and-csr-posterior-outputs">Comparing BED-Direct and CSR Posterior Outputs</h2>
 <p>When both representations are prepared from the same individual-level data, <code>stblr_bed_marker()</code> provides a useful comparison for <code>stblr_csr()</code>. Compare posterior quantities that share the same marker and trait order, such as posterior mean effects <code>fit$bm</code> and posterior inclusion probabilities <code>fit$dm</code>.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_csr<span class="sc">$</span>bm[, <span class="dv">1</span>], fit_bed<span class="sc">$</span>bm[, <span class="dv">1</span>],</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"CSR posterior mean effect"</span>,</span>
@@ -564,8 +564,8 @@ stats$wy + stats$ww + ld_prefix
 </ul>
 <p>A comparison is an integration diagnostic, not a proof that either fit has converged or that the sparse-LD approximation is adequate.</p>
 </section>
-<section id="marker-order-allele-frequency-scaling-rows-and-ld-thresholds" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="marker-order-allele-frequency-scaling-rows-and-ld-thresholds"><span class="header-section-number">10</span> Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds</h2>
+<section id="marker-order-allele-frequency-scaling-rows-and-ld-thresholds" class="level2">
+<h2 class="anchored" data-anchor-id="marker-order-allele-frequency-scaling-rows-and-ld-thresholds">Marker Order, Allele Frequency, Scaling, Rows, and LD Thresholds</h2>
 <p>The central practical invariant is:</p>
 <pre class="text"><code>Glist$rsids[[chr]][cls]
     == Glist$rsidsLD[[chr]]
@@ -585,8 +585,8 @@ stats$wy + stats$ww + ld_prefix
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This is the handoff from the base CSR workflow to the models described in <a href="../notes/annotation_informed_models.html">Annotation-informed models</a>.</p>
 </section>
-<section id="validation-checklist" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="validation-checklist"><span class="header-section-number">11</span> Validation Checklist</h2>
+<section id="validation-checklist" class="level2">
+<h2 class="anchored" data-anchor-id="validation-checklist">Validation Checklist</h2>
 <p>Before fitting <code>stblr_csr()</code>, verify:</p>
 <ol type="1">
 <li><code>cls</code> has no missing values.</li>
@@ -603,8 +603,8 @@ stats$wy + stats$ww + ld_prefix
 <li>Real analyses use adequate chains, convergence checks, and posterior predictive diagnostics.</li>
 </ol>
 </section>
-<section id="runtime-disk-reproducibility-and-convergence-cautions" class="level2" data-number="12">
-<h2 data-number="12" class="anchored" data-anchor-id="runtime-disk-reproducibility-and-convergence-cautions"><span class="header-section-number">12</span> Runtime, Disk, Reproducibility, and Convergence Cautions</h2>
+<section id="runtime-disk-reproducibility-and-convergence-cautions" class="level2">
+<h2 class="anchored" data-anchor-id="runtime-disk-reproducibility-and-convergence-cautions">Runtime, Disk, Reproducibility, and Convergence Cautions</h2>
 <p>Both sufficient-statistic construction and sparse-LD construction can be runtime-heavy. <code>block_size</code> and <code>nthreads</code> affect construction performance, while <code>r2_threshold</code> and distance restrictions also affect the statistical LD approximation. Record all of them.</p>
 <p>Disk-backed CSR preparation writes multiple files sharing <code>ld_prefix</code>. Treat them as one artifact: moving, replacing, or mixing files from different runs can invalidate the prefix. Use distinct prefixes for different marker sets, sample subsets, scaling choices, and LD thresholds.</p>
 <p>For reproducibility, retain:</p>
@@ -618,8 +618,8 @@ stats$wy + stats$ww + ld_prefix
 </ul>
 <p>The short chains in workflow scripts demonstrate object handoffs. Real analyses require longer chains and appropriate convergence and posterior predictive checks. Compact output guidance is covered in <a href="../notes/workflows_and_outputs.html">Workflows and outputs</a>.</p>
 </section>
-<section id="related-notes-and-sources" class="level2" data-number="13">
-<h2 data-number="13" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">13</span> Related Notes and Sources</h2>
+<section id="related-notes-and-sources" class="level2">
+<h2 class="anchored" data-anchor-id="related-notes-and-sources">Related Notes and Sources</h2>
 <ul>
 <li><a href="../notes/data_representations.html">Data representations</a></li>
 <li><a href="../notes/technical_sparse_ld_csr.html">Technical sparse LD and CSR</a></li>

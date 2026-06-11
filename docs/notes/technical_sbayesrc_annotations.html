@@ -183,37 +183,37 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#model-definition" id="toc-model-definition" class="nav-link active" data-scroll-target="#model-definition"><span class="header-section-number">1</span> Model Definition</a></li>
-  <li><a href="#gamma-grids" id="toc-gamma-grids" class="nav-link" data-scroll-target="#gamma-grids"><span class="header-section-number">2</span> Gamma Grids</a></li>
-  <li><a href="#annotation-dependent-component-probabilities" id="toc-annotation-dependent-component-probabilities" class="nav-link" data-scroll-target="#annotation-dependent-component-probabilities"><span class="header-section-number">3</span> Annotation-Dependent Component Probabilities</a>
+  <li><a href="#model-definition" id="toc-model-definition" class="nav-link active" data-scroll-target="#model-definition">Model Definition</a></li>
+  <li><a href="#gamma-grids" id="toc-gamma-grids" class="nav-link" data-scroll-target="#gamma-grids">Gamma Grids</a></li>
+  <li><a href="#annotation-dependent-component-probabilities" id="toc-annotation-dependent-component-probabilities" class="nav-link" data-scroll-target="#annotation-dependent-component-probabilities">Annotation-Dependent Component Probabilities</a>
   <ul class="collapse">
-  <li><a href="#why-the-probabilities-sum-to-one" id="toc-why-the-probabilities-sum-to-one" class="nav-link" data-scroll-target="#why-the-probabilities-sum-to-one"><span class="header-section-number">3.1</span> Why the probabilities sum to one</a></li>
-  <li><a href="#numerical-flooring-and-renormalization" id="toc-numerical-flooring-and-renormalization" class="nav-link" data-scroll-target="#numerical-flooring-and-renormalization"><span class="header-section-number">3.2</span> Numerical flooring and renormalization</a></li>
+  <li><a href="#why-the-probabilities-sum-to-one" id="toc-why-the-probabilities-sum-to-one" class="nav-link" data-scroll-target="#why-the-probabilities-sum-to-one">Why the probabilities sum to one</a></li>
+  <li><a href="#numerical-flooring-and-renormalization" id="toc-numerical-flooring-and-renormalization" class="nav-link" data-scroll-target="#numerical-flooring-and-renormalization">Numerical flooring and renormalization</a></li>
   </ul></li>
-  <li><a href="#annotation-matrix-and-preprocessing" id="toc-annotation-matrix-and-preprocessing" class="nav-link" data-scroll-target="#annotation-matrix-and-preprocessing"><span class="header-section-number">4</span> Annotation Matrix and Preprocessing</a>
+  <li><a href="#annotation-matrix-and-preprocessing" id="toc-annotation-matrix-and-preprocessing" class="nav-link" data-scroll-target="#annotation-matrix-and-preprocessing">Annotation Matrix and Preprocessing</a>
   <ul class="collapse">
-  <li><a href="#intercept-prior" id="toc-intercept-prior" class="nav-link" data-scroll-target="#intercept-prior"><span class="header-section-number">4.1</span> Intercept prior</a></li>
+  <li><a href="#intercept-prior" id="toc-intercept-prior" class="nav-link" data-scroll-target="#intercept-prior">Intercept prior</a></li>
   </ul></li>
-  <li><a href="#alpha-and-sigmasqalpha-priors" id="toc-alpha-and-sigmasqalpha-priors" class="nav-link" data-scroll-target="#alpha-and-sigmasqalpha-priors"><span class="header-section-number">5</span> Alpha and SigmaSqAlpha Priors</a></li>
-  <li><a href="#gibbs-style-alpha-updating" id="toc-gibbs-style-alpha-updating" class="nav-link" data-scroll-target="#gibbs-style-alpha-updating"><span class="header-section-number">6</span> Gibbs-Style Alpha Updating</a></li>
-  <li><a href="#initialization" id="toc-initialization" class="nav-link" data-scroll-target="#initialization"><span class="header-section-number">7</span> Initialization</a></li>
-  <li><a href="#marker-effect-and-component-updates" id="toc-marker-effect-and-component-updates" class="nav-link" data-scroll-target="#marker-effect-and-component-updates"><span class="header-section-number">8</span> Marker-Effect and Component Updates</a></li>
-  <li><a href="#fit-outputs" id="toc-fit-outputs" class="nav-link" data-scroll-target="#fit-outputs"><span class="header-section-number">9</span> Fit Outputs</a>
+  <li><a href="#alpha-and-sigmasqalpha-priors" id="toc-alpha-and-sigmasqalpha-priors" class="nav-link" data-scroll-target="#alpha-and-sigmasqalpha-priors">Alpha and SigmaSqAlpha Priors</a></li>
+  <li><a href="#gibbs-style-alpha-updating" id="toc-gibbs-style-alpha-updating" class="nav-link" data-scroll-target="#gibbs-style-alpha-updating">Gibbs-Style Alpha Updating</a></li>
+  <li><a href="#initialization" id="toc-initialization" class="nav-link" data-scroll-target="#initialization">Initialization</a></li>
+  <li><a href="#marker-effect-and-component-updates" id="toc-marker-effect-and-component-updates" class="nav-link" data-scroll-target="#marker-effect-and-component-updates">Marker-Effect and Component Updates</a></li>
+  <li><a href="#fit-outputs" id="toc-fit-outputs" class="nav-link" data-scroll-target="#fit-outputs">Fit Outputs</a>
   <ul class="collapse">
-  <li><a href="#alpha" id="toc-alpha" class="nav-link" data-scroll-target="#alpha"><span class="header-section-number">9.1</span> <code>alpha</code></a></li>
-  <li><a href="#sigmasqalpha" id="toc-sigmasqalpha" class="nav-link" data-scroll-target="#sigmasqalpha"><span class="header-section-number">9.2</span> <code>sigmaSqAlpha</code></a></li>
-  <li><a href="#comp_prob" id="toc-comp_prob" class="nav-link" data-scroll-target="#comp_prob"><span class="header-section-number">9.3</span> <code>comp_prob</code></a></li>
-  <li><a href="#ncomp" id="toc-ncomp" class="nav-link" data-scroll-target="#ncomp"><span class="header-section-number">9.4</span> <code>ncomp</code></a></li>
+  <li><a href="#alpha" id="toc-alpha" class="nav-link" data-scroll-target="#alpha"><code>alpha</code></a></li>
+  <li><a href="#sigmasqalpha" id="toc-sigmasqalpha" class="nav-link" data-scroll-target="#sigmasqalpha"><code>sigmaSqAlpha</code></a></li>
+  <li><a href="#comp_prob" id="toc-comp_prob" class="nav-link" data-scroll-target="#comp_prob"><code>comp_prob</code></a></li>
+  <li><a href="#ncomp" id="toc-ncomp" class="nav-link" data-scroll-target="#ncomp"><code>ncomp</code></a></li>
   </ul></li>
-  <li><a href="#diagnostic-helpers" id="toc-diagnostic-helpers" class="nav-link" data-scroll-target="#diagnostic-helpers"><span class="header-section-number">10</span> Diagnostic Helpers</a>
+  <li><a href="#diagnostic-helpers" id="toc-diagnostic-helpers" class="nav-link" data-scroll-target="#diagnostic-helpers">Diagnostic Helpers</a>
   <ul class="collapse">
-  <li><a href="#annotation-row-diagnostics" id="toc-annotation-row-diagnostics" class="nav-link" data-scroll-target="#annotation-row-diagnostics"><span class="header-section-number">10.1</span> Annotation-row diagnostics</a></li>
-  <li><a href="#marker-profile-diagnostics" id="toc-marker-profile-diagnostics" class="nav-link" data-scroll-target="#marker-profile-diagnostics"><span class="header-section-number">10.2</span> Marker-profile diagnostics</a></li>
+  <li><a href="#annotation-row-diagnostics" id="toc-annotation-row-diagnostics" class="nav-link" data-scroll-target="#annotation-row-diagnostics">Annotation-row diagnostics</a></li>
+  <li><a href="#marker-profile-diagnostics" id="toc-marker-profile-diagnostics" class="nav-link" data-scroll-target="#marker-profile-diagnostics">Marker-profile diagnostics</a></li>
   </ul></li>
-  <li><a href="#interpretation-of-annotation-effects" id="toc-interpretation-of-annotation-effects" class="nav-link" data-scroll-target="#interpretation-of-annotation-effects"><span class="header-section-number">11</span> Interpretation of Annotation Effects</a></li>
-  <li><a href="#comparison-with-published-sbayesrc" id="toc-comparison-with-published-sbayesrc" class="nav-link" data-scroll-target="#comparison-with-published-sbayesrc"><span class="header-section-number">12</span> Comparison With Published SBayesRC</a></li>
-  <li><a href="#practical-validation-checklist" id="toc-practical-validation-checklist" class="nav-link" data-scroll-target="#practical-validation-checklist"><span class="header-section-number">13</span> Practical Validation Checklist</a></li>
-  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources"><span class="header-section-number">14</span> Related Notes and Sources</a></li>
+  <li><a href="#interpretation-of-annotation-effects" id="toc-interpretation-of-annotation-effects" class="nav-link" data-scroll-target="#interpretation-of-annotation-effects">Interpretation of Annotation Effects</a></li>
+  <li><a href="#comparison-with-published-sbayesrc" id="toc-comparison-with-published-sbayesrc" class="nav-link" data-scroll-target="#comparison-with-published-sbayesrc">Comparison With Published SBayesRC</a></li>
+  <li><a href="#practical-validation-checklist" id="toc-practical-validation-checklist" class="nav-link" data-scroll-target="#practical-validation-checklist">Practical Validation Checklist</a></li>
+  <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_sbayesrc_annotations.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
@@ -254,8 +254,8 @@ window.Quarto = {
 
 <p>This appendix describes the SBayesRC-style annotation-dependent BayesR prior implemented by <code>stblr_csr_sbayesrc_generic()</code>. The core prior family is closely aligned with published SBayesRC: marker effects follow a multi-normal mixture, and marker-specific mixture probabilities are determined by conditional probit stick-breaking regressions on annotations. The exposed <code>sblr</code> model is not an exact reproduction of the published GCTB SBayesRC implementation. Its default gamma grid differs, and it uses a CSR sparse-LD likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.</p>
 <p>This note focuses on the annotation-dependent prior and its diagnostics. It does not claim computational equivalence between the two likelihood implementations.</p>
-<section id="model-definition" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="model-definition"><span class="header-section-number">1</span> Model Definition</h2>
+<section id="model-definition" class="level2">
+<h2 class="anchored" data-anchor-id="model-definition">Model Definition</h2>
 <p>For marker (i), let (z_i {1,,C}) identify one of (C) mixture components. Conditional on (z_i=k), the marker effect is</p>
 <p>[ _i z_i=k, v_b, N(0,_k v_b). ]</p>
 <p>The vector</p>
@@ -267,8 +267,8 @@ window.Quarto = {
 <p>The remaining components represent increasingly diffuse active-effect distributions when their gamma multipliers increase.</p>
 <p>For multiple traits supplied to the wrapper, this mixture construction and its annotation coefficients are fitted separately by trait. The formatted fit therefore stores one <code>alpha</code> matrix and one set of marker component summaries per trait.</p>
 </section>
-<section id="gamma-grids" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="gamma-grids"><span class="header-section-number">2</span> Gamma Grids</h2>
+<section id="gamma-grids" class="level2">
+<h2 class="anchored" data-anchor-id="gamma-grids">Gamma Grids</h2>
 <p>The public <code>sblr</code> default is:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Published SBayesRC uses the five-component grid:</p>
@@ -282,8 +282,8 @@ window.Quarto = {
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Matching the gamma grid aligns this part of the prior specification. It does not make the complete <code>sblr</code> model identical to GCTB SBayesRC because the likelihood, sparse-LD representation, exposed defaults, and implementation details remain distinct.</p>
 </section>
-<section id="annotation-dependent-component-probabilities" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="annotation-dependent-component-probabilities"><span class="header-section-number">3</span> Annotation-Dependent Component Probabilities</h2>
+<section id="annotation-dependent-component-probabilities" class="level2">
+<h2 class="anchored" data-anchor-id="annotation-dependent-component-probabilities">Annotation-Dependent Component Probabilities</h2>
 <p>Let (A) be an (m K) marker-by-annotation matrix. For (C) mixture components, let () be a (K (C-1)) coefficient matrix. Column (_j) controls conditional stick-breaking step (j).</p>
 <p>For marker (i) and step (j), the linear predictor and conditional continuation probability are</p>
 <p>[ <em>{ij}=A_i<em>j, p</em>{ij}=(</em>{ij}), ]</p>
@@ -298,21 +298,21 @@ window.Quarto = {
 \end{aligned}\]</span>
 <p>]</p>
 <p>Equivalently, component (k&lt;C) receives the probability of continuing through all earlier steps and stopping at step (k); the final component receives the probability of continuing through every step.</p>
-<section id="why-the-probabilities-sum-to-one" class="level3" data-number="3.1">
-<h3 data-number="3.1" class="anchored" data-anchor-id="why-the-probabilities-sum-to-one"><span class="header-section-number">3.1</span> Why the probabilities sum to one</h3>
+<section id="why-the-probabilities-sum-to-one" class="level3">
+<h3 class="anchored" data-anchor-id="why-the-probabilities-sum-to-one">Why the probabilities sum to one</h3>
 <p>For a marker with step probabilities (p_1,,p_{C-1}),</p>
 <p>[ <em>{k=1}<sup>{C}<em>k = (1-p_1) +p_1(1-p_2) ++ (</em>{j=1}</sup>{C-2}p_j)(1-p</em>{C-1}) +_{j=1}^{C-1}p_j =1. ]</p>
 <p>The expression telescopes: probability either stops at one of the first (C-1) steps or reaches the final component.</p>
 </section>
-<section id="numerical-flooring-and-renormalization" class="level3" data-number="3.2">
-<h3 data-number="3.2" class="anchored" data-anchor-id="numerical-flooring-and-renormalization"><span class="header-section-number">3.2</span> Numerical flooring and renormalization</h3>
+<section id="numerical-flooring-and-renormalization" class="level3">
+<h3 class="anchored" data-anchor-id="numerical-flooring-and-renormalization">Numerical flooring and renormalization</h3>
 <p>The native sampler computes these probabilities from (A), floors each component probability at <code>pi_floor</code>, and renormalizes each marker row to sum to one. The public default is <code>pi_floor = 1e-12</code>.</p>
 <p>Flooring prevents exact numerical zero probabilities when probit predictors are extreme. Because flooring slightly changes the unnormalized stick-breaking probabilities, the subsequent row renormalization is required. This is a numerical-stability adjustment, not a different conceptual link function.</p>
 <p>The deterministic R diagnostic helpers apply the mathematical stick-breaking transform without the native sampler’s floor-and-renormalize step. For ordinary finite coefficients, their rows sum to one up to numerical tolerance.</p>
 </section>
 </section>
-<section id="annotation-matrix-and-preprocessing" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="annotation-matrix-and-preprocessing"><span class="header-section-number">4</span> Annotation Matrix and Preprocessing</h2>
+<section id="annotation-matrix-and-preprocessing" class="level2">
+<h2 class="anchored" data-anchor-id="annotation-matrix-and-preprocessing">Annotation Matrix and Preprocessing</h2>
 <p>Rows of (A) must be aligned with the markers in the sufficient statistics, CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or quantitative annotations, and overlap is allowed.</p>
 <p>Before fitting, <code>stblr_csr_sbayesrc_generic()</code> calls the shared annotation preparation helper using these controls:</p>
 <ul>
@@ -322,14 +322,14 @@ window.Quarto = {
 <li>row names can be used to reorder (A) to known marker names when all names are available.</li>
 </ul>
 <p>The preprocessing choices determine the meaning and scale of <code>alpha</code>. Quantitative coefficients are effects per standardized annotation unit under the defaults. An unchanged binary coefficient is a contrast associated with membership in that annotation, conditional on the remaining columns.</p>
-<section id="intercept-prior" class="level3" data-number="4.1">
-<h3 data-number="4.1" class="anchored" data-anchor-id="intercept-prior"><span class="header-section-number">4.1</span> Intercept prior</h3>
+<section id="intercept-prior" class="level3">
+<h3 class="anchored" data-anchor-id="intercept-prior">Intercept prior</h3>
 <p>With <code>intercept_flat = TRUE</code>, the first annotation coefficient at every stick-breaking step receives a flat prior in the native alpha update. This assumes the first column is the intercept, which is the arrangement produced when the wrapper adds it. All other annotation coefficients receive the normal prior described below.</p>
 <p>If a custom matrix already contains an intercept, place it first when relying on <code>intercept_flat = TRUE</code>. An all-ones column elsewhere in the matrix is not treated as the flat-prior intercept by the native update.</p>
 </section>
 </section>
-<section id="alpha-and-sigmasqalpha-priors" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="alpha-and-sigmasqalpha-priors"><span class="header-section-number">5</span> Alpha and SigmaSqAlpha Priors</h2>
+<section id="alpha-and-sigmasqalpha-priors" class="level2">
+<h2 class="anchored" data-anchor-id="alpha-and-sigmasqalpha-priors">Alpha and SigmaSqAlpha Priors</h2>
 <p>For non-intercept annotation coefficient (k) at stick-breaking step (j), the implemented prior is</p>
 <p>[ <em>{kj}</em>{,j}^2 N(0,_{,j}^2). ]</p>
 <p>Each step has its own annotation-effect variance (_{,j}^2), represented by <code>sigmaSqAlpha[j]</code>. Under <code>intercept_flat = TRUE</code>, the first coefficient is excluded from this normal shrinkage prior and from the variance update.</p>
@@ -338,8 +338,8 @@ window.Quarto = {
 <p>where () contains coefficients subject to shrinkage, <code>sigmaSqAlpha_a</code> supplies (a_), and <code>sigmaSqAlpha_b</code> supplies (b_). Both public defaults are 2.</p>
 <p>This construction is aligned with the published SBayesRC use of normal annotation-coefficient priors and a scaled-inverse-chi-square-family variance prior. The exact published hyperparameter specification should not be inferred from the <code>sblr</code> defaults. Users should report the values supplied to <code>sigmaSqAlpha_a</code>, <code>sigmaSqAlpha_b</code>, <code>sigmaSqAlpha_init</code>, and <code>intercept_flat</code>.</p>
 </section>
-<section id="gibbs-style-alpha-updating" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="gibbs-style-alpha-updating"><span class="header-section-number">6</span> Gibbs-Style Alpha Updating</h2>
+<section id="gibbs-style-alpha-updating" class="level2">
+<h2 class="anchored" data-anchor-id="gibbs-style-alpha-updating">Gibbs-Style Alpha Updating</h2>
 <p>When <code>updateAlpha = TRUE</code>, the native sampler updates alpha every <code>alpha_update_every</code> iterations. The public default interval is 10.</p>
 <p>The update uses conditional probit data augmentation. At stick-breaking step (j), only markers that reached that step are included. A latent normal variable is sampled for each eligible marker:</p>
 <p>[ _{ij}_j N(A_i_j,1), ]</p>
@@ -347,8 +347,8 @@ window.Quarto = {
 <p>Conditional on the latent variables and the other coefficients, each annotation coefficient has a normal full conditional. For a non-intercept coefficient, the prior precision (1/_{,j}^2) is added to the data precision. With <code>intercept_flat = TRUE</code>, the first coefficient omits that prior precision. After the coefficients for a step are updated, <code>sigmaSqAlpha[j]</code> is drawn from the scaled-inverse-chi-square-family update.</p>
 <p>This is a Gibbs-style conditional update using truncated-normal augmentation and normal draws. It is not a random-walk Metropolis-Hastings alpha update. After an alpha update, the native sampler recomputes all marker-specific prior component probabilities from (A).</p>
 </section>
-<section id="initialization" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="initialization"><span class="header-section-number">7</span> Initialization</h2>
+<section id="initialization" class="level2">
+<h2 class="anchored" data-anchor-id="initialization">Initialization</h2>
 <p><code>make_sbayesrc_alpha_init()</code> creates deterministic initial values for the annotation-dependent mixture architecture.</p>
 <p>Given an initial overall active probability <code>pi_init</code>, it distributes active mass across the (C-1) non-null components using normalized <code>active_comp_weights</code>. This produces initial marginal component probabilities</p>
 <p>[ ^{(0)} = ( 1-<em>{}, </em>{}w_2, , _{}w_C ). ]</p>
@@ -357,47 +357,47 @@ window.Quarto = {
 <p>and all other coefficients begin at zero. If no all-ones column exists, all default coefficients are zero. Supplied <code>alpha_init</code> and <code>sigmaSqAlpha_init</code> values are accepted after dimension and finite-value validation.</p>
 <p>The helper also returns named initial component probabilities, normalized active-component weights, conditional step probabilities, gamma values, and component names. These make initialization auditable without running the sampler.</p>
 </section>
-<section id="marker-effect-and-component-updates" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="marker-effect-and-component-updates"><span class="header-section-number">8</span> Marker-Effect and Component Updates</h2>
+<section id="marker-effect-and-component-updates" class="level2">
+<h2 class="anchored" data-anchor-id="marker-effect-and-component-updates">Marker-Effect and Component Updates</h2>
 <p>For each marker, the sampler combines the annotation-derived prior component probabilities with the summary-statistics likelihood. The exact null component has (_1=0) and leaves the marker effect at zero. For active component (k), the effect prior variance is</p>
 <p>[ v_{b,k}=_k v_b. ]</p>
 <p>The sampler forms a component-specific Bayes factor using the current marker score, residual variance, marker diagonal cross-product, and (v_{b,k}). It samples a new component from the resulting posterior component probabilities, then samples the marker effect from its conditional normal distribution when the selected gamma is positive.</p>
 <p>The global scale (v_b) may also be updated from currently active marker effects and their selected gamma values when <code>updateB = TRUE</code>. Thus gamma defines relative component scales, while (v_b) supplies the shared sampled scale.</p>
 </section>
-<section id="fit-outputs" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="fit-outputs"><span class="header-section-number">9</span> Fit Outputs</h2>
+<section id="fit-outputs" class="level2">
+<h2 class="anchored" data-anchor-id="fit-outputs">Fit Outputs</h2>
 <p>The formatted fit exposes the standard marker and variance summaries together with SBayesRC-style architecture summaries.</p>
-<section id="alpha" class="level3" data-number="9.1">
-<h3 data-number="9.1" class="anchored" data-anchor-id="alpha"><span class="header-section-number">9.1</span> <code>alpha</code></h3>
+<section id="alpha" class="level3">
+<h3 class="anchored" data-anchor-id="alpha"><code>alpha</code></h3>
 <p><code>fit$alpha</code> is a list with one posterior-mean coefficient matrix per trait. Each matrix has annotations in rows and stick-breaking steps in columns. Because it is a posterior mean, applying a nonlinear probability transform to it gives a plug-in diagnostic, not the posterior mean of that transformed quantity.</p>
 </section>
-<section id="sigmasqalpha" class="level3" data-number="9.2">
-<h3 data-number="9.2" class="anchored" data-anchor-id="sigmasqalpha"><span class="header-section-number">9.2</span> <code>sigmaSqAlpha</code></h3>
+<section id="sigmasqalpha" class="level3">
+<h3 class="anchored" data-anchor-id="sigmasqalpha"><code>sigmaSqAlpha</code></h3>
 <p><code>fit$sigmaSqAlpha</code> is a trait-by-step matrix of posterior mean annotation-effect variance parameters. Large values permit more dispersion among non-intercept annotation coefficients at that stick-breaking step. They should be interpreted together with alpha coefficients, annotation scaling, and chain diagnostics.</p>
 </section>
-<section id="comp_prob" class="level3" data-number="9.3">
-<h3 data-number="9.3" class="anchored" data-anchor-id="comp_prob"><span class="header-section-number">9.3</span> <code>comp_prob</code></h3>
+<section id="comp_prob" class="level3">
+<h3 class="anchored" data-anchor-id="comp_prob"><code>comp_prob</code></h3>
 <p><code>fit$comp_prob</code> is a list with one marker-by-component matrix per trait. It contains posterior frequencies of sampled component assignments after burn-in and thinning. It is not the same object as the annotation-derived prior probability matrix computed from (A).</p>
 </section>
-<section id="ncomp" class="level3" data-number="9.4">
-<h3 data-number="9.4" class="anchored" data-anchor-id="ncomp"><span class="header-section-number">9.4</span> <code>ncomp</code></h3>
+<section id="ncomp" class="level3">
+<h3 class="anchored" data-anchor-id="ncomp"><code>ncomp</code></h3>
 <p><code>fit$ncomp</code> is a trait-by-component matrix containing posterior mean counts of markers assigned to each component. Its row sum should equal the number of markers, subject only to numerical representation.</p>
 <p>The usual outputs remain available when returned, including <code>bm</code>, <code>dm</code>, variance traces, covariance summaries, current effects, and residual state. Full marker-scale matrices should be retained for analysis rather than printed in full.</p>
 </section>
 </section>
-<section id="diagnostic-helpers" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="diagnostic-helpers"><span class="header-section-number">10</span> Diagnostic Helpers</h2>
+<section id="diagnostic-helpers" class="level2">
+<h2 class="anchored" data-anchor-id="diagnostic-helpers">Diagnostic Helpers</h2>
 <p>Four deterministic exported helpers translate alpha coefficients into compact prior-architecture diagnostics.</p>
-<section id="annotation-row-diagnostics" class="level3" data-number="10.1">
-<h3 data-number="10.1" class="anchored" data-anchor-id="annotation-row-diagnostics"><span class="header-section-number">10.1</span> Annotation-row diagnostics</h3>
+<section id="annotation-row-diagnostics" class="level3">
+<h3 class="anchored" data-anchor-id="annotation-row-diagnostics">Annotation-row diagnostics</h3>
 <p><code>sbayesrc_annotation_pi(alpha, gamma)</code> applies the probit stick-breaking transform separately to each row of <code>alpha</code>. It returns an annotation-by-component probability matrix.</p>
 <p><code>sbayesrc_annotation_gamma_mean(alpha, gamma)</code> computes</p>
 <p>[ <em>k^{} = </em>{c=1}^{C}_{kc}_c ]</p>
 <p>for each alpha row.</p>
 <p>These are coefficient-row diagnostics. A binary annotation row, for example, is evaluated as a standalone predictor row. It does not automatically include the fitted intercept or the effects of correlated annotations. It should not be described as the literal component probability for every marker carrying that annotation.</p>
 </section>
-<section id="marker-profile-diagnostics" class="level3" data-number="10.2">
-<h3 data-number="10.2" class="anchored" data-anchor-id="marker-profile-diagnostics"><span class="header-section-number">10.2</span> Marker-profile diagnostics</h3>
+<section id="marker-profile-diagnostics" class="level3">
+<h3 class="anchored" data-anchor-id="marker-profile-diagnostics">Marker-profile diagnostics</h3>
 <p><code>sbayesrc_marker_pi(A, alpha, gamma)</code> first computes (A), then applies the stick-breaking transform. It returns an (m C) marker-level prior component probability matrix.</p>
 <p><code>sbayesrc_marker_gamma_mean(A, alpha, gamma)</code> computes the plug-in expected gamma for each marker:</p>
 <p>[ <em>i^{} = </em>{c=1}^{C}_{ic}_c. ]</p>
@@ -410,8 +410,8 @@ window.Quarto = {
 <p>Because these diagnostics transform posterior mean alpha coefficients, they do not propagate the full posterior uncertainty in alpha. Compact reports can show annotation-row expected gamma, <code>summary(expected_gamma)</code>, and the correlation between marker expected gamma and PIP. That correlation describes the fitted prior-posterior relationship; it is not a calibration statistic or causal estimate.</p>
 </section>
 </section>
-<section id="interpretation-of-annotation-effects" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="interpretation-of-annotation-effects"><span class="header-section-number">11</span> Interpretation of Annotation Effects</h2>
+<section id="interpretation-of-annotation-effects" class="level2">
+<h2 class="anchored" data-anchor-id="interpretation-of-annotation-effects">Interpretation of Annotation Effects</h2>
 <p>An alpha coefficient changes a conditional continuation probability at one stick-breaking step. Its sign cannot be interpreted independently of component ordering:</p>
 <ul>
 <li>a positive coefficient increases the probability of continuing past that step;</li>
@@ -421,8 +421,8 @@ window.Quarto = {
 <p>Expected gamma is a useful scalar summary of prior mixture allocation, but it compresses a complete component-probability vector. Two markers can have the same expected gamma while assigning probability to different components. Report component probabilities when those distinctions matter.</p>
 <p>Annotation effects and expected-gamma differences are prior-architecture summaries, not proof of biological causality. They can reflect LD, marker density, annotation overlap, quantitative-annotation scaling, model misspecification, and finite-chain behavior. Interpretation should compare annotation-derived prior probabilities with posterior component frequencies and assess sensitivity to preprocessing, gamma grids, sparse-LD settings, and hyperparameters.</p>
 </section>
-<section id="comparison-with-published-sbayesrc" class="level2" data-number="12">
-<h2 data-number="12" class="anchored" data-anchor-id="comparison-with-published-sbayesrc"><span class="header-section-number">12</span> Comparison With Published SBayesRC</h2>
+<section id="comparison-with-published-sbayesrc" class="level2">
+<h2 class="anchored" data-anchor-id="comparison-with-published-sbayesrc">Comparison With Published SBayesRC</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -510,8 +510,8 @@ window.Quarto = {
 </blockquote>
 <p>It should not be described as an exact reproduction of published GCTB SBayesRC as exposed by default.</p>
 </section>
-<section id="practical-validation-checklist" class="level2" data-number="13">
-<h2 data-number="13" class="anchored" data-anchor-id="practical-validation-checklist"><span class="header-section-number">13</span> Practical Validation Checklist</h2>
+<section id="practical-validation-checklist" class="level2">
+<h2 class="anchored" data-anchor-id="practical-validation-checklist">Practical Validation Checklist</h2>
 <p>Before interpreting an SBayesRC-style fit:</p>
 <ul>
 <li>verify marker alignment among (A), sufficient statistics, CSR LD, and posterior summaries;</li>
@@ -526,8 +526,8 @@ window.Quarto = {
 <li>avoid causal claims from alpha coefficients or expected-gamma summaries.</li>
 </ul>
 </section>
-<section id="related-notes-and-sources" class="level2" data-number="14">
-<h2 data-number="14" class="anchored" data-anchor-id="related-notes-and-sources"><span class="header-section-number">14</span> Related Notes and Sources</h2>
+<section id="related-notes-and-sources" class="level2">
+<h2 class="anchored" data-anchor-id="related-notes-and-sources">Related Notes and Sources</h2>
 <ul>
 <li><a href="annotation_informed_models.html">Annotation-informed models</a> compares this model with fixed, learned, and group annotation priors.</li>
 <li><a href="technical_annotation_priors.html">Technical annotation priors</a> develops marker-specific inclusion and variance priors outside the BayesR mixture construction.</li>
