@@ -13,25 +13,15 @@ library(sblr)
 
 # Data directory setup -----------------------------------------------------
 
-data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR", unset = "path/to/example/data")
-glist_file <- file.path(data_dir, "Glist_sparseLD_1k.RDS")
-ld_prefix <- file.path(data_dir, "annotation_ld")
+data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
+# Prepare Glist and sparse LD ----------------------------------------------
 
-# Load or prepare Glist ----------------------------------------------------
-
-# Load a qgg Glist whose BED, BIM, and FAM paths are valid on the current
-# machine. Prepare and save this object with qgg::gprep() if needed.
-if (!file.exists(glist_file)) {
- stop(
-  "Example Glist not found. Set SBLR_EXAMPLE_DATA_DIR to a directory ",
-  "containing Glist_sparseLD_1k.RDS."
- )
-}
-
-Glist <- readRDS(glist_file)
+Glist <- readRDS(file = file.path(data_dir, "Glist_sparseLD_1k.RDS"))
 chr <- 1
 cls <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
 stopifnot(!anyNA(cls))
+
+ld_prefix <- file.path(data_dir, "ld_test")
 
 # Simulate or load multi-trait phenotype data ------------------------------
 
@@ -198,29 +188,161 @@ fit_sbayesrc <- stblr_csr_sbayesrc_generic(
 
 # Inspect posterior summaries ---------------------------------------------
 
-# Fixed-prior posterior summaries:
-fit_prior_annot$bm
-fit_prior_annot$dm
-fit_prior_annot$input$pi_marker
-fit_prior_annot$input$vb_multiplier
+# Printed summaries are deliberately compact because marker-level posterior
+# matrices can contain tens of thousands of rows. Full matrices remain
+# available in fit$bm, fit$dm, fit$b, and other fit components.
+compact_fit_summary <- function(fit, model_name) {
+ bm <- as.matrix(fit$bm)
+ dm <- as.matrix(fit$dm)
+ trait_names <- colnames(dm)
+ if (is.null(trait_names)) trait_names <- paste0("T", seq_len(ncol(dm)))
 
-# Learned-annotation posterior summaries:
-fit_learn_annot$bm
-fit_learn_annot$dm
-fit_learn_annot$eta_pi
-fit_learn_annot$eta_vb
+ mean_trace <- function(name) {
+  x <- fit[[name]]
+  if (is.null(x)) return(rep(NA_real_, ncol(dm)))
+  x <- as.matrix(x)
+  if (ncol(x) != ncol(dm)) return(rep(NA_real_, ncol(dm)))
+  colMeans(x, na.rm = TRUE)
+ }
 
-# Group-annotation posterior summaries:
-fit_group_annot$bm
-fit_group_annot$dm
-fit_group_annot$group_pi
-fit_group_annot$group_vb_multiplier
+ covariance_summary <- do.call(
+  rbind,
+  lapply(c("covb", "covg", "cove", "rb", "rg", "re"), function(name) {
+   x <- fit[[name]]
+   if (is.null(x)) return(NULL)
+   x <- as.matrix(x)
+   if (nrow(x) != ncol(x) || any(!is.finite(x))) return(NULL)
+   off_diagonal <- x[row(x) != col(x)]
+   data.frame(
+    matrix = name,
+    mean_diagonal = mean(diag(x)),
+    mean_abs_off_diagonal = if (length(off_diagonal)) {
+     mean(abs(off_diagonal))
+    } else {
+     NA_real_
+    },
+    stringsAsFactors = FALSE
+   )
+  })
+ )
 
-# SBayesRC posterior summaries:
-fit_sbayesrc$bm
-fit_sbayesrc$dm
-fit_sbayesrc$ncomp
-fit_sbayesrc$alpha
+ list(
+  trait_summary = data.frame(
+   model = model_name,
+   trait = trait_names,
+   n_markers = nrow(dm),
+   n_traits = ncol(dm),
+   pip_sum = colSums(dm, na.rm = TRUE),
+   mean_abs_bm = colMeans(abs(bm), na.rm = TRUE),
+   mean_vbs = mean_trace("vbs"),
+   mean_vgs = mean_trace("vgs"),
+   mean_ves = mean_trace("ves"),
+   row.names = NULL,
+   stringsAsFactors = FALSE
+  ),
+  covariance_summary = covariance_summary
+ )
+}
 
-# Compare simulated annotation enrichment with fixed-prior posterior signal.
-summarize_annotation_signal(sim, fit_prior_annot)
+top_marker_summary <- function(fit, trait = 1, top_n = 10) {
+ bm <- as.matrix(fit$bm)
+ dm <- as.matrix(fit$dm)
+ trait_index <- if (is.character(trait)) match(trait, colnames(dm)) else trait
+ if (length(trait_index) != 1 || is.na(trait_index) ||
+     trait_index < 1 || trait_index > ncol(dm)) {
+  stop("trait must identify one column of fit$dm.")
+ }
+ marker <- rownames(dm)
+ if (is.null(marker)) marker <- paste0("V", seq_len(nrow(dm)))
+ trait_name <- colnames(dm)[trait_index]
+ if (is.null(trait_name)) trait_name <- paste0("T", trait_index)
+
+ out <- data.frame(
+  marker = marker,
+  trait = trait_name,
+  pip = dm[, trait_index],
+  abs_bm = abs(bm[, trait_index]),
+  bm = bm[, trait_index],
+  stringsAsFactors = FALSE
+ )
+ out <- out[order(-out$pip, -out$abs_bm), , drop = FALSE]
+ utils::head(out, top_n)
+}
+
+annotation_model_summary <- function(sim, fit, model_name) {
+ if (!exists("summarize_annotation_signal", mode = "function")) {
+  stop("summarize_annotation_signal() is required for annotation summaries.")
+ }
+ out <- summarize_annotation_signal(sim, fit)
+ keep <- c(
+  "annotation", "size", "n_causal", "causal_rate_in_set",
+  grep("^(mean_dm_|mean_abs_bm_)", names(out), value = TRUE)
+ )
+ out <- out[, intersect(keep, names(out)), drop = FALSE]
+ out$model <- model_name
+ out[, c("model", setdiff(names(out), "model")), drop = FALSE]
+}
+
+fits <- list(
+ fixed_prior = fit_prior_annot,
+ learned_annotation = fit_learn_annot,
+ group_annotation = fit_group_annot,
+ sbayesrc = fit_sbayesrc
+)
+
+for (model_name in names(fits)) {
+ cat("\nCompact fit summary:", model_name, "\n")
+ print(compact_fit_summary(fits[[model_name]], model_name))
+ cat("\nTop 10 markers for trait 1:", model_name, "\n")
+ print(top_marker_summary(fits[[model_name]], trait = 1, top_n = 10))
+}
+
+for (model_name in c("fixed_prior", "learned_annotation", "group_annotation")) {
+ cat("\nAnnotation signal summary:", model_name, "\n")
+ print(annotation_model_summary(sim, fits[[model_name]], model_name))
+}
+
+# These optional diagnostics use helper functions from exploratory SBayesRC
+# workflows when they are available in the current R session.
+sbayesrc_helpers <- c(
+ "sbayesrc_annotation_pi",
+ "sbayesrc_annotation_gamma_mean",
+ "sbayesrc_marker_gamma_mean"
+)
+if (all(vapply(sbayesrc_helpers, exists, logical(1), mode = "function")) &&
+    !is.null(fit_sbayesrc$alpha)) {
+ gamma <- c(0, 0.01, 0.1, 1)
+ trait_names <- names(fit_sbayesrc$alpha)
+ if (is.null(trait_names)) {
+  trait_names <- paste0("T", seq_along(fit_sbayesrc$alpha))
+ }
+
+ annotation_gamma <- data.frame(
+  annotation = rownames(fit_sbayesrc$alpha[[1]]),
+  stringsAsFactors = FALSE
+ )
+ marker_gamma_summary <- list()
+ marker_gamma_pip_correlation <- numeric(length(fit_sbayesrc$alpha))
+
+ for (t in seq_along(fit_sbayesrc$alpha)) {
+  marker_gamma <- sbayesrc_marker_gamma_mean(A, fit_sbayesrc$alpha[[t]], gamma)
+  annotation_gamma[[trait_names[t]]] <- sbayesrc_annotation_gamma_mean(
+   fit_sbayesrc$alpha[[t]], gamma
+  )
+  marker_gamma_summary[[trait_names[t]]] <- summary(marker_gamma)
+  marker_gamma_pip_correlation[t] <- stats::cor(
+   marker_gamma, fit_sbayesrc$dm[, t], use = "complete.obs"
+  )
+ }
+ names(marker_gamma_pip_correlation) <- trait_names
+
+ cat("\nSBayesRC annotation-level expected gamma:\n")
+ print(annotation_gamma)
+ cat("\nSBayesRC marker expected gamma summaries:\n")
+ print(marker_gamma_summary)
+ cat("\nSBayesRC marker expected gamma/PIP correlations:\n")
+ print(marker_gamma_pip_correlation)
+}
+
+# Real analyses require longer chains, convergence checks, and posterior
+# predictive diagnostics before interpreting these compact summaries.
