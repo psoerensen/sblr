@@ -1,55 +1,382 @@
 ---
 title: "Multi-Trait Models"
-status: "Draft"
 ---
 
-::: {.callout-note}
-This note is under active development. Some sections are structured outlines that will be expanded over time.
-:::
-
-This note will explain joint multi-trait modeling, covariance structures,
-trait-sharing models, and sample-overlap requirements.
-
-<!-- Later: reuse all high-level material from drafts/sblr_theory.qmd and the
-annotation draft's MTBLR sections. Keep full overlap and annotation-prior
-derivations in the linked appendices. -->
+Multi-trait Bayesian linear regression (MT-BLR) models several traits jointly
+so that evidence can be shared through marker-effect patterns and covariance
+structures. This note introduces the main model ideas and explains how they
+relate to the current `sblr` implementation. The deeper requirements for
+cross-trait summary statistics and sample overlap are covered in
+[Technical Appendix: Multi-Trait Overlap](technical_multitrait_overlap.html).
 
 ## Why Model Traits Jointly
 
-<!-- Later: explain joint information sharing and its limits. -->
+Biologically related traits often share part of their genetic architecture.
+A marker with a weak effect on one trait may be supported by stronger evidence
+from another trait, and a joint model can estimate genetic and residual
+covariances rather than treating every trait as independent.
 
-## Effect Vectors and Covariance Matrices
+The main reasons to use an MT-BLR model are:
 
-<!-- Later: define b_i, B, E, and posterior covariance outputs. -->
+- to borrow information across correlated traits;
+- to represent markers that affect one, several, or no traits;
+- to estimate cross-trait marker-effect, genetic, and residual covariance;
+- to improve inference for weak signals when the assumed sharing structure is
+  appropriate.
 
-## Trait-Sharing Model Space
+This is different from fitting a single-trait model independently to every
+column of a phenotype or summary-statistics matrix. Parallel single-trait fits
+can be useful and computationally convenient, but they do not jointly update
+marker effects or estimate cross-trait covariance during sampling.
 
-<!-- Later: explain sharing patterns such as 000 through 111. -->
+## Multi-Trait Regression Model
 
-## Residual Covariance and Cross-Trait Sufficient Statistics
+For \(t\) traits measured on a common set of \(n\) individuals, the
+individual-level model is
 
-<!-- Later: introduce SSY and Nmat without shortening the appendix derivation. -->
+\[
+\mathbf{Y} = \mathbf{X}\mathbf{B} + \mathbf{E},
+\]
 
-## Full Versus Partial Sample Overlap
+where:
 
-<!-- Later: summarize both assumptions from drafts/sblr_theory.qmd. -->
+- \(\mathbf{Y}\) is the \(n \times t\) phenotype matrix;
+- \(\mathbf{X}\) is the \(n \times m\) genotype matrix;
+- \(\mathbf{B}\) is the \(m \times t\) marker-effect matrix;
+- \(\mathbf{E}\) is the \(n \times t\) residual matrix.
 
-## Annotation-Informed MTBLR Concepts
+The \(i\)th row of \(\mathbf{B}\),
 
-<!-- Later: summarize annotation-specific covariance and sharing priors. -->
+\[
+\mathbf{b}_i =
+\begin{bmatrix}
+b_{i1} & \cdots & b_{it}
+\end{bmatrix}^{\mathsf T},
+\]
 
-## Current Implementation Status and Proposed Extensions
+is the effect vector for marker \(i\). A marker may have no effect, affect one
+trait, or affect several traits. Joint MT-BLR models use prior probabilities
+and covariance matrices to describe these possibilities.
 
-<!-- Later: distinguish public functionality from research proposals. -->
+## Marker Effects, Sharing, and Pleiotropy
 
-## Interpretation: Sharing Is Not Causal Direction
+A multi-trait marker model needs to distinguish between two related ideas:
 
-<!-- Later: preserve causal-interpretation cautions from the annotation draft. -->
+1. **Trait-sharing pattern:** which elements of \(\mathbf{b}_i\) are active.
+2. **Effect covariance:** how the non-zero effects vary together across
+   traits.
 
-## Related Notes
+For three traits, example sharing patterns are:
 
-- [Model overview](model_overview.qmd)
-- [Data representations](data_representations.qmd)
-- [Annotation-informed models](annotation_informed_models.qmd)
-- [Technical multi-trait overlap](technical_multitrait_overlap.qmd)
-- [Technical annotation priors](technical_annotation_priors.qmd)
+| Pattern | Interpretation |
+|---|---|
+| `000` | Marker is inactive for all traits |
+| `100` | Marker is active only for trait 1 |
+| `110` | Marker is active for traits 1 and 2 |
+| `111` | Marker is active for all three traits |
+
+The model can assign prior probabilities to these patterns and update their
+posterior support. A shared active pattern is compatible with pleiotropy, but
+it is not proof that one marker is the biological cause of multiple traits.
+LD, prior assumptions, trait scaling, and the available summary statistics
+also influence the inferred sharing pattern.
+
+## Multi-Trait Sparse Priors
+
+The single-trait sparse prior combines an exact null component with an active
+normal component. MT-BLR generalizes this idea by assigning each marker a
+trait-sharing model \(s_i\). Conditional on \(s_i\), inactive effects are fixed
+at zero and active effects are drawn from a multivariate distribution.
+
+A schematic prior is
+
+\[
+s_i \sim \operatorname{Categorical}(\boldsymbol{\pi}),
+\]
+
+\[
+\mathbf{b}_{i,s_i} \mid s_i
+\sim
+\mathcal{N}\left(
+  \mathbf{0},
+  \boldsymbol{\Sigma}_{b,s_i}
+\right),
+\]
+
+where \(\boldsymbol{\pi}\) contains prior probabilities for the allowed
+sharing patterns and \(\boldsymbol{\Sigma}_{b,s_i}\) is the active-effect
+covariance submatrix for pattern \(s_i\).
+
+The allowed model space is an important modeling decision:
+
+- A full model space permits all \(2^t\) inactive/active patterns.
+- A restrictive model space may permit only all-null and all-active patterns.
+- Custom prior probabilities can favor trait-specific or broadly shared
+  effects.
+
+As the number of traits increases, the full \(2^t\) model space grows quickly.
+Restricting or regularizing the sharing patterns can therefore be both a
+scientific choice and a computational necessity.
+
+The documented `sblr()` interface exposes sharing-model inputs such as
+`models` and `pimodels`. These describe the permitted patterns and their prior
+probabilities. Exact argument support and behavior should be checked for the
+selected experimental algorithm before a production analysis.
+
+## Genetic, Effect, and Residual Covariance
+
+Covariance matrices are central to multi-trait inference.
+
+### Active-effect covariance
+
+The active-effect covariance,
+\(\boldsymbol{\Sigma}_b\), describes how non-zero marker effects vary together
+across traits. A positive off-diagonal entry favors effects with the same
+direction; a negative entry favors opposite directions. This covariance is
+conditional on the marker being active for the corresponding traits.
+
+### Genetic covariance
+
+The aggregate genetic value is
+
+\[
+\mathbf{G}_{\mathrm{value}} = \mathbf{X}\mathbf{B}.
+\]
+
+Its covariance across traits depends on both the fitted marker effects and LD.
+Genetic covariance therefore summarizes the combined architecture rather than
+only the conditional covariance of active effects.
+
+### Residual covariance
+
+Residual vectors are commonly modeled as
+
+\[
+\mathbf{e}_r \sim
+\mathcal{N}\left(\mathbf{0}, \boldsymbol{\Sigma}_e\right),
+\]
+
+where \(\boldsymbol{\Sigma}_e\) captures cross-trait association not explained
+by the fitted marker effects. Environmental effects, unmodeled genetic effects,
+measurement processes, and shared individuals can all contribute.
+
+Effect, genetic, and residual covariance answer different questions and should
+not be interpreted interchangeably.
+
+## Individual-Level and Summary-Statistics MTBLR
+
+At the individual level, joint MT-BLR uses \(\mathbf{X}\) and
+\(\mathbf{Y}\) directly. With complete data, it can calculate all required
+within-trait and cross-trait products from the observed individuals.
+
+At the summary-statistics level, the same calculations must be represented by
+compatible cross-products:
+
+\[
+\mathbf{X}^{\mathsf T}\mathbf{Y},
+\qquad
+\mathbf{X}^{\mathsf T}\mathbf{X},
+\qquad
+\mathbf{Y}^{\mathsf T}\mathbf{Y}.
+\]
+
+These correspond to:
+
+- marker-by-trait cross-products, often denoted `Xy` or `wy`;
+- marker cross-products or LD;
+- the trait cross-product matrix `SSY`;
+- trait-specific sample sizes and, where needed, pairwise sample-overlap
+  information.
+
+For one trait, \(y^{\mathsf T}y\) is a scalar. For several traits,
+\(\mathbf{Y}^{\mathsf T}\mathbf{Y}\) contains both trait-specific sums of
+squares and cross-trait products. The off-diagonal terms are necessary for
+estimating and updating residual covariance.
+
+The summary statistics, LD, sample sizes, trait order, marker order, and
+scaling assumptions must all be compatible. See
+[Technical Appendix: Summary Statistics](technical_summary_statistics.html)
+for the cross-product representation and
+[Technical Appendix: Multi-Trait Overlap](technical_multitrait_overlap.html)
+for the role of `SSY` and sample overlap.
+
+## Sample Overlap in Practice
+
+Full sample overlap is the simplest setting: all traits are measured on the
+same individuals, and `SSY` can be computed directly from the phenotype
+matrix. Cross-trait residual covariance then has a direct interpretation on
+that shared sample.
+
+With partial overlap, each trait pair may share a different number of
+individuals. A pairwise overlap matrix, often denoted
+\(\mathbf{N}_{\mathrm{mat}}\), records those counts. Cross-trait phenotype
+products or covariances then require explicit assumptions about the shared
+samples and trait scaling.
+
+The current CSR multi-trait implementation is closest to a shared-LD,
+equal-sample-size setting. It consumes cross-trait phenotype information but
+does not expose a general `Nmat`-aware workflow for arbitrary partial overlap.
+Analyses with partial or uncertain overlap should therefore be treated as a
+technical extension, not as a routine current workflow.
+
+## Simulation and Model Development
+
+Simulation is useful for checking whether a proposed MT-BLR model can recover
+known sharing and covariance structures.
+
+`mtsim()` simulates multiple traits with shared and trait-specific causal
+markers, target heritabilities, and target genetic and residual correlations.
+A short schematic call is:
+
+```r
+sim <- mtsim(
+  W = W,
+  nt = 3,
+  n_shared = 30,
+  n_specific = 10,
+  h2 = c(0.4, 0.5, 0.3),
+  rg = target_rg,
+  re = target_re,
+  seed = 1
+)
+```
+
+Simulation output can be used to compare target and realized covariance,
+inspect true marker-effect patterns, and assess recovery under different
+priors or LD approximations.
+
+`mtsim_annotation()` extends this development setting with overlapping
+annotations and annotation-informed marker architectures.
+`summarize_annotation_signal()` can summarize the simulated signal. The
+current polished annotation workflows primarily fit single-trait or parallel
+single-trait CSR models; annotation-aware joint MT-BLR remains a research
+direction. See
+[Annotation-Informed Models](annotation_informed_models.html).
+
+## Outputs and Interpretation
+
+Multi-trait fits may return the following objects, depending on the selected
+sampler:
+
+- `bm`: posterior mean marker effects, with markers in rows and traits in
+  columns;
+- `dm`: posterior inclusion summaries or PIPs by marker and trait;
+- `d` or `o`: current inclusion or sharing-model states, when returned;
+- `vbs`, `vgs`, and `ves`: sampled effect, genetic, and residual variance
+  summaries;
+- `covb`, `covg`, and `cove`: posterior effect, genetic, and residual
+  covariance summaries;
+- `rb`, `rg`, and `re`: corresponding correlation summaries, when returned;
+- `pi` or `pim`: posterior inclusion or sharing-model probability summaries.
+
+Useful reporting separates trait-specific and cross-trait evidence:
+
+- summarize PIPs and posterior mean effects by trait;
+- list top markers separately for each trait;
+- identify markers with support across several traits;
+- report covariance and correlation estimates with uncertainty;
+- compare posterior sharing probabilities with their prior values.
+
+Large marker-by-trait matrices should usually be summarized rather than
+printed. Posterior support is conditional on the model, priors, LD,
+cross-trait information, and MCMC settings. A high multi-trait PIP or shared
+pattern identifies a candidate under those assumptions; it does not establish
+causal direction.
+
+## Annotation-Informed Multi-Trait Directions
+
+Annotations can, in principle, modify the prior probability of each
+trait-sharing pattern, the scale of active effects, or the covariance among
+traits. This creates several possible MT-BLR extensions:
+
+- marker-specific probabilities for trait-specific and shared patterns;
+- annotation-dependent active-effect variance or covariance;
+- group-specific sharing priors;
+- annotation-dependent mixture components.
+
+These extensions require careful regularization because overlapping
+annotations, many sharing patterns, and covariance estimation can create a
+large parameter space. In the current package, annotation simulations and
+annotation-informed single-trait CSR wrappers provide the main implemented
+foundation. They should not be described as a polished annotation-aware joint
+MTBLR workflow.
+
+## When to Use Multi-Trait Models
+
+Consider a multi-trait model when:
+
+- traits are biologically or statistically related;
+- shared genetic architecture is scientifically meaningful;
+- trait scaling and phenotype definitions are compatible;
+- sample overlap is known or defensibly modeled;
+- the LD reference and marker ordering are compatible across traits;
+- there is enough information to estimate cross-trait covariance.
+
+Prefer separate single-trait analyses, or use them as a diagnostic comparison,
+when trait definitions are incompatible, sample overlap is unknown, LD
+references differ materially, or cross-trait borrowing is not scientifically
+justified.
+
+## Practical Cautions and Diagnostics
+
+Multi-trait models introduce more assumptions than single-trait models.
+Important checks include:
+
+- verify trait order across `Xy`, `SSY`, sample sizes, covariance matrices,
+  and output columns;
+- verify marker order and scaling across all trait summary statistics and LD;
+- check that `SSY` and covariance matrices are symmetric and numerically
+  plausible;
+- record sample-overlap assumptions;
+- compare joint results with separate single-trait fits;
+- inspect covariance traces and sharing-model probabilities;
+- assess sensitivity to sharing priors and covariance priors;
+- use longer chains, repeated chains, and convergence diagnostics for
+  production inference.
+
+Weak or unstable covariance estimates can lead to misleading borrowing across
+traits. Short demonstration chains are useful for integration testing, not for
+final scientific conclusions.
+
+## Current Status in `sblr`
+
+The package contains a conceptual and implementation foundation for MT-BLR:
+
+- `sblr()` is the documented high-level interface for several experimental
+  summary-statistics algorithms and exposes sharing-model and covariance
+  inputs;
+- native multi-trait implementations explore dense, Armadillo-based,
+  OpenMP, and CSR computations;
+- the CSR multi-trait kernel supports cross-trait phenotype information and
+  shared sparse LD under relatively restrictive sample-size and scaling
+  assumptions;
+- `mtsim()` and `mtsim_annotation()` support development and model checking.
+
+The most complete current workflow examples focus on BED and CSR single-trait
+models, including annotation-informed extensions. There is not yet an equally
+polished, general, end-to-end public workflow for joint MTBLR with arbitrary
+sample overlap. Algorithm-specific argument contracts and returned objects
+should be validated before relying on an experimental MTBLR path.
+
+This status distinction matters: the package contains real multi-trait model
+and sampler components, but some interfaces and broader overlap or annotation
+extensions remain research-stage.
+
+## Related Notes and Sources
+
+- [Single-Trait Models](single_trait_models.html) explains the sparse
+  single-trait model that MT-BLR generalizes.
+- [Technical Appendix: Multi-Trait Overlap](technical_multitrait_overlap.html)
+  gives the detailed treatment of `SSY`, `Nmat`, and overlap assumptions.
+- [Technical Appendix: Summary Statistics](technical_summary_statistics.html)
+  derives the summary-statistics representation.
+- [Data Representations](data_representations.html) compares individual-level
+  and summary-statistics inputs.
+- [Annotation-Informed Models](annotation_informed_models.html) describes the
+  currently exposed annotation-aware CSR models.
+- [Workflows and Outputs](workflows_and_outputs.html) explains practical fit
+  summaries and reporting.
+
+This note draws on the archived `sblr_theory.qmd` draft, the completed
+technical appendices, the documented `sblr()` and simulation interfaces, and
+the current experimental multi-trait sampler implementations.
