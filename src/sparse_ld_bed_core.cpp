@@ -31,12 +31,13 @@
 #endif
 
 #include <Rcpp.h>
+#include <R_ext/BLAS.h>
 
 #include "packed_bed.h"
 
-extern "C" {
-#include <cblas.h>
-}
+// extern "C" {
+// #include <cblas.h>
+// }
 
 // [[Rcpp::export]]
 Rcpp::List sparseLD_thread_info(int nthreads = 0) {
@@ -310,36 +311,62 @@ struct StreamingCSRResult {
  std::string meta_file;
 };
 
+// static void compute_ld_block_sgemm(
+//   const float* ZA,
+//   const float* ZB,
+//   int n,
+//   int ma,
+//   int mb,
+//   float* R
+// ) {
+//  // Raw crossproduct: R_ij = x_i' x_j.
+//  // Correlations are computed explicitly as R_ij / sqrt(xx_i * xx_j)
+//  // before thresholding and storage.
+//  const float alpha = 1.0f;
+//  const float beta = 0.0f;
+// 
+//  cblas_sgemm(
+//   CblasRowMajor,
+//   CblasNoTrans,
+//   CblasTrans,
+//   ma,
+//   mb,
+//   n,
+//   alpha,
+//   ZA,
+//   n,
+//   ZB,
+//   n,
+//   beta,
+//   R,
+//   mb
+//  );
+// }
 static void compute_ld_block_sgemm(
-  const float* ZA,
-  const float* ZB,
-  int n,
-  int ma,
-  int mb,
-  float* R
+    const float* ZA,
+    const float* ZB,
+    int n,
+    int ma,
+    int mb,
+    float* R
 ) {
- // Raw crossproduct: R_ij = x_i' x_j.
- // Correlations are computed explicitly as R_ij / sqrt(xx_i * xx_j)
- // before thresholding and storage.
- const float alpha = 1.0f;
- const float beta = 0.0f;
-
- cblas_sgemm(
-  CblasRowMajor,
-  CblasNoTrans,
-  CblasTrans,
-  ma,
-  mb,
-  n,
-  alpha,
-  ZA,
-  n,
-  ZB,
-  n,
-  beta,
-  R,
-  mb
- );
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+  for (int ia = 0; ia < ma; ++ia) {
+    const float* za = ZA + static_cast<std::size_t>(ia) * n;
+    
+    for (int ib = 0; ib < mb; ++ib) {
+      const float* zb = ZB + static_cast<std::size_t>(ib) * n;
+      
+      double acc = 0.0;
+      for (int k = 0; k < n; ++k) {
+        acc += static_cast<double>(za[k]) * static_cast<double>(zb[k]);
+      }
+      
+      R[static_cast<std::size_t>(ia) * mb + ib] = static_cast<float>(acc);
+    }
+  }
 }
 
 static inline bool within_window(
