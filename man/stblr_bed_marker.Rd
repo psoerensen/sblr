@@ -90,7 +90,9 @@ controls.}
 
 \item{return_wy, return_r}{Return optional sampler state.}
 
-\item{rows}{Optional 1-based BED row indices.}
+\item{rows}{Optional 1-based individual row indices into the BED file. When
+omitted, subset phenotypes can instead be matched using `rownames(y)` and
+`Glist$ids`.}
 
 \item{chains, nchains}{Multi-chain controls.}
 

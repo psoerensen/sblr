@@ -285,11 +285,48 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
  fit
 }
 
-.make_bed_marker_data <- function(Glist, y, chr, cls, block_size, chains) {
+.make_bed_marker_data <- function(Glist, y, chr, cls, block_size, chains,
+                                  rows = NULL) {
  chr <- as.integer(chr)
  if (length(chr) < 1 || anyNA(chr)) stop("chr must contain valid chromosome indices.")
  y <- as.matrix(y)
  if (!chains && length(chr) != 1) stop("Use chains = TRUE for multi-chromosome BED sampling.")
+
+ if (is.null(rows)) {
+  if (!is.null(rownames(y))) {
+   if (is.null(Glist$ids)) {
+    stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
+   }
+   if (anyDuplicated(rownames(y))) stop("rownames(y) must not contain duplicates.")
+   if (anyDuplicated(Glist$ids)) {
+    stop("Glist$ids must not contain duplicates when matching rownames(y).")
+   }
+   rows <- match(rownames(y), Glist$ids)
+   if (anyNA(rows)) {
+    missing_ids <- rownames(y)[is.na(rows)]
+    stop(
+     "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
+     paste(head(missing_ids, 10), collapse = ", ")
+    )
+   }
+  } else if (nrow(y) == Glist$n) {
+   rows <- NULL
+  } else {
+   stop(
+    "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
+    "Provide rows as 1-based BED individual indices, or set rownames(y) ",
+    "to IDs matching Glist$ids."
+   )
+  }
+ } else {
+  rows <- as.integer(rows)
+  if (length(rows) != nrow(y)) stop("length(rows) must equal nrow(y).")
+  if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
+   stop("rows must be valid 1-based individual indices into the BED file.")
+  }
+  if (anyDuplicated(rows)) stop("rows must not contain duplicate individual indices.")
+ }
+
  if (is.null(cls)) {
   cls <- lapply(chr, function(cc) match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]]))
  } else if (!is.list(cls)) {
@@ -312,12 +349,11 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
  }
  list(
   y = y, chr = chr, bed_files = Glist$bedfiles[chr], cls = cls, af = af,
-  m = m, nt = ncol(y), n = Glist$n, n_used = nrow(y),
-  trait_names = trait_names, variable_names = variable_names, sets = sets,
-  b_init = lapply(seq_len(ncol(y)), function(i) rep(0, m))
+  rows = rows, m = m, nt = ncol(y), n = Glist$n, n_total = Glist$n,
+  n_used = nrow(y), trait_names = trait_names, variable_names = variable_names,
+  sets = sets, b_init = lapply(seq_len(ncol(y)), function(i) rep(0, m))
  )
 }
-
 #' Fit ST-BLR Directly from PLINK BED Markers
 #'
 #' Fits ST-BLR directly from markers stored in PLINK BED files referenced by a
@@ -346,7 +382,9 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' @param null_update_prob,null_skip_base,null_skip_max Null-marker scheduling
 #'   controls.
 #' @param return_wy,return_r Return optional sampler state.
-#' @param rows Optional 1-based BED row indices.
+#' @param rows Optional 1-based individual row indices into the BED file. When
+#'   omitted, subset phenotypes can instead be matched using `rownames(y)` and
+#'   `Glist$ids`.
 #' @param chains,nchains Multi-chain controls.
 #' @param read_block_size,progress_every Multi-chain BED reading and progress
 #'   controls.
@@ -369,7 +407,15 @@ stblr_bed_marker <- function(
   pi_marker, pi_init, pi_vb_init, pi_prior_mean, pi_prior_strength,
   pi_prior_a, pi_prior_b
  )
- dat <- .make_bed_marker_data(Glist, y, chr, cls, block_size, chains)
+ dat <- .make_bed_marker_data(
+   Glist = Glist,
+   y = y,
+   chr = chr,
+   cls = cls,
+   block_size = block_size,
+   chains = chains,
+   rows = rows
+ )
  if (chains && !scheduled) {
   warning("chains=TRUE uses the scheduled multi-chain sampler; setting scheduled=TRUE.")
   scheduled <- TRUE
@@ -381,16 +427,37 @@ stblr_bed_marker <- function(
   dat$y, dat$m, h2, nub, nue, arch$pi_vb_init, arch$pi_prior_mean,
   dat$trait_names
  )
+ # n is the total BED sample size needed for byte layout; rows selects the
+ # individuals used, and n_used is the resulting phenotype/sample size.
  common <- list(
-  bed_files = dat$bed_files, n = dat$n, cls = dat$cls, y = dat$y,
-  b_init = dat$b_init, sets = dat$sets, rows = rows, af = dat$af,
-  scale = scale, B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior_list,
-  sse_prior = pri$sse_prior_list, pi = arch$pi, nub = nub, nue = nue,
-  updateB = updateB, updateE = updateE, updatePi = updatePi, adjE = adjE,
-  nit = nit, nburn = nburn, nthin = nthin, rebuild_every = rebuild_every,
-  full_sweep_every = full_sweep_every, candidate_threshold = candidate_threshold,
-  candidate_lifetime = candidate_lifetime,
-  skip_nulls_burnin_only = skip_nulls_burnin_only
+   bed_files = dat$bed_files,
+   n = dat$n_total,
+   cls = dat$cls,
+   y = dat$y,
+   b_init = dat$b_init,
+   sets = dat$sets,
+   rows = dat$rows,
+   af = dat$af,
+   scale = scale,
+   B = pri$B,
+   E = pri$E,
+   ssb_prior = pri$ssb_prior_list,
+   sse_prior = pri$sse_prior_list,
+   pi = arch$pi,
+   nub = nub,
+   nue = nue,
+   updateB = updateB,
+   updateE = updateE,
+   updatePi = updatePi,
+   adjE = adjE,
+   nit = nit,
+   nburn = nburn,
+   nthin = nthin,
+   rebuild_every = rebuild_every,
+   full_sweep_every = full_sweep_every,
+   candidate_threshold = candidate_threshold,
+   candidate_lifetime = candidate_lifetime,
+   skip_nulls_burnin_only = skip_nulls_burnin_only
  )
  if (chains) {
   raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, c(common, list(
@@ -416,7 +483,8 @@ stblr_bed_marker <- function(
   raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
  )
  fit$input <- c(list(
-  chr = dat$chr, cls = dat$cls, n = dat$n, n_used = dat$n_used, m = dat$m,
+  chr = dat$chr, cls = dat$cls, n = dat$n, n_total = dat$n_total,
+  n_used = dat$n_used, m = dat$m,
   nt = dat$nt, block_size = block_size, sets = dat$sets, h2 = h2, nub = nub,
   nue = nue, vy = pri$vy, B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior,
   sse_prior = pri$sse_prior, updateB = updateB, updateE = updateE,
@@ -428,7 +496,7 @@ stblr_bed_marker <- function(
   null_skip_max = null_skip_max, ncores = ncores, seed = seed,
   scheduled = scheduled, chains = chains, nchains = nchains,
   read_block_size = read_block_size, progress_every = progress_every,
-  scale = scale, rows = rows
+  scale = scale, rows = dat$rows
  ), arch)
  fit
 }
