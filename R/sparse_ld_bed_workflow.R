@@ -183,9 +183,18 @@ NULL
 #' @param ld_prefix Prefix of the disk-backed CSR LD files.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
-#' @param pi_marker Backward-compatible initial inclusion probability.
-#' @param pi_init,pi_vb_init,pi_prior_mean,pi_prior_strength,pi_prior_a,pi_prior_b
-#'   Inclusion-probability and marker-variance prior controls.
+#' @param pi_marker Backward-compatible initial marker inclusion probability.
+#'   Defaults to 0.001.
+#' @param pi_init Initial inclusion probability used to initialize the sampler.
+#'   Defaults to `pi_marker`.
+#' @param pi_vb_init Inclusion probability used when initializing marker-effect
+#'   variance. Defaults to `pi_init`.
+#' @param pi_prior_mean Prior mean for the marker inclusion probability.
+#'   Defaults to 0.01 for BED marker models.
+#' @param pi_prior_strength Total Beta prior strength for the marker inclusion
+#'   probability. Defaults to 5e5 for BED marker models.
+#' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
+#'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
 #' @param h2 Initial heritability.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
@@ -206,7 +215,7 @@ NULL
 #' @return A formatted ST-BLR fit.
 #' @export
 stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
-                      pi_marker = 0.001, pi_init = NULL, pi_vb_init = NULL,
+                      pi_marker = 0.001, pi_init = 0.01, pi_vb_init = 5e5,
                       pi_prior_mean = NULL, pi_prior_strength = NULL,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.5,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
@@ -285,75 +294,256 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
  fit
 }
 
+# .make_bed_marker_data <- function(Glist, y, chr, cls, block_size, chains,
+#                                   rows = NULL) {
+#  chr <- as.integer(chr)
+#  if (length(chr) < 1 || anyNA(chr)) stop("chr must contain valid chromosome indices.")
+#  y <- as.matrix(y)
+#  if (!chains && length(chr) != 1) stop("Use chains = TRUE for multi-chromosome BED sampling.")
+# 
+#  if (is.null(rows)) {
+#   if (!is.null(rownames(y))) {
+#    if (is.null(Glist$ids)) {
+#     stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
+#    }
+#    if (anyDuplicated(rownames(y))) stop("rownames(y) must not contain duplicates.")
+#    if (anyDuplicated(Glist$ids)) {
+#     stop("Glist$ids must not contain duplicates when matching rownames(y).")
+#    }
+#    rows <- match(rownames(y), Glist$ids)
+#    if (anyNA(rows)) {
+#     missing_ids <- rownames(y)[is.na(rows)]
+#     stop(
+#      "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
+#      paste(head(missing_ids, 10), collapse = ", ")
+#     )
+#    }
+#   } else if (nrow(y) == Glist$n) {
+#    rows <- NULL
+#   } else {
+#    stop(
+#     "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
+#     "Provide rows as 1-based BED individual indices, or set rownames(y) ",
+#     "to IDs matching Glist$ids."
+#    )
+#   }
+#  } else {
+#   rows <- as.integer(rows)
+#   if (length(rows) != nrow(y)) stop("length(rows) must equal nrow(y).")
+#   if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
+#    stop("rows must be valid 1-based individual indices into the BED file.")
+#   }
+#   if (anyDuplicated(rows)) stop("rows must not contain duplicate individual indices.")
+#  }
+# 
+#  if (is.null(cls)) {
+#   cls <- lapply(chr, function(cc) match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]]))
+#  } else if (!is.list(cls)) {
+#   cls <- list(cls)
+#  }
+#  if (length(cls) != length(chr) || any(vapply(cls, anyNA, logical(1)))) {
+#   stop("cls must match chr and contain no missing marker indices.")
+#  }
+#  cls <- lapply(cls, as.integer)
+#  af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
+#  m <- sum(lengths(cls))
+#  trait_names <- colnames(y)
+#  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(ncol(y)))
+#  colnames(y) <- trait_names
+#  variable_names <- unlist(Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls))
+#  sets <- if (length(chr) == 1) {
+#   rep(seq_len(ceiling(m / block_size)), each = block_size)[seq_len(m)]
+#  } else {
+#   rep(seq_along(chr), lengths(cls))
+#  }
+#  list(
+#   y = y, chr = chr, bed_files = Glist$bedfiles[chr], cls = cls, af = af,
+#   rows = rows, m = m, nt = ncol(y), n = Glist$n, n_total = Glist$n,
+#   n_used = nrow(y), trait_names = trait_names, variable_names = variable_names,
+#   sets = sets, b_init = lapply(seq_len(ncol(y)), function(i) rep(0, m))
+#  )
+# }
+
 .make_bed_marker_data <- function(Glist, y, chr, cls, block_size, chains,
                                   rows = NULL) {
- chr <- as.integer(chr)
- if (length(chr) < 1 || anyNA(chr)) stop("chr must contain valid chromosome indices.")
- y <- as.matrix(y)
- if (!chains && length(chr) != 1) stop("Use chains = TRUE for multi-chromosome BED sampling.")
-
- if (is.null(rows)) {
-  if (!is.null(rownames(y))) {
-   if (is.null(Glist$ids)) {
-    stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
-   }
-   if (anyDuplicated(rownames(y))) stop("rownames(y) must not contain duplicates.")
-   if (anyDuplicated(Glist$ids)) {
-    stop("Glist$ids must not contain duplicates when matching rownames(y).")
-   }
-   rows <- match(rownames(y), Glist$ids)
-   if (anyNA(rows)) {
-    missing_ids <- rownames(y)[is.na(rows)]
-    stop(
-     "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
-     paste(head(missing_ids, 10), collapse = ", ")
-    )
-   }
-  } else if (nrow(y) == Glist$n) {
-   rows <- NULL
+  chr <- as.integer(chr)
+  if (length(chr) < 1 || anyNA(chr)) {
+    stop("chr must contain valid chromosome indices.")
+  }
+  y <- as.matrix(y)
+  if (!chains && length(chr) != 1) {
+    stop("Use chains = TRUE for multi-chromosome BED sampling.")
+  }
+  
+  if (is.null(Glist$n) || !is.numeric(Glist$n) || length(Glist$n) != 1 ||
+      !is.finite(Glist$n) || Glist$n < 1) {
+    stop("Glist$n must be a finite positive scalar giving the total BED sample size.")
+  }
+  Glist$n <- as.integer(Glist$n)
+  
+  if (is.null(rows)) {
+    if (!is.null(rownames(y))) {
+      if (is.null(Glist$ids)) {
+        stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
+      }
+      if (anyDuplicated(rownames(y))) {
+        stop("rownames(y) must not contain duplicates.")
+      }
+      if (anyDuplicated(Glist$ids)) {
+        stop("Glist$ids must not contain duplicates when matching rownames(y).")
+      }
+      
+      rows <- match(rownames(y), Glist$ids)
+      
+      if (anyNA(rows)) {
+        missing_ids <- rownames(y)[is.na(rows)]
+        stop(
+          "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
+          paste(head(missing_ids, 10), collapse = ", ")
+        )
+      }
+    } else if (nrow(y) == Glist$n) {
+      rows <- NULL
+    } else {
+      stop(
+        "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
+        "Provide rows as 1-based BED individual indices, or set rownames(y) ",
+        "to IDs matching Glist$ids."
+      )
+    }
   } else {
-   stop(
-    "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
-    "Provide rows as 1-based BED individual indices, or set rownames(y) ",
-    "to IDs matching Glist$ids."
-   )
+    rows <- as.integer(rows)
+    if (length(rows) != nrow(y)) {
+      stop("length(rows) must equal nrow(y).")
+    }
+    if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
+      stop("rows must be valid 1-based individual indices into the BED file.")
+    }
+    if (anyDuplicated(rows)) {
+      stop("rows must not contain duplicate individual indices.")
+    }
   }
- } else {
-  rows <- as.integer(rows)
-  if (length(rows) != nrow(y)) stop("length(rows) must equal nrow(y).")
-  if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
-   stop("rows must be valid 1-based individual indices into the BED file.")
+  
+  if (is.null(Glist$bedfiles)) {
+    stop("Glist$bedfiles is missing.")
   }
-  if (anyDuplicated(rows)) stop("rows must not contain duplicate individual indices.")
- }
-
- if (is.null(cls)) {
-  cls <- lapply(chr, function(cc) match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]]))
- } else if (!is.list(cls)) {
-  cls <- list(cls)
- }
- if (length(cls) != length(chr) || any(vapply(cls, anyNA, logical(1)))) {
-  stop("cls must match chr and contain no missing marker indices.")
- }
- cls <- lapply(cls, as.integer)
- af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
- m <- sum(lengths(cls))
- trait_names <- colnames(y)
- if (is.null(trait_names)) trait_names <- paste0("T", seq_len(ncol(y)))
- colnames(y) <- trait_names
- variable_names <- unlist(Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls))
- sets <- if (length(chr) == 1) {
-  rep(seq_len(ceiling(m / block_size)), each = block_size)[seq_len(m)]
- } else {
-  rep(seq_along(chr), lengths(cls))
- }
- list(
-  y = y, chr = chr, bed_files = Glist$bedfiles[chr], cls = cls, af = af,
-  rows = rows, m = m, nt = ncol(y), n = Glist$n, n_total = Glist$n,
-  n_used = nrow(y), trait_names = trait_names, variable_names = variable_names,
-  sets = sets, b_init = lapply(seq_len(ncol(y)), function(i) rep(0, m))
- )
+  if (anyNA(Glist$bedfiles[chr])) {
+    stop("Glist$bedfiles is missing for chromosome(s): ",
+         paste(chr[is.na(Glist$bedfiles[chr])], collapse = ", "))
+  }
+  
+  if (is.null(cls)) {
+    if (is.null(Glist$rsidsLD)) {
+      stop("cls is NULL, but Glist$rsidsLD is missing.")
+    }
+    if (is.null(Glist$rsids)) {
+      stop("cls is NULL, but Glist$rsids is missing.")
+    }
+    
+    cls <- lapply(chr, function(cc) {
+      if (length(Glist$rsidsLD) < cc || is.null(Glist$rsidsLD[[cc]])) {
+        stop("Glist$rsidsLD[[", cc, "]] is missing.")
+      }
+      if (length(Glist$rsids) < cc || is.null(Glist$rsids[[cc]])) {
+        stop("Glist$rsids[[", cc, "]] is missing.")
+      }
+      
+      out <- match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
+      
+      if (anyNA(out)) {
+        missing <- Glist$rsidsLD[[cc]][is.na(out)]
+        stop(
+          "Some Glist$rsidsLD markers were not found in Glist$rsids for chromosome ",
+          cc, ". First missing markers: ",
+          paste(head(missing, 10), collapse = ", ")
+        )
+      }
+      
+      as.integer(out)
+    })
+    
+    names(cls) <- paste0("chr", chr)
+  } else if (!is.list(cls)) {
+    cls <- list(cls)
+  }
+  
+  if (length(cls) != length(chr)) {
+    stop("cls must have one element per chromosome in chr.")
+  }
+  if (any(vapply(cls, anyNA, logical(1)))) {
+    stop("cls must contain no missing marker indices.")
+  }
+  
+  cls <- lapply(cls, as.integer)
+  
+  for (k in seq_along(chr)) {
+    cc <- chr[k]
+    
+    if (length(Glist$rsids) < cc || is.null(Glist$rsids[[cc]])) {
+      stop("Glist$rsids[[", cc, "]] is missing.")
+    }
+    
+    if (any(cls[[k]] < 1L) || any(cls[[k]] > length(Glist$rsids[[cc]]))) {
+      stop("cls[[", k, "]] contains marker indices outside Glist$rsids[[", cc, "]].")
+    }
+  }
+  
+  if (is.null(Glist$af)) {
+    af <- vector("list", length(chr))
+  } else {
+    af <- Map(function(cc, cl) {
+      if (length(Glist$af) < cc || is.null(Glist$af[[cc]])) {
+        stop("Glist$af[[", cc, "]] is missing.")
+      }
+      if (length(Glist$af[[cc]]) < max(cl)) {
+        stop("Glist$af[[", cc, "]] is shorter than the largest marker index in cls.")
+      }
+      Glist$af[[cc]][cl]
+    }, chr, cls)
+  }
+  
+  m <- sum(lengths(cls))
+  if (m < 1L) {
+    stop("No markers selected. Check chr, cls, Glist$rsidsLD, and Glist$rsids.")
+  }
+  
+  trait_names <- colnames(y)
+  if (is.null(trait_names)) {
+    trait_names <- paste0("T", seq_len(ncol(y)))
+  }
+  colnames(y) <- trait_names
+  
+  variable_names <- unlist(
+    Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
+    use.names = FALSE
+  )
+  
+  sets <- if (length(chr) == 1) {
+    rep(seq_len(ceiling(m / block_size)), each = block_size)[seq_len(m)]
+  } else {
+    rep(seq_along(chr), lengths(cls))
+  }
+  
+  list(
+    y = y,
+    chr = chr,
+    bed_files = Glist$bedfiles[chr],
+    cls = cls,
+    af = af,
+    rows = rows,
+    m = m,
+    nt = ncol(y),
+    n = Glist$n,
+    n_total = Glist$n,
+    n_used = nrow(y),
+    trait_names = trait_names,
+    variable_names = variable_names,
+    sets = sets,
+    b_init = lapply(seq_len(ncol(y)), function(i) rep(0, m))
+  )
 }
+
+
 #' Fit ST-BLR Directly from PLINK BED Markers
 #'
 #' Fits ST-BLR directly from markers stored in PLINK BED files referenced by a

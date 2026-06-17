@@ -10,8 +10,8 @@ stblr_csr(
   n = NULL,
   m = NULL,
   pi_marker = 0.001,
-  pi_init = NULL,
-  pi_vb_init = NULL,
+  pi_init = 0.01,
+  pi_vb_init = 5e+05,
   pi_prior_mean = NULL,
   pi_prior_strength = NULL,
   pi_prior_a = NULL,
@@ -52,9 +52,23 @@ stblr_csr(
 
 \item{m}{Number of markers. Inferred from `stats` when omitted.}
 
-\item{pi_marker}{Backward-compatible initial inclusion probability.}
+\item{pi_marker}{Backward-compatible initial marker inclusion probability.
+Defaults to 0.001.}
 
-\item{pi_init, pi_vb_init, pi_prior_mean, pi_prior_strength, pi_prior_a, pi_prior_b}{Inclusion-probability and marker-variance prior controls.}
+\item{pi_init}{Initial inclusion probability used to initialize the sampler.
+Defaults to `pi_marker`.}
+
+\item{pi_vb_init}{Inclusion probability used when initializing marker-effect
+variance. Defaults to `pi_init`.}
+
+\item{pi_prior_mean}{Prior mean for the marker inclusion probability.
+Defaults to 0.01 for BED marker models.}
+
+\item{pi_prior_strength}{Total Beta prior strength for the marker inclusion
+probability. Defaults to 5e5 for BED marker models.}
+
+\item{pi_prior_a, pi_prior_b}{Optional explicit Beta prior shape parameters.
+When supplied, these override `pi_prior_mean` and `pi_prior_strength`.}
 
 \item{h2}{Initial heritability.}
 
