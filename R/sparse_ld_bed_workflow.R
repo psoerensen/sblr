@@ -7,8 +7,12 @@
 #' @param n Number of individuals in the BED file.
 #' @param cls Marker column indices.
 #' @param af Allele frequencies corresponding to `cls`.
-#' @param y Phenotype matrix.
-#' @param rows Optional 1-based individual row indices.
+#' @param y Phenotype vector or matrix. If `y` is a vector, `names(y)` must
+#'   contain individual IDs matching `Glist$ids`. If `y` is a matrix,
+#'   `rownames(y)` must contain matching IDs unless `nrow(y) == Glist$n`.
+#' @param rows Advanced/internal option. Optional 1-based BED/FAM row indices
+#'   corresponding to rows of `y`. Normally omitted; rows are inferred from
+#'   `names(y)` or `rownames(y)` matched to `Glist$ids`.
 #' @param scale Standardize markers using allele frequencies.
 #' @param nthreads Number of OpenMP threads.
 #' @param MG,JB,TB Internal blocking and tiling controls.
@@ -215,12 +219,12 @@ NULL
 #' @return A formatted ST-BLR fit.
 #' @export
 stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
-                      pi_marker = 0.001, pi_init = 0.01, pi_vb_init = 5e5,
+                      pi_marker = 0.001, pi_init = NULL, pi_vb_init = NULL,
                       pi_prior_mean = NULL, pi_prior_strength = NULL,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.5,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
-                      nthin = 1, ncores = 3, seed = 10, scheduled = FALSE,
+                      nthin = 1, ncores = 1, seed = 10, scheduled = FALSE,
                       full_sweep_every = 10, null_skip_base = 50,
                       null_skip_max = 200, candidate_threshold = 1e-3,
                       candidate_lifetime = 20, skip_nulls_burnin_only = FALSE,
@@ -364,55 +368,101 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #  )
 # }
 
-.make_bed_marker_data <- function(Glist, y, chr, cls, block_size, chains,
+.make_bed_marker_data <- function(Glist, y, chr, cls, block_size,
                                   rows = NULL) {
   chr <- as.integer(chr)
   if (length(chr) < 1 || anyNA(chr)) {
     stop("chr must contain valid chromosome indices.")
   }
-  y <- as.matrix(y)
-  if (!chains && length(chr) != 1) {
-    stop("Use chains = TRUE for multi-chromosome BED sampling.")
+  
+  if (is.null(dim(y))) {
+    if (is.null(names(y)) && is.null(rows)) {
+      stop(
+        "When y is a vector, names(y) must contain IDs matching Glist$ids."
+      )
+    }
+    
+    y_names <- names(y)
+    y <- matrix(as.numeric(y), ncol = 1)
+    
+    if (!is.null(y_names)) {
+      rownames(y) <- y_names
+    }
+    colnames(y) <- "T1"
+  } else {
+    y <- as.matrix(y)
   }
   
+
   if (is.null(Glist$n) || !is.numeric(Glist$n) || length(Glist$n) != 1 ||
       !is.finite(Glist$n) || Glist$n < 1) {
     stop("Glist$n must be a finite positive scalar giving the total BED sample size.")
   }
   Glist$n <- as.integer(Glist$n)
-  
+
   if (is.null(rows)) {
     if (!is.null(rownames(y))) {
       if (is.null(Glist$ids)) {
         stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
       }
-      if (anyDuplicated(rownames(y))) {
-        stop("rownames(y) must not contain duplicates.")
-      }
-      if (anyDuplicated(Glist$ids)) {
-        stop("Glist$ids must not contain duplicates when matching rownames(y).")
-      }
       
-      rows <- match(rownames(y), Glist$ids)
+      ids_y <- rownames(y)
+      ids_y <- as.character(ids_y)
+      Glist$ids <- as.character(Glist$ids)
       
-      if (anyNA(rows)) {
-        missing_ids <- rownames(y)[is.na(rows)]
+      if (anyDuplicated(ids_y)) {
+        dup <- ids_y[duplicated(ids_y)]
         stop(
-          "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
-          paste(head(missing_ids, 10), collapse = ", ")
+          "Phenotype IDs in rownames(y) must not contain duplicates. First duplicates: ",
+          paste(head(unique(dup), 10), collapse = ", ")
+        )
+      }
+      
+      if (anyDuplicated(Glist$ids)) {
+        dup <- Glist$ids[duplicated(Glist$ids)]
+        stop(
+          "Glist$ids must not contain duplicates when matching y to BED individuals. First duplicates: ",
+          paste(head(unique(dup), 10), collapse = ", ")
+        )
+      }
+      
+      rows <- match(ids_y, Glist$ids)
+      ok <- !is.na(rows)
+      
+      if (!all(ok)) {
+        warning(
+          sum(!ok),
+          " phenotype IDs were not found in Glist$ids and will be dropped."
+        )
+        
+        y <- y[ok, , drop = FALSE]
+        ids_y <- ids_y[ok]
+        rows <- rows[ok]
+        rownames(y) <- ids_y
+      }
+      
+      if (nrow(y) < 1L) {
+        stop("No phenotype IDs matched Glist$ids.")
+      }
+      
+      if (anyDuplicated(rows)) {
+        dup_rows <- rows[duplicated(rows)]
+        stop(
+          "Duplicated BED rows after matching phenotype IDs. First duplicates: ",
+          paste(head(unique(dup_rows), 10), collapse = ", ")
         )
       }
     } else if (nrow(y) == Glist$n) {
       rows <- NULL
     } else {
       stop(
-        "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
-        "Provide rows as 1-based BED individual indices, or set rownames(y) ",
-        "to IDs matching Glist$ids."
+        "nrow(y) != Glist$n, but rownames(y) are missing. ",
+        "Set rownames(y) to IDs matching Glist$ids."
       )
     }
   } else {
     rows <- as.integer(rows)
+    
     if (length(rows) != nrow(y)) {
       stop("length(rows) must equal nrow(y).")
     }
@@ -420,9 +470,55 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
       stop("rows must be valid 1-based individual indices into the BED file.")
     }
     if (anyDuplicated(rows)) {
-      stop("rows must not contain duplicate individual indices.")
+      dup_rows <- rows[duplicated(rows)]
+      stop(
+        "rows must not contain duplicate individual indices. First duplicates: ",
+        paste(head(unique(dup_rows), 10), collapse = ", ")
+      )
     }
-  }
+  }  
+  # if (is.null(rows)) {
+  #   if (!is.null(rownames(y))) {
+  #     if (is.null(Glist$ids)) {
+  #       stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
+  #     }
+  #     if (anyDuplicated(rownames(y))) {
+  #       stop("rownames(y) must not contain duplicates.")
+  #     }
+  #     if (anyDuplicated(Glist$ids)) {
+  #       stop("Glist$ids must not contain duplicates when matching rownames(y).")
+  #     }
+  #     
+  #     rows <- match(rownames(y), Glist$ids)
+  #     
+  #     if (anyNA(rows)) {
+  #       missing_ids <- rownames(y)[is.na(rows)]
+  #       stop(
+  #         "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
+  #         paste(head(missing_ids, 10), collapse = ", ")
+  #       )
+  #     }
+  #   } else if (nrow(y) == Glist$n) {
+  #     rows <- NULL
+  #   } else {
+  #     stop(
+  #       "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
+  #       "Provide rows as 1-based BED individual indices, or set rownames(y) ",
+  #       "to IDs matching Glist$ids."
+  #     )
+  #   }
+  # } else {
+  #   rows <- as.integer(rows)
+  #   if (length(rows) != nrow(y)) {
+  #     stop("length(rows) must equal nrow(y).")
+  #   }
+  #   if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
+  #     stop("rows must be valid 1-based individual indices into the BED file.")
+  #   }
+  #   if (anyDuplicated(rows)) {
+  #     stop("rows must not contain duplicate individual indices.")
+  #   }
+  # }
   
   if (is.null(Glist$bedfiles)) {
     stop("Glist$bedfiles is missing.")
@@ -498,7 +594,11 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
       if (length(Glist$af[[cc]]) < max(cl)) {
         stop("Glist$af[[", cc, "]] is shorter than the largest marker index in cls.")
       }
-      Glist$af[[cc]][cl]
+      out <- Glist$af[[cc]][cl]
+      if (anyNA(out)) {
+        stop("Glist$af[[", cc, "]][cls] contains missing values.")
+      }
+      out
     }, chr, cls)
   }
   
@@ -568,31 +668,51 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
-#' @param scheduled Use the scheduled BED sampler.
 #' @param null_update_prob,null_skip_base,null_skip_max Null-marker scheduling
 #'   controls.
 #' @param return_wy,return_r Return optional sampler state.
 #' @param rows Optional 1-based individual row indices into the BED file. When
 #'   omitted, subset phenotypes can instead be matched using `rownames(y)` and
 #'   `Glist$ids`.
-#' @param chains,nchains Multi-chain controls.
+#' @param backend Sampler backend. `"auto"` selects the scheduled multi-chain
+#'   backend for multi-chromosome fits or when `nchains > 1`, and the scheduled
+#'   single-chain backend otherwise. `"scheduled"` forces a scheduled backend;
+#'   for multi-chromosome fits it uses the scheduled multi-chain backend.
+#'   `"sparse"` is only valid for one chromosome.
+#' @param nchains Number of MCMC chains. When `nchains > 1`, the scheduled
+#'   multi-chain backend is used.
 #' @param read_block_size,progress_every Multi-chain BED reading and progress
 #'   controls.
 #' @return A formatted ST-BLR fit.
 #' @export
 stblr_bed_marker <- function(
-  Glist, y, chr = 1, cls = NULL, block_size = 1000, pi_marker = 0.001,
-  pi_init = NULL, pi_vb_init = NULL, pi_prior_mean = NULL,
-  pi_prior_strength = NULL, pi_prior_a = NULL, pi_prior_b = NULL,
+  Glist, y, chr = 1:22, cls = NULL, block_size = 1000, pi_marker = 0.001,
+  pi_init = NULL, pi_vb_init = NULL, pi_prior_mean = 0.01,
+  pi_prior_strength = 5e5, pi_prior_a = NULL, pi_prior_b = NULL,
   h2 = 0.5, nub = 4, nue = 4, scale = TRUE, updateB = TRUE,
   updateE = TRUE, updatePi = TRUE, adjE = 0, nit = 1000, nburn = 100,
   nthin = 1, rebuild_every = 25, full_sweep_every = 10,
   candidate_threshold = 1e-3, candidate_lifetime = 20,
-  skip_nulls_burnin_only = FALSE, ncores = 3, seed = 10,
-  scheduled = TRUE, null_update_prob = 0.02, null_skip_base = 50,
+  skip_nulls_burnin_only = FALSE, ncores = 1, seed = 10,
+  backend = c("auto", "scheduled", "sparse"), null_update_prob = 0.02, null_skip_base = 50,
   null_skip_max = 200, return_wy = FALSE, return_r = FALSE, rows = NULL,
-  chains = FALSE, nchains = 1, read_block_size = 64, progress_every = 0
+  nchains = 1, read_block_size = 64, progress_every = 0
 ) {
+  
+  backend <- match.arg(backend)
+  if (!is.numeric(nchains) || length(nchains) != 1 ||
+      !is.finite(nchains) || nchains < 1) {
+    stop("nchains must be a finite positive scalar.")
+  }
+  nchains <- as.integer(nchains)
+  
+  if (!is.numeric(ncores) || length(ncores) != 1 ||
+      !is.finite(ncores) || ncores < 1) {
+    stop("ncores must be a finite positive scalar.")
+  }
+  ncores <- as.integer(ncores)
+  
+  
  arch <- .resolve_pi_prior(
   pi_marker, pi_init, pi_vb_init, pi_prior_mean, pi_prior_strength,
   pi_prior_a, pi_prior_b
@@ -603,16 +723,29 @@ stblr_bed_marker <- function(
    chr = chr,
    cls = cls,
    block_size = block_size,
-   chains = chains,
    rows = rows
  )
- if (chains && !scheduled) {
-  warning("chains=TRUE uses the scheduled multi-chain sampler; setting scheduled=TRUE.")
-  scheduled <- TRUE
+
+ use_chains_backend <- FALSE
+ 
+ if (backend == "auto") {
+   use_chains_backend <- length(dat$chr) > 1L || nchains > 1L
+   use_scheduled_backend <- !use_chains_backend
+   use_sparse_backend <- FALSE
+ } else if (backend == "scheduled") {
+   use_chains_backend <- nchains > 1L || length(dat$chr) > 1L
+   use_scheduled_backend <- !use_chains_backend
+   use_sparse_backend <- FALSE
+ } else {
+   use_chains_backend <- FALSE
+   use_scheduled_backend <- FALSE
+   use_sparse_backend <- TRUE
  }
- if (!chains && !scheduled && length(dat$chr) != 1) {
-  stop("The sparse non-scheduled sampler path only supports one chromosome.")
+ 
+ if (use_sparse_backend && length(dat$chr) != 1L) {
+   stop("backend = 'sparse' only supports one chromosome.")
  }
+ 
  pri <- .make_stblr_priors(
   dat$y, dat$m, h2, nub, nue, arch$pi_vb_init, arch$pi_prior_mean,
   dat$trait_names
@@ -649,25 +782,57 @@ stblr_bed_marker <- function(
    candidate_lifetime = candidate_lifetime,
    skip_nulls_burnin_only = skip_nulls_burnin_only
  )
- if (chains) {
-  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, c(common, list(
-   null_skip_base = null_skip_base, null_skip_max = null_skip_max,
-   return_wy = return_wy, return_r = return_r,
-   read_block_size = as.integer(read_block_size),
-   progress_every = as.integer(progress_every), pi_prior_a = arch$pi_prior_a,
-   pi_prior_b = arch$pi_prior_b, nchains = as.integer(nchains),
-   ncores = ncores, seed = seed
-  )))
- } else if (scheduled) {
-  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled, c(common, list(
-   null_skip_base = null_skip_base, null_skip_max = null_skip_max,
-   return_wy = return_wy, return_r = return_r, pi_prior_a = arch$pi_prior_a,
-   pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed
-  )))
+ # if (chains) {
+ #  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, c(common, list(
+ #   null_skip_base = null_skip_base, null_skip_max = null_skip_max,
+ #   return_wy = return_wy, return_r = return_r,
+ #   read_block_size = as.integer(read_block_size),
+ #   progress_every = as.integer(progress_every), pi_prior_a = arch$pi_prior_a,
+ #   pi_prior_b = arch$pi_prior_b, nchains = as.integer(nchains),
+ #   ncores = ncores, seed = seed
+ #  )))
+ # } else if (scheduled) {
+ #  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled, c(common, list(
+ #   null_skip_base = null_skip_base, null_skip_max = null_skip_max,
+ #   return_wy = return_wy, return_r = return_r, pi_prior_a = arch$pi_prior_a,
+ #   pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed
+ #  )))
+ # } else {
+ #  raw <- do.call(stblr_cpg_omp_bed_marker_sparse, c(common, list(
+ #   null_update_prob = null_update_prob, ncores = ncores, seed = seed
+ #  )))
+ # }
+ if (use_chains_backend) {
+   raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, c(common, list(
+     null_skip_base = null_skip_base,
+     null_skip_max = null_skip_max,
+     return_wy = return_wy,
+     return_r = return_r,
+     read_block_size = as.integer(read_block_size),
+     progress_every = as.integer(progress_every),
+     pi_prior_a = arch$pi_prior_a,
+     pi_prior_b = arch$pi_prior_b,
+     nchains = as.integer(nchains),
+     ncores = ncores,
+     seed = seed
+   )))
+ } else if (use_scheduled_backend) {
+   raw <- do.call(stblr_cpg_omp_bed_marker_scheduled, c(common, list(
+     null_skip_base = null_skip_base,
+     null_skip_max = null_skip_max,
+     return_wy = return_wy,
+     return_r = return_r,
+     pi_prior_a = arch$pi_prior_a,
+     pi_prior_b = arch$pi_prior_b,
+     ncores = ncores,
+     seed = seed
+   )))
  } else {
-  raw <- do.call(stblr_cpg_omp_bed_marker_sparse, c(common, list(
-   null_update_prob = null_update_prob, ncores = ncores, seed = seed
-  )))
+   raw <- do.call(stblr_cpg_omp_bed_marker_sparse, c(common, list(
+     null_update_prob = null_update_prob,
+     ncores = ncores,
+     seed = seed
+   )))
  }
  fit <- .format_stblr_fit(
   raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
@@ -684,7 +849,12 @@ stblr_bed_marker <- function(
   skip_nulls_burnin_only = skip_nulls_burnin_only,
   null_update_prob = null_update_prob, null_skip_base = null_skip_base,
   null_skip_max = null_skip_max, ncores = ncores, seed = seed,
-  scheduled = scheduled, chains = chains, nchains = nchains,
+  #scheduled = scheduled, chains = chains, nchains = nchains,
+  backend = backend,
+  use_chains_backend = use_chains_backend,
+  use_scheduled_backend = use_scheduled_backend,
+  use_sparse_backend = use_sparse_backend,
+  nchains = nchains,
   read_block_size = read_block_size, progress_every = progress_every,
   scale = scale, rows = dat$rows
  ), arch)

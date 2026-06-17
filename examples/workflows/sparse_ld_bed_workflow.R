@@ -61,7 +61,7 @@ fit_qgg <- gbayes(
 # Compute summary statistics from BED with bed_xtx_xty() ------------------
 
 # Runtime-heavy benchmark.
-stats <- bed_xtx_xty(
+system.time(stats <- bed_xtx_xty(
   bed_file = Glist$bedfiles[chr],
   n = Glist$n,
   cls = cls,
@@ -69,12 +69,13 @@ stats <- bed_xtx_xty(
   y = y,
   scale = TRUE,
   nthreads = 4
-)
+))
+
 
 # Stream sparse LD with sparseLD_stream_CSR() ------------------------------
 
 # Runtime-heavy benchmark. This writes disk-backed CSR files at ld_prefix.
-sparseLD_stream_CSR(
+system.time(sparseLD_stream_CSR(
   bed_files = Glist$bedfiles[chr],
   n = Glist$n,
   cls = list(cls),
@@ -87,7 +88,7 @@ sparseLD_stream_CSR(
   r2_threshold = 0.001,
   block_size = 1024,
   nthreads = 4
-)
+))
 
 ld <- sparseLD_read_CSR(ld_prefix, one_based = FALSE)
 

@@ -12,9 +12,13 @@
 
 \item{af}{Allele frequencies corresponding to `cls`.}
 
-\item{y}{Phenotype matrix.}
+\item{y}{Phenotype vector or matrix. If `y` is a vector, `names(y)` must
+contain individual IDs matching `Glist$ids`. If `y` is a matrix,
+`rownames(y)` must contain matching IDs unless `nrow(y) == Glist$n`.}
 
-\item{rows}{Optional 1-based individual row indices.}
+\item{rows}{Advanced/internal option. Optional 1-based BED/FAM row indices
+corresponding to rows of `y`. Normally omitted; rows are inferred from
+`names(y)` or `rownames(y)` matched to `Glist$ids`.}
 
 \item{scale}{Standardize markers using allele frequencies.}
 

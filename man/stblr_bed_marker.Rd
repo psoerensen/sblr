@@ -7,14 +7,14 @@
 stblr_bed_marker(
   Glist,
   y,
-  chr = 1,
+  chr = 1:22,
   cls = NULL,
   block_size = 1000,
   pi_marker = 0.001,
   pi_init = NULL,
   pi_vb_init = NULL,
-  pi_prior_mean = NULL,
-  pi_prior_strength = NULL,
+  pi_prior_mean = 0.01,
+  pi_prior_strength = 5e+05,
   pi_prior_a = NULL,
   pi_prior_b = NULL,
   h2 = 0.5,
@@ -33,16 +33,15 @@ stblr_bed_marker(
   candidate_threshold = 0.001,
   candidate_lifetime = 20,
   skip_nulls_burnin_only = FALSE,
-  ncores = 3,
+  ncores = 1,
   seed = 10,
-  scheduled = TRUE,
+  backend = c("auto", "scheduled", "sparse"),
   null_update_prob = 0.02,
   null_skip_base = 50,
   null_skip_max = 200,
   return_wy = FALSE,
   return_r = FALSE,
   rows = NULL,
-  chains = FALSE,
   nchains = 1,
   read_block_size = 64,
   progress_every = 0
@@ -83,7 +82,11 @@ stblr_bed_marker(
 
 \item{seed}{Sampler seed.}
 
-\item{scheduled}{Use the scheduled BED sampler.}
+\item{backend}{Sampler backend. `"auto"` selects the scheduled multi-chain
+backend for multi-chromosome fits or when `nchains > 1`, and the scheduled
+single-chain backend otherwise. `"scheduled"` forces a scheduled backend;
+for multi-chromosome fits it uses the scheduled multi-chain backend.
+`"sparse"` is only valid for one chromosome.}
 
 \item{null_update_prob, null_skip_base, null_skip_max}{Null-marker scheduling
 controls.}
@@ -94,7 +97,8 @@ controls.}
 omitted, subset phenotypes can instead be matched using `rownames(y)` and
 `Glist$ids`.}
 
-\item{chains, nchains}{Multi-chain controls.}
+\item{nchains}{Number of MCMC chains. When `nchains > 1`, the scheduled
+multi-chain backend is used.}
 
 \item{read_block_size, progress_every}{Multi-chain BED reading and progress
 controls.}
