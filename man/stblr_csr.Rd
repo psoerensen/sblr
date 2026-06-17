@@ -9,8 +9,7 @@ stblr_csr(
   ld_prefix,
   n = NULL,
   m = NULL,
-  pi_marker = 0.001,
-  pi_init = NULL,
+  pi_init = 0.001,
   pi_vb_init = NULL,
   pi_prior_mean = NULL,
   pi_prior_strength = NULL,
@@ -52,20 +51,16 @@ stblr_csr(
 
 \item{m}{Number of markers. Inferred from `stats` when omitted.}
 
-\item{pi_marker}{Backward-compatible initial marker inclusion probability.
-Defaults to 0.001.}
-
-\item{pi_init}{Initial inclusion probability used to initialize the sampler.
-Defaults to `pi_marker`.}
+\item{pi_init}{Initial marker inclusion probability. Defaults to 0.001.}
 
 \item{pi_vb_init}{Inclusion probability used when initializing marker-effect
 variance. Defaults to `pi_init`.}
 
 \item{pi_prior_mean}{Prior mean for the marker inclusion probability.
-Defaults to 0.01 for BED marker models.}
+Defaults to `pi_init`.}
 
 \item{pi_prior_strength}{Total Beta prior strength for the marker inclusion
-probability. Defaults to 5e5 for BED marker models.}
+probability. Defaults to 2.}
 
 \item{pi_prior_a, pi_prior_b}{Optional explicit Beta prior shape parameters.
 When supplied, these override `pi_prior_mean` and `pi_prior_strength`.}
@@ -76,7 +71,8 @@ When supplied, these override `pi_prior_mean` and `pi_prior_strength`.}
 
 \item{updateB, updateE, updatePi}{Logical sampler update controls.}
 
-\item{adjE}{Residual adjustment factor.}
+\item{adjE}{Residual adjustment factor. For sparse-LD summary-statistic
+models, values greater than 0 can stabilize residual-variance updates.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 

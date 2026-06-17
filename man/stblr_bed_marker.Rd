@@ -10,8 +10,7 @@ stblr_bed_marker(
   chr = 1:22,
   cls = NULL,
   block_size = 1000,
-  pi_marker = 0.001,
-  pi_init = NULL,
+  pi_init = 0.001,
   pi_vb_init = NULL,
   pi_prior_mean = 0.01,
   pi_prior_strength = 5e+05,
@@ -58,9 +57,16 @@ stblr_bed_marker(
 
 \item{block_size}{Marker block size.}
 
-\item{pi_marker}{Backward-compatible initial inclusion probability.}
+\item{pi_init}{Initial marker inclusion probability.}
 
-\item{pi_init, pi_vb_init, pi_prior_mean, pi_prior_strength, pi_prior_a, pi_prior_b}{Inclusion-probability and marker-variance prior controls.}
+\item{pi_vb_init}{Inclusion probability used when initializing marker-effect
+variance. Defaults to `pi_init`.}
+
+\item{pi_prior_mean}{Prior mean for the marker inclusion probability.
+Defaults to 0.01.}
+
+\item{pi_prior_strength}{Total Beta prior strength for the marker inclusion
+probability. Defaults to 5e5.}
 
 \item{h2}{Initial heritability.}
 

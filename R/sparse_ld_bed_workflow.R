@@ -55,45 +55,53 @@ NULL
 #' @export
 NULL
 
-.resolve_pi_prior <- function(pi_marker = 0.001, pi_init = NULL,
-                              pi_vb_init = NULL, pi_prior_mean = NULL,
-                              pi_prior_strength = NULL, pi_prior_a = NULL,
+.resolve_pi_prior <- function(pi_init = 0.001,
+                              pi_vb_init = NULL,
+                              pi_prior_mean = NULL,
+                              pi_prior_strength = NULL,
+                              pi_prior_a = NULL,
                               pi_prior_b = NULL) {
- if (is.null(pi_init)) pi_init <- pi_marker
- if (is.null(pi_vb_init)) pi_vb_init <- pi_init
- if (is.null(pi_prior_mean)) pi_prior_mean <- pi_init
- if (is.null(pi_prior_strength)) pi_prior_strength <- 2
-
- for (nm in c("pi_init", "pi_vb_init", "pi_prior_mean")) {
-  val <- get(nm)
-  if (!is.numeric(val) || length(val) != 1 || !is.finite(val) ||
-      val <= 0 || val >= 1) {
-   stop(nm, " must be a finite scalar in (0, 1).")
+  if (is.null(pi_vb_init)) pi_vb_init <- pi_init
+  if (is.null(pi_prior_mean)) pi_prior_mean <- pi_init
+  if (is.null(pi_prior_strength)) pi_prior_strength <- 2
+  
+  for (nm in c("pi_init", "pi_vb_init", "pi_prior_mean")) {
+    val <- get(nm)
+    if (!is.numeric(val) || length(val) != 1 || !is.finite(val) ||
+        val <= 0 || val >= 1) {
+      stop(nm, " must be a finite scalar in (0, 1).")
+    }
   }
- }
- if (!is.numeric(pi_prior_strength) || length(pi_prior_strength) != 1 ||
-     !is.finite(pi_prior_strength) || pi_prior_strength <= 0) {
-  stop("pi_prior_strength must be a finite positive scalar.")
- }
-
- if (is.null(pi_prior_a)) pi_prior_a <- pi_prior_mean * pi_prior_strength
- if (is.null(pi_prior_b)) pi_prior_b <- (1 - pi_prior_mean) * pi_prior_strength
- if (!is.numeric(pi_prior_a) || length(pi_prior_a) != 1 ||
-     !is.finite(pi_prior_a) || pi_prior_a <= 0) {
-  stop("pi_prior_a must be a finite positive scalar.")
- }
- if (!is.numeric(pi_prior_b) || length(pi_prior_b) != 1 ||
-     !is.finite(pi_prior_b) || pi_prior_b <= 0) {
-  stop("pi_prior_b must be a finite positive scalar.")
- }
-
- list(
-  pi_marker = pi_marker, pi_init = pi_init, pi_vb_init = pi_vb_init,
-  pi_prior_mean = pi_prior_mean, pi_prior_strength = pi_prior_strength,
-  pi_prior_a = pi_prior_a, pi_prior_b = pi_prior_b,
-  pi = c(1 - pi_init, pi_init)
- )
+  
+  if (!is.numeric(pi_prior_strength) || length(pi_prior_strength) != 1 ||
+      !is.finite(pi_prior_strength) || pi_prior_strength <= 0) {
+    stop("pi_prior_strength must be a finite positive scalar.")
+  }
+  
+  if (is.null(pi_prior_a)) pi_prior_a <- pi_prior_mean * pi_prior_strength
+  if (is.null(pi_prior_b)) pi_prior_b <- (1 - pi_prior_mean) * pi_prior_strength
+  
+  if (!is.numeric(pi_prior_a) || length(pi_prior_a) != 1 ||
+      !is.finite(pi_prior_a) || pi_prior_a <= 0) {
+    stop("pi_prior_a must be a finite positive scalar.")
+  }
+  
+  if (!is.numeric(pi_prior_b) || length(pi_prior_b) != 1 ||
+      !is.finite(pi_prior_b) || pi_prior_b <= 0) {
+    stop("pi_prior_b must be a finite positive scalar.")
+  }
+  
+  list(
+    pi_init = pi_init,
+    pi_vb_init = pi_vb_init,
+    pi_prior_mean = pi_prior_mean,
+    pi_prior_strength = pi_prior_strength,
+    pi_prior_a = pi_prior_a,
+    pi_prior_b = pi_prior_b,
+    pi = c(1 - pi_init, pi_init)
+  )
 }
+
 
 .make_stblr_priors <- function(y, m, h2, nub, nue, pi_vb_init,
                                pi_prior_mean, trait_names = NULL) {
@@ -187,22 +195,20 @@ NULL
 #' @param ld_prefix Prefix of the disk-backed CSR LD files.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
-#' @param pi_marker Backward-compatible initial marker inclusion probability.
-#'   Defaults to 0.001.
-#' @param pi_init Initial inclusion probability used to initialize the sampler.
-#'   Defaults to `pi_marker`.
+#' @param pi_init Initial marker inclusion probability. Defaults to 0.001.
 #' @param pi_vb_init Inclusion probability used when initializing marker-effect
 #'   variance. Defaults to `pi_init`.
 #' @param pi_prior_mean Prior mean for the marker inclusion probability.
-#'   Defaults to 0.01 for BED marker models.
+#'   Defaults to `pi_init`.
 #' @param pi_prior_strength Total Beta prior strength for the marker inclusion
-#'   probability. Defaults to 5e5 for BED marker models.
+#'   probability. Defaults to 2.
 #' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
 #' @param h2 Initial heritability.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
-#' @param adjE Residual adjustment factor.
+#' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
+#'   models, values greater than 0 can stabilize residual-variance updates.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
@@ -219,9 +225,9 @@ NULL
 #' @return A formatted ST-BLR fit.
 #' @export
 stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
-                      pi_marker = 0.001, pi_init = NULL, pi_vb_init = NULL,
-                      pi_prior_mean = NULL, pi_prior_strength = NULL,
-                      pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.5,
+                      pi_init = 0.001, pi_vb_init = NULL,
+                      pi_prior_mean = 0.001, pi_prior_strength = 5e5,
+                      pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
                       nthin = 1, ncores = 1, seed = 10, scheduled = FALSE,
@@ -237,9 +243,14 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
  if (is.null(m)) m <- if (!is.null(stats$m)) stats$m else length(stats$ww[[1]])
 
  arch <- .resolve_pi_prior(
-  pi_marker, pi_init, pi_vb_init, pi_prior_mean, pi_prior_strength,
-  pi_prior_a, pi_prior_b
+   pi_init = pi_init,
+   pi_vb_init = pi_vb_init,
+   pi_prior_mean = pi_prior_mean,
+   pi_prior_strength = pi_prior_strength,
+   pi_prior_a = pi_prior_a,
+   pi_prior_b = pi_prior_b
  )
+ 
  trait_names <- names(stats$yy)
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
  variable_names <- names(stats$ww[[1]])
@@ -298,76 +309,6 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
  fit
 }
 
-# .make_bed_marker_data <- function(Glist, y, chr, cls, block_size, chains,
-#                                   rows = NULL) {
-#  chr <- as.integer(chr)
-#  if (length(chr) < 1 || anyNA(chr)) stop("chr must contain valid chromosome indices.")
-#  y <- as.matrix(y)
-#  if (!chains && length(chr) != 1) stop("Use chains = TRUE for multi-chromosome BED sampling.")
-# 
-#  if (is.null(rows)) {
-#   if (!is.null(rownames(y))) {
-#    if (is.null(Glist$ids)) {
-#     stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
-#    }
-#    if (anyDuplicated(rownames(y))) stop("rownames(y) must not contain duplicates.")
-#    if (anyDuplicated(Glist$ids)) {
-#     stop("Glist$ids must not contain duplicates when matching rownames(y).")
-#    }
-#    rows <- match(rownames(y), Glist$ids)
-#    if (anyNA(rows)) {
-#     missing_ids <- rownames(y)[is.na(rows)]
-#     stop(
-#      "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
-#      paste(head(missing_ids, 10), collapse = ", ")
-#     )
-#    }
-#   } else if (nrow(y) == Glist$n) {
-#    rows <- NULL
-#   } else {
-#    stop(
-#     "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
-#     "Provide rows as 1-based BED individual indices, or set rownames(y) ",
-#     "to IDs matching Glist$ids."
-#    )
-#   }
-#  } else {
-#   rows <- as.integer(rows)
-#   if (length(rows) != nrow(y)) stop("length(rows) must equal nrow(y).")
-#   if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
-#    stop("rows must be valid 1-based individual indices into the BED file.")
-#   }
-#   if (anyDuplicated(rows)) stop("rows must not contain duplicate individual indices.")
-#  }
-# 
-#  if (is.null(cls)) {
-#   cls <- lapply(chr, function(cc) match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]]))
-#  } else if (!is.list(cls)) {
-#   cls <- list(cls)
-#  }
-#  if (length(cls) != length(chr) || any(vapply(cls, anyNA, logical(1)))) {
-#   stop("cls must match chr and contain no missing marker indices.")
-#  }
-#  cls <- lapply(cls, as.integer)
-#  af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
-#  m <- sum(lengths(cls))
-#  trait_names <- colnames(y)
-#  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(ncol(y)))
-#  colnames(y) <- trait_names
-#  variable_names <- unlist(Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls))
-#  sets <- if (length(chr) == 1) {
-#   rep(seq_len(ceiling(m / block_size)), each = block_size)[seq_len(m)]
-#  } else {
-#   rep(seq_along(chr), lengths(cls))
-#  }
-#  list(
-#   y = y, chr = chr, bed_files = Glist$bedfiles[chr], cls = cls, af = af,
-#   rows = rows, m = m, nt = ncol(y), n = Glist$n, n_total = Glist$n,
-#   n_used = nrow(y), trait_names = trait_names, variable_names = variable_names,
-#   sets = sets, b_init = lapply(seq_len(ncol(y)), function(i) rep(0, m))
-#  )
-# }
-
 .make_bed_marker_data <- function(Glist, y, chr, cls, block_size,
                                   rows = NULL) {
   chr <- as.integer(chr)
@@ -408,8 +349,14 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
       
       ids_y <- rownames(y)
       ids_y <- as.character(ids_y)
-      Glist$ids <- as.character(Glist$ids)
       
+      if (!is.character(Glist$ids)) {
+        stop("Glist$ids must be a character vector in PLINK FAM/BED row order.")
+      }
+      if (length(Glist$ids) != Glist$n) {
+        stop("length(Glist$ids) must equal Glist$n.")
+      }
+
       if (anyDuplicated(ids_y)) {
         dup <- ids_y[duplicated(ids_y)]
         stop(
@@ -426,7 +373,8 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
         )
       }
       
-      rows <- match(ids_y, Glist$ids)
+      ids_g <- Glist$ids
+      rows <- match(ids_y, ids_g)
       ok <- !is.na(rows)
       
       if (!all(ok)) {
@@ -477,49 +425,6 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
       )
     }
   }  
-  # if (is.null(rows)) {
-  #   if (!is.null(rownames(y))) {
-  #     if (is.null(Glist$ids)) {
-  #       stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
-  #     }
-  #     if (anyDuplicated(rownames(y))) {
-  #       stop("rownames(y) must not contain duplicates.")
-  #     }
-  #     if (anyDuplicated(Glist$ids)) {
-  #       stop("Glist$ids must not contain duplicates when matching rownames(y).")
-  #     }
-  #     
-  #     rows <- match(rownames(y), Glist$ids)
-  #     
-  #     if (anyNA(rows)) {
-  #       missing_ids <- rownames(y)[is.na(rows)]
-  #       stop(
-  #         "Some rownames(y) were not found in Glist$ids. First missing IDs: ",
-  #         paste(head(missing_ids, 10), collapse = ", ")
-  #       )
-  #     }
-  #   } else if (nrow(y) == Glist$n) {
-  #     rows <- NULL
-  #   } else {
-  #     stop(
-  #       "nrow(y) != Glist$n, but neither rows nor rownames(y) were supplied. ",
-  #       "Provide rows as 1-based BED individual indices, or set rownames(y) ",
-  #       "to IDs matching Glist$ids."
-  #     )
-  #   }
-  # } else {
-  #   rows <- as.integer(rows)
-  #   if (length(rows) != nrow(y)) {
-  #     stop("length(rows) must equal nrow(y).")
-  #   }
-  #   if (anyNA(rows) || any(rows < 1L) || any(rows > Glist$n)) {
-  #     stop("rows must be valid 1-based individual indices into the BED file.")
-  #   }
-  #   if (anyDuplicated(rows)) {
-  #     stop("rows must not contain duplicate individual indices.")
-  #   }
-  # }
-  
   if (is.null(Glist$bedfiles)) {
     stop("Glist$bedfiles is missing.")
   }
@@ -654,9 +559,13 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' @param chr Chromosome indices to fit.
 #' @param cls Optional marker column indices.
 #' @param block_size Marker block size.
-#' @param pi_marker Backward-compatible initial inclusion probability.
-#' @param pi_init,pi_vb_init,pi_prior_mean,pi_prior_strength,pi_prior_a,pi_prior_b
-#'   Inclusion-probability and marker-variance prior controls.
+#' @param pi_init Initial marker inclusion probability.
+#' @param pi_vb_init Inclusion probability used when initializing marker-effect
+#'   variance. Defaults to `pi_init`.
+#' @param pi_prior_mean Prior mean for the marker inclusion probability.
+#'   Defaults to 0.01.
+#' @param pi_prior_strength Total Beta prior strength for the marker inclusion
+#'   probability. Defaults to 5e5.
 #' @param h2 Initial heritability.
 #' @param nub,nue Prior degrees of freedom.
 #' @param scale Standardize BED markers.
@@ -686,17 +595,18 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' @return A formatted ST-BLR fit.
 #' @export
 stblr_bed_marker <- function(
-  Glist, y, chr = 1:22, cls = NULL, block_size = 1000, pi_marker = 0.001,
-  pi_init = NULL, pi_vb_init = NULL, pi_prior_mean = 0.01,
-  pi_prior_strength = 5e5, pi_prior_a = NULL, pi_prior_b = NULL,
-  h2 = 0.5, nub = 4, nue = 4, scale = TRUE, updateB = TRUE,
-  updateE = TRUE, updatePi = TRUE, adjE = 0, nit = 1000, nburn = 100,
-  nthin = 1, rebuild_every = 25, full_sweep_every = 10,
-  candidate_threshold = 1e-3, candidate_lifetime = 20,
-  skip_nulls_burnin_only = FALSE, ncores = 1, seed = 10,
-  backend = c("auto", "scheduled", "sparse"), null_update_prob = 0.02, null_skip_base = 50,
-  null_skip_max = 200, return_wy = FALSE, return_r = FALSE, rows = NULL,
-  nchains = 1, read_block_size = 64, progress_every = 0
+    Glist, y, chr = 1:22, cls = NULL, block_size = 1000,
+    pi_init = 0.001, pi_vb_init = NULL, pi_prior_mean = 0.001,
+    pi_prior_strength = 5e5, pi_prior_a = NULL, pi_prior_b = NULL,
+    h2 = 0.3, nub = 4, nue = 4, scale = TRUE, updateB = TRUE,
+    updateE = TRUE, updatePi = TRUE, adjE = 0, nit = 1000, nburn = 100,
+    nthin = 1, rebuild_every = 25, full_sweep_every = 10,
+    candidate_threshold = 1e-3, candidate_lifetime = 20,
+    skip_nulls_burnin_only = FALSE, ncores = 1, seed = 10,
+    backend = c("auto", "scheduled", "sparse"),
+    null_update_prob = 0.02, null_skip_base = 50,
+    null_skip_max = 200, return_wy = FALSE, return_r = FALSE, rows = NULL,
+    nchains = 1, read_block_size = 64, progress_every = 0
 ) {
   
   backend <- match.arg(backend)
@@ -712,11 +622,15 @@ stblr_bed_marker <- function(
   }
   ncores <- as.integer(ncores)
   
-  
- arch <- .resolve_pi_prior(
-  pi_marker, pi_init, pi_vb_init, pi_prior_mean, pi_prior_strength,
-  pi_prior_a, pi_prior_b
- )
+  arch <- .resolve_pi_prior(
+    pi_init = pi_init,
+    pi_vb_init = pi_vb_init,
+    pi_prior_mean = pi_prior_mean,
+    pi_prior_strength = pi_prior_strength,
+    pi_prior_a = pi_prior_a,
+    pi_prior_b = pi_prior_b
+  )
+
  dat <- .make_bed_marker_data(
    Glist = Glist,
    y = y,
@@ -782,26 +696,6 @@ stblr_bed_marker <- function(
    candidate_lifetime = candidate_lifetime,
    skip_nulls_burnin_only = skip_nulls_burnin_only
  )
- # if (chains) {
- #  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, c(common, list(
- #   null_skip_base = null_skip_base, null_skip_max = null_skip_max,
- #   return_wy = return_wy, return_r = return_r,
- #   read_block_size = as.integer(read_block_size),
- #   progress_every = as.integer(progress_every), pi_prior_a = arch$pi_prior_a,
- #   pi_prior_b = arch$pi_prior_b, nchains = as.integer(nchains),
- #   ncores = ncores, seed = seed
- #  )))
- # } else if (scheduled) {
- #  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled, c(common, list(
- #   null_skip_base = null_skip_base, null_skip_max = null_skip_max,
- #   return_wy = return_wy, return_r = return_r, pi_prior_a = arch$pi_prior_a,
- #   pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed
- #  )))
- # } else {
- #  raw <- do.call(stblr_cpg_omp_bed_marker_sparse, c(common, list(
- #   null_update_prob = null_update_prob, ncores = ncores, seed = seed
- #  )))
- # }
  if (use_chains_backend) {
    raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, c(common, list(
      null_skip_base = null_skip_base,
@@ -849,7 +743,6 @@ stblr_bed_marker <- function(
   skip_nulls_burnin_only = skip_nulls_burnin_only,
   null_update_prob = null_update_prob, null_skip_base = null_skip_base,
   null_skip_max = null_skip_max, ncores = ncores, seed = seed,
-  #scheduled = scheduled, chains = chains, nchains = nchains,
   backend = backend,
   use_chains_backend = use_chains_backend,
   use_scheduled_backend = use_scheduled_backend,
