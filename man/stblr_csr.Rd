@@ -5,8 +5,9 @@
 \title{Fit ST-BLR from BED Sufficient Statistics and Sparse LD}
 \usage{
 stblr_csr(
+  Glist = NULL,
   stats,
-  ld_prefix,
+  ld_prefix = NULL,
   n = NULL,
   m = NULL,
   pi_init = 0.001,

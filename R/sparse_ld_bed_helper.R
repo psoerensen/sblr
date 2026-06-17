@@ -273,7 +273,7 @@ NULL
 #'   residual rebuilding controls.
 #' @return A formatted ST-BLR fit.
 #' @export
-stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
+stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_init = 0.001, pi_vb_init = NULL,
                       pi_prior_mean = 0.001, pi_prior_strength = 5e5,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
@@ -291,6 +291,13 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
  if (is.null(n)) stop("n must be supplied or available as stats$n.")
  if (is.null(m)) m <- if (!is.null(stats$m)) stats$m else length(stats$ww[[1]])
 
+ if (is.null(ld_prefix)) {
+   if (is.null(Glist) || is.null(Glist$sparseLD$prefix)) {
+     stop("Provide ld_prefix or run make_sparseLD() and supply Glist.")
+   }
+   ld_prefix <- Glist$sparseLD$prefix
+ }
+ 
  arch <- .resolve_pi_prior(
    pi_init = pi_init,
    pi_vb_init = pi_vb_init,
@@ -843,4 +850,342 @@ stblr_bed_marker <- function(
   scale = scale, rows = dat$rows
  ), arch)
  fit
+}
+
+
+
+#' Make Sufficient Statistics for ST-BLR
+#'
+#' Computes genome-wide marker sufficient statistics from PLINK BED files
+#' referenced by a `Glist` object. The returned marker order is consistent with
+#' the sparse-LD CSR matrix produced by [sparseLD_stream_CSR()] when using the
+#' same `chr` and `cls`.
+#'
+#' @param Glist A qgg genotype list containing `bedfiles`, `n`, `ids`,
+#'   `rsids`, `rsidsLD`, and optionally `af`.
+#' @param y Phenotype vector or matrix. If `y` is a vector, `names(y)` must
+#'   contain individual IDs matching `Glist$ids`. If `y` is a matrix,
+#'   `rownames(y)` must contain individual IDs matching `Glist$ids`, unless
+#'   `rows` is supplied.
+#' @param chr Chromosome/file indices to use. If `NULL`, all available
+#'   non-missing, non-empty entries in `Glist$bedfiles` are used.
+#' @param cls Optional marker column indices. If `NULL`, these are inferred as
+#'   `match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])` for each chromosome/file.
+#'   If supplied as a vector, it is treated as the marker index vector for a
+#'   single chromosome/file. If supplied as a list, it must have one element per
+#'   chromosome/file in `chr`.
+#' @param rows Optional 1-based BED/FAM row indices corresponding to rows of
+#'   `y`. If `NULL`, rows are inferred by matching `rownames(y)` or `names(y)`
+#'   to `Glist$ids`.
+#' @param scale Logical. Standardize BED markers using allele frequencies.
+#' @param nthreads Number of OpenMP threads used by [bed_xtx_xty()].
+#'
+#' @return A list with genome-wide sufficient statistics:
+#' \describe{
+#'   \item{wy}{List of marker-trait cross-products, one vector per trait.}
+#'   \item{ww}{List of marker cross-products, one vector per trait.}
+#'   \item{yy}{Trait sums of squares.}
+#'   \item{n}{Analysis sample size after phenotype-to-BED matching.}
+#'   \item{m}{Total number of markers.}
+#'   \item{chr}{Chromosome/file indices used.}
+#'   \item{bed_files}{BED files used, in the same order as `chr`.}
+#'   \item{cls}{Marker indices used for each chromosome/file.}
+#'   \item{af}{Allele frequencies corresponding to `cls`.}
+#'   \item{rows}{BED/FAM row indices used.}
+#'   \item{marker_names}{Genome-wide marker names in the same order as `wy`
+#'     and `ww`.}
+#'   \item{trait_names}{Trait names.}
+#'   \item{stats_by_chr}{Per-chromosome sufficient statistics returned by
+#'     [bed_xtx_xty()].}
+#' }
+#'
+#' @export
+make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
+                       scale = TRUE, nthreads = 1) {
+  bedfiles <- as.character(Glist$bedfiles)
+  has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
+  
+  if (is.null(chr)) {
+    chr <- which(has_bedfile)
+  } else {
+    chr <- as.integer(chr)
+  }
+  
+  if (length(chr) < 1L || anyNA(chr)) {
+    stop("chr must contain valid chromosome/file indices.")
+  }
+  
+  if (any(chr < 1L | chr > length(bedfiles))) {
+    stop("chr contains indices outside Glist$bedfiles.")
+  }
+  
+  missing_bed <- is.na(bedfiles[chr]) | !nzchar(bedfiles[chr])
+  
+  if (any(missing_bed)) {
+    stop(
+      "Glist$bedfiles is missing for chromosome/file index: ",
+      paste(chr[missing_bed], collapse = ", ")
+    )
+  }
+  
+  if (is.null(dim(y))) {
+    ids_y <- names(y)
+    
+    y <- matrix(as.numeric(y), ncol = 1)
+    
+    if (!is.null(ids_y)) {
+      rownames(y) <- ids_y
+    }
+    
+    colnames(y) <- "T1"
+  } else {
+    y <- as.matrix(y)
+  }
+  
+  if (is.null(rows) && is.null(rownames(y))) {
+    stop(
+      "When rows is NULL, y must have names(y) or rownames(y) ",
+      "matching Glist$ids."
+    )
+  }
+  
+  if (is.null(rows)) {
+    rows <- match(rownames(y), Glist$ids)
+    ok <- !is.na(rows)
+    
+    if (!all(ok)) {
+      warning(
+        sum(!ok),
+        " phenotype IDs were not found in Glist$ids and will be dropped."
+      )
+      
+      y <- y[ok, , drop = FALSE]
+      rows <- rows[ok]
+    }
+    
+    if (nrow(y) < 1L) {
+      stop("No phenotype IDs matched Glist$ids.")
+    }
+  } else {
+    rows <- as.integer(rows)
+    
+    if (length(rows) != nrow(y)) {
+      stop("length(rows) must equal nrow(y).")
+    }
+  }
+  
+  rows <- as.integer(rows)
+  
+  ord <- order(rows)
+  rows <- rows[ord]
+  y <- y[ord, , drop = FALSE]
+  
+  trait_names <- colnames(y)
+  if (is.null(trait_names)) {
+    trait_names <- paste0("T", seq_len(ncol(y)))
+  }
+  colnames(y) <- trait_names
+  
+  if (is.null(cls)) {
+    cls <- lapply(chr, function(cc) {
+      match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
+    })
+  } else if (!is.list(cls)) {
+    cls <- list(cls)
+  }
+  
+  if (length(cls) != length(chr)) {
+    stop("cls must have one element per chromosome/file in chr.")
+  }
+  
+  cls <- lapply(cls, as.integer)
+  names(cls) <- paste0("chr", chr)
+  
+  af <- Map(function(cc, cl) {
+    Glist$af[[cc]][cl]
+  }, chr, cls)
+  
+  stats_by_chr <- vector("list", length(chr))
+  names(stats_by_chr) <- paste0("chr", chr)
+  
+  for (k in seq_along(chr)) {
+    cc <- chr[k]
+    
+    message("Computing sufficient statistics for chromosome ", cc)
+    
+    stats_by_chr[[k]] <- bed_xtx_xty(
+      bed_file = bedfiles[cc],
+      n = Glist$n,
+      cls = cls[[k]],
+      af = af[[k]],
+      y = y,
+      rows = rows,
+      scale = scale,
+      nthreads = nthreads
+    )
+  }
+  
+  nt <- ncol(y)
+  
+  marker_names <- unlist(
+    Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
+    use.names = FALSE
+  )
+  
+  wy <- lapply(seq_len(nt), function(t) {
+    out <- unlist(
+      lapply(stats_by_chr, function(s) s$wy[[t]]),
+      use.names = FALSE
+    )
+    names(out) <- marker_names
+    out
+  })
+  
+  ww <- lapply(seq_len(nt), function(t) {
+    out <- unlist(
+      lapply(stats_by_chr, function(s) s$ww[[t]]),
+      use.names = FALSE
+    )
+    names(out) <- marker_names
+    out
+  })
+  
+  names(wy) <- trait_names
+  names(ww) <- trait_names
+  
+  yy <- stats_by_chr[[1]]$yy
+  names(yy) <- trait_names
+  
+  list(
+    wy = wy,
+    ww = ww,
+    yy = yy,
+    n = nrow(y),
+    m = length(marker_names),
+    chr = chr,
+    bed_files = bedfiles[chr],
+    cls = cls,
+    af = af,
+    rows = rows,
+    marker_names = marker_names,
+    trait_names = trait_names,
+    stats_by_chr = stats_by_chr
+  )
+}
+
+
+#' Make Sparse LD for ST-BLR
+#'
+#' Computes a disk-backed sparse-LD CSR matrix from PLINK BED files referenced
+#' by a `Glist` object and stores the sparse-LD prefix and resolved marker
+#' structure in `Glist$sparseLD`. The returned `Glist` can be used directly
+#' with [make_stats()] and [stblr_csr()].
+#'
+#' @param Glist A qgg genotype list containing `bedfiles`, `n`, `ids`,
+#'   `rsids`, `rsidsLD`, `af`, and optionally `idsLD`.
+#' @param rows Optional 1-based BED/FAM row indices used as the LD reference
+#'   sample. If `NULL` and `Glist$idsLD` is available, rows are inferred as
+#'   `match(Glist$idsLD, Glist$ids)`. If still `NULL`, all BED individuals are
+#'   used.
+#' @param out_prefix Output prefix for the disk-backed sparse-LD CSR files. If
+#'   `NULL`, defaults to `"sparseLD"` in the directory of the first selected
+#'   BED file.
+#' @param chr Chromosome/file indices to use. If `NULL`, all available
+#'   non-missing, non-empty entries in `Glist$bedfiles` are used.
+#' @param cls Optional marker column indices. If `NULL`, these are inferred as
+#'   `match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])` for each chromosome/file.
+#'   If supplied as a vector, it is treated as the marker index vector for a
+#'   single chromosome/file. If supplied as a list, it must have one element per
+#'   chromosome/file in `chr`.
+#' @param pos_bp Optional marker base-pair positions passed to
+#'   [sparseLD_stream_CSR()].
+#' @param max_distance_bp Maximum base-pair distance between retained marker
+#'   pairs. Use 0 to disable base-pair distance filtering.
+#' @param max_distance_variants Maximum marker-index distance between retained
+#'   marker pairs. Use 0 to disable marker-index distance filtering. At least
+#'   one of `max_distance_bp` or `max_distance_variants` should usually be
+#'   positive.
+#' @param r2_threshold Minimum squared-correlation threshold for retaining LD
+#'   entries.
+#' @param block_size Marker block size used by [sparseLD_stream_CSR()].
+#' @param nthreads Number of OpenMP threads used by [sparseLD_stream_CSR()].
+#' @param allow_full_ld Logical. If `FALSE`, the function stops when both
+#'   distance filters are disabled, because this evaluates all marker pairs and
+#'   may be extremely slow. Set to `TRUE` to explicitly allow full pairwise LD.
+#'
+#' @return The input `Glist` with an added `sparseLD` element containing:
+#' \describe{
+#'   \item{prefix}{Output prefix for the sparse-LD CSR files.}
+#'   \item{chr}{Chromosome/file indices used.}
+#'   \item{bed_files}{BED files used, in the same order as `chr`.}
+#'   \item{cls}{Marker indices used for each chromosome/file.}
+#'   \item{af}{Allele frequencies corresponding to `cls`.}
+#'   \item{rows}{BED/FAM row indices used as the LD reference sample, or
+#'     `NULL` if all BED individuals were used.}
+#' }
+#'
+#' @export
+make_sparseLD <- function(Glist,
+                          rows = NULL,
+                          out_prefix = NULL,
+                          chr = NULL,
+                          cls = NULL,
+                          pos_bp = NULL,
+                          max_distance_bp = 0,
+                          max_distance_variants = 1000,
+                          r2_threshold = 0.001,
+                          block_size = 1024,
+                          nthreads = 1,
+                          allow_full_ld = FALSE) {
+  bedfiles <- as.character(Glist$bedfiles)
+  chr <- if (is.null(chr)) which(!is.na(bedfiles) & nzchar(bedfiles)) else as.integer(chr)
+  
+  if (is.null(cls)) {
+    cls <- lapply(chr, function(cc) {
+      match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
+    })
+  } else if (!is.list(cls)) {
+    cls <- list(cls)
+  }
+  names(cls) <- paste0("chr", chr)
+  
+  af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
+  
+  if (is.null(rows) && !is.null(Glist$idsLD)) {
+    rows <- match(Glist$idsLD, Glist$ids)
+  }
+  if (!is.null(rows)) {
+    rows <- as.integer(rows)
+  }
+  
+  if (is.null(out_prefix)) {
+    out_prefix <- file.path(dirname(bedfiles[chr[1]]), "sparseLD")
+  }
+  
+  sparseLD_stream_CSR(
+    bed_files = bedfiles[chr],
+    n = Glist$n,
+    cls = cls,
+    out_prefix = out_prefix,
+    rows = rows,
+    af = af,
+    pos_bp = pos_bp,
+    max_distance_bp = max_distance_bp,
+    max_distance_variants = max_distance_variants,
+    r2_threshold = r2_threshold,
+    block_size = block_size,
+    nthreads = nthreads,
+    allow_full_ld = allow_full_ld
+  )
+  
+  Glist$sparseLD <- list(
+    prefix = out_prefix,
+    chr = chr,
+    bed_files = bedfiles[chr],
+    cls = cls,
+    af = af,
+    rows = rows
+  )
+  
+  Glist
 }
