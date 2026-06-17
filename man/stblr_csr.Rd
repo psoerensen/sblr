@@ -44,9 +44,13 @@ stblr_csr(
 )
 }
 \arguments{
+\item{Glist}{Optional qgg genotype list containing `sparseLD`. If
+`ld_prefix` is `NULL`, `Glist$sparseLD$prefix` is used.}
+
 \item{stats}{Sufficient statistics returned by [bed_xtx_xty()].}
 
-\item{ld_prefix}{Prefix of the disk-backed CSR LD files.}
+\item{ld_prefix}{Prefix of the disk-backed CSR LD files. If `NULL`, this is
+taken from `Glist$sparseLD$prefix`.}
 
 \item{n}{Sample size. Defaults to `stats$n` when available.}
 

@@ -234,14 +234,75 @@ NULL
  out
 }
 
+.resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {
+  bedfiles <- as.character(Glist$bedfiles)
+  has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
+  
+  if (is.null(chr)) {
+    chr <- which(has_bedfile)
+  } else {
+    chr <- as.integer(chr)
+  }
+  
+  if (length(chr) < 1L || anyNA(chr)) {
+    stop("chr must contain valid chromosome/file indices.")
+  }
+  
+  if (any(chr < 1L | chr > length(bedfiles))) {
+    stop("chr contains indices outside Glist$bedfiles.")
+  }
+  
+  missing_bed <- is.na(bedfiles[chr]) | !nzchar(bedfiles[chr])
+  if (any(missing_bed)) {
+    stop(
+      "Glist$bedfiles is missing for chromosome/file index: ",
+      paste(chr[missing_bed], collapse = ", ")
+    )
+  }
+  
+  if (is.null(cls)) {
+    cls <- lapply(chr, function(cc) {
+      match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
+    })
+  } else if (!is.list(cls)) {
+    cls <- list(cls)
+  }
+  
+  if (length(cls) != length(chr)) {
+    stop("cls must have one element per chromosome/file in chr.")
+  }
+  
+  cls <- lapply(cls, as.integer)
+  names(cls) <- paste0("chr", chr)
+  
+  af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
+  
+  marker_names <- unlist(
+    Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
+    use.names = FALSE
+  )
+  
+  list(
+    chr = chr,
+    bed_files = bedfiles[chr],
+    cls = cls,
+    af = af,
+    marker_names = marker_names
+  )
+}
+
 #' Fit ST-BLR from BED Sufficient Statistics and Sparse LD
 #'
 #' Fits the single-trait ST-BLR sampler using sufficient statistics from
 #' [bed_xtx_xty()] and a disk-backed CSR LD prefix from
 #' [sparseLD_stream_CSR()].
 #'
+#'
+#' @param Glist Optional qgg genotype list containing `sparseLD`. If
+#'   `ld_prefix` is `NULL`, `Glist$sparseLD$prefix` is used.
 #' @param stats Sufficient statistics returned by [bed_xtx_xty()].
-#' @param ld_prefix Prefix of the disk-backed CSR LD files.
+#' @param ld_prefix Prefix of the disk-backed CSR LD files. If `NULL`, this is
+#'   taken from `Glist$sparseLD$prefix`.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
 #' @param pi_init Initial marker inclusion probability. Defaults to 0.001.
@@ -1147,6 +1208,12 @@ make_sparseLD <- function(Glist,
   } else if (!is.list(cls)) {
     cls <- list(cls)
   }
+  
+  if (length(cls) != length(chr)) {
+    stop("cls must have one element per chromosome/file in chr.")
+  }
+  
+  cls <- lapply(cls, as.integer)
   names(cls) <- paste0("chr", chr)
   
   af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
@@ -1184,7 +1251,11 @@ make_sparseLD <- function(Glist,
     bed_files = bedfiles[chr],
     cls = cls,
     af = af,
-    rows = rows
+    rows = rows,
+    max_distance_bp = max_distance_bp,
+    max_distance_variants = max_distance_variants,
+    r2_threshold = r2_threshold,
+    block_size = block_size
   )
   
   Glist
