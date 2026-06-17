@@ -316,7 +316,8 @@ results.
 
 A pair must pass every enabled window rule before its $r^2$ is tested.
 Disabling both distance restrictions permits all upper-triangle marker pairs
-to be considered and can be computationally expensive.
+to be considered and can be computationally expensive. The exported R wrapper
+fails closed in this case unless `allow_full_ld = TRUE` is supplied explicitly.
 
 ### Computational Settings
 

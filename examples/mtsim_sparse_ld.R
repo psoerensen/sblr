@@ -1760,9 +1760,9 @@ system.time(out <- sparseLD_stream_CSR(
  ),
  rows = NULL,
  af = list(Glist$af[[1]][cls]),
- pos_bp = NULL,                 # optional; not needed if no bp window
- max_distance_bp = 0,            # no bp restriction
- max_distance_variants = 0,      # no variant-count restriction
+ pos_bp = NULL,                  # optional; not needed without a bp window
+ max_distance_bp = 0,             # disables bp-distance filtering
+ max_distance_variants = 1000,    # local LD window; 0 disables this filter
  r2_threshold = 0.001,
  block_size = 1024,
  nthreads = 4

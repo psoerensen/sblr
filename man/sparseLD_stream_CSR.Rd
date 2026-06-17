@@ -3,6 +3,23 @@
 \name{sparseLD_stream_CSR}
 \alias{sparseLD_stream_CSR}
 \title{Stream Sparse LD from PLINK BED Files to CSR Files}
+\usage{
+sparseLD_stream_CSR(
+  bed_files,
+  n,
+  cls,
+  out_prefix,
+  rows = NULL,
+  af = NULL,
+  pos_bp = NULL,
+  max_distance_bp = 1000000L,
+  max_distance_variants = 1000L,
+  r2_threshold = 0.01,
+  block_size = 1024L,
+  nthreads = 1L,
+  allow_full_ld = FALSE
+)
+}
 \arguments{
 \item{bed_files}{Paths to PLINK BED files.}
 
@@ -18,16 +35,24 @@
 
 \item{pos_bp}{Optional marker base-pair positions.}
 
-\item{max_distance_bp}{Maximum base-pair distance between retained pairs.}
+\item{max_distance_bp}{Maximum base-pair distance between retained pairs.
+A value of zero disables base-pair distance filtering.}
 
 \item{max_distance_variants}{Maximum marker-index distance between retained
-pairs.}
+pairs. A value of zero disables marker-index distance filtering.}
 
 \item{r2_threshold}{Minimum squared-correlation threshold.}
 
 \item{block_size}{Marker block size.}
 
 \item{nthreads}{Number of OpenMP threads.}
+
+\item{allow_full_ld}{Permit both distance filters to be disabled. When
+\code{FALSE}, the default, \code{sparseLD_stream_CSR()} stops if
+\code{max_distance_variants <= 0} and no positive base-pair filter can be
+applied. Setting both distance limits to zero evaluates all marker pairs
+before \code{r2_threshold} filtering and can be very expensive. A local LD
+default such as \code{max_distance_variants = 1000} is usually safer.}
 }
 \value{
 The output prefix and sparse-LD writing summary.

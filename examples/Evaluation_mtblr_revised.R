@@ -56,7 +56,7 @@ system.time(out <- sparseLD_stream_CSR(
   sprintf("ld_chr%d", chr)
  ),
  pos_bp = Glist$pos[[chr]],
- max_distance_bp = 0,
+ max_distance_bp = 0,            # disables bp-distance filtering
  max_distance_variants = 5000,
  r2_threshold = 0.01,
  block_size = 512,
@@ -98,7 +98,7 @@ for (k in seq_len(nrow(bench_mkl))) {
    af = Glist$af[[chr]],
    out_prefix = prefix,
    pos_bp = Glist$pos[[chr]],
-   max_distance_bp = 0,
+   max_distance_bp = 0,            # disables bp-distance filtering
    max_distance_variants = 5000,
    r2_threshold = 0.001,
    block_size = bench_mkl$block_size[k],

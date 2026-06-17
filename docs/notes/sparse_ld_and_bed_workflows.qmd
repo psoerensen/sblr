@@ -229,7 +229,7 @@ ld_written <- sparseLD_stream_CSR(
   af = list(af),
   r2_threshold = 0.001,
   max_distance_bp = 0,
-  max_distance_variants = 0,
+  max_distance_variants = 1000,
   block_size = 1024,
   nthreads = 4
 )
@@ -252,9 +252,10 @@ analysis code should not manually alter index bases or binary files.
 
 `r2_threshold` controls which correlations are retained by squared magnitude.
 The distance arguments can additionally restrict candidate marker pairs.
-Values of zero disable the corresponding distance restriction in the example
-workflow. These settings change the LD approximation and should be recorded
-with analysis outputs.
+A value of zero disables the corresponding distance restriction. Setting both
+distance limits to zero evaluates all marker pairs before thresholding and now
+requires `allow_full_ld = TRUE`. These settings change the LD approximation and
+should be recorded with analysis outputs.
 
 ### Related Sparse-LD Helpers
 

@@ -34,15 +34,64 @@ NULL
 #' @param af Optional list of allele-frequency vectors.
 #' @param pos_bp Optional marker base-pair positions.
 #' @param max_distance_bp Maximum base-pair distance between retained pairs.
+#'   A value of zero disables base-pair distance filtering.
 #' @param max_distance_variants Maximum marker-index distance between retained
-#'   pairs.
+#'   pairs. A value of zero disables marker-index distance filtering.
 #' @param r2_threshold Minimum squared-correlation threshold.
 #' @param block_size Marker block size.
 #' @param nthreads Number of OpenMP threads.
+#' @param allow_full_ld Permit both distance filters to be disabled. When
+#'   \code{FALSE}, the default, \code{sparseLD_stream_CSR()} stops if
+#'   \code{max_distance_variants <= 0} and no positive base-pair filter can be
+#'   applied. Setting both distance limits to zero evaluates all marker pairs
+#'   before \code{r2_threshold} filtering and can be very expensive. A local LD
+#'   default such as \code{max_distance_variants = 1000} is usually safer.
 #' @return The output prefix and sparse-LD writing summary.
 #' @name sparseLD_stream_CSR
 #' @export
-NULL
+sparseLD_stream_CSR <- function(bed_files, n, cls, out_prefix, rows = NULL,
+                                af = NULL, pos_bp = NULL,
+                                max_distance_bp = 1000000L,
+                                max_distance_variants = 1000L,
+                                r2_threshold = 0.01,
+                                block_size = 1024L,
+                                nthreads = 1L,
+                                allow_full_ld = FALSE) {
+  pos_bp_empty <- is.null(pos_bp) ||
+    length(pos_bp) == 0L ||
+    (is.list(pos_bp) && sum(lengths(pos_bp)) == 0L)
+  bp_filter_disabled <- pos_bp_empty || max_distance_bp <= 0
+  variant_filter_disabled <- max_distance_variants <= 0
+
+  if (!isTRUE(allow_full_ld) &&
+      variant_filter_disabled &&
+      bp_filter_disabled) {
+    stop(
+      "Both sparse LD distance filters are disabled. ",
+      "This means all marker pairs will be evaluated before r2_threshold ",
+      "filtering, which can be very expensive. Use a local LD window such as ",
+      "max_distance_variants = 1000, or set allow_full_ld = TRUE to explicitly ",
+      "permit full pairwise LD evaluation.",
+      call. = FALSE
+    )
+  }
+
+  .Call(
+    `_sblr_sparseLD_stream_CSR`,
+    bed_files,
+    n,
+    cls,
+    out_prefix,
+    rows,
+    af,
+    pos_bp,
+    max_distance_bp,
+    max_distance_variants,
+    r2_threshold,
+    block_size,
+    nthreads
+  )
+}
 
 #' Read a Disk-Backed Sparse-LD CSR Matrix
 #'

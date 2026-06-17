@@ -81,8 +81,8 @@ sparseLD_stream_CSR(
  rows = NULL,
  af = list(Glist$af[[chr]][cls]),
  pos_bp = NULL,
- max_distance_bp = 0,
- max_distance_variants = 0,
+ max_distance_bp = 0,           # disables bp-distance filtering
+ max_distance_variants = 1000,  # local LD window; 0 disables this filter
  r2_threshold = 0.001,
  block_size = 1024,
  nthreads = 4
