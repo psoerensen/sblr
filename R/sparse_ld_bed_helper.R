@@ -248,12 +248,12 @@ NULL
 #' @param pi_vb_init Inclusion probability used when initializing marker-effect
 #'   variance. Defaults to `pi_init`.
 #' @param pi_prior_mean Prior mean for the marker inclusion probability.
-#'   Defaults to `pi_init`.
+#'   Defaults to 0.001.
 #' @param pi_prior_strength Total Beta prior strength for the marker inclusion
-#'   probability. Defaults to 2.
+#'   probability. Defaults to 5e5.
 #' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
-#' @param h2 Initial heritability.
+#' @param h2 Initial heritability. Defaults to 0.3.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
@@ -474,12 +474,24 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
       )
     }
   }  
+  
   if (is.null(Glist$bedfiles)) {
     stop("Glist$bedfiles is missing.")
   }
-  if (anyNA(Glist$bedfiles[chr])) {
-    stop("Glist$bedfiles is missing for chromosome(s): ",
-         paste(chr[is.na(Glist$bedfiles[chr])], collapse = ", "))
+  
+  bedfiles <- as.character(Glist$bedfiles)
+  
+  if (any(chr < 1L | chr > length(bedfiles))) {
+    stop("chr contains indices outside Glist$bedfiles.")
+  }
+  
+  missing_bed <- is.na(bedfiles[chr]) | !nzchar(bedfiles[chr])
+  
+  if (any(missing_bed)) {
+    stop(
+      "Glist$bedfiles is missing for chromosome/file index: ",
+      paste(chr[missing_bed], collapse = ", ")
+    )
   }
   
   if (is.null(cls)) {
@@ -581,7 +593,7 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
   list(
     y = y,
     chr = chr,
-    bed_files = Glist$bedfiles[chr],
+    bed_files = bedfiles[chr],
     cls = cls,
     af = af,
     rows = rows,
@@ -604,25 +616,30 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' qgg genotype list.
 #'
 #' @param Glist A qgg genotype list.
-#' @param y Phenotype matrix.
-#' @param chr Chromosome indices to fit.
+#' @param y Phenotype vector or matrix. If `y` is a vector, `names(y)` must
+#'   contain individual IDs matching `Glist$ids`. If `y` is a matrix,
+#'   `rownames(y)` must contain matching IDs unless `nrow(y) == Glist$n`.
+#' @param chr Chromosome/file indices to fit. If `NULL`, all available
+#'   non-missing, non-empty entries in `Glist$bedfiles` are used.
 #' @param cls Optional marker column indices.
 #' @param block_size Marker block size.
-#' @param pi_init Initial marker inclusion probability.
+#' @param pi_init Initial marker inclusion probability. Defaults to 0.001.
 #' @param pi_vb_init Inclusion probability used when initializing marker-effect
 #'   variance. Defaults to `pi_init`.
 #' @param pi_prior_mean Prior mean for the marker inclusion probability.
-#'   Defaults to 0.01.
+#'   Defaults to 0.001.
 #' @param pi_prior_strength Total Beta prior strength for the marker inclusion
 #'   probability. Defaults to 5e5.
-#' @param h2 Initial heritability.
+#' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
+#'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
+#' @param h2 Initial heritability. Defaults to 0.3.
 #' @param nub,nue Prior degrees of freedom.
 #' @param scale Standardize BED markers.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime
-#'   Sparse sampler controls.
+#'   Sampler scheduling and residual-rebuild controls.
 #' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
@@ -644,7 +661,7 @@ stblr_csr <- function(stats, ld_prefix, n = NULL, m = NULL,
 #' @return A formatted ST-BLR fit.
 #' @export
 stblr_bed_marker <- function(
-    Glist, y, chr = 1:22, cls = NULL, block_size = 1000,
+    Glist, y, chr = NULL, cls = NULL, block_size = 1000,
     pi_init = 0.001, pi_vb_init = NULL, pi_prior_mean = 0.001,
     pi_prior_strength = 5e5, pi_prior_a = NULL, pi_prior_b = NULL,
     h2 = 0.3, nub = 4, nue = 4, scale = TRUE, updateB = TRUE,
@@ -670,6 +687,31 @@ stblr_bed_marker <- function(
     stop("ncores must be a finite positive scalar.")
   }
   ncores <- as.integer(ncores)
+  
+  if (is.null(Glist$bedfiles)) {
+    stop("Glist$bedfiles is missing.")
+  }
+  
+  bedfiles <- as.character(Glist$bedfiles)
+  has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
+  
+  if (is.null(chr)) {
+    chr <- which(has_bedfile)
+    
+    if (length(chr) < 1L) {
+      stop("No available BED files found in Glist$bedfiles.")
+    }
+  } else {
+    chr <- as.integer(chr)
+    
+    if (length(chr) < 1L || anyNA(chr)) {
+      stop("chr must contain valid chromosome/file indices.")
+    }
+    
+    if (any(chr < 1L | chr > length(bedfiles))) {
+      stop("chr contains indices outside Glist$bedfiles.")
+    }
+  }
   
   arch <- .resolve_pi_prior(
     pi_init = pi_init,
