@@ -100,7 +100,8 @@ active.}
 residual rebuilding controls.}
 }
 \value{
-A formatted ST-BLR fit.
+A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
+  full sampled inclusion-probability trace for each trait.
 }
 \description{
 Fits the single-trait ST-BLR sampler using sufficient statistics from

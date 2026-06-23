@@ -186,9 +186,11 @@ NULL
   "pitrait", "pimarker"
  )
  has_vle_vld <- length(fit) >= 22
+ has_pis <- length(fit) >= 23
  names(fit)[seq_len(min(length(fit), length(nms)))] <-
   nms[seq_len(min(length(fit), length(nms)))]
  if (has_vle_vld) names(fit)[21:22] <- c("vle", "vld")
+ if (has_pis) names(fit)[23] <- "pis"
 
  for (i in 1:7) {
   fit[[i]] <- as.matrix(as.data.frame(fit[[i]]))
@@ -227,6 +229,10 @@ NULL
   rownames(out$vle) <- paste0("Iter", seq_len(nrow(out$vle)))
   rownames(out$vld) <- paste0("Iter", seq_len(nrow(out$vld)))
   colnames(out$vle) <- colnames(out$vld) <- trait_names
+ }
+ if (has_pis) {
+  out$pis <- lapply(fit[[23]], as.numeric)
+  names(out$pis) <- trait_names
  }
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
@@ -332,7 +338,8 @@ NULL
 #'   Scheduled neighbor wake-up controls.
 #' @param use_d_init,use_r_init,rebuild_r_before_updateE Initialization and
 #'   residual rebuilding controls.
-#' @return A formatted ST-BLR fit.
+#' @return A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
+#'   full sampled inclusion-probability trace for each trait.
 #' @export
 stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_init = 0.001, pi_vb_init = NULL,

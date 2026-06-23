@@ -88,42 +88,25 @@ system.time(
   )
 )
 
-# Stream sparse LD with sparseLD_stream_CSR() ------------------------------
+# Compute sparse LD
 
-## Important:
-## max_distance_bp = 0 disables base-pair distance filtering.
-## max_distance_variants = 0 disables marker-index distance filtering.
-## If both filters are disabled, sparseLD_stream_CSR() now stops unless
-## allow_full_ld = TRUE.
-##
-## Use a finite local LD window for normal workflows.
+system.time(Glist <- make_sparseLD(
+  Glist = Glist,
+  out_prefix = ld_prefix,
+  pos_bp = NULL,
+  max_distance_bp = 0,
+  max_distance_variants = 1000,
+  r2_threshold = 0.001,
+  block_size = 1024,
+  nthreads = 4
+))
 
-system.time(
-  sparseLD_stream_CSR(
-    bed_files = Glist$bedfiles[chr],
-    n = Glist$n,
-    cls = list(cls),
-    out_prefix = ld_prefix,
-    rows = NULL,
-    af = list(Glist$af[[chr]][cls]),
-    pos_bp = NULL,
-    max_distance_bp = 0,
-    max_distance_variants = 1000,
-    r2_threshold = 0.001,
-    block_size = 1024,
-    nthreads = nthreads
-  )
-)
-
-ld <- sparseLD_read_CSR(ld_prefix, one_based = FALSE)
 
 # Fit summary-statistics / sparse-LD BLR with stblr_csr() ------------------
 
 fit_csr <- stblr_csr(
   stats = stats,
-  ld_prefix = ld_prefix,
-  n = Glist$n,
-  
+  Glist = Glist,
   ## Conservative sparse architecture.
   pi_init = 0.001,
   pi_prior_mean = 0.001,
@@ -133,10 +116,17 @@ fit_csr <- stblr_csr(
   adjE = 0.9,
   nit = 1000,
   nburn = 100,
-  ncores = nthreads,
+  ncores = 3,
   seed = 10,
   scheduled = TRUE
 )
+
+str(fit_csr$pis)
+length(fit_csr$pis)
+length(fit_csr$pis[[1]])
+range(fit_csr$pis[[1]])
+tail(fit_csr$pis[[1]])
+
 
 # Individual-level BED BLR models =========================================
 

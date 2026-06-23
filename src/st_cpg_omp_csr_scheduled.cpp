@@ -985,11 +985,11 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_scheduled(
  }
 
  // --------------------------------------------------------------------------
- // Build 22-slot result.
+ // Build 23-slot result.
  // --------------------------------------------------------------------------
 
- std::vector<std::vector<std::vector<double>>> result(22);
- for (int k = 0; k < 22; ++k) {
+ std::vector<std::vector<std::vector<double>>> result(23);
+ for (int k = 0; k < 23; ++k) {
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
  }
 
@@ -1014,6 +1014,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_scheduled(
   result[19][ts].resize(2);
   result[20][ts].resize(static_cast<std::size_t>(nit + nburn)); // VLE
   result[21][ts].resize(static_cast<std::size_t>(nit + nburn)); // VLD = VG - VLE
+  result[22][ts].resize(static_cast<std::size_t>(nit + nburn)); // PI trace
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1047,6 +1048,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_scheduled(
    result[9][ts][its] = ves_mat(tu, itu);
    result[20][ts][its] = vles_mat(tu, itu);
    result[21][ts][its] = vlds_mat(tu, itu);
+   result[22][ts][its] = pis_mat(tu, itu);
   }
  }
 
@@ -1083,6 +1085,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_scheduled(
   int npi = 0;
 
   for (int it = nburn; it < nit + nburn; ++it) {
+   if ((it - nburn) % nthin != 0) continue;
    mean_pi += pis_mat(tu, static_cast<arma::uword>(it));
    ++npi;
   }
