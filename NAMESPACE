@@ -2,9 +2,11 @@
 
 export(bed_xtx_xty)
 export(check_stblr_convergence)
+export(make_credible_sets_from_ld)
 export(make_sbayesrc_alpha_init)
 export(make_sparseLD)
 export(make_stats)
+export(make_stblr_credible_sets)
 export(mtsim)
 export(mtsim_annotation)
 export(plot_stblr_posterior)

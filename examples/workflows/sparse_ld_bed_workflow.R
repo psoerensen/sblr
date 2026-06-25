@@ -91,16 +91,33 @@ matplot(fit$vle)
 matplot(fit$vgs)
 
 
-post <- summarise_stblr_posterior(fit)
-
-subset(post, parameter %in% c("vg", "ve", "h2", "pi", "vb", "varch"))
+post <- sblr:::summarise_stblr_posterior(fit)
 
 plot_stblr_posterior(
   post,
-  parameters = c("vg", "ve", "h2", "pi", "vb", "varch")
+  parameters = c("vg", "ve", "vb", "varch")
 )
 
+plot_stblr_posterior(
+  post,
+  parameters = c("pi","m_included")
+)
 
+cs <- make_stblr_credible_sets(
+  fit = fit,
+  Glist = Glist,
+  trait = "D1",
+  coverage = 0.95,
+  min_r2 = 0.5,
+  pip_cutoff = 0.001,
+  locus_pip_cutoff = 0.01,
+  max_locus_distance = 1e6,
+  method = "pip"
+)
+
+cs$loci
+cs$summary
+cs$sets[[1]]
 # Individual-level BED BLR models =========================================
 
 # High-level BED wrapper.
@@ -131,6 +148,14 @@ matplot(fit_bed$ves)
 matplot(fit_bed$vld)
 matplot(fit_bed$vle)
 matplot(fit_bed$vgs)
+
+
+post <- summarise_stblr_posterior(fit_bed)
+
+plot_stblr_posterior(
+  post,
+  parameters = c("vg", "ve", "vb", "varch")
+)
 
 
 # Optional whole-genome multi-chain BED example ----------------------------

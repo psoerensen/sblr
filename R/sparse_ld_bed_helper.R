@@ -2078,3 +2078,65 @@ summarise_stblr_posterior <- function(
 
   ans
 }
+
+
+plot_stblr_traces <- function(
+    fit,
+    traces = c("vgs", "ves", "vbs", "pis", "vle", "vld"),
+    traits = NULL,
+    nburn = NULL,
+    max_cols = 2
+) {
+  if (is.null(nburn)) {
+    nburn <- if (!is.null(fit$input$nburn)) fit$input$nburn else 0L
+  }
+  
+  available <- traces[!vapply(traces, function(x) is.null(fit[[x]]), logical(1))]
+  
+  if (length(available) < 1L) {
+    stop("No requested traces were found in fit.")
+  }
+  
+  oldpar <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(oldpar))
+  
+  nr <- ceiling(length(available) / max_cols)
+  nc <- min(max_cols, length(available))
+  
+  graphics::par(mfrow = c(nr, nc), mar = c(4, 4, 3, 1))
+  
+  for (nm in available) {
+    x <- as.matrix(fit[[nm]])
+    
+    if (!is.null(traits)) {
+      keep <- colnames(x) %in% traits
+      x <- x[, keep, drop = FALSE]
+    }
+    
+    graphics::matplot(
+      x,
+      type = "l",
+      lty = 1,
+      xlab = "Iteration",
+      ylab = nm,
+      main = nm
+    )
+    
+    if (!is.null(nburn) && nburn > 0) {
+      graphics::abline(v = nburn, lty = 2)
+    }
+    
+    if (ncol(x) > 1L) {
+      graphics::legend(
+        "topright",
+        legend = colnames(x),
+        lty = 1,
+        col = seq_len(ncol(x)),
+        bty = "n",
+        cex = 0.8
+      )
+    }
+  }
+  
+  invisible(available)
+}
