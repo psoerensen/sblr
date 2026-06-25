@@ -1,41 +1,29 @@
-# Summary-statistics / sparse-LD and individual-level BED BLR workflow
+# Summary-statistics/sparse-LD and individual-level BED BLR workflow
 #
 # Set SBLR_EXAMPLE_DATA_DIR to a directory containing the qgdata example files.
 # Set SBLR_RUN_HEAVY_EXAMPLES=true to run the benchmark-scale computations.
 
 # Packages -----------------------------------------------------------------
-
-library(qgg)
 library(sblr)
 
 # Data setup ---------------------------------------------------------------
-
 data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR")
 if (!nzchar(data_dir)) {
   data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
 }
 
-run_heavy <- identical(Sys.getenv("SBLR_RUN_HEAVY_EXAMPLES"), "true")
-nthreads <- if (run_heavy) 4L else 1L
 nthreads <- 4
+
 
 Glist <- readRDS(file.path(data_dir, "Glist_sparseLD_1k.RDS"))
 
-chr <- 1L
 
-## Lower-level BED/CSR functions require explicit marker indices.
-## The high-level BED wrapper can infer these when cls is omitted.
-cls <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
-stopifnot(!anyNA(cls))
-
-ld_prefix <- file.path(data_dir, "ld_test")
 
 # Simulate traits ----------------------------------------------------------
-
 sim <- mtsim(
   Glist = Glist,
-  chr = chr,
-  rsids = Glist$rsidsLD[[chr]],
+  chr = 1,
+  rsids = Glist$rsidsLD[[1]],
   nt = 3,
   n_shared = 30,
   n_specific = 10,
@@ -52,44 +40,21 @@ sim <- mtsim(
   re = 0,
   seed = 1
 )
-
 y <- as.matrix(scale(sim$y))
 
-# qgg comparison using glma() and gbayes() --------------------------------
 
-stat_qgg <- glma(
-  y = y[, 1],
-  rsids = Glist$rsidsLD[[chr]],
-  Glist = Glist
-)
-
-if (run_heavy) {
-  fit_qgg <- gbayes(
-    stat = stat_qgg,
-    Glist = Glist,
-    method = "bayesC",
-    nit = 1000
-  )
-}
-
-# Summary-statistics / sparse-LD BLR models ================================
-
-# Compute summary statistics from BED with bed_xtx_xty() -------------------
+# Compute summary statistics
 
 system.time(
-  stats <- bed_xtx_xty(
-    bed_file = Glist$bedfiles[chr],
-    n = Glist$n,
-    cls = cls,
-    af = Glist$af[[chr]][cls],
-    y = y,
-    scale = TRUE,
+  stats <- make_stats(
+    Glist,
+    y,
     nthreads = nthreads
   )
 )
 
 # Compute sparse LD
-
+ld_prefix <- file.path(data_dir, "ld_test")
 system.time(Glist <- make_sparseLD(
   Glist = Glist,
   out_prefix = ld_prefix,
@@ -102,30 +67,29 @@ system.time(Glist <- make_sparseLD(
 ))
 
 
-# Fit summary-statistics / sparse-LD BLR with stblr_csr() ------------------
-
-fit_csr <- stblr_csr(
+# Fit summary-statistics / sparse-LD BLR model
+fit <- stblr_csr(
   stats = stats,
   Glist = Glist,
   ## Conservative sparse architecture.
   pi_init = 0.001,
-  pi_prior_mean = 0.001,
-  pi_prior_strength = 5e5,
+  pi_prior_a = 1,
+  pi_prior_b = 1,
   h2 = 0.3,
-  
   adjE = 0.9,
-  nit = 1000,
-  nburn = 100,
+  nit = 10000,
+  nburn = 1000,
   ncores = 3,
   seed = 10,
   scheduled = TRUE
 )
 
-str(fit_csr$pis)
-length(fit_csr$pis)
-length(fit_csr$pis[[1]])
-range(fit_csr$pis[[1]])
-tail(fit_csr$pis[[1]])
+matplot(fit$pis)
+matplot(fit$ves)
+matplot(fit$vld)
+matplot(fit$vle)
+matplot(fit$vgs)
+
 
 
 # Individual-level BED BLR models =========================================
@@ -140,19 +104,25 @@ tail(fit_csr$pis[[1]])
 fit_bed <- stblr_bed_marker(
   Glist = Glist,
   y = y,
-  chr = chr,
-  
   ## Same conservative sparse architecture.
+  ## Conservative sparse architecture.
   pi_init = 0.001,
-  pi_prior_mean = 0.001,
-  pi_prior_strength = 5e5,
+  pi_prior_a = 1,
+  pi_prior_b = 1,
   h2 = 0.3,
-  
   nit = 1000,
   nburn = 100,
   ncores = nthreads,
   seed = 10
 )
+
+
+matplot(fit_bed$pis)
+matplot(fit_bed$ves)
+matplot(fit_bed$vld)
+matplot(fit_bed$vle)
+matplot(fit_bed$vgs)
+
 
 # Optional whole-genome multi-chain BED example ----------------------------
 # This illustrates the new automatic backend selection.

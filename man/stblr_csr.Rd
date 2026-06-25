@@ -29,7 +29,7 @@ stblr_csr(
   ncores = 1,
   seed = 10,
   scheduled = FALSE,
-  full_sweep_every = 10,
+  full_sweep_every = 1,
   null_skip_base = 50,
   null_skip_max = 200,
   candidate_threshold = 0.001,

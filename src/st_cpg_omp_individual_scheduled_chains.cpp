@@ -1585,8 +1585,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
   }
  }
 
- std::vector<std::vector<std::vector<double>>> result(22);
- for (int k = 0; k < 22; ++k) {
+ std::vector<std::vector<std::vector<double>>> result(23);
+ for (int k = 0; k < 23; ++k) {
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
  }
 
@@ -1601,6 +1601,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
   result[19][ts].resize(2);
   result[20][ts].resize(static_cast<std::size_t>(nit + nburn)); // linkage-equilibrium variance trace
   result[21][ts].resize(static_cast<std::size_t>(nit + nburn)); // LD variance/covariance trace = vg - vle
+  result[22][ts].resize(static_cast<std::size_t>(nit + nburn)); // inclusion-probability trace
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1629,6 +1630,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
    result[9][ts][its] = ves_mat(t, it);
    result[20][ts][its] = vles_mat(t, it);
    result[21][ts][its] = vlds_mat(t, it);
+   result[22][ts][its] = pis_mat(t, it);
   }
  }
 

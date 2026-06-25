@@ -185,7 +185,8 @@ NULL
   "covb", "covg", "cove", "vb", "vg", "ve", "pi", "pim",
   "pitrait", "pimarker"
  )
- has_vle_vld <- length(fit) >= 22
+ has_vle_vld <- length(fit) >= 22 &&
+  all(vapply(fit[21:22], function(x) length(unlist(x, use.names = FALSE)) > 0, logical(1)))
  has_pis <- length(fit) >= 23
  names(fit)[seq_len(min(length(fit), length(nms)))] <-
   nms[seq_len(min(length(fit), length(nms)))]
@@ -231,8 +232,12 @@ NULL
   colnames(out$vle) <- colnames(out$vld) <- trait_names
  }
  if (has_pis) {
-  out$pis <- lapply(fit[[23]], as.numeric)
-  names(out$pis) <- trait_names
+  out$pis <- as.matrix(as.data.frame(fit[[23]]))
+  #out$pis <- lapply(fit[[23]], as.numeric)
+  #names(out$pis) <- trait_names
+  rownames(out$pis) <- paste0("Iter", seq_len(nrow(out$pis)))
+  colnames(out$pis) <- trait_names
+
  }
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
@@ -348,7 +353,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
                       nthin = 1, ncores = 1, seed = 10, scheduled = FALSE,
-                      full_sweep_every = 10, null_skip_base = 50,
+                      full_sweep_every = 1, null_skip_base = 50,
                       null_skip_max = 200, candidate_threshold = 1e-3,
                       candidate_lifetime = 20, skip_nulls_burnin_only = FALSE,
                       wakeup_ld_neighbors = TRUE, wakeup_diff_threshold = 0,

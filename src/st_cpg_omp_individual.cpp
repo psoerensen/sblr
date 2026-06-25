@@ -1107,12 +1107,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_sparse(
  }
 
  // --------------------------------------------------------------------------
- // Build 20-slot result, compatible with existing code.
+ // Build result, preserving existing slots and adding the pi trace in slot 23.
  // --------------------------------------------------------------------------
 
- std::vector<std::vector<std::vector<double>>> result(20);
+ std::vector<std::vector<std::vector<double>>> result(23);
 
- for (int k = 0; k < 20; ++k) {
+ for (int k = 0; k < 23; ++k) {
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
  }
 
@@ -1140,6 +1140,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_sparse(
   result[17][static_cast<std::size_t>(t)].resize(2);
   result[18][static_cast<std::size_t>(t)].resize(4);
   result[19][static_cast<std::size_t>(t)].resize(2);
+  result[22][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1171,6 +1172,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_sparse(
    result[7][ts][its] = vbs_mat(tu, itu);
    result[8][ts][its] = vgs_mat(tu, itu);
    result[9][ts][its] = ves_mat(tu, itu);
+   result[22][ts][its] = pis_mat(tu, itu);
   }
  }
 
