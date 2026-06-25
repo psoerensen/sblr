@@ -91,6 +91,15 @@ matplot(fit$vle)
 matplot(fit$vgs)
 
 
+post <- summarise_stblr_posterior(fit)
+
+subset(post, parameter %in% c("vg", "ve", "h2", "pi", "vb", "varch"))
+
+plot_stblr_posterior(
+  post,
+  parameters = c("vg", "ve", "h2", "pi", "vb", "varch")
+)
+
 
 # Individual-level BED BLR models =========================================
 

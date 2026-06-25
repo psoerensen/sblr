@@ -113,7 +113,7 @@ NULL
   if (is.null(pi_vb_init)) pi_vb_init <- pi_init
   if (is.null(pi_prior_mean)) pi_prior_mean <- pi_init
   if (is.null(pi_prior_strength)) pi_prior_strength <- 2
-  
+
   for (nm in c("pi_init", "pi_vb_init", "pi_prior_mean")) {
     val <- get(nm)
     if (!is.numeric(val) || length(val) != 1 || !is.finite(val) ||
@@ -121,25 +121,25 @@ NULL
       stop(nm, " must be a finite scalar in (0, 1).")
     }
   }
-  
+
   if (!is.numeric(pi_prior_strength) || length(pi_prior_strength) != 1 ||
       !is.finite(pi_prior_strength) || pi_prior_strength <= 0) {
     stop("pi_prior_strength must be a finite positive scalar.")
   }
-  
+
   if (is.null(pi_prior_a)) pi_prior_a <- pi_prior_mean * pi_prior_strength
   if (is.null(pi_prior_b)) pi_prior_b <- (1 - pi_prior_mean) * pi_prior_strength
-  
+
   if (!is.numeric(pi_prior_a) || length(pi_prior_a) != 1 ||
       !is.finite(pi_prior_a) || pi_prior_a <= 0) {
     stop("pi_prior_a must be a finite positive scalar.")
   }
-  
+
   if (!is.numeric(pi_prior_b) || length(pi_prior_b) != 1 ||
       !is.finite(pi_prior_b) || pi_prior_b <= 0) {
     stop("pi_prior_b must be a finite positive scalar.")
   }
-  
+
   list(
     pi_init = pi_init,
     pi_vb_init = pi_vb_init,
@@ -248,21 +248,21 @@ NULL
 .resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
-  
+
   if (is.null(chr)) {
     chr <- which(has_bedfile)
   } else {
     chr <- as.integer(chr)
   }
-  
+
   if (length(chr) < 1L || anyNA(chr)) {
     stop("chr must contain valid chromosome/file indices.")
   }
-  
+
   if (any(chr < 1L | chr > length(bedfiles))) {
     stop("chr contains indices outside Glist$bedfiles.")
   }
-  
+
   missing_bed <- is.na(bedfiles[chr]) | !nzchar(bedfiles[chr])
   if (any(missing_bed)) {
     stop(
@@ -270,7 +270,7 @@ NULL
       paste(chr[missing_bed], collapse = ", ")
     )
   }
-  
+
   if (is.null(cls)) {
     cls <- lapply(chr, function(cc) {
       match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
@@ -278,21 +278,21 @@ NULL
   } else if (!is.list(cls)) {
     cls <- list(cls)
   }
-  
+
   if (length(cls) != length(chr)) {
     stop("cls must have one element per chromosome/file in chr.")
   }
-  
+
   cls <- lapply(cls, as.integer)
   names(cls) <- paste0("chr", chr)
-  
+
   af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
-  
+
   marker_names <- unlist(
     Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
     use.names = FALSE
   )
-  
+
   list(
     chr = chr,
     bed_files = bedfiles[chr],
@@ -370,7 +370,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    }
    ld_prefix <- Glist$sparseLD$prefix
  }
- 
+
  arch <- .resolve_pi_prior(
    pi_init = pi_init,
    pi_vb_init = pi_vb_init,
@@ -379,7 +379,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    pi_prior_a = pi_prior_a,
    pi_prior_b = pi_prior_b
  )
- 
+
  trait_names <- names(stats$yy)
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
  variable_names <- names(stats$ww[[1]])
@@ -444,17 +444,17 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   if (length(chr) < 1 || anyNA(chr)) {
     stop("chr must contain valid chromosome indices.")
   }
-  
+
   if (is.null(dim(y))) {
     if (is.null(names(y)) && is.null(rows)) {
       stop(
         "When y is a vector, names(y) must contain IDs matching Glist$ids."
       )
     }
-    
+
     y_names <- names(y)
     y <- matrix(as.numeric(y), ncol = 1)
-    
+
     if (!is.null(y_names)) {
       rownames(y) <- y_names
     }
@@ -462,7 +462,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   } else {
     y <- as.matrix(y)
   }
-  
+
 
   if (is.null(Glist$n) || !is.numeric(Glist$n) || length(Glist$n) != 1 ||
       !is.finite(Glist$n) || Glist$n < 1) {
@@ -475,10 +475,10 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
       if (is.null(Glist$ids)) {
         stop("rownames(y) are present but Glist$ids is missing; cannot match y rows to BED individuals.")
       }
-      
+
       ids_y <- rownames(y)
       ids_y <- as.character(ids_y)
-      
+
       if (!is.character(Glist$ids)) {
         stop("Glist$ids must be a character vector in PLINK FAM/BED row order.")
       }
@@ -493,7 +493,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
           paste(head(unique(dup), 10), collapse = ", ")
         )
       }
-      
+
       if (anyDuplicated(Glist$ids)) {
         dup <- Glist$ids[duplicated(Glist$ids)]
         stop(
@@ -501,27 +501,27 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
           paste(head(unique(dup), 10), collapse = ", ")
         )
       }
-      
+
       ids_g <- Glist$ids
       rows <- match(ids_y, ids_g)
       ok <- !is.na(rows)
-      
+
       if (!all(ok)) {
         warning(
           sum(!ok),
           " phenotype IDs were not found in Glist$ids and will be dropped."
         )
-        
+
         y <- y[ok, , drop = FALSE]
         ids_y <- ids_y[ok]
         rows <- rows[ok]
         rownames(y) <- ids_y
       }
-      
+
       if (nrow(y) < 1L) {
         stop("No phenotype IDs matched Glist$ids.")
       }
-      
+
       if (anyDuplicated(rows)) {
         dup_rows <- rows[duplicated(rows)]
         stop(
@@ -539,7 +539,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
     }
   } else {
     rows <- as.integer(rows)
-    
+
     if (length(rows) != nrow(y)) {
       stop("length(rows) must equal nrow(y).")
     }
@@ -553,27 +553,27 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
         paste(head(unique(dup_rows), 10), collapse = ", ")
       )
     }
-  }  
-  
+  }
+
   if (is.null(Glist$bedfiles)) {
     stop("Glist$bedfiles is missing.")
   }
-  
+
   bedfiles <- as.character(Glist$bedfiles)
-  
+
   if (any(chr < 1L | chr > length(bedfiles))) {
     stop("chr contains indices outside Glist$bedfiles.")
   }
-  
+
   missing_bed <- is.na(bedfiles[chr]) | !nzchar(bedfiles[chr])
-  
+
   if (any(missing_bed)) {
     stop(
       "Glist$bedfiles is missing for chromosome/file index: ",
       paste(chr[missing_bed], collapse = ", ")
     )
   }
-  
+
   if (is.null(cls)) {
     if (is.null(Glist$rsidsLD)) {
       stop("cls is NULL, but Glist$rsidsLD is missing.")
@@ -581,7 +581,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
     if (is.null(Glist$rsids)) {
       stop("cls is NULL, but Glist$rsids is missing.")
     }
-    
+
     cls <- lapply(chr, function(cc) {
       if (length(Glist$rsidsLD) < cc || is.null(Glist$rsidsLD[[cc]])) {
         stop("Glist$rsidsLD[[", cc, "]] is missing.")
@@ -589,9 +589,9 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
       if (length(Glist$rsids) < cc || is.null(Glist$rsids[[cc]])) {
         stop("Glist$rsids[[", cc, "]] is missing.")
       }
-      
+
       out <- match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
-      
+
       if (anyNA(out)) {
         missing <- Glist$rsidsLD[[cc]][is.na(out)]
         stop(
@@ -600,36 +600,36 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
           paste(head(missing, 10), collapse = ", ")
         )
       }
-      
+
       as.integer(out)
     })
-    
+
     names(cls) <- paste0("chr", chr)
   } else if (!is.list(cls)) {
     cls <- list(cls)
   }
-  
+
   if (length(cls) != length(chr)) {
     stop("cls must have one element per chromosome in chr.")
   }
   if (any(vapply(cls, anyNA, logical(1)))) {
     stop("cls must contain no missing marker indices.")
   }
-  
+
   cls <- lapply(cls, as.integer)
-  
+
   for (k in seq_along(chr)) {
     cc <- chr[k]
-    
+
     if (length(Glist$rsids) < cc || is.null(Glist$rsids[[cc]])) {
       stop("Glist$rsids[[", cc, "]] is missing.")
     }
-    
+
     if (any(cls[[k]] < 1L) || any(cls[[k]] > length(Glist$rsids[[cc]]))) {
       stop("cls[[", k, "]] contains marker indices outside Glist$rsids[[", cc, "]].")
     }
   }
-  
+
   if (is.null(Glist$af)) {
     af <- vector("list", length(chr))
   } else {
@@ -647,29 +647,29 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
       out
     }, chr, cls)
   }
-  
+
   m <- sum(lengths(cls))
   if (m < 1L) {
     stop("No markers selected. Check chr, cls, Glist$rsidsLD, and Glist$rsids.")
   }
-  
+
   trait_names <- colnames(y)
   if (is.null(trait_names)) {
     trait_names <- paste0("T", seq_len(ncol(y)))
   }
   colnames(y) <- trait_names
-  
+
   variable_names <- unlist(
     Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
     use.names = FALSE
   )
-  
+
   sets <- if (length(chr) == 1) {
     rep(seq_len(ceiling(m / block_size)), each = block_size)[seq_len(m)]
   } else {
     rep(seq_along(chr), lengths(cls))
   }
-  
+
   list(
     y = y,
     chr = chr,
@@ -754,45 +754,45 @@ stblr_bed_marker <- function(
     null_skip_max = 200, return_wy = FALSE, return_r = FALSE, rows = NULL,
     nchains = 1, read_block_size = 64, progress_every = 0
 ) {
-  
+
   backend <- match.arg(backend)
   if (!is.numeric(nchains) || length(nchains) != 1 ||
       !is.finite(nchains) || nchains < 1) {
     stop("nchains must be a finite positive scalar.")
   }
   nchains <- as.integer(nchains)
-  
+
   if (!is.numeric(ncores) || length(ncores) != 1 ||
       !is.finite(ncores) || ncores < 1) {
     stop("ncores must be a finite positive scalar.")
   }
   ncores <- as.integer(ncores)
-  
+
   if (is.null(Glist$bedfiles)) {
     stop("Glist$bedfiles is missing.")
   }
-  
+
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
-  
+
   if (is.null(chr)) {
     chr <- which(has_bedfile)
-    
+
     if (length(chr) < 1L) {
       stop("No available BED files found in Glist$bedfiles.")
     }
   } else {
     chr <- as.integer(chr)
-    
+
     if (length(chr) < 1L || anyNA(chr)) {
       stop("chr must contain valid chromosome/file indices.")
     }
-    
+
     if (any(chr < 1L | chr > length(bedfiles))) {
       stop("chr contains indices outside Glist$bedfiles.")
     }
   }
-  
+
   arch <- .resolve_pi_prior(
     pi_init = pi_init,
     pi_vb_init = pi_vb_init,
@@ -812,7 +812,7 @@ stblr_bed_marker <- function(
  )
 
  use_chains_backend <- FALSE
- 
+
  if (backend == "auto") {
    use_chains_backend <- length(dat$chr) > 1L || nchains > 1L
    use_scheduled_backend <- !use_chains_backend
@@ -826,11 +826,11 @@ stblr_bed_marker <- function(
    use_scheduled_backend <- FALSE
    use_sparse_backend <- TRUE
  }
- 
+
  if (use_sparse_backend && length(dat$chr) != 1L) {
    stop("backend = 'sparse' only supports one chromosome.")
  }
- 
+
  pri <- .make_stblr_priors(
   dat$y, dat$m, h2, nub, nue, arch$pi_vb_init, arch$pi_prior_mean,
   dat$trait_names
@@ -977,88 +977,88 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
                        scale = TRUE, nthreads = 1) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
-  
+
   if (is.null(chr)) {
     chr <- which(has_bedfile)
   } else {
     chr <- as.integer(chr)
   }
-  
+
   if (length(chr) < 1L || anyNA(chr)) {
     stop("chr must contain valid chromosome/file indices.")
   }
-  
+
   if (any(chr < 1L | chr > length(bedfiles))) {
     stop("chr contains indices outside Glist$bedfiles.")
   }
-  
+
   missing_bed <- is.na(bedfiles[chr]) | !nzchar(bedfiles[chr])
-  
+
   if (any(missing_bed)) {
     stop(
       "Glist$bedfiles is missing for chromosome/file index: ",
       paste(chr[missing_bed], collapse = ", ")
     )
   }
-  
+
   if (is.null(dim(y))) {
     ids_y <- names(y)
-    
+
     y <- matrix(as.numeric(y), ncol = 1)
-    
+
     if (!is.null(ids_y)) {
       rownames(y) <- ids_y
     }
-    
+
     colnames(y) <- "T1"
   } else {
     y <- as.matrix(y)
   }
-  
+
   if (is.null(rows) && is.null(rownames(y))) {
     stop(
       "When rows is NULL, y must have names(y) or rownames(y) ",
       "matching Glist$ids."
     )
   }
-  
+
   if (is.null(rows)) {
     rows <- match(rownames(y), Glist$ids)
     ok <- !is.na(rows)
-    
+
     if (!all(ok)) {
       warning(
         sum(!ok),
         " phenotype IDs were not found in Glist$ids and will be dropped."
       )
-      
+
       y <- y[ok, , drop = FALSE]
       rows <- rows[ok]
     }
-    
+
     if (nrow(y) < 1L) {
       stop("No phenotype IDs matched Glist$ids.")
     }
   } else {
     rows <- as.integer(rows)
-    
+
     if (length(rows) != nrow(y)) {
       stop("length(rows) must equal nrow(y).")
     }
   }
-  
+
   rows <- as.integer(rows)
-  
+
   ord <- order(rows)
   rows <- rows[ord]
   y <- y[ord, , drop = FALSE]
-  
+
   trait_names <- colnames(y)
   if (is.null(trait_names)) {
     trait_names <- paste0("T", seq_len(ncol(y)))
   }
   colnames(y) <- trait_names
-  
+
   if (is.null(cls)) {
     cls <- lapply(chr, function(cc) {
       match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
@@ -1066,26 +1066,26 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
   } else if (!is.list(cls)) {
     cls <- list(cls)
   }
-  
+
   if (length(cls) != length(chr)) {
     stop("cls must have one element per chromosome/file in chr.")
   }
-  
+
   cls <- lapply(cls, as.integer)
   names(cls) <- paste0("chr", chr)
-  
+
   af <- Map(function(cc, cl) {
     Glist$af[[cc]][cl]
   }, chr, cls)
-  
+
   stats_by_chr <- vector("list", length(chr))
   names(stats_by_chr) <- paste0("chr", chr)
-  
+
   for (k in seq_along(chr)) {
     cc <- chr[k]
-    
+
     message("Computing sufficient statistics for chromosome ", cc)
-    
+
     stats_by_chr[[k]] <- bed_xtx_xty(
       bed_file = bedfiles[cc],
       n = Glist$n,
@@ -1097,14 +1097,14 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
       nthreads = nthreads
     )
   }
-  
+
   nt <- ncol(y)
-  
+
   marker_names <- unlist(
     Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
     use.names = FALSE
   )
-  
+
   wy <- lapply(seq_len(nt), function(t) {
     out <- unlist(
       lapply(stats_by_chr, function(s) s$wy[[t]]),
@@ -1113,7 +1113,7 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
     names(out) <- marker_names
     out
   })
-  
+
   ww <- lapply(seq_len(nt), function(t) {
     out <- unlist(
       lapply(stats_by_chr, function(s) s$ww[[t]]),
@@ -1122,13 +1122,13 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
     names(out) <- marker_names
     out
   })
-  
+
   names(wy) <- trait_names
   names(ww) <- trait_names
-  
+
   yy <- stats_by_chr[[1]]$yy
   names(yy) <- trait_names
-  
+
   list(
     wy = wy,
     ww = ww,
@@ -1212,7 +1212,7 @@ make_sparseLD <- function(Glist,
                           allow_full_ld = FALSE) {
   bedfiles <- as.character(Glist$bedfiles)
   chr <- if (is.null(chr)) which(!is.na(bedfiles) & nzchar(bedfiles)) else as.integer(chr)
-  
+
   if (is.null(cls)) {
     cls <- lapply(chr, function(cc) {
       match(Glist$rsidsLD[[cc]], Glist$rsids[[cc]])
@@ -1220,27 +1220,27 @@ make_sparseLD <- function(Glist,
   } else if (!is.list(cls)) {
     cls <- list(cls)
   }
-  
+
   if (length(cls) != length(chr)) {
     stop("cls must have one element per chromosome/file in chr.")
   }
-  
+
   cls <- lapply(cls, as.integer)
   names(cls) <- paste0("chr", chr)
-  
+
   af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
-  
+
   if (is.null(rows) && !is.null(Glist$idsLD)) {
     rows <- match(Glist$idsLD, Glist$ids)
   }
   if (!is.null(rows)) {
     rows <- as.integer(rows)
   }
-  
+
   if (is.null(out_prefix)) {
     out_prefix <- file.path(dirname(bedfiles[chr[1]]), "sparseLD")
   }
-  
+
   sparseLD_stream_CSR(
     bed_files = bedfiles[chr],
     n = Glist$n,
@@ -1256,7 +1256,7 @@ make_sparseLD <- function(Glist,
     nthreads = nthreads,
     allow_full_ld = allow_full_ld
   )
-  
+
   Glist$sparseLD <- list(
     prefix = out_prefix,
     chr = chr,
@@ -1269,6 +1269,812 @@ make_sparseLD <- function(Glist,
     r2_threshold = r2_threshold,
     block_size = block_size
   )
-  
+
   Glist
+}
+
+#' Check ST-BLR MCMC Convergence
+#'
+#' Computes simple MCMC convergence diagnostics from available ST-BLR trace
+#' matrices. The function uses post-burn-in samples from traces such as `vbs`,
+#' `vgs`, `ves`, `pis`, `vle`, and `vld`.
+#'
+#' It reports Geweke z-scores, effective sample sizes, lag-1 autocorrelation,
+#' and pass/fail indicators for each available trace and trait. These are
+#' screening diagnostics and should be interpreted together with trace plots
+#' and domain knowledge.
+#'
+#' @param fit Fitted ST-BLR object.
+#' @param nburn Number of initial iterations to discard. Defaults to
+#'   `fit$input$nburn`.
+#' @param traces Character vector of trace components to inspect.
+#' @param crit Named numeric vector of absolute Geweke z-score thresholds.
+#' @param frac1,frac2 Fractions passed to `coda::geweke.diag()`.
+#' @param require Character vector of traces required for the overall pass/fail
+#'   result.
+#' @param use_coda Logical; whether to use `coda` diagnostics when available
+#'   and applicable.
+#'
+#' @return A list with:
+#' \describe{
+#'   \item{passed}{Logical overall pass/fail indicator for required traces.}
+#'   \item{diagnostics}{Data frame of trace-level diagnostics.}
+#'   \item{nburn}{Burn-in used.}
+#'   \item{crit}{Geweke z-score thresholds used.}
+#'   \item{required}{Trace names required for the overall pass/fail result.}
+#' }
+#'
+#' @examples
+#' set.seed(1)
+#' fake_fit <- list(
+#'   input = list(nburn = 5),
+#'   vgs = matrix(rnorm(40, mean = 0.6, sd = 0.02), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   ves = matrix(rnorm(40, mean = 0.4, sd = 0.02), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   pis = matrix(runif(40, min = 0.01, max = 0.03), ncol = 1,
+#'                dimnames = list(NULL, "trait1"))
+#' )
+#' conv <- check_stblr_convergence(
+#'   fake_fit,
+#'   traces = c("vgs", "ves", "pis"),
+#'   require = c("vgs", "ves")
+#' )
+#' names(conv)
+#'
+#' @export
+check_stblr_convergence <- function(
+    fit,
+    nburn = fit$input$nburn,
+    traces = c("vbs", "vgs", "ves", "pis", "vle", "vld"),
+    crit = c(vbs = 3, vgs = 3, ves = 3, pis = 3, vle = 3, vld = 3),
+    frac1 = 0.1,
+    frac2 = 0.5,
+    require = c("vbs", "vgs", "ves", "pis", "vle"),
+    use_coda = TRUE
+) {
+  out <- list()
+  has_coda <- isTRUE(use_coda) && requireNamespace("coda", quietly = TRUE)
+
+  for (nm in traces) {
+    if (is.null(fit[[nm]])) next
+
+    x <- fit[[nm]]
+    x <- as.matrix(x)
+
+    if (nrow(x) <= nburn + 5L) next
+
+    post <- x[seq.int(nburn + 1L, nrow(x)), , drop = FALSE]
+
+    tab <- lapply(seq_len(ncol(post)), function(j) {
+      z <- NA_real_
+      ess <- NA_real_
+      ac1 <- NA_real_
+
+      y <- post[, j]
+      y <- y[is.finite(y)]
+
+      if (length(y) > 10L && stats::sd(y) > 0) {
+        if (has_coda) {
+          z <- tryCatch(
+            coda::geweke.diag(coda::mcmc(y), frac1 = frac1, frac2 = frac2)$z,
+            error = function(e) NA_real_
+          )
+          ess <- tryCatch(
+            as.numeric(coda::effectiveSize(coda::mcmc(y))),
+            error = function(e) NA_real_
+          )
+        }
+        ac1 <- tryCatch(
+          stats::acf(y, lag.max = 1, plot = FALSE)$acf[2],
+          error = function(e) NA_real_
+        )
+      }
+
+      data.frame(
+        trace = nm,
+        trait = colnames(post)[j],
+        n = length(y),
+        mean = mean(y),
+        sd = stats::sd(y),
+        min = min(y),
+        max = max(y),
+        geweke_z = z,
+        ess = ess,
+        acf1 = ac1,
+        passed = ifelse(is.na(z), NA, abs(z) < crit[[nm]]),
+        stringsAsFactors = FALSE
+      )
+    })
+
+    out[[nm]] <- do.call(rbind, tab)
+  }
+
+  diagnostics <- do.call(rbind, out)
+
+  required <- diagnostics$trace %in% require
+  passed <- all(diagnostics$passed[required] %in% TRUE)
+
+  list(
+    passed = passed,
+    diagnostics = diagnostics,
+    nburn = nburn,
+    crit = crit,
+    required = require
+  )
+}
+
+
+#' Plot ST-BLR Posterior Summaries
+#'
+#' Plots posterior means or medians with HPD intervals, equal-tail intervals,
+#' or both interval types from the data frame returned by
+#' [summarise_stblr_posterior()]. The `parameters` argument uses internal
+#' parameter names such as `vg`, `ve`, `h2`, `pi`, `vb`, and `varch`, while plot
+#' labels use the `label` column or built-in plotmath labels.
+#'
+#' The function uses base R graphics.
+#'
+#' @param post Posterior summary data frame from
+#'   [summarise_stblr_posterior()].
+#' @param parameters Optional character vector of internal parameter names to
+#'   plot.
+#' @param traits Optional character vector of traits to plot.
+#' @param interval Interval type to plot: `"hpd"`, `"quantile"`, or `"both"`.
+#' @param point Point estimate to plot: `"mean"` or `"median"`.
+#' @param facet_by Faceting variable: `"parameter"` or `"trait"`.
+#' @param log_scale Logical; use a log-scaled x-axis when possible.
+#' @param xlab Optional x-axis label.
+#' @param main Optional panel title override.
+#' @param cex_axis Axis-label character expansion.
+#' @param pch Point plotting character.
+#' @param lwd_hpd,lwd_quantile Line widths for HPD and equal-tail intervals.
+#' @param col_point,col_hpd,col_quantile Colors for points, HPD intervals, and
+#'   equal-tail intervals.
+#' @param parse_labels Logical; parse parameter labels as plotmath
+#'   expressions.
+#'
+#' @return Invisibly returns the filtered data frame used for plotting.
+#'
+#' @examples
+#' fake_post <- data.frame(
+#'   parameter = c("vg", "ve", "h2", "pi", "varch"),
+#'   label = c("V[g]", "V[e]", "h^2", "pi", "V[arch]"),
+#'   trait = "trait1",
+#'   n = 20L,
+#'   mean = c(0.6, 0.4, 0.6, 0.02, 0.1),
+#'   median = c(0.6, 0.4, 0.6, 0.02, 0.1),
+#'   sd = 0.01,
+#'   mcse = 0.002,
+#'   q_lower = c(0.55, 0.35, 0.55, 0.01, 0.08),
+#'   q_upper = c(0.65, 0.45, 0.65, 0.03, 0.12),
+#'   hpd_lower = c(0.56, 0.36, 0.56, 0.01, 0.08),
+#'   hpd_upper = c(0.64, 0.44, 0.64, 0.03, 0.12),
+#'   ess = NA_real_,
+#'   autocorr_lag1 = NA_real_,
+#'   min = c(0.54, 0.34, 0.54, 0.01, 0.07),
+#'   max = c(0.66, 0.46, 0.66, 0.03, 0.13)
+#' )
+#' if (interactive()) {
+#'   plot_stblr_posterior(fake_post, parameters = c("vg", "ve", "h2"))
+#' }
+#'
+#' @export
+plot_stblr_posterior <- function(
+    post,
+    parameters = NULL,
+    traits = NULL,
+    interval = c("hpd", "quantile", "both"),
+    point = c("mean", "median"),
+    facet_by = c("parameter", "trait"),
+    log_scale = FALSE,
+    xlab = NULL,
+    main = NULL,
+    cex_axis = 0.8,
+    pch = 19,
+    lwd_hpd = 4,
+    lwd_quantile = 1,
+    col_point = "black",
+    col_hpd = "gray35",
+    col_quantile = "gray70",
+    parse_labels = TRUE
+) {
+  interval <- match.arg(interval)
+  point <- match.arg(point)
+  facet_by <- match.arg(facet_by)
+
+  required <- c(
+    "parameter", "trait", "mean", "median",
+    "q_lower", "q_upper", "hpd_lower", "hpd_upper"
+  )
+
+  missing <- setdiff(required, names(post))
+  if (length(missing) > 0L) {
+    stop(
+      "post is missing required columns: ",
+      paste(missing, collapse = ", ")
+    )
+  }
+
+  parameter_labels <- c(
+    vb = "V[b]",
+    vg = "V[g]",
+    ve = "V[e]",
+    pi = "pi",
+    vle = "V[LE]",
+    vld = "V[LD]",
+    h2 = "h^2",
+    ve_ratio = "V[e] / (V[g] + V[e])",
+    le_ratio = "V[LE] / V[g]",
+    ld_ratio = "V[LD] / V[g]",
+    varch = "V[arch]",
+    varch_ratio = "V[arch] / V[g]",
+    h2_arch = "h[arch]^2",
+    m_included = "pi * m"
+  )
+  label_source <- parameter_labels
+
+  label_for <- function(x) {
+    x <- as.character(x)
+    out <- unname(label_source[x])
+    miss <- is.na(out)
+    out[miss] <- x[miss]
+    out
+  }
+
+  make_labels <- function(x) {
+    labs <- label_for(x)
+
+    if (!parse_labels) {
+      return(labs)
+    }
+
+    parsed <- tryCatch(
+      parse(text = labs),
+      error = function(e) labs
+    )
+
+    parsed
+  }
+
+  panel_title <- function(x) {
+    lab <- label_for(x)
+
+    if (!parse_labels) {
+      return(lab)
+    }
+
+    tryCatch(
+      parse(text = lab)[[1]],
+      error = function(e) lab
+    )
+  }
+
+  dat <- post
+
+  if (!is.null(parameters)) {
+    dat <- dat[dat$parameter %in% parameters, , drop = FALSE]
+  }
+
+  if (!is.null(traits)) {
+    dat <- dat[dat$trait %in% traits, , drop = FALSE]
+  }
+
+  if (nrow(dat) < 1L) {
+    stop("No rows left after filtering parameters/traits.")
+  }
+
+  dat$parameter <- as.character(dat$parameter)
+  dat$trait <- as.character(dat$trait)
+
+  if ("label" %in% names(dat)) {
+    supplied <- dat[!is.na(dat$label), c("parameter", "label"), drop = FALSE]
+    supplied$label <- as.character(supplied$label)
+    supplied <- supplied[nzchar(supplied$label), , drop = FALSE]
+    if (nrow(supplied) > 0L) {
+      supplied_labels <- supplied$label
+      names(supplied_labels) <- supplied$parameter
+      label_source[names(supplied_labels)] <- supplied_labels
+    }
+  }
+
+  group_var <- facet_by
+  groups <- split(dat, dat[[group_var]], drop = TRUE)
+
+  oldpar <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(oldpar))
+
+  ng <- length(groups)
+  nr <- ceiling(sqrt(ng))
+  nc <- ceiling(ng / nr)
+
+  graphics::par(
+    mfrow = c(nr, nc),
+    mar = c(4, 8, 3, 1),
+    oma = c(0, 0, 2, 0)
+  )
+
+  point_col <- point
+
+  for (g in names(groups)) {
+    d <- groups[[g]]
+
+    if (facet_by == "parameter") {
+      d$plot_label <- d$trait
+      y_labels <- d$plot_label
+      this_main <- panel_title(g)
+    } else {
+      d$plot_label <- d$parameter
+      y_labels <- make_labels(d$plot_label)
+      this_main <- g
+    }
+
+    d <- d[order(d$plot_label), , drop = FALSE]
+
+    if (facet_by == "trait") {
+      y_labels <- make_labels(d$plot_label)
+    } else {
+      y_labels <- d$plot_label
+    }
+
+    y <- seq_len(nrow(d))
+    x <- d[[point_col]]
+
+    qlo <- d$q_lower
+    qhi <- d$q_upper
+    hlo <- d$hpd_lower
+    hhi <- d$hpd_upper
+
+    if (interval == "hpd") {
+      lo <- hlo
+      hi <- hhi
+    } else if (interval == "quantile") {
+      lo <- qlo
+      hi <- qhi
+    } else {
+      lo <- pmin(qlo, hlo, na.rm = TRUE)
+      hi <- pmax(qhi, hhi, na.rm = TRUE)
+    }
+
+    xlim <- range(c(lo, hi, x), finite = TRUE)
+
+    if (log_scale) {
+      positive <- c(lo, hi, x)
+      positive <- positive[is.finite(positive) & positive > 0]
+
+      if (length(positive) < 1L) {
+        warning("Cannot use log scale for group ", g, "; no positive values.")
+        log_now <- FALSE
+      } else {
+        xlim <- range(positive)
+        log_now <- TRUE
+      }
+    } else {
+      log_now <- FALSE
+    }
+
+    graphics::plot(
+      x,
+      y,
+      type = "n",
+      yaxt = "n",
+      xlim = xlim,
+      ylim = c(0.5, length(y) + 0.5),
+      xlab = if (is.null(xlab)) point_col else xlab,
+      ylab = "",
+      main = if (is.null(main)) this_main else main,
+      log = if (log_now) "x" else ""
+    )
+
+    graphics::axis(
+      side = 2,
+      at = y,
+      labels = y_labels,
+      las = 2,
+      cex.axis = cex_axis
+    )
+
+    if (interval %in% c("quantile", "both")) {
+      graphics::segments(
+        qlo,
+        y,
+        qhi,
+        y,
+        lwd = lwd_quantile,
+        col = col_quantile
+      )
+    }
+
+    if (interval %in% c("hpd", "both")) {
+      graphics::segments(
+        hlo,
+        y,
+        hhi,
+        y,
+        lwd = lwd_hpd,
+        col = col_hpd
+      )
+    }
+
+    graphics::points(
+      x,
+      y,
+      pch = pch,
+      col = col_point
+    )
+
+    graphics::grid(nx = NA, ny = NULL)
+    graphics::box()
+  }
+
+  interval_text <- switch(
+    interval,
+    hpd = "HPD intervals",
+    quantile = "equal-tail intervals",
+    both = "equal-tail and HPD intervals"
+  )
+
+  graphics::mtext(
+    paste(point_col, "with", interval_text),
+    outer = TRUE,
+    line = 0.5
+  )
+
+  invisible(dat)
+}
+
+
+#' Summarise ST-BLR Posterior Traces
+#'
+#' Computes posterior summaries for global ST-BLR trace parameters. The
+#' function summarizes traces such as `vbs`, `vgs`, `ves`, `pis`, `vle`, and
+#' `vld`.
+#'
+#' For each trace it computes posterior mean, median, posterior standard
+#' deviation, Monte Carlo standard error, equal-tail credible intervals, HPD
+#' intervals, effective sample size, lag-1 autocorrelation, minimum, and
+#' maximum. HPD intervals use `coda::HPDinterval()` when `coda` is available and
+#' fall back to equal-tail intervals otherwise.
+#'
+#' When requested, derived quantities are computed from post-burn-in samples:
+#' `h2 = vg / (vg + ve)`, `ve_ratio = ve / (vg + ve)`,
+#' `le_ratio = vle / vg`, `ld_ratio = vld / vg`,
+#' `varch = vb * pi * m`, `varch_ratio = varch / vg`,
+#' `h2_arch = varch / (varch + ve)`, and `m_included = pi * m`.
+#' `m_included` is the expected number of included markers and is derived from
+#' `pi` and `fit$input$m`.
+#'
+#' @param fit Fitted ST-BLR object.
+#' @param nburn Number of initial iterations to discard. If `NULL`, uses
+#'   `fit$input$nburn` when available and otherwise zero.
+#' @param traces Character vector of trace components to summarize.
+#' @param prob Credible interval probability.
+#' @param derived Logical; include derived posterior quantities when the needed
+#'   traces are available.
+#' @param include_m_included Logical; include `m_included = pi * m` when
+#'   `derived = TRUE`, `pis` is available, and `fit$input$m` is present.
+#' @param include_diagnostics Logical; include effective sample size and lag-1
+#'   autocorrelation diagnostics when possible.
+#'
+#' @return A data frame with columns `parameter`, `label`, `trait`, `n`,
+#'   `mean`, `median`, `sd`, `mcse`, `q_lower`, `q_upper`, `hpd_lower`,
+#'   `hpd_upper`, `ess`, `autocorr_lag1`, `min`, and `max`.
+#'
+#' @examples
+#' set.seed(1)
+#' fake_fit <- list(
+#'   input = list(nburn = 5, m = 100),
+#'   vbs = matrix(rnorm(40, mean = 0.005, sd = 0.001), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   vgs = matrix(rnorm(40, mean = 0.6, sd = 0.02), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   ves = matrix(rnorm(40, mean = 0.4, sd = 0.02), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   pis = matrix(runif(40, min = 0.01, max = 0.03), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   vle = matrix(rnorm(40, mean = 0.1, sd = 0.01), ncol = 1,
+#'                dimnames = list(NULL, "trait1")),
+#'   vld = matrix(rnorm(40, mean = 0.2, sd = 0.01), ncol = 1,
+#'                dimnames = list(NULL, "trait1"))
+#' )
+#' post <- summarise_stblr_posterior(fake_fit)
+#' post[post$parameter %in% c("vg", "ve", "h2", "pi", "varch"), ]
+#'
+#' @export
+summarise_stblr_posterior <- function(
+    fit,
+    nburn = NULL,
+    traces = c("vbs", "vgs", "ves", "pis", "vle", "vld"),
+    prob = 0.95,
+    derived = TRUE,
+    include_m_included = TRUE,
+    include_diagnostics = TRUE
+) {
+  if (is.null(nburn)) {
+    nburn <- if (!is.null(fit$input$nburn)) fit$input$nburn else 0L
+  }
+  nburn <- as.integer(nburn)
+
+  if (!is.numeric(prob) || length(prob) != 1L ||
+      !is.finite(prob) || prob <= 0 || prob >= 1) {
+    stop("prob must be a finite scalar in (0, 1).")
+  }
+
+  has_coda <- requireNamespace("coda", quietly = TRUE)
+
+  trace_parameter <- c(
+    vbs = "vb",
+    vgs = "vg",
+    ves = "ve",
+    pis = "pi",
+    vle = "vle",
+    vld = "vld"
+  )
+
+  parameter_label <- c(
+    vb = "V[b]",
+    vg = "V[g]",
+    ve = "V[e]",
+    pi = "pi",
+    vle = "V[LE]",
+    vld = "V[LD]",
+    h2 = "h^2",
+    ve_ratio = "V[e] / (V[g] + V[e])",
+    le_ratio = "V[LE] / V[g]",
+    ld_ratio = "V[LD] / V[g]",
+    varch = "V[arch]",
+    varch_ratio = "V[arch] / V[g]",
+    h2_arch = "h[arch]^2",
+    m_included = "pi * m"
+  )
+
+  get_label <- function(parameter) {
+    label <- unname(parameter_label[parameter])
+    ifelse(is.na(label), parameter, label)
+  }
+
+  as_trace_matrix <- function(x) {
+    x <- as.matrix(x)
+    storage.mode(x) <- "double"
+    x
+  }
+
+  post_trace <- function(x) {
+    x <- as_trace_matrix(x)
+
+    if (nrow(x) < 1L) {
+      stop("Trace has zero rows.")
+    }
+
+    if (nburn >= nrow(x)) {
+      stop("nburn must be smaller than the number of trace rows.")
+    }
+
+    x[seq.int(nburn + 1L, nrow(x)), , drop = FALSE]
+  }
+
+  hpd_interval <- function(x) {
+    alpha <- (1 - prob) / 2
+    q <- stats::quantile(
+      x,
+      probs = c(alpha, 1 - alpha),
+      na.rm = TRUE,
+      names = FALSE,
+      type = 8
+    )
+
+    fallback <- c(lower = q[1], upper = q[2])
+
+    if (!has_coda || length(x) < 2L || stats::sd(x, na.rm = TRUE) == 0) {
+      return(fallback)
+    }
+
+    out <- tryCatch(
+      coda::HPDinterval(coda::mcmc(x), prob = prob),
+      error = function(e) NULL
+    )
+
+    if (is.null(out)) {
+      return(fallback)
+    }
+
+    c(lower = unname(out[1, "lower"]), upper = unname(out[1, "upper"]))
+  }
+
+  ess_value <- function(x) {
+    if (!include_diagnostics || !has_coda ||
+        length(x) < 2L || stats::sd(x, na.rm = TRUE) == 0) {
+      return(NA_real_)
+    }
+
+    tryCatch(
+      as.numeric(coda::effectiveSize(coda::mcmc(x))),
+      error = function(e) NA_real_
+    )
+  }
+
+  autocorr_lag1_value <- function(x) {
+    if (!include_diagnostics ||
+        length(x) < 2L || stats::sd(x, na.rm = TRUE) == 0) {
+      return(NA_real_)
+    }
+
+    tryCatch(
+      as.numeric(stats::acf(x, lag.max = 1, plot = FALSE)$acf[2]),
+      error = function(e) NA_real_
+    )
+  }
+
+  summarise_matrix <- function(mat, parameter) {
+    mat <- as_trace_matrix(mat)
+
+    trait_names <- colnames(mat)
+    if (is.null(trait_names)) {
+      trait_names <- paste0("T", seq_len(ncol(mat)))
+    }
+
+    alpha <- (1 - prob) / 2
+    label <- get_label(parameter)
+
+    rows <- lapply(seq_len(ncol(mat)), function(j) {
+      x <- mat[, j]
+      x <- x[is.finite(x)]
+
+      if (length(x) < 1L) {
+        return(data.frame(
+          parameter = parameter,
+          label = label,
+          trait = trait_names[j],
+          n = 0L,
+          mean = NA_real_,
+          median = NA_real_,
+          sd = NA_real_,
+          mcse = NA_real_,
+          q_lower = NA_real_,
+          q_upper = NA_real_,
+          hpd_lower = NA_real_,
+          hpd_upper = NA_real_,
+          ess = NA_real_,
+          autocorr_lag1 = NA_real_,
+          min = NA_real_,
+          max = NA_real_,
+          stringsAsFactors = FALSE
+        ))
+      }
+
+      sx <- stats::sd(x)
+      ess <- ess_value(x)
+      autocorr_lag1 <- autocorr_lag1_value(x)
+
+      if (is.na(ess) || ess <= 0) {
+        mcse <- sx / sqrt(length(x))
+      } else {
+        mcse <- sx / sqrt(ess)
+      }
+
+      q <- stats::quantile(
+        x,
+        probs = c(alpha, 1 - alpha),
+        na.rm = TRUE,
+        names = FALSE,
+        type = 8
+      )
+
+      hpd <- hpd_interval(x)
+
+      data.frame(
+        parameter = parameter,
+        label = label,
+        trait = trait_names[j],
+        n = length(x),
+        mean = mean(x),
+        median = stats::median(x),
+        sd = sx,
+        mcse = mcse,
+        q_lower = q[1],
+        q_upper = q[2],
+        hpd_lower = hpd[1],
+        hpd_upper = hpd[2],
+        ess = ess,
+        autocorr_lag1 = autocorr_lag1,
+        min = min(x),
+        max = max(x),
+        stringsAsFactors = FALSE
+      )
+    })
+
+    do.call(rbind, rows)
+  }
+
+  safe_divide <- function(num, den) {
+    out <- num / den
+    out[!is.finite(out) | abs(den) <= .Machine$double.eps] <- NA_real_
+    out
+  }
+
+  out <- list()
+  post <- list()
+
+  for (nm in traces) {
+    if (is.null(fit[[nm]])) next
+
+    mat <- post_trace(fit[[nm]])
+    post[[nm]] <- mat
+
+    parameter <- unname(trace_parameter[nm])
+    if (is.na(parameter)) parameter <- nm
+
+    out[[parameter]] <- summarise_matrix(
+      mat = mat,
+      parameter = parameter
+    )
+  }
+
+  if (isTRUE(derived)) {
+    if (!is.null(post$vgs) && !is.null(post$ves)) {
+      denom <- post$vgs + post$ves
+
+      out$h2 <- summarise_matrix(
+        safe_divide(post$vgs, denom),
+        parameter = "h2"
+      )
+
+      out$ve_ratio <- summarise_matrix(
+        safe_divide(post$ves, denom),
+        parameter = "ve_ratio"
+      )
+    }
+
+    if (!is.null(post$vle) && !is.null(post$vgs)) {
+      out$le_ratio <- summarise_matrix(
+        safe_divide(post$vle, post$vgs),
+        parameter = "le_ratio"
+      )
+    }
+
+    if (!is.null(post$vld) && !is.null(post$vgs)) {
+      out$ld_ratio <- summarise_matrix(
+        safe_divide(post$vld, post$vgs),
+        parameter = "ld_ratio"
+      )
+    }
+
+    if (!is.null(post$vbs) &&
+        !is.null(post$pis) &&
+        !is.null(fit$input$m)) {
+      m <- as.numeric(fit$input$m)
+      varch <- post$vbs * post$pis * m
+
+      out$varch <- summarise_matrix(
+        varch,
+        parameter = "varch"
+      )
+
+      if (!is.null(post$vgs)) {
+        out$varch_ratio <- summarise_matrix(
+          safe_divide(varch, post$vgs),
+          parameter = "varch_ratio"
+        )
+      }
+
+      if (!is.null(post$ves)) {
+        out$h2_arch <- summarise_matrix(
+          safe_divide(varch, varch + post$ves),
+          parameter = "h2_arch"
+        )
+      }
+
+      if (isTRUE(include_m_included)) {
+        out$m_included <- summarise_matrix(
+          post$pis * m,
+          parameter = "m_included"
+        )
+      }
+    }
+  }
+
+  ans <- do.call(rbind, out)
+  rownames(ans) <- NULL
+
+  ans
 }
