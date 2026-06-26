@@ -20,6 +20,14 @@
 #' @param method Lead-marker selection method. `"pip"` uses the highest
 #'   remaining PIP; `"ld_pip"` uses an LD-smoothed PIP score.
 #' @param max_sets Maximum number of credible sets to construct.
+#' @param allow_incomplete Logical; if `TRUE`, return sets whose cumulative PIP
+#'   does not reach `coverage` when all available LD-neighborhood candidates
+#'   have been used. The default `FALSE` reports only credible sets with
+#'   `cs_pip >= coverage`.
+#' @param remove Marker removal rule after a credible set is constructed.
+#'   `"ld_neighborhood"` suppresses all candidate markers in the lead marker's
+#'   LD neighborhood from future lead selection. `"credible_set"` suppresses
+#'   only markers included in the selected minimal credible set.
 #'
 #' @return A list with `summary`, `sets`, aligned `pip`, and `parameters`.
 #' @export
@@ -30,13 +38,20 @@ make_credible_sets_from_ld <- function(
     min_r2 = 0.5,
     pip_cutoff = 0.001,
     method = c("pip", "ld_pip"),
-    max_sets = Inf
+    max_sets = Inf,
+    allow_incomplete = FALSE,
+    remove = c("ld_neighborhood", "credible_set")
 ) {
   method <- match.arg(method)
+  remove <- match.arg(remove)
   .check_scalar_range(coverage, "coverage", lower = 0, upper = 1,
                       lower_open = TRUE, upper_open = TRUE)
   .check_scalar_range(min_r2, "min_r2", lower = 0, upper = 1)
   .check_scalar_range(pip_cutoff, "pip_cutoff", lower = 0, upper = 1)
+  if (!is.logical(allow_incomplete) || length(allow_incomplete) != 1L ||
+      is.na(allow_incomplete)) {
+    stop("allow_incomplete must be TRUE or FALSE.")
+  }
   if (!is.numeric(max_sets) || length(max_sets) != 1L ||
       is.na(max_sets) || max_sets < 0) {
     stop("max_sets must be a non-negative scalar.")
@@ -108,7 +123,13 @@ make_credible_sets_from_ld <- function(
 
     cumulative <- cumsum(pip[candidate_idx])
     take_n <- which(cumulative >= coverage)[1L]
-    if (is.na(take_n)) take_n <- length(candidate_idx)
+    if (is.na(take_n)) {
+      if (!allow_incomplete) {
+        remaining[candidate_idx] <- FALSE
+        next
+      }
+      take_n <- length(candidate_idx)
+    }
     selected <- candidate_idx[seq_len(take_n)]
 
     cs_index <- cs_index + 1L
@@ -139,7 +160,11 @@ make_credible_sets_from_ld <- function(
       stringsAsFactors = FALSE
     )
 
-    remaining[selected] <- FALSE
+    if (remove == "ld_neighborhood") {
+      remaining[candidate_idx] <- FALSE
+    } else {
+      remaining[selected] <- FALSE
+    }
   }
 
   summary <- if (length(summaries) > 0L) {
@@ -163,7 +188,9 @@ make_credible_sets_from_ld <- function(
       min_r2 = min_r2,
       pip_cutoff = pip_cutoff,
       method = method,
-      max_sets = max_sets
+      max_sets = max_sets,
+      allow_incomplete = allow_incomplete,
+      remove = remove
     )
   )
 }
@@ -200,6 +227,13 @@ make_credible_sets_from_ld <- function(
 #' @param max_loci Maximum number of automatic loci.
 #' @param method Lead-marker selection method passed to
 #'   [make_credible_sets_from_ld()].
+#' @param allow_incomplete Logical; if `TRUE`, return credible-set candidates
+#'   whose cumulative PIP does not reach `coverage`. The default `FALSE`
+#'   reports only valid credible sets with `cs_pip >= coverage`.
+#' @param remove Marker removal rule passed to [make_credible_sets_from_ld()].
+#'   The default `"ld_neighborhood"` removes the whole lead LD neighborhood from
+#'   future credible-set selection; `"credible_set"` removes only selected
+#'   credible-set markers.
 #'
 #' @return A list with combined `summary`, nested credible `sets`, `loci`,
 #'   `parameters`, and resolved `trait`.
@@ -216,9 +250,12 @@ make_stblr_credible_sets <- function(
     locus_pip_cutoff = 0.01,
     max_locus_distance = 1e6,
     max_loci = Inf,
-    method = c("pip", "ld_pip")
+    method = c("pip", "ld_pip"),
+    allow_incomplete = FALSE,
+    remove = c("ld_neighborhood", "credible_set")
 ) {
   method <- match.arg(method)
+  remove <- match.arg(remove)
   pip_info <- .stblr_extract_pip(fit, trait = trait)
   pip <- pip_info$pip
 
@@ -280,7 +317,9 @@ make_stblr_credible_sets <- function(
       coverage = coverage,
       min_r2 = min_r2,
       pip_cutoff = pip_cutoff,
-      method = method
+      method = method,
+      allow_incomplete = allow_incomplete,
+      remove = remove
     )
 
     out_sets[[locus_name]] <- cs$sets
@@ -320,7 +359,9 @@ make_stblr_credible_sets <- function(
       locus_pip_cutoff = locus_pip_cutoff,
       max_locus_distance = max_locus_distance,
       max_loci = max_loci,
-      method = method
+      method = method,
+      allow_incomplete = allow_incomplete,
+      remove = remove
     ),
     trait = pip_info$trait
   )
@@ -407,31 +448,40 @@ make_stblr_credible_sets <- function(
   if (is.null(Glist$pos)) stop("Glist$pos is required for marker positions.")
 
   if (!is.null(Glist$sparseLD$chr) && !is.null(Glist$sparseLD$cls)) {
-    chr_vec <- as.integer(Glist$sparseLD$chr)
+    component_idx <- Glist$sparseLD$chr
+    if (!is.list(component_idx)) component_idx <- as.list(component_idx)
     cls <- Glist$sparseLD$cls
     if (!is.list(cls)) cls <- as.list(cls)
-    if (length(chr_vec) != length(cls)) {
+    if (length(component_idx) != length(cls)) {
       stop("Glist$sparseLD$chr and Glist$sparseLD$cls must have the same length.")
     }
   } else {
-    chr_vec <- seq_along(Glist$rsids)
+    component_idx <- as.list(seq_along(Glist$rsids))
     cls <- lapply(Glist$rsids, seq_along)
   }
 
   rows <- list()
   sparse_index <- 0L
-  for (k in seq_along(chr_vec)) {
-    cc <- chr_vec[k]
+  for (k in seq_along(component_idx)) {
+    cc <- as.integer(component_idx[[k]])
+    if (length(cc) != 1L || is.na(cc)) {
+      stop("Each Glist$sparseLD$chr entry must identify one Glist component.")
+    }
     cl <- as.integer(cls[[k]])
     if (length(cl) < 1L) next
     if (is.null(Glist$rsids[[cc]]) || is.null(Glist$pos[[cc]])) {
       stop("Glist$rsids and Glist$pos must contain chromosome/file index ", cc, ".")
     }
+    chr <- if (!is.null(Glist$chr) && !is.null(Glist$chr[[cc]])) {
+      Glist$chr[[cc]][cl]
+    } else {
+      rep(cc, length(cl))
+    }
     sparse_idx <- seq.int(sparse_index + 1L, sparse_index + length(cl))
     sparse_index <- sparse_index + length(cl)
     rows[[length(rows) + 1L]] <- data.frame(
       marker = as.character(Glist$rsids[[cc]][cl]),
-      chr = cc,
+      chr = chr,
       pos = as.numeric(Glist$pos[[cc]][cl]),
       index = sparse_idx,
       stringsAsFactors = FALSE
@@ -631,6 +681,12 @@ make_stblr_credible_sets <- function(
   }
 
   diag(LD) <- 1
+  if (m > 10L && all(LD[row(LD) != col(LD)] == 0)) {
+    warning(
+      "Regional LD matrix has more than 10 markers but all off-diagonal ",
+      "entries are zero; LD extraction or sparseLD indexing may be wrong."
+    )
+  }
   LD
 }
 

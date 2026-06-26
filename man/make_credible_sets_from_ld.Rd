@@ -11,7 +11,9 @@ make_credible_sets_from_ld(
   min_r2 = 0.5,
   pip_cutoff = 0.001,
   method = c("pip", "ld_pip"),
-  max_sets = Inf
+  max_sets = Inf,
+  allow_incomplete = FALSE,
+  remove = c("ld_neighborhood", "credible_set")
 )
 }
 \arguments{
@@ -31,6 +33,16 @@ membership.}
 remaining PIP; `"ld_pip"` uses an LD-smoothed PIP score.}
 
 \item{max_sets}{Maximum number of credible sets to construct.}
+
+\item{allow_incomplete}{Logical; if `TRUE`, return sets whose cumulative PIP
+does not reach `coverage` when all available LD-neighborhood candidates
+have been used. The default `FALSE` reports only credible sets with
+`cs_pip >= coverage`.}
+
+\item{remove}{Marker removal rule after a credible set is constructed.
+`"ld_neighborhood"` suppresses all candidate markers in the lead marker's
+LD neighborhood from future lead selection. `"credible_set"` suppresses
+only markers included in the selected minimal credible set.}
 }
 \value{
 A list with `summary`, `sets`, aligned `pip`, and `parameters`.

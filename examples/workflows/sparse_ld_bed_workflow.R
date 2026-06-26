@@ -118,6 +118,7 @@ cs <- make_stblr_credible_sets(
 cs$loci
 cs$summary
 cs$sets[[1]]
+
 # Individual-level BED BLR models =========================================
 
 # High-level BED wrapper.

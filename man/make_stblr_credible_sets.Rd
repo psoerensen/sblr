@@ -16,7 +16,9 @@ make_stblr_credible_sets(
   locus_pip_cutoff = 0.01,
   max_locus_distance = 1e+06,
   max_loci = Inf,
-  method = c("pip", "ld_pip")
+  method = c("pip", "ld_pip"),
+  allow_incomplete = FALSE,
+  remove = c("ld_neighborhood", "credible_set")
 )
 }
 \arguments{
@@ -44,6 +46,15 @@ locus definition.}
 
 \item{method}{Lead-marker selection method passed to
 [make_credible_sets_from_ld()].}
+
+\item{allow_incomplete}{Logical; if `TRUE`, return credible-set candidates
+whose cumulative PIP does not reach `coverage`. The default `FALSE`
+reports only valid credible sets with `cs_pip >= coverage`.}
+
+\item{remove}{Marker removal rule passed to [make_credible_sets_from_ld()].
+The default `"ld_neighborhood"` removes the whole lead LD neighborhood from
+future credible-set selection; `"credible_set"` removes only selected
+credible-set markers.}
 }
 \value{
 A list with combined `summary`, nested credible `sets`, `loci`,
