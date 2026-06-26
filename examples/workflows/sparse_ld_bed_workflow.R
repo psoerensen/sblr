@@ -119,6 +119,73 @@ cs$loci
 cs$summary
 cs$sets[[1]]
 
+cs_global <- make_stblr_credible_sets(
+  fit = fit,
+  Glist = Glist,
+  trait = "D1",
+  coverage = 0.95,
+  min_r2 = 0.5,
+  pip_cutoff = 0.001,
+  locus_pip_cutoff = 0.01,
+  max_locus_distance = 1e6
+)
+
+map <- sblr:::.stblr_marker_map_from_Glist(Glist, fit = fit)
+
+sets <- lapply(seq_len(nrow(cs_global$loci)), function(i) {
+  loc <- cs_global$loci[i, ]
+  
+  map$marker[
+    map$chr == loc$chr &
+      map$pos >= loc$start &
+      map$pos <= loc$end
+  ]
+})
+
+names(sets) <- cs_global$loci$locus
+
+fm <- finemap_stblr_csr(
+  fit = fit,
+  Glist = Glist,
+  stats = stats,
+  sets = sets,
+  trait = "D1",
+  nruns = 8,
+  use_residual = TRUE,   # use FALSE first unless residualization is fully implemented
+  nit = 20000,
+  nburn = 2000,
+  seeds = 101:108,
+  credible_sets = TRUE,
+  coverage = 0.95,
+  min_r2 = 0.5,
+  pip_cutoff = 0.001
+)
+
+fm_sum$secondary_pip <- fm_sum$total_pip - fm_sum$lead_pip
+
+fm_sum$class <- with(fm_sum, ifelse(
+  lead_pip >= 0.95 & secondary_pip < 0.1,
+  "single strong signal",
+  ifelse(
+    lead_pip >= 0.95 & secondary_pip >= 0.1,
+    "strong lead + secondary mass",
+    ifelse(
+      lead_pip < 0.95 & total_pip >= 0.95,
+      "distributed credible signal",
+      "weak/uncertain"
+    )
+  )
+))
+
+table(fm_sum$class)
+
+fm_sum[order(fm_sum$class, -fm_sum$total_pip), c(
+  "locus", "chr", "lead_marker",
+  "lead_pip", "total_pip", "secondary_pip", "class"
+)]
+
+
+
 # Individual-level BED BLR models =========================================
 
 # High-level BED wrapper.
