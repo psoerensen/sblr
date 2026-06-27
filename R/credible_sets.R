@@ -195,6 +195,195 @@ make_credible_sets_from_ld <- function(
   )
 }
 
+#' Construct Approximate Multi-Signal Credible Sets from PIPs and LD
+#'
+#' Constructs multiple credible sets from marginal posterior inclusion
+#' probabilities (PIPs) and a dense regional LD/correlation matrix. This is an
+#' approximate R-level post-processing tool for local fine-mapping output, most
+#' useful when the regional total PIP is much larger than the lead-marker PIP.
+#'
+#' The procedure repeatedly selects a lead marker from the remaining marginal
+#' PIPs, builds a local LD neighborhood around that lead, and accumulates
+#' markers by decreasing PIP until the requested `coverage` is reached. These
+#' sets are based on marginal PIPs, not posterior inclusion configurations, and
+#' are therefore not identical to SuSiE-style per-effect credible sets. Rigorous
+#' per-effect credible sets require posterior configurations or a
+#' component-specific model.
+#'
+#' @param pip Named numeric vector of posterior inclusion probabilities.
+#' @param LD Dense square LD/correlation matrix. If marker names are available
+#'   in both `pip` and `LD`, inputs are aligned by common marker names.
+#' @param coverage Credible-set target cumulative PIP, in `(0, 1)`.
+#' @param min_r2 Minimum squared correlation to the lead marker for candidate
+#'   membership.
+#' @param pip_cutoff PIPs below this value are set to zero for set construction.
+#' @param signal_coverage Minimum total remaining PIP used to continue searching
+#'   for complete additional signals when `allow_incomplete = FALSE`.
+#' @param min_signal_pip Minimum remaining lead-marker PIP required to start a
+#'   new signal.
+#' @param max_signals Maximum number of signals/credible sets to return.
+#' @param method Lead-marker selection method. `"pip"` uses the highest
+#'   remaining PIP; `"ld_pip"` uses an LD-smoothed PIP score.
+#' @param remove Marker removal rule after a signal is constructed.
+#'   `"credible_set"` suppresses only selected credible-set markers from future
+#'   lead selection. `"ld_neighborhood"` suppresses all candidate markers in the
+#'   lead marker's LD neighborhood.
+#' @param allow_incomplete Logical; if `TRUE`, return sets whose cumulative PIP
+#'   does not reach `coverage` when all available LD-neighborhood candidates
+#'   have been used.
+#'
+#' @return A list with `summary`, `sets`, aligned `pip`, and `parameters`.
+#' @export
+make_multisignal_credible_sets_from_ld <- function(
+    pip,
+    LD,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    pip_cutoff = 0.001,
+    signal_coverage = 0.95,
+    min_signal_pip = 0.05,
+    max_signals = Inf,
+    method = c("pip", "ld_pip"),
+    remove = c("credible_set", "ld_neighborhood"),
+    allow_incomplete = FALSE
+) {
+  method <- match.arg(method)
+  remove <- match.arg(remove)
+  .check_scalar_range(coverage, "coverage", lower = 0, upper = 1,
+                      lower_open = TRUE, upper_open = TRUE)
+  .check_scalar_range(min_r2, "min_r2", lower = 0, upper = 1)
+  .check_scalar_range(pip_cutoff, "pip_cutoff", lower = 0, upper = 1)
+  .check_scalar_range(signal_coverage, "signal_coverage", lower = 0, upper = Inf)
+  .check_scalar_range(min_signal_pip, "min_signal_pip", lower = 0, upper = 1)
+  if (!is.numeric(max_signals) || length(max_signals) != 1L ||
+      is.na(max_signals) || max_signals < 0) {
+    stop("max_signals must be a non-negative scalar.")
+  }
+  if (!is.logical(allow_incomplete) || length(allow_incomplete) != 1L ||
+      is.na(allow_incomplete)) {
+    stop("allow_incomplete must be TRUE or FALSE.")
+  }
+
+  aligned <- .stblr_align_pip_ld(pip, LD)
+  pip <- aligned$pip
+  LD <- aligned$LD
+  marker <- names(pip)
+
+  pip[!is.finite(pip)] <- 0
+  pip[pip < pip_cutoff] <- 0
+
+  r2 <- LD^2
+  r2[!is.finite(r2)] <- 0
+  diag(r2) <- 1
+
+  remaining <- pip > 0
+  summaries <- list()
+  sets <- list()
+  signal_index <- 0L
+
+  while (any(remaining) && signal_index < max_signals) {
+    rem_idx <- which(remaining)
+    remaining_pip_before <- sum(pip[rem_idx])
+    if (!allow_incomplete && remaining_pip_before < signal_coverage) break
+
+    if (method == "pip") {
+      lead <- rem_idx[which.max(pip[rem_idx])]
+    } else {
+      score <- as.numeric(r2 %*% (pip * remaining))
+      score[!remaining] <- -Inf
+      lead <- which.max(score)
+    }
+    if (!is.finite(pip[lead]) || pip[lead] < min_signal_pip) break
+
+    candidate_idx <- rem_idx[r2[rem_idx, lead] >= min_r2]
+    if (length(candidate_idx) < 1L) candidate_idx <- lead
+    candidate_idx <- candidate_idx[order(pip[candidate_idx], decreasing = TRUE)]
+
+    cumulative <- cumsum(pip[candidate_idx])
+    take_n <- which(cumulative >= coverage)[1L]
+    complete <- !is.na(take_n)
+    if (!complete) {
+      if (!allow_incomplete) {
+        remaining[lead] <- FALSE
+        next
+      }
+      take_n <- length(candidate_idx)
+    }
+    selected <- candidate_idx[seq_len(take_n)]
+
+    signal_index <- signal_index + 1L
+    cs_name <- paste0("CS", signal_index)
+    cs_pip <- sum(pip[selected])
+    r2_to_lead <- r2[selected, lead]
+
+    sets[[cs_name]] <- data.frame(
+      signal = signal_index,
+      marker = marker[selected],
+      pip = pip[selected],
+      r2_to_lead = r2_to_lead,
+      rank = seq_along(selected),
+      stringsAsFactors = FALSE
+    )
+
+    remove_idx <- if (remove == "ld_neighborhood") candidate_idx else selected
+    remaining[remove_idx] <- FALSE
+    remaining_pip_after <- sum(pip[remaining])
+
+    summaries[[cs_name]] <- data.frame(
+      signal = signal_index,
+      cs = cs_name,
+      lead_marker = marker[lead],
+      lead_pip = pip[lead],
+      cs_pip = cs_pip,
+      remaining_pip_before = remaining_pip_before,
+      remaining_pip_after = remaining_pip_after,
+      n_markers = length(selected),
+      min_r2_to_lead = min(r2_to_lead),
+      mean_r2_to_lead = mean(r2_to_lead),
+      coverage = coverage,
+      min_r2 = min_r2,
+      pip_cutoff = pip_cutoff,
+      min_signal_pip = min_signal_pip,
+      method = method,
+      remove = remove,
+      complete = complete,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  summary <- if (length(summaries) > 0L) {
+    do.call(rbind, summaries)
+  } else {
+    data.frame(
+      signal = integer(), cs = character(), lead_marker = character(),
+      lead_pip = numeric(), cs_pip = numeric(),
+      remaining_pip_before = numeric(), remaining_pip_after = numeric(),
+      n_markers = integer(), min_r2_to_lead = numeric(),
+      mean_r2_to_lead = numeric(), coverage = numeric(), min_r2 = numeric(),
+      pip_cutoff = numeric(), min_signal_pip = numeric(), method = character(),
+      remove = character(), complete = logical(), stringsAsFactors = FALSE
+    )
+  }
+  rownames(summary) <- NULL
+
+  list(
+    summary = summary,
+    sets = sets,
+    pip = pip,
+    parameters = list(
+      coverage = coverage,
+      min_r2 = min_r2,
+      pip_cutoff = pip_cutoff,
+      signal_coverage = signal_coverage,
+      min_signal_pip = min_signal_pip,
+      max_signals = max_signals,
+      method = method,
+      remove = remove,
+      allow_incomplete = allow_incomplete
+    )
+  )
+}
+
 #' Construct Credible Sets for Fitted ST-BLR Models
 #'
 #' Constructs credible sets from marker-level PIPs in `fit$dm` for fitted
@@ -256,11 +445,13 @@ make_stblr_credible_sets <- function(
 ) {
   method <- match.arg(method)
   remove <- match.arg(remove)
+  
   pip_info <- .stblr_extract_pip(fit, trait = trait)
   pip <- pip_info$pip
-
+  
   if (is.null(sets)) {
     map <- .stblr_marker_map_from_Glist(Glist, fit = fit)
+    
     loci <- .stblr_define_loci(
       pip = pip,
       map = map,
@@ -268,22 +459,28 @@ make_stblr_credible_sets <- function(
       max_locus_distance = max_locus_distance,
       max_loci = max_loci
     )
+    
     if (nrow(loci) < 1L) {
       stop("No automatic loci found. Lower locus_pip_cutoff or supply sets.")
     }
+    
     sets <- stats::setNames(loci$markers, loci$locus)
   } else {
     sets <- .stblr_clean_marker_sets(sets, pip)
     loci <- .stblr_loci_from_sets(sets, pip, Glist = Glist, fit = fit)
   }
-
+  
+  locus_sets <- sets
+  
   use_sparse <- is.null(LD)
   csr <- NULL
+  
   if (use_sparse) {
     if (is.null(Glist) || is.null(Glist$sparseLD$prefix) ||
         !nzchar(Glist$sparseLD$prefix)) {
       stop("Supply LD or Glist$sparseLD$prefix.")
     }
+    
     if (!is.null(Glist$sparseLD$r2_threshold) &&
         is.finite(Glist$sparseLD$r2_threshold) &&
         min_r2 < Glist$sparseLD$r2_threshold) {
@@ -294,23 +491,35 @@ make_stblr_credible_sets <- function(
         "; some LD pairs needed for credible-set construction may be missing."
       )
     }
+    
     csr <- sparseLD_read_CSR(Glist$sparseLD$prefix, one_based = TRUE)
   }
-
+  
   summaries <- list()
   out_sets <- list()
+  
   for (locus_name in names(sets)) {
     markers <- sets[[locus_name]]
     regional_pip <- pip[markers]
-
+    
     regional_LD <- if (use_sparse) {
       locus_rows <- loci[loci$locus == locus_name, , drop = FALSE]
       idx <- locus_rows$indices[[1L]]
-      .extract_sparseLD_region_dense(csr, idx, marker_names = markers)
+      
+      .extract_sparseLD_region_dense(
+        csr,
+        idx,
+        marker_names = markers
+      )
     } else {
-      .stblr_resolve_regional_ld(LD, locus_name, markers, length(sets))
+      .stblr_resolve_regional_ld(
+        LD,
+        locus_name,
+        markers,
+        length(sets)
+      )
     }
-
+    
     cs <- make_credible_sets_from_ld(
       pip = regional_pip,
       LD = regional_LD,
@@ -321,10 +530,12 @@ make_stblr_credible_sets <- function(
       allow_incomplete = allow_incomplete,
       remove = remove
     )
-
+    
     out_sets[[locus_name]] <- cs$sets
+    
     if (nrow(cs$summary) > 0L) {
       loc <- loci[loci$locus == locus_name, , drop = FALSE]
+      
       tab <- cbind(
         data.frame(
           locus = locus_name,
@@ -337,21 +548,31 @@ make_stblr_credible_sets <- function(
         cs$summary,
         stringsAsFactors = FALSE
       )
+      
       summaries[[locus_name]] <- tab
     }
   }
-
+  
   summary <- if (length(summaries) > 0L) {
     do.call(rbind, summaries)
   } else {
     data.frame()
   }
+  
   rownames(summary) <- NULL
-
+  
   list(
     summary = summary,
+    
+    # Credible-set marker lists.
     sets = out_sets,
+    
+    # All markers in each detected/supplied locus.
+    # Useful as direct input to finemap_stblr_csr(..., sets = ...).
+    locus_sets = locus_sets,
+    
     loci = loci[, setdiff(names(loci), c("markers", "indices")), drop = FALSE],
+    
     parameters = list(
       coverage = coverage,
       min_r2 = min_r2,
@@ -363,6 +584,7 @@ make_stblr_credible_sets <- function(
       allow_incomplete = allow_incomplete,
       remove = remove
     ),
+    
     trait = pip_info$trait
   )
 }
@@ -380,6 +602,48 @@ make_stblr_credible_sets <- function(
     stop(name, " must be in ", bracket, ".")
   }
   invisible(TRUE)
+}
+
+.stblr_align_pip_ld <- function(pip, LD) {
+  pip_names <- names(pip)
+  pip <- as.numeric(pip)
+  names(pip) <- pip_names
+
+  if (!is.matrix(LD)) LD <- as.matrix(LD)
+  storage.mode(LD) <- "double"
+  if (length(dim(LD)) != 2L || nrow(LD) != ncol(LD)) {
+    stop("LD must be a dense square matrix.")
+  }
+
+  ld_names <- rownames(LD)
+  if (is.null(ld_names)) ld_names <- colnames(LD)
+
+  if (!is.null(pip_names) && !is.null(ld_names)) {
+    common <- intersect(pip_names, ld_names)
+    if (length(common) < 1L) {
+      stop("pip and LD have names but no markers in common.")
+    }
+    pip <- pip[common]
+    LD <- LD[common, common, drop = FALSE]
+  } else {
+    if (length(pip) != nrow(LD)) {
+      stop("LD must have the same number of rows/columns as pip.")
+    }
+    if (is.null(pip_names) && !is.null(ld_names)) {
+      names(pip) <- ld_names
+    }
+  }
+
+  m <- length(pip)
+  if (m < 1L) stop("pip must contain at least one marker.")
+  if (nrow(LD) != m) stop("LD must be the same length as pip after matching.")
+
+  marker <- names(pip)
+  if (is.null(marker)) marker <- paste0("marker", seq_len(m))
+  names(pip) <- marker
+  rownames(LD) <- colnames(LD) <- marker
+
+  list(pip = pip, LD = LD)
 }
 
 .stblr_extract_pip <- function(fit, trait = 1) {

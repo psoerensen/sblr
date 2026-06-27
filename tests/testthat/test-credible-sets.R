@@ -117,6 +117,87 @@ test_that("ld_neighborhood removal suppresses future LD-neighborhood sets", {
   expect_equal(cs$summary$cs_pip, 1)
 })
 
+test_that("multi-signal credible sets report one strong signal", {
+  pip <- c(a = 0.98, b = 0.01, c = 0.005)
+  LD <- diag(3)
+  rownames(LD) <- colnames(LD) <- names(pip)
+
+  cs <- make_multisignal_credible_sets_from_ld(pip, LD, coverage = 0.95)
+
+  expect_equal(nrow(cs$summary), 1)
+  expect_equal(cs$summary$lead_marker[1], "a")
+  expect_true(cs$summary$complete[1])
+})
+
+test_that("multi-signal credible sets report independent secondary mass", {
+  pip <- c(a = 0.98, b = 0.80, c = 0.01)
+  LD <- diag(3)
+  rownames(LD) <- colnames(LD) <- names(pip)
+
+  cs <- make_multisignal_credible_sets_from_ld(
+    pip,
+    LD,
+    coverage = 0.95,
+    min_signal_pip = 0.05,
+    allow_incomplete = TRUE
+  )
+
+  expect_true(nrow(cs$summary) >= 2)
+  expect_equal(cs$summary$lead_marker[1], "a")
+  expect_equal(cs$summary$lead_marker[2], "b")
+  expect_false(cs$summary$complete[2])
+})
+
+test_that("multi-signal credible sets handle distributed signal", {
+  pip <- c(a = 0.4, b = 0.35, c = 0.25, d = 0.01)
+  LD <- matrix(0, 4, 4)
+  diag(LD) <- 1
+  LD[1:3, 1:3] <- 0.8
+  diag(LD) <- 1
+  rownames(LD) <- colnames(LD) <- names(pip)
+
+  cs <- make_multisignal_credible_sets_from_ld(
+    pip,
+    LD,
+    coverage = 0.95,
+    min_r2 = 0.5
+  )
+
+  expect_equal(nrow(cs$summary), 1)
+  expect_true(cs$summary$complete[1])
+  expect_true(cs$summary$n_markers[1] >= 3)
+})
+
+test_that("multi-signal remove behavior controls secondary LD-neighborhood signals", {
+  pip <- c(a = 0.98, b = 0.80, c = 0.01)
+  LD <- diag(3)
+  LD[1, 2] <- LD[2, 1] <- sqrt(0.8)
+  rownames(LD) <- colnames(LD) <- names(pip)
+
+  keep_cs <- make_multisignal_credible_sets_from_ld(
+    pip,
+    LD,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    min_signal_pip = 0.05,
+    remove = "credible_set",
+    allow_incomplete = TRUE
+  )
+  remove_ld <- make_multisignal_credible_sets_from_ld(
+    pip,
+    LD,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    min_signal_pip = 0.05,
+    remove = "ld_neighborhood",
+    allow_incomplete = TRUE
+  )
+
+  expect_true(nrow(keep_cs$summary) >= 2)
+  expect_equal(keep_cs$summary$lead_marker[2], "b")
+  expect_equal(nrow(remove_ld$summary), 1)
+})
+
 test_that("make_stblr_credible_sets works with predefined sets and dense LD", {
   fit <- list(dm = matrix(
     c(0.55, 0.20, 0.10, 0.03, 0.002),

@@ -123,32 +123,31 @@ cs_global <- make_stblr_credible_sets(
   fit = fit,
   Glist = Glist,
   trait = "D1",
-  coverage = 0.95,
-  min_r2 = 0.5,
-  pip_cutoff = 0.001,
   locus_pip_cutoff = 0.01,
   max_locus_distance = 1e6
 )
 
-map <- sblr:::.stblr_marker_map_from_Glist(Glist, fit = fit)
-
-sets <- lapply(seq_len(nrow(cs_global$loci)), function(i) {
-  loc <- cs_global$loci[i, ]
-  
-  map$marker[
-    map$chr == loc$chr &
-      map$pos >= loc$start &
-      map$pos <= loc$end
-  ]
-})
-
-names(sets) <- cs_global$loci$locus
+str(cs_global$locus_sets, max.level = 1)
+length(cs_global$locus_sets)
+head(names(cs_global$locus_sets))
+lengths(cs_global$locus_sets)[1:10]
 
 fm <- finemap_stblr_csr(
   fit = fit,
   Glist = Glist,
   stats = stats,
-  sets = sets,
+  sets = cs_global$locus_sets,
+  trait = "D1",
+  nruns = 8,
+  use_residual = TRUE,
+  verbose = FALSE
+)
+
+fm <- finemap_stblr_csr(
+  fit = fit,
+  Glist = Glist,
+  stats = stats,
+  sets = cs_global$locus_sets,
   trait = "D1",
   nruns = 8,
   use_residual = TRUE,   # use FALSE first unless residualization is fully implemented

@@ -32,85 +32,129 @@
 #' @param credible_sets Logical; construct credible sets from aggregated local
 #'   PIPs.
 #' @param coverage,min_r2,pip_cutoff Credible-set construction parameters.
+#' @param cs_mode Credible-set mode. `"single"` keeps the historical
+#'   single-signal behavior. `"multi"` uses approximate marginal-PIP
+#'   multi-signal post-processing via
+#'   [make_multisignal_credible_sets_from_ld()].
+#' @param min_signal_pip Minimum remaining lead-marker PIP required to start a
+#'   new signal when `cs_mode = "multi"`.
+#' @param max_signals Maximum number of multi-signal credible sets per
+#'   locus/trait when `cs_mode = "multi"`.
 #'
 #' @return A list of class `"stblr_finemap"` with locus summaries,
 #'   marker-level aggregated results, optional credible sets, locus metadata,
 #'   compact run summaries, and resolved parameters.
 #' @export
 finemap_stblr_csr <- function(
-  fit,
-  Glist,
-  stats,
-  sets,
-  trait = NULL,
-  nruns = 8,
-  use_residual = TRUE,
-  nit = 20000,
-  nburn = 2000,
-  seeds = NULL,
-  ve = NULL,
-  vb = NULL,
-  pi = NULL,
-  credible_sets = TRUE,
-  coverage = 0.95,
-  min_r2 = 0.5,
-  pip_cutoff = 0.001
+    fit,
+    Glist,
+    stats,
+    sets,
+    trait = NULL,
+    nruns = 8,
+    use_residual = TRUE,
+    nit = 20000,
+    nburn = 2000,
+    seeds = NULL,
+    ve = NULL,
+    vb = NULL,
+    pi = NULL,
+    credible_sets = TRUE,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    pip_cutoff = 0.001,
+    cs_mode = c("single", "multi"),
+    min_signal_pip = 0.05,
+    max_signals = Inf,
+    verbose = FALSE
 ) {
+  cs_mode <- match.arg(cs_mode)
+  
   if (!is.numeric(nruns) || length(nruns) != 1L || is.na(nruns) || nruns < 1) {
     stop("nruns must be a positive scalar.")
   }
   nruns <- as.integer(nruns)
+  
   if (!is.numeric(nit) || length(nit) != 1L || is.na(nit) || nit < 1) {
     stop("nit must be a positive scalar.")
   }
+  
   if (!is.numeric(nburn) || length(nburn) != 1L || is.na(nburn) || nburn < 0) {
     stop("nburn must be a non-negative scalar.")
   }
+  
   if (!is.logical(use_residual) || length(use_residual) != 1L || is.na(use_residual)) {
     stop("use_residual must be TRUE or FALSE.")
   }
+  
   if (!is.logical(credible_sets) || length(credible_sets) != 1L || is.na(credible_sets)) {
     stop("credible_sets must be TRUE or FALSE.")
   }
-
+  
+  if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) {
+    stop("verbose must be TRUE or FALSE.")
+  }
+  
+  .check_scalar_range(min_signal_pip, "min_signal_pip", lower = 0, upper = 1)
+  
+  if (!is.numeric(max_signals) || length(max_signals) != 1L ||
+      is.na(max_signals) || max_signals < 0) {
+    stop("max_signals must be a non-negative scalar.")
+  }
+  
+  if (is.null(Glist$sparseLD$prefix) || !nzchar(Glist$sparseLD$prefix)) {
+    stop("Glist$sparseLD$prefix is required.")
+  }
+  
   trait_names <- .stblr_resolve_trait_names(fit, stats)
   marker_names <- .stblr_resolve_marker_names(fit, stats, Glist)
   trait_indices <- .stblr_resolve_finemap_traits(fit, stats, trait, trait_names)
+  
   sets <- .stblr_clean_finemap_sets(sets, marker_names)
   set_indices <- lapply(sets, match, table = marker_names)
   names(set_indices) <- names(sets)
-
+  
   seeds <- .stblr_finemap_seeds(fit, nruns, seeds)
-
+  
   map <- .stblr_finemap_marker_map(Glist, fit, marker_names)
   loci <- .stblr_finemap_loci_from_sets(sets, set_indices, map)
-
+  
   csr <- sparseLD_read_CSR(Glist$sparseLD$prefix, one_based = TRUE)
+  
   temp_dir <- tempfile("stblr_finemap_csr_")
   dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(temp_dir, recursive = TRUE, force = TRUE), add = TRUE)
-
+  
   marker_rows <- list()
   locus_rows <- list()
   run_summaries <- list()
   cs_summaries <- list()
   cs_sets <- list()
   param_rows <- list()
-
+  
   for (trait_index in trait_indices) {
     trait_name <- trait_names[trait_index]
+    
     ve0 <- .stblr_get_global_parameter(fit, "ve", trait_index, override = ve)
     vb0 <- .stblr_get_global_parameter(fit, "vb", trait_index, override = vb)
     pi0 <- .stblr_get_global_parameter(fit, "pi", trait_index, override = pi)
+    
     .stblr_validate_finemap_parameters(ve0, vb0, pi0)
+    
     param_rows[[trait_name]] <- data.frame(
-      trait = trait_name, ve = ve0, vb = vb0, pi = pi0,
+      trait = trait_name,
+      ve = ve0,
+      vb = vb0,
+      pi = pi0,
       stringsAsFactors = FALSE
     )
-
+    
     for (locus_name in names(sets)) {
+      key <- paste(locus_name, trait_name, sep = "::")
+      
       idx <- set_indices[[locus_name]]
       markers <- sets[[locus_name]]
+      
       local_stats <- .stblr_make_local_stats(
         stats = stats,
         fit = fit,
@@ -122,14 +166,18 @@ finemap_stblr_csr <- function(
         use_residual = use_residual,
         csr = csr
       )
-      prefix <- file.path(temp_dir, paste0(
-        make.names(locus_name), "_", make.names(trait_name)
-      ))
+      
+      prefix <- file.path(
+        temp_dir,
+        paste0(make.names(locus_name), "_", make.names(trait_name))
+      )
+      
       .stblr_write_csr_subset(csr, idx, prefix)
-
+      
       fits <- vector("list", nruns)
-      for (run in seq_len(nruns)) {
-        fits[[run]] <- .stblr_run_local_csr(
+      
+      run_local <- function(seed) {
+        .stblr_run_local_csr(
           stats = local_stats,
           ld_prefix = prefix,
           ve = ve0,
@@ -137,10 +185,18 @@ finemap_stblr_csr <- function(
           pi = pi0,
           nit = as.integer(nit),
           nburn = as.integer(nburn),
-          seed = seeds[run]
+          seed = seed
         )
       }
-
+      
+      for (run in seq_len(nruns)) {
+        if (isTRUE(verbose)) {
+          fits[[run]] <- run_local(seeds[run])
+        } else {
+          fits[[run]] <- .quiet_value(run_local(seeds[run]))
+        }
+      }
+      
       agg <- .stblr_aggregate_finemap_runs(
         fits,
         locus = locus_name,
@@ -148,38 +204,68 @@ finemap_stblr_csr <- function(
         markers = markers,
         map = map
       )
-      marker_rows[[paste(locus_name, trait_name, sep = "\r")]] <- agg$markers
-      locus_rows[[paste(locus_name, trait_name, sep = "\r")]] <- cbind(
-        loci[loci$locus == locus_name, c("locus", "chr", "start", "end", "n_markers"),
-             drop = FALSE],
+      
+      marker_rows[[key]] <- agg$markers
+      
+      locus_rows[[key]] <- cbind(
+        loci[
+          loci$locus == locus_name,
+          c("locus", "chr", "start", "end", "n_markers"),
+          drop = FALSE
+        ],
         data.frame(
           trait = trait_name,
           lead_marker = agg$summary$lead_marker,
           lead_pip = agg$summary$lead_pip,
           lead_pip_sd = agg$summary$lead_pip_sd,
           total_pip = agg$summary$total_pip,
+          secondary_pip = agg$summary$total_pip - agg$summary$lead_pip,
           nruns = nruns,
           stringsAsFactors = FALSE
         )
-      )[, c("locus", "trait", "chr", "start", "end", "n_markers",
-            "lead_marker", "lead_pip", "lead_pip_sd", "total_pip", "nruns")]
-      run_summaries[[locus_name]][[trait_name]] <- lapply(fits, .stblr_compact_run_summary)
-
+      )[, c(
+        "locus", "trait", "chr", "start", "end", "n_markers",
+        "lead_marker", "lead_pip", "lead_pip_sd",
+        "total_pip", "secondary_pip", "nruns"
+      )]
+      
+      if (is.null(run_summaries[[locus_name]])) {
+        run_summaries[[locus_name]] <- list()
+      }
+      
+      run_summaries[[locus_name]][[trait_name]] <- lapply(
+        fits,
+        .stblr_compact_run_summary
+      )
+      
       if (credible_sets) {
-        regional_LD <- .extract_sparseLD_region_dense(csr, idx, marker_names = markers)
-        cs <- make_credible_sets_from_ld(
+        regional_LD <- .extract_sparseLD_region_dense(
+          csr,
+          idx,
+          marker_names = markers
+        )
+        
+        cs <- .stblr_finemap_credible_sets_from_ld(
           pip = stats::setNames(agg$markers$pip_mean, agg$markers$marker),
           LD = regional_LD,
           coverage = coverage,
           min_r2 = min_r2,
           pip_cutoff = pip_cutoff,
-          allow_incomplete = FALSE,
-          remove = "ld_neighborhood"
+          cs_mode = cs_mode,
+          min_signal_pip = min_signal_pip,
+          max_signals = max_signals
         )
+        
+        if (is.null(cs_sets[[locus_name]])) {
+          cs_sets[[locus_name]] <- list()
+        }
+        
         cs_sets[[locus_name]][[trait_name]] <- cs$sets
+        
         if (nrow(cs$summary) > 0L) {
           loc <- loci[loci$locus == locus_name, , drop = FALSE]
-          cs_summaries[[paste(locus_name, trait_name, sep = "\r")]] <- cbind(
+          
+          cs_summaries[[key]] <- cbind(
             data.frame(
               locus = locus_name,
               trait = trait_name,
@@ -195,14 +281,29 @@ finemap_stblr_csr <- function(
       }
     }
   }
-
-  summary <- if (length(locus_rows)) do.call(rbind, locus_rows) else data.frame()
+  
+  summary <- if (length(locus_rows)) {
+    do.call(rbind, locus_rows)
+  } else {
+    data.frame()
+  }
   rownames(summary) <- NULL
-  markers <- if (length(marker_rows)) do.call(rbind, marker_rows) else data.frame()
+  
+  markers <- if (length(marker_rows)) {
+    do.call(rbind, marker_rows)
+  } else {
+    data.frame()
+  }
   rownames(markers) <- NULL
+  
   cs_out <- if (credible_sets) {
-    out_summary <- if (length(cs_summaries)) do.call(rbind, cs_summaries) else data.frame()
+    out_summary <- if (length(cs_summaries)) {
+      do.call(rbind, cs_summaries)
+    } else {
+      data.frame()
+    }
     rownames(out_summary) <- NULL
+    
     list(
       summary = out_summary,
       sets = cs_sets,
@@ -210,37 +311,132 @@ finemap_stblr_csr <- function(
         coverage = coverage,
         min_r2 = min_r2,
         pip_cutoff = pip_cutoff,
-        allow_incomplete = FALSE,
-        remove = "ld_neighborhood"
+        cs_mode = cs_mode,
+        min_signal_pip = min_signal_pip,
+        max_signals = max_signals,
+        allow_incomplete = cs_mode == "multi",
+        remove = if (cs_mode == "multi") "credible_set" else "ld_neighborhood"
       )
     )
   } else {
     NULL
   }
-
-  resolved_parameters <- if (length(param_rows)) do.call(rbind, param_rows) else data.frame()
+  
+  if (credible_sets && cs_mode == "multi" && nrow(summary) > 0L) {
+    signal_counts <- if (!is.null(cs_out) && nrow(cs_out$summary) > 0L) {
+      stats::aggregate(
+        cs_out$summary$signal,
+        by = list(
+          locus = cs_out$summary$locus,
+          trait = cs_out$summary$trait
+        ),
+        FUN = function(x) length(unique(x))
+      )
+    } else {
+      data.frame(
+        locus = character(),
+        trait = character(),
+        x = integer()
+      )
+    }
+    
+    summary$n_signals <- 0L
+    
+    for (i in seq_len(nrow(signal_counts))) {
+      hit <- summary$locus == signal_counts$locus[i] &
+        summary$trait == signal_counts$trait[i]
+      
+      summary$n_signals[hit] <- signal_counts$x[i]
+    }
+  }
+  
+  resolved_parameters <- if (length(param_rows)) {
+    do.call(rbind, param_rows)
+  } else {
+    data.frame()
+  }
   rownames(resolved_parameters) <- NULL
-
+  
   out <- list(
     summary = summary,
     markers = markers,
     credible_sets = cs_out,
-    loci = loci[, setdiff(names(loci), c("markers", "indices")), drop = FALSE],
+    loci = loci[
+      ,
+      setdiff(names(loci), c("markers", "indices")),
+      drop = FALSE
+    ],
     runs = run_summaries,
     parameters = list(
       nruns = nruns,
       nit = as.integer(nit),
       nburn = as.integer(nburn),
       use_residual = use_residual,
+      verbose = verbose,
       resolved = resolved_parameters,
       credible_sets = credible_sets,
       coverage = coverage,
       min_r2 = min_r2,
-      pip_cutoff = pip_cutoff
+      pip_cutoff = pip_cutoff,
+      cs_mode = cs_mode,
+      min_signal_pip = min_signal_pip,
+      max_signals = max_signals
     )
   )
+  
   class(out) <- "stblr_finemap"
   out
+}
+
+.quiet_value <- function(expr) {
+  value <- NULL
+  
+  invisible(capture.output(
+    value <- suppressMessages(
+      suppressWarnings(
+        force(expr)
+      )
+    ),
+    type = "output"
+  ))
+  
+  value
+}
+
+.stblr_finemap_credible_sets_from_ld <- function(
+    pip,
+    LD,
+    coverage,
+    min_r2,
+    pip_cutoff,
+    cs_mode = c("single", "multi"),
+    min_signal_pip = 0.05,
+    max_signals = Inf
+) {
+  cs_mode <- match.arg(cs_mode)
+  if (cs_mode == "single") {
+    return(make_credible_sets_from_ld(
+      pip = pip,
+      LD = LD,
+      coverage = coverage,
+      min_r2 = min_r2,
+      pip_cutoff = pip_cutoff,
+      allow_incomplete = FALSE,
+      remove = "ld_neighborhood"
+    ))
+  }
+
+  make_multisignal_credible_sets_from_ld(
+    pip = pip,
+    LD = LD,
+    coverage = coverage,
+    min_r2 = min_r2,
+    pip_cutoff = pip_cutoff,
+    min_signal_pip = min_signal_pip,
+    max_signals = max_signals,
+    remove = "credible_set",
+    allow_incomplete = TRUE
+  )
 }
 
 .stblr_extract_trait_pip <- function(fit, trait) {

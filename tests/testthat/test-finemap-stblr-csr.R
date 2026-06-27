@@ -101,6 +101,40 @@ test_that("credible sets use aggregated local PIPs", {
   expect_true(cs$summary$lead_marker[1] %in% c("m1", "m2"))
 })
 
+test_that("fine-map multi-signal credible sets use aggregated local PIPs", {
+  fits <- list(
+    list(
+      dm = matrix(c(0.98, 0.80, 0.01), ncol = 1),
+      bm = matrix(0, nrow = 3, ncol = 1)
+    ),
+    list(
+      dm = matrix(c(0.98, 0.80, 0.01), ncol = 1),
+      bm = matrix(0, nrow = 3, ncol = 1)
+    )
+  )
+  markers <- c("a", "b", "c")
+  agg <- .stblr_aggregate_finemap_runs(fits, "locusA", "trait1", markers)
+  LD <- diag(3)
+  rownames(LD) <- colnames(LD) <- markers
+
+  cs <- .stblr_finemap_credible_sets_from_ld(
+    pip = stats::setNames(agg$markers$pip_mean, agg$markers$marker),
+    LD = LD,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    pip_cutoff = 0.001,
+    cs_mode = "multi",
+    min_signal_pip = 0.05,
+    max_signals = Inf
+  )
+
+  expect_s3_class(cs$summary, "data.frame")
+  expect_true(all(c("signal", "complete") %in% names(cs$summary)))
+  expect_true(nrow(cs$summary) >= 2)
+  expect_equal(cs$summary$lead_marker[1:2], c("a", "b"))
+  expect_false(cs$summary$complete[2])
+})
+
 test_that("credible-set thresholds do not remove markers before local fitting", {
   marker_names <- paste0("m", 1:4)
   sets <- list(locusA = marker_names)

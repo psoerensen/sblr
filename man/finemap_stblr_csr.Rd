@@ -21,7 +21,11 @@ finemap_stblr_csr(
   credible_sets = TRUE,
   coverage = 0.95,
   min_r2 = 0.5,
-  pip_cutoff = 0.001
+  pip_cutoff = 0.001,
+  cs_mode = c("single", "multi"),
+  min_signal_pip = 0.05,
+  max_signals = Inf,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -54,6 +58,17 @@ from `seq_len(nruns)`.}
 PIPs.}
 
 \item{coverage, min_r2, pip_cutoff}{Credible-set construction parameters.}
+
+\item{cs_mode}{Credible-set mode. `"single"` keeps the historical
+single-signal behavior. `"multi"` uses approximate marginal-PIP
+multi-signal post-processing via
+[make_multisignal_credible_sets_from_ld()].}
+
+\item{min_signal_pip}{Minimum remaining lead-marker PIP required to start a
+new signal when `cs_mode = "multi"`.}
+
+\item{max_signals}{Maximum number of multi-signal credible sets per
+locus/trait when `cs_mode = "multi"`.}
 }
 \value{
 A list of class `"stblr_finemap"` with locus summaries,
