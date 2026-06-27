@@ -89,22 +89,23 @@ models, values greater than 0 can stabilize residual-variance updates.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 
-\item{ncores}{Number of OpenMP threads.}
+\item{ncores}{Number of OpenMP threads. For multi-chain regular and
+scheduled CSR fits, threads are assigned over trait-chain tasks.}
 
 \item{seed}{Sampler seed.}
 
-\item{nchains}{Number of independent MCMC chains per trait. For
-`scheduled = FALSE`, chains are run as independent genome-wide
-trait-by-chain tasks in C++ and aggregated before return. `scheduled =
-TRUE` currently supports only `nchains = 1`.}
+\item{nchains}{Number of independent MCMC chains per trait. Chains are run
+as independent genome-wide trait-by-chain tasks in C++ and aggregated
+before return for regular and scheduled CSR fits.}
 
 \item{keep_chains}{Logical; when `TRUE` and `scheduled = FALSE`, return
-compact per-chain `dm`, `bm`, and LD-swap diagnostics in `chains`.}
+compact per-chain `dm`, `bm`, and LD-swap diagnostics in `chains`.
+Compact per-chain output is not yet supported for scheduled CSR.}
 
 \item{chain_seeds}{Optional numeric or integer vector of length `nchains`.
-When supplied for `scheduled = FALSE`, each value is used as the base seed
-for that chain with a deterministic trait offset. Matrix seed inputs are
-not currently supported.}
+When supplied, each value is used as the base seed for that chain with a
+deterministic trait offset. Matrix seed inputs are not currently
+supported.}
 
 \item{scheduled}{Use the scheduled sparse-LD sampler.}
 
@@ -138,10 +139,11 @@ marker, prioritized by highest r-squared.}
 }
 \value{
 A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
-  full sampled inclusion-probability trace for each trait. Multi-chain
-  regular CSR fits additionally provide `dm_sd`, `dm_min`, `dm_max`,
-  `bm_sd`, `bm_min`, and `bm_max`; standard traces are averaged by iteration
-  across chains.
+  sampled inclusion-probability trace for each trait, averaged by iteration
+  across chains when `nchains > 1`. Chain-capable CSR fits provide `dm_sd`,
+  `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`; standard traces are
+  averaged by iteration across chains. LD-swap remains available only for
+  `scheduled = FALSE`.
 }
 \description{
 Fits the single-trait ST-BLR sampler using sufficient statistics from

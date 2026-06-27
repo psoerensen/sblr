@@ -110,13 +110,16 @@ omitted, subset phenotypes can instead be matched using `rownames(y)` and
 `Glist$ids`.}
 
 \item{nchains}{Number of MCMC chains. When `nchains > 1`, the scheduled
-multi-chain backend is used.}
+multi-chain backend is used and returns chain-stability summaries
+`dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`.}
 
 \item{read_block_size, progress_every}{Multi-chain BED reading and progress
 controls.}
 }
 \value{
-A formatted ST-BLR fit.
+A formatted ST-BLR fit. Fits from the scheduled multi-chain backend
+  include CSR-compatible chain-stability summaries for marker inclusion
+  probabilities and posterior effects.
 }
 \description{
 Fits ST-BLR directly from markers stored in PLINK BED files referenced by a
