@@ -40,7 +40,12 @@ stblr_csr(
   wakeup_max_neighbors = 0,
   use_d_init = FALSE,
   use_r_init = FALSE,
-  rebuild_r_before_updateE = FALSE
+  rebuild_r_before_updateE = FALSE,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50,
+  ld_swap_moves = 1
 )
 }
 \arguments{
@@ -98,6 +103,22 @@ active.}
 
 \item{use_d_init, use_r_init, rebuild_r_before_updateE}{Initialization and
 residual rebuilding controls.}
+
+\item{updateLDswap}{Logical; attempt optional LD-swap Metropolis-Hastings
+moves among included markers and high-LD excluded neighbors. These moves
+can improve mixing in fine-mapping and high-LD regions, are off by
+default, and use an exact proposal-ratio correction in the base CSR
+sampler.}
+
+\item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
+moves when `updateLDswap = TRUE`.}
+
+\item{ld_swap_r2}{Minimum LD r-squared for candidate swap partners.}
+
+\item{ld_swap_max_friends}{Maximum number of high-LD friends stored per
+marker, prioritized by highest r-squared.}
+
+\item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 }
 \value{
 A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the

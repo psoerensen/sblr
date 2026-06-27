@@ -77,8 +77,8 @@ stblr_color_blocks_from_ld <- function(sets, ld_row_ptr, ld_col_idx, ld_values, 
     .Call(`_sblr_stblr_color_blocks_from_ld`, sets, ld_row_ptr, ld_col_idx, ld_values, ld_col_idx_one_based, ld_abs_threshold, ld_r2_threshold)
 }
 
-stblr_cpg_omp_csr <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed) {
-    .Call(`_sblr_stblr_cpg_omp_csr`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed)
+stblr_cpg_omp_csr <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L) {
+    .Call(`_sblr_stblr_cpg_omp_csr`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves)
 }
 
 stblr_cpg_omp_csr_annot <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, pi_min, pi_max, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed) {

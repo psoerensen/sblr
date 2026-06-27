@@ -40,6 +40,17 @@
 #'   new signal when `cs_mode = "multi"`.
 #' @param max_signals Maximum number of multi-signal credible sets per
 #'   locus/trait when `cs_mode = "multi"`.
+#' @param updateLDswap Logical; attempt optional LD-swap Metropolis-Hastings
+#'   moves among included markers and high-LD excluded neighbors. These moves
+#'   can improve mixing in fine-mapping and high-LD regions, are off by
+#'   default, and use an exact proposal-ratio correction in the base CSR
+#'   sampler.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker, prioritized by highest r-squared.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #'
 #' @return A list of class `"stblr_finemap"` with locus summaries,
 #'   marker-level aggregated results, optional credible sets, locus metadata,
@@ -66,9 +77,17 @@ finemap_stblr_csr <- function(
     cs_mode = c("single", "multi"),
     min_signal_pip = 0.05,
     max_signals = Inf,
+    updateLDswap = FALSE,
+    ld_swap_prob = 0.05,
+    ld_swap_r2 = 0.8,
+    ld_swap_max_friends = 50,
+    ld_swap_moves = 1,
     verbose = FALSE
 ) {
   cs_mode <- match.arg(cs_mode)
+  .validate_ld_swap_args(
+    updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+  )
   
   if (!is.numeric(nruns) || length(nruns) != 1L || is.na(nruns) || nruns < 1) {
     stop("nruns must be a positive scalar.")
@@ -185,7 +204,12 @@ finemap_stblr_csr <- function(
           pi = pi0,
           nit = as.integer(nit),
           nburn = as.integer(nburn),
-          seed = seed
+          seed = seed,
+          updateLDswap = updateLDswap,
+          ld_swap_prob = ld_swap_prob,
+          ld_swap_r2 = ld_swap_r2,
+          ld_swap_max_friends = ld_swap_max_friends,
+          ld_swap_moves = ld_swap_moves
         )
       }
       
@@ -380,7 +404,12 @@ finemap_stblr_csr <- function(
       pip_cutoff = pip_cutoff,
       cs_mode = cs_mode,
       min_signal_pip = min_signal_pip,
-      max_signals = max_signals
+      max_signals = max_signals,
+      updateLDswap = updateLDswap,
+      ld_swap_prob = ld_swap_prob,
+      ld_swap_r2 = ld_swap_r2,
+      ld_swap_max_friends = as.integer(ld_swap_max_friends),
+      ld_swap_moves = as.integer(ld_swap_moves)
     )
   )
   
@@ -805,7 +834,14 @@ finemap_stblr_csr <- function(
   out
 }
 
-.stblr_run_local_csr <- function(stats, ld_prefix, ve, vb, pi, nit, nburn, seed) {
+.stblr_run_local_csr <- function(stats, ld_prefix, ve, vb, pi, nit, nburn, seed,
+                                 updateLDswap = FALSE, ld_swap_prob = 0.05,
+                                 ld_swap_r2 = 0.8,
+                                 ld_swap_max_friends = 50,
+                                 ld_swap_moves = 1) {
+  .validate_ld_swap_args(
+    updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+  )
   m <- stats$m
   trait_name <- stats$trait_names[1L]
   B <- matrix(vb, nrow = 1L, ncol = 1L, dimnames = list(trait_name, trait_name))
@@ -841,14 +877,23 @@ finemap_stblr_csr <- function(
     pi_prior_a = 1,
     pi_prior_b = 1,
     ncores = 1L,
-    seed = as.integer(seed)
+    seed = as.integer(seed),
+    updateLDswap = updateLDswap,
+    ld_swap_prob = ld_swap_prob,
+    ld_swap_r2 = ld_swap_r2,
+    ld_swap_max_friends = as.integer(ld_swap_max_friends),
+    ld_swap_moves = as.integer(ld_swap_moves)
   )
   fit <- .format_stblr_fit(raw, 1L, m, trait_name, stats$marker_names)
   fit$input <- list(
     n = stats$n, m = m, nt = 1L, B = B, E = E,
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,
     nit = nit, nburn = nburn, seed = seed, ld_prefix = ld_prefix,
-    pi = c(1 - pi, pi), pi_prior_mean = pi
+    pi = c(1 - pi, pi), pi_prior_mean = pi,
+    updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
+    ld_swap_r2 = ld_swap_r2,
+    ld_swap_max_friends = as.integer(ld_swap_max_friends),
+    ld_swap_moves = as.integer(ld_swap_moves)
   )
   fit
 }

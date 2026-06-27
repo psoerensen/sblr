@@ -25,6 +25,11 @@ finemap_stblr_csr(
   cs_mode = c("single", "multi"),
   min_signal_pip = 0.05,
   max_signals = Inf,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50,
+  ld_swap_moves = 1,
   verbose = FALSE
 )
 }
@@ -69,6 +74,22 @@ new signal when `cs_mode = "multi"`.}
 
 \item{max_signals}{Maximum number of multi-signal credible sets per
 locus/trait when `cs_mode = "multi"`.}
+
+\item{updateLDswap}{Logical; attempt optional LD-swap Metropolis-Hastings
+moves among included markers and high-LD excluded neighbors. These moves
+can improve mixing in fine-mapping and high-LD regions, are off by
+default, and use an exact proposal-ratio correction in the base CSR
+sampler.}
+
+\item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
+moves when `updateLDswap = TRUE`.}
+
+\item{ld_swap_r2}{Minimum LD r-squared for candidate swap partners.}
+
+\item{ld_swap_max_friends}{Maximum number of high-LD friends stored per
+marker, prioritized by highest r-squared.}
+
+\item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 }
 \value{
 A list of class `"stblr_finemap"` with locus summaries,

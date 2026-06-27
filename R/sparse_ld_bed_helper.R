@@ -187,11 +187,28 @@ NULL
  )
  has_vle_vld <- length(fit) >= 22 &&
   all(vapply(fit[21:22], function(x) length(unlist(x, use.names = FALSE)) > 0, logical(1)))
- has_pis <- length(fit) >= 23
+ trace_len <- if (length(fit) >= 8 && length(fit[[8]]) > 0L) {
+  length(fit[[8]][[1L]])
+ } else {
+  NA_integer_
+ }
+ slot23_len <- if (length(fit) >= 23 && length(fit[[23]]) > 0L) {
+  length(fit[[23]][[1L]])
+ } else {
+  NA_integer_
+ }
+ slot23_ld_swap <- length(fit) >= 23 && slot23_len == 4L &&
+  all(vapply(fit[[23]], function(x) {
+   length(x) >= 4L && isTRUE(all.equal(as.numeric(x[[4L]]), 1))
+  }, logical(1)))
+ has_pis <- length(fit) >= 23 && is.finite(trace_len) &&
+  slot23_len == trace_len && !slot23_ld_swap
+ has_ld_swap <- slot23_ld_swap
  names(fit)[seq_len(min(length(fit), length(nms)))] <-
   nms[seq_len(min(length(fit), length(nms)))]
  if (has_vle_vld) names(fit)[21:22] <- c("vle", "vld")
  if (has_pis) names(fit)[23] <- "pis"
+ if (has_ld_swap) names(fit)[23] <- "ld_swap_raw"
 
  for (i in 1:7) {
   fit[[i]] <- as.matrix(as.data.frame(fit[[i]]))
@@ -238,6 +255,13 @@ NULL
   rownames(out$pis) <- paste0("Iter", seq_len(nrow(out$pis)))
   colnames(out$pis) <- trait_names
 
+ }
+ if (has_ld_swap) {
+  ld_swap <- matrix(unlist(fit[[23]], use.names = FALSE), ncol = 4, byrow = TRUE)
+  ld_swap <- ld_swap[, 1:3, drop = FALSE]
+  rownames(ld_swap) <- trait_names
+  colnames(ld_swap) <- c("attempted", "accepted", "acceptance_rate")
+  out$ld_swap <- as.data.frame(ld_swap)
  }
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
@@ -302,6 +326,33 @@ NULL
   )
 }
 
+.validate_ld_swap_args <- function(updateLDswap, ld_swap_prob, ld_swap_r2,
+                                   ld_swap_max_friends, ld_swap_moves) {
+  if (!is.logical(updateLDswap) || length(updateLDswap) != 1L ||
+      is.na(updateLDswap)) {
+    stop("updateLDswap must be TRUE or FALSE.")
+  }
+  if (!is.numeric(ld_swap_prob) || length(ld_swap_prob) != 1L ||
+      !is.finite(ld_swap_prob) || ld_swap_prob < 0 || ld_swap_prob > 1) {
+    stop("ld_swap_prob must be a finite numeric scalar in [0, 1].")
+  }
+  if (!is.numeric(ld_swap_r2) || length(ld_swap_r2) != 1L ||
+      !is.finite(ld_swap_r2) || ld_swap_r2 < 0 || ld_swap_r2 > 1) {
+    stop("ld_swap_r2 must be a finite numeric scalar in [0, 1].")
+  }
+  if (!is.numeric(ld_swap_max_friends) || length(ld_swap_max_friends) != 1L ||
+      !is.finite(ld_swap_max_friends) || ld_swap_max_friends < 1 ||
+      ld_swap_max_friends != floor(ld_swap_max_friends)) {
+    stop("ld_swap_max_friends must be a positive integer.")
+  }
+  if (!is.numeric(ld_swap_moves) || length(ld_swap_moves) != 1L ||
+      !is.finite(ld_swap_moves) || ld_swap_moves < 0 ||
+      ld_swap_moves != floor(ld_swap_moves)) {
+    stop("ld_swap_moves must be a non-negative integer.")
+  }
+  invisible(TRUE)
+}
+
 #' Fit ST-BLR from BED Sufficient Statistics and Sparse LD
 #'
 #' Fits the single-trait ST-BLR sampler using sufficient statistics from
@@ -343,6 +394,17 @@ NULL
 #'   Scheduled neighbor wake-up controls.
 #' @param use_d_init,use_r_init,rebuild_r_before_updateE Initialization and
 #'   residual rebuilding controls.
+#' @param updateLDswap Logical; attempt optional LD-swap Metropolis-Hastings
+#'   moves among included markers and high-LD excluded neighbors. These moves
+#'   can improve mixing in fine-mapping and high-LD regions, are off by
+#'   default, and use an exact proposal-ratio correction in the base CSR
+#'   sampler.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker, prioritized by highest r-squared.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @return A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
 #'   full sampled inclusion-probability trace for each trait.
 #' @export
@@ -358,7 +420,16 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       candidate_lifetime = 20, skip_nulls_burnin_only = FALSE,
                       wakeup_ld_neighbors = TRUE, wakeup_diff_threshold = 0,
                       wakeup_max_neighbors = 0, use_d_init = FALSE,
-                      use_r_init = FALSE, rebuild_r_before_updateE = FALSE) {
+                      use_r_init = FALSE, rebuild_r_before_updateE = FALSE,
+                      updateLDswap = FALSE, ld_swap_prob = 0.05,
+                      ld_swap_r2 = 0.8, ld_swap_max_friends = 50,
+                      ld_swap_moves = 1) {
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ if (isTRUE(scheduled) && isTRUE(updateLDswap)) {
+  stop("updateLDswap is currently implemented only for scheduled = FALSE.")
+ }
  nt <- length(stats$yy)
  if (is.null(n)) n <- stats$n
  if (is.null(n)) stop("n must be supplied or available as stats$n.")
@@ -424,7 +495,10 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  } else {
   raw <- do.call(stblr_cpg_omp_csr, c(common, list(
    pi_prior_a = arch$pi_prior_a, pi_prior_b = arch$pi_prior_b,
-   ncores = ncores, seed = seed
+   ncores = ncores, seed = seed, updateLDswap = updateLDswap,
+   ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
+   ld_swap_max_friends = as.integer(ld_swap_max_friends),
+   ld_swap_moves = as.integer(ld_swap_moves)
   )))
  }
  fit <- .format_stblr_fit(raw, nt, m, trait_names, variable_names)
@@ -433,7 +507,11 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior,
   sse_prior = pri$sse_prior, updateB = updateB, updateE = updateE,
   updatePi = updatePi, adjE = adjE, nit = nit, nburn = nburn, nthin = nthin,
-  ncores = ncores, seed = seed, scheduled = scheduled, ld_prefix = ld_prefix
+  ncores = ncores, seed = seed, scheduled = scheduled, ld_prefix = ld_prefix,
+  updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves)
  ), arch)
  fit
 }
