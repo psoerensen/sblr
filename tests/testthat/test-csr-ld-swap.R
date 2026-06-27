@@ -72,6 +72,26 @@ test_that("CSR LD-swap arguments are validated", {
     stblr_csr(stats = stats, ld_prefix = prefix, ld_swap_moves = -1),
     "ld_swap_moves"
   )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, nchains = 0),
+    "nchains"
+  )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, nchains = -1),
+    "nchains"
+  )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, keep_chains = NA),
+    "keep_chains"
+  )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, nchains = 2, chain_seeds = 1),
+    "chain_seeds"
+  )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, nchains = 2),
+    "nchains > 1"
+  )
 })
 
 test_that("CSR sampler returns zero LD-swap diagnostics by default", {
@@ -120,6 +140,90 @@ test_that("CSR sampler runs with LD-swap enabled on tiny CSR LD", {
   expect_true(fit$ld_swap$accepted >= 0)
   expect_true(fit$ld_swap$acceptance_rate >= 0)
   expect_true(fit$ld_swap$acceptance_rate <= 1)
+})
+
+test_that("CSR sampler returns multi-chain posterior summaries", {
+  fit <- stblr_csr(
+    stats = tiny_csr_stats(),
+    ld_prefix = make_tiny_csr_prefix(),
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 3,
+    nburn = 0,
+    seed = 14,
+    nchains = 2,
+    ncores = 2
+  )
+
+  expect_equal(fit$input$nchains, 2L)
+  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+    expect_true(nm %in% names(fit))
+    expect_equal(dim(fit[[nm]]), dim(fit$dm))
+    expect_false(anyNA(fit[[nm]]))
+    expect_true(all(is.finite(fit[[nm]])))
+  }
+})
+
+test_that("CSR sampler can keep compact per-chain summaries", {
+  fit <- stblr_csr(
+    stats = tiny_csr_stats(),
+    ld_prefix = make_tiny_csr_prefix(),
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 3,
+    nburn = 0,
+    seed = 15,
+    nchains = 2,
+    keep_chains = TRUE,
+    ncores = 2
+  )
+
+  expect_true("chains" %in% names(fit))
+  expect_length(fit$chains$trait1, 2)
+  dm_chain <- vapply(fit$chains$trait1, function(x) x$dm, numeric(3))
+  bm_chain <- vapply(fit$chains$trait1, function(x) x$bm, numeric(3))
+  expect_equal(as.numeric(fit$dm[, "trait1"]), rowMeans(dm_chain), tolerance = 1e-12)
+  expect_equal(as.numeric(fit$bm[, "trait1"]), rowMeans(bm_chain), tolerance = 1e-12)
+})
+
+test_that("CSR LD-swap diagnostics aggregate across chains", {
+  fit <- stblr_csr(
+    stats = tiny_csr_stats(),
+    ld_prefix = make_tiny_csr_prefix(),
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 3,
+    nburn = 0,
+    seed = 16,
+    nchains = 2,
+    keep_chains = TRUE,
+    ncores = 2,
+    updateLDswap = TRUE,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.8,
+    ld_swap_max_friends = 2,
+    ld_swap_moves = 2
+  )
+
+  expect_true("ld_swap" %in% names(fit))
+  expect_equal(fit$ld_swap$attempted, 12)
+  expect_true(fit$ld_swap$accepted >= 0)
+  expect_true(fit$ld_swap$acceptance_rate >= 0)
+  expect_true(fit$ld_swap$acceptance_rate <= 1)
+  expect_true("ld_swap_chains" %in% names(fit))
+  expect_equal(sum(fit$ld_swap_chains$trait1$attempted), fit$ld_swap$attempted)
 })
 
 test_that("local CSR runner accepts LD-swap pass-through arguments", {

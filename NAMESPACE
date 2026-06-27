@@ -2,6 +2,7 @@
 
 export(bed_xtx_xty)
 export(check_stblr_convergence)
+export(extract_stblr_finemap_loci)
 export(finemap_stblr_csr)
 export(make_credible_sets_from_ld)
 export(make_multisignal_credible_sets_from_ld)

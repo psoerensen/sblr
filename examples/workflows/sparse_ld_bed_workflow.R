@@ -84,11 +84,65 @@ fit <- stblr_csr(
   scheduled = TRUE
 )
 
+fitMH <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  pi_init = 0.001,
+  pi_prior_a = 1,
+  pi_prior_b = 1,
+  h2 = 0.3,
+  adjE = 0.9,
+  nit = 1000,
+  nburn = 100,
+  ncores = 3,
+  seed = 10,
+  scheduled = FALSE,
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.10,
+  ld_swap_r2 = 0.05,
+  ld_swap_moves = 5
+)
+
+cs_global <- make_stblr_credible_sets(
+  fit = fitMH,
+  Glist = Glist,
+  trait = "D1",
+  coverage = 0.95,
+  min_r2 = 0.5,
+  pip_cutoff = 0.001,
+  locus_pip_cutoff = 0.01,
+  max_locus_distance = 1e6
+)
+
+fm_extract <- extract_stblr_finemap_loci(
+  fit = fitMH,
+  Glist = Glist,
+  locus_sets = cs_global$locus_sets,
+  trait = "D1",
+  credible_sets = TRUE,
+  coverage = 0.95,
+  min_r2 = 0.5,
+  pip_cutoff = 0.001,
+  cs_mode = "multi",
+  min_signal_pip = 0.05
+)
+
+fm_extract$summary
+fm_extract$markers
+fm_extract$credible_sets$summary
+colMeans(fit$dm)
+colMeans(fitMH$dm)
+
+
+summarise_stblr_posterior(fit)
+summarise_stblr_posterior(fitMH)
+
 matplot(fit$pis)
 matplot(fit$ves)
 matplot(fit$vld)
 matplot(fit$vle)
 matplot(fit$vgs)
+
 
 
 post <- sblr:::summarise_stblr_posterior(fit)
@@ -114,6 +168,7 @@ cs <- make_stblr_credible_sets(
   max_locus_distance = 1e6,
   method = "pip"
 )
+
 
 cs$loci
 cs$summary

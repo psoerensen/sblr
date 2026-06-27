@@ -209,6 +209,18 @@ NULL
  if (has_vle_vld) names(fit)[21:22] <- c("vle", "vld")
  if (has_pis) names(fit)[23] <- "pis"
  if (has_ld_swap) names(fit)[23] <- "ld_swap_raw"
+ has_chain_summaries <- length(fit) >= 29 &&
+  all(vapply(fit[24:29], function(x) length(x) == nt, logical(1)))
+ if (has_chain_summaries) {
+  names(fit)[24:29] <- c(
+   "bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max"
+  )
+ }
+ has_chain_details <- length(fit) >= 32 &&
+  all(vapply(fit[30:32], function(x) length(x) == nt, logical(1)))
+ if (has_chain_details) {
+  names(fit)[30:32] <- c("chain_dm_raw", "chain_bm_raw", "chain_ld_swap_raw")
+ }
 
  for (i in 1:7) {
   fit[[i]] <- as.matrix(as.data.frame(fit[[i]]))
@@ -262,6 +274,45 @@ NULL
   rownames(ld_swap) <- trait_names
   colnames(ld_swap) <- c("attempted", "accepted", "acceptance_rate")
   out$ld_swap <- as.data.frame(ld_swap)
+ }
+ if (has_chain_summaries) {
+  for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
+   out[[nm]] <- as.matrix(as.data.frame(fit[[nm]]))
+   rownames(out[[nm]]) <- variable_names
+   colnames(out[[nm]]) <- trait_names
+  }
+ }
+ if (has_chain_details) {
+  chains <- setNames(vector("list", nt), trait_names)
+  ld_swap_chains <- list()
+  for (tt in seq_len(nt)) {
+   dm_raw <- as.numeric(fit$chain_dm_raw[[tt]])
+   bm_raw <- as.numeric(fit$chain_bm_raw[[tt]])
+   diag_raw <- as.numeric(fit$chain_ld_swap_raw[[tt]])
+   nchains <- if (m > 0L) length(dm_raw) %/% m else 0L
+   trait_chains <- setNames(vector("list", nchains), paste0("chain", seq_len(nchains)))
+   trait_ld <- matrix(NA_real_, nrow = nchains, ncol = 3)
+   colnames(trait_ld) <- c("attempted", "accepted", "acceptance_rate")
+   rownames(trait_ld) <- names(trait_chains)
+   for (cc in seq_len(nchains)) {
+    idx <- ((cc - 1L) * m + 1L):(cc * m)
+    trait_chains[[cc]] <- list(
+     dm = stats::setNames(dm_raw[idx], variable_names),
+     bm = stats::setNames(bm_raw[idx], variable_names)
+    )
+    didx <- ((cc - 1L) * 4L + 1L):((cc - 1L) * 4L + 4L)
+    if (length(diag_raw) >= max(didx)) {
+     trait_chains[[cc]]$ld_swap <- stats::setNames(
+      diag_raw[didx][1:3], c("attempted", "accepted", "acceptance_rate")
+     )
+     trait_ld[cc, ] <- diag_raw[didx][1:3]
+    }
+   }
+   chains[[tt]] <- trait_chains
+   ld_swap_chains[[trait_names[tt]]] <- as.data.frame(trait_ld)
+  }
+  out$chains <- chains
+  out$ld_swap_chains <- ld_swap_chains
  }
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
@@ -384,6 +435,16 @@ NULL
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
+#' @param nchains Number of independent MCMC chains per trait. For
+#'   `scheduled = FALSE`, chains are run as independent genome-wide
+#'   trait-by-chain tasks in C++ and aggregated before return. `scheduled =
+#'   TRUE` currently supports only `nchains = 1`.
+#' @param keep_chains Logical; when `TRUE` and `scheduled = FALSE`, return
+#'   compact per-chain `dm`, `bm`, and LD-swap diagnostics in `chains`.
+#' @param chain_seeds Optional numeric or integer vector of length `nchains`.
+#'   When supplied for `scheduled = FALSE`, each value is used as the base seed
+#'   for that chain with a deterministic trait offset. Matrix seed inputs are
+#'   not currently supported.
 #' @param scheduled Use the scheduled sparse-LD sampler.
 #' @param full_sweep_every,null_skip_base,null_skip_max,candidate_threshold
 #'   Scheduled sampler controls.
@@ -406,7 +467,10 @@ NULL
 #'   marker, prioritized by highest r-squared.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @return A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
-#'   full sampled inclusion-probability trace for each trait.
+#'   full sampled inclusion-probability trace for each trait. Multi-chain
+#'   regular CSR fits additionally provide `dm_sd`, `dm_min`, `dm_max`,
+#'   `bm_sd`, `bm_min`, and `bm_max`; standard traces are averaged by iteration
+#'   across chains.
 #' @export
 stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_init = 0.001, pi_vb_init = NULL,
@@ -414,7 +478,9 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
-                      nthin = 1, ncores = 1, seed = 10, scheduled = FALSE,
+                      nthin = 1, ncores = 1, seed = 10, nchains = 1L,
+                      keep_chains = FALSE, chain_seeds = NULL,
+                      scheduled = FALSE,
                       full_sweep_every = 1, null_skip_base = 50,
                       null_skip_max = 200, candidate_threshold = 1e-3,
                       candidate_lifetime = 20, skip_nulls_burnin_only = FALSE,
@@ -427,6 +493,28 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+ if (!is.null(chain_seeds)) {
+  if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds))) {
+   stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.")
+  }
+  chain_seeds <- as.integer(chain_seeds)
+ } else {
+  chain_seeds <- integer()
+ }
+ if (isTRUE(scheduled) && nchains != 1L) {
+  stop("nchains > 1 is currently supported only for scheduled = FALSE.")
+ }
  if (isTRUE(scheduled) && isTRUE(updateLDswap)) {
   stop("updateLDswap is currently implemented only for scheduled = FALSE.")
  }
@@ -493,9 +581,11 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed
   )))
  } else {
-  raw <- do.call(stblr_cpg_omp_csr, c(common, list(
+ raw <- do.call(stblr_cpg_omp_csr, c(common, list(
    pi_prior_a = arch$pi_prior_a, pi_prior_b = arch$pi_prior_b,
-   ncores = ncores, seed = seed, updateLDswap = updateLDswap,
+   ncores = ncores, seed = seed, nchains = nchains,
+   keep_chains = keep_chains, chain_seeds = chain_seeds,
+   updateLDswap = updateLDswap,
    ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
    ld_swap_max_friends = as.integer(ld_swap_max_friends),
    ld_swap_moves = as.integer(ld_swap_moves)
@@ -507,7 +597,17 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior,
   sse_prior = pri$sse_prior, updateB = updateB, updateE = updateE,
   updatePi = updatePi, adjE = adjE, nit = nit, nburn = nburn, nthin = nthin,
-  ncores = ncores, seed = seed, scheduled = scheduled, ld_prefix = ld_prefix,
+  ncores = ncores, seed = seed, nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = if (length(chain_seeds)) chain_seeds else NULL,
+  chain_seed_rule = if (length(chain_seeds)) {
+   "chain_seeds[chain] + 1000003 * (trait + 1)"
+  } else if (nchains == 1L) {
+   "seed + 1000003 * (trait + 1)"
+  } else {
+   "seed + 1000003 * (trait + 1) + 9176 * (chain + 1)"
+  },
+  scheduled = scheduled, ld_prefix = ld_prefix,
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
