@@ -2,26 +2,20 @@
 
 ## Executive Summary
 
-`stblr_csr()` currently runs one independent MCMC chain per trait in the
-summary-statistic CSR backends. `ncores` controls OpenMP threads for the trait
-loop, so with three traits and `ncores = 3` the observed output
-`trait 0 used thread 0`, `trait 1 used thread 1`, and `trait 2 used thread 2`
-is expected. It is not running multiple chains per trait.
+`stblr_csr()` now supports multiple independent MCMC chains per trait in the
+regular summary-statistic CSR backend when `scheduled = FALSE`. The scheduled
+CSR backend remains single-chain and still parallelizes only over traits.
 
-The repository already has useful multi-chain machinery, but it is in the
-packed-BED scheduled backend, not in the summary-statistic CSR backend used by
-`stblr_csr()`. The BED implementation runs `nchains * nt` chain-trait jobs,
+The repository also has useful multi-chain machinery in the packed-BED
+scheduled backend. That implementation runs `nchains * nt` chain-trait jobs,
 derives per-chain seeds, aggregates posterior summaries across chains, and
-returns the existing 23-slot fit layout. The summary-statistic scheduled CSR
-implementation does not currently expose `nchains` and still parallelizes only
-over traits.
+returns the existing 23-slot fit layout extended with the same SD/min/max
+marker-summary fields as the regular CSR backend.
 
-Recommended first implementation: add a multi-chain task loop to the regular
-CSR backend, because that is the backend that already supports LD-swap and is
-the path needed for `scheduled = FALSE, nchains > 1, updateLDswap = TRUE`.
-While doing that, extract a single-chain CSR worker and shared aggregation
-helpers so the scheduled CSR backend can reuse the same chain/task structure
-later.
+The recommended first implementation has been completed for the regular CSR
+backend. The next step is not to copy that logic into every backend, but to
+introduce small shared chain helpers and align chain-capable outputs in focused
+follow-up work.
 
 ## Implementation Status
 
@@ -55,19 +49,25 @@ The user-facing R function is `stblr_csr()` in `R/sparse_ld_bed_helper.R`.
 When `scheduled = FALSE`, it builds common arguments and calls
 `stblr_cpg_omp_csr()`.
 
-The regular CSR sampler:
+The regular CSR sampler now:
 
 - reads and builds one shared flat CSR LD object from `ld_prefix`;
 - optionally builds LD-swap friend lists once;
-- allocates one row per trait for `bm`, `dm`, final state, and traces;
-- runs `#pragma omp parallel for` over `t = 0 .. nt - 1`;
-- sets `nthreads = max(1, min(ncores, nt))`;
-- seeds trait `t` with `seed + 1000003 * (t + 1)`;
-- has no `chain`, `chains`, or `nchains` argument;
-- has no current notion of independent chains per trait.
+- allocates one row per trait-chain task for `bm`, `dm`, final state, traces,
+  and LD-swap diagnostics;
+- runs `#pragma omp parallel for` over `task = 0 .. nt * nchains - 1`;
+- maps `trait = task / nchains` and `chain = task % nchains`;
+- sets `nthreads` from `ncores`, bounded by the number of tasks;
+- preserves the old single-chain seed rule
+  `seed + 1000003 * (t + 1)`;
+- uses `seed + 1000003 * (t + 1) + 9176 * (chain + 1)` for default
+  multi-chain seeds;
+- uses `chain_seeds[chain] + 1000003 * (t + 1)` when chain seeds are supplied;
+- aggregates posterior summaries across independent chains.
 
-The main returned object is a 23-slot `std::vector<std::vector<std::vector<double>>>`.
-The R formatter `.format_stblr_fit()` names and reshapes it. Important slots:
+The main returned object is a `std::vector<std::vector<std::vector<double>>>`.
+The R formatter `.format_stblr_fit()` names and reshapes it. Important base
+slots:
 
 - slot 1 / index 0: `bm`, posterior mean effects;
 - slot 2 / index 1: `dm`, posterior inclusion probabilities;
@@ -75,12 +75,16 @@ The R formatter `.format_stblr_fit()` names and reshapes it. Important slots:
 - slots 21 to 22 / indices 20 to 21: `vle`, `vld` traces;
 - slot 23 / index 22: LD-swap diagnostics for the regular CSR backend.
 
-`dm`, `bm`, `vbs`, `ves`, `pis`, `vgs`, `vld`, and `vle` are allocated in
-`src/st_cpg_omp_csr.cpp` before the trait-parallel loop and filled from the
-per-trait local accumulators inside that loop. `ld_swap` diagnostics are
-created from `ld_swap_attempted_vec` and `ld_swap_accepted_vec`, then placed
-in result slot 23 with a four-value marker that `.format_stblr_fit()` uses to
-recognize LD-swap output.
+When `nchains > 1`, slots 24 to 29 / indices 23 to 28 contain `bm_sd`,
+`bm_min`, `bm_max`, `dm_sd`, `dm_min`, and `dm_max`. When `keep_chains = TRUE`,
+slots 30 to 32 / indices 29 to 31 contain compact chain-major `dm`, `bm`, and
+LD-swap diagnostics.
+
+`dm`, `bm`, `vbs`, `ves`, `pis`, `vgs`, `vld`, and `vle` are accumulated from
+per-task local outputs after the OpenMP loop. `ld_swap` diagnostics are created
+by summing per-task attempted and accepted counts within each trait, then
+placed in result slot 23 with a four-value marker that `.format_stblr_fit()`
+uses to recognize LD-swap output.
 
 ## Current Scheduled CSR Sampler
 
@@ -140,7 +144,6 @@ That implementation already has useful machinery:
 
 What it does not currently provide:
 
-- chain-level standard deviation, min, or max for `dm` or `bm`;
 - retained compact per-chain summaries in the R fit;
 - trace concatenation across chains;
 - convergence diagnostics such as R-hat or ESS;
@@ -272,9 +275,11 @@ Cons:
 - Requires extending the current 23-slot result format or adding a parallel
   chain-summary return convention.
 
-Recommended choice: implement Option C first, but do it by extracting a small
-regular CSR single-chain worker and a chain aggregation helper. That creates a
-natural path to Option B without making the first implementation too broad.
+Recommended choice after the completed CSR update: do not continue copying
+chain logic into each backend. Use regular CSR as the canonical exact
+summary-stat backend, use the BED scheduled chains backend as the canonical
+individual-level chain backend, and introduce small shared seed/task/aggregation
+helpers before adding chains to scheduled CSR.
 
 ## LD-Swap Interaction
 

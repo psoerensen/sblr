@@ -913,10 +913,13 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
 #'   for multi-chromosome fits it uses the scheduled multi-chain backend.
 #'   `"sparse"` is only valid for one chromosome.
 #' @param nchains Number of MCMC chains. When `nchains > 1`, the scheduled
-#'   multi-chain backend is used.
+#'   multi-chain backend is used and returns chain-stability summaries
+#'   `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`.
 #' @param read_block_size,progress_every Multi-chain BED reading and progress
 #'   controls.
-#' @return A formatted ST-BLR fit.
+#' @return A formatted ST-BLR fit. Fits from the scheduled multi-chain backend
+#'   include CSR-compatible chain-stability summaries for marker inclusion
+#'   probabilities and posterior effects.
 #' @export
 stblr_bed_marker <- function(
     Glist, y, chr = NULL, cls = NULL, block_size = 1000,

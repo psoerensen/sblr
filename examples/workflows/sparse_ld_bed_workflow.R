@@ -95,6 +95,7 @@ fitMH <- stblr_csr(
   nit = 1000,
   nburn = 100,
   ncores = 3,
+  nchains = 3,
   seed = 10,
   scheduled = FALSE,
   updateLDswap = TRUE,
@@ -466,3 +467,21 @@ fit_bed_sched_single <- stblr_bed_marker(
 plot(sim$B[, 1], fit_csr$dm[, 1], xlab = "True effect", ylab = "CSR PIP")
 plot(sim$B[, 1], fit_bed_sched_single$dm[, 1], xlab = "True effect", ylab = "BED PIP")
 plot(fit_csr$bm[, 1], fit_bed_sched_single$bm[, 1], xlab = "CSR effect", ylab = "BED effect")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

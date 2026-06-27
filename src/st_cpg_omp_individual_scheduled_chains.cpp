@@ -37,7 +37,8 @@ using namespace arma;
 //   - BED setup uses a blocked reader, modeled after mtgrsbed_core(), to speed
 //     up raw BED -> selected-row packed matrix construction.
 //
-// Return layout is the same 20-slot structure as the single-chain function:
+// Return layout uses the same 23-slot base structure as the single-chain
+// scheduled marker function, with optional CSR-compatible chain summaries:
 //   result[[1]]  / result[0]  = posterior mean effects, averaged over chains
 //   result[[2]]  / result[1]  = posterior inclusion probabilities, averaged over chains
 //   result[[5]]  / result[4]  = final effects, averaged over chains
@@ -47,6 +48,8 @@ using namespace arma;
 //   result[[19]] / result[18] = diagnostics: mean total log-CPO, mean log-CPO per individual,
 //                                  mean seconds, max seconds
 //   result[[20]] / result[19] = diagnostics: mean nsamples, n_used
+//   result[[24:29]] / result[23:28] = bm_sd, bm_min, bm_max,
+//                                      dm_sd, dm_min, dm_max
 // =============================================================================
 
 struct MarkerMapSTScheduledChains {
@@ -1476,6 +1479,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_sd_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_sd_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_min_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_min_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_max_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_max_mat(nt, m, arma::fill::zeros);
  arma::mat b_mat(nt, m, arma::fill::zeros);
  arma::mat d_mat_double(nt, m, arma::fill::zeros);
  arma::mat vbs_mat(nt, nit + nburn, arma::fill::zeros);
@@ -1551,6 +1560,39 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
  mean_nsamples *= inv_chains;
  mean_seconds *= inv_chains;
 
+ for (int t = 0; t < nt; ++t) {
+  const arma::uword tu = static_cast<arma::uword>(t);
+  bm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
+  dm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
+  bm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
+  dm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
+
+  for (int chain = 0; chain < nchains; ++chain) {
+   const int job = chain * nt + t;
+   const ChainResultSTScheduled& r = job_results[static_cast<std::size_t>(job)];
+
+   for (int j = 0; j < m; ++j) {
+    const arma::uword ju = static_cast<arma::uword>(j);
+    bm_min_mat(tu, ju) = std::min(bm_min_mat(tu, ju), r.bm(ju));
+    dm_min_mat(tu, ju) = std::min(dm_min_mat(tu, ju), r.dm(ju));
+    bm_max_mat(tu, ju) = std::max(bm_max_mat(tu, ju), r.bm(ju));
+    dm_max_mat(tu, ju) = std::max(dm_max_mat(tu, ju), r.dm(ju));
+   }
+
+   if (nchains > 1) {
+    arma::rowvec bm_diff = r.bm - bm_mat.row(tu);
+    arma::rowvec dm_diff = r.dm - dm_mat.row(tu);
+    bm_sd_mat.row(tu) += bm_diff % bm_diff;
+    dm_sd_mat.row(tu) += dm_diff % dm_diff;
+   }
+  }
+
+  if (nchains > 1) {
+   bm_sd_mat.row(tu) = arma::sqrt(bm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
+   dm_sd_mat.row(tu) = arma::sqrt(dm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
+  }
+ }
+
  arma::mat wy_mat(nt, m, arma::fill::zeros);
  arma::mat r_mat(nt, m, arma::fill::zeros);
 
@@ -1585,8 +1627,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
   }
  }
 
- std::vector<std::vector<std::vector<double>>> result(23);
- for (int k = 0; k < 23; ++k) {
+ std::vector<std::vector<std::vector<double>>> result(29);
+ for (int k = 0; k < 29; ++k) {
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
  }
 
@@ -1602,6 +1644,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
   result[20][ts].resize(static_cast<std::size_t>(nit + nburn)); // linkage-equilibrium variance trace
   result[21][ts].resize(static_cast<std::size_t>(nit + nburn)); // LD variance/covariance trace = vg - vle
   result[22][ts].resize(static_cast<std::size_t>(nit + nburn)); // inclusion-probability trace
+  result[23][ts].resize(static_cast<std::size_t>(m)); // bm_sd
+  result[24][ts].resize(static_cast<std::size_t>(m)); // bm_min
+  result[25][ts].resize(static_cast<std::size_t>(m)); // bm_max
+  result[26][ts].resize(static_cast<std::size_t>(m)); // dm_sd
+  result[27][ts].resize(static_cast<std::size_t>(m)); // dm_min
+  result[28][ts].resize(static_cast<std::size_t>(m)); // dm_max
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1618,6 +1666,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
    result[4][ts][js] = b_mat(tu, ju);
    result[5][ts][js] = d_mat_double(tu, ju);
    result[6][ts][js] = static_cast<double>(j);
+   result[23][ts][js] = bm_sd_mat(tu, ju);
+   result[24][ts][js] = bm_min_mat(tu, ju);
+   result[25][ts][js] = bm_max_mat(tu, ju);
+   result[26][ts][js] = dm_sd_mat(tu, ju);
+   result[27][ts][js] = dm_min_mat(tu, ju);
+   result[28][ts][js] = dm_max_mat(tu, ju);
   }
  }
 

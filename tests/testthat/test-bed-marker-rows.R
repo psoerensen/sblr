@@ -16,7 +16,6 @@ make_bed_marker_test_data <- function(Glist, y, rows = NULL) {
     chr = 1L,
     cls = NULL,
     block_size = 1000L,
-    chains = FALSE,
     rows = rows
   )
 }
@@ -118,7 +117,7 @@ test_that("BED marker fits report total and selected sample counts", {
   y_sub <- y[idx, , drop = FALSE]
   fit_args <- list(
     Glist = Glist, chr = 1L, nit = 2L, nburn = 1L, ncores = 1L,
-    seed = 10L, full_sweep_every = 1L, scheduled = TRUE
+    seed = 10L, full_sweep_every = 1L, backend = "scheduled"
   )
 
   fit_explicit <- do.call(
@@ -135,4 +134,122 @@ test_that("BED marker fits report total and selected sample counts", {
   expect_equal(fit_explicit$input$n, Glist$n)
   expect_equal(fit_explicit$input$n_total, Glist$n)
   expect_equal(fit_explicit$input$n_used, nrow(y_sub))
+})
+
+make_bed_marker_chain_test_files <- function() {
+  bed_file1 <- tempfile(fileext = ".bed")
+  bed_file2 <- tempfile(fileext = ".bed")
+  write_bed_marker_test_file(
+    bed_file1,
+    rbind(c(0, 1, 2, 0, 1, 2), c(2, 0, 1, 2, 0, 1))
+  )
+  write_bed_marker_test_file(
+    bed_file2,
+    rbind(c(1, 2, 0, 1, 2, 0))
+  )
+  list(bed_file1, bed_file2)
+}
+
+make_bed_marker_chain_test_glist <- function(files) {
+  list(
+    n = 6L,
+    ids = paste0("id", seq_len(6L)),
+    bedfiles = unlist(files, use.names = FALSE),
+    rsids = list(c("rs1", "rs2"), "rs3"),
+    rsidsLD = list(c("rs1", "rs2"), "rs3"),
+    chr = list(c(1L, 1L), 2L),
+    pos = list(c(100, 200), 300),
+    af = list(c(0.2, 0.3), 0.4)
+  )
+}
+
+expect_bed_chain_summary_shape <- function(fit) {
+  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+    expect_true(nm %in% names(fit))
+    expect_equal(dim(fit[[nm]]), dim(fit$dm))
+    expect_identical(rownames(fit[[nm]]), rownames(fit$dm))
+    expect_identical(colnames(fit[[nm]]), colnames(fit$dm))
+    expect_true(all(is.finite(fit[[nm]])))
+  }
+}
+
+test_that("BED scheduled chains expose zero-width summaries for one chain", {
+  files <- make_bed_marker_chain_test_files()
+  on.exit(unlink(unlist(files, use.names = FALSE)), add = TRUE)
+
+  fit <- stblr_bed_marker(
+    Glist = make_bed_marker_chain_test_glist(files),
+    y = matrix(c(-1, 0, 1, -0.5, 0.5, 1.5), ncol = 1,
+               dimnames = list(NULL, "D1")),
+    chr = 1:2,
+    backend = "scheduled",
+    nit = 2L,
+    nburn = 0L,
+    full_sweep_every = 1L,
+    nchains = 1L,
+    ncores = 1L,
+    seed = 11L
+  )
+
+  expect_true(fit$input$use_chains_backend)
+  expect_equal(fit$input$nchains, 1L)
+  expect_bed_chain_summary_shape(fit)
+  expect_equal(fit$dm_sd, fit$dm * 0, tolerance = 1e-12)
+  expect_equal(fit$bm_sd, fit$bm * 0, tolerance = 1e-12)
+  expect_equal(fit$dm_min, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$dm_max, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$bm_min, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$bm_max, fit$bm, tolerance = 1e-12)
+})
+
+test_that("BED scheduled chains expose finite summaries across chains", {
+  bed_file <- tempfile(fileext = ".bed")
+  on.exit(unlink(bed_file), add = TRUE)
+  write_bed_marker_test_file(
+    bed_file,
+    rbind(c(0, 1, 2, 0, 1, 2), c(2, 0, 1, 2, 0, 1))
+  )
+
+  Glist <- make_bed_marker_test_glist()
+  Glist$bedfiles <- bed_file
+  Glist$chr <- list(c(1L, 1L))
+  Glist$pos <- list(c(100, 200))
+
+  fit <- stblr_bed_marker(
+    Glist = Glist,
+    y = matrix(c(-1, 0, 1, -0.5, 0.5, 1.5), ncol = 1,
+               dimnames = list(NULL, "D1")),
+    chr = 1L,
+    backend = "scheduled",
+    nit = 2L,
+    nburn = 0L,
+    full_sweep_every = 1L,
+    nchains = 2L,
+    ncores = 1L,
+    seed = 12L
+  )
+
+  expect_true(fit$input$use_chains_backend)
+  expect_equal(fit$input$nchains, 2L)
+  expect_bed_chain_summary_shape(fit)
+  expect_true(all(fit$dm_sd >= -1e-12))
+  expect_true(all(fit$bm_sd >= -1e-12))
+  expect_true(all(fit$dm_min <= fit$dm + 1e-12))
+  expect_true(all(fit$dm <= fit$dm_max + 1e-12))
+  expect_true(all(fit$bm_min <= fit$bm + 1e-12))
+  expect_true(all(fit$bm <= fit$bm_max + 1e-12))
+
+  fm <- extract_stblr_finemap_loci(
+    fit = fit,
+    Glist = Glist,
+    locus_sets = list(regionA = rownames(fit$dm)),
+    trait = "D1",
+    credible_sets = FALSE
+  )
+  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_sd[, "D1"]))
+  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_min[, "D1"]))
+  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_max[, "D1"]))
+  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_sd[, "D1"]))
+  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_min[, "D1"]))
+  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_max[, "D1"]))
 })
