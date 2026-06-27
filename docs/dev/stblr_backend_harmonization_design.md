@@ -8,17 +8,16 @@ trait-by-chain OpenMP jobs, deterministic chain seeds, optional per-chain
 compact summaries, chain SD/min/max for `dm` and `bm`, and LD-swap diagnostics
 aggregated across chains.
 
-The related scheduled CSR and individual/BED backends are not yet aligned.
-They share substantial single-chain sampler scaffolding, but the scheduled CSR
-backend is still single-chain and LD-swap-free, while the individual/BED chain
-support lives in a separate scheduled chains backend with a different return
-contract.
+The related scheduled CSR and individual/BED backends now expose the same
+marker-level chain stability summaries as regular CSR. Scheduled CSR remains
+LD-swap-free, and the individual/BED chain support still lives in a separate
+scheduled chains backend.
 
-Implementation status: the individual/BED scheduled chains backend now extends
-its existing 23-slot base result with CSR-compatible chain-stability summaries
-in slots 24 to 29: `bm_sd`, `bm_min`, `bm_max`, `dm_sd`, `dm_min`, and
-`dm_max`. The R formatter exposes these as marker-by-trait matrices with the
-same dimnames as `bm` and `dm`.
+Implementation status: scheduled CSR and individual/BED scheduled chains now
+extend their existing 23-slot base results with CSR-compatible chain-stability
+summaries in slots 24 to 29: `bm_sd`, `bm_min`, `bm_max`, `dm_sd`, `dm_min`,
+and `dm_max`. The R formatter exposes these as marker-by-trait matrices with
+the same dimnames as `bm` and `dm`.
 
 Recommended implementation scope for this pass is design only. The backends
 are too divergent to safely add shared helpers or chain summaries everywhere
@@ -147,21 +146,27 @@ CSR inputs but updates markers according to scheduling rules:
 
 Current chain and LD-swap status:
 
-- It does not support `nchains` in C++.
-- The R wrapper rejects `scheduled = TRUE, nchains > 1`.
+- It supports `nchains` in C++ using trait-major task mapping.
+- The R wrapper permits `scheduled = TRUE, nchains > 1`.
+- `keep_chains = TRUE` remains unsupported for scheduled CSR.
 - It does not support LD-swap.
 - The R wrapper rejects `scheduled = TRUE, updateLDswap = TRUE`.
 
 Parallelization:
 
-- Parallelizes over traits only.
-- Seeds trait `t` with `seed + 1000003 * (t + 1)`.
-- Uses `#pragma omp parallel for` over `t = 0 .. nt - 1`.
+- Parallelizes over `nt * nchains` trait-chain tasks.
+- For `nchains == 1` with no chain seeds, seeds trait `t` with
+  `seed + 1000003 * (t + 1)`, preserving previous single-chain behavior.
+- For default multi-chain runs, seeds task `(trait, chain)` with
+  `seed + 1000003 * (trait + 1) + 9176 * (chain + 1)`.
+- Uses `#pragma omp parallel for` over `task = 0 .. nt * nchains - 1`.
 
 Output layout:
 
 - Returns the same base fit shape used by the formatter, with 23 slots.
 - Slot 22 is a pi trace for the scheduled backend, not LD-swap diagnostics.
+- Slots 23 to 28 contain `bm_sd`, `bm_min`, `bm_max`, `dm_sd`, `dm_min`,
+  and `dm_max`.
 - `.format_stblr_fit()` distinguishes LD-swap diagnostics from a pi trace by
   slot shape.
 
@@ -176,7 +181,6 @@ Duplicated code:
 
 What could be shared:
 
-- Seed calculation and task mapping once scheduled CSR supports chains.
 - Result aggregation for chain means, SD/min/max, and LD-swap diagnostics.
 - Common scalar update helpers where scheduled and exact code have identical
   math.
@@ -184,11 +188,9 @@ What could be shared:
 
 Recommendation:
 
-Do not add `nchains` to scheduled CSR by copy-pasting the exact CSR chain
-logic. Either keep scheduled CSR single-chain until a shared chain helper is in
-place, or add chains only after extracting common seed/task/aggregation helpers
-that both CSR backends can use. Scheduled CSR should remain LD-swap-free for
-now.
+Scheduled CSR now uses shared seed/task helpers for chain execution. Keep it
+LD-swap-free until swap behavior with scheduled active/candidate marker lists
+is designed.
 
 ### Individual/BED Sparse Backend
 
@@ -330,7 +332,6 @@ Pros:
 
 Cons:
 
-- Scheduled CSR remains single-chain for now.
 - Some older backends remain present as internal/reference code.
 - Requires wrapper decisions for when to route BED scheduled single-chain calls
   through the chains backend.
@@ -378,8 +379,8 @@ Recommendation: use together with Option B for short-term stability.
 Use Option B plus a staged version of Option C.
 
 1. Keep `st_cpg_omp_csr.cpp` as the canonical exact summary-stat backend.
-2. Keep `st_cpg_omp_csr_scheduled.cpp` as approximate acceleration and leave
-   it single-chain until shared helpers are available.
+2. Keep `st_cpg_omp_csr_scheduled.cpp` as approximate acceleration with
+   multi-chain task execution and no LD-swap.
 3. Keep LD-swap only in regular CSR for now.
 4. Prefer `st_cpg_omp_individual_scheduled_chains.cpp` for BED chain support.
 5. Avoid extending both `st_cpg_omp_individual.cpp` and
@@ -442,17 +443,12 @@ framework until two active backends are actually using the helper code.
 
 ## Implementation Scope Decision
 
-Chosen scope for this task: Scope 1, documentation/design only.
+Implemented scope:
 
-Rationale:
-
-- Regular CSR already implements the requested chain and LD-swap behavior.
-- Scheduled CSR lacks both chain arguments and LD-swap, so updating it safely
-  requires either duplicated logic or a refactor.
-- BED scheduled chains has useful multi-chain machinery but a different return
-  convention and no SD/min/max fields.
-- A shared helper change would be low-level C++ churn without immediate
-  behavior coverage unless paired with a backend update and tests.
+- Regular CSR implements chains, optional compact chain output, and LD-swap.
+- BED scheduled chains implements CSR-compatible chain summary fields.
+- Scheduled CSR implements chains and CSR-compatible chain summary fields,
+  while still rejecting LD-swap and compact per-chain output.
 
 ## Recommended Implementation Order
 
@@ -466,8 +462,8 @@ Rationale:
    fields as CSR chain fits.
 6. Consider routing scheduled BED single-chain calls through the chains backend
    with `nchains = 1` if tests show identical or acceptable behavior.
-7. Only then consider scheduled CSR `nchains`, using the same trait-major task
-   mapping and aggregation helpers.
+7. Scheduled CSR `nchains` uses the same trait-major task mapping and shared
+   seed helpers as regular CSR.
 8. Keep scheduled CSR LD-swap unsupported until swap behavior with scheduled
    active/candidate marker lists is designed.
 
@@ -487,10 +483,12 @@ CSR exact backend:
 
 CSR scheduled backend:
 
-- `scheduled = TRUE, nchains = 1` remains unchanged.
-- While not implemented, `scheduled = TRUE, nchains > 1` errors clearly.
-- If implemented later, `scheduled = TRUE, nchains = 2` returns the same
-  chain-summary fields as regular CSR, but still rejects LD-swap.
+- `scheduled = TRUE, nchains = 1` preserves the old single-chain seed rule.
+- `scheduled = TRUE, nchains = 2` returns the same chain-summary fields as
+  regular CSR.
+- `scheduled = TRUE, updateLDswap = TRUE` still rejects clearly.
+- `scheduled = TRUE, keep_chains = TRUE` rejects clearly until compact
+  scheduled chain output is implemented.
 
 Individual/BED chain backend:
 

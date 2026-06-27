@@ -89,10 +89,34 @@ test_that("CSR LD-swap arguments are validated", {
     "chain_seeds"
   )
   expect_error(
-    stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, nchains = 2),
-    "nchains > 1"
+    stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, keep_chains = TRUE),
+    "keep_chains"
+  )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, updateLDswap = TRUE),
+    "updateLDswap"
   )
 })
+
+expect_csr_chain_summary_shape <- function(fit) {
+  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+    expect_true(nm %in% names(fit))
+    expect_equal(dim(fit[[nm]]), dim(fit$dm))
+    expect_identical(rownames(fit[[nm]]), rownames(fit$dm))
+    expect_identical(colnames(fit[[nm]]), colnames(fit$dm))
+    expect_false(anyNA(fit[[nm]]))
+    expect_true(all(is.finite(fit[[nm]])))
+  }
+}
+
+tiny_csr_glist <- function() {
+  list(
+    rsids = list(paste0("m", 1:3)),
+    chr = list(rep(1L, 3)),
+    pos = list(c(100, 200, 300)),
+    sparseLD = list(chr = 1L, cls = list(1:3), prefix = make_tiny_csr_prefix())
+  )
+}
 
 test_that("CSR sampler returns zero LD-swap diagnostics by default", {
   fit <- stblr_csr(
@@ -160,12 +184,83 @@ test_that("CSR sampler returns multi-chain posterior summaries", {
   )
 
   expect_equal(fit$input$nchains, 2L)
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
-    expect_true(nm %in% names(fit))
-    expect_equal(dim(fit[[nm]]), dim(fit$dm))
-    expect_false(anyNA(fit[[nm]]))
-    expect_true(all(is.finite(fit[[nm]])))
-  }
+  expect_csr_chain_summary_shape(fit)
+})
+
+test_that("scheduled CSR returns one-chain posterior summaries", {
+  fit <- stblr_csr(
+    stats = tiny_csr_stats(),
+    ld_prefix = make_tiny_csr_prefix(),
+    scheduled = TRUE,
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    full_sweep_every = 1,
+    null_skip_base = 1,
+    nit = 2,
+    nburn = 0,
+    seed = 17,
+    nchains = 1,
+    ncores = 1
+  )
+
+  expect_equal(fit$input$nchains, 1L)
+  expect_true("pis" %in% names(fit))
+  expect_csr_chain_summary_shape(fit)
+  expect_equal(fit$dm_sd, fit$dm * 0, tolerance = 1e-12)
+  expect_equal(fit$bm_sd, fit$bm * 0, tolerance = 1e-12)
+  expect_equal(fit$dm_min, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$dm_max, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$bm_min, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$bm_max, fit$bm, tolerance = 1e-12)
+})
+
+test_that("scheduled CSR returns multi-chain posterior summaries", {
+  fit <- stblr_csr(
+    stats = tiny_csr_stats(),
+    ld_prefix = make_tiny_csr_prefix(),
+    scheduled = TRUE,
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    full_sweep_every = 1,
+    null_skip_base = 1,
+    nit = 3,
+    nburn = 0,
+    seed = 18,
+    nchains = 2,
+    ncores = 2
+  )
+
+  expect_equal(fit$input$nchains, 2L)
+  expect_true("pis" %in% names(fit))
+  expect_csr_chain_summary_shape(fit)
+  expect_true(all(fit$dm_sd >= -1e-12))
+  expect_true(all(fit$bm_sd >= -1e-12))
+  expect_true(all(fit$dm_min <= fit$dm + 1e-12))
+  expect_true(all(fit$dm <= fit$dm_max + 1e-12))
+  expect_true(all(fit$bm_min <= fit$bm + 1e-12))
+  expect_true(all(fit$bm <= fit$bm_max + 1e-12))
+
+  fm <- extract_stblr_finemap_loci(
+    fit = fit,
+    Glist = tiny_csr_glist(),
+    locus_sets = list(regionA = rownames(fit$dm)),
+    trait = "trait1",
+    credible_sets = FALSE
+  )
+  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_sd[, "trait1"]))
+  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_min[, "trait1"]))
+  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_max[, "trait1"]))
+  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_sd[, "trait1"]))
+  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_min[, "trait1"]))
+  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_max[, "trait1"]))
 })
 
 test_that("CSR sampler can keep compact per-chain summaries", {

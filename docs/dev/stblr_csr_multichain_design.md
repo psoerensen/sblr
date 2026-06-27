@@ -3,8 +3,9 @@
 ## Executive Summary
 
 `stblr_csr()` now supports multiple independent MCMC chains per trait in the
-regular summary-statistic CSR backend when `scheduled = FALSE`. The scheduled
-CSR backend remains single-chain and still parallelizes only over traits.
+regular summary-statistic CSR backend when `scheduled = FALSE` and in the
+scheduled summary-statistic CSR backend when `scheduled = TRUE`. The scheduled
+CSR backend remains LD-swap-free.
 
 The repository also has useful multi-chain machinery in the packed-BED
 scheduled backend. That implementation runs `nchains * nt` chain-trait jobs,
@@ -32,9 +33,20 @@ Implemented for the regular summary-statistic CSR backend:
 - `keep_chains = TRUE` returns compact per-chain `dm`, `bm`, and LD-swap
   diagnostics.
 
+Implemented for the scheduled summary-statistic CSR backend:
+
+- `stblr_csr(..., scheduled = TRUE)` accepts `nchains` and vector
+  `chain_seeds`.
+- scheduled CSR C++ execution uses independent trait-by-chain OpenMP tasks.
+- `nchains = 1` preserves the previous per-trait seed rule.
+- `nchains > 1` aggregates `bm`, `dm`, final summaries, and averaged traces
+  across chains.
+- scheduled multi-chain fits expose `dm_sd`, `dm_min`, `dm_max`, `bm_sd`,
+  `bm_min`, and `bm_max`.
+- `keep_chains = TRUE` remains unsupported for scheduled CSR.
+
 Not implemented in this pass:
 
-- scheduled CSR multi-chain execution;
 - LD-swap in the scheduled CSR backend;
 - per-chain full trace retention or convergence diagnostics.
 
@@ -100,11 +112,15 @@ The scheduled CSR sampler:
 - uses the same summary-statistic CSR inputs as the regular backend;
 - adds marker scheduling controls such as `full_sweep_every`,
   `null_skip_base`, `candidate_threshold`, and LD-neighbor wakeup controls;
-- still parallelizes only over traits;
-- sets `nthreads = max(1, min(ncores, nt))`;
-- seeds trait `t` with `seed + 1000003 * (t + 1)`;
-- does not expose `nchains`;
-- does not return per-chain summaries;
+- parallelizes over `nt * nchains` trait-chain tasks;
+- maps `trait = task / nchains` and `chain = task % nchains`;
+- sets `nthreads = max(1, min(ncores, nt * nchains))`;
+- preserves the old single-chain seed rule
+  `seed + 1000003 * (t + 1)`;
+- uses `seed + 1000003 * (t + 1) + 9176 * (chain + 1)` for default
+  multi-chain seeds;
+- uses `chain_seeds[chain] + 1000003 * (t + 1)` when chain seeds are supplied;
+- returns chain SD/min/max summaries for `dm` and `bm`;
 - returns the same base fit layout, with slot 23 used for the pi trace rather
   than LD-swap diagnostics.
 
@@ -271,7 +287,6 @@ Pros:
 Cons:
 
 - Some temporary duplication versus scheduled CSR.
-- Scheduled CSR remains single-chain until a follow-up.
 - Requires extending the current 23-slot result format or adding a parallel
   chain-summary return convention.
 
@@ -279,7 +294,7 @@ Recommended choice after the completed CSR update: do not continue copying
 chain logic into each backend. Use regular CSR as the canonical exact
 summary-stat backend, use the BED scheduled chains backend as the canonical
 individual-level chain backend, and introduce small shared seed/task/aggregation
-helpers before adding chains to scheduled CSR.
+helpers for scheduled CSR chain execution.
 
 ## LD-Swap Interaction
 
@@ -309,8 +324,8 @@ active/candidate marker lists after a swap.
 
 ## Output Structure
 
-For compatibility, `nchains = 1L` should keep the existing formatted fields.
-For `nchains > 1L`, the recommended formatted object is:
+For compatibility, the first 23 return slots remain backend-specific base
+slots. Chain-capable CSR fits add:
 
 ```text
 fit$bm        matrix m x nt, mean across chains
@@ -322,8 +337,8 @@ fit$dm_sd     matrix m x nt, SD across chain-level dm
 fit$dm_min    matrix m x nt, min across chain-level dm
 fit$dm_max    matrix m x nt, max across chain-level dm
 fit$vbs/vgs/ves/vle/vld/pis averaged traces or documented mean traces
-fit$ld_swap   per-trait aggregated diagnostics
-fit$chains    optional compact per-chain summaries
+fit$ld_swap   per-trait aggregated diagnostics for regular CSR only
+fit$chains    optional compact per-chain summaries for regular CSR only
 fit$input$nchains
 ```
 
@@ -344,14 +359,16 @@ necessary, gate them behind a separate option such as `keep_chain_traces`.
 
 ## Testing Plan
 
-Add tests in a later implementation task:
+Implemented tests cover:
 
 - `nchains = 1` gives the same structure as current `stblr_csr()` output.
 - `nchains = 1` preserves current seed behavior for a fixed small fixture.
 - `nchains = 2` returns `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`,
   `bm_max`.
-- `fit$dm` equals the mean of per-chain `dm` when `keep_chains = TRUE`.
-- `fit$bm` equals the mean of per-chain `bm` when `keep_chains = TRUE`.
+- `fit$dm` equals the mean of per-chain `dm` when regular CSR
+  `keep_chains = TRUE`.
+- `fit$bm` equals the mean of per-chain `bm` when regular CSR
+  `keep_chains = TRUE`.
 - `fit$input$nchains` is set.
 - chain seeds are reproducible and distinct across trait-chain jobs.
 - `extract_stblr_finemap_loci()` fills `pip_sd`, `pip_min`, and `pip_max`
@@ -361,23 +378,17 @@ Add tests in a later implementation task:
 - current single-chain LD-swap tests continue to pass.
 - `scheduled = TRUE, updateLDswap = TRUE` remains clearly blocked until that
   backend supports LD-swap.
-- `scheduled = TRUE, nchains > 1` is either implemented and tested or clearly
-  rejected with an informative error.
+- `scheduled = TRUE, nchains > 1` is implemented and tested.
+- `scheduled = TRUE, keep_chains = TRUE` is clearly rejected.
 
 ## Suggested Next Codex Implementation Task
 
-Implement `nchains`, `keep_chains`, and `chain_seeds` for
-`stblr_csr(scheduled = FALSE)` only.
+Design compact per-chain output for `stblr_csr(scheduled = TRUE)`.
 
 Scope:
 
-- update `stblr_csr()` argument validation and `fit$input`;
-- add an exported regular CSR multi-chain C++ entry point or extend
-  `stblr_cpg_omp_csr()` carefully;
-- factor the regular CSR per-trait body into a single-chain worker returning
-  `bm`, `dm`, final state, traces, variance/pi summaries, and LD-swap counts;
-- run OpenMP over trait-chain jobs;
-- aggregate means, SD/min/max for `bm` and `dm`, and LD-swap diagnostics;
-- add optional compact `fit$chains` formatting;
-- leave `scheduled = TRUE, updateLDswap = TRUE` unsupported;
-- avoid changing `nchains = 1` behavior except for adding `fit$input$nchains`.
+- decide whether scheduled compact output should include only `dm`/`bm` or
+  also final pi/variance summaries;
+- keep full traces out of the compact output unless explicitly requested;
+- preserve the scheduled CSR pi trace in base slot 23;
+- leave `scheduled = TRUE, updateLDswap = TRUE` unsupported.

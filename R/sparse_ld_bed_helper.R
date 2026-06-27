@@ -433,18 +433,19 @@ NULL
 #' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
 #'   models, values greater than 0 can stabilize residual-variance updates.
 #' @param nit,nburn,nthin MCMC iteration controls.
-#' @param ncores Number of OpenMP threads.
+#' @param ncores Number of OpenMP threads. For multi-chain regular and
+#'   scheduled CSR fits, threads are assigned over trait-chain tasks.
 #' @param seed Sampler seed.
-#' @param nchains Number of independent MCMC chains per trait. For
-#'   `scheduled = FALSE`, chains are run as independent genome-wide
-#'   trait-by-chain tasks in C++ and aggregated before return. `scheduled =
-#'   TRUE` currently supports only `nchains = 1`.
+#' @param nchains Number of independent MCMC chains per trait. Chains are run
+#'   as independent genome-wide trait-by-chain tasks in C++ and aggregated
+#'   before return for regular and scheduled CSR fits.
 #' @param keep_chains Logical; when `TRUE` and `scheduled = FALSE`, return
 #'   compact per-chain `dm`, `bm`, and LD-swap diagnostics in `chains`.
+#'   Compact per-chain output is not yet supported for scheduled CSR.
 #' @param chain_seeds Optional numeric or integer vector of length `nchains`.
-#'   When supplied for `scheduled = FALSE`, each value is used as the base seed
-#'   for that chain with a deterministic trait offset. Matrix seed inputs are
-#'   not currently supported.
+#'   When supplied, each value is used as the base seed for that chain with a
+#'   deterministic trait offset. Matrix seed inputs are not currently
+#'   supported.
 #' @param scheduled Use the scheduled sparse-LD sampler.
 #' @param full_sweep_every,null_skip_base,null_skip_max,candidate_threshold
 #'   Scheduled sampler controls.
@@ -467,10 +468,11 @@ NULL
 #'   marker, prioritized by highest r-squared.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @return A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
-#'   full sampled inclusion-probability trace for each trait. Multi-chain
-#'   regular CSR fits additionally provide `dm_sd`, `dm_min`, `dm_max`,
-#'   `bm_sd`, `bm_min`, and `bm_max`; standard traces are averaged by iteration
-#'   across chains.
+#'   sampled inclusion-probability trace for each trait, averaged by iteration
+#'   across chains when `nchains > 1`. Chain-capable CSR fits provide `dm_sd`,
+#'   `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`; standard traces are
+#'   averaged by iteration across chains. LD-swap remains available only for
+#'   `scheduled = FALSE`.
 #' @export
 stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_init = 0.001, pi_vb_init = NULL,
@@ -512,8 +514,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  } else {
   chain_seeds <- integer()
  }
- if (isTRUE(scheduled) && nchains != 1L) {
-  stop("nchains > 1 is currently supported only for scheduled = FALSE.")
+ if (isTRUE(scheduled) && isTRUE(keep_chains)) {
+  stop("scheduled = TRUE, keep_chains = TRUE is not yet supported.")
  }
  if (isTRUE(scheduled) && isTRUE(updateLDswap)) {
   stop("updateLDswap is currently implemented only for scheduled = FALSE.")
@@ -578,7 +580,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    wakeup_ld_neighbors = wakeup_ld_neighbors,
    wakeup_diff_threshold = wakeup_diff_threshold,
    wakeup_max_neighbors = wakeup_max_neighbors, pi_prior_a = arch$pi_prior_a,
-   pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed
+   pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed,
+   nchains = nchains, keep_chains = keep_chains, chain_seeds = chain_seeds
   )))
  } else {
  raw <- do.call(stblr_cpg_omp_csr, c(common, list(
