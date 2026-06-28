@@ -419,6 +419,117 @@ Initial behavior should be:
 if (updateLDswap) stop("BayesR CSR LD-swap is not yet supported.")
 ```
 
+## Residual Variance Update and Prior Scaling
+
+This section records the inspection triggered by invalid residual variance
+updates in the experimental exact CSR BayesR backend when `updateE = TRUE`.
+
+SBayesRC prior setup:
+
+- The public SBayesRC wrapper is `stblr_csr_sbayesrc_generic()` in
+  `R/stblr-csr-sbayesrc.R`.
+- Its default mixture variance multipliers are `gamma = c(0, 0.01, 0.1, 1)`.
+  These are scale factors, not absolute effect variances.
+- Native SBayesRC kernels use active prior variance
+  `vb_t * gamma[k]`, with `gamma[0] = 0` forcing the null component effect to
+  exactly zero.
+- The default active probability is `pi_init = 0.001`, distributed evenly over
+  active components by `make_sbayesrc_alpha_init()` unless
+  `active_comp_weights` is supplied.
+- Marker probabilities in the overlapping-annotation SBayesRC path are
+  produced by probit stick-breaking: `Phi(A_i alpha_j)`. With an intercept
+  column, the intercept is initialized to encode the sparse baseline.
+- `B` and `ssb_prior` are initialized as
+  `(vy * h2) / (m * pi_vb_init)` and
+  `((nub - 2) / nub) * (vy * h2) / (m * pi_prior_mean)`.
+- `E` and `sse_prior` are initialized as `vy * (1 - h2)` and
+  `((nue - 2) / nue) * vy * (1 - h2)`.
+- Defaults are `nub = 4`, `nue = 4`, `h2 = 0.5`, `updateAlpha = TRUE`,
+  `updateB = TRUE`, `updateE = TRUE`, and `adjE = 0.9`.
+- `comp_init` defaults to all null components. `r_init` defaults to a rebuild
+  from `b_init`, unless the caller explicitly supplies `use_r_init = TRUE`.
+- `rebuild_r_before_updateE` exists but defaults to `FALSE`.
+
+SBayesRC native update path:
+
+- `src/st_sbayesrc_omp_csr.cpp`,
+  `src/st_sbayesrc_omp_csr_annot.cpp`, and
+  `src/st_sbayresrc_omp_csr.cpp` all call the shared
+  `sampleE_ST_csr()` from `src/st_csr_common.h` when `updateE = TRUE`.
+- The arguments are the current marker count, `nue`, mutable `ve_t`, full
+  `b_t`, `wy_t`, current `r_t`, diagonal `sse_prior`, `yy_t`, `n[t]`, and the
+  chain RNG.
+- `sampleE_ST_csr()` uses the same identity as the experimental BayesR path:
+  `SSE = y'y - b'X'y - b'r`, with `r = X'y - X'Xb`.
+- SBayesRC can optionally rebuild `r` immediately before `sampleE_ST_csr()`,
+  but it does not do so by default.
+- The same active effect posterior form is used in SBayesRC and plain CSR
+  BayesR: component likelihood terms include
+  `0.5 * log(vei / (vei + ww_i * vb * scale_k))` and the corresponding
+  quadratic score term. The conditional effect draw uses
+  `lhs = ww_i + vei / (vb * scale_k)`.
+- `sampleB_*` updates use `sum b_i^2 / scale_k` over active components and do
+  not divide by LD score or marker-specific annotation variance.
+- Annotation effects in SBayesRC change mixture probabilities, not the
+  component variance formula.
+
+Comparison with experimental plain CSR BayesR:
+
+| Quantity | SBayesRC CSR | Experimental plain CSR BayesR |
+| --- | --- | --- |
+| Mixture grid | `c(0, 0.01, 0.1, 1)` | `c(0, 0.01, 0.1, 1)` |
+| Scale convention | `vb * gamma[k]` | `vb * mixture_var[k]` |
+| Initial active probability | `0.001` | now `0.001`; previously `0.05` |
+| Initial component state | all null unless supplied | all null unless supplied |
+| Mixture probability model | marker-specific probit stick-breaking or class-specific rows | global trait/chain `pi` |
+| Pi prior/update | annotation alpha update or class Dirichlet variants | global `Dirichlet(alpha + counts)` |
+| Default alpha prior | encoded by sparse alpha init; class variants are caller-supplied | now centered on `pi` with strength `5e5`; previously flat `rep(1, K)` |
+| `B`/`ssb_prior` scale | divided by `m * pi_*` | divided by `m * sum(pi[-1])` |
+| `E`/`sse_prior` scale | `vy * (1 - h2)` convention | same convention |
+| update order | markers, optional alpha/Pi, B, E, diagnostics | markers, B, E, Pi, diagnostics |
+| `updateE` call | shared `sampleE_ST_csr()` | shared `sampleE_ST_csr()` with extra diagnostic precheck |
+| `adjE` | `vei = ve + adjE * vg` after diagnostics | same |
+| Null component | effect exactly zero | effect exactly zero |
+
+The failing diagnostic had `nonzero_components=2894` out of `m=5000` at
+iteration 3. That is not expected under the SBayesRC-style sparse prior:
+`pi_init = 0.001` implies roughly 5 active markers initially for `m=5000`.
+The earlier experimental plain BayesR defaults implied 250 active markers
+before any likelihood contribution, and the flat Dirichlet prior did little to
+pull the global mixture weights back toward sparsity after dense early
+assignments. A dense state can overfit the summary statistics enough that
+`y'y - b'X'y - b'r` becomes negative, making the inverse-chi-square residual
+scale invalid even when the SSE identity itself is correct.
+
+Most likely causes evaluated:
+
+- A. Mixture variance scale bug: not supported by code inspection. Both paths
+  use `vb * scale_k`, and both default grids are scale factors.
+- B. Prior probability bug: supported. The experimental wrapper used a much
+  denser default `pi` and a flat Dirichlet prior.
+- C. Effect variance bug: not supported by code inspection. `sampleB` and
+  marker updates use the same `vb * scale_k` convention.
+- D. Component likelihood bug: not supported by the inspected formulas; the
+  determinant and quadratic terms are present and match SBayesRC.
+- E. Initialization bug: partly mitigated by all-null component initialization,
+  but the previous dense `pi` made early activation too permissive.
+- F. updateE incompatibility: still possible on real data. Even with sparse
+  priors, `updateE = TRUE` should remain disabled until native smoke tests on
+  realistic CSR LD show positive residual scales across early iterations.
+
+Minimal fix applied:
+
+- `.stblr_csr_bayesr_experimental()` now defaults to total active
+  `pi = 0.001` instead of `0.05`.
+- When `alpha` is omitted, it is now centered on the normalized `pi` with total
+  strength `5e5`, matching the sparse CSR prior convention instead of using a
+  flat `rep(1, K)`.
+
+`updateE = TRUE` remains disabled in the R helper. The next investigation
+should run the plain CSR BayesR native backend with this sparse prior on the
+same real `stats`/`Glist`, first with `updateE = FALSE` and then through a
+temporary direct native call with `updateE = TRUE` and residual diagnostics.
+
 ## R Wrapper Design
 
 Add an internal experimental helper first:

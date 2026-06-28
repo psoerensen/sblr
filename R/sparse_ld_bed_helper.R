@@ -751,16 +751,16 @@ NULL
   stop("mixture_var must start with 0 and have positive non-null components.")
  }
  if (is.null(pi)) {
-  active <- 0.05
+  active <- 0.001
   pi <- c(1 - active, rep(active / (length(mixture_var) - 1L),
                          length(mixture_var) - 1L))
  }
- if (is.null(alpha)) alpha <- rep(1, length(mixture_var))
  if (!is.numeric(pi) || length(pi) != length(mixture_var) ||
      any(!is.finite(pi)) || any(pi < 0) || sum(pi) <= 0) {
   stop("pi must be a non-negative finite vector matching mixture_var with positive sum.")
  }
  pi <- pi / sum(pi)
+ if (is.null(alpha)) alpha <- pmax(pi * 5e5, .Machine$double.eps)
  if (!is.numeric(alpha) || length(alpha) != length(mixture_var) ||
      any(!is.finite(alpha)) || any(alpha <= 0)) {
   stop("alpha must be a positive finite vector matching mixture_var.")

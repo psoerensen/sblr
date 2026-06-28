@@ -287,6 +287,13 @@ This path is experimental and internal. It supports exact CSR updates,
 `dm_component_mean`. It rejects `keep_chains = TRUE` and LD-swap. Scheduled CSR
 BayesR remains future work.
 
+The residual variance update investigation is documented in
+`docs/dev/stblr_csr_bayesr_design.md` under "Residual Variance Update and Prior
+Scaling". The experimental CSR BayesR wrapper now uses the same sparse active
+probability convention as the SBayesRC/BayesC CSR helpers, but `updateE = TRUE`
+remains disabled until real-data native diagnostics validate the residual
+scale.
+
 Other existing CSR mixture code is SBayesRC-style:
 
 - `stblr_cpg_omp_csr_sbayesrc()` models marker-specific mixture probabilities

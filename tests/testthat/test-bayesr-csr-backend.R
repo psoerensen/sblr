@@ -268,6 +268,12 @@ test_that("experimental exact CSR BayesR updateE modes are constrained", {
     updateE = FALSE
   )
   expect_bayesr_csr_conventions(fit_noE)
+  expect_equal(sum(fit_noE$input$pi[-1L]), 0.001, tolerance = 1e-12)
+  expect_equal(
+    unname(fit_noE$input$alpha / sum(fit_noE$input$alpha)),
+    unname(fit_noE$input$pi),
+    tolerance = 1e-12
+  )
 
   expect_error(
     .stblr_csr_bayesr_experimental(
