@@ -1,3 +1,21 @@
+source_sblr_test_file <- function(path) {
+  candidates <- c(path, file.path("..", "..", path))
+  path <- candidates[file.exists(candidates)][1L]
+  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
+  source(path)
+}
+
+if (!exists(".format_stblr_bayesr_fit", mode = "function")) {
+  source_sblr_test_file("R/sparse_ld_bed_helper.R")
+}
+if (!exists("check_stblr_backend_consistency", mode = "function")) {
+  source_sblr_test_file("R/check-stblr-backend-consistency.R")
+}
+if (!exists("extract_stblr_finemap_loci", mode = "function")) {
+  source_sblr_test_file("R/credible_sets.R")
+  source_sblr_test_file("R/extract-stblr-finemap-loci.R")
+}
+
 make_bayesr_bed_raw <- function(bm, comp_prob, component_mean,
                                 bm_chain = NULL, dm_chain = NULL) {
   m <- nrow(comp_prob)
@@ -69,9 +87,21 @@ format_bayesr_bed_test_fit <- function(raw, nchains) {
     n_components = 3L,
     keep_diagnostics = TRUE
   )
-  fit$input <- list(nchains = nchains, backend = "bed_bayesr_scheduled_chains")
+  fit$input <- list(
+    model = "bayesr",
+    backend = "bed_scheduled_chains_bayesr",
+    scheduled = TRUE,
+    keep_chains = FALSE,
+    nchains = nchains
+  )
   fit
 }
+
+test_that("BED BayesR experimental helper remains internal", {
+  expect_true(exists(".stblr_bed_marker_bayesr_experimental", mode = "function"))
+  helper_args <- names(formals(.stblr_bed_marker_bayesr_experimental))
+  expect_true(all(c("mixture_var", "pi", "alpha", "nchains") %in% helper_args))
+})
 
 test_that("BED BayesR formatter exposes non-null PIP as standard dm", {
   comp_prob <- matrix(
@@ -94,8 +124,12 @@ test_that("BED BayesR formatter exposes non-null PIP as standard dm", {
   expect_equal(as.numeric(fit$dm[, "D1"]), 1 - comp_prob[, 1], tolerance = 1e-12)
   expect_true(all(fit$dm >= -1e-12 & fit$dm <= 1 + 1e-12))
   expect_named(fit$comp_prob, "D1")
+  # comp_prob is marker x component; component_0 is the null component.
+  expect_identical(rownames(fit$comp_prob$D1), paste0("m", 1:3))
+  expect_identical(colnames(fit$comp_prob$D1), paste0("component_", 0:2))
   expect_equal(unname(fit$comp_prob$D1), comp_prob, tolerance = 1e-12)
   expect_equal(unname(rowSums(fit$comp_prob$D1)), rep(1, 3), tolerance = 1e-12)
+  expect_true(all(fit$comp_prob$D1 >= -1e-12 & fit$comp_prob$D1 <= 1 + 1e-12))
   expect_equal(unname(fit$dm_component_mean[, "D1"]), c(0.4, 1.5, 0.8))
 })
 

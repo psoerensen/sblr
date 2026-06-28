@@ -185,6 +185,28 @@ Current return layout is 30 slots:
 In R's one-based indexing, BayesR `pip_k` is `fit[[23]]`, chain summaries are
 `fit[[24:29]]`, and posterior mean component index is `fit[[30]]`.
 
+## Current R-side Status
+
+The BED BayesR path remains experimental and lower-level. No public wrapper
+routes user fits to `stblr_cpg_omp_bed_marker_scheduled_chains_bayesr()` yet.
+The stable R-side path for tests and future wrappers is internal:
+
+- `.format_stblr_bayesr_fit()` formats the raw Rcpp return.
+- `.stblr_bed_marker_bayesr_experimental()` is an internal helper that calls
+  the Rcpp backend, formats the result, and records minimal BayesR metadata.
+- No new public API has been added for BED BayesR.
+
+The formatted BayesR fit convention is:
+
+- `dm`: standard non-null PIP, `P(component > 0)`.
+- `bm`: posterior mean marker effect.
+- `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, `bm_max`: standard
+  chain-summary matrices with the same dimensions and dimnames as `dm`/`bm`.
+- `comp_prob`: named list by trait; each element is a marker-by-component
+  matrix. `component_0` is the null component, so `dm = 1 - component_0`.
+- `dm_component_mean`: posterior mean component index, preserving the old
+  BayesR-specific quantity separately from standard `dm`.
+
 ## Required Output Convention
 
 For all BayesR ST-BLR fits, the standard fields should be:

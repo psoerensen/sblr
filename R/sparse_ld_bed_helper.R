@@ -391,6 +391,162 @@ NULL
  out
 }
 
+.stblr_bed_marker_bayesr_experimental <- function(
+  bed_files,
+  n,
+  cls,
+  y,
+  b_init,
+  sets,
+  rows = NULL,
+  af = NULL,
+  scale = TRUE,
+  B,
+  E,
+  ssb_prior,
+  sse_prior,
+  pi,
+  mixture_var,
+  alpha,
+  nub = 4,
+  nue = 4,
+  updateB = TRUE,
+  updateE = TRUE,
+  updatePi = TRUE,
+  adjE = 0,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  rebuild_every = 25,
+  full_sweep_every = 10,
+  null_skip_base = 50,
+  null_skip_max = 200,
+  candidate_threshold = 1e-3,
+  candidate_lifetime = 20,
+  skip_nulls_burnin_only = FALSE,
+  return_wy = FALSE,
+  return_r = FALSE,
+  read_block_size = 64,
+  progress_every = 0,
+  nchains = 1,
+  ncores = 1,
+  seed = 10,
+  trait_names = NULL,
+  variable_names = NULL,
+  keep_diagnostics = TRUE
+) {
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.numeric(ncores) || length(ncores) != 1L ||
+     !is.finite(ncores) || ncores < 1 || ncores != floor(ncores)) {
+  stop("ncores must be a positive integer scalar.")
+ }
+ ncores <- as.integer(ncores)
+ if (!is.numeric(mixture_var) || length(mixture_var) < 2L ||
+     any(!is.finite(mixture_var))) {
+  stop("mixture_var must be a finite numeric vector with at least two components.")
+ }
+ if (mixture_var[1L] != 0) stop("mixture_var[1] must be 0 for the null component.")
+ if (any(mixture_var[-1L] <= 0)) {
+  stop("Non-null mixture_var values must be positive.")
+ }
+ if (!is.numeric(pi) || length(pi) != length(mixture_var) ||
+     any(!is.finite(pi)) || any(pi < 0) || sum(pi) <= 0) {
+  stop("pi must be a non-negative finite vector matching mixture_var with positive sum.")
+ }
+ if (!is.numeric(alpha) || length(alpha) != length(mixture_var) ||
+     any(!is.finite(alpha)) || any(alpha <= 0)) {
+  stop("alpha must be a positive finite vector matching mixture_var.")
+ }
+
+ y_mat <- as.matrix(y)
+ nt <- ncol(y_mat)
+ m <- length(unlist(cls, use.names = FALSE))
+ if (is.null(trait_names)) {
+  trait_names <- colnames(y_mat)
+  if (is.null(trait_names)) trait_names <- paste0("D", seq_len(nt))
+ }
+ if (is.null(variable_names)) variable_names <- paste0("m", seq_len(m))
+ if (length(trait_names) != nt) stop("trait_names must have length ncol(y).")
+ if (length(variable_names) != m) {
+  stop("variable_names must match the number of markers implied by cls.")
+ }
+
+ raw <- stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
+  bed_files = bed_files,
+  n = as.integer(n),
+  cls = cls,
+  y = y_mat,
+  b_init = b_init,
+  sets = as.integer(sets),
+  rows = rows,
+  af = af,
+  scale = scale,
+  B = B,
+  E = E,
+  ssb_prior = ssb_prior,
+  sse_prior = sse_prior,
+  pi = as.numeric(pi),
+  c = as.numeric(mixture_var),
+  alpha = as.numeric(alpha),
+  nub = nub,
+  nue = nue,
+  updateB = updateB,
+  updateE = updateE,
+  updatePi = updatePi,
+  adjE = adjE,
+  nit = as.integer(nit),
+  nburn = as.integer(nburn),
+  nthin = as.integer(nthin),
+  rebuild_every = as.integer(rebuild_every),
+  full_sweep_every = as.integer(full_sweep_every),
+  null_skip_base = as.integer(null_skip_base),
+  null_skip_max = as.integer(null_skip_max),
+  candidate_threshold = candidate_threshold,
+  candidate_lifetime = as.integer(candidate_lifetime),
+  skip_nulls_burnin_only = skip_nulls_burnin_only,
+  return_wy = return_wy,
+  return_r = return_r,
+  read_block_size = as.integer(read_block_size),
+  progress_every = as.integer(progress_every),
+  nchains = nchains,
+  ncores = ncores,
+  seed = as.integer(seed)
+ )
+
+ fit <- .format_stblr_bayesr_fit(
+  raw,
+  nt = nt,
+  m = m,
+  trait_names = trait_names,
+  variable_names = variable_names,
+  n_components = length(mixture_var),
+  keep_diagnostics = keep_diagnostics
+ )
+ fit$input <- list(
+  model = "bayesr",
+  backend = "bed_scheduled_chains_bayesr",
+  scheduled = TRUE,
+  keep_chains = FALSE,
+  nchains = nchains,
+  ncores = ncores,
+  seed = as.integer(seed),
+  n = as.integer(n),
+  m = m,
+  nt = nt,
+  mixture_var = as.numeric(mixture_var),
+  pi = as.numeric(pi),
+  alpha = as.numeric(alpha),
+  nit = as.integer(nit),
+  nburn = as.integer(nburn),
+  nthin = as.integer(nthin)
+ )
+ fit
+}
+
 .resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
