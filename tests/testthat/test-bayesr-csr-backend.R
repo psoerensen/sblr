@@ -182,9 +182,28 @@ test_that("public CSR BayesR API exists and rejects unsupported modes early", {
     stblr_csr_bayesr(stats = list(), scheduled = TRUE),
     "scheduled CSR BayesR"
   )
+})
+
+test_that("CSR BayesR LD-swap arguments are validated", {
   expect_error(
-    stblr_csr_bayesr(stats = list(), updateLDswap = TRUE),
-    "LD-swap/MH"
+    stblr_csr_bayesr(stats = list(), updateLDswap = NA),
+    "updateLDswap"
+  )
+  expect_error(
+    stblr_csr_bayesr(stats = list(), ld_swap_prob = 2),
+    "ld_swap_prob"
+  )
+  expect_error(
+    stblr_csr_bayesr(stats = list(), ld_swap_r2 = -0.1),
+    "ld_swap_r2"
+  )
+  expect_error(
+    stblr_csr_bayesr(stats = list(), ld_swap_max_friends = 0),
+    "ld_swap_max_friends"
+  )
+  expect_error(
+    stblr_csr_bayesr(stats = list(), ld_swap_moves = -1),
+    "ld_swap_moves"
   )
 })
 
@@ -196,6 +215,40 @@ write_empty_csr_ld_fixture <- function(prefix, m) {
   writeBin(rep(as.raw(0), 8L * (m + 1L)), paste0(prefix, ".row_ptr.u64.bin"))
   file.create(paste0(prefix, ".col_idx.u32.0based.bin"))
   file.create(paste0(prefix, ".values.f32.bin"))
+}
+
+write_high_ld_csr_ld_fixture <- function(prefix, m = 4L) {
+  row_ptr <- c(0, 1, 1, 1, 1)
+  col_idx <- 1L
+  values <- 0.95
+
+  sblr:::.stblr_write_uint64_file(paste0(prefix, ".row_ptr.u64.bin"), row_ptr)
+  sblr:::.stblr_write_uint32_file(paste0(prefix, ".col_idx.u32.0based.bin"), col_idx)
+  writeBin(as.numeric(values), paste0(prefix, ".values.f32.bin"),
+           size = 4, endian = "little")
+
+  writeLines(
+    c(
+      "format=sparse_ld_csr",
+      "storage=streamed_upper_triangle",
+      "n_bed=NA",
+      "n_used=NA",
+      "n_samples_used=NA",
+      paste0("n_variants=", m),
+      "nnz=1",
+      "triangle=upper",
+      "diagonal=implicit_1",
+      paste0("row_ptr_file=", prefix, ".row_ptr.u64.bin"),
+      paste0("col_idx_file=", prefix, ".col_idx.u32.0based.bin"),
+      paste0("values_file=", prefix, ".values.f32.bin"),
+      "row_ptr_type=uint64",
+      "col_idx_type=uint32",
+      "values_type=float32",
+      "index_base=0",
+      "value=r"
+    ),
+    paste0(prefix, ".meta.txt")
+  )
 }
 
 make_small_bayesr_csr_stats <- function() {
@@ -268,6 +321,23 @@ expect_bayesr_csr_chain_aggregation <- function(fit) {
       ) %in% names(ch)))
     }
   }
+}
+
+expect_bayesr_ld_swap_diagnostics <- function(fit, require_chains = FALSE) {
+  chk <- check_stblr_backend_consistency(
+    fit,
+    require_chain_summaries = TRUE,
+    require_chains = require_chains,
+    require_ld_swap = TRUE,
+    verbose = FALSE
+  )
+  expect_true(chk$ok)
+  expect_true("ld_swap" %in% names(fit))
+  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in% names(fit$ld_swap)))
+  expect_true(all(fit$ld_swap$attempted >= fit$ld_swap$accepted))
+  expect_true(all(fit$ld_swap$accepted >= 0))
+  expect_true(all(fit$ld_swap$acceptance_rate >= 0))
+  expect_true(all(fit$ld_swap$acceptance_rate <= 1))
 }
 
 test_that("CSR BayesR formatter preserves compact per-chain component summaries", {
@@ -345,6 +415,10 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
     updateE = FALSE
   )
   expect_bayesr_csr_conventions(fit_noE)
+  expect_true("ld_swap" %in% names(fit_noE))
+  expect_equal(fit_noE$ld_swap$attempted, 0)
+  expect_equal(fit_noE$ld_swap$accepted, 0)
+  expect_equal(fit_noE$ld_swap$acceptance_rate, 0)
   expect_equal(sum(fit_noE$input$pi[-1L]), 0.001, tolerance = 1e-12)
   expect_equal(
     unname(fit_noE$input$alpha / sum(fit_noE$input$alpha)),
@@ -470,4 +544,81 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
     updateE = FALSE
   )
   expect_bayesr_csr_conventions(fit_alias)
+})
+
+test_that("CSR BayesR LD-swap runs and returns diagnostics", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native CSR BayesR symbol is not loaded"
+  )
+
+  fixture <- make_small_bayesr_csr_stats()
+  write_high_ld_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+
+  fit <- stblr_csr_bayesr(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    pi = c(0.5, 0.5, 0, 0),
+    alpha = c(10, 10, 1, 1),
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 1,
+    seed = 30,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    updateLDswap = TRUE,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.8,
+    ld_swap_max_friends = 2,
+    ld_swap_moves = 2
+  )
+
+  expect_bayesr_csr_conventions(fit)
+  expect_bayesr_ld_swap_diagnostics(fit)
+  expect_true(isTRUE(fit$input$updateLDswap))
+  expect_equal(fit$input$ld_swap_moves, 2L)
+})
+
+test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native CSR BayesR symbol is not loaded"
+  )
+
+  fixture <- make_small_bayesr_csr_stats()
+  write_high_ld_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+
+  fit <- stblr_csr_bayesr(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    pi = c(0.5, 0.5, 0, 0),
+    alpha = c(10, 10, 1, 1),
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 2,
+    keep_chains = TRUE,
+    seed = 31,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    updateLDswap = TRUE,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.8,
+    ld_swap_max_friends = 2,
+    ld_swap_moves = 2
+  )
+
+  expect_bayesr_csr_conventions(fit)
+  expect_bayesr_csr_chain_aggregation(fit)
+  expect_bayesr_ld_swap_diagnostics(fit, require_chains = TRUE)
+  expect_true("ld_swap_chains" %in% names(fit))
+  expect_equal(sum(fit$ld_swap_chains$T1$attempted), fit$ld_swap$attempted)
+  expect_true(all(vapply(fit$chains$T1, function(ch) "ld_swap" %in% names(ch), logical(1))))
 })

@@ -23,16 +23,17 @@ accumulation. The BED BayesR backend defines the BayesR output contract:
 standard `dm = P(component > 0)`, marker-by-component `comp_prob`, and
 `dm_component_mean` for posterior mean component index.
 
-The supported public R interface is `stblr_csr_bayesr()`. BayesR swap moves
-still need a separate Metropolis-Hastings design because the state includes
-both marker effect and mixture component, so LD-swap remains unsupported.
-Scheduled CSR BayesR also remains future work.
+The supported public R interface is `stblr_csr_bayesr()`. Exact CSR BayesR now
+supports optional active/null LD-swap/MH moves that relocate the full
+`(component, b)` state from an active marker to a null LD friend. Scheduled CSR
+BayesR remains future work.
 
-The BayesR LD-swap/MH design is now recorded separately in
-`docs/dev/stblr_bayesr_ldswap_design.md`. That design recommends a first
-implementation that relocates the full BayesR `(component, b)` state from an
-active marker to a null LD friend, with the BayesC likelihood/proposal-ratio
-machinery reused only after accounting for BayesR component priors.
+The BayesR LD-swap/MH design is recorded separately in
+`docs/dev/stblr_bayesr_ldswap_design.md`. The implemented first scope relocates
+the full BayesR `(component, b)` state from an active marker to a null LD
+friend, with the BayesC likelihood/proposal-ratio machinery reused only after
+accounting for BayesR component priors. Active/active swaps and
+marker-specific or annotation-specific swap prior terms are not implemented.
 
 ## Implementation Status
 
@@ -48,8 +49,9 @@ Implemented in this pass:
 The backend supports exact CSR updates, `nchains`, `chain_seeds`,
 `keep_chains = TRUE`, standard `bm`/`dm` summaries, component probabilities,
 posterior mean component index, variance traces, mixture-weight summaries, and
-strict `updateE = TRUE` diagnostics. It does not implement scheduled CSR
-BayesR or LD-swap/MH.
+strict `updateE = TRUE` diagnostics. It also supports optional active/null
+LD-swap/MH diagnostics. It does not implement scheduled CSR BayesR or
+active/active BayesR LD-swap.
 
 ## Code Inventory
 
@@ -266,12 +268,16 @@ stblr_cpg_omp_csr_bayesr(
   std::vector<int> chain_seeds,
   int updateE_start = 0,
   int updateE_every = 1,
-  bool updateLDswap = false
+  bool updateLDswap = false,
+  double ld_swap_prob = 0.05,
+  double ld_swap_r2 = 0.8,
+  int ld_swap_max_friends = 50,
+  int ld_swap_moves = 1
 )
 ```
 
-`updateLDswap` should be accepted only if useful for wrapper symmetry, but the
-first implementation should reject `TRUE` with a clear error.
+`updateLDswap` enables active/null full-state BayesR LD-swap. The tuning
+arguments follow exact CSR BayesC conventions.
 
 ### Argument Validation
 
@@ -292,8 +298,9 @@ Validate:
 - `chain_seeds` is empty or length `nchains`;
 - `updateE_start >= 0`;
 - `updateE_every >= 1`;
-- `keep_chains = TRUE` is rejected in the first exact CSR BayesR backend;
-- `updateLDswap = TRUE` is rejected.
+- `ld_swap_prob` and `ld_swap_r2` are in `[0, 1]`;
+- `ld_swap_max_friends` is positive;
+- `ld_swap_moves` is non-negative.
 
 ### Marker Update
 
@@ -418,27 +425,20 @@ For each trait and marker:
 - `pi` and `pim` = arithmetic means across chains;
 - traces can follow BayesC CSR convention by averaging chain traces.
 
-## LD-Swap Decision
+## LD-Swap Scope
 
-LD-swap should be deferred for the first exact CSR BayesR backend.
+Exact CSR BayesR supports active/null LD-swap. The move relocates the full
+BayesR state `(component, b)` from an active marker to a null LD friend, updates
+`r = X'y - X'Xb`, and accepts/rejects with the same likelihood/proposal-ratio
+structure used by exact CSR BayesC. Under the current plain CSR BayesR model,
+global `pi` and global `mixture_var` make component/effect prior terms cancel
+for this full-state relocation.
 
-Reasons:
+Not implemented:
 
-- BayesR state is `(effect, component)`, not only `(effect, included)`.
-- Swapping only included status/effect is not a full state exchange.
-- Swapping effect and component together changes component prior and variance
-  terms.
-- A correct Metropolis-Hastings ratio must account for proposal probabilities,
-  component probabilities, variance multipliers, and any future marker-specific
-  priors.
-- Plain exact BayesR CSR can be validated against SBayesRC/BED conventions
-  faster without this method change.
-
-Initial behavior should be:
-
-```text
-if (updateLDswap) stop("BayesR CSR LD-swap is not yet supported.")
-```
+- active/active BayesR swaps;
+- scheduled CSR BayesR swaps;
+- marker-specific or annotation-specific swap prior terms.
 
 ## Residual Variance Update and Prior Scaling
 
@@ -580,8 +580,8 @@ The internal helper should:
   `nchains`, `keep_chains`, `chain_seeds`, and MCMC controls;
 - create `b_init`, `comp_init`, prior matrices, and marker/trait names using
   the same conventions as `stblr_csr()`;
-- reject LD-swap arguments;
-- reject `keep_chains = TRUE` in the first implementation;
+- accept BayesR active/null LD-swap arguments and pass them to the CSR backend;
+- support `keep_chains = TRUE` summaries and chain-level LD-swap diagnostics;
 - call `stblr_cpg_omp_csr_bayesr()`;
 - call a BayesR CSR formatter;
 - set metadata:
@@ -673,7 +673,8 @@ Compatibility tests:
 - `extract_stblr_finemap_loci(..., credible_sets = FALSE)` propagates
   `dm_sd` to `pip_sd`, `dm_min` to `pip_min`, `dm_max` to `pip_max`, and
   `bm_sd`/`bm_min`/`bm_max`;
-- unsupported `updateLDswap = TRUE` errors clearly;
+- `updateLDswap = TRUE` returns trait-level and, when `keep_chains = TRUE`,
+  chain-level LD-swap diagnostics;
 - scheduled mode errors or routes elsewhere until scheduled CSR BayesR exists.
 
 Avoid expensive MCMC. Use small synthetic CSR fixtures and short chains.
@@ -684,7 +685,9 @@ Next work should stay outside the supported exact CSR BayesR surface unless it
 is explicitly scoped.
 
 - Implement scheduled CSR BayesR as a separate backend.
-- Design BayesR LD-swap/MH separately before adding any swap moves.
+- Extend BayesR LD-swap only in separately scoped tasks, such as active/active
+  swaps or marker-specific prior terms.
 - Extend public docs or examples if real-data smoke tests identify missing
   usage guidance.
-- Keep scheduled CSR BayesR and LD-swap as separate future tasks.
+- Keep scheduled CSR BayesR and LD-swap extensions, such as active/active swaps
+  and marker-specific prior terms, as separate future tasks.

@@ -709,9 +709,26 @@ NULL
   out$updateE_diagnostics <- set_updateE_diagnostics(fit$updateE_diagnostics)
  }
 
+ if (!is.null(fit$ld_swap)) {
+  ld_swap <- as.matrix(fit$ld_swap)
+  if (!identical(dim(ld_swap), c(nt, 3L))) {
+   stop("CSR BayesR ld_swap must have dimension nt x 3.")
+  }
+  rownames(ld_swap) <- trait_names
+  colnames(ld_swap) <- c("attempted", "accepted", "acceptance_rate")
+  out$ld_swap <- as.data.frame(ld_swap)
+ }
+
  if (!is.null(fit$chains)) {
   if (!is.list(fit$chains) || length(fit$chains) != nt) {
    stop("CSR BayesR chains must be a list with one entry per trait.")
+  }
+  ld_swap_chain_raw <- fit$ld_swap_chains
+  if (!is.null(ld_swap_chain_raw)) {
+   ld_swap_chain_raw <- as.matrix(ld_swap_chain_raw)
+   if (ncol(ld_swap_chain_raw) != 5L) {
+    stop("CSR BayesR ld_swap_chains must have five columns.")
+   }
   }
   chains <- lapply(seq_len(nt), function(tt) {
    trait_chains <- fit$chains[[tt]]
@@ -747,6 +764,12 @@ NULL
       matrix(as.numeric(ch$updateE_diagnostics), nrow = 1L)
      )
     }
+    if (!is.null(ch$ld_swap)) {
+     chain$ld_swap <- stats::setNames(
+      as.numeric(ch$ld_swap)[1:3],
+      c("attempted", "accepted", "acceptance_rate")
+     )
+    }
     chain
    })
    names(trait_chains) <- paste0("chain", seq_along(trait_chains))
@@ -754,6 +777,20 @@ NULL
   })
   names(chains) <- trait_names
   out$chains <- chains
+  if (!is.null(ld_swap_chain_raw)) {
+   ld_swap_chains <- lapply(seq_len(nt), function(tt) {
+    rows <- which(ld_swap_chain_raw[, 1L] == (tt - 1L))
+    if (!length(rows)) return(NULL)
+    trait_ld <- ld_swap_chain_raw[rows, 3:5, drop = FALSE]
+    rownames(trait_ld) <- paste0("chain", seq_len(nrow(trait_ld)))
+    colnames(trait_ld) <- c("attempted", "accepted", "acceptance_rate")
+    as.data.frame(trait_ld)
+   })
+   names(ld_swap_chains) <- trait_names
+   if (any(vapply(ld_swap_chains, Negate(is.null), logical(1)))) {
+    out$ld_swap_chains <- ld_swap_chains
+   }
+  }
  }
 
  tol <- 1e-8
@@ -778,8 +815,10 @@ NULL
 #'
 #' Exact CSR BayesR supports multiple chains, compact per-chain output with
 #' `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
-#' SSE validation. Scheduled CSR BayesR and BayesR LD-swap/MH moves are not
-#' currently supported by this interface.
+#' SSE validation. Optional BayesR LD-swap/MH moves relocate the full
+#' `(component, b)` state from an active marker to a null LD friend. Active/active
+#' swaps, marker-specific swap priors, and scheduled CSR BayesR are not
+#' implemented.
 #'
 #' @param stats Summary-statistics object with `yy`, `ww`, `wy`, and usually
 #'   `n`/`m`, as used by [stblr_csr()].
@@ -803,13 +842,23 @@ NULL
 #' @param updateE_start Zero-based first iteration where `updateE` is allowed.
 #'   Defaults to 0.
 #' @param updateE_every Positive update interval for `updateE`.
+#' @param updateLDswap Logical; attempt active/null BayesR LD-swap
+#'   Metropolis-Hastings moves. The move relocates `(component, b)` together and
+#'   assumes the current plain CSR BayesR model with global `pi` and
+#'   `mixture_var`.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker for swap proposals.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @param ld_prefix,n,m Optional low-level CSR LD prefix, sample sizes, and
 #'   marker count.
 #' @param nub,nue Prior degrees of freedom.
 #' @param use_comp_init,comp_init,use_r_init,r_init,rebuild_r_before_updateE
 #'   Advanced initialization controls.
-#' @param ... Unsupported options. Passing scheduled CSR or LD-swap controls
-#'   through `...` errors clearly.
+#' @param ... Unsupported options. Passing scheduled CSR controls through `...`
+#'   errors clearly.
 #'
 #' @return A formatted ST-BLR BayesR fit.
 #' @export
@@ -837,6 +886,11 @@ stblr_csr_bayesr <- function(
   updatePi = TRUE,
   updateE_start = NULL,
   updateE_every = 1L,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -852,29 +906,19 @@ stblr_csr_bayesr <- function(
   if (is.null(dot_names)) dot_names <- rep("", length(dots))
   unsupported <- intersect(
    dot_names,
-   c(
-    "scheduled", "updateLDswap", "ld_swap_prob", "ld_swap_r2",
-    "ld_swap_max_friends", "ld_swap_moves"
-   )
+   "scheduled"
   )
   if ("scheduled" %in% unsupported && isTRUE(dots$scheduled)) {
    stop("scheduled CSR BayesR is not supported by stblr_csr_bayesr().")
-  }
-  if ("updateLDswap" %in% unsupported && isTRUE(dots$updateLDswap)) {
-   stop("BayesR CSR LD-swap/MH is not yet supported.")
-  }
-  ld_tuning <- intersect(
-   dot_names,
-   c("ld_swap_prob", "ld_swap_r2", "ld_swap_max_friends", "ld_swap_moves")
-  )
-  if (length(ld_tuning)) {
-   stop("BayesR CSR LD-swap/MH is not yet supported.")
   }
   unknown <- setdiff(dot_names[nzchar(dot_names)], unsupported)
   if (length(unknown)) {
    stop("Unsupported argument(s) in ...: ", paste(unknown, collapse = ", "))
   }
  }
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
   stop("nchains must be a positive integer scalar.")
@@ -1008,7 +1052,11 @@ stblr_csr_bayesr <- function(
   chain_seeds = chain_seeds,
   updateE_start = updateE_start,
   updateE_every = updateE_every,
-  updateLDswap = FALSE
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves)
  )
 
  fit <- .format_stblr_csr_bayesr_fit(
@@ -1025,7 +1073,11 @@ stblr_csr_bayesr <- function(
   scheduled = FALSE,
   nchains = nchains,
   keep_chains = keep_chains,
-  updateLDswap = FALSE,
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves),
   n = as.integer(n),
   m = m,
   nt = nt,
@@ -1073,6 +1125,10 @@ stblr_csr_bayesr <- function(
   chain_seeds = NULL,
   scheduled = FALSE,
   updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   use_comp_init = FALSE,
   comp_init = NULL,
   use_r_init = FALSE,
@@ -1113,7 +1169,11 @@ stblr_csr_bayesr <- function(
   r_init = r_init,
   rebuild_r_before_updateE = rebuild_r_before_updateE,
   scheduled = scheduled,
-  updateLDswap = updateLDswap
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = ld_swap_max_friends,
+  ld_swap_moves = ld_swap_moves
  )
 }
 

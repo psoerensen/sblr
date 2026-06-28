@@ -28,7 +28,7 @@ statement is specific to the current plain CSR BayesR model; marker-specific
 priors or annotation-informed mixture probabilities would add non-cancelling
 prior terms.
 
-Recommended first implementation scope is **Scope B: active/null relocation**
+Implemented first scope is **Scope B: active/null relocation**
 using a full BayesR state move:
 
 ```text
@@ -523,7 +523,12 @@ Recommended helper split for implementation:
 
 ## API Design
 
-Future public arguments for `stblr_csr_bayesr()` should match BayesC:
+Implementation status: active/null exact CSR BayesR LD-swap is implemented for
+`stblr_csr_bayesr()` and `src/st_cpg_omp_csr_bayesr.cpp`. The implementation
+does not add scheduled CSR BayesR, active/active swaps, or marker-specific /
+annotation-specific MH prior terms.
+
+Public arguments for `stblr_csr_bayesr()` match exact CSR BayesC:
 
 ```r
 updateLDswap = FALSE
@@ -542,25 +547,9 @@ Rules:
   or `Glist$sparseLD$prefix`.
 - BayesC behavior and BayesC defaults must not change.
 
-`updateE` can be allowed in principle because the swap conditions on the current
-`vei`, updates `r` exactly, and the BayesR backend already rebuilds `r` before
-`sampleE_ST_csr()`. For the first implementation pass, the safer scope is to
-support and test:
-
-```r
-updateLDswap = TRUE, updateE = FALSE
-```
-
-first. If `updateE = TRUE` is accepted in the same pass, it should require an
-explicit tiny-fixture test with strict `updateE_diagnostics` and should rebuild
-`r` before `updateE` exactly as the current backend does. If that validation is
-not included, reject:
-
-```r
-updateLDswap = TRUE, updateE = TRUE
-```
-
-with a clear message until a follow-up test covers the combination.
+`updateE` is allowed with LD-swap. The swap conditions on the current adjusted
+residual variance `vei`, updates `r` exactly, and the BayesR backend already
+rebuilds `r` before `sampleE_ST_csr()`.
 
 ## Diagnostics Design
 
@@ -604,7 +593,7 @@ the existing `chains` list. It does not need to mimic BayesC positional slot 22.
 
 ## Testing Plan
 
-Future implementation tests should be written before enabling the API.
+Implementation tests cover the enabled API.
 
 1. API validation:
    - invalid `updateLDswap`
@@ -612,13 +601,11 @@ Future implementation tests should be written before enabling the API.
    - invalid `ld_swap_r2`
    - invalid `ld_swap_max_friends`
    - invalid `ld_swap_moves`
-   - unsupported `scheduled = TRUE, updateLDswap = TRUE`
-   - unsupported `updateLDswap = TRUE, updateE = TRUE` if first implementation
-     does not test that combination
+   - unsupported `scheduled = TRUE`
 
 2. Tiny CSR fixture:
    - `updateLDswap = FALSE` still works
-   - `updateLDswap = TRUE` works with `updateE = FALSE`
+   - `updateLDswap = TRUE` works
    - `fit$ld_swap` is present
    - `attempted >= accepted >= 0`
    - `acceptance_rate` is in `[0, 1]`
@@ -648,15 +635,14 @@ Future implementation tests should be written before enabling the API.
 
 7. Regression:
    - existing BayesC LD-swap tests remain unchanged and pass
-   - existing BayesR CSR backend tests remain unchanged and pass with
-     `updateLDswap = FALSE`
+   - existing BayesR CSR backend tests pass with `updateLDswap = FALSE`
 
 Avoid expensive MCMC. Use the existing tiny CSR fixtures as the template.
 
-## Recommended Implementation Scope
+## Implemented Scope
 
-Recommended first scope is **Scope B: active/null relocation only**, implemented
-as a full BayesR state move:
+The implemented scope is **Scope B: active/null relocation only**, as a full
+BayesR state move:
 
 ```text
 (component, b) moves from an active marker to a null LD friend
@@ -675,7 +661,7 @@ with the explicit implementation invariant that prior terms cancel only because
 the full component/effect pair is moved and current plain CSR BayesR has global
 `pi` and global `mixture_var`.
 
-Scope A, full active/active state swaps, can follow after Scope B. It is not
+Scope A, full active/active state swaps, can follow later. It is not
 much harder algebraically under global priors, but it changes proposal topology
 and requires more careful testing of reverse candidates. Scope C is unnecessary
 unless the implementation pass needs exploratory diagnostics. Scope D is not
@@ -703,6 +689,5 @@ Implement BayesR CSR LD-swap active/null relocation only.
 - Add focused tests for API validation, tiny CSR execution, multi-chain
   aggregation, chain diagnostics, BayesR component conventions, and BayesC
   regression.
-- Initially support `updateLDswap = TRUE, updateE = FALSE`; only allow
-  `updateE = TRUE` in the same pass if a dedicated strict diagnostic test is
-  included.
+- Keep `updateE = TRUE` compatible by rebuilding `r` before residual-variance
+  updates as the exact CSR BayesR backend already does.
