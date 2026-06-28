@@ -2,8 +2,8 @@
 
 ## Executive Summary
 
-Plain summary-statistics CSR BayesR does not exist in the package today. The
-recommended implementation is a new exact, non-scheduled backend:
+Plain summary-statistics CSR BayesR now has a first experimental exact,
+non-scheduled backend:
 
 ```text
 src/st_cpg_omp_csr_bayesr.cpp
@@ -15,17 +15,34 @@ exporting:
 stblr_cpg_omp_csr_bayesr(...)
 ```
 
-The implementation should use `src/st_cpg_omp_csr.cpp` as the primary template
-for exact CSR likelihood updates, residual handling, chains, seed handling,
-`keep_chains`, and standard output layout. Existing SBayesRC-style CSR files
-should be used only as references for categorical mixture math and component
-probability accumulation. The BED BayesR backend should define the BayesR output
-contract: standard `dm = P(component > 0)`, marker-by-component `comp_prob`, and
+The implementation uses `src/st_cpg_omp_csr.cpp` as the primary template for
+exact CSR likelihood updates, residual handling, chains, seed handling, and
+standard output aggregation. Existing SBayesRC-style CSR files were used only
+as references for categorical mixture math and component probability
+accumulation. The BED BayesR backend defines the BayesR output contract:
+standard `dm = P(component > 0)`, marker-by-component `comp_prob`, and
 `dm_component_mean` for posterior mean component index.
 
-Do not include LD-swap in the first CSR BayesR version. BayesR swap moves need a
-separate Metropolis-Hastings design because the state includes both marker
-effect and mixture component.
+The first implementation deliberately rejects LD-swap and `keep_chains = TRUE`.
+BayesR swap moves need a separate Metropolis-Hastings design because the state
+includes both marker effect and mixture component. Compact chain output can be
+added later without changing sampler math.
+
+## Implementation Status
+
+Implemented in this pass:
+
+- `src/st_cpg_omp_csr_bayesr.cpp`
+- Rcpp export `stblr_cpg_omp_csr_bayesr(...)`
+- internal formatter `.format_stblr_csr_bayesr_fit()`
+- internal helper `.stblr_csr_bayesr_experimental()`
+- formatter-level tests in `tests/testthat/test-bayesr-csr-backend.R`
+
+The backend is internal and experimental. It supports exact CSR updates,
+`nchains`, `chain_seeds`, standard `bm`/`dm` summaries, component probabilities,
+posterior mean component index, variance traces, and mixture-weight summaries.
+It does not implement scheduled CSR BayesR, LD-swap, or compact per-chain
+return objects.
 
 ## Code Inventory
 
@@ -189,17 +206,17 @@ P(z_it > 0)
 
 ### File and Export
 
-Recommended file:
+Implemented file:
 
 ```text
 src/st_cpg_omp_csr_bayesr.cpp
 ```
 
-Recommended export:
+Implemented export:
 
 ```cpp
 // [[Rcpp::export]]
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_bayesr(...)
+Rcpp::List stblr_cpg_omp_csr_bayesr(...)
 ```
 
 ### Rcpp Signature
@@ -264,7 +281,7 @@ Validate:
 - component states are integers in `0..K-1`;
 - `nchains >= 1`;
 - `chain_seeds` is empty or length `nchains`;
-- `keep_chains` is supported from the start for exact CSR BayesR;
+- `keep_chains = TRUE` is rejected in the first exact CSR BayesR backend;
 - `updateLDswap = TRUE` is rejected.
 
 ### Marker Update
@@ -327,50 +344,43 @@ OpenMP should run over `nt * nchains` tasks with
 
 ### Output Layout
 
-Use the standard BayesC CSR base layout where possible, but do not reuse slot 22
-for LD-swap diagnostics because LD-swap is unsupported initially. A safe
-BayesR-specific layout is:
+The implemented backend returns a named `Rcpp::List` instead of extending the
+BayesC positional slot protocol. This keeps the experimental BayesR path
+separate from BayesC formatting and avoids collisions with LD-swap diagnostics.
 
-- `0`: `bm`
-- `1`: `dm`, standard `P(component > 0)`
-- `2`: `wy`
-- `3`: `r`
-- `4`: `b`
-- `5`: `component`, final zero-based component index as double
-- `6`: marker index
-- `7`: `vbs`
-- `8`: `vgs`
-- `9`: `ves`
-- `10`: `covb`
-- `11`: `covg`
-- `12`: `cove`
-- `13`: `vb`
-- `14`: `vg`
-- `15`: `ve`
-- `16`: `pi`, final mixture weights, length `K` per trait
-- `17`: `pim`, posterior mean mixture weights, length `K` per trait
-- `18`: diagnostics/CPO-compatible slot if retained
-- `19`: marker diagnostics if retained
-- `20`: `vle`
-- `21`: `vld`
-- `22`: `comp_prob`, flattened marker-major `m x K` per trait
-- `23`: `bm_sd`
-- `24`: `bm_min`
-- `25`: `bm_max`
-- `26`: `dm_sd`
-- `27`: `dm_min`
-- `28`: `dm_max`
-- `29`: `dm_component_mean`
-- `30`: `ncomp`, posterior mean component counts, length `K` per trait
+Standard marker fields are marker-by-trait matrices:
 
-If `keep_chains = TRUE`, append compact chain details after these fixed slots:
+- `bm`
+- `dm`, standard `P(component > 0)`
+- `bm_sd`, `bm_min`, `bm_max`
+- `dm_sd`, `dm_min`, `dm_max`
 
-- `31`: chain-level `dm`, chain-major `nchains * m`
-- `32`: chain-level `bm`, chain-major `nchains * m`
-- optionally `33`: chain-level `component_mean`, chain-major `nchains * m`
+BayesR-specific marker fields are:
 
-Do not overload slots `23:28`; these should remain the standard chain summaries
-recognized by `.format_stblr_fit()`.
+- `component`, final zero-based component index, marker by trait
+- `comp_prob`, list by trait; each element is marker by component
+- `dm_component_mean`, posterior mean component index, marker by trait
+
+Variance and mixture summaries are:
+
+- `vbs`, `vgs`, `ves`, `vle`, `vld`, trace by trait
+- `covb`, `covg`, `cove`, `vb`, `vg`, `ve`
+- `pi`, final mixture weights, trait by component
+- `pim`, posterior mean mixture weights, trait by component
+- `ncomp`, posterior mean component counts, trait by component
+- `mixture_var`
+
+Additional state fields are retained for diagnostics and formatter
+compatibility:
+
+- `wy`
+- `r`
+- `b`
+- `marker_index`
+
+`keep_chains = TRUE` is rejected in this first implementation. Compact
+chain-level details can be added later as named fields such as `dm_chains`,
+`bm_chains`, and `component_mean_chains`.
 
 ### Aggregation Rules
 
@@ -429,6 +439,7 @@ The internal helper should:
 - create `b_init`, `comp_init`, prior matrices, and marker/trait names using
   the same conventions as `stblr_csr()`;
 - reject LD-swap arguments;
+- reject `keep_chains = TRUE` in the first implementation;
 - call `stblr_cpg_omp_csr_bayesr()`;
 - call a BayesR CSR formatter;
 - set metadata:
@@ -438,7 +449,7 @@ fit$input$model = "bayesr"
 fit$input$backend = "csr_bayesr"
 fit$input$scheduled = FALSE
 fit$input$nchains = nchains
-fit$input$keep_chains = keep_chains
+fit$input$keep_chains = FALSE
 fit$input$mixture_var = mixture_var
 fit$input$alpha = alpha
 ```
@@ -452,18 +463,17 @@ handle every layout immediately:
 .format_stblr_csr_bayesr_fit(...)
 ```
 
-Recommended behavior:
+Implemented behavior:
 
-1. Call `.format_stblr_fit()` for slots `0:21` and standard chain summaries
-   `23:28`.
-2. Parse raw slot `23` in R one-based indexing only if the C++ layout places
-   `comp_prob` at zero-based slot `22`.
+1. Read named fields from the `Rcpp::List` returned by
+   `stblr_cpg_omp_csr_bayesr()`.
+2. Format standard marker fields and chain summaries as marker-by-trait
+   matrices with marker and trait dimnames.
 3. Format `comp_prob` as a named list by trait, each `m x K` with columns
    `component_0`, `component_1`, ...
 4. Set `fit$dm <- 1 - comp_prob[[trait]][, "component_0"]`.
-5. Parse `dm_component_mean` from the chosen slot.
-6. Parse `ncomp` if returned.
-7. Validate `comp_prob` values are finite, within `[0, 1]`, and row sums are
+5. Expose `dm_component_mean`, `pi`, `pim`, `ncomp`, and `mixture_var`.
+6. Validate `comp_prob` values are finite, within `[0, 1]`, and row sums are
    approximately one.
 
 Longer term, `.format_stblr_bayesr_fit()` and `.format_stblr_csr_bayesr_fit()`
@@ -502,7 +512,7 @@ Tiny CSR fixture tests:
 - `nchains = 1`;
 - `nchains = 2`;
 - `keep_chains = FALSE`;
-- `keep_chains = TRUE` for exact backend;
+- `keep_chains = TRUE` rejects until compact chain output is implemented;
 - finite `bm`, `dm`, variance traces, and mixture weights;
 - `dm_min <= dm <= dm_max`;
 - `bm_min <= bm <= bm_max`;
@@ -526,20 +536,14 @@ Compatibility tests:
 
 Avoid expensive MCMC. Use small synthetic CSR fixtures and short chains.
 
-## Suggested Implementation Prompt
+## Suggested Next Implementation Prompt
 
-Implement a new exact summary-statistics CSR BayesR backend only.
+Stabilize and validate the experimental exact CSR BayesR backend.
 
-- Add `src/st_cpg_omp_csr_bayesr.cpp`.
-- Use `src/st_cpg_omp_csr.cpp` as the implementation template.
-- Adapt BayesR categorical component sampling and `sampleB` scaling from
-  SBayesRC CSR code.
-- Use `st_chain_utils.h` and `st_csr_common.h`.
-- Support `nchains`, `keep_chains`, and `chain_seeds` from the start.
-- Return standard `bm`/`dm` and standard chain summaries.
-- Return BayesR `comp_prob`, `dm_component_mean`, and `ncomp`.
-- Reject LD-swap.
-- Add an internal `.stblr_csr_bayesr_experimental()` helper and a CSR BayesR
-  formatter.
-- Add formatter-level and tiny CSR tests.
-- Do not implement scheduled CSR BayesR or LD-swap in this step.
+- Add a tiny on-disk CSR fixture that can exercise
+  `.stblr_csr_bayesr_experimental()` without expensive MCMC.
+- Test direct native runs with `nchains = 1` and `nchains = 2`.
+- Verify deterministic behavior with explicit `chain_seeds`.
+- Decide whether compact `keep_chains` output is needed before exposing a
+  public wrapper.
+- Keep scheduled CSR BayesR and LD-swap as separate future tasks.

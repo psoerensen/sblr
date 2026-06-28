@@ -547,6 +547,329 @@ NULL
  fit
 }
 
+.format_stblr_csr_bayesr_fit <- function(fit, nt, m, trait_names,
+                                         variable_names, n_components) {
+ if (!is.list(fit) || is.null(names(fit))) {
+  stop(".format_stblr_csr_bayesr_fit() expects a named CSR BayesR return list.")
+ }
+ if (!is.numeric(n_components) || length(n_components) != 1L ||
+     !is.finite(n_components) || n_components < 2L ||
+     n_components != floor(n_components)) {
+  stop("n_components must be a finite integer scalar of at least 2.")
+ }
+ n_components <- as.integer(n_components)
+ component_names <- paste0("component_", seq.int(0L, n_components - 1L))
+
+ set_marker_matrix <- function(x, name) {
+  if (is.null(x)) stop("CSR BayesR return is missing field: ", name)
+  x <- as.matrix(x)
+  if (!identical(dim(x), c(m, nt))) {
+   stop("CSR BayesR field ", name, " must have dimension m x nt.")
+  }
+  rownames(x) <- variable_names
+  colnames(x) <- trait_names
+  x
+ }
+
+ set_trace_matrix <- function(x, name) {
+  if (is.null(x)) return(NULL)
+  x <- as.matrix(x)
+  if (ncol(x) != nt) {
+   stop("CSR BayesR field ", name, " must have nt columns.")
+  }
+  rownames(x) <- paste0("Iter", seq_len(nrow(x)))
+  colnames(x) <- trait_names
+  x
+ }
+
+ set_trait_square <- function(x, name) {
+  if (is.null(x)) return(matrix(NA_real_, nt, nt,
+                               dimnames = list(trait_names, trait_names)))
+  x <- as.matrix(x)
+  if (!identical(dim(x), c(nt, nt))) {
+   stop("CSR BayesR field ", name, " must have dimension nt x nt.")
+  }
+  rownames(x) <- colnames(x) <- trait_names
+  x
+ }
+
+ out <- list(
+  bm = set_marker_matrix(fit$bm, "bm"),
+  dm = set_marker_matrix(fit$dm, "dm"),
+  wy = set_marker_matrix(fit$wy, "wy"),
+  r = set_marker_matrix(fit$r, "r"),
+  b = set_marker_matrix(fit$b, "b"),
+  component = set_marker_matrix(fit$component, "component"),
+  vbs = set_trace_matrix(fit$vbs, "vbs"),
+  vgs = set_trace_matrix(fit$vgs, "vgs"),
+  ves = set_trace_matrix(fit$ves, "ves"),
+  covb = set_trait_square(fit$covb, "covb"),
+  covg = set_trait_square(fit$covg, "covg"),
+  cove = set_trait_square(fit$cove, "cove"),
+  vb = set_trait_square(fit$vb, "vb"),
+  vg = set_trait_square(fit$vg, "vg"),
+  ve = set_trait_square(fit$ve, "ve"),
+  pi = as.matrix(fit$pi),
+  pim = as.matrix(fit$pim),
+  vle = set_trace_matrix(fit$vle, "vle"),
+  vld = set_trace_matrix(fit$vld, "vld"),
+  bm_sd = set_marker_matrix(fit$bm_sd, "bm_sd"),
+  bm_min = set_marker_matrix(fit$bm_min, "bm_min"),
+  bm_max = set_marker_matrix(fit$bm_max, "bm_max"),
+  dm_sd = set_marker_matrix(fit$dm_sd, "dm_sd"),
+  dm_min = set_marker_matrix(fit$dm_min, "dm_min"),
+  dm_max = set_marker_matrix(fit$dm_max, "dm_max"),
+  dm_component_mean = set_marker_matrix(
+   fit$dm_component_mean, "dm_component_mean"
+  )
+ )
+
+ if (!identical(dim(out$pi), c(nt, n_components))) {
+  stop("CSR BayesR field pi must have dimension nt x n_components.")
+ }
+ if (!identical(dim(out$pim), c(nt, n_components))) {
+  stop("CSR BayesR field pim must have dimension nt x n_components.")
+ }
+ rownames(out$pi) <- rownames(out$pim) <- trait_names
+ colnames(out$pi) <- colnames(out$pim) <- component_names
+
+ comp_prob <- fit$comp_prob
+ if (!is.list(comp_prob) || length(comp_prob) != nt) {
+  stop("CSR BayesR comp_prob must be a list with one matrix per trait.")
+ }
+ comp_prob <- lapply(seq_len(nt), function(tt) {
+  x <- as.matrix(comp_prob[[tt]])
+  if (!identical(dim(x), c(m, n_components))) {
+   stop("CSR BayesR comp_prob entries must have dimension m x n_components.")
+  }
+  rownames(x) <- variable_names
+  colnames(x) <- component_names
+  x
+ })
+ names(comp_prob) <- trait_names
+ out$comp_prob <- comp_prob
+
+ dm_from_components <- vapply(
+  comp_prob,
+  function(x) 1 - x[, 1L],
+  numeric(m)
+ )
+ if (nt == 1L) dm_from_components <- matrix(dm_from_components, ncol = 1L)
+ rownames(dm_from_components) <- variable_names
+ colnames(dm_from_components) <- trait_names
+ out$dm <- dm_from_components
+
+ if (!is.null(fit$ncomp)) {
+  ncomp <- as.matrix(fit$ncomp)
+  if (!identical(dim(ncomp), c(nt, n_components))) {
+   stop("CSR BayesR ncomp must have dimension nt x n_components.")
+  }
+  rownames(ncomp) <- trait_names
+  colnames(ncomp) <- component_names
+  out$ncomp <- ncomp
+ }
+ if (!is.null(fit$mixture_var)) {
+  out$mixture_var <- stats::setNames(as.numeric(fit$mixture_var), component_names)
+ }
+
+ tol <- 1e-8
+ valid_prob <- vapply(comp_prob, function(x) {
+  all(is.finite(x)) &&
+   all(x >= -tol & x <= 1 + tol) &&
+   all(abs(rowSums(x) - 1) <= 1e-6)
+ }, logical(1))
+ if (!all(valid_prob)) {
+  stop("CSR BayesR component probabilities must be finite, within [0, 1], and sum to 1 by marker.")
+ }
+
+ out
+}
+
+.stblr_csr_bayesr_experimental <- function(
+  Glist = NULL,
+  stats,
+  ld_prefix = NULL,
+  n = NULL,
+  m = NULL,
+  h2 = 0.3,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  pi = NULL,
+  alpha = NULL,
+  nub = 4,
+  nue = 4,
+  updateB = TRUE,
+  updateE = TRUE,
+  updatePi = TRUE,
+  adjE = 0.9,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 1,
+  seed = 10,
+  nchains = 1L,
+  keep_chains = FALSE,
+  chain_seeds = NULL,
+  scheduled = FALSE,
+  updateLDswap = FALSE,
+  use_comp_init = FALSE,
+  comp_init = NULL,
+  use_r_init = FALSE,
+  r_init = NULL,
+  rebuild_r_before_updateE = FALSE
+) {
+ if (isTRUE(scheduled)) stop("scheduled CSR BayesR is not implemented.")
+ if (isTRUE(updateLDswap)) stop("BayesR CSR LD-swap is not yet supported.")
+ if (isTRUE(keep_chains)) {
+  stop("keep_chains is not yet supported for experimental CSR BayesR.")
+ }
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.numeric(ncores) || length(ncores) != 1L ||
+     !is.finite(ncores) || ncores < 1 || ncores != floor(ncores)) {
+  stop("ncores must be a positive integer scalar.")
+ }
+ ncores <- as.integer(ncores)
+ if (!is.null(chain_seeds)) {
+  if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds))) {
+   stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.")
+  }
+  chain_seeds <- as.integer(chain_seeds)
+ } else {
+  chain_seeds <- integer()
+ }
+ if (!is.numeric(mixture_var) || length(mixture_var) < 2L ||
+     any(!is.finite(mixture_var)) || mixture_var[1L] != 0 ||
+     any(mixture_var[-1L] <= 0)) {
+  stop("mixture_var must start with 0 and have positive non-null components.")
+ }
+ if (is.null(pi)) {
+  active <- 0.05
+  pi <- c(1 - active, rep(active / (length(mixture_var) - 1L),
+                         length(mixture_var) - 1L))
+ }
+ if (is.null(alpha)) alpha <- rep(1, length(mixture_var))
+ if (!is.numeric(pi) || length(pi) != length(mixture_var) ||
+     any(!is.finite(pi)) || any(pi < 0) || sum(pi) <= 0) {
+  stop("pi must be a non-negative finite vector matching mixture_var with positive sum.")
+ }
+ pi <- pi / sum(pi)
+ if (!is.numeric(alpha) || length(alpha) != length(mixture_var) ||
+     any(!is.finite(alpha)) || any(alpha <= 0)) {
+  stop("alpha must be a positive finite vector matching mixture_var.")
+ }
+
+ nt <- length(stats$yy)
+ if (is.null(n)) n <- stats$n
+ if (is.null(n)) stop("n must be supplied or available as stats$n.")
+ if (length(n) == 1L) n <- rep(n, nt)
+ if (is.null(m)) m <- if (!is.null(stats$m)) stats$m else length(stats$ww[[1L]])
+ if (is.null(ld_prefix)) {
+  if (is.null(Glist) || is.null(Glist$sparseLD$prefix)) {
+   stop("Provide ld_prefix or run make_sparseLD() and supply Glist.")
+  }
+  ld_prefix <- Glist$sparseLD$prefix
+ }
+
+ trait_names <- names(stats$yy)
+ if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
+ variable_names <- names(stats$ww[[1L]])
+ if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
+
+ vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
+ pi_active <- sum(pi[-1L])
+ if (!is.finite(pi_active) || pi_active <= 0) {
+  stop("pi must allocate positive probability to non-null components.")
+ }
+ pri <- list(
+  vy = vy,
+  B = diag((vy * h2) / (m * pi_active), nt, nt),
+  E = diag(vy * (1 - h2), nt, nt),
+  ssb_prior = diag(((nub - 2) / nub) * (vy * h2) / (m * pi_active), nt, nt),
+  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ )
+ for (x in c("B", "E", "ssb_prior", "sse_prior")) {
+  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
+ }
+ pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
+ pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
+
+ if (is.null(comp_init)) comp_init <- lapply(seq_len(nt), function(i) rep(0, m))
+ if (is.null(r_init)) r_init <- stats$wy
+
+ raw <- stblr_cpg_omp_csr_bayesr(
+  wy = stats$wy,
+  ww = stats$ww,
+  yy = stats$yy,
+  b_init = lapply(seq_len(nt), function(i) rep(0, m)),
+  comp_init = comp_init,
+  use_comp_init = use_comp_init,
+  r_init = r_init,
+  use_r_init = use_r_init,
+  rebuild_r_before_updateE = rebuild_r_before_updateE,
+  ld_prefix = ld_prefix,
+  B = pri$B,
+  E = pri$E,
+  ssb_prior = pri$ssb_prior_list,
+  sse_prior = pri$sse_prior_list,
+  pi = as.numeric(pi),
+  mixture_var = as.numeric(mixture_var),
+  alpha = as.numeric(alpha),
+  nub = nub,
+  nue = nue,
+  updateB = updateB,
+  updateE = updateE,
+  updatePi = updatePi,
+  adjE = adjE,
+  n = as.integer(n),
+  nit = as.integer(nit),
+  nburn = as.integer(nburn),
+  nthin = as.integer(nthin),
+  ncores = ncores,
+  seed = as.integer(seed),
+  nchains = nchains,
+  keep_chains = FALSE,
+  chain_seeds = chain_seeds,
+  updateLDswap = FALSE
+ )
+
+ fit <- .format_stblr_csr_bayesr_fit(
+  raw,
+  nt = nt,
+  m = m,
+  trait_names = trait_names,
+  variable_names = variable_names,
+  n_components = length(mixture_var)
+ )
+ fit$input <- list(
+  model = "bayesr",
+  backend = "csr_bayesr",
+  scheduled = FALSE,
+  nchains = nchains,
+  keep_chains = FALSE,
+  updateLDswap = FALSE,
+  n = as.integer(n),
+  m = m,
+  nt = nt,
+  h2 = h2,
+  nub = nub,
+  nue = nue,
+  adjE = adjE,
+  nit = as.integer(nit),
+  nburn = as.integer(nburn),
+  nthin = as.integer(nthin),
+  mixture_var = as.numeric(mixture_var),
+  pi = as.numeric(pi),
+  alpha = as.numeric(alpha),
+  chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
+ )
+ fit
+}
+
 .resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)

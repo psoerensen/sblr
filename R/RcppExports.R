@@ -85,6 +85,10 @@ stblr_cpg_omp_csr_annot <- function(wy, ww, yy, b_init, d_init, use_d_init, r_in
     .Call(`_sblr_stblr_cpg_omp_csr_annot`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, pi_min, pi_max, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed)
 }
 
+stblr_cpg_omp_csr_bayesr <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap = FALSE) {
+    .Call(`_sblr_stblr_cpg_omp_csr_bayesr`, wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap)
+}
+
 stblr_cpg_omp_csr_group_annot <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b, group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior, normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed) {
     .Call(`_sblr_stblr_cpg_omp_csr_group_annot`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b, group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior, normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed)
 }

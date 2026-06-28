@@ -552,6 +552,49 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// stblr_cpg_omp_csr_bayesr
+Rcpp::List stblr_cpg_omp_csr_bayesr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, bool updateLDswap);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_bayesr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type comp_init(comp_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_comp_init(use_comp_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type rebuild_r_before_updateE(rebuild_r_before_updateESEXP);
+    Rcpp::traits::input_parameter< std::string >::type ld_prefix(ld_prefixSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type mixture_var(mixture_varSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateLDswap(updateLDswapSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_bayesr(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_csr_group_annot
 std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<int> group_index, int ngroup, std::vector<std::vector<double>> group_pi_init, std::vector<double> pi_group_prior_a, std::vector<double> pi_group_prior_b, std::vector<std::vector<double>> group_vb_multiplier_init, bool updateGroupVb, double nub_group, double ssb_group_prior, bool normalize_group_vb, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed);
 RcppExport SEXP _sblr_stblr_cpg_omp_csr_group_annot(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP group_indexSEXP, SEXP ngroupSEXP, SEXP group_pi_initSEXP, SEXP pi_group_prior_aSEXP, SEXP pi_group_prior_bSEXP, SEXP group_vb_multiplier_initSEXP, SEXP updateGroupVbSEXP, SEXP nub_groupSEXP, SEXP ssb_group_priorSEXP, SEXP normalize_group_vbSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP) {
@@ -1041,6 +1084,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_color_blocks_from_ld", (DL_FUNC) &_sblr_stblr_color_blocks_from_ld, 7},
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 37},
     {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 43},
+    {"_sblr_stblr_cpg_omp_csr_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr, 33},
     {"_sblr_stblr_cpg_omp_csr_group_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_group_annot, 37},
     {"_sblr_stblr_cpg_omp_csr_prior", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_prior, 33},
     {"_sblr_stblr_cpg_omp_csr_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_scheduled, 41},

@@ -17,18 +17,18 @@ mean component index is preserved separately, and standard `bm`/`dm` chain
 summaries are returned. The backend remains lower-level and experimental
 because no public R wrapper currently calls it.
 
-The next backend work should be a plain exact CSR BayesR backend using
+Plain exact CSR BayesR now has a first internal experimental backend using
 `src/st_cpg_omp_csr.cpp` as the architectural template and the SBayesRC CSR code
 only as a source of mixture-update math. Scheduled CSR BayesR should come after
-exact CSR BayesR. LD-swap should be postponed for BayesR until the
-Metropolis-Hastings state exchange is explicitly designed for both effect and
-component assignment.
+the exact CSR BayesR path is validated. LD-swap remains postponed for BayesR
+until the Metropolis-Hastings state exchange is explicitly designed for both
+effect and component assignment.
 
-The detailed exact CSR BayesR design is in
-`docs/dev/stblr_csr_bayesr_design.md`. That design keeps CSR BayesR separate
-from SBayesRC-style annotation models, recommends an internal experimental R
-helper before a public API, and preserves the standard chain-output convention
-used by the harmonized BayesC backends.
+The detailed exact CSR BayesR design and implementation status are in
+`docs/dev/stblr_csr_bayesr_design.md`. That path keeps CSR BayesR separate from
+SBayesRC-style annotation models, uses an internal experimental R helper before
+a public API, and preserves the standard chain-output convention used by the
+harmonized BayesC backends.
 
 ## Current BayesR Backend Inventory
 
@@ -50,7 +50,8 @@ Explicit BayesR/BayesR-like native files:
   - CSR SBayesRC-style annotation-class sampler. The filename appears to have a
     transposed spelling, but it is exported as `stblr_cpg_omp_csr_sbayesrc_annot1`.
 
-There is no plain `src/st_cpg_omp_csr_bayesr.cpp` and no scheduled
+There is now a plain experimental `src/st_cpg_omp_csr_bayesr.cpp`, exported as
+`stblr_cpg_omp_csr_bayesr()`. There is no scheduled
 `src/st_cpg_omp_csr_scheduled_bayesr.cpp` today.
 
 ### R Wrappers
@@ -274,8 +275,19 @@ exposes slot `30` as `dm_component_mean`.
 
 ## Existing CSR BayesR Status
 
-There is no plain summary-stat CSR BayesR backend. Existing CSR mixture code is
-SBayesRC-style:
+There is now a first plain exact summary-stat CSR BayesR backend:
+
+- `src/st_cpg_omp_csr_bayesr.cpp`
+- `stblr_cpg_omp_csr_bayesr(...)`
+- internal formatter `.format_stblr_csr_bayesr_fit()`
+- internal helper `.stblr_csr_bayesr_experimental()`
+
+This path is experimental and internal. It supports exact CSR updates,
+`nchains`, `chain_seeds`, standard chain summaries, `comp_prob`, and
+`dm_component_mean`. It rejects `keep_chains = TRUE` and LD-swap. Scheduled CSR
+BayesR remains future work.
+
+Other existing CSR mixture code is SBayesRC-style:
 
 - `stblr_cpg_omp_csr_sbayesrc()` models marker-specific mixture probabilities
   from overlapping annotations through probit stick-breaking.
@@ -301,26 +313,26 @@ a reusable BayesR kernel source today.
 
 ## Exact CSR BayesR Design
 
-Recommended file name:
+Implemented file name:
 
 ```text
 src/st_cpg_omp_csr_bayesr.cpp
 ```
 
-Recommended C++ export:
+Implemented C++ export:
 
 ```cpp
 stblr_cpg_omp_csr_bayesr(...)
 ```
 
-Recommended R-facing wrapper:
+Internal R-facing helper:
 
 ```r
-stblr_csr_bayesr(...)
+.stblr_csr_bayesr_experimental(...)
 ```
 
-The implementation should start from `src/st_cpg_omp_csr.cpp` for architecture,
-not from the SBayesRC files. Use the SBayesRC files for the BayesR component
+The implementation starts from `src/st_cpg_omp_csr.cpp` for architecture, not
+from the SBayesRC files. It uses the SBayesRC files for the BayesR component
 update and output conventions.
 
 Arguments to reuse from BayesC CSR:
@@ -360,6 +372,7 @@ Standard outputs:
 BayesR-specific outputs:
 
 - `comp_prob`: marker-by-component posterior probability per trait.
+- `dm_component_mean`: posterior mean component index per marker and trait.
 - `ncomp`: posterior mean component counts per trait.
 - optional `component_trace` or `pi_trace` only if the storage cost and format
   are explicitly justified.
@@ -443,11 +456,15 @@ BayesR LD-swap should be postponed until exact non-swap CSR BayesR is validated.
    probabilities.
 2. Focused tests now cover formatted BED BayesR lower-level output, component
    probabilities, backend consistency, and extractor compatibility.
-3. Implement exact CSR BayesR without LD-swap, using regular CSR BayesC as the
-   architecture template and SBayesRC CSR code for mixture math.
-4. Add a public `stblr_csr_bayesr()` wrapper and tests.
-5. Implement scheduled CSR BayesR after exact CSR BayesR is stable.
-6. Design BayesR LD-swap later as a separate statistical-method change.
+3. A first internal exact CSR BayesR backend now exists without LD-swap, using
+   regular CSR BayesC as the architecture template and SBayesRC CSR code for
+   mixture math.
+4. Validate exact CSR BayesR with tiny native CSR fixture tests and explicit
+   `chain_seeds`.
+5. Decide whether compact `keep_chains` output and a public
+   `stblr_csr_bayesr()` wrapper are needed.
+6. Implement scheduled CSR BayesR after exact CSR BayesR is stable.
+7. Design BayesR LD-swap later as a separate statistical-method change.
 
 This corresponds to option E: create small BayesR-specific helpers and keep
 backends separate initially. A broad BayesC/BayesR sampler refactor should wait
