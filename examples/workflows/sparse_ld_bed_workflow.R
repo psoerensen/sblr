@@ -360,6 +360,27 @@ matplot(fit$vle)
 matplot(fit$vgs)
 
 
+fit_br_noE <- sblr:::.stblr_csr_bayesr_experimental(
+  stats = stats,
+  Glist = Glist,
+  h2 = 0.3,
+  adjE = 0.9,
+  nit = 200,
+  nburn = 50,
+  ncores = 2,
+  nchains = 2,
+  seed = 10,
+  updateE = FALSE
+)
+
+check_stblr_backend_consistency(
+  fit_br_noE,
+  require_chain_summaries = TRUE
+)
+
+range(fit_br_noE$dm, na.rm = TRUE)
+head(fit_br_noE$comp_prob[[1]])
+
 
 post <- sblr:::summarise_stblr_posterior(fit)
 

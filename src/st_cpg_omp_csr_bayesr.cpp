@@ -35,6 +35,85 @@ inline double computeLE_bayesr_ST_csr(
  return vle / static_cast<double>(n);
 }
 
+inline double residual_sse_bayesr_ST_csr(
+  int m,
+  const arma::rowvec& b,
+  const arma::rowvec& wy,
+  const arma::rowvec& r,
+  double yy
+) {
+ double b_dot_r_plus_wy = 0.0;
+
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  b_dot_r_plus_wy += b(iu) * (r(iu) + wy(iu));
+ }
+
+ return yy - b_dot_r_plus_wy;
+}
+
+inline void check_residual_scale_bayesr_ST_csr(
+  int m,
+  int trait,
+  int chain,
+  int iter,
+  double nue,
+  double ve,
+  double vb,
+  const arma::vec& mixture_var,
+  const arma::rowvec& b,
+  const arma::rowvec& r,
+  const arma::Row<int>& comp,
+  const arma::rowvec& wy,
+  double sse_prior,
+  double yy,
+  int n,
+  double adjE
+) {
+ const double sse = residual_sse_bayesr_ST_csr(m, b, wy, r, yy);
+ const double scale = sse + nue * sse_prior;
+
+ if (std::isfinite(scale) && scale > 0.0) return;
+
+ int nonzero_comp = 0;
+ for (int i = 0; i < m; ++i) {
+  if (comp(static_cast<arma::uword>(i)) > 0) ++nonzero_comp;
+ }
+
+ const double b_min = b.n_elem > 0 ? b.min() : std::numeric_limits<double>::quiet_NaN();
+ const double b_max = b.n_elem > 0 ? b.max() : std::numeric_limits<double>::quiet_NaN();
+ const double b_sum = b.n_elem > 0 ? arma::accu(b) : std::numeric_limits<double>::quiet_NaN();
+ const double r_min = r.n_elem > 0 ? r.min() : std::numeric_limits<double>::quiet_NaN();
+ const double r_max = r.n_elem > 0 ? r.max() : std::numeric_limits<double>::quiet_NaN();
+ const double mix_min = mixture_var.n_elem > 0 ? mixture_var.min() : std::numeric_limits<double>::quiet_NaN();
+ const double mix_max = mixture_var.n_elem > 0 ? mixture_var.max() : std::numeric_limits<double>::quiet_NaN();
+
+ throw std::runtime_error(
+  "sampleE_ST_csr: invalid residual scale in BayesR CSR. trait=" +
+  std::to_string(trait) +
+  ", chain=" + std::to_string(chain) +
+  ", iter=" + std::to_string(iter) +
+  ", yy=" + std::to_string(yy) +
+  ", n=" + std::to_string(n) +
+  ", adjE=" + std::to_string(adjE) +
+  ", ve=" + std::to_string(ve) +
+  ", vb=" + std::to_string(vb) +
+  ", mixture_var_min=" + std::to_string(mix_min) +
+  ", mixture_var_max=" + std::to_string(mix_max) +
+  ", sse_prior=" + std::to_string(sse_prior) +
+  ", sse=" + std::to_string(sse) +
+  ", residual_scale=" + std::to_string(scale) +
+  ", r_finite=" + std::to_string(r.is_finite() ? 1 : 0) +
+  ", r_min=" + std::to_string(r_min) +
+  ", r_max=" + std::to_string(r_max) +
+  ", nonzero_components=" + std::to_string(nonzero_comp) +
+  ", b_finite=" + std::to_string(b.is_finite() ? 1 : 0) +
+  ", b_min=" + std::to_string(b_min) +
+  ", b_max=" + std::to_string(b_max) +
+  ", b_sum=" + std::to_string(b_sum)
+ );
+}
+
 inline double logsumexp_bayesr(const std::vector<double>& x) {
  double mx = -std::numeric_limits<double>::infinity();
  for (double v : x) mx = std::max(mx, v);
@@ -521,7 +600,25 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     }
 
     if (updateE) {
-     if (rebuild_r_before_updateE) rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+     rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+     check_residual_scale_bayesr_ST_csr(
+      m,
+      t,
+      chain,
+      it,
+      nue,
+      ve_t,
+      vb_t,
+      mixture_var_vec,
+      b_t,
+      r_t,
+      comp_t,
+      wy_t,
+      sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
+      yy_vec(static_cast<arma::uword>(t)),
+      n[t],
+      adjE
+     );
      sampleE_ST_csr(
       m,
       nue,

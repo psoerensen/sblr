@@ -190,3 +190,92 @@ test_that("CSR BayesR experimental helper rejects unsupported modes early", {
     "keep_chains"
   )
 })
+
+write_empty_csr_ld_fixture <- function(prefix, m) {
+  writeLines(c(
+    paste0("n_variants=", m),
+    "nnz=0"
+  ), paste0(prefix, ".meta.txt"))
+  writeBin(rep(as.raw(0), 8L * (m + 1L)), paste0(prefix, ".row_ptr.u64.bin"))
+  file.create(paste0(prefix, ".col_idx.u32.0based.bin"))
+  file.create(paste0(prefix, ".values.f32.bin"))
+}
+
+make_small_bayesr_csr_stats <- function() {
+  m <- 4L
+  nt <- 1L
+  n <- 80L
+  variable_names <- paste0("m", seq_len(m))
+  yy <- stats::setNames(n - 1, "T1")
+  ww <- stats::setNames(rep(n - 1, m), variable_names)
+  wy <- stats::setNames(c(4.0, -3.0, 2.0, 1.0), variable_names)
+
+  list(
+    stats = list(
+      yy = yy,
+      ww = list(T1 = ww),
+      wy = list(T1 = wy),
+      n = n,
+      m = m
+    ),
+    Glist = list(sparseLD = list(prefix = tempfile("bayesr-csr-ld-"))),
+    nt = nt,
+    m = m
+  )
+}
+
+expect_bayesr_csr_conventions <- function(fit) {
+  chk <- check_stblr_backend_consistency(
+    fit,
+    require_chain_summaries = TRUE,
+    verbose = FALSE
+  )
+  expect_true(chk$ok)
+
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(fit$dm >= -1e-12 & fit$dm <= 1 + 1e-12))
+  for (trait in names(fit$comp_prob)) {
+    cp <- fit$comp_prob[[trait]]
+    expect_equal(as.numeric(fit$dm[rownames(cp), trait]), 1 - cp[, 1L], tolerance = 1e-12)
+    expect_equal(unname(rowSums(cp)), rep(1, nrow(cp)), tolerance = 1e-12)
+    expect_true(all(cp >= -1e-12 & cp <= 1 + 1e-12))
+  }
+}
+
+test_that("experimental exact CSR BayesR updateE modes run on a small native fixture", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native CSR BayesR symbol is not loaded"
+  )
+
+  fixture <- make_small_bayesr_csr_stats()
+  write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+
+  fit_noE <- .stblr_csr_bayesr_experimental(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 1,
+    seed = 10,
+    updateE = FALSE
+  )
+  expect_bayesr_csr_conventions(fit_noE)
+
+  fit_E <- .stblr_csr_bayesr_experimental(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 2,
+    seed = 10,
+    updateE = TRUE
+  )
+  expect_bayesr_csr_conventions(fit_E)
+})
