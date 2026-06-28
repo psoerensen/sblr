@@ -73,7 +73,7 @@ test_that("BED marker subset rows and IDs are unambiguous", {
 
   expect_error(
     make_bed_marker_test_data(Glist, y_sub),
-    "neither rows nor rownames\\(y\\) were supplied"
+    "nrow\\(y\\) != Glist\\$n, but rownames\\(y\\) are missing"
   )
 
   expect_error(
@@ -96,10 +96,12 @@ test_that("BED marker subset rows and IDs are unambiguous", {
 
   Glist <- make_bed_marker_test_glist()
   rownames(y_sub) <- c("id1", "id2", "missing")
-  expect_error(
-    make_bed_marker_test_data(Glist, y_sub),
-    "Some rownames\\(y\\) were not found"
+  expect_warning(
+    missing <- make_bed_marker_test_data(Glist, y_sub),
+    "phenotype IDs were not found in Glist\\$ids and will be dropped"
   )
+  expect_identical(missing$rows, c(1L, 2L))
+  expect_equal(missing$n_used, 2L)
 })
 
 test_that("BED marker fits report total and selected sample counts", {

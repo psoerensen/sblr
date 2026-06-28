@@ -285,8 +285,8 @@ test_that("CSR sampler can keep compact per-chain summaries", {
   expect_length(fit$chains$trait1, 2)
   dm_chain <- vapply(fit$chains$trait1, function(x) x$dm, numeric(3))
   bm_chain <- vapply(fit$chains$trait1, function(x) x$bm, numeric(3))
-  expect_equal(as.numeric(fit$dm[, "trait1"]), rowMeans(dm_chain), tolerance = 1e-12)
-  expect_equal(as.numeric(fit$bm[, "trait1"]), rowMeans(bm_chain), tolerance = 1e-12)
+  expect_equal(as.numeric(fit$dm[, "trait1"]), unname(rowMeans(dm_chain)), tolerance = 1e-12)
+  expect_equal(as.numeric(fit$bm[, "trait1"]), unname(rowMeans(bm_chain)), tolerance = 1e-12)
 })
 
 test_that("CSR LD-swap diagnostics aggregate across chains", {
