@@ -28,6 +28,12 @@ still need a separate Metropolis-Hastings design because the state includes
 both marker effect and mixture component, so LD-swap remains unsupported.
 Scheduled CSR BayesR also remains future work.
 
+The BayesR LD-swap/MH design is now recorded separately in
+`docs/dev/stblr_bayesr_ldswap_design.md`. That design recommends a first
+implementation that relocates the full BayesR `(component, b)` state from an
+active marker to a null LD friend, with the BayesC likelihood/proposal-ratio
+machinery reused only after accounting for BayesR component priors.
+
 ## Implementation Status
 
 Implemented in this pass:
