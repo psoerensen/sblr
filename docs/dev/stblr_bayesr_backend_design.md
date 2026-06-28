@@ -17,18 +17,16 @@ mean component index is preserved separately, and standard `bm`/`dm` chain
 summaries are returned. The backend remains lower-level and experimental
 because no public R wrapper currently calls it.
 
-Plain exact CSR BayesR now has a first internal experimental backend using
+Plain exact CSR BayesR is supported through `stblr_csr_bayesr()`, using
 `src/st_cpg_omp_csr.cpp` as the architectural template and the SBayesRC CSR code
-only as a source of mixture-update math. Scheduled CSR BayesR should come after
-the exact CSR BayesR path is validated. LD-swap remains postponed for BayesR
-until the Metropolis-Hastings state exchange is explicitly designed for both
-effect and component assignment.
+only as a source of mixture-update math. Scheduled CSR BayesR remains future
+work. LD-swap remains postponed for BayesR until the Metropolis-Hastings state
+exchange is explicitly designed for both effect and component assignment.
 
 The detailed exact CSR BayesR design and implementation status are in
 `docs/dev/stblr_csr_bayesr_design.md`. That path keeps CSR BayesR separate from
-SBayesRC-style annotation models, uses an internal experimental R helper before
-a public API, and preserves the standard chain-output convention used by the
-harmonized BayesC backends.
+SBayesRC-style annotation models and preserves the standard chain-output
+convention used by the harmonized BayesC backends.
 
 ## Current BayesR Backend Inventory
 
@@ -50,8 +48,9 @@ Explicit BayesR/BayesR-like native files:
   - CSR SBayesRC-style annotation-class sampler. The filename appears to have a
     transposed spelling, but it is exported as `stblr_cpg_omp_csr_sbayesrc_annot1`.
 
-There is now a plain experimental `src/st_cpg_omp_csr_bayesr.cpp`, exported as
-`stblr_cpg_omp_csr_bayesr()`. There is no scheduled
+There is now a supported plain exact `src/st_cpg_omp_csr_bayesr.cpp`, exported
+at the native level as `stblr_cpg_omp_csr_bayesr()` and exposed to users
+through `stblr_csr_bayesr()`. There is no scheduled
 `src/st_cpg_omp_csr_scheduled_bayesr.cpp` today.
 
 ### R Wrappers
@@ -316,21 +315,22 @@ exposes slot `30` as `dm_component_mean`.
 
 ## Existing CSR BayesR Status
 
-There is now a first plain exact summary-stat CSR BayesR backend:
+There is a supported plain exact summary-stat CSR BayesR backend:
 
 - `src/st_cpg_omp_csr_bayesr.cpp`
 - `stblr_cpg_omp_csr_bayesr(...)`
 - internal formatter `.format_stblr_csr_bayesr_fit()`
-- internal helper `.stblr_csr_bayesr_experimental()`
+- public helper `stblr_csr_bayesr()`
+- compatibility alias `.stblr_csr_bayesr_experimental()`
 
-This path is experimental and internal. It supports exact CSR updates,
-`nchains`, `chain_seeds`, standard chain summaries, `comp_prob`, and
-`dm_component_mean`. It rejects `keep_chains = TRUE` and LD-swap. Scheduled CSR
-BayesR remains future work.
+This path supports exact CSR updates, `nchains`, `chain_seeds`,
+`keep_chains = TRUE`, standard chain summaries, `comp_prob`, and
+`dm_component_mean`. It rejects LD-swap/MH. Scheduled CSR BayesR remains future
+work.
 
 The residual variance update investigation is documented in
 `docs/dev/stblr_csr_bayesr_design.md` under "Residual Variance Update and Prior
-Scaling". The experimental CSR BayesR wrapper now uses the same sparse active
+Scaling". The CSR BayesR wrapper uses the same sparse active
 probability convention as the SBayesRC/BayesC CSR helpers. `updateE = TRUE` is
 enabled for this internal backend with strict residual-scale diagnostics,
 zero-based `updateE_start` defaulting to `0`, and `updateE_every` defaulting to
@@ -374,10 +374,10 @@ Implemented C++ export:
 stblr_cpg_omp_csr_bayesr(...)
 ```
 
-Internal R-facing helper:
+Public R-facing helper:
 
 ```r
-.stblr_csr_bayesr_experimental(...)
+stblr_csr_bayesr(...)
 ```
 
 The implementation starts from `src/st_cpg_omp_csr.cpp` for architecture, not
@@ -572,4 +572,5 @@ Suggested next implementation prompt:
 
 - Add a small experimental R wrapper for the BED BayesR backend if there is a
   clear user workflow for direct BED BayesR fits.
-- Otherwise, implement exact CSR BayesR without LD-swap as a separate task.
+- Implement scheduled CSR BayesR only as a separate scoped task.
+- Design BayesR LD-swap/MH separately before adding swap moves.

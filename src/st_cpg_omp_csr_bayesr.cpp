@@ -439,9 +439,6 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  if (nchains <= 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: nchains must be positive.");
  if (updateE_start < 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: updateE_start must be non-negative.");
  if (updateE_every <= 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: updateE_every must be positive.");
- if (keep_chains) {
-  throw std::runtime_error("stblr_cpg_omp_csr_bayesr: keep_chains is not yet supported.");
- }
  if (updateLDswap) {
   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: LD-swap is not yet supported for BayesR.");
  }
@@ -570,6 +567,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::vec final_vg_task(ntasks, arma::fill::zeros);
  arma::vec final_ve_task(ntasks, arma::fill::zeros);
  arma::vec min_sse_task(ntasks, arma::fill::zeros);
+ arma::ivec min_sse_iter_task(ntasks, arma::fill::value(-1));
  arma::vec min_residual_scale_task(ntasks, arma::fill::zeros);
  arma::ivec max_nonzero_components_task(ntasks, arma::fill::zeros);
  arma::vec max_abs_effect_task(ntasks, arma::fill::zeros);
@@ -645,6 +643,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    arma::vec pi_mean_t(K, arma::fill::zeros);
    double nsamples_t = 0.0;
    double min_sse_t = std::numeric_limits<double>::infinity();
+   int min_sse_iter_t = -1;
    double min_residual_scale_t = std::numeric_limits<double>::infinity();
    int max_nonzero_components_t = 0;
    double max_abs_effect_t = 0.0;
@@ -704,7 +703,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
       sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
       yy_vec(static_cast<arma::uword>(t))
      );
-     min_sse_t = std::min(min_sse_t, diag.sse);
+     if (diag.sse < min_sse_t) {
+      min_sse_t = diag.sse;
+      min_sse_iter_t = it;
+     }
      min_residual_scale_t = std::min(min_residual_scale_t, diag.residual_scale);
      max_nonzero_components_t = std::max(max_nonzero_components_t, diag.nonzero_components);
      max_abs_effect_t = std::max(max_abs_effect_t, diag.max_abs_b);
@@ -798,6 +800,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    final_vg_task(task_u) = vg_t;
    final_ve_task(task_u) = ve_t;
    min_sse_task(task_u) = std::isfinite(min_sse_t) ? min_sse_t : NA_REAL;
+   min_sse_iter_task(task_u) = min_sse_iter_t;
    min_residual_scale_task(task_u) = std::isfinite(min_residual_scale_t) ? min_residual_scale_t : NA_REAL;
    max_nonzero_components_task(task_u) = max_nonzero_components_t;
    max_abs_effect_task(task_u) = max_abs_effect_t;
@@ -848,7 +851,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::vec final_vb(nt, arma::fill::zeros);
  arma::vec final_vg(nt, arma::fill::zeros);
  arma::vec final_ve(nt, arma::fill::zeros);
- arma::mat updateE_diagnostics(ntasks, 8, arma::fill::zeros);
+ arma::mat updateE_diagnostics(ntasks, 9, arma::fill::zeros);
  std::vector<arma::mat> comp_prob(static_cast<std::size_t>(nt));
  arma::mat ncomp(nt, K, arma::fill::zeros);
 
@@ -858,10 +861,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   updateE_diagnostics(task_u, 1) = stblr_task_chain(task, nchains);
   updateE_diagnostics(task_u, 2) = n_updateE_task(task_u);
   updateE_diagnostics(task_u, 3) = min_sse_task(task_u);
-  updateE_diagnostics(task_u, 4) = min_residual_scale_task(task_u);
-  updateE_diagnostics(task_u, 5) = max_nonzero_components_task(task_u);
-  updateE_diagnostics(task_u, 6) = max_abs_effect_task(task_u);
-  updateE_diagnostics(task_u, 7) = max_fitted_quadratic_task(task_u);
+  updateE_diagnostics(task_u, 4) = min_sse_iter_task(task_u);
+  updateE_diagnostics(task_u, 5) = min_residual_scale_task(task_u);
+  updateE_diagnostics(task_u, 6) = max_nonzero_components_task(task_u);
+  updateE_diagnostics(task_u, 7) = max_abs_effect_task(task_u);
+  updateE_diagnostics(task_u, 8) = max_fitted_quadratic_task(task_u);
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -939,6 +943,37 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  Rcpp::List comp_prob_out(nt);
  for (int t = 0; t < nt; ++t) comp_prob_out[t] = comp_prob[static_cast<std::size_t>(t)];
 
+ Rcpp::List chains_out;
+ if (keep_chains) {
+  chains_out = Rcpp::List(nt);
+  for (int t = 0; t < nt; ++t) {
+   Rcpp::List trait_chains(nchains);
+   for (int chain = 0; chain < nchains; ++chain) {
+    const int task = t * nchains + chain;
+    const arma::uword task_u = static_cast<arma::uword>(task);
+    Rcpp::NumericVector updateE_diag(9);
+    for (int j = 0; j < 9; ++j) {
+     updateE_diag[j] = updateE_diagnostics(task_u, static_cast<arma::uword>(j));
+    }
+    trait_chains[chain] = Rcpp::List::create(
+     Rcpp::Named("dm") = dm_task.row(task_u).t(),
+     Rcpp::Named("bm") = bm_task.row(task_u).t(),
+     Rcpp::Named("comp_prob") = comp_prob_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("dm_component_mean") = component_mean_task.row(task_u).t(),
+     Rcpp::Named("final_pi") = final_pi_task.row(task_u).t(),
+     Rcpp::Named("mean_pi") = mean_pi_task.row(task_u).t(),
+     Rcpp::Named("vbs") = vbs_task.row(task_u).t(),
+     Rcpp::Named("vgs") = vgs_task.row(task_u).t(),
+     Rcpp::Named("ves") = ves_task.row(task_u).t(),
+     Rcpp::Named("vle") = vles_task.row(task_u).t(),
+     Rcpp::Named("vld") = vlds_task.row(task_u).t(),
+     Rcpp::Named("updateE_diagnostics") = updateE_diag
+    );
+   }
+   chains_out[t] = trait_chains;
+  }
+ }
+
  arma::mat covb(nt, nt, arma::fill::zeros);
  arma::mat covg(nt, nt, arma::fill::zeros);
  arma::mat cove(nt, nt, arma::fill::zeros);
@@ -955,7 +990,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   ve(tu, tu) = final_ve(tu);
  }
 
- return Rcpp::List::create(
+ Rcpp::List out = Rcpp::List::create(
   Rcpp::Named("bm") = bm.t(),
   Rcpp::Named("dm") = dm.t(),
   Rcpp::Named("wy") = wy_mat.t(),
@@ -988,4 +1023,6 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   Rcpp::Named("mixture_var") = mixture_var_vec,
   Rcpp::Named("updateE_diagnostics") = updateE_diagnostics
  );
+ if (keep_chains) out["chains"] = chains_out;
+ return out;
 }

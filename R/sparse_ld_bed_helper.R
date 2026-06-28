@@ -687,16 +687,73 @@ NULL
  if (!is.null(fit$mixture_var)) {
   out$mixture_var <- stats::setNames(as.numeric(fit$mixture_var), component_names)
  }
- if (!is.null(fit$updateE_diagnostics)) {
-  updateE_diagnostics <- as.matrix(fit$updateE_diagnostics)
-  if (ncol(updateE_diagnostics) == 8L) {
-   colnames(updateE_diagnostics) <- c(
+ set_updateE_diagnostics <- function(x) {
+  x <- as.matrix(x)
+  if (ncol(x) == 8L) {
+   colnames(x) <- c(
     "trait_index", "chain_index", "n_updateE", "min_sse",
     "min_residual_scale", "max_nonzero_components",
     "max_abs_effect", "max_fitted_quadratic"
    )
+  } else if (ncol(x) == 9L) {
+   colnames(x) <- c(
+    "trait_index", "chain_index", "n_updateE", "min_sse",
+    "min_sse_iter", "min_residual_scale", "max_nonzero_components",
+    "max_abs_effect", "max_fitted_quadratic"
+   )
   }
-  out$updateE_diagnostics <- updateE_diagnostics
+  x
+ }
+
+ if (!is.null(fit$updateE_diagnostics)) {
+  out$updateE_diagnostics <- set_updateE_diagnostics(fit$updateE_diagnostics)
+ }
+
+ if (!is.null(fit$chains)) {
+  if (!is.list(fit$chains) || length(fit$chains) != nt) {
+   stop("CSR BayesR chains must be a list with one entry per trait.")
+  }
+  chains <- lapply(seq_len(nt), function(tt) {
+   trait_chains <- fit$chains[[tt]]
+   if (!is.list(trait_chains)) {
+    stop("CSR BayesR chains entries must be lists of chains.")
+   }
+   trait_chains <- lapply(seq_along(trait_chains), function(cc) {
+    ch <- trait_chains[[cc]]
+    if (!is.list(ch)) stop("CSR BayesR chain entry must be a list.")
+    chain <- list(
+     dm = stats::setNames(as.numeric(ch$dm), variable_names),
+     bm = stats::setNames(as.numeric(ch$bm), variable_names),
+     comp_prob = as.matrix(ch$comp_prob),
+     dm_component_mean = stats::setNames(
+      as.numeric(ch$dm_component_mean), variable_names
+     ),
+     final_pi = stats::setNames(as.numeric(ch$final_pi), component_names),
+     mean_pi = stats::setNames(as.numeric(ch$mean_pi), component_names)
+    )
+    if (!identical(dim(chain$comp_prob), c(m, n_components))) {
+     stop("CSR BayesR chain comp_prob entries must have dimension m x n_components.")
+    }
+    rownames(chain$comp_prob) <- variable_names
+    colnames(chain$comp_prob) <- component_names
+    for (nm in c("vbs", "vgs", "ves", "vle", "vld")) {
+     if (!is.null(ch[[nm]])) {
+      chain[[nm]] <- as.numeric(ch[[nm]])
+      names(chain[[nm]]) <- paste0("Iter", seq_along(chain[[nm]]))
+     }
+    }
+    if (!is.null(ch$updateE_diagnostics)) {
+     chain$updateE_diagnostics <- set_updateE_diagnostics(
+      matrix(as.numeric(ch$updateE_diagnostics), nrow = 1L)
+     )
+    }
+    chain
+   })
+   names(trait_chains) <- paste0("chain", seq_along(trait_chains))
+   trait_chains
+  })
+  names(chains) <- trait_names
+  out$chains <- chains
  }
 
  tol <- 1e-8
@@ -712,44 +769,111 @@ NULL
  out
 }
 
-.stblr_csr_bayesr_experimental <- function(
-  Glist = NULL,
+#' Fit an Exact CSR Summary-Statistics BayesR Model
+#'
+#' Fits a supported exact CSR BayesR model for GWAS summary statistics and a
+#' disk-backed sparse LD matrix. The standard posterior inclusion probability
+#' `dm` is `P(component > 0)`, and `comp_prob` stores marker-by-component
+#' posterior probabilities with `component_0` as the null component.
+#'
+#' Exact CSR BayesR supports multiple chains, compact per-chain output with
+#' `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
+#' SSE validation. Scheduled CSR BayesR and BayesR LD-swap/MH moves are not
+#' currently supported by this interface.
+#'
+#' @param stats Summary-statistics object with `yy`, `ww`, `wy`, and usually
+#'   `n`/`m`, as used by [stblr_csr()].
+#' @param Glist Optional genotype list containing `Glist$sparseLD$prefix`.
+#'   Required when `ld_prefix` is not supplied.
+#' @param pi Initial BayesR mixture probabilities. Defaults to total non-null
+#'   probability 0.001 distributed evenly across non-null components.
+#' @param mixture_var BayesR mixture variance multipliers. The first value must
+#'   be zero for the null component and remaining values must be positive.
+#' @param alpha Dirichlet prior shapes for mixture probabilities. Defaults to
+#'   `pi * 5e5`.
+#' @param h2 Initial heritability.
+#' @param adjE Residual adjustment factor.
+#' @param nit,nburn,nthin MCMC iteration controls.
+#' @param ncores Number of OpenMP threads.
+#' @param seed Base sampler seed.
+#' @param nchains Number of independent chains per trait.
+#' @param keep_chains Logical; return compact per-chain BayesR summaries.
+#' @param chain_seeds Optional integer seeds, one per chain.
+#' @param updateB,updateE,updatePi Logical sampler update controls.
+#' @param updateE_start Zero-based first iteration where `updateE` is allowed.
+#'   Defaults to 0.
+#' @param updateE_every Positive update interval for `updateE`.
+#' @param ld_prefix,n,m Optional low-level CSR LD prefix, sample sizes, and
+#'   marker count.
+#' @param nub,nue Prior degrees of freedom.
+#' @param use_comp_init,comp_init,use_r_init,r_init,rebuild_r_before_updateE
+#'   Advanced initialization controls.
+#' @param ... Unsupported options. Passing scheduled CSR or LD-swap controls
+#'   through `...` errors clearly.
+#'
+#' @return A formatted ST-BLR BayesR fit.
+#' @export
+stblr_csr_bayesr <- function(
   stats,
+  Glist = NULL,
   ld_prefix = NULL,
   n = NULL,
   m = NULL,
-  h2 = 0.3,
-  mixture_var = c(0, 0.01, 0.1, 1),
   pi = NULL,
+  mixture_var = c(0, 0.01, 0.1, 1),
   alpha = NULL,
-  nub = 4,
-  nue = 4,
-  updateB = TRUE,
-  updateE = TRUE,
-  updatePi = TRUE,
+  h2 = 0.3,
   adjE = 0.9,
   nit = 1000,
   nburn = 100,
   nthin = 1,
   ncores = 1,
-  seed = 10,
+  seed = 1,
   nchains = 1L,
   keep_chains = FALSE,
   chain_seeds = NULL,
-  scheduled = FALSE,
-  updateLDswap = FALSE,
+  updateB = TRUE,
+  updateE = TRUE,
+  updatePi = TRUE,
+  updateE_start = NULL,
+  updateE_every = 1L,
+  nub = 4,
+  nue = 4,
   use_comp_init = FALSE,
   comp_init = NULL,
   use_r_init = FALSE,
   r_init = NULL,
   rebuild_r_before_updateE = FALSE,
-  updateE_start = NULL,
-  updateE_every = 1L
+  ...
 ) {
- if (isTRUE(scheduled)) stop("scheduled CSR BayesR is not implemented.")
- if (isTRUE(updateLDswap)) stop("BayesR CSR LD-swap is not yet supported.")
- if (isTRUE(keep_chains)) {
-  stop("keep_chains is not yet supported for experimental CSR BayesR.")
+ dots <- list(...)
+ if (length(dots)) {
+  dot_names <- names(dots)
+  if (is.null(dot_names)) dot_names <- rep("", length(dots))
+  unsupported <- intersect(
+   dot_names,
+   c(
+    "scheduled", "updateLDswap", "ld_swap_prob", "ld_swap_r2",
+    "ld_swap_max_friends", "ld_swap_moves"
+   )
+  )
+  if ("scheduled" %in% unsupported && isTRUE(dots$scheduled)) {
+   stop("scheduled CSR BayesR is not supported by stblr_csr_bayesr().")
+  }
+  if ("updateLDswap" %in% unsupported && isTRUE(dots$updateLDswap)) {
+   stop("BayesR CSR LD-swap/MH is not yet supported.")
+  }
+  ld_tuning <- intersect(
+   dot_names,
+   c("ld_swap_prob", "ld_swap_r2", "ld_swap_max_friends", "ld_swap_moves")
+  )
+  if (length(ld_tuning)) {
+   stop("BayesR CSR LD-swap/MH is not yet supported.")
+  }
+  unknown <- setdiff(dot_names[nzchar(dot_names)], unsupported)
+  if (length(unknown)) {
+   stop("Unsupported argument(s) in ...: ", paste(unknown, collapse = ", "))
+  }
  }
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -761,6 +885,10 @@ NULL
   stop("ncores must be a positive integer scalar.")
  }
  ncores <- as.integer(ncores)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
  if (!is.null(chain_seeds)) {
   if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
       anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
@@ -876,7 +1004,7 @@ NULL
   ncores = ncores,
   seed = as.integer(seed),
   nchains = nchains,
-  keep_chains = FALSE,
+  keep_chains = keep_chains,
   chain_seeds = chain_seeds,
   updateE_start = updateE_start,
   updateE_every = updateE_every,
@@ -896,7 +1024,7 @@ NULL
   backend = "csr_bayesr",
   scheduled = FALSE,
   nchains = nchains,
-  keep_chains = FALSE,
+  keep_chains = keep_chains,
   updateLDswap = FALSE,
   n = as.integer(n),
   m = m,
@@ -917,6 +1045,76 @@ NULL
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
  fit
+}
+
+.stblr_csr_bayesr_experimental <- function(
+  Glist = NULL,
+  stats,
+  ld_prefix = NULL,
+  n = NULL,
+  m = NULL,
+  h2 = 0.3,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  pi = NULL,
+  alpha = NULL,
+  nub = 4,
+  nue = 4,
+  updateB = TRUE,
+  updateE = TRUE,
+  updatePi = TRUE,
+  adjE = 0.9,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 1,
+  seed = 10,
+  nchains = 1L,
+  keep_chains = FALSE,
+  chain_seeds = NULL,
+  scheduled = FALSE,
+  updateLDswap = FALSE,
+  use_comp_init = FALSE,
+  comp_init = NULL,
+  use_r_init = FALSE,
+  r_init = NULL,
+  rebuild_r_before_updateE = FALSE,
+  updateE_start = NULL,
+  updateE_every = 1L
+) {
+ stblr_csr_bayesr(
+  stats = stats,
+  Glist = Glist,
+  ld_prefix = ld_prefix,
+  n = n,
+  m = m,
+  pi = pi,
+  mixture_var = mixture_var,
+  alpha = alpha,
+  h2 = h2,
+  adjE = adjE,
+  nit = nit,
+  nburn = nburn,
+  nthin = nthin,
+  ncores = ncores,
+  seed = seed,
+  nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = chain_seeds,
+  updateB = updateB,
+  updateE = updateE,
+  updatePi = updatePi,
+  updateE_start = updateE_start,
+  updateE_every = updateE_every,
+  nub = nub,
+  nue = nue,
+  use_comp_init = use_comp_init,
+  comp_init = comp_init,
+  use_r_init = use_r_init,
+  r_init = r_init,
+  rebuild_r_before_updateE = rebuild_r_before_updateE,
+  scheduled = scheduled,
+  updateLDswap = updateLDswap
+ )
 }
 
 .resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {

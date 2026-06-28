@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Plain summary-statistics CSR BayesR now has a first experimental exact,
+Plain summary-statistics CSR BayesR is supported through an exact,
 non-scheduled backend:
 
 ```text
@@ -23,10 +23,10 @@ accumulation. The BED BayesR backend defines the BayesR output contract:
 standard `dm = P(component > 0)`, marker-by-component `comp_prob`, and
 `dm_component_mean` for posterior mean component index.
 
-The first implementation deliberately rejects LD-swap and `keep_chains = TRUE`.
-BayesR swap moves need a separate Metropolis-Hastings design because the state
-includes both marker effect and mixture component. Compact chain output can be
-added later without changing sampler math.
+The supported public R interface is `stblr_csr_bayesr()`. BayesR swap moves
+still need a separate Metropolis-Hastings design because the state includes
+both marker effect and mixture component, so LD-swap remains unsupported.
+Scheduled CSR BayesR also remains future work.
 
 ## Implementation Status
 
@@ -35,14 +35,15 @@ Implemented in this pass:
 - `src/st_cpg_omp_csr_bayesr.cpp`
 - Rcpp export `stblr_cpg_omp_csr_bayesr(...)`
 - internal formatter `.format_stblr_csr_bayesr_fit()`
-- internal helper `.stblr_csr_bayesr_experimental()`
-- formatter-level tests in `tests/testthat/test-bayesr-csr-backend.R`
+- public helper `stblr_csr_bayesr()`
+- compatibility alias `.stblr_csr_bayesr_experimental()`
+- formatter and native smoke tests in `tests/testthat/test-bayesr-csr-backend.R`
 
-The backend is internal and experimental. It supports exact CSR updates,
-`nchains`, `chain_seeds`, standard `bm`/`dm` summaries, component probabilities,
-posterior mean component index, variance traces, and mixture-weight summaries.
-It does not implement scheduled CSR BayesR, LD-swap, or compact per-chain
-return objects.
+The backend supports exact CSR updates, `nchains`, `chain_seeds`,
+`keep_chains = TRUE`, standard `bm`/`dm` summaries, component probabilities,
+posterior mean component index, variance traces, mixture-weight summaries, and
+strict `updateE = TRUE` diagnostics. It does not implement scheduled CSR
+BayesR or LD-swap/MH.
 
 ## Code Inventory
 
@@ -349,8 +350,8 @@ OpenMP should run over `nt * nchains` tasks with
 ### Output Layout
 
 The implemented backend returns a named `Rcpp::List` instead of extending the
-BayesC positional slot protocol. This keeps the experimental BayesR path
-separate from BayesC formatting and avoids collisions with LD-swap diagnostics.
+BayesC positional slot protocol. This keeps the BayesR path separate from
+BayesC formatting and avoids collisions with LD-swap diagnostics.
 
 Standard marker fields are marker-by-trait matrices:
 
@@ -436,7 +437,7 @@ if (updateLDswap) stop("BayesR CSR LD-swap is not yet supported.")
 ## Residual Variance Update and Prior Scaling
 
 This section records the inspection triggered by invalid residual variance
-updates in the experimental exact CSR BayesR backend when `updateE = TRUE`.
+updates in the exact CSR BayesR backend when `updateE = TRUE`.
 
 SBayesRC prior setup:
 
@@ -473,7 +474,7 @@ SBayesRC native update path:
 - The arguments are the current marker count, `nue`, mutable `ve_t`, full
   `b_t`, `wy_t`, current `r_t`, diagonal `sse_prior`, `yy_t`, `n[t]`, and the
   chain RNG.
-- `sampleE_ST_csr()` uses the same identity as the experimental BayesR path:
+- `sampleE_ST_csr()` uses the same identity as the BayesR path:
   `SSE = y'y - b'X'y - b'r`, with `r = X'y - X'Xb`.
 - SBayesRC can optionally rebuild `r` immediately before `sampleE_ST_csr()`,
   but it does not do so by default.
@@ -487,9 +488,9 @@ SBayesRC native update path:
 - Annotation effects in SBayesRC change mixture probabilities, not the
   component variance formula.
 
-Comparison with experimental plain CSR BayesR:
+Comparison with plain CSR BayesR:
 
-| Quantity | SBayesRC CSR | Experimental plain CSR BayesR |
+| Quantity | SBayesRC CSR | Plain CSR BayesR |
 | --- | --- | --- |
 | Mixture grid | `c(0, 0.01, 0.1, 1)` | `c(0, 0.01, 0.1, 1)` |
 | Scale convention | `vb * gamma[k]` | `vb * mixture_var[k]` |
@@ -508,7 +509,7 @@ Comparison with experimental plain CSR BayesR:
 The failing diagnostic had `nonzero_components=2894` out of `m=5000` at
 iteration 3. That is not expected under the SBayesRC-style sparse prior:
 `pi_init = 0.001` implies roughly 5 active markers initially for `m=5000`.
-The earlier experimental plain BayesR defaults implied 250 active markers
+The earlier plain BayesR defaults implied 250 active markers
 before any likelihood contribution, and the flat Dirichlet prior did little to
 pull the global mixture weights back toward sparsity after dense early
 assignments. A dense state can overfit the summary statistics enough that
@@ -519,7 +520,7 @@ Most likely causes evaluated:
 
 - A. Mixture variance scale bug: not supported by code inspection. Both paths
   use `vb * scale_k`, and both default grids are scale factors.
-- B. Prior probability bug: supported. The experimental wrapper used a much
+- B. Prior probability bug: supported. The earlier wrapper used a much
   denser default `pi` and a flat Dirichlet prior.
 - C. Effect variance bug: not supported by code inspection. `sampleB` and
   marker updates use the same `vb * scale_k` convention.
@@ -533,16 +534,16 @@ Most likely causes evaluated:
 
 Minimal fix applied:
 
-- `.stblr_csr_bayesr_experimental()` now defaults to total active
+- `stblr_csr_bayesr()` defaults to total active
   `pi = 0.001` instead of `0.05`.
 - When `alpha` is omitted, it is now centered on the normalized `pi` with total
   strength `5e5`, matching the sparse CSR prior convention instead of using a
   flat `rep(1, K)`.
 
-`updateE = TRUE` is now enabled in the experimental R helper. By default it
+`updateE = TRUE` is enabled in `stblr_csr_bayesr()`. By default it
 updates residual variance from zero-based iteration `0` and every iteration
 after that (`updateE_start = NULL` maps to `0`, `updateE_every = 1`). These are
-internal experimental controls; callers can delay or thin residual-variance
+supported controls; callers can delay or thin residual-variance
 updates with `updateE_start` and `updateE_every` when investigating a dataset.
 
 The native backend rebuilds `r = X'y - X'Xb` immediately before each residual
@@ -556,10 +557,10 @@ effect, and maximum absolute fitted quadratic term.
 
 ## R Wrapper Design
 
-Add an internal experimental helper first:
+Use the public exact CSR BayesR helper:
 
 ```r
-.stblr_csr_bayesr_experimental(...)
+stblr_csr_bayesr(...)
 ```
 
 Do not extend `stblr_csr()` with `model = "bayesr"` in the first implementation.
@@ -673,12 +674,11 @@ Avoid expensive MCMC. Use small synthetic CSR fixtures and short chains.
 
 ## Suggested Next Implementation Prompt
 
-Stabilize and validate the experimental exact CSR BayesR backend.
+Next work should stay outside the supported exact CSR BayesR surface unless it
+is explicitly scoped.
 
-- Add a tiny on-disk CSR fixture that can exercise
-  `.stblr_csr_bayesr_experimental()` without expensive MCMC.
-- Test direct native runs with `nchains = 1` and `nchains = 2`.
-- Verify deterministic behavior with explicit `chain_seeds`.
-- Decide whether compact `keep_chains` output is needed before exposing a
-  public wrapper.
+- Implement scheduled CSR BayesR as a separate backend.
+- Design BayesR LD-swap/MH separately before adding any swap moves.
+- Extend public docs or examples if real-data smoke tests identify missing
+  usage guidance.
 - Keep scheduled CSR BayesR and LD-swap as separate future tasks.

@@ -381,6 +381,7 @@ print.stblr_backend_check <- function(x, ...) {
 
     dm_chain <- list()
     bm_chain <- list()
+    comp_prob_chain <- list()
     for (cc in seq_along(trait_chains)) {
       ch <- trait_chains[[cc]]
       if (!is.list(ch)) {
@@ -400,6 +401,13 @@ print.stblr_backend_check <- function(x, ...) {
                   length(ch$bm) == nrow(bm),
                   "chain bm length matches number of markers")
       }
+      if (!is.null(ch$comp_prob)) {
+        cp <- as.matrix(ch$comp_prob)
+        comp_prob_chain[[length(comp_prob_chain) + 1L]] <- cp
+        add_check(paste0("chains.", cname, ".chain", cc, ".comp_prob_rows"),
+                  nrow(cp) == nrow(dm),
+                  "chain comp_prob row count matches number of markers")
+      }
     }
     if (length(dm_chain) == nchains &&
         all(vapply(dm_chain, length, integer(1)) == nrow(dm))) {
@@ -416,6 +424,25 @@ print.stblr_backend_check <- function(x, ...) {
                 isTRUE(all.equal(rowMeans(bm_mat), bm[, tt], tolerance = 1e-8,
                                  check.attributes = FALSE)),
                 "mean chain bm equals fit$bm")
+    }
+    if (!is.null(fit$comp_prob) && !is.null(fit$comp_prob[[cname]]) &&
+        length(comp_prob_chain) == nchains) {
+      target_cp <- as.matrix(fit$comp_prob[[cname]])
+      same_dim <- all(vapply(
+        comp_prob_chain,
+        function(x) identical(dim(x), dim(target_cp)),
+        logical(1)
+      ))
+      add_check(paste0("chains.", cname, ".comp_prob_dim"),
+                same_dim,
+                "chain comp_prob dimensions match fit$comp_prob")
+      if (same_dim) {
+        cp_mean <- Reduce(`+`, comp_prob_chain) / length(comp_prob_chain)
+        add_check(paste0("chains.", cname, ".comp_prob_mean"),
+                  isTRUE(all.equal(cp_mean, target_cp, tolerance = 1e-8,
+                                   check.attributes = FALSE)),
+                  "mean chain comp_prob equals fit$comp_prob")
+      }
     }
   }
   invisible(NULL)

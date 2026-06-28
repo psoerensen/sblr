@@ -176,18 +176,15 @@ test_that("CSR BayesR formatted fit is compatible with fine-mapping extractor", 
   expect_equal(fm$markers$bm_max, as.numeric(fit$bm_max[, "D1"]))
 })
 
-test_that("CSR BayesR experimental helper rejects unsupported modes early", {
+test_that("public CSR BayesR API exists and rejects unsupported modes early", {
+  expect_true(is.function(stblr_csr_bayesr))
   expect_error(
-    .stblr_csr_bayesr_experimental(stats = list(), scheduled = TRUE),
+    stblr_csr_bayesr(stats = list(), scheduled = TRUE),
     "scheduled CSR BayesR"
   )
   expect_error(
-    .stblr_csr_bayesr_experimental(stats = list(), updateLDswap = TRUE),
-    "LD-swap"
-  )
-  expect_error(
-    .stblr_csr_bayesr_experimental(stats = list(), keep_chains = TRUE),
-    "keep_chains"
+    stblr_csr_bayesr(stats = list(), updateLDswap = TRUE),
+    "LD-swap/MH"
   )
 })
 
@@ -246,7 +243,87 @@ expect_bayesr_csr_conventions <- function(fit) {
   }
 }
 
-test_that("experimental exact CSR BayesR supports strict updateE modes", {
+expect_bayesr_csr_chain_aggregation <- function(fit) {
+  chk <- check_stblr_backend_consistency(
+    fit,
+    require_chain_summaries = TRUE,
+    require_chains = TRUE,
+    verbose = FALSE
+  )
+  expect_true(chk$ok)
+
+  for (trait in names(fit$chains)) {
+    chains <- fit$chains[[trait]]
+    dm_mat <- do.call(cbind, lapply(chains, function(ch) ch$dm))
+    bm_mat <- do.call(cbind, lapply(chains, function(ch) ch$bm))
+    expect_equal(unname(rowMeans(dm_mat)), as.numeric(fit$dm[, trait]), tolerance = 1e-8)
+    expect_equal(unname(rowMeans(bm_mat)), as.numeric(fit$bm[, trait]), tolerance = 1e-8)
+
+    cp_mean <- Reduce(`+`, lapply(chains, function(ch) ch$comp_prob)) / length(chains)
+    expect_equal(cp_mean, fit$comp_prob[[trait]], tolerance = 1e-8)
+    for (ch in chains) {
+      expect_true(all(c(
+        "dm", "bm", "comp_prob", "dm_component_mean", "final_pi", "mean_pi",
+        "vbs", "vgs", "ves", "updateE_diagnostics"
+      ) %in% names(ch)))
+    }
+  }
+}
+
+test_that("CSR BayesR formatter preserves compact per-chain component summaries", {
+  raw <- make_bayesr_csr_raw(nchains = 2L)
+  cp1 <- matrix(
+    c(0.80, 0.20, 0.00, 0.20, 0.30, 0.50, 0.50, 0.50, 0.00),
+    nrow = 3,
+    byrow = TRUE
+  )
+  cp2 <- matrix(
+    c(0.60, 0.20, 0.20, 0.00, 0.30, 0.70, 0.30, 0.30, 0.40),
+    nrow = 3,
+    byrow = TRUE
+  )
+  raw$chains <- list(list(
+    list(
+      dm = 1 - cp1[, 1L],
+      bm = c(0.00, -0.03, 0.02),
+      comp_prob = cp1,
+      dm_component_mean = c(0.2, 1.3, 0.5),
+      final_pi = c(0.50, 0.25, 0.25),
+      mean_pi = c(0.55, 0.20, 0.25),
+      vbs = 1:4,
+      vgs = 2:5,
+      ves = 3:6,
+      updateE_diagnostics = c(0, 0, 4, 1.1, 2, 1.2, 2, 0.1, 0.2)
+    ),
+    list(
+      dm = 1 - cp2[, 1L],
+      bm = c(0.02, -0.01, 0.04),
+      comp_prob = cp2,
+      dm_component_mean = c(0.6, 1.7, 1.1),
+      final_pi = c(0.30, 0.35, 0.35),
+      mean_pi = c(0.35, 0.30, 0.35),
+      vbs = 2:5,
+      vgs = 3:6,
+      ves = 4:7,
+      updateE_diagnostics = c(0, 1, 4, 1.0, 1, 1.1, 2, 0.2, 0.3)
+    )
+  ))
+
+  fit <- format_bayesr_csr_test_fit(raw, nchains = 2L)
+  fit$input$keep_chains <- TRUE
+
+  expect_bayesr_csr_chain_aggregation(fit)
+  expect_identical(
+    colnames(fit$chains$D1$chain1$updateE_diagnostics),
+    c(
+      "trait_index", "chain_index", "n_updateE", "min_sse",
+      "min_sse_iter", "min_residual_scale", "max_nonzero_components",
+      "max_abs_effect", "max_fitted_quadratic"
+    )
+  )
+})
+
+test_that("supported exact CSR BayesR public API supports strict updateE modes", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native CSR BayesR symbol is not loaded"
@@ -255,7 +332,7 @@ test_that("experimental exact CSR BayesR supports strict updateE modes", {
   fixture <- make_small_bayesr_csr_stats()
   write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
-  fit_noE <- .stblr_csr_bayesr_experimental(
+  fit_noE <- stblr_csr_bayesr(
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -276,8 +353,13 @@ test_that("experimental exact CSR BayesR supports strict updateE modes", {
   )
   expect_equal(fit_noE$input$updateE_start, 0L)
   expect_equal(fit_noE$input$updateE_every, 1L)
+  expect_equal(fit_noE$input$model, "bayesr")
+  expect_equal(fit_noE$input$backend, "csr_bayesr")
+  expect_equal(fit_noE$input$scheduled, FALSE)
+  expect_equal(fit_noE$input$keep_chains, FALSE)
+  expect_equal(fit_noE$input$updateLDswap, FALSE)
 
-  fit_E <- .stblr_csr_bayesr_experimental(
+  fit_E <- stblr_csr_bayesr(
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -294,14 +376,16 @@ test_that("experimental exact CSR BayesR supports strict updateE modes", {
   expect_equal(fit_E$input$updateE_start, 0L)
   expect_equal(fit_E$input$updateE_every, 1L)
   expect_true("updateE_diagnostics" %in% names(fit_E))
+  expect_true("min_sse_iter" %in% colnames(fit_E$updateE_diagnostics))
   expect_equal(
     unname(fit_E$updateE_diagnostics[, "n_updateE"]),
     25,
     tolerance = 1e-12
   )
   expect_true(all(fit_E$updateE_diagnostics[, "min_residual_scale"] > 0))
+  expect_true(all(fit_E$updateE_diagnostics[, "min_sse_iter"] >= 0))
 
-  fit_E_two_chain <- .stblr_csr_bayesr_experimental(
+  fit_E_two_chain <- stblr_csr_bayesr(
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -316,7 +400,24 @@ test_that("experimental exact CSR BayesR supports strict updateE modes", {
   expect_bayesr_csr_conventions(fit_E_two_chain)
   expect_equal(nrow(fit_E_two_chain$updateE_diagnostics), 2L)
 
-  fit_E_delayed <- .stblr_csr_bayesr_experimental(
+  fit_E_keep <- stblr_csr_bayesr(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 20,
+    nburn = 5,
+    ncores = 1,
+    nchains = 2,
+    keep_chains = TRUE,
+    seed = 10,
+    updateE = TRUE
+  )
+  expect_bayesr_csr_conventions(fit_E_keep)
+  expect_equal(fit_E_keep$input$keep_chains, TRUE)
+  expect_bayesr_csr_chain_aggregation(fit_E_keep)
+
+  fit_E_delayed <- stblr_csr_bayesr(
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -340,7 +441,7 @@ test_that("experimental exact CSR BayesR supports strict updateE modes", {
   )
 
   expect_error(
-    .stblr_csr_bayesr_experimental(
+    stblr_csr_bayesr(
       stats = fixture$stats,
       Glist = fixture$Glist,
       h2 = 0.3,
@@ -355,4 +456,18 @@ test_that("experimental exact CSR BayesR supports strict updateE modes", {
     ),
     "updateE_every must be a positive integer scalar"
   )
+
+  fit_alias <- .stblr_csr_bayesr_experimental(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 1,
+    seed = 10,
+    updateE = FALSE
+  )
+  expect_bayesr_csr_conventions(fit_alias)
 })
