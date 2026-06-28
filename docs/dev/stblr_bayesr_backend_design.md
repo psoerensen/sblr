@@ -214,6 +214,35 @@ The formatted BayesR fit convention is:
 - `dm_component_mean`: posterior mean component index, preserving the old
   BayesR-specific quantity separately from standard `dm`.
 
+## BED BayesR CPO/logCPO Diagnostics
+
+The BED BayesR scheduled-chains backend implements CPO/log-CPO diagnostics using
+the same Gaussian inverse-CPO accumulation as the BayesC BED scheduled-chains
+backend. For each chain and trait, thinned post-burn-in samples accumulate
+`-loglik` for every individual with a log-sum-exp update. The chain-level total
+log-CPO is then computed as `sum(log(nsamples) - log_inv_cpo_i)`, and
+`mean_log_cpo` is the total divided by the number of individuals.
+
+Diagnostics are aggregated over chains at the trait level before return. The
+raw C++ layout keeps BayesC-compatible slots:
+
+- slot `16` zero-based: final BayesR mixture probabilities, length K per trait.
+- slot `17` zero-based: posterior mean BayesR mixture probabilities, length K
+  per trait.
+- slot `18` zero-based: diagnostics per trait:
+  `log_cpo`, `mean_log_cpo`, `seconds_mean`, `seconds_max`.
+
+The R formatter exposes:
+
+- `fit$log_cpo` and `fit$mean_log_cpo` as named trait-level numeric vectors.
+- `fit$diagnostics`/`fit$pitrait` as the trait-by-diagnostic matrix.
+- `fit$pi` and `fit$pim` as trait-by-component matrices.
+- `fit$final_pi` and `fit$mean_pi` as BayesR-readable aliases of `pi` and
+  `pim`.
+
+No per-chain CPO table is currently returned. The exposed diagnostics are
+chain-averaged trait summaries, matching BayesC BED scheduled chains.
+
 Formatted BayesR component probabilities can be inspected with the exported
 diagnostic helper:
 
@@ -302,9 +331,10 @@ BayesR remains future work.
 The residual variance update investigation is documented in
 `docs/dev/stblr_csr_bayesr_design.md` under "Residual Variance Update and Prior
 Scaling". The experimental CSR BayesR wrapper now uses the same sparse active
-probability convention as the SBayesRC/BayesC CSR helpers, but `updateE = TRUE`
-remains disabled until real-data native diagnostics validate the residual
-scale.
+probability convention as the SBayesRC/BayesC CSR helpers. `updateE = TRUE` is
+enabled for this internal backend with strict residual-scale diagnostics,
+zero-based `updateE_start` defaulting to `0`, and `updateE_every` defaulting to
+`1`. Invalid SSE states are errors, not clamped or skipped.
 
 Other existing CSR mixture code is SBayesRC-style:
 

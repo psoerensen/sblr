@@ -17,7 +17,9 @@ if (!exists("extract_stblr_finemap_loci", mode = "function")) {
 }
 
 make_bayesr_bed_raw <- function(bm, comp_prob, component_mean,
-                                bm_chain = NULL, dm_chain = NULL) {
+                                bm_chain = NULL, dm_chain = NULL,
+                                log_cpo = -10, mean_log_cpo = -10,
+                                final_pi = NULL, mean_pi = NULL) {
   m <- nrow(comp_prob)
   k <- ncol(comp_prob)
   nt <- 1L
@@ -26,6 +28,8 @@ make_bayesr_bed_raw <- function(bm, comp_prob, component_mean,
 
   if (is.null(bm_chain)) bm_chain <- list(as.numeric(bm))
   if (is.null(dm_chain)) dm_chain <- list(as.numeric(dm))
+  if (is.null(final_pi)) final_pi <- rep(1 / k, k)
+  if (is.null(mean_pi)) mean_pi <- rep(1 / k, k)
   nchains <- length(bm_chain)
 
   bm_sd <- if (nchains > 1L) {
@@ -55,9 +59,9 @@ make_bayesr_bed_raw <- function(bm, comp_prob, component_mean,
   raw[[9L]] <- list(seq_len(trace_len) / 9)
   raw[[10L]] <- list(seq_len(trace_len) / 8)
   for (i in 11:16) raw[[i]] <- list(1)
-  raw[[17L]] <- list(rep(1 / k, k))
-  raw[[18L]] <- list(rep(1 / k, k))
-  raw[[19L]] <- list(c(-10, -10, 0, 0))
+  raw[[17L]] <- list(final_pi)
+  raw[[18L]] <- list(mean_pi)
+  raw[[19L]] <- list(c(log_cpo, mean_log_cpo, 0, 0))
   raw[[20L]] <- list(c(2, 6))
   raw[[21L]] <- list(seq_len(trace_len) / 7)
   raw[[22L]] <- list(seq_len(trace_len) / 6)
@@ -131,6 +135,52 @@ test_that("BED BayesR formatter exposes non-null PIP as standard dm", {
   expect_equal(unname(rowSums(fit$comp_prob$D1)), rep(1, 3), tolerance = 1e-12)
   expect_true(all(fit$comp_prob$D1 >= -1e-12 & fit$comp_prob$D1 <= 1 + 1e-12))
   expect_equal(unname(fit$dm_component_mean[, "D1"]), c(0.4, 1.5, 0.8))
+})
+
+test_that("BED BayesR formatter preserves CPO diagnostics and mixture weights", {
+  comp_prob <- matrix(
+    c(
+      0.70, 0.20, 0.10,
+      0.10, 0.30, 0.60,
+      0.40, 0.40, 0.20
+    ),
+    nrow = 3,
+    byrow = TRUE
+  )
+  raw <- make_bayesr_bed_raw(
+    bm = c(0.01, -0.02, 0.03),
+    comp_prob = comp_prob,
+    component_mean = c(0.4, 1.5, 0.8),
+    log_cpo = -12.5,
+    mean_log_cpo = -4.1666667,
+    final_pi = c(0.25, 0.35, 0.40),
+    mean_pi = c(0.30, 0.30, 0.40)
+  )
+
+  fit <- format_bayesr_bed_test_fit(raw, nchains = 1L)
+
+  expect_true(all(c(
+    "diagnostics", "log_cpo", "mean_log_cpo", "pi", "pim",
+    "final_pi", "mean_pi"
+  ) %in% names(fit)))
+  expect_identical(rownames(fit$diagnostics), "D1")
+  expect_identical(
+    colnames(fit$diagnostics),
+    c("log_cpo", "mean_log_cpo", "seconds_mean", "seconds_max")
+  )
+  expect_equal(unname(fit$log_cpo), -12.5)
+  expect_equal(unname(fit$mean_log_cpo), -4.1666667)
+  expect_true(all(is.finite(fit$log_cpo)))
+  expect_true(all(is.finite(fit$mean_log_cpo)))
+
+  expect_equal(dim(fit$pi), c(1L, 3L))
+  expect_equal(dim(fit$pim), c(1L, 3L))
+  expect_identical(rownames(fit$pi), "D1")
+  expect_identical(colnames(fit$pi), paste0("component_", 0:2))
+  expect_equal(unname(fit$pi[1L, ]), c(0.25, 0.35, 0.40))
+  expect_equal(unname(fit$pim[1L, ]), c(0.30, 0.30, 0.40))
+  expect_equal(fit$final_pi, fit$pi)
+  expect_equal(fit$mean_pi, fit$pim)
 })
 
 test_that("BED BayesR formatter exposes single-chain summary convention", {

@@ -346,6 +346,22 @@ NULL
  )
 
  component_names <- paste0("component_", seq.int(0L, n_components - 1L))
+
+ pi_raw <- fit[[17L]]
+ pim_raw <- fit[[18L]]
+ if (!is.list(pi_raw) || length(pi_raw) != nt ||
+     any(lengths(pi_raw) != n_components) ||
+     !is.list(pim_raw) || length(pim_raw) != nt ||
+     any(lengths(pim_raw) != n_components)) {
+  stop("BayesR pi and pim slots must have length n_components per trait.")
+ }
+ out$pi <- t(vapply(pi_raw, as.numeric, numeric(n_components)))
+ out$pim <- t(vapply(pim_raw, as.numeric, numeric(n_components)))
+ rownames(out$pi) <- rownames(out$pim) <- trait_names
+ colnames(out$pi) <- colnames(out$pim) <- component_names
+ out$final_pi <- out$pi
+ out$mean_pi <- out$pim
+
  comp_prob <- lapply(seq_len(nt), function(tt) {
   raw <- as.numeric(comp_prob_raw[[tt]])
   mat <- t(matrix(raw, nrow = n_components, ncol = m, byrow = TRUE))
@@ -671,6 +687,17 @@ NULL
  if (!is.null(fit$mixture_var)) {
   out$mixture_var <- stats::setNames(as.numeric(fit$mixture_var), component_names)
  }
+ if (!is.null(fit$updateE_diagnostics)) {
+  updateE_diagnostics <- as.matrix(fit$updateE_diagnostics)
+  if (ncol(updateE_diagnostics) == 8L) {
+   colnames(updateE_diagnostics) <- c(
+    "trait_index", "chain_index", "n_updateE", "min_sse",
+    "min_residual_scale", "max_nonzero_components",
+    "max_abs_effect", "max_fitted_quadratic"
+   )
+  }
+  out$updateE_diagnostics <- updateE_diagnostics
+ }
 
  tol <- 1e-8
  valid_prob <- vapply(comp_prob, function(x) {
@@ -715,15 +742,14 @@ NULL
   comp_init = NULL,
   use_r_init = FALSE,
   r_init = NULL,
-  rebuild_r_before_updateE = FALSE
+  rebuild_r_before_updateE = FALSE,
+  updateE_start = NULL,
+  updateE_every = 1L
 ) {
  if (isTRUE(scheduled)) stop("scheduled CSR BayesR is not implemented.")
  if (isTRUE(updateLDswap)) stop("BayesR CSR LD-swap is not yet supported.")
  if (isTRUE(keep_chains)) {
   stop("keep_chains is not yet supported for experimental CSR BayesR.")
- }
- if (isTRUE(updateE)) {
-  stop("updateE = TRUE is not yet supported for experimental CSR BayesR; use updateE = FALSE.")
  }
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -745,6 +771,21 @@ NULL
  } else {
   chain_seeds <- integer()
  }
+ if (is.null(updateE_start)) {
+  updateE_start <- 0L
+ }
+ if (!is.numeric(updateE_start) || length(updateE_start) != 1L ||
+     !is.finite(updateE_start) || updateE_start < 0 ||
+     updateE_start != floor(updateE_start)) {
+  stop("updateE_start must be NULL or a non-negative integer scalar.")
+ }
+ updateE_start <- as.integer(updateE_start)
+ if (!is.numeric(updateE_every) || length(updateE_every) != 1L ||
+     !is.finite(updateE_every) || updateE_every < 1 ||
+     updateE_every != floor(updateE_every)) {
+  stop("updateE_every must be a positive integer scalar.")
+ }
+ updateE_every <- as.integer(updateE_every)
  if (!is.numeric(mixture_var) || length(mixture_var) < 2L ||
      any(!is.finite(mixture_var)) || mixture_var[1L] != 0 ||
      any(mixture_var[-1L] <= 0)) {
@@ -837,6 +878,8 @@ NULL
   nchains = nchains,
   keep_chains = FALSE,
   chain_seeds = chain_seeds,
+  updateE_start = updateE_start,
+  updateE_every = updateE_every,
   updateLDswap = FALSE
  )
 
@@ -868,6 +911,9 @@ NULL
   mixture_var = as.numeric(mixture_var),
   pi = as.numeric(pi),
   alpha = as.numeric(alpha),
+  updateE = updateE,
+  updateE_start = updateE_start,
+  updateE_every = updateE_every,
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
  fit

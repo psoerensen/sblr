@@ -257,6 +257,8 @@ stblr_cpg_omp_csr_bayesr(
   int nchains,
   bool keep_chains,
   std::vector<int> chain_seeds,
+  int updateE_start = 0,
+  int updateE_every = 1,
   bool updateLDswap = false
 )
 ```
@@ -281,6 +283,8 @@ Validate:
 - component states are integers in `0..K-1`;
 - `nchains >= 1`;
 - `chain_seeds` is empty or length `nchains`;
+- `updateE_start >= 0`;
+- `updateE_every >= 1`;
 - `keep_chains = TRUE` is rejected in the first exact CSR BayesR backend;
 - `updateLDswap = TRUE` is rejected.
 
@@ -524,8 +528,8 @@ Most likely causes evaluated:
 - E. Initialization bug: partly mitigated by all-null component initialization,
   but the previous dense `pi` made early activation too permissive.
 - F. updateE incompatibility: still possible on real data. Even with sparse
-  priors, `updateE = TRUE` should remain disabled until native smoke tests on
-  realistic CSR LD show positive residual scales across early iterations.
+  priors, `updateE = TRUE` should fail strictly with diagnostics if a dataset
+  enters an invalid residual-scale state.
 
 Minimal fix applied:
 
@@ -535,10 +539,20 @@ Minimal fix applied:
   strength `5e5`, matching the sparse CSR prior convention instead of using a
   flat `rep(1, K)`.
 
-`updateE = TRUE` remains disabled in the R helper. The next investigation
-should run the plain CSR BayesR native backend with this sparse prior on the
-same real `stats`/`Glist`, first with `updateE = FALSE` and then through a
-temporary direct native call with `updateE = TRUE` and residual diagnostics.
+`updateE = TRUE` is now enabled in the experimental R helper. By default it
+updates residual variance from zero-based iteration `0` and every iteration
+after that (`updateE_start = NULL` maps to `0`, `updateE_every = 1`). These are
+internal experimental controls; callers can delay or thin residual-variance
+updates with `updateE_start` and `updateE_every` when investigating a dataset.
+
+The native backend rebuilds `r = X'y - X'Xb` immediately before each residual
+variance update, verifies that null-component markers have exactly zero effect,
+computes SSE diagnostics, and then calls the shared `sampleE_ST_csr()` only if
+the residual scale is finite and positive. It does not clamp or silently skip
+invalid SSE states. Successful fits return a lightweight
+`updateE_diagnostics` matrix with per trait-chain update counts, minimum SSE,
+minimum residual scale, maximum active-component count, maximum absolute
+effect, and maximum absolute fitted quadratic term.
 
 ## R Wrapper Design
 

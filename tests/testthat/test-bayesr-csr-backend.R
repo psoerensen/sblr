@@ -246,7 +246,7 @@ expect_bayesr_csr_conventions <- function(fit) {
   }
 }
 
-test_that("experimental exact CSR BayesR updateE modes are constrained", {
+test_that("experimental exact CSR BayesR supports strict updateE modes", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native CSR BayesR symbol is not loaded"
@@ -274,6 +274,70 @@ test_that("experimental exact CSR BayesR updateE modes are constrained", {
     unname(fit_noE$input$pi),
     tolerance = 1e-12
   )
+  expect_equal(fit_noE$input$updateE_start, 0L)
+  expect_equal(fit_noE$input$updateE_every, 1L)
+
+  fit_E <- .stblr_csr_bayesr_experimental(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 20,
+    nburn = 5,
+    ncores = 1,
+    nchains = 1,
+    seed = 10,
+    updateE = TRUE
+  )
+  expect_bayesr_csr_conventions(fit_E)
+  expect_equal(fit_E$input$updateE, TRUE)
+  expect_equal(fit_E$input$updateE_start, 0L)
+  expect_equal(fit_E$input$updateE_every, 1L)
+  expect_true("updateE_diagnostics" %in% names(fit_E))
+  expect_equal(
+    unname(fit_E$updateE_diagnostics[, "n_updateE"]),
+    25,
+    tolerance = 1e-12
+  )
+  expect_true(all(fit_E$updateE_diagnostics[, "min_residual_scale"] > 0))
+
+  fit_E_two_chain <- .stblr_csr_bayesr_experimental(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 20,
+    nburn = 5,
+    ncores = 1,
+    nchains = 2,
+    seed = 10,
+    updateE = TRUE
+  )
+  expect_bayesr_csr_conventions(fit_E_two_chain)
+  expect_equal(nrow(fit_E_two_chain$updateE_diagnostics), 2L)
+
+  fit_E_delayed <- .stblr_csr_bayesr_experimental(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 20,
+    nburn = 5,
+    ncores = 1,
+    nchains = 1,
+    seed = 10,
+    updateE = TRUE,
+    updateE_start = 5,
+    updateE_every = 2
+  )
+  expect_bayesr_csr_conventions(fit_E_delayed)
+  expect_equal(fit_E_delayed$input$updateE_start, 5L)
+  expect_equal(fit_E_delayed$input$updateE_every, 2L)
+  expect_equal(
+    unname(fit_E_delayed$updateE_diagnostics[, "n_updateE"]),
+    10,
+    tolerance = 1e-12
+  )
 
   expect_error(
     .stblr_csr_bayesr_experimental(
@@ -286,8 +350,9 @@ test_that("experimental exact CSR BayesR updateE modes are constrained", {
       ncores = 1,
       nchains = 2,
       seed = 10,
-      updateE = TRUE
+      updateE = TRUE,
+      updateE_every = 0
     ),
-    "updateE = TRUE is not yet supported for experimental CSR BayesR"
+    "updateE_every must be a positive integer scalar"
   )
 })

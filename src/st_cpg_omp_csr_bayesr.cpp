@@ -59,6 +59,64 @@ inline void residual_sse_terms_bayesr_ST_csr(
  sse = yy - bwy - br;
 }
 
+struct BayesRUpdateEDiagnostics {
+ double bwy = 0.0;
+ double br = 0.0;
+ double bXb = 0.0;
+ double sse = 0.0;
+ double residual_scale = 0.0;
+ int nonzero_components = 0;
+ double max_abs_b = 0.0;
+ double max_abs_r = 0.0;
+};
+
+inline BayesRUpdateEDiagnostics residual_diagnostics_bayesr_ST_csr(
+  int m,
+  double nue,
+  const arma::rowvec& b,
+  const arma::rowvec& r,
+  const arma::Row<int>& comp,
+  const arma::rowvec& wy,
+  double sse_prior,
+  double yy
+) {
+ BayesRUpdateEDiagnostics out;
+ residual_sse_terms_bayesr_ST_csr(m, b, wy, r, yy, out.bwy, out.br, out.bXb, out.sse);
+ out.residual_scale = out.sse + nue * sse_prior;
+
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  if (comp(iu) > 0) ++out.nonzero_components;
+  out.max_abs_b = std::max(out.max_abs_b, std::abs(b(iu)));
+  out.max_abs_r = std::max(out.max_abs_r, std::abs(r(iu)));
+ }
+
+ return out;
+}
+
+inline void ensure_null_effects_bayesr_ST_csr(
+  int m,
+  int trait,
+  int chain,
+  int iter,
+  const arma::rowvec& b,
+  const arma::Row<int>& comp
+) {
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  if (comp(iu) == 0 && b(iu) != 0.0) {
+   throw std::runtime_error(
+    "BayesR CSR state mismatch: null component has nonzero effect. trait=" +
+    std::to_string(trait) +
+    ", chain=" + std::to_string(chain) +
+    ", iter=" + std::to_string(iter) +
+    ", marker=" + std::to_string(i) +
+    ", b=" + std::to_string(b(iu))
+   );
+  }
+ }
+}
+
 inline void check_residual_scale_bayesr_ST_csr(
   int m,
   int trait,
@@ -77,19 +135,18 @@ inline void check_residual_scale_bayesr_ST_csr(
   int n,
   double adjE
 ) {
- double bwy = 0.0;
- double br = 0.0;
- double bXb = 0.0;
- double sse = 0.0;
- residual_sse_terms_bayesr_ST_csr(m, b, wy, r, yy, bwy, br, bXb, sse);
- const double scale = sse + nue * sse_prior;
+ const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
+  m,
+  nue,
+  b,
+  r,
+  comp,
+  wy,
+  sse_prior,
+  yy
+ );
 
- if (std::isfinite(scale) && scale > 0.0) return;
-
- int nonzero_comp = 0;
- for (int i = 0; i < m; ++i) {
-  if (comp(static_cast<arma::uword>(i)) > 0) ++nonzero_comp;
- }
+ if (std::isfinite(diag.residual_scale) && diag.residual_scale > 0.0) return;
 
  const double b_min = b.n_elem > 0 ? b.min() : std::numeric_limits<double>::quiet_NaN();
  const double b_max = b.n_elem > 0 ? b.max() : std::numeric_limits<double>::quiet_NaN();
@@ -112,15 +169,15 @@ inline void check_residual_scale_bayesr_ST_csr(
   ", mixture_var_min=" + std::to_string(mix_min) +
   ", mixture_var_max=" + std::to_string(mix_max) +
   ", sse_prior=" + std::to_string(sse_prior) +
-  ", bwy=" + std::to_string(bwy) +
-  ", br=" + std::to_string(br) +
-  ", bXb=" + std::to_string(bXb) +
-  ", sse=" + std::to_string(sse) +
-  ", residual_scale=" + std::to_string(scale) +
+  ", bwy=" + std::to_string(diag.bwy) +
+  ", br=" + std::to_string(diag.br) +
+  ", bXb=" + std::to_string(diag.bXb) +
+  ", sse=" + std::to_string(diag.sse) +
+  ", residual_scale=" + std::to_string(diag.residual_scale) +
   ", r_finite=" + std::to_string(r.is_finite() ? 1 : 0) +
   ", r_min=" + std::to_string(r_min) +
   ", r_max=" + std::to_string(r_max) +
-  ", nonzero_components=" + std::to_string(nonzero_comp) +
+  ", nonzero_components=" + std::to_string(diag.nonzero_components) +
   ", b_finite=" + std::to_string(b.is_finite() ? 1 : 0) +
   ", b_min=" + std::to_string(b_min) +
   ", b_max=" + std::to_string(b_max) +
@@ -367,6 +424,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   int nchains,
   bool keep_chains,
   std::vector<int> chain_seeds,
+  int updateE_start = 0,
+  int updateE_every = 1,
   bool updateLDswap = false
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -378,6 +437,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: invalid nit/nburn/nthin.");
  }
  if (nchains <= 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: nchains must be positive.");
+ if (updateE_start < 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: updateE_start must be non-negative.");
+ if (updateE_every <= 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: updateE_every must be positive.");
  if (keep_chains) {
   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: keep_chains is not yet supported.");
  }
@@ -508,6 +569,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::vec final_vb_task(ntasks, arma::fill::zeros);
  arma::vec final_vg_task(ntasks, arma::fill::zeros);
  arma::vec final_ve_task(ntasks, arma::fill::zeros);
+ arma::vec min_sse_task(ntasks, arma::fill::zeros);
+ arma::vec min_residual_scale_task(ntasks, arma::fill::zeros);
+ arma::ivec max_nonzero_components_task(ntasks, arma::fill::zeros);
+ arma::vec max_abs_effect_task(ntasks, arma::fill::zeros);
+ arma::vec max_fitted_quadratic_task(ntasks, arma::fill::zeros);
+ arma::ivec n_updateE_task(ntasks, arma::fill::zeros);
  std::vector<arma::mat> comp_prob_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::vec> ncomp_task(static_cast<std::size_t>(ntasks));
  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
@@ -577,6 +644,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    arma::mat comp_prob_t(m, K, arma::fill::zeros);
    arma::vec pi_mean_t(K, arma::fill::zeros);
    double nsamples_t = 0.0;
+   double min_sse_t = std::numeric_limits<double>::infinity();
+   double min_residual_scale_t = std::numeric_limits<double>::infinity();
+   int max_nonzero_components_t = 0;
+   double max_abs_effect_t = 0.0;
+   double max_fitted_quadratic_t = 0.0;
+   int n_updateE_t = 0;
 
    double vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
    double vle_t = computeLE_bayesr_ST_csr(m, b_t, ww_t, n[t]);
@@ -613,8 +686,30 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
      );
     }
 
-    if (updateE) {
+    const bool do_updateE =
+     updateE &&
+     it >= updateE_start &&
+     ((it - updateE_start) % updateE_every == 0);
+
+    if (do_updateE) {
+     ensure_null_effects_bayesr_ST_csr(m, t, chain, it, b_t, comp_t);
      rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+     const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
+      m,
+      nue,
+      b_t,
+      r_t,
+      comp_t,
+      wy_t,
+      sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
+      yy_vec(static_cast<arma::uword>(t))
+     );
+     min_sse_t = std::min(min_sse_t, diag.sse);
+     min_residual_scale_t = std::min(min_residual_scale_t, diag.residual_scale);
+     max_nonzero_components_t = std::max(max_nonzero_components_t, diag.nonzero_components);
+     max_abs_effect_t = std::max(max_abs_effect_t, diag.max_abs_b);
+     max_fitted_quadratic_t = std::max(max_fitted_quadratic_t, std::abs(diag.bXb));
+     ++n_updateE_t;
      check_residual_scale_bayesr_ST_csr(
       m,
       t,
@@ -702,6 +797,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    final_vb_task(task_u) = vb_t;
    final_vg_task(task_u) = vg_t;
    final_ve_task(task_u) = ve_t;
+   min_sse_task(task_u) = std::isfinite(min_sse_t) ? min_sse_t : NA_REAL;
+   min_residual_scale_task(task_u) = std::isfinite(min_residual_scale_t) ? min_residual_scale_t : NA_REAL;
+   max_nonzero_components_task(task_u) = max_nonzero_components_t;
+   max_abs_effect_task(task_u) = max_abs_effect_t;
+   max_fitted_quadratic_task(task_u) = max_fitted_quadratic_t;
+   n_updateE_task(task_u) = n_updateE_t;
    comp_prob_task[static_cast<std::size_t>(task)] = comp_prob_t;
    ncomp_task[static_cast<std::size_t>(task)] = arma::sum(comp_prob_t, 0).t();
   } catch (const std::exception& e) {
@@ -747,8 +848,21 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::vec final_vb(nt, arma::fill::zeros);
  arma::vec final_vg(nt, arma::fill::zeros);
  arma::vec final_ve(nt, arma::fill::zeros);
+ arma::mat updateE_diagnostics(ntasks, 8, arma::fill::zeros);
  std::vector<arma::mat> comp_prob(static_cast<std::size_t>(nt));
  arma::mat ncomp(nt, K, arma::fill::zeros);
+
+ for (int task = 0; task < ntasks; ++task) {
+  const arma::uword task_u = static_cast<arma::uword>(task);
+  updateE_diagnostics(task_u, 0) = stblr_task_trait(task, nchains);
+  updateE_diagnostics(task_u, 1) = stblr_task_chain(task, nchains);
+  updateE_diagnostics(task_u, 2) = n_updateE_task(task_u);
+  updateE_diagnostics(task_u, 3) = min_sse_task(task_u);
+  updateE_diagnostics(task_u, 4) = min_residual_scale_task(task_u);
+  updateE_diagnostics(task_u, 5) = max_nonzero_components_task(task_u);
+  updateE_diagnostics(task_u, 6) = max_abs_effect_task(task_u);
+  updateE_diagnostics(task_u, 7) = max_fitted_quadratic_task(task_u);
+ }
 
  for (int t = 0; t < nt; ++t) {
   const arma::uword tu = static_cast<arma::uword>(t);
@@ -871,6 +985,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   Rcpp::Named("comp_prob") = comp_prob_out,
   Rcpp::Named("dm_component_mean") = component_mean.t(),
   Rcpp::Named("ncomp") = ncomp,
-  Rcpp::Named("mixture_var") = mixture_var_vec
+  Rcpp::Named("mixture_var") = mixture_var_vec,
+  Rcpp::Named("updateE_diagnostics") = updateE_diagnostics
  );
 }
