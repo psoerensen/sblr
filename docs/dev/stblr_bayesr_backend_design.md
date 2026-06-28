@@ -214,6 +214,18 @@ The formatted BayesR fit convention is:
 - `dm_component_mean`: posterior mean component index, preserving the old
   BayesR-specific quantity separately from standard `dm`.
 
+Formatted BayesR component probabilities can be inspected with the exported
+diagnostic helper:
+
+```r
+summarise_stblr_bayesr_components(fit)
+```
+
+This reports per-trait aggregate PIP summaries, expected active marker counts
+(`sum_pip`), component-probability summaries, optional chain-stability fields,
+and the maximum difference between `dm` and `1 - component_0` when the null
+component column is present.
+
 ## Required Output Convention
 
 For all BayesR ST-BLR fits, the standard fields should be:

@@ -361,6 +361,16 @@ BayesR-specific marker fields are:
 - `comp_prob`, list by trait; each element is marker by component
 - `dm_component_mean`, posterior mean component index, marker by trait
 
+The formatted component fields can be summarized without printing marker-level
+matrices:
+
+```r
+summarise_stblr_bayesr_components(fit)
+```
+
+This helper is an R-side diagnostic summary only. It does not implement
+scheduled CSR BayesR, LD-swap, sampler changes, or native backend changes.
+
 Variance and mixture summaries are:
 
 - `vbs`, `vgs`, `ves`, `vle`, `vld`, trace by trait
