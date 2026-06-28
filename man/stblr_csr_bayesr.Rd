@@ -28,6 +28,11 @@ stblr_csr_bayesr(
   updatePi = TRUE,
   updateE_start = NULL,
   updateE_every = 1L,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -80,12 +85,27 @@ Defaults to 0.}
 
 \item{updateE_every}{Positive update interval for `updateE`.}
 
+\item{updateLDswap}{Logical; attempt active/null BayesR LD-swap
+Metropolis-Hastings moves. The move relocates `(component, b)` together and
+assumes the current plain CSR BayesR model with global `pi` and
+`mixture_var`.}
+
+\item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
+moves when `updateLDswap = TRUE`.}
+
+\item{ld_swap_r2}{Minimum LD r-squared for candidate swap partners.}
+
+\item{ld_swap_max_friends}{Maximum number of high-LD friends stored per
+marker for swap proposals.}
+
+\item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
+
 \item{nub, nue}{Prior degrees of freedom.}
 
 \item{use_comp_init, comp_init, use_r_init, r_init, rebuild_r_before_updateE}{Advanced initialization controls.}
 
-\item{...}{Unsupported options. Passing scheduled CSR or LD-swap controls
-through `...` errors clearly.}
+\item{...}{Unsupported options. Passing scheduled CSR controls through `...`
+errors clearly.}
 }
 \value{
 A formatted ST-BLR BayesR fit.
@@ -99,6 +119,8 @@ posterior probabilities with `component_0` as the null component.
 \details{
 Exact CSR BayesR supports multiple chains, compact per-chain output with
 `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
-SSE validation. Scheduled CSR BayesR and BayesR LD-swap/MH moves are not
-currently supported by this interface.
+SSE validation. Optional BayesR LD-swap/MH moves relocate the full
+`(component, b)` state from an active marker to a null LD friend. Active/active
+swaps, marker-specific swap priors, and scheduled CSR BayesR are not
+implemented.
 }
