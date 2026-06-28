@@ -320,6 +320,77 @@ NULL
  out
 }
 
+.format_stblr_bayesr_fit <- function(fit, nt, m, trait_names, variable_names,
+                                     n_components,
+                                     keep_diagnostics = FALSE) {
+ if (!is.list(fit) || length(fit) < 23L) {
+  stop(".format_stblr_bayesr_fit() expects a BayesR raw return list.")
+ }
+ if (!is.numeric(n_components) || length(n_components) != 1L ||
+     !is.finite(n_components) || n_components < 2L ||
+     n_components != floor(n_components)) {
+  stop("n_components must be a finite integer scalar of at least 2.")
+ }
+ n_components <- as.integer(n_components)
+
+ comp_prob_raw <- fit[[23L]]
+ if (!is.list(comp_prob_raw) || length(comp_prob_raw) != nt ||
+     any(lengths(comp_prob_raw) != m * n_components)) {
+  stop("BayesR component-probability slot must have length n_components * m per trait.")
+ }
+ component_mean_raw <- if (length(fit) >= 30L) fit[[30L]] else NULL
+
+ out <- .format_stblr_fit(
+  fit, nt, m, trait_names, variable_names,
+  keep_diagnostics = keep_diagnostics
+ )
+
+ component_names <- paste0("component_", seq.int(0L, n_components - 1L))
+ comp_prob <- lapply(seq_len(nt), function(tt) {
+  raw <- as.numeric(comp_prob_raw[[tt]])
+  mat <- t(matrix(raw, nrow = n_components, ncol = m, byrow = TRUE))
+  rownames(mat) <- variable_names
+  colnames(mat) <- component_names
+  mat
+ })
+ names(comp_prob) <- trait_names
+ out$comp_prob <- comp_prob
+
+ dm_from_components <- vapply(
+  comp_prob,
+  function(x) 1 - x[, 1L],
+  numeric(m)
+ )
+ if (nt == 1L) {
+  dm_from_components <- matrix(dm_from_components, ncol = 1L)
+ }
+ rownames(dm_from_components) <- variable_names
+ colnames(dm_from_components) <- trait_names
+ out$dm <- dm_from_components
+
+ if (!is.null(component_mean_raw)) {
+  if (!is.list(component_mean_raw) || length(component_mean_raw) != nt ||
+      any(lengths(component_mean_raw) != m)) {
+   stop("BayesR component-mean slot must have length m per trait.")
+  }
+  out$dm_component_mean <- as.matrix(as.data.frame(component_mean_raw))
+  rownames(out$dm_component_mean) <- variable_names
+  colnames(out$dm_component_mean) <- trait_names
+ }
+
+ tol <- 1e-8
+ valid_prob <- vapply(comp_prob, function(x) {
+  all(is.finite(x)) &&
+   all(x >= -tol & x <= 1 + tol) &&
+   all(abs(rowSums(x) - 1) <= 1e-6)
+ }, logical(1))
+ if (!all(valid_prob)) {
+  stop("BayesR component probabilities must be finite, within [0, 1], and sum to 1 by marker.")
+ }
+
+ out
+}
+
 .resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)

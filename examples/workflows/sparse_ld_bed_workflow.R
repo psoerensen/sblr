@@ -81,7 +81,7 @@ fit <- stblr_csr(
   nburn = 1000,
   ncores = 3,
   seed = 10,
-  scheduled = TRUE
+  scheduled = FALSE
 )
 
 fitMH <- stblr_csr(
@@ -137,6 +137,221 @@ colMeans(fitMH$dm)
 
 summarise_stblr_posterior(fit)
 summarise_stblr_posterior(fitMH)
+
+
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}
+
+## ------------------------------------------------------------
+## Simple ST-BLR backend and fine-mapping checks
+## ------------------------------------------------------------
+
+## 1. Basic backend consistency checks
+chk_fit <- check_stblr_backend_consistency(
+  fit,
+  require_chain_summaries = FALSE,
+  require_ld_swap = FALSE
+)
+
+chk_fitMH <- check_stblr_backend_consistency(
+  fitMH,
+  require_chain_summaries = TRUE,
+  require_ld_swap = TRUE
+)
+
+print(chk_fit)
+print(chk_fitMH)
+
+stopifnot(isTRUE(chk_fit$ok))
+stopifnot(isTRUE(chk_fitMH$ok))
+
+
+## ------------------------------------------------------------
+## 2. Basic dimensions and metadata
+## ------------------------------------------------------------
+
+cat("\n--- Basic dimensions ---\n")
+cat("dim(fit$dm):   ", paste(dim(fit$dm), collapse = " x "), "\n")
+cat("dim(fitMH$dm): ", paste(dim(fitMH$dm), collapse = " x "), "\n")
+
+cat("\n--- Chain metadata ---\n")
+cat("fit nchains:   ", fit$input$nchains %||% 1L, "\n")
+cat("fitMH nchains: ", fitMH$input$nchains %||% 1L, "\n")
+
+cat("\n--- Scheduled flags ---\n")
+cat("fit scheduled:   ", fit$input$scheduled %||% NA, "\n")
+cat("fitMH scheduled: ", fitMH$input$scheduled %||% NA, "\n")
+
+
+## ------------------------------------------------------------
+## 3. Check chain summary fields in fitMH
+## ------------------------------------------------------------
+
+chain_fields <- c(
+  "dm_sd", "dm_min", "dm_max",
+  "bm_sd", "bm_min", "bm_max"
+)
+
+cat("\n--- Chain summary fields in fitMH ---\n")
+print(sapply(chain_fields, function(x) x %in% names(fitMH)))
+
+stopifnot(all(chain_fields %in% names(fitMH)))
+
+stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_sd)))
+stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_min)))
+stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_max)))
+
+stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_sd)))
+stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_min)))
+stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_max)))
+
+stopifnot(all(fitMH$dm_sd >= 0, na.rm = TRUE))
+stopifnot(all(fitMH$bm_sd >= 0, na.rm = TRUE))
+
+stopifnot(all(fitMH$dm_min <= fitMH$dm + 1e-12, na.rm = TRUE))
+stopifnot(all(fitMH$dm <= fitMH$dm_max + 1e-12, na.rm = TRUE))
+
+stopifnot(all(fitMH$bm_min <= fitMH$bm + 1e-12, na.rm = TRUE))
+stopifnot(all(fitMH$bm <= fitMH$bm_max + 1e-12, na.rm = TRUE))
+
+
+## ------------------------------------------------------------
+## 4. Check LD-swap diagnostics
+## ------------------------------------------------------------
+
+cat("\n--- LD-swap diagnostics ---\n")
+print(fitMH$ld_swap)
+
+if (!is.null(fitMH$ld_swap)) {
+  stopifnot(all(fitMH$ld_swap$attempted >= fitMH$ld_swap$accepted))
+  stopifnot(all(fitMH$ld_swap$accepted >= 0))
+  stopifnot(all(fitMH$ld_swap$acceptance_rate >= 0))
+  stopifnot(all(fitMH$ld_swap$acceptance_rate <= 1))
+}
+
+
+## ------------------------------------------------------------
+## 5. Compare posterior inclusion levels
+## ------------------------------------------------------------
+
+cat("\n--- Mean PIP per trait ---\n")
+
+pip_compare <- data.frame(
+  trait = colnames(fit$dm),
+  scheduled_mean_pip = colMeans(fit$dm),
+  exact_mh_mean_pip = colMeans(fitMH$dm)
+)
+
+print(pip_compare)
+
+
+## ------------------------------------------------------------
+## 6. Check credible-set object
+## ------------------------------------------------------------
+
+cat("\n--- Global credible-set object ---\n")
+
+stopifnot(is.list(cs_global))
+stopifnot(all(c("summary", "sets", "locus_sets", "loci", "parameters") %in% names(cs_global)))
+
+cat("Number of detected loci: ", nrow(cs_global$summary), "\n")
+cat("Number of locus sets:    ", length(cs_global$locus_sets), "\n")
+
+print(head(cs_global$summary, 10))
+
+
+## ------------------------------------------------------------
+## 7. Check extracted fine-mapping object
+## ------------------------------------------------------------
+
+cat("\n--- Fine-mapping extraction object ---\n")
+
+stopifnot(is.list(fm_extract))
+stopifnot(all(c("summary", "markers", "credible_sets", "loci", "parameters") %in% names(fm_extract)))
+
+cat("Number of extracted loci:   ", nrow(fm_extract$summary), "\n")
+cat("Number of marker rows:      ", nrow(fm_extract$markers), "\n")
+
+print(head(fm_extract$summary, 20))
+
+
+## ------------------------------------------------------------
+## 8. Confirm chain summaries propagated into fine-mapping output
+## ------------------------------------------------------------
+
+cat("\n--- Fine-mapping chain-summary propagation ---\n")
+
+required_marker_cols <- c(
+  "pip_mean", "pip_sd", "pip_min", "pip_max",
+  "bm_mean", "bm_sd", "bm_min", "bm_max"
+)
+
+print(sapply(required_marker_cols, function(x) x %in% names(fm_extract$markers)))
+
+stopifnot(all(required_marker_cols %in% names(fm_extract$markers)))
+
+stopifnot(any(!is.na(fm_extract$markers$pip_sd)))
+stopifnot(any(!is.na(fm_extract$markers$pip_min)))
+stopifnot(any(!is.na(fm_extract$markers$pip_max)))
+
+stopifnot(any(!is.na(fm_extract$markers$bm_sd)))
+stopifnot(any(!is.na(fm_extract$markers$bm_min)))
+stopifnot(any(!is.na(fm_extract$markers$bm_max)))
+
+
+## ------------------------------------------------------------
+## 9. Summarize locus classes
+## ------------------------------------------------------------
+
+fm_extract$summary$class <- with(fm_extract$summary, ifelse(
+  lead_pip >= 0.95 & secondary_pip < 0.05,
+  "single strong signal",
+  ifelse(
+    lead_pip >= 0.95 & secondary_pip >= 0.05,
+    "strong lead + secondary mass",
+    ifelse(
+      total_pip >= 0.95,
+      "distributed/partial credible signal",
+      "weak or exploratory signal"
+    )
+  )
+))
+
+cat("\n--- Locus classes ---\n")
+print(table(fm_extract$summary$class))
+
+cat("\n--- Strong or distributed loci ---\n")
+print(
+  subset(
+    fm_extract$summary,
+    class != "weak or exploratory signal"
+  )
+)
+
+
+## ------------------------------------------------------------
+## 10. Credible-set summary
+## ------------------------------------------------------------
+
+cat("\n--- Credible-set summary ---\n")
+
+if (!is.null(fm_extract$credible_sets$summary)) {
+  print(head(fm_extract$credible_sets$summary, 50))
+  
+  cat("\nComplete credible sets:\n")
+  print(table(fm_extract$credible_sets$summary$complete))
+  
+  cat("\nNumber of signals per locus:\n")
+  print(table(fm_extract$credible_sets$summary$locus))
+}
+
+
+## ------------------------------------------------------------
+## 11. Final message
+## ------------------------------------------------------------
+
+cat("\nAll basic ST-BLR backend and fine-mapping checks passed.\n")
 
 matplot(fit$pis)
 matplot(fit$ves)

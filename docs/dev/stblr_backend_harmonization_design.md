@@ -13,6 +13,13 @@ marker-level chain stability summaries as regular CSR. Scheduled CSR remains
 LD-swap-free, and the individual/BED chain support still lives in a separate
 scheduled chains backend.
 
+BayesR backend harmonization is tracked separately in
+`docs/dev/stblr_bayesr_backend_design.md`. The existing BED BayesR scheduled
+chains backend now uses standard `dm = P(component > 0)` and exposes standard
+`bm`/`dm` chain summaries. It remains a lower-level experimental backend with
+no public wrapper. Plain exact and scheduled CSR BayesR backends remain future
+work.
+
 Implementation status: scheduled CSR and individual/BED scheduled chains now
 extend their existing 23-slot base results with CSR-compatible chain-stability
 summaries in slots 24 to 29: `bm_sd`, `bm_min`, `bm_max`, `dm_sd`, `dm_min`,

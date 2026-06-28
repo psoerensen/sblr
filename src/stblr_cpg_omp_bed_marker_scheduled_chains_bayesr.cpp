@@ -35,6 +35,8 @@ using namespace arma;
 //   - pi is a K-vector sampled from Dirichlet(alpha + counts)
 //   - sampleB uses b_j^2 / c[d_j] as each marker's ssb contribution
 //   - Additional result slot [22]: per-component PIP matrix, flat K*m per trait
+//   - Standard dm is P(component > 0); posterior mean component index is
+//     preserved in result slot [29].
 //
 // All BED reading, packing, scheduling logic, chain parallelism, and R/C++
 // signatures for BED/packed matrix routines are unchanged from the BayesC version.
@@ -48,6 +50,7 @@ struct MarkerMapBayesR {
 struct ChainResultBayesR {
  arma::rowvec bm;
  arma::rowvec dm;
+ arma::rowvec component_mean;
  arma::rowvec b;
  arma::rowvec d_as_double;
  arma::rowvec vbs;
@@ -773,6 +776,7 @@ static ChainResultBayesR run_one_bayesr_chain(
  ChainResultBayesR out;
  out.bm = arma::rowvec(m, arma::fill::zeros);
  out.dm = arma::rowvec(m, arma::fill::zeros);
+ out.component_mean = arma::rowvec(m, arma::fill::zeros);
  out.b = arma::rowvec(m, arma::fill::zeros);
  out.d_as_double = arma::rowvec(m, arma::fill::zeros);
  out.vbs = arma::rowvec(nit + nburn, arma::fill::zeros);
@@ -825,6 +829,7 @@ static ChainResultBayesR run_one_bayesr_chain(
 
   arma::rowvec bm_t(m, arma::fill::zeros);
   arma::rowvec dm_t(m, arma::fill::zeros);
+  arma::rowvec component_mean_t(m, arma::fill::zeros);
   arma::mat    pip_k_t(static_cast<arma::uword>(K), static_cast<arma::uword>(m), arma::fill::zeros);
   arma::rowvec vbs_t(nit + nburn, arma::fill::zeros);
   arma::rowvec vgs_t(nit + nburn, arma::fill::zeros);
@@ -1086,7 +1091,8 @@ static ChainResultBayesR run_one_bayesr_chain(
     for (int j = 0; j < m; ++j) {
      const arma::uword ju = static_cast<arma::uword>(j);
      bm_t(ju) += b_t(ju);
-     dm_t(ju) += static_cast<double>(d_t(ju));
+     dm_t(ju) += d_t(ju) > 0 ? 1.0 : 0.0;
+     component_mean_t(ju) += static_cast<double>(d_t(ju));
      pip_k_t(static_cast<arma::uword>(d_t(ju)), ju) += 1.0;
     }
    }
@@ -1099,10 +1105,12 @@ static ChainResultBayesR run_one_bayesr_chain(
 
   bm_t /= nsamples_t;
   dm_t /= nsamples_t;
+  component_mean_t /= nsamples_t;
   pip_k_t /= nsamples_t;
 
   out.bm = bm_t;
   out.dm = dm_t;
+  out.component_mean = component_mean_t;
   out.b = b_t;
   for (int j = 0; j < m; ++j)
    out.d_as_double(static_cast<arma::uword>(j)) = static_cast<double>(d_t(static_cast<arma::uword>(j)));
@@ -1429,8 +1437,15 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
  // Aggregate across chains
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
+ arma::mat component_mean_mat(nt, m, arma::fill::zeros);
  arma::mat b_mat(nt, m, arma::fill::zeros);
  arma::mat d_mat_double(nt, m, arma::fill::zeros);
+ arma::mat bm_sd_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_sd_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_min_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_min_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_max_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_max_mat(nt, m, arma::fill::zeros);
  arma::mat vbs_mat(nt, nit + nburn, arma::fill::zeros);
  arma::mat vgs_mat(nt, nit + nburn, arma::fill::zeros);
  arma::mat ves_mat(nt, nit + nburn, arma::fill::zeros);
@@ -1463,6 +1478,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
 
    bm_mat.row(tu) += r.bm;
    dm_mat.row(tu) += r.dm;
+   component_mean_mat.row(tu) += r.component_mean;
    b_mat.row(tu) += r.b;
    d_mat_double.row(tu) += r.d_as_double;
    vbs_mat.row(tu) += r.vbs;
@@ -1492,6 +1508,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
  const double inv_chains = 1.0 / static_cast<double>(nchains);
  bm_mat *= inv_chains;
  dm_mat *= inv_chains;
+ component_mean_mat *= inv_chains;
  b_mat *= inv_chains;
  d_mat_double *= inv_chains;
  vbs_mat *= inv_chains;
@@ -1511,6 +1528,39 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
  mean_log_cpo *= inv_chains;
  mean_nsamples *= inv_chains;
  mean_seconds *= inv_chains;
+
+ for (int t = 0; t < nt; ++t) {
+  const arma::uword tu = static_cast<arma::uword>(t);
+  bm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
+  dm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
+  bm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
+  dm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
+
+  for (int ch = 0; ch < nchains; ++ch) {
+   const int job = ch * nt + t;
+   const ChainResultBayesR& r = job_results[static_cast<std::size_t>(job)];
+
+   for (int j = 0; j < m; ++j) {
+    const arma::uword ju = static_cast<arma::uword>(j);
+    bm_min_mat(tu, ju) = std::min(bm_min_mat(tu, ju), r.bm(ju));
+    dm_min_mat(tu, ju) = std::min(dm_min_mat(tu, ju), r.dm(ju));
+    bm_max_mat(tu, ju) = std::max(bm_max_mat(tu, ju), r.bm(ju));
+    dm_max_mat(tu, ju) = std::max(dm_max_mat(tu, ju), r.dm(ju));
+   }
+
+   if (nchains > 1) {
+    const arma::rowvec bm_diff = r.bm - bm_mat.row(tu);
+    const arma::rowvec dm_diff = r.dm - dm_mat.row(tu);
+    bm_sd_mat.row(tu) += bm_diff % bm_diff;
+    dm_sd_mat.row(tu) += dm_diff % dm_diff;
+   }
+  }
+
+  if (nchains > 1) {
+   bm_sd_mat.row(tu) = arma::sqrt(bm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
+   dm_sd_mat.row(tu) = arma::sqrt(dm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
+  }
+ }
 
  arma::mat wy_mat(nt, m, arma::fill::zeros);
  arma::mat r_mat(nt, m, arma::fill::zeros);
@@ -1533,9 +1583,9 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
   }
  }
 
- // Result layout (23 slots, 0-indexed):
+ // Result layout (30 slots, 0-indexed):
  //  [0]  bm:          posterior mean effect (m per trait)
- //  [1]  dm:          posterior mean component index (m per trait)
+ //  [1]  dm:          posterior non-null probability, P(component > 0)
  //  [2]  wy:          x_j'y (optional, m per trait)
  //  [3]  r:           x_j'e (optional, m per trait)
  //  [4]  b:           final effect (m per trait)
@@ -1552,9 +1602,16 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
  //  [20] vles trace   (nit+nburn per trait)
  //  [21] vlds trace   (nit+nburn per trait)
  //  [22] pip_k:       per-component PIP, flat K*m (component-major: k*m+j), per trait
+ //  [23] bm_sd
+ //  [24] bm_min
+ //  [25] bm_max
+ //  [26] dm_sd
+ //  [27] dm_min
+ //  [28] dm_max
+ //  [29] component_mean: posterior mean component index (m per trait)
 
- std::vector<std::vector<std::vector<double>>> result(23);
- for (int k = 0; k < 23; ++k)
+ std::vector<std::vector<std::vector<double>>> result(30);
+ for (int k = 0; k < 30; ++k)
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
 
  for (int t = 0; t < nt; ++t) {
@@ -1569,6 +1626,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
   result[20][ts].resize(static_cast<std::size_t>(nit + nburn));
   result[21][ts].resize(static_cast<std::size_t>(nit + nburn));
   result[22][ts].resize(static_cast<std::size_t>(K) * static_cast<std::size_t>(m));
+  for (int k = 23; k <= 29; ++k) result[static_cast<std::size_t>(k)][ts].resize(static_cast<std::size_t>(m));
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1585,6 +1643,13 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_scheduled
    result[4][ts][js] = b_mat(tu, ju);
    result[5][ts][js] = d_mat_double(tu, ju);
    result[6][ts][js] = static_cast<double>(j);
+   result[23][ts][js] = bm_sd_mat(tu, ju);
+   result[24][ts][js] = bm_min_mat(tu, ju);
+   result[25][ts][js] = bm_max_mat(tu, ju);
+   result[26][ts][js] = dm_sd_mat(tu, ju);
+   result[27][ts][js] = dm_min_mat(tu, ju);
+   result[28][ts][js] = dm_max_mat(tu, ju);
+   result[29][ts][js] = component_mean_mat(tu, ju);
   }
  }
 
