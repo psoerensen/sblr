@@ -381,47 +381,6 @@ check_stblr_backend_consistency(
 range(fit_br_noE$dm, na.rm = TRUE)
 head(fit_br_noE$comp_prob[[1]])
 
-BayesC exact CSR
-nchains        yes
-updateE        yes
-LD-swap/MH     yes
-scheduled      no
-chain summaries yes
-
-BayesC scheduled CSR
-nchains        yes
-updateE        yes
-LD-swap/MH     no
-scheduled      yes
-chain summaries yes
-
-BayesC BED scheduled chains
-nchains        yes
-CPO/logCPO     yes
-chain summaries yes
-
-BayesR BED scheduled chains
-nchains        yes
-dm = P(comp > 0) yes
-comp_prob      yes
-chain summaries yes
-
-BayesR exact CSR
-nchains        yes
-updateE        experimentally yes
-LD-swap/MH     no
-scheduled      no
-keep_chains    no
-comp_prob      yes
-chain summaries yes
-
-BayesC exact CSR
-nchains        yes
-updateE        yes
-LD-swap/MH     yes
-scheduled      no
-chain summaries yes
-
 
 post <- sblr:::summarise_stblr_posterior(fit)
 

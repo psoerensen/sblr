@@ -220,9 +220,23 @@ test_that("BED BayesR formatter exposes finite multi-chain summaries", {
     comp_prob = comp_prob,
     component_mean = c(0.45, 1.4, 0.75),
     bm_chain = bm_chain,
-    dm_chain = dm_chain
+    dm_chain = dm_chain,
+    log_cpo = -15.25,
+    mean_log_cpo = -5.0833333,
+    final_pi = c(0.20, 0.35, 0.45),
+    mean_pi = c(0.25, 0.35, 0.40)
   )
   fit <- format_bayesr_bed_test_fit(raw, nchains = 2L)
+
+  expect_true(all(c("log_cpo", "mean_log_cpo", "final_pi", "mean_pi") %in% names(fit)))
+  expect_length(fit$log_cpo, 1L)
+  expect_length(fit$mean_log_cpo, 1L)
+  expect_true(all(is.finite(fit$log_cpo)))
+  expect_true(all(is.finite(fit$mean_log_cpo)))
+  expect_equal(unname(fit$log_cpo), -15.25)
+  expect_equal(unname(fit$mean_log_cpo), -5.0833333)
+  expect_equal(dim(fit$final_pi), c(1L, 3L))
+  expect_equal(dim(fit$mean_pi), c(1L, 3L))
 
   expect_true(all(is.finite(fit$bm_sd)))
   expect_true(all(is.finite(fit$dm_sd)))
