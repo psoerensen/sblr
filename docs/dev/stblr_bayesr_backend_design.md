@@ -24,6 +24,12 @@ exact CSR BayesR. LD-swap should be postponed for BayesR until the
 Metropolis-Hastings state exchange is explicitly designed for both effect and
 component assignment.
 
+The detailed exact CSR BayesR design is in
+`docs/dev/stblr_csr_bayesr_design.md`. That design keeps CSR BayesR separate
+from SBayesRC-style annotation models, recommends an internal experimental R
+helper before a public API, and preserves the standard chain-output convention
+used by the harmonized BayesC backends.
+
 ## Current BayesR Backend Inventory
 
 ### C++ Files
