@@ -722,6 +722,9 @@ NULL
  if (isTRUE(keep_chains)) {
   stop("keep_chains is not yet supported for experimental CSR BayesR.")
  }
+ if (isTRUE(updateE)) {
+  stop("updateE = TRUE is not yet supported for experimental CSR BayesR; use updateE = FALSE.")
+ }
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
   stop("nchains must be a positive integer scalar.")

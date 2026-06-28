@@ -236,13 +236,17 @@ expect_bayesr_csr_conventions <- function(fit) {
   expect_true(all(fit$dm >= -1e-12 & fit$dm <= 1 + 1e-12))
   for (trait in names(fit$comp_prob)) {
     cp <- fit$comp_prob[[trait]]
-    expect_equal(as.numeric(fit$dm[rownames(cp), trait]), 1 - cp[, 1L], tolerance = 1e-12)
+    expect_equal(
+      unname(as.numeric(fit$dm[rownames(cp), trait])),
+      unname(as.numeric(1 - cp[, 1L])),
+      tolerance = 1e-12
+    )
     expect_equal(unname(rowSums(cp)), rep(1, nrow(cp)), tolerance = 1e-12)
     expect_true(all(cp >= -1e-12 & cp <= 1 + 1e-12))
   }
 }
 
-test_that("experimental exact CSR BayesR updateE modes run on a small native fixture", {
+test_that("experimental exact CSR BayesR updateE modes are constrained", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native CSR BayesR symbol is not loaded"
@@ -265,17 +269,19 @@ test_that("experimental exact CSR BayesR updateE modes run on a small native fix
   )
   expect_bayesr_csr_conventions(fit_noE)
 
-  fit_E <- .stblr_csr_bayesr_experimental(
-    stats = fixture$stats,
-    Glist = fixture$Glist,
-    h2 = 0.3,
-    adjE = 0.9,
-    nit = 12,
-    nburn = 4,
-    ncores = 1,
-    nchains = 2,
-    seed = 10,
-    updateE = TRUE
+  expect_error(
+    .stblr_csr_bayesr_experimental(
+      stats = fixture$stats,
+      Glist = fixture$Glist,
+      h2 = 0.3,
+      adjE = 0.9,
+      nit = 12,
+      nburn = 4,
+      ncores = 1,
+      nchains = 2,
+      seed = 10,
+      updateE = TRUE
+    ),
+    "updateE = TRUE is not yet supported for experimental CSR BayesR"
   )
-  expect_bayesr_csr_conventions(fit_E)
 })

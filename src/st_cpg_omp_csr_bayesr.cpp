@@ -35,21 +35,28 @@ inline double computeLE_bayesr_ST_csr(
  return vle / static_cast<double>(n);
 }
 
-inline double residual_sse_bayesr_ST_csr(
+inline void residual_sse_terms_bayesr_ST_csr(
   int m,
   const arma::rowvec& b,
   const arma::rowvec& wy,
   const arma::rowvec& r,
-  double yy
+  double yy,
+  double& bwy,
+  double& br,
+  double& bXb,
+  double& sse
 ) {
- double b_dot_r_plus_wy = 0.0;
+ bwy = 0.0;
+ br = 0.0;
 
  for (int i = 0; i < m; ++i) {
   const arma::uword iu = static_cast<arma::uword>(i);
-  b_dot_r_plus_wy += b(iu) * (r(iu) + wy(iu));
+  bwy += b(iu) * wy(iu);
+  br += b(iu) * r(iu);
  }
 
- return yy - b_dot_r_plus_wy;
+ bXb = bwy - br;
+ sse = yy - bwy - br;
 }
 
 inline void check_residual_scale_bayesr_ST_csr(
@@ -70,7 +77,11 @@ inline void check_residual_scale_bayesr_ST_csr(
   int n,
   double adjE
 ) {
- const double sse = residual_sse_bayesr_ST_csr(m, b, wy, r, yy);
+ double bwy = 0.0;
+ double br = 0.0;
+ double bXb = 0.0;
+ double sse = 0.0;
+ residual_sse_terms_bayesr_ST_csr(m, b, wy, r, yy, bwy, br, bXb, sse);
  const double scale = sse + nue * sse_prior;
 
  if (std::isfinite(scale) && scale > 0.0) return;
@@ -101,6 +112,9 @@ inline void check_residual_scale_bayesr_ST_csr(
   ", mixture_var_min=" + std::to_string(mix_min) +
   ", mixture_var_max=" + std::to_string(mix_max) +
   ", sse_prior=" + std::to_string(sse_prior) +
+  ", bwy=" + std::to_string(bwy) +
+  ", br=" + std::to_string(br) +
+  ", bXb=" + std::to_string(bXb) +
   ", sse=" + std::to_string(sse) +
   ", residual_scale=" + std::to_string(scale) +
   ", r_finite=" + std::to_string(r.is_finite() ? 1 : 0) +
