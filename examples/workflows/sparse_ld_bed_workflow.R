@@ -71,14 +71,13 @@ system.time(Glist <- make_sparseLD(
 fit <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  ## Conservative sparse architecture.
   pi_init = 0.001,
   pi_prior_a = 1,
   pi_prior_b = 1,
   h2 = 0.3,
   adjE = 0.9,
-  nit = 10000,
-  nburn = 1000,
+  nit = 1000,
+  nburn = 100,
   ncores = 3,
   seed = 10,
   scheduled = FALSE
