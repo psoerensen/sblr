@@ -123,37 +123,11 @@ These limitations remain explicit:
 ## Annotation-Aware BLR Alignment Plan
 
 Annotation-aware BLR should align with the same public interface, metadata, and
-output conventions as CSR and BED BLR. Candidate future interfaces include:
+output conventions as CSR and BED BLR. The detailed audit and staged alignment
+plan is in `docs/dev/stblr_annotation_backend_design.md`.
 
-```r
-stblr_csr(
-  stats = stats,
-  Glist = Glist,
-  method = "bayesC",
-  annotations = annot
-)
-```
-
-or, if a distinct entry point is clearer:
-
-```r
-stblr_csr_annot(
-  stats = stats,
-  Glist = Glist,
-  method = "bayesC",
-  annotations = annot
-)
-```
-
-BayesR annotation-aware interfaces should use the same pattern when planned.
-Future annotation-aware fits should preserve:
-
-- `fit$dm`
-- `fit$bm`
-- `fit$input$method`
-- `fit$input$backend`
-- `fit$input$data_level`
-- `fit$annotation`
-- `fit$annotation_summary`
-
-Annotation-aware changes should be implemented in a separate task.
+The current recommendation is to add a clean `stblr_csr_annot()` interface first
+and keep existing exported annotation wrappers as compatibility entry points.
+Direct `stblr_csr(..., annotations = ...)` dispatch can be added later after the
+annotation argument contract is stable. Annotation-aware changes should remain a
+separate implementation task and should not rename native C++ files or symbols.
