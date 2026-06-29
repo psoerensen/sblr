@@ -17,11 +17,13 @@ mean component index is preserved separately, and standard `bm`/`dm` chain
 summaries are returned. The backend remains lower-level and experimental
 because no public R wrapper currently calls it.
 
-Plain exact CSR BayesR is supported through `stblr_csr_bayesr()`, using
-`src/st_cpg_omp_csr.cpp` as the architectural template and the SBayesRC CSR code
-only as a source of mixture-update math. Scheduled CSR BayesR remains future
-work. LD-swap remains postponed for BayesR until the Metropolis-Hastings state
-exchange is explicitly designed for both effect and component assignment.
+Plain exact CSR BayesR is supported through `stblr_csr_bayesr()` and
+`stblr_csr(method = "bayesr")`, using `src/st_cpg_omp_csr.cpp` as the
+architectural template and the SBayesRC CSR code only as a source of
+mixture-update math. Scheduled CSR BayesR remains future work. Exact CSR BayesR
+supports the first LD-swap scope: active/null full-state relocation of
+`(component, b)`. Active/active swaps and marker-specific swap priors remain
+future work.
 
 The detailed exact CSR BayesR design and implementation status are in
 `docs/dev/stblr_csr_bayesr_design.md`. That path keeps CSR BayesR separate from
@@ -321,12 +323,13 @@ There is a supported plain exact summary-stat CSR BayesR backend:
 - `stblr_cpg_omp_csr_bayesr(...)`
 - internal formatter `.format_stblr_csr_bayesr_fit()`
 - public helper `stblr_csr_bayesr()`
+- high-level `stblr_csr(method = "bayesr")` dispatch
 - compatibility alias `.stblr_csr_bayesr_experimental()`
 
 This path supports exact CSR updates, `nchains`, `chain_seeds`,
 `keep_chains = TRUE`, standard chain summaries, `comp_prob`, and
-`dm_component_mean`. It rejects LD-swap/MH. Scheduled CSR BayesR remains future
-work.
+`dm_component_mean`. It supports active/null full-state LD-swap/MH. Scheduled
+CSR BayesR remains future work.
 
 The residual variance update investigation is documented in
 `docs/dev/stblr_csr_bayesr_design.md` under "Residual Variance Update and Prior
@@ -407,8 +410,9 @@ BayesR-specific arguments:
 
 Initial LD-swap support:
 
-- Do not support LD-swap in the first exact CSR BayesR implementation.
-- Reject `updateLDswap = TRUE` if the argument is present.
+- Support active/null full-state LD-swap in exact CSR BayesR.
+- Do not support scheduled CSR BayesR LD-swap, active/active swaps, or
+  marker-specific swap prior terms.
 
 Standard outputs:
 
@@ -495,8 +499,10 @@ The key design question is whether a swap exchanges:
 
 The correct Metropolis-Hastings ratio depends on the component prior
 probabilities, component variance multipliers, and any marker-specific mixture
-probabilities. Because this is not a trivial extension of BayesC LD-swap,
-BayesR LD-swap should be postponed until exact non-swap CSR BayesR is validated.
+probabilities. The implemented exact CSR BayesR scope is active/null
+full-state relocation under global `pi` and global `mixture_var`. Active/active
+swaps and marker-specific or annotation-specific swap prior terms remain
+separate future work.
 
 ## Recommended Implementation Order
 

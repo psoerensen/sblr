@@ -811,7 +811,9 @@ NULL
 #' Fits a supported exact CSR BayesR model for GWAS summary statistics and a
 #' disk-backed sparse LD matrix. The standard posterior inclusion probability
 #' `dm` is `P(component > 0)`, and `comp_prob` stores marker-by-component
-#' posterior probabilities with `component_0` as the null component.
+#' posterior probabilities with `component_0` as the null component. This
+#' explicit convenience wrapper is also available through
+#' `stblr_csr(method = "bayesr")`.
 #'
 #' Exact CSR BayesR supports multiple chains, compact per-chain output with
 #' `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
@@ -1068,6 +1070,7 @@ stblr_csr_bayesr <- function(
   n_components = length(mixture_var)
  )
  fit$input <- list(
+  method = "bayesr",
   model = "bayesr",
   backend = "csr_bayesr",
   scheduled = FALSE,
@@ -1275,6 +1278,10 @@ stblr_csr_bayesr <- function(
 #'   taken from `Glist$sparseLD$prefix`.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
+#' @param method CSR model to fit. `"bayesc"` keeps the historical BayesC CSR
+#'   behavior and is the default. `"bayesr"` dispatches to the exact CSR BayesR
+#'   backend exposed by [stblr_csr_bayesr()]. Scheduled CSR BayesR is not
+#'   currently implemented.
 #' @param pi_init Initial marker inclusion probability. Defaults to 0.001.
 #' @param pi_vb_init Inclusion probability used when initializing marker-effect
 #'   variance. Defaults to `pi_init`.
@@ -1324,14 +1331,32 @@ stblr_csr_bayesr <- function(
 #' @param ld_swap_max_friends Maximum number of high-LD friends stored per
 #'   marker, prioritized by highest r-squared.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
+#' @param mixture_var,pi,alpha BayesR mixture variance multipliers, initial
+#'   mixture probabilities, and Dirichlet prior shapes. Used only when
+#'   `method = "bayesr"` and passed through to [stblr_csr_bayesr()]. BayesR
+#'   defaults are supplied by [stblr_csr_bayesr()] when these are left `NULL`.
+#' @param updateE_start,updateE_every BayesR residual-variance update schedule.
+#'   Used only when `method = "bayesr"`.
+#' @param use_comp_init,comp_init BayesR component-state initialization
+#'   controls. Used only when `method = "bayesr"`.
 #' @return A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
 #'   sampled inclusion-probability trace for each trait, averaged by iteration
 #'   across chains when `nchains > 1`. Chain-capable CSR fits provide `dm_sd`,
 #'   `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`; standard traces are
 #'   averaged by iteration across chains. LD-swap remains available only for
-#'   `scheduled = FALSE`.
+#'   `scheduled = FALSE`. For `method = "bayesr"`, `dm` is
+#'   `P(component > 0)`, `comp_prob` contains marker-by-component posterior
+#'   probabilities, `dm_component_mean` contains posterior mean component
+#'   indices, and LD-swap relocates the active/null full `(component, b)` state.
+#'
+#' @examples
+#' \dontrun{
+#' fit_bc <- stblr_csr(stats = stats, Glist = Glist, method = "bayesc")
+#' fit_br <- stblr_csr(stats = stats, Glist = Glist, method = "bayesr")
+#' }
 #' @export
 stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
+                      method = c("bayesc", "bayesr"),
                       pi_init = 0.001, pi_vb_init = NULL,
                       pi_prior_mean = 0.001, pi_prior_strength = 5e5,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
@@ -1348,7 +1373,90 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       use_r_init = FALSE, rebuild_r_before_updateE = FALSE,
                       updateLDswap = FALSE, ld_swap_prob = 0.05,
                       ld_swap_r2 = 0.8, ld_swap_max_friends = 50,
-                      ld_swap_moves = 1) {
+                      ld_swap_moves = 1,
+                      mixture_var = NULL, pi = NULL, alpha = NULL,
+                      updateE_start = NULL, updateE_every = NULL,
+                      use_comp_init = FALSE, comp_init = NULL) {
+ method <- tolower(method)
+ if (length(method) > 1L) method <- method[1L]
+ if (length(method) < 1L || is.na(method) ||
+     !method %in% c("bayesc", "bayesr")) {
+  stop("method must be one of 'bayesc' or 'bayesr'.")
+ }
+ if (method == "bayesr") {
+  bayesc_only <- character()
+  if (!missing(pi_init) && !identical(pi_init, 0.001)) {
+   bayesc_only <- c(bayesc_only, "pi_init")
+  }
+  if (!missing(pi_vb_init) && !is.null(pi_vb_init)) {
+   bayesc_only <- c(bayesc_only, "pi_vb_init")
+  }
+  if (!missing(pi_prior_mean) && !identical(pi_prior_mean, 0.001)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_mean")
+  }
+  if (!missing(pi_prior_strength) && !identical(pi_prior_strength, 5e5)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_strength")
+  }
+  if (!missing(pi_prior_a) && !is.null(pi_prior_a)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_a")
+  }
+  if (!missing(pi_prior_b) && !is.null(pi_prior_b)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_b")
+  }
+  if (length(bayesc_only)) {
+   stop(
+    "`", paste(bayesc_only, collapse = "`, `"),
+    "` are BayesC-specific. Use `pi` and `alpha` for method = 'bayesr'."
+   )
+  }
+  if (isTRUE(scheduled)) {
+   stop(
+    "scheduled CSR BayesR is not currently implemented. ",
+    "Use method = 'bayesc' for scheduled CSR or scheduled = FALSE for BayesR."
+   )
+  }
+  br_args <- list(
+   stats = stats,
+   Glist = Glist,
+   ld_prefix = ld_prefix,
+   n = n,
+   m = m,
+   h2 = h2,
+   adjE = adjE,
+   nit = nit,
+   nburn = nburn,
+   nthin = nthin,
+   ncores = ncores,
+   seed = seed,
+   nchains = nchains,
+   keep_chains = keep_chains,
+   chain_seeds = chain_seeds,
+   updateB = updateB,
+   updateE = updateE,
+   updatePi = updatePi,
+   updateLDswap = updateLDswap,
+   ld_swap_prob = ld_swap_prob,
+   ld_swap_r2 = ld_swap_r2,
+   ld_swap_max_friends = ld_swap_max_friends,
+   ld_swap_moves = ld_swap_moves,
+   nub = nub,
+   nue = nue,
+   use_comp_init = use_comp_init,
+   comp_init = comp_init,
+   use_r_init = use_r_init,
+   rebuild_r_before_updateE = rebuild_r_before_updateE
+  )
+  if (!is.null(mixture_var)) br_args$mixture_var <- mixture_var
+  if (!is.null(pi)) br_args$pi <- pi
+  if (!is.null(alpha)) br_args$alpha <- alpha
+  if (!is.null(updateE_start)) br_args$updateE_start <- updateE_start
+  if (!is.null(updateE_every)) br_args$updateE_every <- updateE_every
+  fit <- do.call(stblr_csr_bayesr, br_args)
+  fit$input$method <- "bayesr"
+  fit$input$model <- "bayesr"
+  fit$input$backend <- "csr_bayesr"
+  return(fit)
+ }
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
@@ -1468,6 +1576,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    "seed + 1000003 * (trait + 1) + 9176 * (chain + 1)"
   },
   scheduled = scheduled, ld_prefix = ld_prefix,
+  method = "bayesc", model = "bayesc",
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),

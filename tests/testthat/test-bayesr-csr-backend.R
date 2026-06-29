@@ -340,6 +340,64 @@ expect_bayesr_ld_swap_diagnostics <- function(fit, require_chains = FALSE) {
   expect_true(all(fit$ld_swap$acceptance_rate <= 1))
 }
 
+test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native CSR BayesR symbol is not loaded"
+  )
+
+  fixture <- make_small_bayesr_csr_stats()
+  write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+
+  common <- list(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    h2 = 0.3,
+    adjE = 0.9,
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 1,
+    seed = 10,
+    updateE = FALSE
+  )
+  fit_direct <- do.call(stblr_csr_bayesr, common)
+  fit_bridge <- do.call(stblr_csr, c(common, list(method = "BayesR")))
+
+  expect_bayesr_csr_conventions(fit_bridge)
+  expect_equal(fit_bridge$input$method, "bayesr")
+  expect_equal(fit_bridge$input$model, "bayesr")
+  expect_equal(fit_bridge$input$backend, "csr_bayesr")
+  expect_equal(fit_bridge$input$scheduled, FALSE)
+  expect_equal(dim(fit_bridge$dm), dim(fit_direct$dm))
+  expect_equal(dim(fit_bridge$bm), dim(fit_direct$bm))
+  expect_equal(names(fit_bridge$comp_prob), names(fit_direct$comp_prob))
+  expect_true(all(c("dm", "bm", "comp_prob", "dm_component_mean") %in% names(fit_bridge)))
+
+  keep_args <- common
+  keep_args$nchains <- 2
+  keep_args$keep_chains <- TRUE
+  fit_keep <- do.call(stblr_csr, c(keep_args, list(method = "bayesr")))
+  expect_bayesr_csr_conventions(fit_keep)
+  expect_bayesr_csr_chain_aggregation(fit_keep)
+  expect_true("chains" %in% names(fit_keep))
+})
+
+test_that("stblr_csr method BayesR rejects unsupported high-level combinations", {
+  expect_error(
+    stblr_csr(stats = list(), method = "bayesr", scheduled = TRUE),
+    "scheduled CSR BayesR is not currently implemented"
+  )
+  expect_error(
+    stblr_csr(stats = list(), method = "bayesr", pi_init = 0.5),
+    "BayesC-specific"
+  )
+  expect_error(
+    stblr_csr(stats = list(), method = "bayesr", pi_prior_a = 1),
+    "BayesC-specific"
+  )
+})
+
 test_that("CSR BayesR formatter preserves compact per-chain component summaries", {
   raw <- make_bayesr_csr_raw(nchains = 2L)
   cp1 <- matrix(
@@ -581,6 +639,32 @@ test_that("CSR BayesR LD-swap runs and returns diagnostics", {
   expect_bayesr_ld_swap_diagnostics(fit)
   expect_true(isTRUE(fit$input$updateLDswap))
   expect_equal(fit$input$ld_swap_moves, 2L)
+
+  fit_bridge <- stblr_csr(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    method = "bayesr",
+    h2 = 0.3,
+    adjE = 0.9,
+    pi = c(0.5, 0.5, 0, 0),
+    alpha = c(10, 10, 1, 1),
+    nit = 12,
+    nburn = 4,
+    ncores = 1,
+    nchains = 1,
+    seed = 30,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    updateLDswap = TRUE,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.8,
+    ld_swap_max_friends = 2,
+    ld_swap_moves = 2
+  )
+  expect_bayesr_csr_conventions(fit_bridge)
+  expect_bayesr_ld_swap_diagnostics(fit_bridge)
+  expect_equal(fit_bridge$input$method, "bayesr")
 })
 
 test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {

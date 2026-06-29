@@ -114,7 +114,9 @@ A formatted ST-BLR BayesR fit.
 Fits a supported exact CSR BayesR model for GWAS summary statistics and a
 disk-backed sparse LD matrix. The standard posterior inclusion probability
 `dm` is `P(component > 0)`, and `comp_prob` stores marker-by-component
-posterior probabilities with `component_0` as the null component.
+posterior probabilities with `component_0` as the null component. This
+explicit convenience wrapper is also available through
+`stblr_csr(method = "bayesr")`.
 }
 \details{
 Exact CSR BayesR supports multiple chains, compact per-chain output with

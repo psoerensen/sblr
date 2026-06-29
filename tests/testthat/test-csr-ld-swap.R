@@ -96,6 +96,10 @@ test_that("CSR LD-swap arguments are validated", {
     stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, updateLDswap = TRUE),
     "updateLDswap"
   )
+  expect_error(
+    stblr_csr(stats = stats, ld_prefix = prefix, method = "invalid"),
+    "method"
+  )
 })
 
 expect_csr_chain_summary_shape <- function(fit) {
@@ -137,6 +141,34 @@ test_that("CSR sampler returns zero LD-swap diagnostics by default", {
   expect_equal(fit$ld_swap$attempted, 0)
   expect_equal(fit$ld_swap$accepted, 0)
   expect_equal(fit$ld_swap$acceptance_rate, 0)
+  expect_equal(fit$input$method, "bayesc")
+  expect_equal(fit$input$model, "bayesc")
+})
+
+test_that("CSR method defaults to BayesC and explicit BayesC preserves metadata", {
+  args <- list(
+    stats = tiny_csr_stats(),
+    ld_prefix = make_tiny_csr_prefix(),
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 2,
+    nburn = 0,
+    seed = 11
+  )
+
+  fit_default <- do.call(stblr_csr, args)
+  fit_method <- do.call(stblr_csr, c(args, list(method = "BayesC")))
+
+  expect_equal(class(fit_method), class(fit_default))
+  expect_equal(names(fit_method), names(fit_default))
+  expect_equal(dim(fit_method$dm), dim(fit_default$dm))
+  expect_equal(fit_default$input$method, "bayesc")
+  expect_equal(fit_method$input$method, "bayesc")
+  expect_equal(fit_method$input$model, "bayesc")
 })
 
 test_that("CSR sampler runs with LD-swap enabled on tiny CSR LD", {

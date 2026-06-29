@@ -10,6 +10,7 @@ stblr_csr(
   ld_prefix = NULL,
   n = NULL,
   m = NULL,
+  method = c("bayesc", "bayesr"),
   pi_init = 0.001,
   pi_vb_init = NULL,
   pi_prior_mean = 0.001,
@@ -48,7 +49,14 @@ stblr_csr(
   ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50,
-  ld_swap_moves = 1
+  ld_swap_moves = 1,
+  mixture_var = NULL,
+  pi = NULL,
+  alpha = NULL,
+  updateE_start = NULL,
+  updateE_every = NULL,
+  use_comp_init = FALSE,
+  comp_init = NULL
 )
 }
 \arguments{
@@ -63,6 +71,11 @@ taken from `Glist$sparseLD$prefix`.}
 \item{n}{Sample size. Defaults to `stats$n` when available.}
 
 \item{m}{Number of markers. Inferred from `stats` when omitted.}
+
+\item{method}{CSR model to fit. `"bayesc"` keeps the historical BayesC CSR
+behavior and is the default. `"bayesr"` dispatches to the exact CSR BayesR
+backend exposed by [stblr_csr_bayesr()]. Scheduled CSR BayesR is not
+currently implemented.}
 
 \item{pi_init}{Initial marker inclusion probability. Defaults to 0.001.}
 
@@ -136,6 +149,17 @@ moves when `updateLDswap = TRUE`.}
 marker, prioritized by highest r-squared.}
 
 \item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
+
+\item{mixture_var, pi, alpha}{BayesR mixture variance multipliers, initial
+mixture probabilities, and Dirichlet prior shapes. Used only when
+`method = "bayesr"` and passed through to [stblr_csr_bayesr()]. BayesR
+defaults are supplied by [stblr_csr_bayesr()] when these are left `NULL`.}
+
+\item{updateE_start, updateE_every}{BayesR residual-variance update schedule.
+Used only when `method = "bayesr"`.}
+
+\item{use_comp_init, comp_init}{BayesR component-state initialization
+controls. Used only when `method = "bayesr"`.}
 }
 \value{
 A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
@@ -143,10 +167,19 @@ A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
   across chains when `nchains > 1`. Chain-capable CSR fits provide `dm_sd`,
   `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`; standard traces are
   averaged by iteration across chains. LD-swap remains available only for
-  `scheduled = FALSE`.
+  `scheduled = FALSE`. For `method = "bayesr"`, `dm` is
+  `P(component > 0)`, `comp_prob` contains marker-by-component posterior
+  probabilities, `dm_component_mean` contains posterior mean component
+  indices, and LD-swap relocates the active/null full `(component, b)` state.
 }
 \description{
 Fits the single-trait ST-BLR sampler using sufficient statistics from
 [bed_xtx_xty()] and a disk-backed CSR LD prefix from
 [sparseLD_stream_CSR()].
+}
+\examples{
+\dontrun{
+fit_bc <- stblr_csr(stats = stats, Glist = Glist, method = "bayesc")
+fit_br <- stblr_csr(stats = stats, Glist = Glist, method = "bayesr")
+}
 }

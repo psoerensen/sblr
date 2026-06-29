@@ -23,8 +23,9 @@ accumulation. The BED BayesR backend defines the BayesR output contract:
 standard `dm = P(component > 0)`, marker-by-component `comp_prob`, and
 `dm_component_mean` for posterior mean component index.
 
-The supported public R interface is `stblr_csr_bayesr()`. Exact CSR BayesR now
-supports optional active/null LD-swap/MH moves that relocate the full
+The supported public R interfaces are `stblr_csr_bayesr()` and
+`stblr_csr(method = "bayesr")`. Exact CSR BayesR now supports optional
+active/null LD-swap/MH moves that relocate the full
 `(component, b)` state from an active marker to a null LD friend. Scheduled CSR
 BayesR remains future work.
 
@@ -43,6 +44,7 @@ Implemented in this pass:
 - Rcpp export `stblr_cpg_omp_csr_bayesr(...)`
 - internal formatter `.format_stblr_csr_bayesr_fit()`
 - public helper `stblr_csr_bayesr()`
+- high-level `stblr_csr(method = "bayesr")` dispatch
 - compatibility alias `.stblr_csr_bayesr_experimental()`
 - formatter and native smoke tests in `tests/testthat/test-bayesr-csr-backend.R`
 
@@ -563,16 +565,25 @@ effect, and maximum absolute fitted quadratic term.
 
 ## R Wrapper Design
 
-Use the public exact CSR BayesR helper:
+Use the public exact CSR BayesR helper directly:
 
 ```r
 stblr_csr_bayesr(...)
 ```
 
-Do not extend `stblr_csr()` with `model = "bayesr"` in the first implementation.
-The current public `stblr_csr()` API is BayesC-oriented and has no general
-`model`/`prior` convention. A public `stblr_csr_bayesr()` wrapper can be added
-after native behavior, formatting, and tests are stable.
+The same exact backend is also available through the high-level CSR wrapper:
+
+```r
+stblr_csr(..., method = "bayesr")
+```
+
+`stblr_csr()` keeps BayesC as the default (`method = "bayesc"`). Under
+`method = "bayesr"`, it performs only high-level argument dispatch and lets
+`stblr_csr_bayesr()` own BayesR defaults and backend validation. BayesC-specific
+prior arguments such as `pi_init`, `pi_prior_a`, and `pi_prior_b` are rejected
+when explicitly supplied for BayesR; callers should use BayesR `pi` and
+`alpha` instead. `scheduled = TRUE` errors clearly because scheduled CSR
+BayesR is not implemented.
 
 The internal helper should:
 
