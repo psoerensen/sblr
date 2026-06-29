@@ -343,5 +343,5 @@ stblr_csr_learn_annot <- function(
   ),
   arch
  )
- fit
+ .standardize_stblr_annotation_fit(fit, "learned")
 }

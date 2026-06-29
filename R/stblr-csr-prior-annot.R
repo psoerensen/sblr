@@ -274,5 +274,5 @@ stblr_csr_prior_annot <- function(
   ),
   arch
  )
- fit
+ .standardize_stblr_annotation_fit(fit, "prior")
 }

@@ -301,5 +301,5 @@ stblr_csr_sbayesrc_generic <- function(
   arch
  )
 
- fit
+ .standardize_stblr_annotation_fit(fit, "sbayesrc")
 }

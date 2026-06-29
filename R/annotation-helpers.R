@@ -3,8 +3,31 @@
 }
 
 .stblr_match_annotation_model <- function(model) {
- model <- match.arg(model, c("prior", "annot", "sbayesrc", "group"))
- model
+ if (length(model) != 1L || is.na(model)) {
+  stop("annotation_model must be a single string.")
+ }
+
+ key <- tolower(gsub("-", "_", model))
+ aliases <- c(
+  prior = "prior",
+  fixed_prior = "prior",
+  fixed = "prior",
+  learned = "learned",
+  annot = "learned",
+  annotation = "learned",
+  group = "group",
+  groups = "group",
+  sbayesrc = "sbayesrc"
+ )
+
+ out <- unname(aliases[[key]])
+ if (is.null(out)) {
+  stop(
+   "annotation_model must be one of prior, learned, group, or sbayesrc.",
+   call. = FALSE
+  )
+ }
+ out
 }
 
 .stblr_get_nt_m_names <- function(stats, n = NULL, m = NULL) {

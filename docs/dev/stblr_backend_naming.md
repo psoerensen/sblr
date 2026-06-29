@@ -10,6 +10,10 @@ Supported user-facing entry points:
 
 - `stblr_csr(..., method = "bayesC")`
 - `stblr_csr(..., method = "bayesR")`
+- `stblr_csr_annot(..., annotation_model = "prior")`
+- `stblr_csr_annot(..., annotation_model = "learned")`
+- `stblr_csr_annot(..., annotation_model = "group")`
+- `stblr_csr_annot(..., annotation_model = "sbayesrc")`
 - `stblr_bed(..., method = "bayesC")`
 - `stblr_bed(..., method = "bayesR")`
 
@@ -82,6 +86,10 @@ Backend values:
 - `csr_bayesc`
 - `csr_scheduled_bayesc`
 - `csr_bayesr`
+- `csr_prior_bayesc`
+- `csr_annot_bayesc`
+- `csr_group_bayesc`
+- `csr_sbayesrc`
 - `bed_bayesc`
 - `bed_bayesr`
 
@@ -126,8 +134,9 @@ Annotation-aware BLR should align with the same public interface, metadata, and
 output conventions as CSR and BED BLR. The detailed audit and staged alignment
 plan is in `docs/dev/stblr_annotation_backend_design.md`.
 
-The current recommendation is to add a clean `stblr_csr_annot()` interface first
-and keep existing exported annotation wrappers as compatibility entry points.
+The clean `stblr_csr_annot()` interface is the public annotation-aware CSR entry
+point. Existing exported annotation wrappers remain compatibility entry points
+and should continue returning standardized metadata and annotation aliases.
 Direct `stblr_csr(..., annotations = ...)` dispatch can be added later after the
-annotation argument contract is stable. Annotation-aware changes should remain a
-separate implementation task and should not rename native C++ files or symbols.
+annotation argument contract is stable. Annotation-aware changes should not
+rename native C++ files or symbols.

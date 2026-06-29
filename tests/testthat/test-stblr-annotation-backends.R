@@ -100,6 +100,7 @@ test_that("annotation-aware exported wrappers and helpers are available", {
     "stblr_csr_learn_annot",
     "stblr_csr_group_annot",
     "stblr_csr_sbayesrc_generic",
+    "stblr_csr_annot",
     "make_sbayesrc_alpha_init",
     "sbayesrc_annotation_pi",
     "sbayesrc_annotation_gamma_mean",
@@ -223,19 +224,26 @@ test_that("csr_prior_bayesc wrapper returns standard marker summaries", {
   )
 
   expect_annotation_fit_core(fit, stats)
-  expect_equal(fit$input$model, "prior")
+  expect_equal(fit$input$method, "bayesc")
+  expect_equal(fit$input$model, "bayesc")
+  expect_equal(fit$input$backend, "csr_prior_bayesc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$annotation_model, "prior")
+  expect_true(isTRUE(fit$input$annotations))
+  expect_equal(fit$input$nchains, 1L)
+  expect_false(fit$input$keep_chains)
   expect_identical(fit$input$annotation_names, colnames(A))
   expect_true(isTRUE(fit$input$use_pi_marker))
   expect_true(isTRUE(fit$input$use_vb_multiplier))
   expect_length(fit$input$pi_marker, 1)
   expect_length(fit$input$vb_multiplier, 1)
+  expect_true("annotation_prior" %in% names(fit))
+  expect_true("annotation_summary" %in% names(fit))
+  expect_identical(fit$annotation, fit$input$A)
   expect_trace_matrix(fit$vbs, 1L)
   expect_trace_matrix(fit$vgs, 1L)
   expect_trace_matrix(fit$ves, 1L)
   expect_square_trait_matrix(fit$covb, 1L)
-  # Target metadata for the next alignment task:
-  # input$method = "bayesc", input$backend = "csr_prior_bayesc",
-  # input$data_level = "summary", and input$annotation_model = "prior".
 })
 
 test_that("csr_annot_bayesc wrapper returns learned annotation fields", {
@@ -268,7 +276,14 @@ test_that("csr_annot_bayesc wrapper returns learned annotation fields", {
   )
 
   expect_annotation_fit_core(fit, stats)
-  expect_equal(fit$input$model, "annot")
+  expect_equal(fit$input$method, "bayesc")
+  expect_equal(fit$input$model, "bayesc")
+  expect_equal(fit$input$backend, "csr_annot_bayesc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$annotation_model, "learned")
+  expect_true(isTRUE(fit$input$annotations))
+  expect_equal(fit$input$nchains, 1L)
+  expect_false(fit$input$keep_chains)
   expect_identical(fit$input$annotation_names, colnames(A))
   expect_true(is.matrix(fit$eta_pi))
   expect_true(is.matrix(fit$eta_vb))
@@ -278,10 +293,12 @@ test_that("csr_annot_bayesc wrapper returns learned annotation fields", {
   expect_identical(colnames(fit$eta_vb), colnames(A))
   expect_true(all(is.finite(fit$eta_pi)))
   expect_true(all(is.finite(fit$eta_vb)))
+  expect_true("annotation_effects" %in% names(fit))
+  expect_identical(fit$annotation_effects$pi, fit$eta_pi)
+  expect_identical(fit$annotation_effects$variance, fit$eta_vb)
+  expect_true(is.data.frame(fit$annotation_summary))
   expect_trace_matrix(fit$vle, 1L)
   expect_trace_matrix(fit$vld, 1L)
-  # Target aliases for the next alignment task: annotation_effects should
-  # expose eta_pi/eta_vb while preserving these current native field names.
 })
 
 test_that("csr_group_bayesc wrapper returns group-level annotation fields", {
@@ -313,7 +330,14 @@ test_that("csr_group_bayesc wrapper returns group-level annotation fields", {
   )
 
   expect_annotation_fit_core(fit, stats)
-  expect_equal(fit$input$model, "group")
+  expect_equal(fit$input$method, "bayesc")
+  expect_equal(fit$input$model, "bayesc")
+  expect_equal(fit$input$backend, "csr_group_bayesc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$annotation_model, "group")
+  expect_true(isTRUE(fit$input$annotations))
+  expect_equal(fit$input$nchains, 1L)
+  expect_false(fit$input$keep_chains)
   expect_identical(fit$input$group_names, c("coding", "background"))
   for (nm in c("group_pi", "group_vb_multiplier", "group_nincluded", "group_size")) {
     expect_true(is.matrix(fit[[nm]]), info = nm)
@@ -323,8 +347,9 @@ test_that("csr_group_bayesc wrapper returns group-level annotation fields", {
   }
   expect_true(all(fit$group_pi >= 0 & fit$group_pi <= 1))
   expect_equal(unname(fit$group_size[1, ]), c(2, 2))
-  # Target aliases for the next alignment task: annotation_pi and
-  # annotation_variance should point to group summaries.
+  expect_identical(fit$annotation_pi, fit$group_pi)
+  expect_identical(fit$annotation_variance, fit$group_vb_multiplier)
+  expect_true(is.data.frame(fit$annotation_summary))
 })
 
 test_that("csr_sbayesrc wrapper returns component and annotation fields", {
@@ -354,7 +379,14 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
   )
 
   expect_annotation_fit_core(fit, stats)
+  expect_equal(fit$input$method, "sbayesrc")
   expect_equal(fit$input$model, "sbayesrc")
+  expect_equal(fit$input$backend, "csr_sbayesrc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$annotation_model, "sbayesrc")
+  expect_true(isTRUE(fit$input$annotations))
+  expect_equal(fit$input$nchains, 1L)
+  expect_false(fit$input$keep_chains)
   expect_true("comp_prob" %in% names(fit))
   expect_length(fit$comp_prob, 1L)
   expect_equal(dim(fit$comp_prob$trait1), c(stats$m, length(gamma)))
@@ -367,7 +399,8 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
   expect_true(all(is.finite(fit$alpha$trait1)))
   expect_true(all(is.finite(fit$sigmaSqAlpha)))
   expect_true(all(is.finite(fit$ncomp)))
-  # Target metadata for the next alignment task:
-  # input$method = "sbayesrc" or a documented BayesR-like value,
-  # input$backend = "csr_sbayesrc", input$data_level = "summary".
+  expect_identical(fit$annotation_effects, fit$alpha)
+  expect_identical(fit$annotation_variance, fit$sigmaSqAlpha)
+  expect_length(fit$annotation_pi, 1L)
+  expect_true(is.data.frame(fit$annotation_summary))
 })

@@ -11,10 +11,11 @@ record `method`, `backend`, or `data_level`, and none of the inspected native
 annotation backends supports `nchains`, `keep_chains`, chain summaries,
 LD-swap, or scheduled marker updates.
 
-Do not rename C++ files or native symbols in the alignment phase. Add clean R
-adapters and metadata/output standardization first, then decide whether
-annotation dispatch belongs directly in `stblr_csr()` or in a dedicated
-`stblr_csr_annot()` entry point.
+Do not rename C++ files or native symbols in the alignment phase. The first
+R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
+standardized annotation-aware metadata/output aliases while preserving existing
+explicit wrappers. Direct `stblr_csr(..., annotations = ...)` dispatch remains a
+later design decision.
 
 ## C++ Backend Inventory
 
@@ -216,7 +217,7 @@ alignment checks, and tiny synthetic calls to each wrapper.
 
 ## Proposed Public Interface
 
-Use Option B first:
+Use Option B first. This is now the active public annotation-aware interface:
 
 ```r
 stblr_csr_annot(
@@ -259,6 +260,11 @@ Keep existing explicit wrappers as compatibility entry points:
 - `stblr_csr_group_annot()`
 - `stblr_csr_sbayesrc_generic()`
 
+`stblr_csr_annot()` accepts `annotation_model = "prior"`, `"learned"`,
+`"group"`, or `"sbayesrc"` plus common synonyms such as `"fixed_prior"`,
+`"annot"`, `"groups"`, and `"SBayesRC"`. It dispatches to the existing wrappers
+rather than calling native samplers directly.
+
 ## Proposed Internal Helper Naming
 
 Add current-style helpers and make old names delegate where feasible:
@@ -276,7 +282,7 @@ Do not rename native symbols in this phase.
 
 ## Proposed Metadata Convention
 
-All annotation-aware fits should set:
+All annotation-aware fits set:
 
 - `fit$input$method`: `"bayesc"` or `"bayesr"`/`"sbayesrc"` as appropriate.
 - `fit$input$model`: same base model family, such as `"bayesc"` or
@@ -286,7 +292,9 @@ All annotation-aware fits should set:
 - `fit$input$data_level`: `"summary"`.
 - `fit$input$annotation_model`: `"prior"`, `"learned"`, `"group"`, or
   `"sbayesrc"`.
-- `fit$input$annotations`: the prepared marker x annotation matrix when used.
+- `fit$input$annotations`: `TRUE`, indicating that the fit used an
+  annotation-aware backend. Prepared matrices or groups remain in existing
+  compatibility fields such as `fit$input$A` or `fit$input$group`.
 - `fit$input$annotation_names`: annotation column names.
 - `fit$input$nchains`: `1L` until native chain support exists.
 - `fit$input$keep_chains`: `FALSE` until native chain support exists.
@@ -297,7 +305,7 @@ Keep `fit$input$A` and older fields for compatibility during the transition.
 
 ## Proposed Output Convention
 
-All fits should preserve:
+All fits preserve:
 
 - `fit$dm`
 - `fit$bm`
@@ -308,7 +316,8 @@ BayesR/SBayesRC-like fits should also expose:
 - `fit$comp_prob`
 - `fit$dm_component_mean` when available or derivable
 
-Annotation-specific fields should use stable aliases:
+Annotation-specific fields use stable aliases when they can be constructed
+reliably:
 
 - `fit$annotation`: prepared annotation input or group metadata.
 - `fit$annotation_summary`: compact annotation/group summary table.

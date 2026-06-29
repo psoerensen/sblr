@@ -355,5 +355,5 @@ stblr_csr_group_annot <- function(
   ),
   arch
  )
- fit
+ .standardize_stblr_annotation_fit(fit, "group")
 }
