@@ -44,94 +44,258 @@ y <- as.matrix(scale(sim$y))
 
 
 # Compute summary statistics
-
-system.time(
-  stats <- make_stats(
-    Glist,
-    y,
-    nthreads = nthreads
-  )
+stats <- make_stats(
+  Glist,
+  y,
+  nthreads = nthreads
 )
 
 # Compute sparse LD
-ld_prefix <- file.path(data_dir, "ld_test")
-system.time(Glist <- make_sparseLD(
+Glist <- make_sparseLD(
   Glist = Glist,
-  out_prefix = ld_prefix,
+  out_prefix = file.path(data_dir, "ld_test"),
   pos_bp = NULL,
   max_distance_bp = 0,
   max_distance_variants = 1000,
   r2_threshold = 0.001,
   block_size = 1024,
   nthreads = 4
-))
-
-
-# Fit summary-statistics / sparse-LD BLR model
-fit <- stblr_csr(
-  stats = stats,
-  Glist = Glist,
-  pi_init = 0.001,
-  pi_prior_a = 1,
-  pi_prior_b = 1,
-  h2 = 0.3,
-  adjE = 0.9,
-  nit = 1000,
-  nburn = 100,
-  ncores = 3,
-  seed = 10,
-  scheduled = FALSE
 )
 
-fitMH <- stblr_csr(
+
+library(sblr)
+
+
+library(sblr)
+
+## ------------------------------------------------------------
+## Fit summary-statistics / sparse-LD BLR models
+## ------------------------------------------------------------
+
+trait <- "D1"
+
+fitC <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  pi_init = 0.001,
-  pi_prior_a = 1,
-  pi_prior_b = 1,
-  h2 = 0.3,
-  adjE = 0.9,
+  method = "bayesC",
   nit = 1000,
   nburn = 100,
-  ncores = 3,
-  nchains = 3,
+  seed = 10
+)
+
+fitC_MH <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  nit = 1000,
+  nburn = 100,
   seed = 10,
-  scheduled = FALSE,
   updateLDswap = TRUE,
   ld_swap_prob = 0.10,
   ld_swap_r2 = 0.05,
   ld_swap_moves = 5
 )
 
-cs_global <- make_stblr_credible_sets(
-  fit = fitMH,
+fitR <- stblr_csr(
+  stats = stats,
   Glist = Glist,
-  trait = "D1",
-  coverage = 0.95,
-  min_r2 = 0.5,
-  pip_cutoff = 0.001,
-  locus_pip_cutoff = 0.01,
-  max_locus_distance = 1e6
+  method = "bayesR",
+  nit = 1000,
+  nburn = 100,
+  seed = 10
 )
 
-fm_extract <- extract_stblr_finemap_loci(
-  fit = fitMH,
+fitR_MH <- stblr_csr(
+  stats = stats,
   Glist = Glist,
-  locus_sets = cs_global$locus_sets,
-  trait = "D1",
-  credible_sets = TRUE,
-  coverage = 0.95,
-  min_r2 = 0.5,
-  pip_cutoff = 0.001,
-  cs_mode = "multi",
-  min_signal_pip = 0.05
+  method = "bayesR",
+  nit = 1000,
+  nburn = 100,
+  seed = 10,
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.50,
+  ld_swap_r2 = 0.001,
+  ld_swap_moves = 20
 )
 
-fm_extract$summary
-fm_extract$markers
-fm_extract$credible_sets$summary
-colMeans(fit$dm)
-colMeans(fitMH$dm)
+## ------------------------------------------------------------
+## Fit individual-level / BED BLR models
+## ------------------------------------------------------------
+## Replace `stblr_bed()` arguments with your current BED interface.
+## The important thing is to keep object names and method settings parallel.
+
+fitC_bed <- stblr_bed(
+  y = y,
+  Glist = Glist,
+  method = "bayesC",
+  nit = 1000,
+  nburn = 100,
+  seed = 10,
+  nchains = 1
+)
+
+fitR_bed <- stblr_bed(
+  y = y,
+  Glist = Glist,
+  method = "bayesR",
+  nit = 1000,
+  nburn = 100,
+  seed = 10,
+  nchains = 1
+)
+
+
+fits <- list(
+  bayesC_csr = fitC,
+  bayesC_csr_MH = fitC_MH,
+  bayesR_csr = fitR,
+  bayesR_csr_MH = fitR_MH,
+  bayesC_bed = fitC_bed,
+  bayesR_bed = fitR_bed
+)
+
+## ------------------------------------------------------------
+## Check fits
+## ------------------------------------------------------------
+
+check_stblr_backend_consistency(fitC, require_chain_summaries = TRUE)
+
+check_stblr_backend_consistency(
+  fitC_MH,
+  require_chain_summaries = TRUE,
+  require_ld_swap = TRUE
+)
+
+check_stblr_backend_consistency(fitR, require_chain_summaries = TRUE)
+
+check_stblr_backend_consistency(
+  fitR_MH,
+  require_chain_summaries = TRUE,
+  require_ld_swap = TRUE
+)
+
+## ------------------------------------------------------------
+## Quick posterior comparison
+## ------------------------------------------------------------
+
+pip_summary <- rbind(
+  bayesC = colMeans(fitC$dm),
+  bayesC_MH = colMeans(fitC_MH$dm),
+  bayesR = colMeans(fitR$dm),
+  bayesR_MH = colMeans(fitR_MH$dm)
+)
+
+pip_summary
+
+max_pip_summary <- rbind(
+  bayesC = apply(fitC$dm, 2, max),
+  bayesC_MH = apply(fitC_MH$dm, 2, max),
+  bayesR = apply(fitR$dm, 2, max),
+  bayesR_MH = apply(fitR_MH$dm, 2, max)
+)
+
+max_pip_summary
+
+## BayesR component summaries
+summarise_stblr_bayesr_components(fitR)
+summarise_stblr_bayesr_components(fitR_MH)
+
+## LD-swap diagnostics
+fitC_MH$ld_swap
+fitR_MH$ld_swap
+
+## ------------------------------------------------------------
+## Helper for fine-mapping one fit
+## ------------------------------------------------------------
+
+run_finemap <- function(fit, Glist, trait = "D1") {
+  cs <- make_stblr_credible_sets(
+    fit = fit,
+    Glist = Glist,
+    trait = trait,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    pip_cutoff = 0.001,
+    locus_pip_cutoff = 0.01,
+    max_locus_distance = 1e6
+  )
+  
+  fm <- extract_stblr_finemap_loci(
+    fit = fit,
+    Glist = Glist,
+    locus_sets = cs$locus_sets,
+    trait = trait,
+    credible_sets = TRUE,
+    coverage = 0.95,
+    min_r2 = 0.5,
+    pip_cutoff = 0.001,
+    cs_mode = "multi",
+    min_signal_pip = 0.05
+  )
+  
+  list(
+    credible_sets = cs,
+    finemap = fm
+  )
+}
+
+## ------------------------------------------------------------
+## Fine-map all four models
+## ------------------------------------------------------------
+
+fmC <- run_finemap(fitC, Glist, trait)
+fmC_MH <- run_finemap(fitC_MH, Glist, trait)
+fmR <- run_finemap(fitR, Glist, trait)
+fmR_MH <- run_finemap(fitR_MH, Glist, trait)
+
+## ------------------------------------------------------------
+## Inspect fine-mapping summaries
+## ------------------------------------------------------------
+
+fmC$finemap$summary
+fmC_MH$finemap$summary
+fmR$finemap$summary
+fmR_MH$finemap$summary
+
+fmC$finemap$credible_sets$summary
+fmC_MH$finemap$credible_sets$summary
+fmR$finemap$credible_sets$summary
+fmR_MH$finemap$credible_sets$summary
+
+## Marker-level output for one model
+fmR_MH$finemap$markers
+
+
+top_markers <- function(fit, trait = "D1", n = 20) {
+  pip <- fit$dm[, trait]
+  bm <- fit$bm[, trait]
+  
+  data.frame(
+    marker = rownames(fit$dm),
+    pip = pip,
+    effect = bm
+  )[order(-pip), ][1:n, ]
+}
+
+topC <- top_markers(fitC, trait)
+topC_MH <- top_markers(fitC_MH, trait)
+topR <- top_markers(fitR, trait)
+topR_MH <- top_markers(fitR_MH, trait)
+
+topC
+topC_MH
+topR
+topR_MH
+
+Reduce(
+  intersect,
+  list(
+    topC$marker,
+    topC_MH$marker,
+    topR$marker,
+    topR_MH$marker
+  )
+)
 
 
 summarise_stblr_posterior(fit)

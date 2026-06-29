@@ -2075,6 +2075,475 @@ stblr_bed_marker <- function(
  fit
 }
 
+.normalize_stblr_method <- function(method) {
+ method <- tolower(method)
+ if (length(method) > 1L) method <- method[1L]
+ if (length(method) < 1L || is.na(method) ||
+     !method %in% c("bayesc", "bayesr")) {
+  stop("method must be one of 'bayesc' or 'bayesr'.")
+ }
+ method
+}
+
+#' Fit individual-level PLINK BED ST-BLR models
+#'
+#' Fits individual-level ST-BLR models directly from PLINK BED files referenced
+#' by a BED-backed `Glist`. This is the individual-level analogue of
+#' [stblr_csr()] for the plain BayesC and BayesR model families.
+#'
+#' `method = "bayesc"` fits the BayesC BED scheduled-chain backend.
+#' `method = "bayesr"` fits the BayesR BED scheduled-chain backend. For BayesR,
+#' `dm` is `P(component > 0)`, `comp_prob` contains marker-by-component
+#' posterior probabilities, and `dm_component_mean` contains posterior mean
+#' component indices. BED scheduled-chain fits expose CPO/log-CPO diagnostics.
+#'
+#' @param y Phenotype vector or matrix. If `y` is a vector, `names(y)` must
+#'   contain individual IDs matching `Glist$ids`. If `y` is a matrix,
+#'   `rownames(y)` must contain matching IDs unless `nrow(y) == Glist$n`.
+#' @param Glist A BED-backed qgg genotype list containing `bedfiles`, `n`,
+#'   `ids`, `rsids`, `rsidsLD`, and optionally `af`.
+#' @param method Model family. Case-insensitive `"bayesc"` fits BayesC and is
+#'   the default; case-insensitive `"bayesr"` fits BayesR.
+#' @param covar Optional covariates. Covariates are not currently adjusted by
+#'   this BED interface; pass pre-adjusted phenotypes.
+#' @param chr Chromosome/file indices to fit. If `NULL`, all available
+#'   non-missing, non-empty entries in `Glist$bedfiles` are used.
+#' @param cls Optional marker column indices.
+#' @param block_size Marker block size used to construct update sets for a
+#'   single BED file.
+#' @param rows Optional 1-based individual row indices into the BED file. When
+#'   omitted, subset phenotypes can instead be matched using `rownames(y)` and
+#'   `Glist$ids`.
+#' @param scale Standardize BED markers using allele frequencies.
+#' @param nit,nburn,nthin MCMC iteration controls.
+#' @param ncores Number of OpenMP threads.
+#' @param seed Sampler seed.
+#' @param nchains Number of scheduled MCMC chains.
+#' @param chain_seeds Optional explicit chain seeds. Not currently supported by
+#'   the BED scheduled-chain backends.
+#' @param pi_init Initial BayesC marker inclusion probability.
+#' @param pi_vb_init Inclusion probability used when initializing BayesC
+#'   marker-effect variance. Defaults to `pi_init`.
+#' @param pi_prior_mean Prior mean for the BayesC marker inclusion probability.
+#' @param pi_prior_strength Total Beta prior strength for the BayesC marker
+#'   inclusion probability.
+#' @param pi_prior_a,pi_prior_b Optional explicit BayesC Beta prior shape
+#'   parameters. When supplied, these override `pi_prior_mean` and
+#'   `pi_prior_strength`.
+#' @param h2 Initial heritability.
+#' @param adjE Residual adjustment factor.
+#' @param updateB,updateE,updatePi Logical sampler update controls.
+#' @param mixture_var BayesR mixture variance multipliers. The first value must
+#'   be zero and non-null values must be positive.
+#' @param pi Initial BayesR mixture probabilities. Defaults to total non-null
+#'   probability 0.001 split equally across non-null components.
+#' @param alpha BayesR Dirichlet prior shape vector for mixture probabilities.
+#' @param nub,nue Prior degrees of freedom.
+#' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime
+#'   Sampler scheduling and residual-rebuild controls.
+#' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
+#' @param null_skip_base,null_skip_max Null-marker scheduling controls.
+#' @param return_wy,return_r Return optional sampler state.
+#' @param read_block_size,progress_every Scheduled-chain BED reading and
+#'   progress controls.
+#' @param ... Unsupported arguments.
+#' @return A formatted ST-BLR fit with standard `dm`, `bm`, and `input` fields.
+#'   BayesC fits include `log_cpo`, `mean_log_cpo`, `final_pi`, `mean_pi`, and
+#'   chain-summary matrices. BayesR fits additionally include `comp_prob` and
+#'   `dm_component_mean`.
+#'
+#' @examples
+#' \dontrun{
+#' fitC_bed <- stblr_bed(
+#'   y = y,
+#'   Glist = Glist,
+#'   method = "bayesC",
+#'   nit = 1000,
+#'   nburn = 100
+#' )
+#'
+#' fitR_bed <- stblr_bed(
+#'   y = y,
+#'   Glist = Glist,
+#'   method = "bayesR",
+#'   nit = 1000,
+#'   nburn = 100
+#' )
+#' }
+#' @export
+stblr_bed <- function(
+  y,
+  Glist,
+  method = c("bayesc", "bayesr"),
+  covar = NULL,
+  chr = NULL,
+  cls = NULL,
+  block_size = 1000,
+  rows = NULL,
+  scale = TRUE,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 1,
+  seed = 1,
+  nchains = 1L,
+  chain_seeds = NULL,
+  pi_init = 0.001,
+  pi_vb_init = NULL,
+  pi_prior_mean = 0.001,
+  pi_prior_strength = 5e5,
+  pi_prior_a = NULL,
+  pi_prior_b = NULL,
+  h2 = 0.3,
+  adjE = 0.9,
+  updateB = TRUE,
+  updateE = TRUE,
+  updatePi = TRUE,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  pi = NULL,
+  alpha = NULL,
+  nub = 4,
+  nue = 4,
+  rebuild_every = 25,
+  full_sweep_every = 10,
+  candidate_threshold = 1e-3,
+  candidate_lifetime = 20,
+  skip_nulls_burnin_only = FALSE,
+  null_skip_base = 50,
+  null_skip_max = 200,
+  return_wy = FALSE,
+  return_r = FALSE,
+  read_block_size = 64,
+  progress_every = 0,
+  ...
+) {
+ method <- .normalize_stblr_method(method)
+ dots <- list(...)
+ if (length(dots)) {
+  dot_names <- names(dots)
+  if (is.null(dot_names)) dot_names <- rep("", length(dots))
+  dot_names <- dot_names[nzchar(dot_names)]
+  if (length(dot_names)) {
+   stop("Unsupported argument(s) in ...: ", paste(dot_names, collapse = ", "))
+  }
+  stop("Unsupported unnamed argument(s) in ....")
+ }
+ if (!is.null(covar)) {
+  stop("covar is not currently supported by stblr_bed(); pass pre-adjusted phenotypes.")
+ }
+ if (!is.null(chain_seeds)) {
+  stop("chain_seeds is not currently supported by the BED scheduled-chain backends.")
+ }
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.numeric(ncores) || length(ncores) != 1L ||
+     !is.finite(ncores) || ncores < 1 || ncores != floor(ncores)) {
+  stop("ncores must be a positive integer scalar.")
+ }
+ ncores <- as.integer(ncores)
+
+ if (is.null(Glist$bedfiles)) {
+  stop("Glist must contain BED file information in Glist$bedfiles for stblr_bed().")
+ }
+ bedfiles <- as.character(Glist$bedfiles)
+ has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
+ if (is.null(chr)) {
+  chr <- which(has_bedfile)
+  if (length(chr) < 1L) {
+   stop("No available BED files found in Glist$bedfiles.")
+  }
+ } else {
+  chr <- as.integer(chr)
+  if (length(chr) < 1L || anyNA(chr)) {
+   stop("chr must contain valid chromosome/file indices.")
+  }
+  if (any(chr < 1L | chr > length(bedfiles))) {
+   stop("chr contains indices outside Glist$bedfiles.")
+  }
+ }
+
+ bayesc_only <- character()
+ if (method == "bayesr") {
+  if (!missing(pi_init) && !identical(pi_init, 0.001)) {
+   bayesc_only <- c(bayesc_only, "pi_init")
+  }
+  if (!missing(pi_vb_init) && !is.null(pi_vb_init)) {
+   bayesc_only <- c(bayesc_only, "pi_vb_init")
+  }
+  if (!missing(pi_prior_mean) && !identical(pi_prior_mean, 0.001)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_mean")
+  }
+  if (!missing(pi_prior_strength) && !identical(pi_prior_strength, 5e5)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_strength")
+  }
+  if (!missing(pi_prior_a) && !is.null(pi_prior_a)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_a")
+  }
+  if (!missing(pi_prior_b) && !is.null(pi_prior_b)) {
+   bayesc_only <- c(bayesc_only, "pi_prior_b")
+  }
+  if (length(bayesc_only)) {
+   stop(
+    "`", paste(bayesc_only, collapse = "`, `"),
+    "` are BayesC-specific. Use `pi` and `alpha` for method = 'bayesr'."
+   )
+  }
+ } else {
+  bayesr_only <- character()
+  if (!missing(mixture_var)) bayesr_only <- c(bayesr_only, "mixture_var")
+  if (!missing(pi) && !is.null(pi)) bayesr_only <- c(bayesr_only, "pi")
+  if (!missing(alpha) && !is.null(alpha)) bayesr_only <- c(bayesr_only, "alpha")
+  if (length(bayesr_only)) {
+   stop(
+    "`", paste(bayesr_only, collapse = "`, `"),
+    "` are BayesR-specific and are only supported with method = 'bayesr'."
+   )
+  }
+ }
+
+ dat <- .make_bed_marker_data(
+  Glist = Glist,
+  y = y,
+  chr = chr,
+  cls = cls,
+  block_size = block_size,
+  rows = rows
+ )
+
+ if (method == "bayesr") {
+  if (!is.numeric(mixture_var) || length(mixture_var) < 2L ||
+      any(!is.finite(mixture_var)) || mixture_var[1L] != 0 ||
+      any(mixture_var[-1L] <= 0)) {
+   stop("mixture_var must start with 0 and have positive non-null components.")
+  }
+  if (is.null(pi)) {
+   active <- 0.001
+   pi <- c(1 - active, rep(active / (length(mixture_var) - 1L),
+                          length(mixture_var) - 1L))
+  }
+  if (!is.numeric(pi) || length(pi) != length(mixture_var) ||
+      any(!is.finite(pi)) || any(pi < 0) || sum(pi) <= 0) {
+   stop("pi must be a non-negative finite vector matching mixture_var with positive sum.")
+  }
+  pi <- pi / sum(pi)
+  if (is.null(alpha)) alpha <- pmax(pi * 5e5, .Machine$double.eps)
+  if (!is.numeric(alpha) || length(alpha) != length(mixture_var) ||
+      any(!is.finite(alpha)) || any(alpha <= 0)) {
+   stop("alpha must be a positive finite vector matching mixture_var.")
+  }
+  pi_active <- sum(pi[-1L])
+  if (!is.finite(pi_active) || pi_active <= 0) {
+   stop("pi must allocate positive probability to non-null components.")
+  }
+  pri <- .make_stblr_priors(
+   dat$y, dat$m, h2, nub, nue, pi_active, pi_active, dat$trait_names
+  )
+  fit <- .stblr_bed_marker_bayesr_experimental(
+   bed_files = dat$bed_files,
+   n = dat$n_total,
+   cls = dat$cls,
+   y = dat$y,
+   b_init = dat$b_init,
+   sets = dat$sets,
+   rows = dat$rows,
+   af = dat$af,
+   scale = scale,
+   B = pri$B,
+   E = pri$E,
+   ssb_prior = pri$ssb_prior_list,
+   sse_prior = pri$sse_prior_list,
+   pi = pi,
+   mixture_var = mixture_var,
+   alpha = alpha,
+   nub = nub,
+   nue = nue,
+   updateB = updateB,
+   updateE = updateE,
+   updatePi = updatePi,
+   adjE = adjE,
+   nit = nit,
+   nburn = nburn,
+   nthin = nthin,
+   rebuild_every = rebuild_every,
+   full_sweep_every = full_sweep_every,
+   null_skip_base = null_skip_base,
+   null_skip_max = null_skip_max,
+   candidate_threshold = candidate_threshold,
+   candidate_lifetime = candidate_lifetime,
+   skip_nulls_burnin_only = skip_nulls_burnin_only,
+   return_wy = return_wy,
+   return_r = return_r,
+   read_block_size = read_block_size,
+   progress_every = progress_every,
+   nchains = nchains,
+   ncores = ncores,
+   seed = seed,
+   trait_names = dat$trait_names,
+   variable_names = dat$variable_names,
+   keep_diagnostics = TRUE
+  )
+  fit$input <- c(list(
+   method = "bayesr",
+   model = "bayesr",
+   backend = "bed_scheduled_bayesr",
+   data_level = "individual",
+   chr = dat$chr,
+   cls = dat$cls,
+   n = dat$n,
+   n_total = dat$n_total,
+   n_used = dat$n_used,
+   m = dat$m,
+   nt = dat$nt,
+   block_size = block_size,
+   sets = dat$sets,
+   h2 = h2,
+   nub = nub,
+   nue = nue,
+   vy = pri$vy,
+   B = pri$B,
+   E = pri$E,
+   ssb_prior = pri$ssb_prior,
+   sse_prior = pri$sse_prior,
+   updateB = updateB,
+   updateE = updateE,
+   updatePi = updatePi,
+   adjE = adjE,
+   nit = as.integer(nit),
+   nburn = as.integer(nburn),
+   nthin = as.integer(nthin),
+   rebuild_every = rebuild_every,
+   full_sweep_every = full_sweep_every,
+   candidate_threshold = candidate_threshold,
+   candidate_lifetime = candidate_lifetime,
+   skip_nulls_burnin_only = skip_nulls_burnin_only,
+   null_skip_base = null_skip_base,
+   null_skip_max = null_skip_max,
+   ncores = ncores,
+   seed = as.integer(seed),
+   nchains = nchains,
+   read_block_size = read_block_size,
+   progress_every = progress_every,
+   scale = scale,
+   rows = dat$rows
+  ), fit$input)
+  fit$input$method <- "bayesr"
+  fit$input$model <- "bayesr"
+  fit$input$backend <- "bed_scheduled_bayesr"
+  fit$input$data_level <- "individual"
+  fit$input$nchains <- nchains
+  fit$input <- fit$input[!duplicated(names(fit$input))]
+  return(fit)
+ }
+
+ arch <- .resolve_pi_prior(
+  pi_init = pi_init,
+  pi_vb_init = pi_vb_init,
+  pi_prior_mean = pi_prior_mean,
+  pi_prior_strength = pi_prior_strength,
+  pi_prior_a = pi_prior_a,
+  pi_prior_b = pi_prior_b
+ )
+ pri <- .make_stblr_priors(
+  dat$y, dat$m, h2, nub, nue, arch$pi_vb_init, arch$pi_prior_mean,
+  dat$trait_names
+ )
+ common <- list(
+  bed_files = dat$bed_files,
+  n = dat$n_total,
+  cls = dat$cls,
+  y = dat$y,
+  b_init = dat$b_init,
+  sets = dat$sets,
+  rows = dat$rows,
+  af = dat$af,
+  scale = scale,
+  B = pri$B,
+  E = pri$E,
+  ssb_prior = pri$ssb_prior_list,
+  sse_prior = pri$sse_prior_list,
+  pi = arch$pi,
+  nub = nub,
+  nue = nue,
+  updateB = updateB,
+  updateE = updateE,
+  updatePi = updatePi,
+  adjE = adjE,
+  nit = nit,
+  nburn = nburn,
+  nthin = nthin,
+  rebuild_every = rebuild_every,
+  full_sweep_every = full_sweep_every,
+  null_skip_base = null_skip_base,
+  null_skip_max = null_skip_max,
+  candidate_threshold = candidate_threshold,
+  candidate_lifetime = candidate_lifetime,
+  skip_nulls_burnin_only = skip_nulls_burnin_only,
+  return_wy = return_wy,
+  return_r = return_r,
+  read_block_size = as.integer(read_block_size),
+  progress_every = as.integer(progress_every),
+  pi_prior_a = arch$pi_prior_a,
+  pi_prior_b = arch$pi_prior_b,
+  nchains = nchains,
+  ncores = ncores,
+  seed = seed
+ )
+ raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, common)
+ fit <- .format_stblr_fit(
+ raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
+ )
+ if (is.null(fit$final_pi)) fit$final_pi <- fit$pi
+ if (is.null(fit$mean_pi)) fit$mean_pi <- fit$pim
+ fit$input <- c(list(
+  method = "bayesc",
+  model = "bayesc",
+  backend = "bed_scheduled",
+  data_level = "individual",
+  chr = dat$chr,
+  cls = dat$cls,
+  n = dat$n,
+  n_total = dat$n_total,
+  n_used = dat$n_used,
+  m = dat$m,
+  nt = dat$nt,
+  block_size = block_size,
+  sets = dat$sets,
+  h2 = h2,
+  nub = nub,
+  nue = nue,
+  vy = pri$vy,
+  B = pri$B,
+  E = pri$E,
+  ssb_prior = pri$ssb_prior,
+  sse_prior = pri$sse_prior,
+  updateB = updateB,
+  updateE = updateE,
+  updatePi = updatePi,
+  adjE = adjE,
+  nit = as.integer(nit),
+  nburn = as.integer(nburn),
+  nthin = as.integer(nthin),
+  rebuild_every = rebuild_every,
+  full_sweep_every = full_sweep_every,
+  candidate_threshold = candidate_threshold,
+  candidate_lifetime = candidate_lifetime,
+  skip_nulls_burnin_only = skip_nulls_burnin_only,
+  null_skip_base = null_skip_base,
+  null_skip_max = null_skip_max,
+  ncores = ncores,
+  seed = as.integer(seed),
+  nchains = nchains,
+  read_block_size = read_block_size,
+  progress_every = progress_every,
+  scale = scale,
+  rows = dat$rows
+ ), arch)
+ fit
+}
+
 
 
 #' Make Sufficient Statistics for ST-BLR
