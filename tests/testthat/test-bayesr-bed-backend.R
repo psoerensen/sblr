@@ -92,8 +92,10 @@ format_bayesr_bed_test_fit <- function(raw, nchains) {
     keep_diagnostics = TRUE
   )
   fit$input <- list(
+    method = "bayesr",
     model = "bayesr",
-    backend = "bed_scheduled_chains_bayesr",
+    backend = "bed_bayesr",
+    data_level = "individual",
     scheduled = TRUE,
     keep_chains = FALSE,
     nchains = nchains
@@ -101,10 +103,12 @@ format_bayesr_bed_test_fit <- function(raw, nchains) {
   fit
 }
 
-test_that("BED BayesR experimental helper remains internal", {
+test_that("BED BayesR fit helper and compatibility alias remain internal", {
+  expect_true(exists(".fit_stblr_bed_bayesr", mode = "function"))
   expect_true(exists(".stblr_bed_marker_bayesr_experimental", mode = "function"))
-  helper_args <- names(formals(.stblr_bed_marker_bayesr_experimental))
+  helper_args <- names(formals(.fit_stblr_bed_bayesr))
   expect_true(all(c("mixture_var", "pi", "alpha", "nchains") %in% helper_args))
+  expect_equal(names(formals(.stblr_bed_marker_bayesr_experimental)), "...")
 })
 
 test_that("BED BayesR formatter exposes non-null PIP as standard dm", {

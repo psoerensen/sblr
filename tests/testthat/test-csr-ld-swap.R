@@ -143,6 +143,10 @@ test_that("CSR sampler returns zero LD-swap diagnostics by default", {
   expect_equal(fit$ld_swap$acceptance_rate, 0)
   expect_equal(fit$input$method, "bayesc")
   expect_equal(fit$input$model, "bayesc")
+  expect_equal(fit$input$backend, "csr_bayesc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$scheduled, FALSE)
+  expect_equal(fit$input$nchains, 1L)
 })
 
 test_that("CSR method defaults to BayesC and explicit BayesC preserves metadata", {
@@ -169,6 +173,8 @@ test_that("CSR method defaults to BayesC and explicit BayesC preserves metadata"
   expect_equal(fit_default$input$method, "bayesc")
   expect_equal(fit_method$input$method, "bayesc")
   expect_equal(fit_method$input$model, "bayesc")
+  expect_equal(fit_method$input$backend, "csr_bayesc")
+  expect_equal(fit_method$input$data_level, "summary")
 })
 
 test_that("CSR sampler runs with LD-swap enabled on tiny CSR LD", {
@@ -240,6 +246,9 @@ test_that("scheduled CSR returns one-chain posterior summaries", {
   )
 
   expect_equal(fit$input$nchains, 1L)
+  expect_equal(fit$input$backend, "csr_scheduled_bayesc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$scheduled, TRUE)
   expect_true("pis" %in% names(fit))
   expect_csr_chain_summary_shape(fit)
   expect_equal(fit$dm_sd, fit$dm * 0, tolerance = 1e-12)
@@ -271,6 +280,9 @@ test_that("scheduled CSR returns multi-chain posterior summaries", {
   )
 
   expect_equal(fit$input$nchains, 2L)
+  expect_equal(fit$input$backend, "csr_scheduled_bayesc")
+  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$scheduled, TRUE)
   expect_true("pis" %in% names(fit))
   expect_csr_chain_summary_shape(fit)
   expect_true(all(fit$dm_sd >= -1e-12))

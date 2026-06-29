@@ -320,6 +320,9 @@ NULL
  out
 }
 
+.format_stblr_csr_bayesc_fit <- .format_stblr_fit
+.format_stblr_bed_bayesc_fit <- .format_stblr_fit
+
 .format_stblr_bayesr_fit <- function(fit, nt, m, trait_names, variable_names,
                                      n_components,
                                      keep_diagnostics = FALSE) {
@@ -407,7 +410,9 @@ NULL
  out
 }
 
-.stblr_bed_marker_bayesr_experimental <- function(
+.format_stblr_bed_bayesr_fit <- .format_stblr_bayesr_fit
+
+.fit_stblr_bed_bayesr <- function(
   bed_files,
   n,
   cls,
@@ -533,7 +538,7 @@ NULL
   seed = as.integer(seed)
  )
 
- fit <- .format_stblr_bayesr_fit(
+ fit <- .format_stblr_bed_bayesr_fit(
   raw,
   nt = nt,
   m = m,
@@ -543,8 +548,10 @@ NULL
   keep_diagnostics = keep_diagnostics
  )
  fit$input <- list(
+  method = "bayesr",
   model = "bayesr",
-  backend = "bed_scheduled_chains_bayesr",
+  backend = "bed_bayesr",
+  data_level = "individual",
   scheduled = TRUE,
   keep_chains = FALSE,
   nchains = nchains,
@@ -561,6 +568,11 @@ NULL
   nthin = as.integer(nthin)
  )
  fit
+}
+
+# Compatibility alias for scripts/tests that used the old internal helper name.
+.stblr_bed_marker_bayesr_experimental <- function(...) {
+ .fit_stblr_bed_bayesr(...)
 }
 
 .format_stblr_csr_bayesr_fit <- function(fit, nt, m, trait_names,
@@ -1073,6 +1085,7 @@ stblr_csr_bayesr <- function(
   method = "bayesr",
   model = "bayesr",
   backend = "csr_bayesr",
+  data_level = "summary",
   scheduled = FALSE,
   nchains = nchains,
   keep_chains = keep_chains,
@@ -1102,6 +1115,10 @@ stblr_csr_bayesr <- function(
  fit
 }
 
+# Internal clearer helper name for the exact CSR BayesR backend.
+.fit_stblr_csr_bayesr <- stblr_csr_bayesr
+
+# Compatibility alias for scripts/tests that used the old internal helper name.
 .stblr_csr_bayesr_experimental <- function(
   Glist = NULL,
   stats,
@@ -1140,7 +1157,7 @@ stblr_csr_bayesr <- function(
   updateE_start = NULL,
   updateE_every = 1L
 ) {
- stblr_csr_bayesr(
+ .fit_stblr_csr_bayesr(
   stats = stats,
   Glist = Glist,
   ld_prefix = ld_prefix,
@@ -1455,6 +1472,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   fit$input$method <- "bayesr"
   fit$input$model <- "bayesr"
   fit$input$backend <- "csr_bayesr"
+  fit$input$data_level <- "summary"
   return(fit)
  }
  .validate_ld_swap_args(
@@ -1577,12 +1595,20 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   },
   scheduled = scheduled, ld_prefix = ld_prefix,
   method = "bayesc", model = "bayesc",
+  backend = if (isTRUE(scheduled)) "csr_scheduled_bayesc" else "csr_bayesc",
+  data_level = "summary",
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves)
  ), arch)
  fit
+}
+
+.fit_stblr_csr_bayesc <- function(...) {
+ args <- list(...)
+ args$method <- "bayesc"
+ do.call(stblr_csr, args)
 }
 
 .make_bed_marker_data <- function(Glist, y, chr, cls, block_size,
@@ -2341,7 +2367,7 @@ stblr_bed <- function(
   pri <- .make_stblr_priors(
    dat$y, dat$m, h2, nub, nue, pi_active, pi_active, dat$trait_names
   )
-  fit <- .stblr_bed_marker_bayesr_experimental(
+  fit <- .fit_stblr_bed_bayesr(
    bed_files = dat$bed_files,
    n = dat$n_total,
    cls = dat$cls,
@@ -2388,7 +2414,7 @@ stblr_bed <- function(
   fit$input <- c(list(
    method = "bayesr",
    model = "bayesr",
-   backend = "bed_scheduled_bayesr",
+   backend = "bed_bayesr",
    data_level = "individual",
    chr = dat$chr,
    cls = dat$cls,
@@ -2431,7 +2457,7 @@ stblr_bed <- function(
   ), fit$input)
   fit$input$method <- "bayesr"
   fit$input$model <- "bayesr"
-  fit$input$backend <- "bed_scheduled_bayesr"
+  fit$input$backend <- "bed_bayesr"
   fit$input$data_level <- "individual"
   fit$input$nchains <- nchains
   fit$input <- fit$input[!duplicated(names(fit$input))]
@@ -2500,8 +2526,10 @@ stblr_bed <- function(
  fit$input <- c(list(
   method = "bayesc",
   model = "bayesc",
-  backend = "bed_scheduled",
+  backend = "bed_bayesc",
   data_level = "individual",
+  scheduled = TRUE,
+  keep_chains = FALSE,
   chr = dat$chr,
   cls = dat$cls,
   n = dat$n,
@@ -2542,6 +2570,12 @@ stblr_bed <- function(
   rows = dat$rows
  ), arch)
  fit
+}
+
+.fit_stblr_bed_bayesc <- function(...) {
+ args <- list(...)
+ args$method <- "bayesc"
+ do.call(stblr_bed, args)
 }
 
 

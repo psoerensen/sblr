@@ -93,8 +93,9 @@ test_that("stblr_bed fits BayesC BED scheduled chains", {
   expect_stblr_bed_chain_fields(fit)
   expect_equal(fit$input$method, "bayesc")
   expect_equal(fit$input$model, "bayesc")
-  expect_equal(fit$input$backend, "bed_scheduled")
+  expect_equal(fit$input$backend, "bed_bayesc")
   expect_equal(fit$input$data_level, "individual")
+  expect_equal(fit$input$scheduled, TRUE)
   expect_equal(fit$input$nchains, 1L)
 })
 
@@ -127,8 +128,9 @@ test_that("stblr_bed fits BayesR BED scheduled chains", {
   expect_stblr_bed_bayesr_convention(fit)
   expect_equal(fit$input$method, "bayesr")
   expect_equal(fit$input$model, "bayesr")
-  expect_equal(fit$input$backend, "bed_scheduled_bayesr")
+  expect_equal(fit$input$backend, "bed_bayesr")
   expect_equal(fit$input$data_level, "individual")
+  expect_equal(fit$input$scheduled, TRUE)
   expect_equal(fit$input$nchains, 1L)
 })
 

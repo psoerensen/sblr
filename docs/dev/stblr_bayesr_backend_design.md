@@ -101,10 +101,9 @@ the implementation pass.
 
 ### Status Classification
 
-`stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp` is best treated as
-experimental, exported lower-level code that is currently unused or orphaned
-from public R entry points. It now follows the standard marker-level `bm`/`dm`
-and chain-summary convention, but it still does not have a public wrapper. The
+`stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp` is the current exported
+lower-level native implementation behind `stblr_bed(method = "bayesr")`. It now
+follows the standard marker-level `bm`/`dm` and chain-summary convention. The
 SBayesRC CSR path is active public code, but it is not the same as a plain
 BayesR ST-BLR backend.
 
@@ -198,21 +197,23 @@ In R's one-based indexing, BayesR `pip_k` is `fit[[23]]`, chain summaries are
 
 ## Current R-side Status
 
-The BED BayesR path remains experimental relative to the mature BayesC BED
-path, but it has a public high-level dispatcher:
+The BED BayesR path is supported through the public high-level dispatcher:
 
 - `stblr_bed(..., method = "bayesr")` prepares BED marker data from `Glist`,
   constructs priors, calls the existing scheduled-chain BayesR helper, and
   records `input$method = "bayesr"`, `input$backend =
-  "bed_scheduled_bayesr"`, and `input$data_level = "individual"`.
+  "bed_bayesr"`, and `input$data_level = "individual"`.
 
 The stable lower-level R-side path is:
 
-- `.format_stblr_bayesr_fit()` formats the raw Rcpp return.
-- `.stblr_bed_marker_bayesr_experimental()` is an internal helper that calls
-  the Rcpp backend, formats the result, and records minimal BayesR metadata.
+- `.format_stblr_bed_bayesr_fit()` formats the raw Rcpp return. The older
+  `.format_stblr_bayesr_fit()` name is retained as a compatibility alias.
+- `.fit_stblr_bed_bayesr()` is an internal helper that calls the Rcpp backend,
+  formats the result, and records minimal BayesR metadata. The older
+  `.stblr_bed_marker_bayesr_experimental()` name is retained only as a
+  compatibility alias.
 - `stblr_bed(..., method = "bayesc")` is the matching high-level BayesC BED
-  scheduled-chain interface and records `input$backend = "bed_scheduled"`.
+  scheduled-chain interface and records `input$backend = "bed_bayesc"`.
 
 The formatted BayesR fit convention is:
 
@@ -314,7 +315,7 @@ Minimal alignment has been added without changing sampler math:
 
 `.format_stblr_fit()` already detects slots one-based `24:29` and names them
 as the six standard chain summaries. The internal
-`.format_stblr_bayesr_fit()` wrapper additionally formats BayesR component
+`.format_stblr_bed_bayesr_fit()` wrapper additionally formats BayesR component
 probabilities from slot `23`, enforces standard `dm = 1 - P(component 0)`, and
 exposes slot `30` as `dm_component_mean`.
 
@@ -586,7 +587,7 @@ The first BayesR harmonization step has been implemented:
 
 Suggested next implementation prompt:
 
-- Add a small experimental R wrapper for the BED BayesR backend if there is a
-  clear user workflow for direct BED BayesR fits.
+- Extend the current BED BayesR wrapper only when there is a clear user
+  workflow for additional direct BED BayesR controls.
 - Implement scheduled CSR BayesR only as a separate scoped task.
 - Design BayesR LD-swap/MH separately before adding swap moves.

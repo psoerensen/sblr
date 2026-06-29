@@ -16,7 +16,7 @@ scheduled chains backend.
 BayesR backend harmonization is tracked separately in
 `docs/dev/stblr_bayesr_backend_design.md`. The existing BED BayesR scheduled
 chains backend now uses standard `dm = P(component > 0)` and exposes standard
-`bm`/`dm` chain summaries. It remains a lower-level experimental backend with
+`bm`/`dm` chain summaries. It remains a lower-level current backend with
 no public wrapper. Plain exact and scheduled CSR BayesR backends remain future
 work.
 

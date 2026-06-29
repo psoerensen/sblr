@@ -85,8 +85,10 @@ format_bayesr_csr_test_fit <- function(raw, nchains) {
     n_components = 3L
   )
   fit$input <- list(
+    method = "bayesr",
     model = "bayesr",
     backend = "csr_bayesr",
+    data_level = "summary",
     scheduled = FALSE,
     keep_chains = FALSE,
     updateLDswap = FALSE,
@@ -368,6 +370,7 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
   expect_equal(fit_bridge$input$method, "bayesr")
   expect_equal(fit_bridge$input$model, "bayesr")
   expect_equal(fit_bridge$input$backend, "csr_bayesr")
+  expect_equal(fit_bridge$input$data_level, "summary")
   expect_equal(fit_bridge$input$scheduled, FALSE)
   expect_equal(dim(fit_bridge$dm), dim(fit_direct$dm))
   expect_equal(dim(fit_bridge$bm), dim(fit_direct$bm))
@@ -487,6 +490,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_equal(fit_noE$input$updateE_every, 1L)
   expect_equal(fit_noE$input$model, "bayesr")
   expect_equal(fit_noE$input$backend, "csr_bayesr")
+  expect_equal(fit_noE$input$data_level, "summary")
   expect_equal(fit_noE$input$scheduled, FALSE)
   expect_equal(fit_noE$input$keep_chains, FALSE)
   expect_equal(fit_noE$input$updateLDswap, FALSE)
