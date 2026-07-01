@@ -8,20 +8,19 @@
 
 # Packages -----------------------------------------------------------------
 
-library(qgg)
 library(sblr)
 
 # Data directory setup -----------------------------------------------------
 
-data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
-# Prepare Glist and sparse LD ----------------------------------------------
+# Data setup ---------------------------------------------------------------
+data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR")
+if (!nzchar(data_dir)) {
+  data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
+}
 
-Glist <- readRDS(file = file.path(data_dir, "Glist_sparseLD_1k.RDS"))
-chr <- 1
-cls <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
-stopifnot(!anyNA(cls))
+nthreads <- 4
 
-ld_prefix <- file.path(data_dir, "ld_test")
+Glist <- readRDS(file.path(data_dir, "Glist_sparseLD_1k.RDS"))
 
 # Simulate or load multi-trait phenotype data ------------------------------
 
@@ -31,8 +30,8 @@ ld_prefix <- file.path(data_dir, "ld_test")
 # the study if desired.
 sim <- mtsim_annotation(
  Glist = Glist,
- chr = chr,
- rsids = Glist$rsidsLD[[chr]],
+ chr = 1,
+ rsids = Glist$rsidsLD[[1]],
  nt = 3,
  n_shared = 30,
  n_specific = 10,
@@ -59,47 +58,175 @@ summarize_annotation_signal(sim)
 
 # Compute BED sufficient statistics with bed_xtx_xty() --------------------
 
-# Runtime-heavy example.
-stats <- bed_xtx_xty(
- bed_file = Glist$bedfiles[chr],
- n = Glist$n,
- cls = cls,
- af = Glist$af[[chr]][cls],
- y = y,
- scale = TRUE,
- nthreads = 4
+# Compute summary statistics
+stats <- make_stats(
+  Glist,
+  y,
+  nthreads = nthreads
 )
 
-# Stream sparse LD with sparseLD_stream_CSR() ------------------------------
-
-# Runtime-heavy example. This writes disk-backed CSR files at ld_prefix.
-sparseLD_stream_CSR(
- bed_files = Glist$bedfiles[chr],
- n = Glist$n,
- cls = list(cls),
- out_prefix = ld_prefix,
- rows = NULL,
- af = list(Glist$af[[chr]][cls]),
- pos_bp = NULL,
- max_distance_bp = 0,           # disables bp-distance filtering
- max_distance_variants = 1000,  # local LD window; 0 disables this filter
- r2_threshold = 0.001,
- block_size = 1024,
- nthreads = 4
+# Compute sparse LD
+Glist <- make_sparseLD(
+  Glist = Glist,
+  out_prefix = file.path(data_dir, "ld_test"),
+  pos_bp = NULL,
+  max_distance_bp = 0,
+  max_distance_variants = 1000,
+  r2_threshold = 0.001,
+  block_size = 1024,
+  nthreads = 4
 )
+
 
 # Use the simulated annotation matrix A -----------------------------------
 
 # A is an m x K marker annotation matrix. Rows of A must correspond exactly
 # to the marker ordering in stats and the sparse-LD files. Real analyses should
 # replace sim$annot with biological annotations in the same marker order.
-m <- length(cls)
-marker_id <- Glist$rsidsLD[[chr]]
+# A is an m x K marker annotation matrix. Rows of A must correspond exactly
+# to the marker ordering in stats and the sparse-LD files. Real analyses should
+# replace sim$annot with biological annotations in the same marker order.
+
+marker_id <- Glist$rsidsLD[[1]]
+m <- length(marker_id)
+
 A <- sim$annot
 rownames(A) <- marker_id
-stopifnot(nrow(A) == m, identical(rownames(A), marker_id))
+
+stopifnot(
+  nrow(A) == m,
+  identical(rownames(A), marker_id)
+)
+
+fit <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  nit = 1000,
+  nburn = 100
+)
+
+
+fit_prior <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = list(
+    A = A,
+    fixed_pi_marker = sim$pi_marker,
+    fixed_vb_multiplier = sim$vb_multiplier,
+    use_pi_marker = TRUE,
+    use_vb_multiplier = TRUE
+  ),
+  annotation_model = "prior",
+  nit = 1000,
+  nburn = 100
+)
+
+fit_learned <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "learned",
+  learn_pi_annot = TRUE,
+  learn_vb_annot = TRUE,
+  nit = 1000,
+  nburn = 100
+)
+
+group <- ifelse(A[, 1] != 0, "annotated", "background")
+names(group) <- rownames(A)
+
+fit_group <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = group,
+  annotation_model = "group",
+  group_names = c("annotated", "background"),
+  group_pi_init = c(0.002, 0.001),
+  group_vb_multiplier_init = c(1.1, 1.0),
+  nit = 1000,
+  nburn = 100
+)
+
+rbind(
+  sbayesrc = colMeans(fit$dm),
+  prior = colMeans(fit_prior$dm),
+  learned = colMeans(fit_learned$dm),
+  group = colMeans(fit_group$dm)
+)
+
 
 # Fixed marker-specific prior model ---------------------------------------
+
+
+fit_prior_annot <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = list(
+    A = A,
+    fixed_pi_marker = sim$pi_marker,
+    fixed_vb_multiplier = sim$vb_multiplier,
+    use_pi_marker = TRUE,
+    use_vb_multiplier = TRUE
+  ),
+  annotation_model = "prior",
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 3,
+  seed = 10
+)
+
+fit_learn_annot <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "learned",
+  learn_pi_annot = TRUE,
+  learn_vb_annot = TRUE,
+  rw_sd_eta_pi = 0.02,
+  rw_sd_eta_vb = 0.02,
+  annot_update_every = 10,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 3,
+  seed = 10
+)
+
+group <- ifelse(A[, 1] != 0, "annotated", "background")
+names(group) <- rownames(A)
+
+fit_group_annot <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = group,
+  annotation_model = "group",
+  group_names = c("annotated", "background"),
+  group_pi_init = c(0.002, 0.001),
+  group_vb_multiplier_init = c(1.1, 1.0),
+  updatePi = TRUE,
+  updateGroupVb = TRUE,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 3,
+  seed = 10
+)
+
+fit_sbayesrc <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  gamma = c(0, 0.01, 0.1, 1),
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 3,
+  seed = 10
+)
 
 # stblr_csr_prior_annot() uses the marker-specific inclusion probabilities and
 # variance multipliers generated by mtsim_annotation().

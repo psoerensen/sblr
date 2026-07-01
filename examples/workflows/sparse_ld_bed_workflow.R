@@ -63,10 +63,6 @@ Glist <- make_sparseLD(
 )
 
 
-library(sblr)
-
-
-library(sblr)
 
 ## ------------------------------------------------------------
 ## Fit summary-statistics / sparse-LD BLR models
