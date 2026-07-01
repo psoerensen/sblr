@@ -25,11 +25,15 @@
 #' @param chain_seeds Optional integer seeds, one per chain.
 #' @param keep_chains Logical; return compact per-chain summaries when
 #'   supported.
-#' @param updateLDswap Logical; request optional LD-swap/MH. This currently
-#'   errors for BayesC-like annotation-aware CSR models (`"prior"`,
-#'   `"learned"`, and `"group"`); LD-swap will be implemented separately.
-#' @param ld_swap_prob,ld_swap_r2,ld_swap_max_friends,ld_swap_moves LD-swap
-#'   controls reserved for compatible backends.
+#' @param updateLDswap Logical; request optional LD-swap/MH. This is currently
+#'   supported only for `annotation_model = "prior"` among annotation-aware CSR
+#'   models.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker for swap proposals.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @param h2 Initial heritability.
 #' @param adjE Residual adjustment factor.
 #' @param updateB,updateE,updatePi Logical sampler update controls. `updatePi`
@@ -47,8 +51,9 @@
 #' @details
 #' This interface is CSR summary-statistics only. The current annotation-aware
 #' SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
-#' native chains and compact chain summaries. BayesC-like annotation-aware CSR
-#' models do not yet implement LD-swap/MH.
+#' native chains and compact chain summaries. LD-swap/MH is currently available
+#' for the fixed-prior annotation-aware CSR BayesC backend only; learned,
+#' group, and SBayesRC annotation models error if `updateLDswap = TRUE`.
 #'
 #' Existing wrappers remain supported:
 #' [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
@@ -92,11 +97,11 @@ stblr_csr_annot <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- if (annotation_model %in% c("prior", "learned", "group")) {
-  .stblr_stop_bayesc_annotation_ld_swap(updateLDswap)
- } else if (isTRUE(updateLDswap)) {
-  stop("LD-swap/MH is not yet implemented for annotation_model = 'sbayesrc'.",
-       call. = FALSE)
+ if (annotation_model != "prior" && isTRUE(updateLDswap)) {
+  stop(
+   "LD-swap/MH is currently implemented only for annotation_model = 'prior' among annotation-aware CSR models.",
+   call. = FALSE
+  )
  }
  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(
   Glist = Glist,

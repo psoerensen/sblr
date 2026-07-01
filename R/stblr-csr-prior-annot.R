@@ -27,10 +27,16 @@
 #' @param keep_chains Logical; return compact per-chain `dm` and `bm`
 #'   summaries in `fit$chains`.
 #' @param chain_seeds Optional numeric or integer vector of length `nchains`.
-#' @param updateLDswap Logical; LD-swap/MH is currently not implemented for
-#'   this BayesC-like annotation-aware CSR backend and `TRUE` errors.
-#' @param ld_swap_prob,ld_swap_r2,ld_swap_max_friends,ld_swap_moves Reserved
-#'   LD-swap controls for a future implementation.
+#' @param updateLDswap Logical; attempt active/null LD-swap
+#'   Metropolis-Hastings moves. For this fixed-prior annotation-aware backend,
+#'   marker-specific inclusion probabilities and variance multipliers are
+#'   included in the MH prior ratio when enabled.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker for swap proposals.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @param b_init,d_init Optional initial marker effects and inclusion states.
 #' @param use_d_init Use the supplied initial inclusion states.
 #' @param r_init Optional initial residual state.
@@ -112,7 +118,6 @@ stblr_csr_prior_annot <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- .stblr_stop_bayesc_annotation_ld_swap(updateLDswap)
  chain_args <- .stblr_validate_annotation_chain_args(
   nchains = nchains,
   keep_chains = keep_chains,
@@ -259,7 +264,12 @@ stblr_csr_prior_annot <- function(
   seed = as.integer(seed),
   nchains = nchains,
   keep_chains = keep_chains,
-  chain_seeds = chain_seeds
+  chain_seeds = chain_seeds,
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves)
  )
 
  fit <- .format_stblr_fit(

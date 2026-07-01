@@ -7,9 +7,10 @@ use disk-backed sparse LD. They are already close to the standard ST-BLR object
 shape because the first fields are `bm`, `dm`, and the usual variance traces.
 They now follow the current public CSR/BED multi-chain conventions for the
 annotation-aware CSR SBayesRC backend and the three BayesC-like annotation
-backends: fixed-prior, learned-annotation, and group-prior BayesC. LD-swap/MH
-remains planned for the BayesC-like annotation backends and is guarded at the R
-interface.
+backends: fixed-prior, learned-annotation, and group-prior BayesC. The
+fixed-prior backend now also supports optional active/null LD-swap/MH for
+comparison with annotation-unaware CSR BayesC. LD-swap/MH remains planned and
+guarded for learned, group, and SBayesRC annotation models.
 
 Do not rename C++ files or native symbols in the alignment phase. The first
 R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
@@ -38,11 +39,16 @@ later design decision.
   `chain_seeds`. Returned chain summaries include `bm_sd`, `bm_min`, `bm_max`,
   `dm_sd`, `dm_min`, and `dm_max`; compact chains expose per-trait/per-chain
   named `dm` and `bm` vectors after R formatting.
-- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
-  scheduled updates.
-- Return layout: 22 slots: `bm`, `dm`, `wy`, `r`, `b`, `d`, marker index,
+- Supports optional LD-swap/MH controls: `updateLDswap`, `ld_swap_prob`,
+  `ld_swap_r2`, `ld_swap_max_friends`, and `ld_swap_moves`. The MH ratio uses
+  the plain CSR BayesC likelihood/proposal terms plus marker-specific inclusion
+  and effect-variance prior ratios when fixed marker priors are active.
+- Unsupported compared with current CSR/BED main interfaces: scheduled updates.
+- Return layout: 23 slots: `bm`, `dm`, `wy`, `r`, `b`, `d`, marker index,
   `vbs`, `vgs`, `ves`, `covb`, `covg`, `cove`, `vb`, `vg`, `ve`, final `pi`,
-  posterior mean `pim`, reserved diagnostics, `nsamples`/`n`, `vle`, and `vld`.
+  posterior mean `pim`, reserved diagnostics, `nsamples`/`n`, `vle`, `vld`,
+  and LD-swap diagnostics. Multi-chain summary/chain slots follow the standard
+  CSR convention.
 - ST-BLR resemblance: high for base fields; missing current metadata and chain
   fields at the R wrapper level.
 
@@ -350,7 +356,7 @@ Existing native names (`eta_pi`, `eta_vb`, `alpha`, `sigmaSqAlpha`, `group_pi`,
 
 | Backend | nchains | chain summaries | keep_chains | updateE | LD-swap/MH | scheduled | standard dm/bm | standard metadata | tests | docs |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `csr_prior_bayesc` | yes | yes | yes | yes | guarded/no | no | yes | yes | focused chain tests | man page |
+| `csr_prior_bayesc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
 | `csr_annot_bayesc` | yes | yes | yes | yes | annotation-effect MH only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |
 | `csr_group_bayesc` | yes | yes | yes | yes | guarded/no | no | yes | yes | focused chain tests | man page |
 | `csr_sbayesrc` | yes | yes | yes | yes | annotation coefficient updates only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |

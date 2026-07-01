@@ -71,12 +71,19 @@ supported.}
 \item{updateB, updateE, updatePi}{Logical sampler update controls. `updatePi`
 is used by the BayesC-like annotation models and ignored by SBayesRC.}
 
-\item{updateLDswap}{Logical; request optional LD-swap/MH. This currently
-errors for BayesC-like annotation-aware CSR models (`"prior"`,
-`"learned"`, and `"group"`); LD-swap will be implemented separately.}
+\item{updateLDswap}{Logical; request optional LD-swap/MH. This is currently
+supported only for `annotation_model = "prior"` among annotation-aware CSR
+models.}
 
-\item{ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves}{LD-swap
-controls reserved for compatible backends.}
+\item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
+moves when `updateLDswap = TRUE`.}
+
+\item{ld_swap_r2}{Minimum LD r-squared for candidate swap partners.}
+
+\item{ld_swap_max_friends}{Maximum number of high-LD friends stored per
+marker for swap proposals.}
+
+\item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 
 \item{ld_prefix}{Optional prefix of the disk-backed CSR LD files.}
 
@@ -99,8 +106,9 @@ output aliases while preserving wrapper-specific fields.
 \details{
 This interface is CSR summary-statistics only. The current annotation-aware
 SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
-native chains and compact chain summaries. BayesC-like annotation-aware CSR
-models do not yet implement LD-swap/MH.
+native chains and compact chain summaries. LD-swap/MH is currently available
+for the fixed-prior annotation-aware CSR BayesC backend only; learned,
+group, and SBayesRC annotation models error if `updateLDswap = TRUE`.
 
 Existing wrappers remain supported:
 [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],

@@ -110,6 +110,11 @@ multi-chain output convention. `csr_prior_bayesc`, `csr_annot_bayesc`, and
 named marker vectors, with compact annotation-specific chain fields where
 available.
 
+`csr_prior_bayesc` also supports optional active/null LD-swap/MH through the
+standard `updateLDswap` and `ld_swap_*` controls. Aggregate diagnostics are
+returned as `fit$ld_swap`; when compact chains are kept, chain diagnostics are
+available as `fit$ld_swap_chains` and `fit$chains[[trait]][[chain]]$ld_swap`.
+
 ## Compatibility Aliases
 
 Compatibility aliases are intentionally kept for local scripts and historical
@@ -131,7 +136,8 @@ These limitations remain explicit:
 
 - scheduled CSR BayesR is not implemented
 - active/active BayesR LD-swap is not implemented
-- LD-swap/MH for BayesC-like annotation-aware CSR backends is not implemented
+- LD-swap/MH for `csr_annot_bayesc`, `csr_group_bayesc`, and `csr_sbayesrc` is
+  not implemented
 - marker-specific or annotation-specific BayesR LD-swap priors are not
   implemented
 - BED `chain_seeds` are not supported
