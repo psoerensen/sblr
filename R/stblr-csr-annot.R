@@ -21,11 +21,15 @@
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
-#' @param nchains Number of independent chains. Currently supported only for
-#'   `annotation_model = "sbayesrc"` among annotation-aware CSR models.
+#' @param nchains Number of independent chains.
 #' @param chain_seeds Optional integer seeds, one per chain.
 #' @param keep_chains Logical; return compact per-chain summaries when
 #'   supported.
+#' @param updateLDswap Logical; request optional LD-swap/MH. This currently
+#'   errors for BayesC-like annotation-aware CSR models (`"prior"`,
+#'   `"learned"`, and `"group"`); LD-swap will be implemented separately.
+#' @param ld_swap_prob,ld_swap_r2,ld_swap_max_friends,ld_swap_moves LD-swap
+#'   controls reserved for compatible backends.
 #' @param h2 Initial heritability.
 #' @param adjE Residual adjustment factor.
 #' @param updateB,updateE,updatePi Logical sampler update controls. `updatePi`
@@ -42,9 +46,9 @@
 #'
 #' @details
 #' This interface is CSR summary-statistics only. The current annotation-aware
-#' SBayesRC backend supports multiple native chains. Other annotation-aware
-#' backends do not implement multiple chains, `keep_chains`, LD-swap, or
-#' scheduled annotation-aware models.
+#' SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
+#' native chains and compact chain summaries. BayesC-like annotation-aware CSR
+#' models do not yet implement LD-swap/MH.
 #'
 #' Existing wrappers remain supported:
 #' [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
@@ -70,6 +74,11 @@ stblr_csr_annot <- function(
   updateB = TRUE,
   updateE = TRUE,
   updatePi = TRUE,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   ld_prefix = NULL,
   ...
 ) {
@@ -79,7 +88,16 @@ stblr_csr_annot <- function(
 
  annotation_model <- .stblr_match_annotation_model(annotation_model[[1L]])
  .stblr_check_annotation_method(method, annotation_model)
- .stblr_check_annotation_chains(annotation_model, nchains, keep_chains)
+ .stblr_check_annotation_chains(annotation_model, nchains, keep_chains, chain_seeds)
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ if (annotation_model %in% c("prior", "learned", "group")) {
+  .stblr_stop_bayesc_annotation_ld_swap(updateLDswap)
+ } else if (isTRUE(updateLDswap)) {
+  stop("LD-swap/MH is not yet implemented for annotation_model = 'sbayesrc'.",
+       call. = FALSE)
+ }
  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(
   Glist = Glist,
   ld_prefix = ld_prefix
@@ -104,10 +122,12 @@ stblr_csr_annot <- function(
  extra <- list(...)
 
  if (annotation_model %in% c("prior", "learned", "group")) {
-  common$updatePi <- updatePi
-  common$nchains <- NULL
-  common$chain_seeds <- NULL
-  common$keep_chains <- NULL
+ common$updatePi <- updatePi
+  common$updateLDswap <- updateLDswap
+  common$ld_swap_prob <- ld_swap_prob
+  common$ld_swap_r2 <- ld_swap_r2
+  common$ld_swap_max_friends <- ld_swap_max_friends
+  common$ld_swap_moves <- ld_swap_moves
  }
 
  if (annotation_model == "prior") {
@@ -139,7 +159,8 @@ stblr_csr_annot <- function(
  do.call(stblr_csr_sbayesrc_generic, args)
 }
 
-.stblr_check_annotation_chains <- function(annotation_model, nchains, keep_chains) {
+.stblr_check_annotation_chains <- function(annotation_model, nchains, keep_chains,
+                                          chain_seeds = NULL) {
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
   stop("nchains must be a positive integer scalar.", call. = FALSE)
@@ -148,12 +169,12 @@ stblr_csr_annot <- function(
      is.na(keep_chains)) {
   stop("keep_chains must be TRUE or FALSE.", call. = FALSE)
  }
- if (annotation_model != "sbayesrc" &&
-     (as.integer(nchains) > 1L || isTRUE(keep_chains))) {
-  stop(
-   "nchains > 1 is currently only supported for annotation_model = 'sbayesrc' among annotation-aware CSR models.",
-   call. = FALSE
-  )
+ if (!is.null(chain_seeds) &&
+     (!is.numeric(chain_seeds) || length(chain_seeds) != as.integer(nchains) ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds)))) {
+  stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.",
+       call. = FALSE)
  }
  invisible(TRUE)
 }

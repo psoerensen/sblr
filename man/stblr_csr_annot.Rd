@@ -23,6 +23,11 @@ stblr_csr_annot(
   updateB = TRUE,
   updateE = TRUE,
   updatePi = TRUE,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   ld_prefix = NULL,
   ...
 )
@@ -52,8 +57,7 @@ or `pi_marker`, and `fixed_vb_multiplier` or `vb_multiplier` elements. For
 
 \item{seed}{Sampler seed.}
 
-\item{nchains}{Number of independent chains. Currently supported only for
-`annotation_model = "sbayesrc"` among annotation-aware CSR models.}
+\item{nchains}{Number of independent chains.}
 
 \item{chain_seeds}{Optional integer seeds, one per chain.}
 
@@ -66,6 +70,13 @@ supported.}
 
 \item{updateB, updateE, updatePi}{Logical sampler update controls. `updatePi`
 is used by the BayesC-like annotation models and ignored by SBayesRC.}
+
+\item{updateLDswap}{Logical; request optional LD-swap/MH. This currently
+errors for BayesC-like annotation-aware CSR models (`"prior"`,
+`"learned"`, and `"group"`); LD-swap will be implemented separately.}
+
+\item{ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves}{LD-swap
+controls reserved for compatible backends.}
 
 \item{ld_prefix}{Optional prefix of the disk-backed CSR LD files.}
 
@@ -87,9 +98,9 @@ output aliases while preserving wrapper-specific fields.
 }
 \details{
 This interface is CSR summary-statistics only. The current annotation-aware
-SBayesRC backend supports multiple native chains. Other annotation-aware
-backends do not implement multiple chains, `keep_chains`, LD-swap, or
-scheduled annotation-aware models.
+SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
+native chains and compact chain summaries. BayesC-like annotation-aware CSR
+models do not yet implement LD-swap/MH.
 
 Existing wrappers remain supported:
 [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],

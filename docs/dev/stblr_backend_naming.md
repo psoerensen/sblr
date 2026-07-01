@@ -102,6 +102,14 @@ BayesR output convention is unchanged: `fit$dm` is
 `P(component > 0)`, `fit$comp_prob` stores marker-by-component probabilities,
 and `fit$dm_component_mean` stores posterior mean component index.
 
+BayesC-like annotation-aware CSR backends now follow the standard native
+multi-chain output convention. `csr_prior_bayesc`, `csr_annot_bayesc`, and
+`csr_group_bayesc` expose `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and
+`bm_max` when multiple chains are requested or compact chains are kept.
+`keep_chains = TRUE` returns `fit$chains[[trait]][[chain]]$dm` and `$bm` as
+named marker vectors, with compact annotation-specific chain fields where
+available.
+
 ## Compatibility Aliases
 
 Compatibility aliases are intentionally kept for local scripts and historical
@@ -123,6 +131,7 @@ These limitations remain explicit:
 
 - scheduled CSR BayesR is not implemented
 - active/active BayesR LD-swap is not implemented
+- LD-swap/MH for BayesC-like annotation-aware CSR backends is not implemented
 - marker-specific or annotation-specific BayesR LD-swap priors are not
   implemented
 - BED `chain_seeds` are not supported

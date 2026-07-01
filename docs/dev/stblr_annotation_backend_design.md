@@ -5,11 +5,11 @@
 The annotation-aware implementations are all CSR summary-statistics models that
 use disk-backed sparse LD. They are already close to the standard ST-BLR object
 shape because the first fields are `bm`, `dm`, and the usual variance traces.
-They are not yet aligned with the current public CSR/BED interface conventions:
-their public entry points are separate wrappers, their `input` metadata does not
-record `method`, `backend`, or `data_level`, and none of the inspected native
-annotation backends supports `nchains`, `keep_chains`, chain summaries,
-LD-swap, or scheduled marker updates.
+They now follow the current public CSR/BED multi-chain conventions for the
+annotation-aware CSR SBayesRC backend and the three BayesC-like annotation
+backends: fixed-prior, learned-annotation, and group-prior BayesC. LD-swap/MH
+remains planned for the BayesC-like annotation backends and is guarded at the R
+interface.
 
 Do not rename C++ files or native symbols in the alignment phase. The first
 R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
@@ -34,8 +34,12 @@ later design decision.
   `pi_prior_a`, `pi_prior_b`, `ncores`, and `seed`.
 - MCMC controls: `nit`, `nburn`, `nthin`, `updateB`, `updateE`, `updatePi`,
   `ncores`, and `seed`.
-- Unsupported compared with current CSR/BED main interfaces: `nchains`,
-  `keep_chains`, chain summaries, LD-swap/MH, and scheduled updates.
+- Supports native multi-chain controls: `nchains`, `keep_chains`, and
+  `chain_seeds`. Returned chain summaries include `bm_sd`, `bm_min`, `bm_max`,
+  `dm_sd`, `dm_min`, and `dm_max`; compact chains expose per-trait/per-chain
+  named `dm` and `bm` vectors after R formatting.
+- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
+  scheduled updates.
 - Return layout: 22 slots: `bm`, `dm`, `wy`, `r`, `b`, `d`, marker index,
   `vbs`, `vgs`, `ves`, `covb`, `covg`, `cove`, `vb`, `vg`, `ve`, final `pi`,
   posterior mean `pim`, reserved diagnostics, `nsamples`/`n`, `vle`, and `vld`.
@@ -59,8 +63,13 @@ later design decision.
 - MCMC controls: `nit`, `nburn`, `nthin`, `updateB`, `updateE`, `updatePi`,
   `learn_pi_annot`, `learn_vb_annot`, `annot_update_every`, `ncores`, and
   `seed`. Annotation effects are updated by random-walk MH.
-- Unsupported compared with current CSR/BED main interfaces: `nchains`,
-  `keep_chains`, chain summaries, LD-swap/MH, and scheduled updates.
+- Supports native multi-chain controls: `nchains`, `keep_chains`, and
+  `chain_seeds`. Returned chain summaries include `bm_sd`, `bm_min`, `bm_max`,
+  `dm_sd`, `dm_min`, and `dm_max`; compact chains expose per-trait/per-chain
+  named `dm` and `bm` vectors after R formatting, plus compact `eta_pi` and
+  `eta_vb` vectors.
+- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
+  scheduled updates.
 - Return layout: 22 slots. Slots 0-17 match the BayesC-like CSR convention;
   slot 18 is posterior mean `eta_pi`, slot 19 is posterior mean `eta_vb`, slot
   20 is `vle`, and slot 21 is `vld`.
@@ -85,8 +94,13 @@ later design decision.
   the BayesC-like CSR backends.
 - MCMC controls: `nit`, `nburn`, `nthin`, `updateB`, `updateE`, `updatePi`,
   `updateGroupVb`, `ncores`, and `seed`.
-- Unsupported compared with current CSR/BED main interfaces: `nchains`,
-  `keep_chains`, chain summaries, LD-swap/MH, and scheduled updates.
+- Supports native multi-chain controls: `nchains`, `keep_chains`, and
+  `chain_seeds`. Returned chain summaries include `bm_sd`, `bm_min`, `bm_max`,
+  `dm_sd`, `dm_min`, and `dm_max`; compact chains expose per-trait/per-chain
+  named `dm` and `bm` vectors after R formatting, plus compact group-level
+  `group_pi`, `group_vb_multiplier`, and `group_nincluded` vectors.
+- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
+  scheduled updates.
 - Return layout: 26 slots. Slots 0-21 follow the BayesC-like CSR convention;
   slots 22-25 are `group_pi`, `group_vb_multiplier`, `group_nincluded`, and
   `group_size`.
@@ -111,8 +125,10 @@ later design decision.
 - MCMC controls: `nit`, `nburn`, `nthin`, `updateAlpha`, `updateB`, `updateE`,
   `alpha_update_every`, `ncores`, and `seed`. There is no `updatePi`; mixture
   probabilities are induced by `A %*% alpha`.
-- Unsupported compared with current CSR/BED main interfaces: `nchains`,
-  `keep_chains`, chain summaries, LD-swap/MH, and scheduled updates.
+- Supports native multi-chain controls: `nchains`, `keep_chains`, and
+  `chain_seeds`, including component-probability chain output.
+- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
+  scheduled updates.
 - Return layout: 24 slots. Slots 0-17 follow the BayesR-like CSR convention
   with `dm = P(component > 0)`; slot 18 is posterior mean `alpha`, slot 19 is
   posterior mean `sigmaSqAlpha`, slots 20-21 are `vle`/`vld`, slot 22 is
@@ -296,8 +312,8 @@ All annotation-aware fits set:
   annotation-aware backend. Prepared matrices or groups remain in existing
   compatibility fields such as `fit$input$A` or `fit$input$group`.
 - `fit$input$annotation_names`: annotation column names.
-- `fit$input$nchains`: `1L` until native chain support exists.
-- `fit$input$keep_chains`: `FALSE` until native chain support exists.
+- `fit$input$nchains`: requested native chain count.
+- `fit$input$keep_chains`: whether compact per-chain summaries were requested.
 - `fit$input$updateE`, `fit$input$updatePi`, and model-specific controls such
   as `updateAlpha`, `learn_pi_annot`, `learn_vb_annot`, and `updateGroupVb`.
 
@@ -334,10 +350,10 @@ Existing native names (`eta_pi`, `eta_vb`, `alpha`, `sigmaSqAlpha`, `group_pi`,
 
 | Backend | nchains | chain summaries | keep_chains | updateE | LD-swap/MH | scheduled | standard dm/bm | standard metadata | tests | docs |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `csr_prior_bayesc` | no | no | no | yes | no | no | yes | no | no end-to-end | man page |
-| `csr_annot_bayesc` | no | no | no | yes | annotation-effect MH only | no | yes | no | no end-to-end | man page |
-| `csr_group_bayesc` | no | no | no | yes | no | no | yes | no | no end-to-end | man page |
-| `csr_sbayesrc` | no | no | no | yes | annotation coefficient updates only | no | yes | no | helper/formatter only | man page |
+| `csr_prior_bayesc` | yes | yes | yes | yes | guarded/no | no | yes | yes | focused chain tests | man page |
+| `csr_annot_bayesc` | yes | yes | yes | yes | annotation-effect MH only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |
+| `csr_group_bayesc` | yes | yes | yes | yes | guarded/no | no | yes | yes | focused chain tests | man page |
+| `csr_sbayesrc` | yes | yes | yes | yes | annotation coefficient updates only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |
 
 ## Compatibility Strategy
 
@@ -377,5 +393,5 @@ Use tiny synthetic fixtures rather than expensive real BED workflows.
 5. Align `csr_sbayesrc` output to the same conventions, including
    `comp_prob`, `annotation_effects`, and `annotation_variance`.
 6. Add compatibility tests for old and new wrapper structural equivalence.
-7. Only later consider native support for `nchains`, `keep_chains`, LD-swap, or
-   scheduled updates for annotation-aware models.
+7. Only later consider LD-swap/MH or scheduled updates for annotation-aware
+   models.

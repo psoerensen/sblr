@@ -30,6 +30,40 @@
  out
 }
 
+.stblr_validate_annotation_chain_args <- function(nchains, keep_chains, chain_seeds) {
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.", call. = FALSE)
+ }
+ nchains <- as.integer(nchains)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.", call. = FALSE)
+ }
+ if (!is.null(chain_seeds)) {
+  if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds))) {
+   stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.",
+        call. = FALSE)
+  }
+  chain_seeds <- as.integer(chain_seeds)
+ } else {
+  chain_seeds <- integer()
+ }
+ list(nchains = nchains, keep_chains = keep_chains, chain_seeds = chain_seeds)
+}
+
+.stblr_stop_bayesc_annotation_ld_swap <- function(updateLDswap) {
+ if (isTRUE(updateLDswap)) {
+  stop(
+   "LD-swap/MH is not yet implemented for BayesC-like annotation-aware CSR models.",
+   call. = FALSE
+  )
+ }
+ invisible(TRUE)
+}
+
 .stblr_get_nt_m_names <- function(stats, n = NULL, m = NULL) {
  nt <- length(stats$yy)
 

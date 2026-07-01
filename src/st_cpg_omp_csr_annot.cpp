@@ -3,6 +3,7 @@
 
 #include "cpg_samplers.h"
 #include "distributions.h"
+#include "st_chain_utils.h"
 #include "st_csr_common.h"
 
 #include <algorithm>
@@ -764,8 +765,7 @@ inline void samplePi_ST_annot(
  pi[1] = g1 / s;
 }
 
-// [[Rcpp::export]]
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot(
+std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -1617,6 +1617,180 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot(
  }
 
  return result;
+}
+
+// [[Rcpp::export]]
+std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot(
+  std::vector<std::vector<double>> wy,
+  std::vector<std::vector<double>> ww,
+  std::vector<double> yy,
+  std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> d_init,
+  bool use_d_init,
+  std::vector<std::vector<double>> r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  std::string ld_prefix,
+  arma::mat B,
+  arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior,
+  std::vector<double> pi,
+  arma::mat A,
+  bool learn_pi_annot,
+  bool learn_vb_annot,
+  arma::mat eta_pi_init,
+  arma::mat eta_vb_init,
+  double sigma_eta_pi,
+  double sigma_eta_vb,
+  double rw_sd_eta_pi,
+  double rw_sd_eta_vb,
+  int annot_update_every,
+  double pi_min,
+  double pi_max,
+  double vb_multiplier_min,
+  double vb_multiplier_max,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  std::vector<int> n,
+  int nit,
+  int nburn,
+  int nthin,
+  double pi_prior_a,
+  double pi_prior_b,
+  int ncores,
+  int seed,
+  int nchains = 1,
+  bool keep_chains = false,
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
+) {
+ if (nchains <= 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_annot: nchains must be positive.");
+ }
+ std::vector<int> chain_seeds_vec;
+ if (chain_seeds.isNotNull()) {
+  Rcpp::IntegerVector chain_seeds_r(chain_seeds);
+  chain_seeds_vec = Rcpp::as<std::vector<int>>(chain_seeds_r);
+ }
+ if (!chain_seeds_vec.empty() && static_cast<int>(chain_seeds_vec.size()) != nchains) {
+  throw std::runtime_error("stblr_cpg_omp_csr_annot: chain_seeds must have length nchains.");
+ }
+
+ std::vector<std::vector<std::vector<double>>> out;
+ std::vector<std::vector<std::vector<double>>> sumsq;
+ std::vector<std::vector<std::vector<double>>> minv;
+ std::vector<std::vector<std::vector<double>>> maxv;
+ std::vector<std::vector<std::vector<double>>> chain_dm;
+ std::vector<std::vector<std::vector<double>>> chain_bm;
+ std::vector<std::vector<std::vector<double>>> chain_eta_pi;
+ std::vector<std::vector<std::vector<double>>> chain_eta_vb;
+
+ for (int chain = 0; chain < nchains; ++chain) {
+  int chain_seed = seed;
+  if (!chain_seeds_vec.empty()) {
+   chain_seed = chain_seeds_vec[static_cast<std::size_t>(chain)];
+  } else if (nchains > 1) {
+   chain_seed = seed + 9176 * (chain + 1);
+  }
+
+  std::vector<std::vector<std::vector<double>>> raw =
+   stblr_cpg_omp_csr_annot_single(
+    wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
+    rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
+    A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init,
+    sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb,
+    annot_update_every, pi_min, pi_max, vb_multiplier_min,
+    vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n,
+    nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, chain_seed
+   );
+
+  if (chain == 0) {
+   out = raw;
+   sumsq = raw;
+   minv = raw;
+   maxv = raw;
+   for (std::size_t k = 0; k < out.size(); ++k) {
+    for (std::size_t t = 0; t < out[k].size(); ++t) {
+     for (std::size_t i = 0; i < out[k][t].size(); ++i) {
+      sumsq[k][t][i] = raw[k][t][i] * raw[k][t][i];
+     }
+    }
+   }
+   chain_dm.resize(raw[1].size());
+   chain_bm.resize(raw[0].size());
+   chain_eta_pi.resize(raw[18].size());
+   chain_eta_vb.resize(raw[19].size());
+  } else {
+   for (std::size_t k = 0; k < out.size(); ++k) {
+    for (std::size_t t = 0; t < out[k].size(); ++t) {
+     for (std::size_t i = 0; i < out[k][t].size(); ++i) {
+      out[k][t][i] += raw[k][t][i];
+      sumsq[k][t][i] += raw[k][t][i] * raw[k][t][i];
+      minv[k][t][i] = std::min(minv[k][t][i], raw[k][t][i]);
+      maxv[k][t][i] = std::max(maxv[k][t][i], raw[k][t][i]);
+     }
+    }
+   }
+  }
+
+  if (keep_chains) {
+   for (std::size_t t = 0; t < raw[0].size(); ++t) {
+    chain_dm[t].insert(chain_dm[t].end(), raw[1][t].begin(), raw[1][t].end());
+    chain_bm[t].insert(chain_bm[t].end(), raw[0][t].begin(), raw[0][t].end());
+    chain_eta_pi[t].insert(chain_eta_pi[t].end(), raw[18][t].begin(), raw[18][t].end());
+    chain_eta_vb[t].insert(chain_eta_vb[t].end(), raw[19][t].begin(), raw[19][t].end());
+   }
+  }
+ }
+
+ const double inv_chains = 1.0 / static_cast<double>(nchains);
+ for (std::size_t k = 0; k < out.size(); ++k) {
+  for (std::size_t t = 0; t < out[k].size(); ++t) {
+   for (std::size_t i = 0; i < out[k][t].size(); ++i) {
+    out[k][t][i] *= inv_chains;
+   }
+  }
+ }
+
+ const bool return_chain_summaries = (nchains > 1) || keep_chains;
+ if (return_chain_summaries) {
+  std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 32 : 28);
+  for (std::size_t k = 0; k < out.size(); ++k) extended[k] = out[k];
+  for (int slot = 22; slot <= 27; ++slot) extended[static_cast<std::size_t>(slot)].resize(out[0].size());
+  for (std::size_t t = 0; t < out[0].size(); ++t) {
+   const std::size_t m_t = out[0][t].size();
+   for (int slot = 22; slot <= 27; ++slot) extended[static_cast<std::size_t>(slot)][t].resize(m_t);
+   for (std::size_t i = 0; i < m_t; ++i) {
+    const double bm_mean = out[0][t][i];
+    const double dm_mean = out[1][t][i];
+    double bm_sd = 0.0;
+    double dm_sd = 0.0;
+    if (nchains > 1) {
+     bm_sd = std::sqrt(std::max(0.0, (sumsq[0][t][i] - nchains * bm_mean * bm_mean) / static_cast<double>(nchains - 1)));
+     dm_sd = std::sqrt(std::max(0.0, (sumsq[1][t][i] - nchains * dm_mean * dm_mean) / static_cast<double>(nchains - 1)));
+    }
+    extended[22][t][i] = bm_sd;
+    extended[23][t][i] = minv[0][t][i];
+    extended[24][t][i] = maxv[0][t][i];
+    extended[25][t][i] = dm_sd;
+    extended[26][t][i] = minv[1][t][i];
+    extended[27][t][i] = maxv[1][t][i];
+   }
+  }
+  if (keep_chains) {
+   extended[28] = chain_dm;
+   extended[29] = chain_bm;
+   extended[30] = chain_eta_pi;
+   extended[31] = chain_eta_vb;
+  }
+  return extended;
+ }
+
+ return out;
 }
 
 // // [[Rcpp::depends(RcppArmadillo)]]

@@ -96,6 +96,44 @@
  out$log_cpo <- out$diagnostics[, "log_cpo"]
  out$mean_log_cpo <- out$diagnostics[, "mean_log_cpo"]
 
+ if (length(fit) >= 32L) {
+  names(fit)[27:32] <- c(
+   "bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max"
+  )
+  for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
+   out[[nm]] <- as.matrix(as.data.frame(fit[[nm]]))
+   rownames(out[[nm]]) <- variable_names
+   colnames(out[[nm]]) <- trait_names
+  }
+ }
+
+ if (length(fit) >= 37L) {
+  names(fit)[33:37] <- c(
+   "chain_dm_raw", "chain_bm_raw", "chain_group_pi_raw",
+   "chain_group_vb_raw", "chain_group_nincluded_raw"
+  )
+  chains <- setNames(vector("list", nt), trait_names)
+  for (tt in seq_len(nt)) {
+   dm_raw <- as.numeric(fit$chain_dm_raw[[tt]])
+   bm_raw <- as.numeric(fit$chain_bm_raw[[tt]])
+   nchains <- if (m > 0L) length(dm_raw) %/% m else 0L
+   trait_chains <- setNames(vector("list", nchains), paste0("chain", seq_len(nchains)))
+   for (cc in seq_len(nchains)) {
+    idx <- ((cc - 1L) * m + 1L):(cc * m)
+    gidx <- ((cc - 1L) * ngroup + 1L):(cc * ngroup)
+    trait_chains[[cc]] <- list(
+     dm = stats::setNames(dm_raw[idx], variable_names),
+     bm = stats::setNames(bm_raw[idx], variable_names),
+     group_pi = stats::setNames(as.numeric(fit$chain_group_pi_raw[[tt]])[gidx], group_names),
+     group_vb_multiplier = stats::setNames(as.numeric(fit$chain_group_vb_raw[[tt]])[gidx], group_names),
+     group_nincluded = stats::setNames(as.numeric(fit$chain_group_nincluded_raw[[tt]])[gidx], group_names)
+    )
+   }
+   chains[[tt]] <- trait_chains
+  }
+  out$chains <- chains
+ }
+
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
  if (sum(diag(out$cove)) > 0) out$re <- cov2cor(out$cove)
@@ -127,6 +165,13 @@
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
+#' @param nchains Number of independent MCMC chains.
+#' @param keep_chains Logical; return compact per-chain summaries.
+#' @param chain_seeds Optional numeric or integer vector of length `nchains`.
+#' @param updateLDswap Logical; LD-swap/MH is currently not implemented for
+#'   this BayesC-like annotation-aware CSR backend and `TRUE` errors.
+#' @param ld_swap_prob,ld_swap_r2,ld_swap_max_friends,ld_swap_moves Reserved
+#'   LD-swap controls for a future implementation.
 #' @param b_init,d_init Optional initial marker effects and inclusion states.
 #' @param use_d_init Use the supplied initial inclusion states.
 #' @param r_init Optional initial residual state.
@@ -172,6 +217,14 @@ stblr_csr_group_annot <- function(
   nthin = 1,
   ncores = 3,
   seed = 10,
+  nchains = 1L,
+  keep_chains = FALSE,
+  chain_seeds = NULL,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   b_init = NULL,
   d_init = NULL,
   use_d_init = FALSE,
@@ -189,6 +242,19 @@ stblr_csr_group_annot <- function(
   ssb_group_prior = 1,
   normalize_group_vb = TRUE
 ) {
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ .stblr_stop_bayesc_annotation_ld_swap(updateLDswap)
+ chain_args <- .stblr_validate_annotation_chain_args(
+  nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = chain_seeds
+ )
+ nchains <- chain_args$nchains
+ keep_chains <- chain_args$keep_chains
+ chain_seeds <- chain_args$chain_seeds
+
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
  n <- dims$n
@@ -297,7 +363,10 @@ stblr_csr_group_annot <- function(
   nburn = as.integer(nburn),
   nthin = as.integer(nthin),
   ncores = as.integer(ncores),
-  seed = as.integer(seed)
+  seed = as.integer(seed),
+  nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = chain_seeds
  )
 
  fit <- .format_csr_group_annot_fit(
@@ -348,6 +417,21 @@ stblr_csr_group_annot <- function(
    nthin = nthin,
    ncores = ncores,
    seed = seed,
+   nchains = nchains,
+   keep_chains = keep_chains,
+   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL,
+   chain_seed_rule = if (length(chain_seeds)) {
+    "chain_seeds[chain] + 1000003 * (trait + 1)"
+   } else if (nchains == 1L) {
+    "seed + 1000003 * (trait + 1)"
+   } else {
+    "seed + 1000003 * (trait + 1) + 9176 * (chain + 1)"
+   },
+   updateLDswap = updateLDswap,
+   ld_swap_prob = ld_swap_prob,
+   ld_swap_r2 = ld_swap_r2,
+   ld_swap_max_friends = as.integer(ld_swap_max_friends),
+   ld_swap_moves = as.integer(ld_swap_moves),
    use_d_init = use_d_init,
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,

@@ -23,6 +23,14 @@
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
+#' @param nchains Number of independent MCMC chains.
+#' @param keep_chains Logical; return compact per-chain `dm` and `bm`
+#'   summaries in `fit$chains`.
+#' @param chain_seeds Optional numeric or integer vector of length `nchains`.
+#' @param updateLDswap Logical; LD-swap/MH is currently not implemented for
+#'   this BayesC-like annotation-aware CSR backend and `TRUE` errors.
+#' @param ld_swap_prob,ld_swap_r2,ld_swap_max_friends,ld_swap_moves Reserved
+#'   LD-swap controls for a future implementation.
 #' @param b_init,d_init Optional initial marker effects and inclusion states.
 #' @param use_d_init Use the supplied initial inclusion states.
 #' @param r_init Optional initial residual state.
@@ -73,6 +81,14 @@ stblr_csr_prior_annot <- function(
   nthin = 1,
   ncores = 3,
   seed = 10,
+  nchains = 1L,
+  keep_chains = FALSE,
+  chain_seeds = NULL,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   b_init = NULL,
   d_init = NULL,
   use_d_init = FALSE,
@@ -93,6 +109,19 @@ stblr_csr_prior_annot <- function(
   vb_multiplier_min = 1e-3,
   vb_multiplier_max = 1e3
 ) {
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ .stblr_stop_bayesc_annotation_ld_swap(updateLDswap)
+ chain_args <- .stblr_validate_annotation_chain_args(
+  nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = chain_seeds
+ )
+ nchains <- chain_args$nchains
+ keep_chains <- chain_args$keep_chains
+ chain_seeds <- chain_args$chain_seeds
+
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
  n <- dims$n
@@ -227,7 +256,10 @@ stblr_csr_prior_annot <- function(
   pi_prior_a = arch$pi_prior_a,
   pi_prior_b = arch$pi_prior_b,
   ncores = as.integer(ncores),
-  seed = as.integer(seed)
+  seed = as.integer(seed),
+  nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = chain_seeds
  )
 
  fit <- .format_stblr_fit(
@@ -267,6 +299,21 @@ stblr_csr_prior_annot <- function(
    nthin = nthin,
    ncores = ncores,
    seed = seed,
+   nchains = nchains,
+   keep_chains = keep_chains,
+   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL,
+   chain_seed_rule = if (length(chain_seeds)) {
+    "chain_seeds[chain] + 1000003 * (trait + 1)"
+   } else if (nchains == 1L) {
+    "seed + 1000003 * (trait + 1)"
+   } else {
+    "seed + 1000003 * (trait + 1) + 9176 * (chain + 1)"
+   },
+   updateLDswap = updateLDswap,
+   ld_swap_prob = ld_swap_prob,
+   ld_swap_r2 = ld_swap_r2,
+   ld_swap_max_friends = as.integer(ld_swap_max_friends),
+   ld_swap_moves = as.integer(ld_swap_moves),
    use_d_init = use_d_init,
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,

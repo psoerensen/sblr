@@ -3,6 +3,7 @@
 
 #include "cpg_samplers.h"
 #include "distributions.h"
+#include "st_chain_utils.h"
 #include "st_csr_common.h"
 
 #include <algorithm>
@@ -394,8 +395,7 @@ inline arma::rowvec count_group_inclusions(
  return out;
 }
 
-// [[Rcpp::export]]
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
+std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -967,4 +967,175 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
  }
 
  return result;
+}
+
+// [[Rcpp::export]]
+std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
+  std::vector<std::vector<double>> wy,
+  std::vector<std::vector<double>> ww,
+  std::vector<double> yy,
+  std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> d_init,
+  bool use_d_init,
+  std::vector<std::vector<double>> r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  std::string ld_prefix,
+  arma::mat B,
+  arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior,
+  std::vector<double> pi,
+  std::vector<int> group_index,
+  int ngroup,
+  std::vector<std::vector<double>> group_pi_init,
+  std::vector<double> pi_group_prior_a,
+  std::vector<double> pi_group_prior_b,
+  std::vector<std::vector<double>> group_vb_multiplier_init,
+  bool updateGroupVb,
+  double nub_group,
+  double ssb_group_prior,
+  bool normalize_group_vb,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  std::vector<int> n,
+  int nit,
+  int nburn,
+  int nthin,
+  int ncores,
+  int seed,
+  int nchains = 1,
+  bool keep_chains = false,
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
+) {
+ if (nchains <= 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: nchains must be positive.");
+ }
+ std::vector<int> chain_seeds_vec;
+ if (chain_seeds.isNotNull()) {
+  Rcpp::IntegerVector chain_seeds_r(chain_seeds);
+  chain_seeds_vec = Rcpp::as<std::vector<int>>(chain_seeds_r);
+ }
+ if (!chain_seeds_vec.empty() && static_cast<int>(chain_seeds_vec.size()) != nchains) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: chain_seeds must have length nchains.");
+ }
+
+ std::vector<std::vector<std::vector<double>>> out;
+ std::vector<std::vector<std::vector<double>>> sumsq;
+ std::vector<std::vector<std::vector<double>>> minv;
+ std::vector<std::vector<std::vector<double>>> maxv;
+ std::vector<std::vector<std::vector<double>>> chain_dm;
+ std::vector<std::vector<std::vector<double>>> chain_bm;
+ std::vector<std::vector<std::vector<double>>> chain_group_pi;
+ std::vector<std::vector<std::vector<double>>> chain_group_vb;
+ std::vector<std::vector<std::vector<double>>> chain_group_nincluded;
+
+ for (int chain = 0; chain < nchains; ++chain) {
+  int chain_seed = seed;
+  if (!chain_seeds_vec.empty()) {
+   chain_seed = chain_seeds_vec[static_cast<std::size_t>(chain)];
+  } else if (nchains > 1) {
+   chain_seed = seed + 9176 * (chain + 1);
+  }
+
+  std::vector<std::vector<std::vector<double>>> raw =
+   stblr_cpg_omp_csr_group_annot_single(
+    wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
+    rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
+    group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b,
+    group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior,
+    normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n,
+    nit, nburn, nthin, ncores, chain_seed
+   );
+
+  if (chain == 0) {
+   out = raw;
+   sumsq = raw;
+   minv = raw;
+   maxv = raw;
+   for (std::size_t k = 0; k < out.size(); ++k) {
+    for (std::size_t t = 0; t < out[k].size(); ++t) {
+     for (std::size_t i = 0; i < out[k][t].size(); ++i) {
+      sumsq[k][t][i] = raw[k][t][i] * raw[k][t][i];
+     }
+    }
+   }
+   chain_dm.resize(raw[1].size());
+   chain_bm.resize(raw[0].size());
+   chain_group_pi.resize(raw[22].size());
+   chain_group_vb.resize(raw[23].size());
+   chain_group_nincluded.resize(raw[24].size());
+  } else {
+   for (std::size_t k = 0; k < out.size(); ++k) {
+    for (std::size_t t = 0; t < out[k].size(); ++t) {
+     for (std::size_t i = 0; i < out[k][t].size(); ++i) {
+      out[k][t][i] += raw[k][t][i];
+      sumsq[k][t][i] += raw[k][t][i] * raw[k][t][i];
+      minv[k][t][i] = std::min(minv[k][t][i], raw[k][t][i]);
+      maxv[k][t][i] = std::max(maxv[k][t][i], raw[k][t][i]);
+     }
+    }
+   }
+  }
+
+  if (keep_chains) {
+   for (std::size_t t = 0; t < raw[0].size(); ++t) {
+    chain_dm[t].insert(chain_dm[t].end(), raw[1][t].begin(), raw[1][t].end());
+    chain_bm[t].insert(chain_bm[t].end(), raw[0][t].begin(), raw[0][t].end());
+    chain_group_pi[t].insert(chain_group_pi[t].end(), raw[22][t].begin(), raw[22][t].end());
+    chain_group_vb[t].insert(chain_group_vb[t].end(), raw[23][t].begin(), raw[23][t].end());
+    chain_group_nincluded[t].insert(chain_group_nincluded[t].end(), raw[24][t].begin(), raw[24][t].end());
+   }
+  }
+ }
+
+ const double inv_chains = 1.0 / static_cast<double>(nchains);
+ for (std::size_t k = 0; k < out.size(); ++k) {
+  for (std::size_t t = 0; t < out[k].size(); ++t) {
+   for (std::size_t i = 0; i < out[k][t].size(); ++i) {
+    out[k][t][i] *= inv_chains;
+   }
+  }
+ }
+
+ const bool return_chain_summaries = (nchains > 1) || keep_chains;
+ if (return_chain_summaries) {
+  std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 37 : 32);
+  for (std::size_t k = 0; k < out.size(); ++k) extended[k] = out[k];
+  for (int slot = 26; slot <= 31; ++slot) extended[static_cast<std::size_t>(slot)].resize(out[0].size());
+  for (std::size_t t = 0; t < out[0].size(); ++t) {
+   const std::size_t m_t = out[0][t].size();
+   for (int slot = 26; slot <= 31; ++slot) extended[static_cast<std::size_t>(slot)][t].resize(m_t);
+   for (std::size_t i = 0; i < m_t; ++i) {
+    const double bm_mean = out[0][t][i];
+    const double dm_mean = out[1][t][i];
+    double bm_sd = 0.0;
+    double dm_sd = 0.0;
+    if (nchains > 1) {
+     bm_sd = std::sqrt(std::max(0.0, (sumsq[0][t][i] - nchains * bm_mean * bm_mean) / static_cast<double>(nchains - 1)));
+     dm_sd = std::sqrt(std::max(0.0, (sumsq[1][t][i] - nchains * dm_mean * dm_mean) / static_cast<double>(nchains - 1)));
+    }
+    extended[26][t][i] = bm_sd;
+    extended[27][t][i] = minv[0][t][i];
+    extended[28][t][i] = maxv[0][t][i];
+    extended[29][t][i] = dm_sd;
+    extended[30][t][i] = minv[1][t][i];
+    extended[31][t][i] = maxv[1][t][i];
+   }
+  }
+  if (keep_chains) {
+   extended[32] = chain_dm;
+   extended[33] = chain_bm;
+   extended[34] = chain_group_pi;
+   extended[35] = chain_group_vb;
+   extended[36] = chain_group_nincluded;
+  }
+  return extended;
+ }
+
+ return out;
 }

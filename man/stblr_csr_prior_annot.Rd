@@ -33,6 +33,14 @@ stblr_csr_prior_annot(
   nthin = 1,
   ncores = 3,
   seed = 10,
+  nchains = 1L,
+  keep_chains = FALSE,
+  chain_seeds = NULL,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   b_init = NULL,
   d_init = NULL,
   use_d_init = FALSE,
@@ -87,6 +95,19 @@ to the markers in `stats` and the sparse LD files.}
 \item{ncores}{Number of OpenMP threads.}
 
 \item{seed}{Sampler seed.}
+
+\item{nchains}{Number of independent MCMC chains.}
+
+\item{keep_chains}{Logical; return compact per-chain `dm` and `bm`
+summaries in `fit$chains`.}
+
+\item{chain_seeds}{Optional numeric or integer vector of length `nchains`.}
+
+\item{updateLDswap}{Logical; LD-swap/MH is currently not implemented for
+this BayesC-like annotation-aware CSR backend and `TRUE` errors.}
+
+\item{ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves}{Reserved
+LD-swap controls for a future implementation.}
 
 \item{b_init, d_init}{Optional initial marker effects and inclusion states.}
 

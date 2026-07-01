@@ -182,35 +182,31 @@ test_that("SBayesRC annotation chain seeds are reproducible", {
   expect_equal(fit1$bm, fit2$bm, tolerance = 1e-12)
 })
 
-test_that("non-SBayesRC annotation models reject multi-chain requests clearly", {
+test_that("annotation chain argument validation is shared", {
   stats <- tiny_sbayesrc_chain_stats()
   A <- tiny_sbayesrc_chain_matrix()
   prefix <- make_tiny_sbayesrc_chain_csr_prefix(stats$m)
-  msg <- "nchains > 1 is currently only supported for annotation_model = 'sbayesrc'"
 
   expect_error(
     stblr_csr_annot(
       stats = stats, ld_prefix = prefix, annotations = A,
-      annotation_model = "prior", nchains = 2L
+      annotation_model = "prior", nchains = 0L
     ),
-    msg,
-    fixed = TRUE
+    "nchains"
   )
   expect_error(
     stblr_csr_annot(
       stats = stats, ld_prefix = prefix, annotations = A,
-      annotation_model = "learned", nchains = 2L
+      annotation_model = "learned", nchains = 2L, chain_seeds = 1L
     ),
-    msg,
-    fixed = TRUE
+    "chain_seeds"
   )
   expect_error(
     stblr_csr_annot(
       stats = stats, ld_prefix = prefix,
       annotations = c("a", "b", "a", "b"),
-      annotation_model = "group", nchains = 2L
+      annotation_model = "group", keep_chains = NA
     ),
-    msg,
-    fixed = TRUE
+    "keep_chains"
   )
 })
