@@ -16,6 +16,7 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifdef _OPENMP
@@ -395,6 +396,307 @@ inline arma::rowvec count_group_inclusions(
  return out;
 }
 
+struct LDLDFriendsGroup {
+ std::vector<uint64_t> ptr;
+ std::vector<int> idx;
+ std::vector<double> r2;
+};
+
+inline LDLDFriendsGroup build_ld_swap_friends_st_csr_group(
+  int m,
+  const STLDCSR& ld,
+  const std::vector<double>& xx,
+  double min_r2,
+  int max_friends
+) {
+ std::vector<std::vector<std::pair<int, double>>> rows(static_cast<std::size_t>(m));
+
+ for (int i = 0; i < m; ++i) {
+  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
+  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
+
+  for (uint64_t p = start; p < end; ++p) {
+   const int j = ld.idx[static_cast<std::size_t>(p)];
+   if (j <= i) continue;
+
+   const double denom = xx[static_cast<std::size_t>(i)] * xx[static_cast<std::size_t>(j)];
+   if (!std::isfinite(denom) || denom <= 0.0) continue;
+
+   const double xij = static_cast<double>(ld.xij[static_cast<std::size_t>(p)]);
+   const double r2 = (xij * xij) / denom;
+   if (!std::isfinite(r2) || r2 < min_r2) continue;
+
+   rows[static_cast<std::size_t>(i)].push_back(std::make_pair(j, r2));
+   rows[static_cast<std::size_t>(j)].push_back(std::make_pair(i, r2));
+  }
+ }
+
+ LDLDFriendsGroup friends;
+ friends.ptr.resize(static_cast<std::size_t>(m) + 1);
+ friends.ptr[0] = 0;
+
+ for (int i = 0; i < m; ++i) {
+  std::vector<std::pair<int, double>>& row = rows[static_cast<std::size_t>(i)];
+  std::sort(row.begin(), row.end(),
+            [](const std::pair<int, double>& a, const std::pair<int, double>& b) {
+             if (a.second == b.second) return a.first < b.first;
+             return a.second > b.second;
+            });
+
+  std::vector<std::pair<int, double>> unique_row;
+  unique_row.reserve(row.size());
+  for (std::size_t k = 0; k < row.size(); ++k) {
+   if (!unique_row.empty() && unique_row.back().first == row[k].first) continue;
+   unique_row.push_back(row[k]);
+  }
+  if (static_cast<int>(unique_row.size()) > max_friends) {
+   unique_row.resize(static_cast<std::size_t>(max_friends));
+  }
+  row.swap(unique_row);
+  friends.ptr[static_cast<std::size_t>(i + 1)] =
+   friends.ptr[static_cast<std::size_t>(i)] + row.size();
+ }
+
+ const uint64_t nfriend = friends.ptr[static_cast<std::size_t>(m)];
+ friends.idx.resize(static_cast<std::size_t>(nfriend));
+ friends.r2.resize(static_cast<std::size_t>(nfriend));
+ for (int i = 0; i < m; ++i) {
+  const uint64_t offset = friends.ptr[static_cast<std::size_t>(i)];
+  const std::vector<std::pair<int, double>>& row = rows[static_cast<std::size_t>(i)];
+  for (std::size_t k = 0; k < row.size(); ++k) {
+   friends.idx[static_cast<std::size_t>(offset + k)] = row[k].first;
+   friends.r2[static_cast<std::size_t>(offset + k)] = row[k].second;
+  }
+ }
+
+ return friends;
+}
+
+inline void set_marker_effect_st_csr_group(
+  int i,
+  double b_new,
+  int d_new,
+  const arma::rowvec& ww,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& d,
+  const STLDCSR& ld
+) {
+ const arma::uword iu = static_cast<arma::uword>(i);
+ const double diff = b_new - b(iu);
+
+ if (diff != 0.0) {
+  r(iu) -= ww(iu) * diff;
+  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
+  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
+  for (uint64_t p = start; p < end; ++p) {
+   const int j = ld.idx[static_cast<std::size_t>(p)];
+   r(static_cast<arma::uword>(j)) -=
+    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
+  }
+ }
+
+ b(iu) = b_new;
+ d(iu) = d_new;
+}
+
+inline double residual_sse_st_csr_group(
+  int m,
+  const arma::rowvec& b,
+  const arma::rowvec& wy,
+  const arma::rowvec& r,
+  double yy
+) {
+ double b_dot_r_plus_wy = 0.0;
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  b_dot_r_plus_wy += b(iu) * (r(iu) + wy(iu));
+ }
+ return yy - b_dot_r_plus_wy;
+}
+
+inline int count_excluded_ld_friends_group(
+  int i,
+  const arma::Row<int>& d,
+  const LDLDFriendsGroup& friends
+) {
+ int n = 0;
+ const uint64_t start = friends.ptr[static_cast<std::size_t>(i)];
+ const uint64_t end   = friends.ptr[static_cast<std::size_t>(i + 1)];
+ for (uint64_t p = start; p < end; ++p) {
+  const int j = friends.idx[static_cast<std::size_t>(p)];
+  if (d(static_cast<arma::uword>(j)) == 0) ++n;
+ }
+ return n;
+}
+
+inline int collect_ld_swap_candidates_group(
+  int m,
+  const arma::Row<int>& d,
+  const LDLDFriendsGroup& friends,
+  std::vector<int>& candidates,
+  std::vector<int>& n_excluded
+) {
+ candidates.clear();
+ n_excluded.clear();
+ for (int i = 0; i < m; ++i) {
+  if (d(static_cast<arma::uword>(i)) <= 0) continue;
+  const int nf = count_excluded_ld_friends_group(i, d, friends);
+  if (nf > 0) {
+   candidates.push_back(i);
+   n_excluded.push_back(nf);
+  }
+ }
+ return static_cast<int>(candidates.size());
+}
+
+inline double log_group_prior_ratio_group(
+  double b_move,
+  int j,
+  int k,
+  double vb_t,
+  const arma::Row<int>& group,
+  const arma::rowvec& group_pi,
+  const arma::rowvec& group_vb_multiplier
+) {
+ const int gj = group(static_cast<arma::uword>(j));
+ const int gk = group(static_cast<arma::uword>(k));
+ const arma::uword gju = static_cast<arma::uword>(gj);
+ const arma::uword gku = static_cast<arma::uword>(gk);
+
+ const double pi_j = clamp_prob_group(group_pi(gju));
+ const double pi_k = clamp_prob_group(group_pi(gku));
+ double log_ratio =
+  std::log(pi_k) + std::log(std::max(1.0 - pi_j, 1e-300)) -
+  std::log(pi_j) - std::log(std::max(1.0 - pi_k, 1e-300));
+
+ const double mult_j = group_vb_multiplier(gju);
+ const double mult_k = group_vb_multiplier(gku);
+ if (!std::isfinite(vb_t) || vb_t <= 0.0 ||
+     !std::isfinite(mult_j) || mult_j <= 0.0 ||
+     !std::isfinite(mult_k) || mult_k <= 0.0) {
+  return -std::numeric_limits<double>::infinity();
+ }
+ const double sigma2_j = std::max(vb_t * mult_j, 1e-300);
+ const double sigma2_k = std::max(vb_t * mult_k, 1e-300);
+ log_ratio +=
+  0.5 * (std::log(sigma2_j) - std::log(sigma2_k)) -
+  0.5 * b_move * b_move * (1.0 / sigma2_k - 1.0 / sigma2_j);
+
+ return log_ratio;
+}
+
+inline bool attempt_ld_swap_st_csr_group(
+  int m,
+  double vei,
+  double yy,
+  double vb_t,
+  const arma::rowvec& ww,
+  const arma::rowvec& wy,
+  const arma::Row<int>& group,
+  const arma::rowvec& group_pi,
+  const arma::rowvec& group_vb_multiplier,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& d,
+  const STLDCSR& ld,
+  const LDLDFriendsGroup& friends,
+  std::mt19937& gen
+) {
+ if (!std::isfinite(vei) || vei <= 0.0) return false;
+
+ std::vector<int> candidates;
+ std::vector<int> n_excluded;
+ const int n_candidates = collect_ld_swap_candidates_group(m, d, friends, candidates, n_excluded);
+ if (n_candidates <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_candidate(0, n_candidates - 1);
+ const int cand_pos = pick_candidate(gen);
+ const int j = candidates[static_cast<std::size_t>(cand_pos)];
+ const int n_forward_friends = n_excluded[static_cast<std::size_t>(cand_pos)];
+ if (n_forward_friends <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_friend(0, n_forward_friends - 1);
+ const int friend_pos = pick_friend(gen);
+
+ int k = -1;
+ int seen = 0;
+ const uint64_t start = friends.ptr[static_cast<std::size_t>(j)];
+ const uint64_t end   = friends.ptr[static_cast<std::size_t>(j + 1)];
+ for (uint64_t p = start; p < end; ++p) {
+  const int jj = friends.idx[static_cast<std::size_t>(p)];
+  if (d(static_cast<arma::uword>(jj)) != 0) continue;
+  if (seen == friend_pos) {
+   k = jj;
+   break;
+  }
+  ++seen;
+ }
+ if (k < 0) return false;
+
+ const arma::uword ju = static_cast<arma::uword>(j);
+ const arma::uword ku = static_cast<arma::uword>(k);
+ const double b_j_old = b(ju);
+ const double b_k_old = b(ku);
+ const int d_j_old = d(ju);
+ const int d_k_old = d(ku);
+ if (d_j_old <= 0 || d_k_old != 0 || b_j_old == 0.0) return false;
+
+ const double sse_old = residual_sse_st_csr_group(m, b, wy, r, yy);
+ if (!std::isfinite(sse_old)) return false;
+
+ const arma::rowvec r_old = r;
+ set_marker_effect_st_csr_group(j, 0.0, 0, ww, r, b, d, ld);
+ set_marker_effect_st_csr_group(k, b_j_old, 1, ww, r, b, d, ld);
+
+ const double sse_new = residual_sse_st_csr_group(m, b, wy, r, yy);
+ bool accept = false;
+
+ if (std::isfinite(sse_new)) {
+  std::vector<int> reverse_candidates;
+  std::vector<int> reverse_n_excluded;
+  const int n_reverse_candidates =
+   collect_ld_swap_candidates_group(m, d, friends, reverse_candidates, reverse_n_excluded);
+
+  int n_reverse_friends = 0;
+  for (std::size_t pos = 0; pos < reverse_candidates.size(); ++pos) {
+   if (reverse_candidates[pos] == k) {
+    n_reverse_friends = reverse_n_excluded[pos];
+    break;
+   }
+  }
+
+  if (n_reverse_candidates > 0 && n_reverse_friends > 0) {
+   const double log_q_forward =
+    -std::log(static_cast<double>(n_candidates)) -
+    std::log(static_cast<double>(n_forward_friends));
+   const double log_q_reverse =
+    -std::log(static_cast<double>(n_reverse_candidates)) -
+    std::log(static_cast<double>(n_reverse_friends));
+   const double log_prior_ratio = log_group_prior_ratio_group(
+    b_j_old, j, k, vb_t, group, group_pi, group_vb_multiplier
+   );
+   const double log_alpha =
+    -0.5 * (sse_new - sse_old) / vei +
+    log_prior_ratio +
+    log_q_reverse - log_q_forward;
+
+   std::uniform_real_distribution<double> runif(0.0, 1.0);
+   accept = std::log(std::max(runif(gen), 1e-300)) < log_alpha;
+  }
+ }
+
+ if (!accept) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  d(ju) = d_j_old;
+  d(ku) = d_k_old;
+ }
+
+ return accept;
+}
+
 std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
@@ -432,7 +734,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
   int nburn,
   int nthin,
   int ncores,
-  int seed
+  int seed,
+  bool updateLDswap = false,
+  double ld_swap_prob = 0.05,
+  double ld_swap_r2 = 0.8,
+  int ld_swap_max_friends = 50,
+  int ld_swap_moves = 1
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -447,6 +754,18 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
  if (ngroup <= 0) throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ngroup must be positive.");
  if (static_cast<int>(group_index.size()) != m) {
   throw std::runtime_error("stblr_cpg_omp_csr_group_annot: group_index must have length m.");
+ }
+ if (!std::isfinite(ld_swap_prob) || ld_swap_prob < 0.0 || ld_swap_prob > 1.0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_prob must be in [0, 1].");
+ }
+ if (!std::isfinite(ld_swap_r2) || ld_swap_r2 < 0.0 || ld_swap_r2 > 1.0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_r2 must be in [0, 1].");
+ }
+ if (ld_swap_max_friends <= 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_max_friends must be positive.");
+ }
+ if (ld_swap_moves < 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_moves must be non-negative.");
  }
 
  if (pi.size() != 2) throw std::runtime_error("stblr_cpg_omp_csr_group_annot: pi must have length 2.");
@@ -569,6 +888,19 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
  }
  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
 
+ LDLDFriendsGroup ld_swap_friends;
+ if (updateLDswap) {
+  ld_swap_friends = build_ld_swap_friends_st_csr_group(
+   m,
+   ld,
+   xx,
+   ld_swap_r2,
+   ld_swap_max_friends
+  );
+ } else {
+  ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+ }
+
  std::vector<double> x2(static_cast<std::size_t>(m), 0.0);
  std::vector<int> order(static_cast<std::size_t>(m));
  for (int i = 0; i < m; ++i) {
@@ -600,6 +932,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
  arma::vec final_ve(nt, arma::fill::zeros);
  arma::vec final_pi(nt, arma::fill::zeros);
  arma::vec nsamples_vec(nt, arma::fill::zeros);
+ arma::vec ld_swap_attempted_vec(nt, arma::fill::zeros);
+ arma::vec ld_swap_accepted_vec(nt, arma::fill::zeros);
 
  arma::mat group_pi_mean(nt, ngroup, arma::fill::zeros);
  arma::mat group_vb_mean(nt, ngroup, arma::fill::zeros);
@@ -697,6 +1031,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
    arma::rowvec group_nincluded_accum(ngroup, arma::fill::zeros);
 
    double nsamples_t = 0.0;
+   double ld_swap_attempted_t = 0.0;
+   double ld_swap_accepted_t = 0.0;
 
    for (int it = 0; it < nit + nburn; ++it) {
     for (int isort = 0; isort < m; ++isort) {
@@ -718,6 +1054,34 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
       ld,
       gen_t
      );
+    }
+
+    if (updateLDswap && ld_swap_moves > 0 && ld_swap_prob > 0.0) {
+     std::uniform_real_distribution<double> runif(0.0, 1.0);
+     if (runif(gen_t) < ld_swap_prob) {
+      for (int move = 0; move < ld_swap_moves; ++move) {
+       ld_swap_attempted_t += 1.0;
+       if (attempt_ld_swap_st_csr_group(
+            m,
+            vei_t,
+            yy_vec(static_cast<arma::uword>(t)),
+            vb_t,
+            ww_t,
+            wy_t,
+            group,
+            group_pi_t,
+            group_vb_multiplier_t,
+            r_t,
+            b_t,
+            d_t,
+            ld,
+            ld_swap_friends,
+            gen_t
+           )) {
+        ld_swap_accepted_t += 1.0;
+       }
+      }
+     }
     }
 
     if (updateB) {
@@ -827,6 +1191,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
    final_ve(static_cast<arma::uword>(t)) = ve_t;
    final_pi(static_cast<arma::uword>(t)) = marker_weighted_mean_group_value(group_pi_t, group_size);
    nsamples_vec(static_cast<arma::uword>(t)) = nsamples_t;
+   ld_swap_attempted_vec(static_cast<arma::uword>(t)) = ld_swap_attempted_t;
+   ld_swap_accepted_vec(static_cast<arma::uword>(t)) = ld_swap_accepted_t;
 
    group_pi_mean.row(static_cast<arma::uword>(t)) = group_pi_accum;
    group_vb_mean.row(static_cast<arma::uword>(t)) = group_vb_accum;
@@ -865,8 +1231,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
   }
  }
 
- std::vector<std::vector<std::vector<double>>> result(26);
- for (int k = 0; k < 26; ++k) result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
+ std::vector<std::vector<std::vector<double>>> result(27);
+ for (int k = 0; k < 27; ++k) result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
 
  for (int t = 0; t < nt; ++t) {
   const std::size_t ts = static_cast<std::size_t>(t);
@@ -883,6 +1249,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
   result[23][ts].resize(static_cast<std::size_t>(ngroup));
   result[24][ts].resize(static_cast<std::size_t>(ngroup));
   result[25][ts].resize(static_cast<std::size_t>(ngroup));
+  result[26][ts].resize(4);
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -964,6 +1331,13 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
    result[24][ts][gs] = group_nincluded_mean(static_cast<arma::uword>(t), static_cast<arma::uword>(g));
    result[25][ts][gs] = group_size_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(g));
   }
+
+  const double attempted = ld_swap_attempted_vec(static_cast<arma::uword>(t));
+  const double accepted = ld_swap_accepted_vec(static_cast<arma::uword>(t));
+  result[26][ts][0] = attempted;
+  result[26][ts][1] = accepted;
+  result[26][ts][2] = attempted > 0.0 ? accepted / attempted : 0.0;
+  result[26][ts][3] = 1.0;
  }
 
  return result;
@@ -1010,7 +1384,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
   int seed,
   int nchains = 1,
   bool keep_chains = false,
-  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue,
+  bool updateLDswap = false,
+  double ld_swap_prob = 0.05,
+  double ld_swap_r2 = 0.8,
+  int ld_swap_max_friends = 50,
+  int ld_swap_moves = 1
 ) {
  if (nchains <= 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_group_annot: nchains must be positive.");
@@ -1023,6 +1402,18 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
  if (!chain_seeds_vec.empty() && static_cast<int>(chain_seeds_vec.size()) != nchains) {
   throw std::runtime_error("stblr_cpg_omp_csr_group_annot: chain_seeds must have length nchains.");
  }
+ if (!std::isfinite(ld_swap_prob) || ld_swap_prob < 0.0 || ld_swap_prob > 1.0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_prob must be in [0, 1].");
+ }
+ if (!std::isfinite(ld_swap_r2) || ld_swap_r2 < 0.0 || ld_swap_r2 > 1.0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_r2 must be in [0, 1].");
+ }
+ if (ld_swap_max_friends <= 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_max_friends must be positive.");
+ }
+ if (ld_swap_moves < 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_group_annot: ld_swap_moves must be non-negative.");
+ }
 
  std::vector<std::vector<std::vector<double>>> out;
  std::vector<std::vector<std::vector<double>>> sumsq;
@@ -1030,9 +1421,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
  std::vector<std::vector<std::vector<double>>> maxv;
  std::vector<std::vector<std::vector<double>>> chain_dm;
  std::vector<std::vector<std::vector<double>>> chain_bm;
+ std::vector<std::vector<std::vector<double>>> chain_ld_swap;
  std::vector<std::vector<std::vector<double>>> chain_group_pi;
  std::vector<std::vector<std::vector<double>>> chain_group_vb;
  std::vector<std::vector<std::vector<double>>> chain_group_nincluded;
+ std::vector<std::vector<double>> ld_swap_attempted_sum;
+ std::vector<std::vector<double>> ld_swap_accepted_sum;
 
  for (int chain = 0; chain < nchains; ++chain) {
   int chain_seed = seed;
@@ -1049,7 +1443,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
     group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b,
     group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior,
     normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n,
-    nit, nburn, nthin, ncores, chain_seed
+    nit, nburn, nthin, ncores, chain_seed, updateLDswap, ld_swap_prob,
+    ld_swap_r2, ld_swap_max_friends, ld_swap_moves
    );
 
   if (chain == 0) {
@@ -1066,9 +1461,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
    }
    chain_dm.resize(raw[1].size());
    chain_bm.resize(raw[0].size());
+   chain_ld_swap.resize(raw[26].size());
    chain_group_pi.resize(raw[22].size());
    chain_group_vb.resize(raw[23].size());
    chain_group_nincluded.resize(raw[24].size());
+   ld_swap_attempted_sum.assign(raw[0].size(), std::vector<double>(1, 0.0));
+   ld_swap_accepted_sum.assign(raw[0].size(), std::vector<double>(1, 0.0));
   } else {
    for (std::size_t k = 0; k < out.size(); ++k) {
     for (std::size_t t = 0; t < out[k].size(); ++t) {
@@ -1082,10 +1480,22 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
    }
   }
 
+  for (std::size_t t = 0; t < raw[0].size(); ++t) {
+   if (raw.size() > 26 && raw[26][t].size() >= 2) {
+    ld_swap_attempted_sum[t][0] += raw[26][t][0];
+    ld_swap_accepted_sum[t][0] += raw[26][t][1];
+   }
+  }
+
   if (keep_chains) {
    for (std::size_t t = 0; t < raw[0].size(); ++t) {
     chain_dm[t].insert(chain_dm[t].end(), raw[1][t].begin(), raw[1][t].end());
     chain_bm[t].insert(chain_bm[t].end(), raw[0][t].begin(), raw[0][t].end());
+    if (raw.size() > 26 && raw[26][t].size() >= 4) {
+     chain_ld_swap[t].insert(chain_ld_swap[t].end(), raw[26][t].begin(), raw[26][t].begin() + 4);
+    } else {
+     chain_ld_swap[t].insert(chain_ld_swap[t].end(), 4, 0.0);
+    }
     chain_group_pi[t].insert(chain_group_pi[t].end(), raw[22][t].begin(), raw[22][t].end());
     chain_group_vb[t].insert(chain_group_vb[t].end(), raw[23][t].begin(), raw[23][t].end());
     chain_group_nincluded[t].insert(chain_group_nincluded[t].end(), raw[24][t].begin(), raw[24][t].end());
@@ -1102,14 +1512,26 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
   }
  }
 
+ if (out.size() > 26) {
+  for (std::size_t t = 0; t < out[26].size(); ++t) {
+   if (out[26][t].size() < 4) out[26][t].resize(4);
+   const double attempted = ld_swap_attempted_sum[t][0];
+   const double accepted = ld_swap_accepted_sum[t][0];
+   out[26][t][0] = attempted;
+   out[26][t][1] = accepted;
+   out[26][t][2] = attempted > 0.0 ? accepted / attempted : 0.0;
+   out[26][t][3] = 1.0;
+  }
+ }
+
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
  if (return_chain_summaries) {
-  std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 37 : 32);
+  std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 39 : 33);
   for (std::size_t k = 0; k < out.size(); ++k) extended[k] = out[k];
-  for (int slot = 26; slot <= 31; ++slot) extended[static_cast<std::size_t>(slot)].resize(out[0].size());
+  for (int slot = 27; slot <= 32; ++slot) extended[static_cast<std::size_t>(slot)].resize(out[0].size());
   for (std::size_t t = 0; t < out[0].size(); ++t) {
    const std::size_t m_t = out[0][t].size();
-   for (int slot = 26; slot <= 31; ++slot) extended[static_cast<std::size_t>(slot)][t].resize(m_t);
+   for (int slot = 27; slot <= 32; ++slot) extended[static_cast<std::size_t>(slot)][t].resize(m_t);
    for (std::size_t i = 0; i < m_t; ++i) {
     const double bm_mean = out[0][t][i];
     const double dm_mean = out[1][t][i];
@@ -1119,20 +1541,21 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
      bm_sd = std::sqrt(std::max(0.0, (sumsq[0][t][i] - nchains * bm_mean * bm_mean) / static_cast<double>(nchains - 1)));
      dm_sd = std::sqrt(std::max(0.0, (sumsq[1][t][i] - nchains * dm_mean * dm_mean) / static_cast<double>(nchains - 1)));
     }
-    extended[26][t][i] = bm_sd;
-    extended[27][t][i] = minv[0][t][i];
-    extended[28][t][i] = maxv[0][t][i];
-    extended[29][t][i] = dm_sd;
-    extended[30][t][i] = minv[1][t][i];
-    extended[31][t][i] = maxv[1][t][i];
+    extended[27][t][i] = bm_sd;
+    extended[28][t][i] = minv[0][t][i];
+    extended[29][t][i] = maxv[0][t][i];
+    extended[30][t][i] = dm_sd;
+    extended[31][t][i] = minv[1][t][i];
+    extended[32][t][i] = maxv[1][t][i];
    }
   }
   if (keep_chains) {
-   extended[32] = chain_dm;
-   extended[33] = chain_bm;
-   extended[34] = chain_group_pi;
-   extended[35] = chain_group_vb;
-   extended[36] = chain_group_nincluded;
+   extended[33] = chain_dm;
+   extended[34] = chain_bm;
+   extended[35] = chain_ld_swap;
+   extended[36] = chain_group_pi;
+   extended[37] = chain_group_vb;
+   extended[38] = chain_group_nincluded;
   }
   return extended;
  }

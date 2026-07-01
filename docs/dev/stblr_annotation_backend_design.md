@@ -8,9 +8,9 @@ shape because the first fields are `bm`, `dm`, and the usual variance traces.
 They now follow the current public CSR/BED multi-chain conventions for the
 annotation-aware CSR SBayesRC backend and the three BayesC-like annotation
 backends: fixed-prior, learned-annotation, and group-prior BayesC. The
-fixed-prior backend now also supports optional active/null LD-swap/MH for
-comparison with annotation-unaware CSR BayesC. LD-swap/MH remains planned and
-guarded for learned, group, and SBayesRC annotation models.
+fixed-prior and group-prior backends now also support optional active/null
+LD-swap/MH for comparison with annotation-unaware CSR BayesC. LD-swap/MH
+remains planned and guarded for learned and SBayesRC annotation models.
 
 Do not rename C++ files or native symbols in the alignment phase. The first
 R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
@@ -105,11 +105,15 @@ later design decision.
   `dm_sd`, `dm_min`, and `dm_max`; compact chains expose per-trait/per-chain
   named `dm` and `bm` vectors after R formatting, plus compact group-level
   `group_pi`, `group_vb_multiplier`, and `group_nincluded` vectors.
-- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
-  scheduled updates.
-- Return layout: 26 slots. Slots 0-21 follow the BayesC-like CSR convention;
+- Supports optional LD-swap/MH controls: `updateLDswap`, `ld_swap_prob`,
+  `ld_swap_r2`, `ld_swap_max_friends`, and `ld_swap_moves`. The MH ratio uses
+  the current group inclusion probabilities and current group variance
+  multipliers at the iteration where the swap is proposed.
+- Unsupported compared with current CSR/BED main interfaces: scheduled updates.
+- Return layout: 27 slots. Slots 0-21 follow the BayesC-like CSR convention;
   slots 22-25 are `group_pi`, `group_vb_multiplier`, `group_nincluded`, and
-  `group_size`.
+  `group_size`; slot 26 is LD-swap diagnostics. Multi-chain summary/chain
+  slots follow the standard CSR convention.
 - ST-BLR resemblance: high for base fields; group outputs need standard
   annotation naming aliases or summaries.
 
@@ -358,7 +362,7 @@ Existing native names (`eta_pi`, `eta_vb`, `alpha`, `sigmaSqAlpha`, `group_pi`,
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `csr_prior_bayesc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
 | `csr_annot_bayesc` | yes | yes | yes | yes | annotation-effect MH only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |
-| `csr_group_bayesc` | yes | yes | yes | yes | guarded/no | no | yes | yes | focused chain tests | man page |
+| `csr_group_bayesc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
 | `csr_sbayesrc` | yes | yes | yes | yes | annotation coefficient updates only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |
 
 ## Compatibility Strategy
@@ -399,5 +403,5 @@ Use tiny synthetic fixtures rather than expensive real BED workflows.
 5. Align `csr_sbayesrc` output to the same conventions, including
    `comp_prob`, `annotation_effects`, and `annotation_variance`.
 6. Add compatibility tests for old and new wrapper structural equivalence.
-7. Only later consider LD-swap/MH or scheduled updates for annotation-aware
-   models.
+7. Only later consider LD-swap/MH for learned/SBayesRC or scheduled updates for
+   annotation-aware models.

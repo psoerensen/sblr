@@ -605,8 +605,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_cpg_omp_csr_group_annot
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<int> group_index, int ngroup, std::vector<std::vector<double>> group_pi_init, std::vector<double> pi_group_prior_a, std::vector<double> pi_group_prior_b, std::vector<std::vector<double>> group_vb_multiplier_init, bool updateGroupVb, double nub_group, double ssb_group_prior, bool normalize_group_vb, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds);
-RcppExport SEXP _sblr_stblr_cpg_omp_csr_group_annot(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP group_indexSEXP, SEXP ngroupSEXP, SEXP group_pi_initSEXP, SEXP pi_group_prior_aSEXP, SEXP pi_group_prior_bSEXP, SEXP group_vb_multiplier_initSEXP, SEXP updateGroupVbSEXP, SEXP nub_groupSEXP, SEXP ssb_group_priorSEXP, SEXP normalize_group_vbSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP) {
+std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<int> group_index, int ngroup, std::vector<std::vector<double>> group_pi_init, std::vector<double> pi_group_prior_a, std::vector<double> pi_group_prior_b, std::vector<std::vector<double>> group_vb_multiplier_init, bool updateGroupVb, double nub_group, double ssb_group_prior, bool normalize_group_vb, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_group_annot(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP group_indexSEXP, SEXP ngroupSEXP, SEXP group_pi_initSEXP, SEXP pi_group_prior_aSEXP, SEXP pi_group_prior_bSEXP, SEXP group_vb_multiplier_initSEXP, SEXP updateGroupVbSEXP, SEXP nub_groupSEXP, SEXP ssb_group_priorSEXP, SEXP normalize_group_vbSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -650,7 +650,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
     Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type chain_seeds(chain_seedsSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_group_annot(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b, group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior, normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds));
+    Rcpp::traits::input_parameter< bool >::type updateLDswap(updateLDswapSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_prob(ld_swap_probSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_r2(ld_swap_r2SEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_max_friends(ld_swap_max_friendsSEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_moves(ld_swap_movesSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_group_annot(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b, group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior, normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1067,7 +1072,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 37},
     {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 46},
     {"_sblr_stblr_cpg_omp_csr_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr, 39},
-    {"_sblr_stblr_cpg_omp_csr_group_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_group_annot, 40},
+    {"_sblr_stblr_cpg_omp_csr_group_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_group_annot, 45},
     {"_sblr_stblr_cpg_omp_csr_prior", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_prior, 41},
     {"_sblr_stblr_cpg_omp_csr_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_scheduled, 41},
     {"_sblr_stblr_cpg_omp_bed_marker_sparse", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_sparse, 31},

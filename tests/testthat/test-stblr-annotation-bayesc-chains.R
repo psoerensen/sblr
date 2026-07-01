@@ -188,7 +188,7 @@ test_that("group BayesC annotations support native chains", {
   ) %in% names(fit$chains[[1]][[1]])))
 })
 
-test_that("non-prior BayesC-like annotation LD-swap requests error clearly", {
+test_that("learned BayesC-like annotation LD-swap requests error clearly", {
   stats <- tiny_annotation_bayesc_chain_stats()
   A <- tiny_annotation_bayesc_chain_matrix()
   prefix <- make_tiny_annotation_bayesc_chain_csr_prefix(stats$m)
@@ -198,18 +198,6 @@ test_that("non-prior BayesC-like annotation LD-swap requests error clearly", {
       ld_prefix = prefix,
       annotations = A,
       annotation_model = "learned",
-      updateLDswap = TRUE,
-      nit = 2,
-      nburn = 0
-    ),
-    "LD-swap"
-  )
-  expect_error(
-    sblr::stblr_csr_annot(
-      stats = stats,
-      ld_prefix = prefix,
-      annotations = c("a", "b", "a", "b"),
-      annotation_model = "group",
       updateLDswap = TRUE,
       nit = 2,
       nburn = 0

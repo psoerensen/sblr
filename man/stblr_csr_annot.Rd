@@ -72,8 +72,8 @@ supported.}
 is used by the BayesC-like annotation models and ignored by SBayesRC.}
 
 \item{updateLDswap}{Logical; request optional LD-swap/MH. This is currently
-supported only for `annotation_model = "prior"` among annotation-aware CSR
-models.}
+supported for `annotation_model = "prior"` and `"group"` among
+annotation-aware CSR models.}
 
 \item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
 moves when `updateLDswap = TRUE`.}
@@ -107,8 +107,8 @@ output aliases while preserving wrapper-specific fields.
 This interface is CSR summary-statistics only. The current annotation-aware
 SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
 native chains and compact chain summaries. LD-swap/MH is currently available
-for the fixed-prior annotation-aware CSR BayesC backend only; learned,
-group, and SBayesRC annotation models error if `updateLDswap = TRUE`.
+for the fixed-prior and group annotation-aware CSR BayesC backends; learned
+and SBayesRC annotation models error if `updateLDswap = TRUE`.
 
 Existing wrappers remain supported:
 [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
