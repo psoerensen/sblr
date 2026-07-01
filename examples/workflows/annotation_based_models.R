@@ -149,12 +149,301 @@ fit_group <- stblr_csr_annot(
   nburn = 100
 )
 
-rbind(
-  sbayesrc = colMeans(fit$dm),
-  prior = colMeans(fit_prior$dm),
-  learned = colMeans(fit_learned$dm),
-  group = colMeans(fit_group$dm)
+fitC <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  nit = 1000,
+  nburn = 100,
+  seed = 10
 )
+
+fitC_MH <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  nit = 1000,
+  nburn = 100,
+  seed = 10,
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.10,
+  ld_swap_r2 = 0.05,
+  ld_swap_moves = 5
+)
+
+fitR <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  nit = 1000,
+  nburn = 100,
+  seed = 10
+)
+
+fitR_MH <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  nit = 1000,
+  nburn = 100,
+  seed = 10,
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.50,
+  ld_swap_r2 = 0.001,
+  ld_swap_moves = 20
+)
+
+## ------------------------------------------------------------
+## Collect fits
+## ------------------------------------------------------------
+
+fits <- list(
+  bayesC        = fitC,
+  bayesC_MH     = fitC_MH,
+  bayesR        = fitR,
+  bayesR_MH     = fitR_MH,
+  prior_annot   = fit_prior,
+  learned_annot = fit_learned,
+  group_annot   = fit_group,
+  sbayesrc      = fit
+)
+
+## ------------------------------------------------------------
+## Compact model metadata
+## ------------------------------------------------------------
+
+model_metadata <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    x <- fits[[model_name]]$input
+    
+    data.frame(
+      model_name = model_name,
+      method = ifelse(is.null(x$method), NA, x$method),
+      model = ifelse(is.null(x$model), NA, x$model),
+      backend = ifelse(is.null(x$backend), NA, x$backend),
+      data_level = ifelse(is.null(x$data_level), NA, x$data_level),
+      annotation_model = ifelse(is.null(x$annotation_model), NA, x$annotation_model),
+      annotations = ifelse(is.null(x$annotations), FALSE, x$annotations),
+      n_markers = nrow(fits[[model_name]]$dm),
+      n_traits = ncol(fits[[model_name]]$dm),
+      stringsAsFactors = FALSE
+    )
+  })
+)
+
+
+model_metadata
+
+
+## ------------------------------------------------------------
+## PIP and effect summaries by model and trait
+## ------------------------------------------------------------
+
+summarise_fit <- function(fit, model_name) {
+  dm <- as.matrix(fit$dm)
+  bm <- as.matrix(fit$bm)
+  
+  trait_names <- colnames(dm)
+  if (is.null(trait_names)) {
+    trait_names <- paste0("T", seq_len(ncol(dm)))
+  }
+  
+  data.frame(
+    model = model_name,
+    trait = trait_names,
+    n_markers = nrow(dm),
+    mean_pip = colMeans(dm, na.rm = TRUE),
+    sum_pip = colSums(dm, na.rm = TRUE),
+    max_pip = apply(dm, 2, max, na.rm = TRUE),
+    n_pip_gt_0_001 = colSums(dm > 0.001, na.rm = TRUE),
+    n_pip_gt_0_01 = colSums(dm > 0.01, na.rm = TRUE),
+    n_pip_gt_0_05 = colSums(dm > 0.05, na.rm = TRUE),
+    n_pip_gt_0_5 = colSums(dm > 0.5, na.rm = TRUE),
+    n_pip_gt_0_95 = colSums(dm > 0.95, na.rm = TRUE),
+    mean_abs_bm = colMeans(abs(bm), na.rm = TRUE),
+    max_abs_bm = apply(abs(bm), 2, max, na.rm = TRUE),
+    stringsAsFactors = FALSE
+  )
+}
+
+fit_summary <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    summarise_fit(fits[[model_name]], model_name)
+  })
+)
+
+fit_summary
+
+
+## ------------------------------------------------------------
+## Sum PIP matrix: models x traits
+## ------------------------------------------------------------
+
+sum_pip_matrix <- do.call(
+  rbind,
+  lapply(fits, function(fit) colSums(as.matrix(fit$dm), na.rm = TRUE))
+)
+
+sum_pip_matrix
+
+mean_pip_matrix <- do.call(
+  rbind,
+  lapply(fits, function(fit) colMeans(as.matrix(fit$dm), na.rm = TRUE))
+)
+
+mean_pip_matrix
+
+## ------------------------------------------------------------
+## Top markers by model and trait
+## ------------------------------------------------------------
+
+top_markers <- function(fit, model_name, trait = 1, top_n = 20) {
+  dm <- as.matrix(fit$dm)
+  bm <- as.matrix(fit$bm)
+  
+  trait_index <- if (is.character(trait)) match(trait, colnames(dm)) else trait
+  
+  if (length(trait_index) != 1 || is.na(trait_index)) {
+    stop("trait must be a valid column name or column index.")
+  }
+  
+  marker <- rownames(dm)
+  if (is.null(marker)) marker <- paste0("V", seq_len(nrow(dm)))
+  
+  trait_name <- colnames(dm)[trait_index]
+  if (is.null(trait_name)) trait_name <- paste0("T", trait_index)
+  
+  out <- data.frame(
+    model = model_name,
+    trait = trait_name,
+    marker = marker,
+    pip = dm[, trait_index],
+    bm = bm[, trait_index],
+    abs_bm = abs(bm[, trait_index]),
+    stringsAsFactors = FALSE
+  )
+  
+  out <- out[order(-out$pip, -out$abs_bm), , drop = FALSE]
+  utils::head(out, top_n)
+}
+
+top_trait1 <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    top_markers(fits[[model_name]], model_name, trait = 1, top_n = 20)
+  })
+)
+
+top_trait1
+
+all_top_markers <- do.call(
+  rbind,
+  lapply(seq_len(ncol(fitC$dm)), function(trait_index) {
+    do.call(
+      rbind,
+      lapply(names(fits), function(model_name) {
+        top_markers(
+          fits[[model_name]],
+          model_name,
+          trait = trait_index,
+          top_n = 20
+        )
+      })
+    )
+  })
+)
+
+all_top_markers
+
+
+## ------------------------------------------------------------
+## How many top markers are shared across models?
+## ------------------------------------------------------------
+
+top_marker_sets <- lapply(names(fits), function(model_name) {
+  top_markers(fits[[model_name]], model_name, trait = 1, top_n = 20)$marker
+})
+names(top_marker_sets) <- names(fits)
+
+shared_top_markers <- Reduce(intersect, top_marker_sets)
+shared_top_markers
+
+length(shared_top_markers)
+
+
+pairwise_top_overlap <- expand.grid(
+  model1 = names(fits),
+  model2 = names(fits),
+  stringsAsFactors = FALSE
+)
+
+pairwise_top_overlap$n_shared_top20 <- mapply(
+  function(a, b) {
+    length(intersect(top_marker_sets[[a]], top_marker_sets[[b]]))
+  },
+  pairwise_top_overlap$model1,
+  pairwise_top_overlap$model2
+)
+
+pairwise_top_overlap
+
+
+## ------------------------------------------------------------
+## PIP correlation between models
+## ------------------------------------------------------------
+
+pip_correlation_by_trait <- function(fits, trait = 1, method = "spearman") {
+  pip_mat <- do.call(
+    cbind,
+    lapply(fits, function(fit) {
+      dm <- as.matrix(fit$dm)
+      dm[, trait]
+    })
+  )
+  
+  colnames(pip_mat) <- names(fits)
+  
+  stats::cor(
+    pip_mat,
+    use = "pairwise.complete.obs",
+    method = method
+  )
+}
+
+pip_cor_trait1 <- pip_correlation_by_trait(fits, trait = 1)
+pip_cor_trait1
+
+pip_correlations <- lapply(seq_len(ncol(fitC$dm)), function(trait_index) {
+  pip_correlation_by_trait(fits, trait = trait_index)
+})
+
+names(pip_correlations) <- colnames(fitC$dm)
+pip_correlations
+
+
+## ------------------------------------------------------------
+## Annotation summaries where available
+## ------------------------------------------------------------
+
+annotation_summaries <- lapply(
+  c("prior_annot", "learned_annot", "group_annot", "sbayesrc"),
+  function(model_name) {
+    x <- fits[[model_name]]
+    
+    if (!is.null(x$annotation_summary)) {
+      out <- x$annotation_summary
+      out$model <- model_name
+      return(out)
+    }
+    
+    NULL
+  }
+)
+
+annotation_summaries <- Filter(Negate(is.null), annotation_summaries)
+annotation_summaries
 
 
 # Fixed marker-specific prior model ---------------------------------------
