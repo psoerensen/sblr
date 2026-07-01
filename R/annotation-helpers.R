@@ -57,7 +57,7 @@
 .stblr_stop_bayesc_annotation_ld_swap <- function(updateLDswap) {
  if (isTRUE(updateLDswap)) {
   stop(
-   "LD-swap/MH is currently implemented only for annotation_model = 'prior' and 'group' among annotation-aware CSR models.",
+   "LD-swap/MH is currently implemented only for annotation_model = 'prior', 'group', and 'learned' among annotation-aware CSR models.",
    call. = FALSE
   )
  }

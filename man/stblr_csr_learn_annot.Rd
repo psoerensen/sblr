@@ -105,11 +105,21 @@ markers in `stats` and the sparse LD files.}
 
 \item{chain_seeds}{Optional numeric or integer vector of length `nchains`.}
 
-\item{updateLDswap}{Logical; LD-swap/MH is currently not implemented for
-this BayesC-like annotation-aware CSR backend and `TRUE` errors.}
+\item{updateLDswap}{Logical; attempt active/null LD-swap
+Metropolis-Hastings moves. For this learned annotation-aware backend, the
+current marker-specific inclusion probabilities and variance multipliers
+implied by the current annotation effects are included in the MH prior
+ratio when their learning options are enabled.}
 
-\item{ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves}{Reserved
-LD-swap controls for a future implementation.}
+\item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
+moves when `updateLDswap = TRUE`.}
+
+\item{ld_swap_r2}{Minimum LD r-squared for candidate swap partners.}
+
+\item{ld_swap_max_friends}{Maximum number of high-LD friends stored per
+marker for swap proposals.}
+
+\item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 
 \item{b_init, d_init}{Optional initial marker effects and inclusion states.}
 

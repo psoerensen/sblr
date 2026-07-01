@@ -66,8 +66,24 @@
  out$vle <- vle
  out$vld <- vld
 
- if (length(fit) >= 28L) {
-  names(fit)[23:28] <- c(
+ has_ld_swap <- length(fit) >= 23L &&
+  length(fit[[23L]]) == nt &&
+  all(vapply(fit[[23L]], function(x) {
+   length(x) >= 4L && isTRUE(all.equal(as.numeric(x[[4L]]), 1))
+  }, logical(1)))
+ if (has_ld_swap) {
+  names(fit)[23L] <- "ld_swap_raw"
+  ld_swap <- matrix(unlist(fit$ld_swap_raw, use.names = FALSE), ncol = 4, byrow = TRUE)
+  ld_swap <- ld_swap[, 1:3, drop = FALSE]
+  rownames(ld_swap) <- trait_names
+  colnames(ld_swap) <- c("attempted", "accepted", "acceptance_rate")
+  out$ld_swap <- as.data.frame(ld_swap)
+ }
+
+ summary_start <- if (has_ld_swap) 24L else 23L
+ summary_end <- summary_start + 5L
+ if (length(fit) >= summary_end) {
+  names(fit)[summary_start:summary_end] <- c(
    "bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max"
   )
   for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
@@ -77,16 +93,31 @@
   }
  }
 
- if (length(fit) >= 32L) {
-  names(fit)[29:32] <- c(
-   "chain_dm_raw", "chain_bm_raw", "chain_eta_pi_raw", "chain_eta_vb_raw"
-  )
+ chain_start <- summary_end + 1L
+ chain_slots <- length(fit) - chain_start + 1L
+ if (chain_slots >= 4L) {
+  has_chain_ld_swap <- has_ld_swap && chain_slots >= 5L
+  if (has_chain_ld_swap) {
+   names(fit)[chain_start:(chain_start + 4L)] <- c(
+    "chain_dm_raw", "chain_bm_raw", "chain_ld_swap_raw",
+    "chain_eta_pi_raw", "chain_eta_vb_raw"
+   )
+  } else {
+   names(fit)[chain_start:(chain_start + 3L)] <- c(
+    "chain_dm_raw", "chain_bm_raw", "chain_eta_pi_raw", "chain_eta_vb_raw"
+   )
+  }
   chains <- setNames(vector("list", nt), trait_names)
+  ld_swap_chains <- list()
   for (tt in seq_len(nt)) {
    dm_raw <- as.numeric(fit$chain_dm_raw[[tt]])
    bm_raw <- as.numeric(fit$chain_bm_raw[[tt]])
+   diag_raw <- if (has_chain_ld_swap) as.numeric(fit$chain_ld_swap_raw[[tt]]) else numeric(0)
    nchains <- if (m > 0L) length(dm_raw) %/% m else 0L
    trait_chains <- setNames(vector("list", nchains), paste0("chain", seq_len(nchains)))
+   trait_ld <- matrix(NA_real_, nrow = nchains, ncol = 3)
+   colnames(trait_ld) <- c("attempted", "accepted", "acceptance_rate")
+   rownames(trait_ld) <- names(trait_chains)
    for (cc in seq_len(nchains)) {
     idx <- ((cc - 1L) * m + 1L):(cc * m)
     trait_chains[[cc]] <- list(
@@ -103,10 +134,21 @@
       as.numeric(fit$chain_eta_vb_raw[[tt]])[kidx], annotation_names
      )
     }
+    if (has_chain_ld_swap) {
+     didx <- ((cc - 1L) * 4L + 1L):((cc - 1L) * 4L + 4L)
+     if (length(diag_raw) >= max(didx)) {
+      trait_chains[[cc]]$ld_swap <- stats::setNames(
+       diag_raw[didx][1:3], c("attempted", "accepted", "acceptance_rate")
+      )
+      trait_ld[cc, ] <- diag_raw[didx][1:3]
+     }
+    }
    }
    chains[[tt]] <- trait_chains
+   if (has_chain_ld_swap) ld_swap_chains[[trait_names[tt]]] <- as.data.frame(trait_ld)
   }
   out$chains <- chains
+  if (has_chain_ld_swap) out$ld_swap_chains <- ld_swap_chains
  }
 
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
@@ -143,10 +185,17 @@
 #' @param nchains Number of independent MCMC chains.
 #' @param keep_chains Logical; return compact per-chain summaries.
 #' @param chain_seeds Optional numeric or integer vector of length `nchains`.
-#' @param updateLDswap Logical; LD-swap/MH is currently not implemented for
-#'   this BayesC-like annotation-aware CSR backend and `TRUE` errors.
-#' @param ld_swap_prob,ld_swap_r2,ld_swap_max_friends,ld_swap_moves Reserved
-#'   LD-swap controls for a future implementation.
+#' @param updateLDswap Logical; attempt active/null LD-swap
+#'   Metropolis-Hastings moves. For this learned annotation-aware backend, the
+#'   current marker-specific inclusion probabilities and variance multipliers
+#'   implied by the current annotation effects are included in the MH prior
+#'   ratio when their learning options are enabled.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker for swap proposals.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @param b_init,d_init Optional initial marker effects and inclusion states.
 #' @param use_d_init Use the supplied initial inclusion states.
 #' @param r_init Optional initial residual state.
@@ -230,7 +279,6 @@ stblr_csr_learn_annot <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- .stblr_stop_bayesc_annotation_ld_swap(updateLDswap)
  chain_args <- .stblr_validate_annotation_chain_args(
   nchains = nchains,
   keep_chains = keep_chains,
@@ -364,7 +412,12 @@ stblr_csr_learn_annot <- function(
   seed = as.integer(seed),
   nchains = nchains,
   keep_chains = keep_chains,
-  chain_seeds = chain_seeds
+  chain_seeds = chain_seeds,
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves)
  )
 
  fit <- .format_csr_annot_fit(

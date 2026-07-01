@@ -195,36 +195,12 @@ test_that("old fixed-prior annotation wrapper accepts LD-swap", {
   expect_annotation_prior_ldswap_diagnostics(fit, expected_attempted = 6)
 })
 
-test_that("non-prior annotation models reject LD-swap", {
+test_that("SBayesRC annotation model rejects BayesC-like LD-swap", {
   stats <- tiny_annotation_prior_ldswap_stats()
   A <- tiny_annotation_prior_ldswap_A()
   prefix <- make_tiny_annotation_prior_ldswap_csr_prefix()
-  msg <- "implemented only for annotation_model = 'prior'"
+  msg <- "implemented only for annotation_model = 'prior', 'group', and 'learned'"
 
-  expect_error(
-    stblr_csr_annot(
-      stats = stats,
-      ld_prefix = prefix,
-      annotations = A,
-      annotation_model = "learned",
-      updateLDswap = TRUE,
-      nit = 2,
-      nburn = 0
-    ),
-    msg
-  )
-  expect_error(
-    stblr_csr_annot(
-      stats = stats,
-      ld_prefix = prefix,
-      annotations = c("a", "b", "a"),
-      annotation_model = "group",
-      updateLDswap = TRUE,
-      nit = 2,
-      nburn = 0
-    ),
-    msg
-  )
   expect_error(
     stblr_csr_annot(
       stats = stats,
