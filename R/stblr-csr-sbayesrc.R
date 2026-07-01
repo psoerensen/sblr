@@ -27,6 +27,9 @@
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
+#' @param nchains Number of independent MCMC chains.
+#' @param chain_seeds Optional integer seeds, one per chain.
+#' @param keep_chains Logical; return compact per-chain summaries.
 #' @param b_init Optional initial marker effects.
 #' @param comp_init Optional initial zero-based mixture-component indices, one
 #'   length-`m` vector per trait.
@@ -80,6 +83,9 @@ stblr_csr_sbayesrc_generic <- function(
   nthin = 1,
   ncores = 3,
   seed = 10,
+  nchains = 1L,
+  chain_seeds = NULL,
+  keep_chains = FALSE,
   b_init = NULL,
   comp_init = NULL,
   use_comp_init = FALSE,
@@ -106,6 +112,26 @@ stblr_csr_sbayesrc_generic <- function(
  variable_names <- dims$variable_names
 
  .stblr_validate_stats(stats, nt = nt, m = m)
+
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+ if (!is.null(chain_seeds)) {
+  if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds))) {
+   stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.")
+  }
+  chain_seeds <- as.integer(chain_seeds)
+ } else {
+  chain_seeds <- integer()
+ }
 
  arch <- .stblr_resolve_architecture(
   pi_marker = pi_marker,
@@ -238,7 +264,10 @@ stblr_csr_sbayesrc_generic <- function(
   nburn = as.integer(nburn),
   nthin = as.integer(nthin),
   ncores = as.integer(ncores),
-  seed = as.integer(seed)
+  seed = as.integer(seed),
+  nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = chain_seeds
  )
 
  fit <- format_sbayesrc_csr_fit(
@@ -249,7 +278,9 @@ stblr_csr_sbayesrc_generic <- function(
   n_anno = ncol(A),
   trait_names = trait_names,
   variable_names = variable_names,
-  annotation_names = colnames(A)
+  annotation_names = colnames(A),
+  nchains = nchains,
+  keep_chains = keep_chains
  )
 
  fit$input <- c(
@@ -294,6 +325,16 @@ stblr_csr_sbayesrc_generic <- function(
    nthin = nthin,
    ncores = ncores,
    seed = seed,
+   nchains = nchains,
+   keep_chains = keep_chains,
+   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL,
+   chain_seed_rule = if (length(chain_seeds)) {
+    "chain_seeds[chain] + 1000003 * (trait + 1)"
+   } else if (nchains == 1L) {
+    "seed + 1000003 * (trait + 1)"
+   } else {
+    "seed + 1000003 * (trait + 1) + 9176 * (chain + 1)"
+   },
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,
    ld_prefix = ld_prefix

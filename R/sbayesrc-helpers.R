@@ -306,7 +306,9 @@ format_sbayesrc_csr_fit <- function(
   n_anno,
   trait_names = NULL,
   variable_names = NULL,
-  annotation_names = NULL
+  annotation_names = NULL,
+  nchains = 1L,
+  keep_chains = FALSE
 ) {
  validate_positive_integer <- function(x, name) {
   if (!is.numeric(x) || length(x) != 1 || !is.finite(x) ||
@@ -330,8 +332,23 @@ format_sbayesrc_csr_fit <- function(
  m <- validate_positive_integer(m, "m")
  n_anno <- validate_positive_integer(n_anno, "n_anno")
 
- if (!is.list(fit) || length(fit) != 24) {
-  stop("format_sbayesrc_csr_fit() expects the 24-slot SBayesRC CSR return object.")
+ nchains <- validate_positive_integer(nchains, "nchains")
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+
+ expected_len <- if (nchains > 1L || isTRUE(keep_chains)) {
+  if (isTRUE(keep_chains)) 35L else 30L
+ } else {
+  24L
+ }
+ if (!is.list(fit) || length(fit) != expected_len) {
+  stop(
+   "format_sbayesrc_csr_fit() expects the ",
+   expected_len,
+   "-slot SBayesRC CSR return object."
+  )
  }
 
  if (!is.numeric(gamma) || length(gamma) < 2 ||
@@ -385,14 +402,36 @@ format_sbayesrc_csr_fit <- function(
  }
  validate_trait_list(fit[[23]], m * Kgamma, "fit[[23]]")
  validate_trait_list(fit[[24]], Kgamma, "fit[[24]]")
+ if (expected_len >= 30L) {
+  for (i in 25:30) {
+   validate_trait_list(fit[[i]], m, paste0("fit[[", i, "]]"))
+  }
+ }
+ if (expected_len == 35L) {
+  validate_trait_list(fit[[31]], nchains * m, "fit[[31]]")
+  validate_trait_list(fit[[32]], nchains * m, "fit[[32]]")
+  validate_trait_list(fit[[33]], nchains * m * Kgamma, "fit[[33]]")
+  validate_trait_list(fit[[34]], nchains * n_anno * nstep, "fit[[34]]")
+  validate_trait_list(fit[[35]], nchains * nstep, "fit[[35]]")
+ }
 
- names(fit) <- c(
+ base_names <- c(
   "bm", "dm", "wy", "r", "b", "component", "marker_index",
   "vbs", "vgs", "ves",
   "covb", "covg", "cove",
   "vb", "vg", "ve",
   "pi", "pim", "alpha_raw", "sigmaSqAlpha_raw",
   "vle", "vld", "comp_prob_raw", "ncomp_raw"
+ )
+ summary_names <- c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")
+ chain_names <- c(
+  "chain_dm_raw", "chain_bm_raw", "chain_comp_prob_raw",
+  "chain_alpha_raw", "chain_sigmaSqAlpha_raw"
+ )
+ names(fit) <- c(
+  base_names,
+  if (expected_len >= 30L) summary_names else character(),
+  if (expected_len == 35L) chain_names else character()
  )
 
  for (i in seq_len(7)) {
@@ -475,6 +514,54 @@ format_sbayesrc_csr_fit <- function(
  out$vld <- fit$vld
  out$comp_prob <- comp_prob
  out$ncomp <- ncomp
+
+ if (expected_len >= 30L) {
+  for (nm in summary_names) {
+   out[[nm]] <- as.matrix(as.data.frame(fit[[nm]]))
+   rownames(out[[nm]]) <- variable_names
+   colnames(out[[nm]]) <- trait_names
+  }
+ }
+
+ if (expected_len == 35L) {
+  chains <- lapply(seq_len(nt), function(t) {
+   dm_raw <- as.numeric(fit$chain_dm_raw[[t]])
+   bm_raw <- as.numeric(fit$chain_bm_raw[[t]])
+   comp_raw <- as.numeric(fit$chain_comp_prob_raw[[t]])
+   alpha_raw <- as.numeric(fit$chain_alpha_raw[[t]])
+   sigma_raw <- as.numeric(fit$chain_sigmaSqAlpha_raw[[t]])
+   trait_chains <- lapply(seq_len(nchains), function(chain) {
+    marker_idx <- ((chain - 1L) * m + 1L):(chain * m)
+    comp_idx <- ((chain - 1L) * m * Kgamma + 1L):(chain * m * Kgamma)
+    alpha_idx <- ((chain - 1L) * n_anno * nstep + 1L):(chain * n_anno * nstep)
+    sigma_idx <- ((chain - 1L) * nstep + 1L):(chain * nstep)
+    chain_comp <- matrix(
+     comp_raw[comp_idx],
+     nrow = m,
+     ncol = Kgamma,
+     dimnames = list(variable_names, component_names)
+    )
+    chain_alpha <- matrix(
+     alpha_raw[alpha_idx],
+     nrow = n_anno,
+     ncol = nstep,
+     dimnames = list(annotation_names, step_names)
+    )
+    chain_sigma <- stats::setNames(sigma_raw[sigma_idx], step_names)
+    list(
+     dm = stats::setNames(dm_raw[marker_idx], variable_names),
+     bm = stats::setNames(bm_raw[marker_idx], variable_names),
+     comp_prob = chain_comp,
+     alpha = chain_alpha,
+     sigmaSqAlpha = chain_sigma
+    )
+   })
+   names(trait_chains) <- paste0("chain", seq_len(nchains))
+   trait_chains
+  })
+  names(chains) <- trait_names
+  out$chains <- chains
+ }
 
  valid_covariance <- function(x) {
   is.matrix(x) && all(dim(x) == c(nt, nt)) &&

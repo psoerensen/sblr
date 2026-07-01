@@ -15,6 +15,9 @@ stblr_csr_annot(
   nthin = 1,
   ncores = 1,
   seed = 1,
+  nchains = 1L,
+  chain_seeds = NULL,
+  keep_chains = FALSE,
   h2 = 0.3,
   adjE = 0.9,
   updateB = TRUE,
@@ -49,6 +52,14 @@ or `pi_marker`, and `fixed_vb_multiplier` or `vb_multiplier` elements. For
 
 \item{seed}{Sampler seed.}
 
+\item{nchains}{Number of independent chains. Currently supported only for
+`annotation_model = "sbayesrc"` among annotation-aware CSR models.}
+
+\item{chain_seeds}{Optional integer seeds, one per chain.}
+
+\item{keep_chains}{Logical; return compact per-chain summaries when
+supported.}
+
 \item{h2}{Initial heritability.}
 
 \item{adjE}{Residual adjustment factor.}
@@ -76,6 +87,7 @@ output aliases while preserving wrapper-specific fields.
 }
 \details{
 This interface is CSR summary-statistics only. The current annotation-aware
+SBayesRC backend supports multiple native chains. Other annotation-aware
 backends do not implement multiple chains, `keep_chains`, LD-swap, or
 scheduled annotation-aware models.
 

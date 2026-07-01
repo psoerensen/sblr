@@ -117,8 +117,8 @@ debug_stldcsr_xij_pairs <- function(ld_prefix, xx, pairs) {
     .Call(`_sblr_debug_stldcsr_xij_pairs`, ld_prefix, xx, pairs)
 }
 
-stblr_cpg_omp_csr_sbayesrc <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed) {
-    .Call(`_sblr_stblr_cpg_omp_csr_sbayesrc`, wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed)
+stblr_cpg_omp_csr_sbayesrc <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains = 1L, keep_chains = FALSE, chain_seeds = NULL) {
+    .Call(`_sblr_stblr_cpg_omp_csr_sbayesrc`, wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds)
 }
 
 stblr_cpg_omp_csr_sbayesrc_annot <- function(wy, ww, yy, b_init, gamma_init, use_gamma_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, annotation_class, n_classes, mixture_var, pi_class_init, alpha_class, updatePiClass, nub, nue, updateB, updateE, adjE, n, nit, nburn, nthin, ncores, seed) {

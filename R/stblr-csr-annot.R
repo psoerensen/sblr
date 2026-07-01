@@ -21,6 +21,11 @@
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
+#' @param nchains Number of independent chains. Currently supported only for
+#'   `annotation_model = "sbayesrc"` among annotation-aware CSR models.
+#' @param chain_seeds Optional integer seeds, one per chain.
+#' @param keep_chains Logical; return compact per-chain summaries when
+#'   supported.
 #' @param h2 Initial heritability.
 #' @param adjE Residual adjustment factor.
 #' @param updateB,updateE,updatePi Logical sampler update controls. `updatePi`
@@ -37,6 +42,7 @@
 #'
 #' @details
 #' This interface is CSR summary-statistics only. The current annotation-aware
+#' SBayesRC backend supports multiple native chains. Other annotation-aware
 #' backends do not implement multiple chains, `keep_chains`, LD-swap, or
 #' scheduled annotation-aware models.
 #'
@@ -56,6 +62,9 @@ stblr_csr_annot <- function(
   nthin = 1,
   ncores = 1,
   seed = 1,
+  nchains = 1L,
+  chain_seeds = NULL,
+  keep_chains = FALSE,
   h2 = 0.3,
   adjE = 0.9,
   updateB = TRUE,
@@ -70,6 +79,7 @@ stblr_csr_annot <- function(
 
  annotation_model <- .stblr_match_annotation_model(annotation_model[[1L]])
  .stblr_check_annotation_method(method, annotation_model)
+ .stblr_check_annotation_chains(annotation_model, nchains, keep_chains)
  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(
   Glist = Glist,
   ld_prefix = ld_prefix
@@ -86,12 +96,18 @@ stblr_csr_annot <- function(
   nburn = nburn,
   nthin = nthin,
   ncores = ncores,
-  seed = seed
+  seed = seed,
+  nchains = nchains,
+  chain_seeds = chain_seeds,
+  keep_chains = keep_chains
  )
  extra <- list(...)
 
  if (annotation_model %in% c("prior", "learned", "group")) {
   common$updatePi <- updatePi
+  common$nchains <- NULL
+  common$chain_seeds <- NULL
+  common$keep_chains <- NULL
  }
 
  if (annotation_model == "prior") {
@@ -121,6 +137,25 @@ stblr_csr_annot <- function(
  }
  args <- c(common, list(A = annotations), extra)
  do.call(stblr_csr_sbayesrc_generic, args)
+}
+
+.stblr_check_annotation_chains <- function(annotation_model, nchains, keep_chains) {
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.", call. = FALSE)
+ }
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.", call. = FALSE)
+ }
+ if (annotation_model != "sbayesrc" &&
+     (as.integer(nchains) > 1L || isTRUE(keep_chains))) {
+  stop(
+   "nchains > 1 is currently only supported for annotation_model = 'sbayesrc' among annotation-aware CSR models.",
+   call. = FALSE
+  )
+ }
+ invisible(TRUE)
 }
 
 .stblr_check_annotation_method <- function(method, annotation_model) {
@@ -239,8 +274,8 @@ stblr_csr_annot <- function(
  fit$input$data_level <- "summary"
  fit$input$annotation_model <- annotation_model
  fit$input$annotations <- TRUE
- fit$input$nchains <- 1L
- fit$input$keep_chains <- FALSE
+ if (is.null(fit$input$nchains)) fit$input$nchains <- 1L
+ if (is.null(fit$input$keep_chains)) fit$input$keep_chains <- FALSE
 
  if (annotation_model == "prior") {
   fit <- .stblr_add_prior_annotation_aliases(fit)

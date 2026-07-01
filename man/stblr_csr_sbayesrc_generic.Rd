@@ -34,6 +34,9 @@ stblr_csr_sbayesrc_generic(
   nthin = 1,
   ncores = 3,
   seed = 10,
+  nchains = 1L,
+  chain_seeds = NULL,
+  keep_chains = FALSE,
   b_init = NULL,
   comp_init = NULL,
   use_comp_init = FALSE,
@@ -89,6 +92,12 @@ zero and all remaining values must be positive.}
 \item{ncores}{Number of OpenMP threads.}
 
 \item{seed}{Sampler seed.}
+
+\item{nchains}{Number of independent MCMC chains.}
+
+\item{chain_seeds}{Optional integer seeds, one per chain.}
+
+\item{keep_chains}{Logical; return compact per-chain summaries.}
 
 \item{b_init}{Optional initial marker effects.}
 

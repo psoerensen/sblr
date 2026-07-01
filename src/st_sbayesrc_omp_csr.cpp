@@ -1,6 +1,7 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 
+#include "st_chain_utils.h"
 #include "st_csr_common.h"
 
 #include <algorithm>
@@ -76,6 +77,17 @@ using namespace arma;
 //   21 vld = linkage-disequilibrium contribution trace, vg - vle
 //   22 comp_prob = posterior component probabilities, flattened m x Kgamma
 //   23 ncomp = posterior mean number of markers per component, length Kgamma
+//   24 bm_sd, optional when nchains > 1 or keep_chains = true
+//   25 bm_min
+//   26 bm_max
+//   27 dm_sd
+//   28 dm_min
+//   29 dm_max
+//   30 chain dm, optional when keep_chains = true, chain-major
+//   31 chain bm, optional when keep_chains = true, chain-major
+//   32 chain comp_prob, optional when keep_chains = true, chain-major
+//   33 chain alpha, optional when keep_chains = true, chain-major
+//   34 chain sigmaSqAlpha, optional when keep_chains = true, chain-major
 //
 // Recommended R extraction for slot 18:
 //   alpha <- matrix(fit[[18]][[t]], nrow=ncol(A), ncol=length(gamma)-1)
@@ -518,7 +530,10 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
   int nburn,
   int nthin,
   int ncores,
-  int seed
+  int seed,
+  int nchains = 1,
+  bool keep_chains = false,
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -538,6 +553,20 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
 
  if (alpha_update_every <= 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: alpha_update_every must be positive.");
+ }
+
+ if (nchains <= 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: nchains must be positive.");
+ }
+
+ std::vector<int> chain_seeds_vec;
+ if (chain_seeds.isNotNull()) {
+  Rcpp::IntegerVector chain_seeds_r(chain_seeds);
+  chain_seeds_vec = Rcpp::as<std::vector<int>>(chain_seeds_r);
+ }
+
+ if (!chain_seeds_vec.empty() && static_cast<int>(chain_seeds_vec.size()) != nchains) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: chain_seeds must have length nchains.");
  }
 
  if ((int)ww.size() != nt || (int)b_init.size() != nt ||
@@ -632,7 +661,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
  arma::mat ww_mat(nt, m, arma::fill::zeros);
  arma::mat b_mat(nt, m, arma::fill::zeros);
  arma::mat r_mat(nt, m, arma::fill::zeros);
- arma::Mat<int> comp_mat(nt, m, arma::fill::zeros);
+ arma::mat comp_mat(nt, m, arma::fill::zeros);
 
  arma::vec yy_vec(nt, arma::fill::zeros);
  arma::mat ssb_prior_mat(nt, nt, arma::fill::zeros);
@@ -723,8 +752,49 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
             return x2[static_cast<std::size_t>(a)] > x2[static_cast<std::size_t>(b)];
            });
 
+ const int ntasks = stblr_num_chain_tasks(nt, nchains);
+
+ arma::mat bm_task(ntasks, m, arma::fill::zeros);
+ arma::mat dm_task(ntasks, m, arma::fill::zeros);
+ arma::mat b_task(ntasks, m, arma::fill::zeros);
+ arma::mat r_task(ntasks, m, arma::fill::zeros);
+ arma::mat comp_task_double(ntasks, m, arma::fill::zeros);
+
+ arma::mat vbs_task(ntasks, nit + nburn, arma::fill::zeros);
+ arma::mat vgs_task(ntasks, nit + nburn, arma::fill::zeros);
+ arma::mat ves_task(ntasks, nit + nburn, arma::fill::zeros);
+ arma::mat pis_task(ntasks, nit + nburn, arma::fill::zeros);
+ arma::mat vles_task(ntasks, nit + nburn, arma::fill::zeros);
+ arma::mat vlds_task(ntasks, nit + nburn, arma::fill::zeros);
+
+ arma::vec final_vb_task(ntasks, arma::fill::zeros);
+ arma::vec final_vg_task(ntasks, arma::fill::zeros);
+ arma::vec final_ve_task(ntasks, arma::fill::zeros);
+ arma::vec final_pi_active_task(ntasks, arma::fill::zeros);
+ arma::vec final_vle_task(ntasks, arma::fill::zeros);
+ arma::vec final_vld_task(ntasks, arma::fill::zeros);
+ arma::vec nsamples_task(ntasks, arma::fill::zeros);
+
+ std::vector<arma::mat> alpha_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> sigmaSqAlpha_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> comp_prob_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> ncomp_mean_task(static_cast<std::size_t>(ntasks));
+
+ for (int task = 0; task < ntasks; ++task) {
+  alpha_mean_task[static_cast<std::size_t>(task)] = arma::mat(nAnno, nstep, arma::fill::zeros);
+  sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = arma::vec(nstep, arma::fill::zeros);
+  comp_prob_mean_task[static_cast<std::size_t>(task)] = arma::mat(m, Kgamma, arma::fill::zeros);
+  ncomp_mean_task[static_cast<std::size_t>(task)] = arma::vec(Kgamma, arma::fill::zeros);
+ }
+
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_sd_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_sd_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_min_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_min_mat(nt, m, arma::fill::zeros);
+ arma::mat bm_max_mat(nt, m, arma::fill::zeros);
+ arma::mat dm_max_mat(nt, m, arma::fill::zeros);
 
  arma::mat vbs_mat(nt, nit + nburn, arma::fill::zeros);
  arma::mat vgs_mat(nt, nit + nburn, arma::fill::zeros);
@@ -753,16 +823,16 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
   ncomp_mean[static_cast<std::size_t>(t)] = arma::vec(Kgamma, arma::fill::zeros);
  }
 
- std::vector<int> failed(static_cast<std::size_t>(nt), 0);
- std::vector<std::string> errors(static_cast<std::size_t>(nt));
- std::vector<int> thread_used(static_cast<std::size_t>(nt), 0);
- std::vector<double> trait_seconds(static_cast<std::size_t>(nt), 0.0);
+ std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
+ std::vector<std::string> errors(static_cast<std::size_t>(ntasks));
+ std::vector<int> thread_used(static_cast<std::size_t>(ntasks), 0);
+ std::vector<double> task_seconds(static_cast<std::size_t>(ntasks), 0.0);
 
  int nthreads = 1;
 
 #ifdef _OPENMP
  omp_set_dynamic(0);
- nthreads = std::max(1, std::min(ncores, nt));
+ nthreads = stblr_num_threads_for_tasks(ncores, ntasks);
  omp_set_num_threads(nthreads);
 
  Rcpp::Rcout
@@ -778,6 +848,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
  Rcpp::Rcout
  << "STBLR real-SBayesRC CSR: m=" << m
  << ", nt=" << nt
+ << ", nchains=" << nchains
  << ", annotations=" << nAnno
  << ", components=" << Kgamma
  << ", updateAlpha=" << updateAlpha
@@ -787,17 +858,31 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
 #endif
- for (int t = 0; t < nt; ++t) {
+ for (int task = 0; task < ntasks; ++task) {
+  const int t = stblr_task_trait(task, nchains);
+  const int chain = stblr_task_chain(task, nchains);
+  const arma::uword task_u = static_cast<arma::uword>(task);
 #ifdef _OPENMP
   const double wall_start = omp_get_wtime();
-  thread_used[static_cast<std::size_t>(t)] = omp_get_thread_num();
+  thread_used[static_cast<std::size_t>(task)] = omp_get_thread_num();
 #else
   const double wall_start = 0.0;
-  thread_used[static_cast<std::size_t>(t)] = 0;
+  thread_used[static_cast<std::size_t>(task)] = 0;
 #endif
 
   try {
-   std::mt19937 gen_t(static_cast<unsigned int>(seed + 1000003 * (t + 1)));
+   unsigned int task_seed = 0u;
+   if (!chain_seeds_vec.empty()) {
+    task_seed = stblr_seed_with_chain_base(
+     chain_seeds_vec[static_cast<std::size_t>(chain)],
+     t
+    );
+   } else if (nchains == 1) {
+    task_seed = stblr_trait_seed(seed, t);
+   } else {
+    task_seed = stblr_chain_seed(seed, t, chain);
+   }
+   std::mt19937 gen_t(task_seed);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
    arma::rowvec ww_t = ww_mat.row(static_cast<arma::uword>(t));
@@ -1028,75 +1113,174 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
     throw std::runtime_error("posterior mean dm contains NaN/Inf.");
    }
 
-   bm_mat.row(static_cast<arma::uword>(t)) = bm_t;
-   dm_mat.row(static_cast<arma::uword>(t)) = dm_t;
-   b_mat.row(static_cast<arma::uword>(t))  = b_t;
-   r_mat.row(static_cast<arma::uword>(t))  = r_t;
-   comp_mat.row(static_cast<arma::uword>(t)) = comp_t;
+   bm_task.row(task_u) = bm_t;
+   dm_task.row(task_u) = dm_t;
+   b_task.row(task_u)  = b_t;
+   r_task.row(task_u)  = r_t;
+   for (int i = 0; i < m; ++i) {
+    comp_task_double(task_u, static_cast<arma::uword>(i)) =
+     static_cast<double>(comp_t(static_cast<arma::uword>(i)));
+   }
 
-   vbs_mat.row(static_cast<arma::uword>(t)) = vbs_t;
-   vgs_mat.row(static_cast<arma::uword>(t)) = vgs_t;
-   ves_mat.row(static_cast<arma::uword>(t)) = ves_t;
-   pis_mat.row(static_cast<arma::uword>(t)) = pis_t;
-   vles_mat.row(static_cast<arma::uword>(t)) = vles_t;
-   vlds_mat.row(static_cast<arma::uword>(t)) = vlds_t;
+   vbs_task.row(task_u) = vbs_t;
+   vgs_task.row(task_u) = vgs_t;
+   ves_task.row(task_u) = ves_t;
+   pis_task.row(task_u) = pis_t;
+   vles_task.row(task_u) = vles_t;
+   vlds_task.row(task_u) = vlds_t;
 
-   final_vb(static_cast<arma::uword>(t)) = vb_t;
-   final_ve(static_cast<arma::uword>(t)) = ve_t;
-   final_vg(static_cast<arma::uword>(t)) = vg_t;
-   final_pi_active(static_cast<arma::uword>(t)) = pis_t(static_cast<arma::uword>(nit + nburn - 1));
-   final_vle(static_cast<arma::uword>(t)) = vle_t;
-   final_vld(static_cast<arma::uword>(t)) = vld_t;
-   nsamples_vec(static_cast<arma::uword>(t)) = nsamples_t;
+   final_vb_task(task_u) = vb_t;
+   final_ve_task(task_u) = ve_t;
+   final_vg_task(task_u) = vg_t;
+   final_pi_active_task(task_u) = pis_t(static_cast<arma::uword>(nit + nburn - 1));
+   final_vle_task(task_u) = vle_t;
+   final_vld_task(task_u) = vld_t;
+   nsamples_task(task_u) = nsamples_t;
 
-   alpha_mean[static_cast<std::size_t>(t)] = alpha_accum;
-   sigmaSqAlpha_mean[static_cast<std::size_t>(t)] = sigmaSqAlpha_accum;
-   comp_prob_mean[static_cast<std::size_t>(t)] = comp_prob_accum;
-   ncomp_mean[static_cast<std::size_t>(t)] = ncomp_accum;
+   alpha_mean_task[static_cast<std::size_t>(task)] = alpha_accum;
+   sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = sigmaSqAlpha_accum;
+   comp_prob_mean_task[static_cast<std::size_t>(task)] = comp_prob_accum;
+   ncomp_mean_task[static_cast<std::size_t>(task)] = ncomp_accum;
 
 #ifdef _OPENMP
-   trait_seconds[static_cast<std::size_t>(t)] = omp_get_wtime() - wall_start;
+   task_seconds[static_cast<std::size_t>(task)] = omp_get_wtime() - wall_start;
 #endif
 
   } catch (const std::exception& e) {
-   failed[static_cast<std::size_t>(t)] = 1;
-   errors[static_cast<std::size_t>(t)] = e.what();
+   failed[static_cast<std::size_t>(task)] = 1;
+   errors[static_cast<std::size_t>(task)] = e.what();
 #ifdef _OPENMP
-   trait_seconds[static_cast<std::size_t>(t)] = omp_get_wtime() - wall_start;
+   task_seconds[static_cast<std::size_t>(task)] = omp_get_wtime() - wall_start;
 #endif
   } catch (...) {
-   failed[static_cast<std::size_t>(t)] = 1;
-   errors[static_cast<std::size_t>(t)] = "unknown error";
+   failed[static_cast<std::size_t>(task)] = 1;
+   errors[static_cast<std::size_t>(task)] = "unknown error";
 #ifdef _OPENMP
-   trait_seconds[static_cast<std::size_t>(t)] = omp_get_wtime() - wall_start;
+   task_seconds[static_cast<std::size_t>(task)] = omp_get_wtime() - wall_start;
 #endif
   }
  }
 
 #ifdef _OPENMP
- for (int t = 0; t < nt; ++t) {
+ for (int task = 0; task < ntasks; ++task) {
+  const int t = stblr_task_trait(task, nchains);
+  const int chain = stblr_task_chain(task, nchains);
   Rcpp::Rcout
   << "trait " << t
-  << " used thread " << thread_used[static_cast<std::size_t>(t)]
-  << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
+  << ", chain " << chain
+  << " used thread " << thread_used[static_cast<std::size_t>(task)]
+  << ", seconds = " << task_seconds[static_cast<std::size_t>(task)]
   << "\n";
  }
 #endif
 
- for (int t = 0; t < nt; ++t) {
-  if (failed[static_cast<std::size_t>(t)]) {
+ for (int task = 0; task < ntasks; ++task) {
+  if (failed[static_cast<std::size_t>(task)]) {
    throw std::runtime_error(
      "stblr_cpg_omp_csr_sbayesrc failed for trait " +
-      std::to_string(t) +
+      std::to_string(stblr_task_trait(task, nchains)) +
+      ", chain " +
+      std::to_string(stblr_task_chain(task, nchains)) +
       ": " +
-      errors[static_cast<std::size_t>(t)]
+      errors[static_cast<std::size_t>(task)]
    );
   }
  }
 
- std::vector<std::vector<std::vector<double>>> result(24);
+ const double inv_chains = 1.0 / static_cast<double>(nchains);
 
- for (int k = 0; k < 24; ++k) {
+ for (int t = 0; t < nt; ++t) {
+  const arma::uword tu = static_cast<arma::uword>(t);
+
+  bm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
+  dm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
+  bm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
+  dm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
+
+  for (int chain = 0; chain < nchains; ++chain) {
+   const int task = t * nchains + chain;
+   const arma::uword task_u = static_cast<arma::uword>(task);
+
+   bm_mat.row(tu) += bm_task.row(task_u);
+   dm_mat.row(tu) += dm_task.row(task_u);
+   b_mat.row(tu) += b_task.row(task_u);
+   r_mat.row(tu) += r_task.row(task_u);
+   for (int i = 0; i < m; ++i) {
+    comp_mat(tu, static_cast<arma::uword>(i)) +=
+     comp_task_double(task_u, static_cast<arma::uword>(i));
+    bm_min_mat(tu, static_cast<arma::uword>(i)) =
+     std::min(bm_min_mat(tu, static_cast<arma::uword>(i)), bm_task(task_u, static_cast<arma::uword>(i)));
+    dm_min_mat(tu, static_cast<arma::uword>(i)) =
+     std::min(dm_min_mat(tu, static_cast<arma::uword>(i)), dm_task(task_u, static_cast<arma::uword>(i)));
+    bm_max_mat(tu, static_cast<arma::uword>(i)) =
+     std::max(bm_max_mat(tu, static_cast<arma::uword>(i)), bm_task(task_u, static_cast<arma::uword>(i)));
+    dm_max_mat(tu, static_cast<arma::uword>(i)) =
+     std::max(dm_max_mat(tu, static_cast<arma::uword>(i)), dm_task(task_u, static_cast<arma::uword>(i)));
+   }
+
+   vbs_mat.row(tu) += vbs_task.row(task_u);
+   vgs_mat.row(tu) += vgs_task.row(task_u);
+   ves_mat.row(tu) += ves_task.row(task_u);
+   pis_mat.row(tu) += pis_task.row(task_u);
+   vles_mat.row(tu) += vles_task.row(task_u);
+   vlds_mat.row(tu) += vlds_task.row(task_u);
+
+   final_vb(tu) += final_vb_task(task_u);
+   final_ve(tu) += final_ve_task(task_u);
+   final_vg(tu) += final_vg_task(task_u);
+   final_pi_active(tu) += final_pi_active_task(task_u);
+   final_vle(tu) += final_vle_task(task_u);
+   final_vld(tu) += final_vld_task(task_u);
+   nsamples_vec(tu) += nsamples_task(task_u);
+
+   alpha_mean[static_cast<std::size_t>(t)] += alpha_mean_task[static_cast<std::size_t>(task)];
+   sigmaSqAlpha_mean[static_cast<std::size_t>(t)] += sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)];
+   comp_prob_mean[static_cast<std::size_t>(t)] += comp_prob_mean_task[static_cast<std::size_t>(task)];
+   ncomp_mean[static_cast<std::size_t>(t)] += ncomp_mean_task[static_cast<std::size_t>(task)];
+  }
+
+  bm_mat.row(tu) *= inv_chains;
+  dm_mat.row(tu) *= inv_chains;
+  b_mat.row(tu) *= inv_chains;
+  r_mat.row(tu) *= inv_chains;
+  comp_mat.row(tu) *= inv_chains;
+  vbs_mat.row(tu) *= inv_chains;
+  vgs_mat.row(tu) *= inv_chains;
+  ves_mat.row(tu) *= inv_chains;
+  pis_mat.row(tu) *= inv_chains;
+  vles_mat.row(tu) *= inv_chains;
+  vlds_mat.row(tu) *= inv_chains;
+  final_vb(tu) *= inv_chains;
+  final_ve(tu) *= inv_chains;
+  final_vg(tu) *= inv_chains;
+  final_pi_active(tu) *= inv_chains;
+  final_vle(tu) *= inv_chains;
+  final_vld(tu) *= inv_chains;
+  nsamples_vec(tu) *= inv_chains;
+  alpha_mean[static_cast<std::size_t>(t)] *= inv_chains;
+  sigmaSqAlpha_mean[static_cast<std::size_t>(t)] *= inv_chains;
+  comp_prob_mean[static_cast<std::size_t>(t)] *= inv_chains;
+  ncomp_mean[static_cast<std::size_t>(t)] *= inv_chains;
+
+  if (nchains > 1) {
+   for (int chain = 0; chain < nchains; ++chain) {
+    const int task = t * nchains + chain;
+    const arma::uword task_u = static_cast<arma::uword>(task);
+    arma::rowvec bm_diff = bm_task.row(task_u) - bm_mat.row(tu);
+    arma::rowvec dm_diff = dm_task.row(task_u) - dm_mat.row(tu);
+    bm_sd_mat.row(tu) += bm_diff % bm_diff;
+    dm_sd_mat.row(tu) += dm_diff % dm_diff;
+   }
+   bm_sd_mat.row(tu) = arma::sqrt(bm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
+   dm_sd_mat.row(tu) = arma::sqrt(dm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
+  }
+ }
+
+ const bool return_chain_summaries = (nchains > 1) || keep_chains;
+ const int result_size = return_chain_summaries ? (keep_chains ? 35 : 30) : 24;
+ std::vector<std::vector<std::vector<double>>> result(static_cast<std::size_t>(result_size));
+
+ for (int k = 0; k < result_size; ++k) {
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
  }
 
@@ -1129,6 +1313,21 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
   result[21][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
   result[22][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m * Kgamma));
   result[23][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(Kgamma));
+  if (return_chain_summaries) {
+   result[24][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+   result[25][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+   result[26][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+   result[27][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+   result[28][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+   result[29][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+  }
+  if (keep_chains) {
+   result[30][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));
+   result[31][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));
+   result[32][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m * Kgamma));
+   result[33][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * nAnno * nstep));
+   result[34][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * nstep));
+  }
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1146,6 +1345,59 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
    result[4][ts][is] = b_mat(tu, iu);
    result[5][ts][is] = static_cast<double>(comp_mat(tu, iu));
    result[6][ts][is] = static_cast<double>(i);
+   if (return_chain_summaries) {
+    result[24][ts][is] = bm_sd_mat(tu, iu);
+    result[25][ts][is] = bm_min_mat(tu, iu);
+    result[26][ts][is] = bm_max_mat(tu, iu);
+    result[27][ts][is] = dm_sd_mat(tu, iu);
+    result[28][ts][is] = dm_min_mat(tu, iu);
+    result[29][ts][is] = dm_max_mat(tu, iu);
+   }
+  }
+
+  if (keep_chains) {
+   for (int chain = 0; chain < nchains; ++chain) {
+    const int task = t * nchains + chain;
+    const arma::uword task_u = static_cast<arma::uword>(task);
+    for (int i = 0; i < m; ++i) {
+     const std::size_t offset = static_cast<std::size_t>(chain * m + i);
+     const arma::uword iu = static_cast<arma::uword>(i);
+     result[30][ts][offset] = dm_task(task_u, iu);
+     result[31][ts][offset] = bm_task(task_u, iu);
+    }
+
+    for (int k = 0; k < Kgamma; ++k) {
+     for (int i = 0; i < m; ++i) {
+      const std::size_t offset =
+       static_cast<std::size_t>(chain * m * Kgamma + k * m + i);
+      result[32][ts][offset] =
+       comp_prob_mean_task[static_cast<std::size_t>(task)](
+        static_cast<arma::uword>(i),
+        static_cast<arma::uword>(k)
+       );
+     }
+    }
+
+    for (int j = 0; j < nstep; ++j) {
+     for (int a = 0; a < nAnno; ++a) {
+      const std::size_t offset =
+       static_cast<std::size_t>(chain * nAnno * nstep + j * nAnno + a);
+      result[33][ts][offset] =
+       alpha_mean_task[static_cast<std::size_t>(task)](
+        static_cast<arma::uword>(a),
+        static_cast<arma::uword>(j)
+       );
+     }
+    }
+
+    for (int j = 0; j < nstep; ++j) {
+     const std::size_t offset = static_cast<std::size_t>(chain * nstep + j);
+     result[34][ts][offset] =
+      sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)](
+       static_cast<arma::uword>(j)
+      );
+    }
+   }
   }
  }
 
