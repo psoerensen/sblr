@@ -9,8 +9,9 @@ They now follow the current public CSR/BED multi-chain conventions for the
 annotation-aware CSR SBayesRC backend and the three BayesC-like annotation
 backends: fixed-prior, learned-annotation, and group-prior BayesC. These
 BayesC-like backends now also support optional active/null LD-swap/MH for
-comparison with annotation-unaware CSR BayesC. LD-swap/MH remains planned and
-guarded for SBayesRC annotation models.
+comparison with annotation-unaware CSR BayesC. The SBayesRC backend supports
+optional active/null LD-swap/MH for comparison with annotation-unaware CSR
+BayesR.
 
 Do not rename C++ files or native symbols in the alignment phase. The first
 R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
@@ -141,12 +142,20 @@ later design decision.
   probabilities are induced by `A %*% alpha`.
 - Supports native multi-chain controls: `nchains`, `keep_chains`, and
   `chain_seeds`, including component-probability chain output.
-- Unsupported compared with current CSR/BED main interfaces: LD-swap/MH and
-  scheduled updates.
-- Return layout: 24 slots. Slots 0-17 follow the BayesR-like CSR convention
+- Supports optional LD-swap/MH controls: `updateLDswap`, `ld_swap_prob`,
+  `ld_swap_r2`, `ld_swap_max_friends`, and `ld_swap_moves`. The move relocates
+  the full active `(component, b)` state to a null LD neighbor. The MH ratio
+  uses the current annotation-dependent component probabilities implied by the
+  current `alpha`; the effect-prior variance term cancels because the component
+  and effect value move together and `vb * gamma[component]` is not
+  marker-specific.
+- Unsupported compared with current CSR/BED main interfaces: scheduled updates.
+- Return layout: 25 slots. Slots 0-17 follow the BayesR-like CSR convention
   with `dm = P(component > 0)`; slot 18 is posterior mean `alpha`, slot 19 is
   posterior mean `sigmaSqAlpha`, slots 20-21 are `vle`/`vld`, slot 22 is
-  marker component probabilities, and slot 23 is posterior component counts.
+  marker component probabilities, slot 23 is posterior component counts, and
+  slot 24 is LD-swap diagnostics. Multi-chain summary/chain slots follow the
+  standard CSR convention.
 - ST-BLR resemblance: high for base fields and BayesR component outputs; the
   annotation coefficient fields need standard names and metadata.
 
@@ -367,7 +376,7 @@ Existing native names (`eta_pi`, `eta_vb`, `alpha`, `sigmaSqAlpha`, `group_pi`,
 | `csr_prior_bayesc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
 | `csr_annot_bayesc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
 | `csr_group_bayesc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
-| `csr_sbayesrc` | yes | yes | yes | yes | annotation coefficient updates only; LD-swap guarded/no | no | yes | yes | focused chain tests | man page |
+| `csr_sbayesrc` | yes | yes | yes | yes | yes | no | yes | yes | focused chain and LD-swap tests | man page |
 
 ## Compatibility Strategy
 
@@ -405,7 +414,7 @@ Use tiny synthetic fixtures rather than expensive real BED workflows.
 4. Align `csr_group_bayesc` and `csr_annot_bayesc` to the same metadata and
    annotation alias conventions.
 5. Align `csr_sbayesrc` output to the same conventions, including
-   `comp_prob`, `annotation_effects`, and `annotation_variance`.
+   `comp_prob`, `annotation_effects`, `annotation_variance`, and LD-swap
+   diagnostics.
 6. Add compatibility tests for old and new wrapper structural equivalence.
-7. Only later consider LD-swap/MH for SBayesRC or scheduled updates for
-   annotation-aware models.
+7. Only later consider scheduled updates for annotation-aware models.

@@ -30,6 +30,14 @@
 #' @param nchains Number of independent MCMC chains.
 #' @param chain_seeds Optional integer seeds, one per chain.
 #' @param keep_chains Logical; return compact per-chain summaries.
+#' @param updateLDswap Logical; attempt optional active/null LD-swap
+#'   Metropolis-Hastings moves.
+#' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
+#'   moves when `updateLDswap = TRUE`.
+#' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
+#' @param ld_swap_max_friends Maximum number of high-LD friends stored per
+#'   marker for swap proposals.
+#' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @param b_init Optional initial marker effects.
 #' @param comp_init Optional initial zero-based mixture-component indices, one
 #'   length-`m` vector per trait.
@@ -86,6 +94,11 @@ stblr_csr_sbayesrc_generic <- function(
   nchains = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   b_init = NULL,
   comp_init = NULL,
   use_comp_init = FALSE,
@@ -132,6 +145,9 @@ stblr_csr_sbayesrc_generic <- function(
  } else {
   chain_seeds <- integer()
  }
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
 
  arch <- .stblr_resolve_architecture(
   pi_marker = pi_marker,
@@ -267,7 +283,12 @@ stblr_csr_sbayesrc_generic <- function(
   seed = as.integer(seed),
   nchains = nchains,
   keep_chains = keep_chains,
-  chain_seeds = chain_seeds
+  chain_seeds = chain_seeds,
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves)
  )
 
  fit <- format_sbayesrc_csr_fit(
@@ -328,6 +349,11 @@ stblr_csr_sbayesrc_generic <- function(
    nchains = nchains,
    keep_chains = keep_chains,
    chain_seeds = if (length(chain_seeds)) chain_seeds else NULL,
+   updateLDswap = updateLDswap,
+   ld_swap_prob = ld_swap_prob,
+   ld_swap_r2 = ld_swap_r2,
+   ld_swap_max_friends = as.integer(ld_swap_max_friends),
+   ld_swap_moves = as.integer(ld_swap_moves),
    chain_seed_rule = if (length(chain_seeds)) {
     "chain_seeds[chain] + 1000003 * (trait + 1)"
    } else if (nchains == 1L) {

@@ -338,18 +338,22 @@ format_sbayesrc_csr_fit <- function(
   stop("keep_chains must be TRUE or FALSE.")
  }
 
- expected_len <- if (nchains > 1L || isTRUE(keep_chains)) {
-  if (isTRUE(keep_chains)) 35L else 30L
+ expected_lens <- if (nchains > 1L || isTRUE(keep_chains)) {
+  if (isTRUE(keep_chains)) c(35L, 37L) else c(30L, 31L)
  } else {
-  24L
+  c(24L, 25L)
  }
- if (!is.list(fit) || length(fit) != expected_len) {
+ if (!is.list(fit) || !length(fit) %in% expected_lens) {
   stop(
-   "format_sbayesrc_csr_fit() expects the ",
-   expected_len,
+   "format_sbayesrc_csr_fit() expects a ",
+   paste(expected_lens, collapse = "- or "),
    "-slot SBayesRC CSR return object."
   )
  }
+ has_ld_swap <- length(fit) %in% c(25L, 31L, 37L)
+ summary_start <- if (has_ld_swap) 26L else 25L
+ summary_end <- if (has_ld_swap) 31L else 30L
+ chain_start <- if (has_ld_swap) 32L else 31L
 
  if (!is.numeric(gamma) || length(gamma) < 2 ||
      any(!is.finite(gamma))) {
@@ -402,17 +406,27 @@ format_sbayesrc_csr_fit <- function(
  }
  validate_trait_list(fit[[23]], m * Kgamma, "fit[[23]]")
  validate_trait_list(fit[[24]], Kgamma, "fit[[24]]")
- if (expected_len >= 30L) {
-  for (i in 25:30) {
+ if (has_ld_swap) {
+  validate_trait_list(fit[[25]], 4L, "fit[[25]]")
+ }
+ if (length(fit) >= summary_end) {
+  for (i in summary_start:summary_end) {
    validate_trait_list(fit[[i]], m, paste0("fit[[", i, "]]"))
   }
  }
- if (expected_len == 35L) {
-  validate_trait_list(fit[[31]], nchains * m, "fit[[31]]")
-  validate_trait_list(fit[[32]], nchains * m, "fit[[32]]")
-  validate_trait_list(fit[[33]], nchains * m * Kgamma, "fit[[33]]")
-  validate_trait_list(fit[[34]], nchains * n_anno * nstep, "fit[[34]]")
-  validate_trait_list(fit[[35]], nchains * nstep, "fit[[35]]")
+ if (isTRUE(keep_chains)) {
+  validate_trait_list(fit[[chain_start]], nchains * m, paste0("fit[[", chain_start, "]]"))
+  validate_trait_list(fit[[chain_start + 1L]], nchains * m, paste0("fit[[", chain_start + 1L, "]]"))
+  if (has_ld_swap) {
+   validate_trait_list(fit[[chain_start + 2L]], nchains * 4L, paste0("fit[[", chain_start + 2L, "]]"))
+   validate_trait_list(fit[[chain_start + 3L]], nchains * m * Kgamma, paste0("fit[[", chain_start + 3L, "]]"))
+   validate_trait_list(fit[[chain_start + 4L]], nchains * n_anno * nstep, paste0("fit[[", chain_start + 4L, "]]"))
+   validate_trait_list(fit[[chain_start + 5L]], nchains * nstep, paste0("fit[[", chain_start + 5L, "]]"))
+  } else {
+   validate_trait_list(fit[[chain_start + 2L]], nchains * m * Kgamma, paste0("fit[[", chain_start + 2L, "]]"))
+   validate_trait_list(fit[[chain_start + 3L]], nchains * n_anno * nstep, paste0("fit[[", chain_start + 3L, "]]"))
+   validate_trait_list(fit[[chain_start + 4L]], nchains * nstep, paste0("fit[[", chain_start + 4L, "]]"))
+  }
  }
 
  base_names <- c(
@@ -424,14 +438,22 @@ format_sbayesrc_csr_fit <- function(
   "vle", "vld", "comp_prob_raw", "ncomp_raw"
  )
  summary_names <- c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")
- chain_names <- c(
-  "chain_dm_raw", "chain_bm_raw", "chain_comp_prob_raw",
-  "chain_alpha_raw", "chain_sigmaSqAlpha_raw"
- )
+ chain_names <- if (has_ld_swap) {
+  c(
+   "chain_dm_raw", "chain_bm_raw", "chain_ld_swap_raw",
+   "chain_comp_prob_raw", "chain_alpha_raw", "chain_sigmaSqAlpha_raw"
+  )
+ } else {
+  c(
+   "chain_dm_raw", "chain_bm_raw", "chain_comp_prob_raw",
+   "chain_alpha_raw", "chain_sigmaSqAlpha_raw"
+  )
+ }
  names(fit) <- c(
   base_names,
-  if (expected_len >= 30L) summary_names else character(),
-  if (expected_len == 35L) chain_names else character()
+  if (has_ld_swap) "ld_swap_raw" else character(),
+  if (length(fit) >= summary_end) summary_names else character(),
+  if (isTRUE(keep_chains)) chain_names else character()
  )
 
  for (i in seq_len(7)) {
@@ -515,7 +537,20 @@ format_sbayesrc_csr_fit <- function(
  out$comp_prob <- comp_prob
  out$ncomp <- ncomp
 
- if (expected_len >= 30L) {
+ if (has_ld_swap) {
+  ld_swap_raw <- matrix(
+   unlist(fit$ld_swap_raw),
+   nrow = nt,
+   ncol = 4L,
+   byrow = TRUE
+  )
+  ld_swap <- as.data.frame(ld_swap_raw[, 1:3, drop = FALSE])
+  colnames(ld_swap) <- c("attempted", "accepted", "acceptance_rate")
+  rownames(ld_swap) <- trait_names
+  out$ld_swap <- ld_swap
+ }
+
+ if (length(fit) >= summary_end) {
   for (nm in summary_names) {
    out[[nm]] <- as.matrix(as.data.frame(fit[[nm]]))
    rownames(out[[nm]]) <- variable_names
@@ -523,13 +558,19 @@ format_sbayesrc_csr_fit <- function(
   }
  }
 
- if (expected_len == 35L) {
-  chains <- lapply(seq_len(nt), function(t) {
+ if (isTRUE(keep_chains)) {
+  chain_bundle <- lapply(seq_len(nt), function(t) {
    dm_raw <- as.numeric(fit$chain_dm_raw[[t]])
    bm_raw <- as.numeric(fit$chain_bm_raw[[t]])
+   chain_ld_raw <- if (has_ld_swap) as.numeric(fit$chain_ld_swap_raw[[t]]) else NULL
    comp_raw <- as.numeric(fit$chain_comp_prob_raw[[t]])
    alpha_raw <- as.numeric(fit$chain_alpha_raw[[t]])
    sigma_raw <- as.numeric(fit$chain_sigmaSqAlpha_raw[[t]])
+   chain_diag <- if (has_ld_swap) {
+    matrix(chain_ld_raw, nrow = nchains, ncol = 4L, byrow = TRUE)
+   } else {
+    matrix(0, nrow = nchains, ncol = 4L)
+   }
    trait_chains <- lapply(seq_len(nchains), function(chain) {
     marker_idx <- ((chain - 1L) * m + 1L):(chain * m)
     comp_idx <- ((chain - 1L) * m * Kgamma + 1L):(chain * m * Kgamma)
@@ -548,19 +589,40 @@ format_sbayesrc_csr_fit <- function(
      dimnames = list(annotation_names, step_names)
     )
     chain_sigma <- stats::setNames(sigma_raw[sigma_idx], step_names)
-    list(
+    chain_out <- list(
      dm = stats::setNames(dm_raw[marker_idx], variable_names),
      bm = stats::setNames(bm_raw[marker_idx], variable_names),
      comp_prob = chain_comp,
      alpha = chain_alpha,
      sigmaSqAlpha = chain_sigma
     )
+    if (has_ld_swap) {
+     chain_out$ld_swap <- stats::setNames(
+      chain_diag[chain, 1:3],
+      c("attempted", "accepted", "acceptance_rate")
+     )
+    }
+    chain_out
    })
    names(trait_chains) <- paste0("chain", seq_len(nchains))
-   trait_chains
+   list(
+    chains = trait_chains,
+    ld_swap = data.frame(
+     attempted = chain_diag[, 1],
+     accepted = chain_diag[, 2],
+     acceptance_rate = chain_diag[, 3],
+     row.names = names(trait_chains)
+    )
+   )
   })
+  chains <- lapply(chain_bundle, `[[`, "chains")
   names(chains) <- trait_names
   out$chains <- chains
+  if (has_ld_swap) {
+   ld_swap_chains <- lapply(chain_bundle, `[[`, "ld_swap")
+   names(ld_swap_chains) <- trait_names
+   out$ld_swap_chains <- ld_swap_chains
+  }
  }
 
  valid_covariance <- function(x) {

@@ -192,28 +192,3 @@ test_that("old group annotation wrapper accepts LD-swap", {
   expect_equal(fit$input$backend, "csr_group_bayesc")
   expect_annotation_group_ldswap_diagnostics(fit, expected_attempted = 6)
 })
-
-test_that("SBayesRC annotation model rejects BayesC-like LD-swap", {
-  stats <- tiny_annotation_group_ldswap_stats()
-  A <- matrix(
-    c(1, 0, 0, 1, 1, 1),
-    nrow = 3,
-    byrow = TRUE,
-    dimnames = list(paste0("m", 1:3), c("coding", "qtl"))
-  )
-  prefix <- make_tiny_annotation_group_ldswap_csr_prefix()
-  msg <- "implemented only for annotation_model = 'prior', 'group', and 'learned'"
-
-  expect_error(
-    stblr_csr_annot(
-      stats = stats,
-      ld_prefix = prefix,
-      annotations = A,
-      annotation_model = "sbayesrc",
-      updateLDswap = TRUE,
-      nit = 2,
-      nburn = 0
-    ),
-    msg
-  )
-})

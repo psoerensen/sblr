@@ -14,6 +14,7 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifdef _OPENMP
@@ -77,17 +78,19 @@ using namespace arma;
 //   21 vld = linkage-disequilibrium contribution trace, vg - vle
 //   22 comp_prob = posterior component probabilities, flattened m x Kgamma
 //   23 ncomp = posterior mean number of markers per component, length Kgamma
-//   24 bm_sd, optional when nchains > 1 or keep_chains = true
-//   25 bm_min
-//   26 bm_max
-//   27 dm_sd
-//   28 dm_min
-//   29 dm_max
-//   30 chain dm, optional when keep_chains = true, chain-major
-//   31 chain bm, optional when keep_chains = true, chain-major
-//   32 chain comp_prob, optional when keep_chains = true, chain-major
-//   33 chain alpha, optional when keep_chains = true, chain-major
-//   34 chain sigmaSqAlpha, optional when keep_chains = true, chain-major
+//   24 LD-swap diagnostics, length 4: attempted, accepted, rate, flag
+//   25 bm_sd, optional when nchains > 1 or keep_chains = true
+//   26 bm_min
+//   27 bm_max
+//   28 dm_sd
+//   29 dm_min
+//   30 dm_max
+//   31 chain dm, optional when keep_chains = true, chain-major
+//   32 chain bm, optional when keep_chains = true, chain-major
+//   33 chain LD-swap diagnostics, optional when keep_chains = true, chain-major
+//   34 chain comp_prob, optional when keep_chains = true, chain-major
+//   35 chain alpha, optional when keep_chains = true, chain-major
+//   36 chain sigmaSqAlpha, optional when keep_chains = true, chain-major
 //
 // Recommended R extraction for slot 18:
 //   alpha <- matrix(fit[[18]][[t]], nrow=ncol(A), ncol=length(gamma)-1)
@@ -292,6 +295,384 @@ inline void sampleBeta_SBayesRC_ST_csr(
 
  b(iu) = b_new;
  comp(iu) = k_new;
+}
+
+struct SBayesRCLDLDFriends {
+ std::vector<uint64_t> ptr;
+ std::vector<int> idx;
+ std::vector<double> r2;
+};
+
+inline SBayesRCLDLDFriends build_ld_swap_friends_sbayesrc_ST_csr(
+  int m,
+  const STLDCSR& ld,
+  const std::vector<double>& xx,
+  double min_r2,
+  int max_friends
+) {
+ std::vector<std::vector<std::pair<int, double>>> rows(static_cast<std::size_t>(m));
+
+ for (int i = 0; i < m; ++i) {
+  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
+  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
+
+  for (uint64_t p = start; p < end; ++p) {
+   const int j = ld.idx[static_cast<std::size_t>(p)];
+   if (j <= i) continue;
+
+   const double denom = xx[static_cast<std::size_t>(i)] * xx[static_cast<std::size_t>(j)];
+   if (!std::isfinite(denom) || denom <= 0.0) continue;
+
+   const double xij = static_cast<double>(ld.xij[static_cast<std::size_t>(p)]);
+   const double r2 = (xij * xij) / denom;
+   if (!std::isfinite(r2) || r2 < min_r2) continue;
+
+   rows[static_cast<std::size_t>(i)].push_back(std::make_pair(j, r2));
+   rows[static_cast<std::size_t>(j)].push_back(std::make_pair(i, r2));
+  }
+ }
+
+ SBayesRCLDLDFriends friends;
+ friends.ptr.resize(static_cast<std::size_t>(m) + 1);
+ friends.ptr[0] = 0;
+
+ for (int i = 0; i < m; ++i) {
+  std::vector<std::pair<int, double>>& row = rows[static_cast<std::size_t>(i)];
+
+  std::sort(row.begin(), row.end(),
+            [](const std::pair<int, double>& a, const std::pair<int, double>& b) {
+             if (a.second == b.second) return a.first < b.first;
+             return a.second > b.second;
+            });
+
+  std::vector<std::pair<int, double>> unique_row;
+  unique_row.reserve(row.size());
+
+  for (std::size_t k = 0; k < row.size(); ++k) {
+   if (!unique_row.empty() && unique_row.back().first == row[k].first) continue;
+   unique_row.push_back(row[k]);
+  }
+
+  if (static_cast<int>(unique_row.size()) > max_friends) {
+   unique_row.resize(static_cast<std::size_t>(max_friends));
+  }
+
+  row.swap(unique_row);
+  friends.ptr[static_cast<std::size_t>(i + 1)] =
+   friends.ptr[static_cast<std::size_t>(i)] + row.size();
+ }
+
+ const uint64_t nfriend = friends.ptr[static_cast<std::size_t>(m)];
+ friends.idx.resize(static_cast<std::size_t>(nfriend));
+ friends.r2.resize(static_cast<std::size_t>(nfriend));
+
+ for (int i = 0; i < m; ++i) {
+  const uint64_t offset = friends.ptr[static_cast<std::size_t>(i)];
+  const std::vector<std::pair<int, double>>& row = rows[static_cast<std::size_t>(i)];
+
+  for (std::size_t k = 0; k < row.size(); ++k) {
+   friends.idx[static_cast<std::size_t>(offset + k)] = row[k].first;
+   friends.r2[static_cast<std::size_t>(offset + k)] = row[k].second;
+  }
+ }
+
+ return friends;
+}
+
+inline void set_marker_state_sbayesrc_ST_csr(
+  int i,
+  double b_new,
+  int comp_new,
+  const arma::rowvec& ww,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& comp,
+  const STLDCSR& ld
+) {
+ const arma::uword iu = static_cast<arma::uword>(i);
+ const double diff = b_new - b(iu);
+
+ if (diff != 0.0) {
+  r(iu) -= ww(iu) * diff;
+
+  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
+  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
+
+  for (uint64_t p = start; p < end; ++p) {
+   const int j = ld.idx[static_cast<std::size_t>(p)];
+   r(static_cast<arma::uword>(j)) -=
+    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
+  }
+ }
+
+ b(iu) = b_new;
+ comp(iu) = comp_new;
+}
+
+inline int count_null_ld_friends_sbayesrc_ST_csr(
+  int i,
+  const arma::Row<int>& comp,
+  const arma::rowvec& b,
+  const SBayesRCLDLDFriends& friends
+) {
+ int n = 0;
+ const uint64_t start = friends.ptr[static_cast<std::size_t>(i)];
+ const uint64_t end = friends.ptr[static_cast<std::size_t>(i + 1)];
+
+ for (uint64_t p = start; p < end; ++p) {
+  const int j = friends.idx[static_cast<std::size_t>(p)];
+  const arma::uword ju = static_cast<arma::uword>(j);
+  if (comp(ju) == 0 && b(ju) == 0.0) ++n;
+ }
+
+ return n;
+}
+
+inline int collect_ld_swap_candidates_sbayesrc_ST_csr(
+  int m,
+  const arma::Row<int>& comp,
+  const arma::rowvec& b,
+  const SBayesRCLDLDFriends& friends,
+  std::vector<int>& candidates,
+  std::vector<int>& n_null
+) {
+ candidates.clear();
+ n_null.clear();
+
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  if (comp(iu) <= 0 || b(iu) == 0.0) continue;
+
+  const int nf = count_null_ld_friends_sbayesrc_ST_csr(i, comp, b, friends);
+  if (nf > 0) {
+   candidates.push_back(i);
+   n_null.push_back(nf);
+  }
+ }
+
+ return static_cast<int>(candidates.size());
+}
+
+inline double residual_sse_sbayesrc_ST_csr(
+  int m,
+  const arma::rowvec& b,
+  const arma::rowvec& wy,
+  const arma::rowvec& r,
+  double yy
+) {
+ double bwy = 0.0;
+ double br = 0.0;
+
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  bwy += b(iu) * wy(iu);
+  br += b(iu) * r(iu);
+ }
+
+ return yy - bwy - br;
+}
+
+inline double clamp_sbayesrc_prob(double p) {
+ if (!std::isfinite(p)) return 1e-300;
+ return std::min(std::max(p, 1e-300), 1.0 - 1e-12);
+}
+
+inline double log_component_prior_ratio_sbayesrc_ST_csr(
+  int source,
+  int target,
+  int component_moved,
+  const arma::mat& snpPi
+) {
+ const arma::uword su = static_cast<arma::uword>(source);
+ const arma::uword tu = static_cast<arma::uword>(target);
+ const arma::uword cu = static_cast<arma::uword>(component_moved);
+
+ return
+  std::log(clamp_sbayesrc_prob(snpPi(tu, cu))) +
+  std::log(clamp_sbayesrc_prob(snpPi(su, 0))) -
+  std::log(clamp_sbayesrc_prob(snpPi(su, cu))) -
+  std::log(clamp_sbayesrc_prob(snpPi(tu, 0)));
+}
+
+inline void throw_ld_swap_error_sbayesrc_ST_csr(
+  int trait,
+  int chain,
+  int iter,
+  int source,
+  int target,
+  int component_moved,
+  double sse_old,
+  double sse_new,
+  double vei,
+  double log_prior_ratio,
+  double log_q_forward,
+  double log_q_reverse,
+  const arma::rowvec& b,
+  const arma::rowvec& r
+) {
+ throw std::runtime_error(
+  "SBayesRC CSR LD-swap invalid proposal. trait=" +
+  std::to_string(trait) +
+  ", chain=" + std::to_string(chain) +
+  ", iter=" + std::to_string(iter) +
+  ", source=" + std::to_string(source) +
+  ", target=" + std::to_string(target) +
+  ", component_moved=" + std::to_string(component_moved) +
+  ", sse_old=" + std::to_string(sse_old) +
+  ", sse_new=" + std::to_string(sse_new) +
+  ", vei=" + std::to_string(vei) +
+  ", log_prior_ratio=" + std::to_string(log_prior_ratio) +
+  ", log_q_forward=" + std::to_string(log_q_forward) +
+  ", log_q_reverse=" + std::to_string(log_q_reverse) +
+  ", b_finite=" + std::to_string(b.is_finite() ? 1 : 0) +
+  ", r_finite=" + std::to_string(r.is_finite() ? 1 : 0)
+ );
+}
+
+inline bool attempt_ld_swap_sbayesrc_ST_csr(
+  int m,
+  int trait,
+  int chain,
+  int iter,
+  double vei,
+  double yy,
+  const arma::rowvec& ww,
+  const arma::rowvec& wy,
+  const arma::mat& snpPi,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& comp,
+  const STLDCSR& ld,
+  const SBayesRCLDLDFriends& friends,
+  std::mt19937& gen,
+  bool& attempted
+) {
+ attempted = false;
+ if (!std::isfinite(vei) || vei <= 0.0) return false;
+
+ std::vector<int> candidates;
+ std::vector<int> n_null;
+ const int n_candidates =
+  collect_ld_swap_candidates_sbayesrc_ST_csr(m, comp, b, friends, candidates, n_null);
+ if (n_candidates <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_candidate(0, n_candidates - 1);
+ const int cand_pos = pick_candidate(gen);
+ const int j = candidates[static_cast<std::size_t>(cand_pos)];
+ const int n_forward_friends = n_null[static_cast<std::size_t>(cand_pos)];
+ if (n_forward_friends <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_friend(0, n_forward_friends - 1);
+ const int friend_pos = pick_friend(gen);
+
+ int k = -1;
+ int seen = 0;
+ const uint64_t start = friends.ptr[static_cast<std::size_t>(j)];
+ const uint64_t end = friends.ptr[static_cast<std::size_t>(j + 1)];
+
+ for (uint64_t p = start; p < end; ++p) {
+  const int jj = friends.idx[static_cast<std::size_t>(p)];
+  const arma::uword jju = static_cast<arma::uword>(jj);
+  if (comp(jju) != 0 || b(jju) != 0.0) continue;
+
+  if (seen == friend_pos) {
+   k = jj;
+   break;
+  }
+  ++seen;
+ }
+
+ if (k < 0) return false;
+
+ const arma::uword ju = static_cast<arma::uword>(j);
+ const arma::uword ku = static_cast<arma::uword>(k);
+ const double b_j_old = b(ju);
+ const double b_k_old = b(ku);
+ const int comp_j_old = comp(ju);
+ const int comp_k_old = comp(ku);
+ if (comp_j_old <= 0 || b_j_old == 0.0 || comp_k_old != 0 || b_k_old != 0.0) return false;
+
+ attempted = true;
+ const double sse_old = residual_sse_sbayesrc_ST_csr(m, b, wy, r, yy);
+ if (!std::isfinite(sse_old)) {
+  throw_ld_swap_error_sbayesrc_ST_csr(
+   trait, chain, iter, j, k, comp_j_old, sse_old,
+   std::numeric_limits<double>::quiet_NaN(), vei,
+   std::numeric_limits<double>::quiet_NaN(),
+   std::numeric_limits<double>::quiet_NaN(),
+   std::numeric_limits<double>::quiet_NaN(), b, r
+  );
+ }
+
+ const arma::rowvec r_old = r;
+ set_marker_state_sbayesrc_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
+ set_marker_state_sbayesrc_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+
+ const double sse_new = residual_sse_sbayesrc_ST_csr(m, b, wy, r, yy);
+
+ std::vector<int> reverse_candidates;
+ std::vector<int> reverse_n_null;
+ const int n_reverse_candidates =
+  collect_ld_swap_candidates_sbayesrc_ST_csr(
+   m, comp, b, friends, reverse_candidates, reverse_n_null
+  );
+
+ int n_reverse_friends = 0;
+ for (std::size_t pos = 0; pos < reverse_candidates.size(); ++pos) {
+  if (reverse_candidates[pos] == k) {
+   n_reverse_friends = reverse_n_null[pos];
+   break;
+  }
+ }
+
+ double log_q_forward = std::numeric_limits<double>::quiet_NaN();
+ double log_q_reverse = std::numeric_limits<double>::quiet_NaN();
+ if (n_candidates > 0 && n_forward_friends > 0) {
+  log_q_forward =
+   -std::log(static_cast<double>(n_candidates)) -
+   std::log(static_cast<double>(n_forward_friends));
+ }
+ if (n_reverse_candidates > 0 && n_reverse_friends > 0) {
+  log_q_reverse =
+   -std::log(static_cast<double>(n_reverse_candidates)) -
+   std::log(static_cast<double>(n_reverse_friends));
+ }
+
+ const double log_prior_ratio =
+  log_component_prior_ratio_sbayesrc_ST_csr(j, k, comp_j_old, snpPi);
+
+ if (!std::isfinite(sse_new) ||
+     !std::isfinite(log_prior_ratio) ||
+     !std::isfinite(log_q_forward) ||
+     !std::isfinite(log_q_reverse)) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  comp(ju) = comp_j_old;
+  comp(ku) = comp_k_old;
+  throw_ld_swap_error_sbayesrc_ST_csr(
+   trait, chain, iter, j, k, comp_j_old, sse_old, sse_new,
+   vei, log_prior_ratio, log_q_forward, log_q_reverse, b, r
+  );
+ }
+
+ const double log_alpha =
+  -0.5 * (sse_new - sse_old) / vei +
+  log_prior_ratio +
+  log_q_reverse - log_q_forward;
+
+ std::uniform_real_distribution<double> runif(0.0, 1.0);
+ const bool accept = std::log(std::max(runif(gen), 1e-300)) < log_alpha;
+
+ if (!accept) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  comp(ju) = comp_j_old;
+  comp(ku) = comp_k_old;
+ }
+
+ return accept;
 }
 
 inline void sampleB_SBayesRC_ST_csr(
@@ -533,7 +914,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
   int seed,
   int nchains = 1,
   bool keep_chains = false,
-  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue,
+  bool updateLDswap = false,
+  double ld_swap_prob = 0.05,
+  double ld_swap_r2 = 0.8,
+  int ld_swap_max_friends = 50,
+  int ld_swap_moves = 1
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -567,6 +953,19 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
 
  if (!chain_seeds_vec.empty() && static_cast<int>(chain_seeds_vec.size()) != nchains) {
   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: chain_seeds must have length nchains.");
+ }
+
+ if (!std::isfinite(ld_swap_prob) || ld_swap_prob < 0.0 || ld_swap_prob > 1.0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: ld_swap_prob must be in [0, 1].");
+ }
+ if (!std::isfinite(ld_swap_r2) || ld_swap_r2 < 0.0 || ld_swap_r2 > 1.0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: ld_swap_r2 must be in [0, 1].");
+ }
+ if (ld_swap_max_friends <= 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: ld_swap_max_friends must be positive.");
+ }
+ if (ld_swap_moves < 0) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: ld_swap_moves must be non-negative.");
  }
 
  if ((int)ww.size() != nt || (int)b_init.size() != nt ||
@@ -729,6 +1128,19 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
 
  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
 
+ SBayesRCLDLDFriends ld_swap_friends;
+ if (updateLDswap) {
+  ld_swap_friends = build_ld_swap_friends_sbayesrc_ST_csr(
+   m,
+   ld,
+   xx,
+   ld_swap_r2,
+   ld_swap_max_friends
+  );
+ } else {
+  ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+ }
+
  std::vector<double> x2(static_cast<std::size_t>(m), 0.0);
  std::vector<int> order(static_cast<std::size_t>(m));
 
@@ -774,6 +1186,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
  arma::vec final_vle_task(ntasks, arma::fill::zeros);
  arma::vec final_vld_task(ntasks, arma::fill::zeros);
  arma::vec nsamples_task(ntasks, arma::fill::zeros);
+ arma::vec ld_swap_attempted_task(ntasks, arma::fill::zeros);
+ arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
 
  std::vector<arma::mat> alpha_mean_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::vec> sigmaSqAlpha_mean_task(static_cast<std::size_t>(ntasks));
@@ -956,6 +1370,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
    arma::vec ncomp_accum(Kgamma, arma::fill::zeros);
 
    double nsamples_t = 0.0;
+   double ld_swap_attempted_t = 0.0;
+   double ld_swap_accepted_t = 0.0;
 
    for (int it = 0; it < nit + nburn; ++it) {
     for (int isort = 0; isort < m; ++isort) {
@@ -974,6 +1390,37 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
       ld,
       gen_t
      );
+    }
+
+    if (updateLDswap && ld_swap_moves > 0 && ld_swap_prob > 0.0) {
+     std::uniform_real_distribution<double> runif(0.0, 1.0);
+     if (runif(gen_t) < ld_swap_prob) {
+      for (int move = 0; move < ld_swap_moves; ++move) {
+       bool attempted = false;
+       const bool accepted = attempt_ld_swap_sbayesrc_ST_csr(
+        m,
+        t,
+        chain,
+        it,
+        vei_t,
+        yy_vec(static_cast<arma::uword>(t)),
+        ww_t,
+        wy_t,
+        snpPi_t,
+        r_t,
+        b_t,
+        comp_t,
+        ld,
+        ld_swap_friends,
+        gen_t,
+        attempted
+       );
+       if (attempted) {
+        ld_swap_attempted_t += 1.0;
+        if (accepted) ld_swap_accepted_t += 1.0;
+       }
+      }
+     }
     }
 
     if (updateAlpha && ((it + 1) % alpha_update_every == 0)) {
@@ -1136,6 +1583,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
    final_vle_task(task_u) = vle_t;
    final_vld_task(task_u) = vld_t;
    nsamples_task(task_u) = nsamples_t;
+   ld_swap_attempted_task(task_u) = ld_swap_attempted_t;
+   ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
 
    alpha_mean_task[static_cast<std::size_t>(task)] = alpha_accum;
    sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = sigmaSqAlpha_accum;
@@ -1188,6 +1637,34 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
  }
 
  const double inv_chains = 1.0 / static_cast<double>(nchains);
+ arma::mat ld_swap_diagnostics(nt, 3, arma::fill::zeros);
+ arma::mat ld_swap_chain_diagnostics(ntasks, 5, arma::fill::zeros);
+
+ for (int task = 0; task < ntasks; ++task) {
+  const arma::uword task_u = static_cast<arma::uword>(task);
+  const int task_trait = stblr_task_trait(task, nchains);
+  const int task_chain = stblr_task_chain(task, nchains);
+  const double attempted = ld_swap_attempted_task(task_u);
+  const double accepted = ld_swap_accepted_task(task_u);
+  const double rate = attempted > 0.0 ? accepted / attempted : 0.0;
+
+  ld_swap_chain_diagnostics(task_u, 0) = task_trait;
+  ld_swap_chain_diagnostics(task_u, 1) = task_chain;
+  ld_swap_chain_diagnostics(task_u, 2) = attempted;
+  ld_swap_chain_diagnostics(task_u, 3) = accepted;
+  ld_swap_chain_diagnostics(task_u, 4) = rate;
+
+  ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 0) += attempted;
+  ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 1) += accepted;
+ }
+
+ for (int t = 0; t < nt; ++t) {
+  const arma::uword tu = static_cast<arma::uword>(t);
+  ld_swap_diagnostics(tu, 2) =
+   ld_swap_diagnostics(tu, 0) > 0.0
+   ? ld_swap_diagnostics(tu, 1) / ld_swap_diagnostics(tu, 0)
+   : 0.0;
+ }
 
  for (int t = 0; t < nt; ++t) {
   const arma::uword tu = static_cast<arma::uword>(t);
@@ -1277,7 +1754,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
  }
 
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
- const int result_size = return_chain_summaries ? (keep_chains ? 35 : 30) : 24;
+ const int result_size = return_chain_summaries ? (keep_chains ? 37 : 31) : 25;
  std::vector<std::vector<std::vector<double>>> result(static_cast<std::size_t>(result_size));
 
  for (int k = 0; k < result_size; ++k) {
@@ -1313,20 +1790,22 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
   result[21][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
   result[22][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m * Kgamma));
   result[23][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(Kgamma));
+  result[24][static_cast<std::size_t>(t)].resize(4);
   if (return_chain_summaries) {
-   result[24][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
    result[25][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
    result[26][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
    result[27][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
    result[28][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
    result[29][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
+   result[30][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
   }
   if (keep_chains) {
-   result[30][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));
    result[31][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));
-   result[32][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m * Kgamma));
-   result[33][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * nAnno * nstep));
-   result[34][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * nstep));
+   result[32][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));
+   result[33][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * 4));
+   result[34][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m * Kgamma));
+   result[35][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * nAnno * nstep));
+   result[36][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * nstep));
   }
  }
 
@@ -1346,14 +1825,19 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
    result[5][ts][is] = static_cast<double>(comp_mat(tu, iu));
    result[6][ts][is] = static_cast<double>(i);
    if (return_chain_summaries) {
-    result[24][ts][is] = bm_sd_mat(tu, iu);
-    result[25][ts][is] = bm_min_mat(tu, iu);
-    result[26][ts][is] = bm_max_mat(tu, iu);
-    result[27][ts][is] = dm_sd_mat(tu, iu);
-    result[28][ts][is] = dm_min_mat(tu, iu);
-    result[29][ts][is] = dm_max_mat(tu, iu);
+    result[25][ts][is] = bm_sd_mat(tu, iu);
+    result[26][ts][is] = bm_min_mat(tu, iu);
+    result[27][ts][is] = bm_max_mat(tu, iu);
+    result[28][ts][is] = dm_sd_mat(tu, iu);
+    result[29][ts][is] = dm_min_mat(tu, iu);
+    result[30][ts][is] = dm_max_mat(tu, iu);
    }
   }
+
+  result[24][ts][0] = ld_swap_diagnostics(static_cast<arma::uword>(t), 0);
+  result[24][ts][1] = ld_swap_diagnostics(static_cast<arma::uword>(t), 1);
+  result[24][ts][2] = ld_swap_diagnostics(static_cast<arma::uword>(t), 2);
+  result[24][ts][3] = 1.0;
 
   if (keep_chains) {
    for (int chain = 0; chain < nchains; ++chain) {
@@ -1362,15 +1846,21 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
     for (int i = 0; i < m; ++i) {
      const std::size_t offset = static_cast<std::size_t>(chain * m + i);
      const arma::uword iu = static_cast<arma::uword>(i);
-     result[30][ts][offset] = dm_task(task_u, iu);
-     result[31][ts][offset] = bm_task(task_u, iu);
+     result[31][ts][offset] = dm_task(task_u, iu);
+     result[32][ts][offset] = bm_task(task_u, iu);
     }
+
+    const std::size_t diag_offset = static_cast<std::size_t>(chain * 4);
+    result[33][ts][diag_offset + 0] = ld_swap_chain_diagnostics(task_u, 2);
+    result[33][ts][diag_offset + 1] = ld_swap_chain_diagnostics(task_u, 3);
+    result[33][ts][diag_offset + 2] = ld_swap_chain_diagnostics(task_u, 4);
+    result[33][ts][diag_offset + 3] = 1.0;
 
     for (int k = 0; k < Kgamma; ++k) {
      for (int i = 0; i < m; ++i) {
       const std::size_t offset =
        static_cast<std::size_t>(chain * m * Kgamma + k * m + i);
-      result[32][ts][offset] =
+      result[34][ts][offset] =
        comp_prob_mean_task[static_cast<std::size_t>(task)](
         static_cast<arma::uword>(i),
         static_cast<arma::uword>(k)
@@ -1382,7 +1872,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
      for (int a = 0; a < nAnno; ++a) {
       const std::size_t offset =
        static_cast<std::size_t>(chain * nAnno * nstep + j * nAnno + a);
-      result[33][ts][offset] =
+      result[35][ts][offset] =
        alpha_mean_task[static_cast<std::size_t>(task)](
         static_cast<arma::uword>(a),
         static_cast<arma::uword>(j)
@@ -1392,7 +1882,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
 
     for (int j = 0; j < nstep; ++j) {
      const std::size_t offset = static_cast<std::size_t>(chain * nstep + j);
-     result[34][ts][offset] =
+     result[36][ts][offset] =
       sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)](
        static_cast<arma::uword>(j)
       );

@@ -196,18 +196,3 @@ test_that("old learned annotation wrapper accepts LD-swap", {
   expect_equal(fit$input$backend, "csr_annot_bayesc")
   expect_annotation_learned_ldswap_diagnostics(fit, expected_attempted = 6)
 })
-
-test_that("SBayesRC annotation model rejects BayesC-like LD-swap", {
-  expect_error(
-    stblr_csr_annot(
-      stats = tiny_annotation_learned_ldswap_stats(),
-      ld_prefix = make_tiny_annotation_learned_ldswap_csr_prefix(),
-      annotations = tiny_annotation_learned_ldswap_A(),
-      annotation_model = "sbayesrc",
-      updateLDswap = TRUE,
-      nit = 2,
-      nburn = 0
-    ),
-    "implemented only for annotation_model = 'prior', 'group', and 'learned'"
-  )
-})

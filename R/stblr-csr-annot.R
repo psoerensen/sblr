@@ -25,9 +25,8 @@
 #' @param chain_seeds Optional integer seeds, one per chain.
 #' @param keep_chains Logical; return compact per-chain summaries when
 #'   supported.
-#' @param updateLDswap Logical; request optional LD-swap/MH. This is currently
-#'   supported for `annotation_model = "prior"`, `"group"`, and `"learned"`
-#'   among annotation-aware CSR models.
+#' @param updateLDswap Logical; request optional LD-swap/MH. This is supported
+#'   for the current annotation-aware CSR models, including SBayesRC.
 #' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
 #'   moves when `updateLDswap = TRUE`.
 #' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
@@ -53,7 +52,7 @@
 #' SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
 #' native chains and compact chain summaries. LD-swap/MH is currently available
 #' for the fixed-prior, group, and learned annotation-aware CSR BayesC
-#' backends; SBayesRC errors if `updateLDswap = TRUE`.
+#' backends and the annotation-aware CSR SBayesRC backend.
 #'
 #' Existing wrappers remain supported:
 #' [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
@@ -97,12 +96,6 @@ stblr_csr_annot <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- if (!annotation_model %in% c("prior", "group", "learned") && isTRUE(updateLDswap)) {
-  stop(
-   "LD-swap/MH is currently implemented only for annotation_model = 'prior', 'group', and 'learned' among annotation-aware CSR models.",
-   call. = FALSE
-  )
- }
  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(
   Glist = Glist,
   ld_prefix = ld_prefix
@@ -126,13 +119,14 @@ stblr_csr_annot <- function(
  )
  extra <- list(...)
 
+ common$updateLDswap <- updateLDswap
+ common$ld_swap_prob <- ld_swap_prob
+ common$ld_swap_r2 <- ld_swap_r2
+ common$ld_swap_max_friends <- ld_swap_max_friends
+ common$ld_swap_moves <- ld_swap_moves
+
  if (annotation_model %in% c("prior", "learned", "group")) {
- common$updatePi <- updatePi
-  common$updateLDswap <- updateLDswap
-  common$ld_swap_prob <- ld_swap_prob
-  common$ld_swap_r2 <- ld_swap_r2
-  common$ld_swap_max_friends <- ld_swap_max_friends
-  common$ld_swap_moves <- ld_swap_moves
+  common$updatePi <- updatePi
  }
 
  if (annotation_model == "prior") {

@@ -37,6 +37,11 @@ stblr_csr_sbayesrc_generic(
   nchains = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
   b_init = NULL,
   comp_init = NULL,
   use_comp_init = FALSE,
@@ -98,6 +103,19 @@ zero and all remaining values must be positive.}
 \item{chain_seeds}{Optional integer seeds, one per chain.}
 
 \item{keep_chains}{Logical; return compact per-chain summaries.}
+
+\item{updateLDswap}{Logical; attempt optional active/null LD-swap
+Metropolis-Hastings moves.}
+
+\item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
+moves when `updateLDswap = TRUE`.}
+
+\item{ld_swap_r2}{Minimum LD r-squared for candidate swap partners.}
+
+\item{ld_swap_max_friends}{Maximum number of high-LD friends stored per
+marker for swap proposals.}
+
+\item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 
 \item{b_init}{Optional initial marker effects.}
 
