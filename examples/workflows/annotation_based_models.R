@@ -98,26 +98,6 @@ stopifnot(
   identical(rownames(A), marker_id)
 )
 
-# Annotation-based ST-BLR workflow
-#
-# Compares annotation-unaware CSR BayesC/BayesR models with annotation-aware
-# CSR models: fixed-prior, learned annotation, group annotation, and SBayesRC.
-#
-# Includes optional LD-swap/MH variants for models where implemented.
-#
-# Demonstration settings only. Real analyses need longer chains,
-# convergence checks, and posterior predictive diagnostics.
-
-# Packages -----------------------------------------------------------------
-
-library(sblr)
-
-# Data setup ---------------------------------------------------------------
-
-data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR")
-if (!nzchar(data_dir)) {
-  data_dir <- "C:/Users/au223366/Documents/GitHub/examples/human"
-}
 
 chr <- 1L
 nthreads <- 4L
@@ -483,7 +463,7 @@ model_metadata <- do.call(
   rbind,
   lapply(names(fits), function(model_name) {
     x <- fits[[model_name]]$input
-    
+
     data.frame(
       model_name = model_name,
       method = ifelse(is.null(x$method), NA, x$method),
@@ -509,12 +489,12 @@ model_metadata
 summarise_fit <- function(fit, model_name) {
   dm <- as.matrix(fit$dm)
   bm <- as.matrix(fit$bm)
-  
+
   trait_names <- colnames(dm)
   if (is.null(trait_names)) {
     trait_names <- paste0("T", seq_len(ncol(dm)))
   }
-  
+
   data.frame(
     model = model_name,
     trait = trait_names,
@@ -558,11 +538,11 @@ ld_swap_summary <- do.call(
   lapply(names(fits), function(model_name) {
     x <- fits[[model_name]]$ld_swap
     if (is.null(x)) return(NULL)
-    
+
     x <- as.data.frame(x)
     x$model <- model_name
     x$trait <- rownames(x)
-    
+
     x[, c("model", "trait", setdiff(names(x), c("model", "trait"))), drop = FALSE]
   })
 )
@@ -576,19 +556,19 @@ ld_swap_summary
 top_markers <- function(fit, model_name, trait = 1, top_n = 20) {
   dm <- as.matrix(fit$dm)
   bm <- as.matrix(fit$bm)
-  
+
   trait_index <- if (is.character(trait)) match(trait, colnames(dm)) else trait
-  
+
   if (length(trait_index) != 1 || is.na(trait_index)) {
     stop("trait must be a valid column name or column index.")
   }
-  
+
   marker <- rownames(dm)
   if (is.null(marker)) marker <- paste0("V", seq_len(nrow(dm)))
-  
+
   trait_name <- colnames(dm)[trait_index]
   if (is.null(trait_name)) trait_name <- paste0("T", trait_index)
-  
+
   out <- data.frame(
     model = model_name,
     trait = trait_name,
@@ -598,7 +578,7 @@ top_markers <- function(fit, model_name, trait = 1, top_n = 20) {
     abs_bm = abs(bm[, trait_index]),
     stringsAsFactors = FALSE
   )
-  
+
   out <- out[order(-out$pip, -out$abs_bm), , drop = FALSE]
   utils::head(out, top_n)
 }
@@ -621,10 +601,10 @@ top_overlap_matrix <- function(fits, trait = 1, top_n = 100) {
     dm <- as.matrix(fit$dm)
     marker <- rownames(dm)
     if (is.null(marker)) marker <- paste0("V", seq_len(nrow(dm)))
-    
+
     marker[order(-dm[, trait])[seq_len(top_n)]]
   })
-  
+
   out <- outer(
     names(top_sets),
     names(top_sets),
@@ -632,7 +612,7 @@ top_overlap_matrix <- function(fits, trait = 1, top_n = 100) {
       length(intersect(top_sets[[a]], top_sets[[b]]))
     })
   )
-  
+
   dimnames(out) <- list(names(top_sets), names(top_sets))
   out
 }
@@ -658,11 +638,11 @@ pip_correlation_signal_markers <- function(fits, trait = 1,
       as.matrix(fit$dm)[, trait]
     })
   )
-  
+
   colnames(pip_mat) <- names(fits)
-  
+
   keep <- apply(pip_mat, 1, max, na.rm = TRUE) > pip_threshold
-  
+
   stats::cor(
     pip_mat[keep, , drop = FALSE],
     use = "pairwise.complete.obs",
@@ -686,13 +666,13 @@ annotation_summaries <- lapply(
   names(fits),
   function(model_name) {
     x <- fits[[model_name]]
-    
+
     if (!is.null(x$annotation_summary)) {
       out <- as.data.frame(x$annotation_summary)
       out$model <- model_name
       return(out)
     }
-    
+
     NULL
   }
 )
@@ -747,6 +727,85 @@ compact_input <- function(fit) {
 }
 
 lapply(fits, compact_input)
+
+
+
+fit_prior_MH2 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = list(
+    A = A,
+    fixed_pi_marker = sim$pi_marker,
+    fixed_vb_multiplier = sim$vb_multiplier,
+    use_pi_marker = TRUE,
+    use_vb_multiplier = TRUE
+  ),
+  annotation_model = "prior",
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.50,
+  ld_swap_r2 = 0.001,
+  ld_swap_moves = 20,
+  nit = 1000,
+  nburn = 100,
+  seed = 10
+)
+
+fit_prior_MH2$ld_swap
+colSums(fit_prior_MH2$dm)
+
+fit_group_MH2 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = group,
+  annotation_model = "group",
+  group_names = c("annotated", "background"),
+  group_pi_init = c(0.002, 0.001),
+  group_vb_multiplier_init = c(1.1, 1.0),
+  updatePi = TRUE,
+  updateGroupVb = TRUE,
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.50,
+  ld_swap_r2 = 0.001,
+  ld_swap_moves = 20,
+  nit = 1000,
+  nburn = 100,
+  seed = 10
+)
+
+fit_learned_MH2 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "learned",
+  learn_pi_annot = TRUE,
+  learn_vb_annot = TRUE,
+  rw_sd_eta_pi = 0.02,
+  rw_sd_eta_vb = 0.02,
+  annot_update_every = 10,
+  updateLDswap = TRUE,
+  ld_swap_prob = 0.50,
+  ld_swap_r2 = 0.001,
+  ld_swap_moves = 20,
+  nit = 1000,
+  nburn = 100,
+  seed = 10
+)
+
+rbind(
+  prior_MH2 = colSums(fit_prior_MH2$dm),
+  group_MH2 = colSums(fit_group_MH2$dm),
+  learned_MH2 = colSums(fit_learned_MH2$dm)
+)
+
+rbind(
+  prior_MH2 = fit_prior_MH2$ld_swap,
+  group_MH2 = fit_group_MH2$ld_swap,
+  learned_MH2 = fit_learned_MH2$ld_swap
+)
+
+
+
+
 
 
 fit <- stblr_csr_annot(

@@ -1879,9 +1879,9 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
  }
 
  std::vector<std::vector<std::vector<double>>> out;
- std::vector<std::vector<std::vector<double>>> chain_dm;
- std::vector<std::vector<std::vector<double>>> chain_bm;
- std::vector<std::vector<std::vector<double>>> chain_diag;
+ std::vector<std::vector<double>> chain_dm_flat;
+ std::vector<std::vector<double>> chain_bm_flat;
+ std::vector<std::vector<double>> chain_diag_flat;
  std::vector<std::vector<std::vector<double>>> sumsq;
  std::vector<std::vector<std::vector<double>>> minv;
  std::vector<std::vector<std::vector<double>>> maxv;
@@ -1918,9 +1918,9 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
      }
     }
    }
-   chain_dm.resize(raw[1].size());
-   chain_bm.resize(raw[0].size());
-   chain_diag.resize(raw[0].size());
+   chain_dm_flat.resize(raw[1].size());
+   chain_bm_flat.resize(raw[0].size());
+   chain_diag_flat.resize(raw[0].size());
    ld_swap_attempted_sum.assign(raw[0].size(), std::vector<double>(1, 0.0));
    ld_swap_accepted_sum.assign(raw[0].size(), std::vector<double>(1, 0.0));
   } else {
@@ -1945,12 +1945,16 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
 
   if (keep_chains) {
    for (std::size_t t = 0; t < raw[0].size(); ++t) {
-    chain_dm[t].insert(chain_dm[t].end(), raw[1][t].begin(), raw[1][t].end());
-    chain_bm[t].insert(chain_bm[t].end(), raw[0][t].begin(), raw[0][t].end());
+    chain_dm_flat[t].insert(chain_dm_flat[t].end(), raw[1][t].begin(), raw[1][t].end());
+    chain_bm_flat[t].insert(chain_bm_flat[t].end(), raw[0][t].begin(), raw[0][t].end());
     if (raw.size() > 22 && raw[22][t].size() >= 4) {
-     chain_diag[t].insert(chain_diag[t].end(), raw[22][t].begin(), raw[22][t].begin() + 4);
+     chain_diag_flat[t].insert(
+      chain_diag_flat[t].end(),
+      raw[22][t].begin(),
+      raw[22][t].begin() + 4
+     );
     } else {
-     chain_diag[t].insert(chain_diag[t].end(), 4, 0.0);
+     chain_diag_flat[t].insert(chain_diag_flat[t].end(), 4, 0.0);
     }
    }
   }
@@ -2003,9 +2007,9 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
    }
   }
   if (keep_chains) {
-   extended[29] = chain_dm;
-   extended[30] = chain_bm;
-   extended[31] = chain_diag;
+   extended[29] = chain_dm_flat;
+   extended[30] = chain_bm_flat;
+   extended[31] = chain_diag_flat;
   }
   return extended;
  }

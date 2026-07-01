@@ -1419,12 +1419,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
  std::vector<std::vector<std::vector<double>>> sumsq;
  std::vector<std::vector<std::vector<double>>> minv;
  std::vector<std::vector<std::vector<double>>> maxv;
- std::vector<std::vector<std::vector<double>>> chain_dm;
- std::vector<std::vector<std::vector<double>>> chain_bm;
- std::vector<std::vector<std::vector<double>>> chain_ld_swap;
- std::vector<std::vector<std::vector<double>>> chain_group_pi;
- std::vector<std::vector<std::vector<double>>> chain_group_vb;
- std::vector<std::vector<std::vector<double>>> chain_group_nincluded;
+ std::vector<std::vector<double>> chain_dm_flat;
+ std::vector<std::vector<double>> chain_bm_flat;
+ std::vector<std::vector<double>> chain_ld_swap_flat;
+ std::vector<std::vector<double>> chain_group_pi_flat;
+ std::vector<std::vector<double>> chain_group_vb_flat;
+ std::vector<std::vector<double>> chain_group_nincluded_flat;
  std::vector<std::vector<double>> ld_swap_attempted_sum;
  std::vector<std::vector<double>> ld_swap_accepted_sum;
 
@@ -1459,12 +1459,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
      }
     }
    }
-   chain_dm.resize(raw[1].size());
-   chain_bm.resize(raw[0].size());
-   chain_ld_swap.resize(raw[26].size());
-   chain_group_pi.resize(raw[22].size());
-   chain_group_vb.resize(raw[23].size());
-   chain_group_nincluded.resize(raw[24].size());
+   chain_dm_flat.resize(raw[1].size());
+   chain_bm_flat.resize(raw[0].size());
+   chain_ld_swap_flat.resize(raw[26].size());
+   chain_group_pi_flat.resize(raw[22].size());
+   chain_group_vb_flat.resize(raw[23].size());
+   chain_group_nincluded_flat.resize(raw[24].size());
    ld_swap_attempted_sum.assign(raw[0].size(), std::vector<double>(1, 0.0));
    ld_swap_accepted_sum.assign(raw[0].size(), std::vector<double>(1, 0.0));
   } else {
@@ -1489,16 +1489,24 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
 
   if (keep_chains) {
    for (std::size_t t = 0; t < raw[0].size(); ++t) {
-    chain_dm[t].insert(chain_dm[t].end(), raw[1][t].begin(), raw[1][t].end());
-    chain_bm[t].insert(chain_bm[t].end(), raw[0][t].begin(), raw[0][t].end());
+    chain_dm_flat[t].insert(chain_dm_flat[t].end(), raw[1][t].begin(), raw[1][t].end());
+    chain_bm_flat[t].insert(chain_bm_flat[t].end(), raw[0][t].begin(), raw[0][t].end());
     if (raw.size() > 26 && raw[26][t].size() >= 4) {
-     chain_ld_swap[t].insert(chain_ld_swap[t].end(), raw[26][t].begin(), raw[26][t].begin() + 4);
+     chain_ld_swap_flat[t].insert(
+      chain_ld_swap_flat[t].end(),
+      raw[26][t].begin(),
+      raw[26][t].begin() + 4
+     );
     } else {
-     chain_ld_swap[t].insert(chain_ld_swap[t].end(), 4, 0.0);
+     chain_ld_swap_flat[t].insert(chain_ld_swap_flat[t].end(), 4, 0.0);
     }
-    chain_group_pi[t].insert(chain_group_pi[t].end(), raw[22][t].begin(), raw[22][t].end());
-    chain_group_vb[t].insert(chain_group_vb[t].end(), raw[23][t].begin(), raw[23][t].end());
-    chain_group_nincluded[t].insert(chain_group_nincluded[t].end(), raw[24][t].begin(), raw[24][t].end());
+    chain_group_pi_flat[t].insert(chain_group_pi_flat[t].end(), raw[22][t].begin(), raw[22][t].end());
+    chain_group_vb_flat[t].insert(chain_group_vb_flat[t].end(), raw[23][t].begin(), raw[23][t].end());
+    chain_group_nincluded_flat[t].insert(
+     chain_group_nincluded_flat[t].end(),
+     raw[24][t].begin(),
+     raw[24][t].end()
+    );
    }
   }
  }
@@ -1550,12 +1558,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot(
    }
   }
   if (keep_chains) {
-   extended[33] = chain_dm;
-   extended[34] = chain_bm;
-   extended[35] = chain_ld_swap;
-   extended[36] = chain_group_pi;
-   extended[37] = chain_group_vb;
-   extended[38] = chain_group_nincluded;
+   extended[33] = chain_dm_flat;
+   extended[34] = chain_bm_flat;
+   extended[35] = chain_ld_swap_flat;
+   extended[36] = chain_group_pi_flat;
+   extended[37] = chain_group_vb_flat;
+   extended[38] = chain_group_nincluded_flat;
   }
   return extended;
  }
