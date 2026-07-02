@@ -44,6 +44,7 @@ inline void sampleBetaC_ST_csr(
   int i,
   const std::vector<double>& pi,
   double vb,
+  const arma::rowvec& prior_scale,
   double vei_i,
   const arma::rowvec& ww,
   arma::rowvec& r,
@@ -63,17 +64,18 @@ inline void sampleBetaC_ST_csr(
  const double pi1 = std::max(pi[1], 1e-300);
 
  const double vei_safe = std::max(vei_i, 1e-300);
+ const double vbi = std::max(vb * prior_scale(iu), 1e-300);
 
  // score = x_i' residual_without_i
  const double score = r(iu) + wi * b(iu);
 
  // Same BayesC scalar marginal likelihood as old sbayes(),
  // but using scalar adjusted residual variance vei_i.
- const double denom = std::max(vei_safe + wi * vb, 1e-300);
+ const double denom = std::max(vei_safe + wi * vbi, 1e-300);
 
  const double logBF =
   0.5 * std::log(vei_safe / denom)
-  + 0.5 * score * score * vb / (vei_safe * denom);
+  + 0.5 * score * score * vbi / (vei_safe * denom);
 
  const double logp1 = std::log(pi1) + logBF;
  const double logp0 = std::log(pi0);
@@ -95,7 +97,7 @@ inline void sampleBetaC_ST_csr(
  double b_new = 0.0;
 
  if (di == 1) {
-  const double lhs = wi + vei_safe / vb;
+  const double lhs = wi + vei_safe / vbi;
   const double mean = score / lhs;
   const double sd = std::sqrt(vei_safe / lhs);
 
@@ -131,6 +133,7 @@ inline void sampleB_ST_csr(
   double& vb,
   const arma::rowvec& b,
   const arma::Row<int>& d,
+  const arma::rowvec& prior_scale,
   double ssb_prior,
   std::mt19937& gen
 ) {
@@ -140,7 +143,7 @@ inline void sampleB_ST_csr(
  for (int i = 0; i < m; ++i) {
   const arma::uword iu = static_cast<arma::uword>(i);
   if (d(iu) > 0) {
-   ssb += b(iu) * b(iu);
+   ssb += b(iu) * b(iu) / prior_scale(iu);
    dfb += 1.0;
   }
  }
@@ -378,9 +381,11 @@ inline int collect_ld_swap_candidates(
 inline bool attempt_ld_swap_st_csr(
   int m,
   double vei,
+  double vb,
   double yy,
   const arma::rowvec& ww,
   const arma::rowvec& wy,
+  const arma::rowvec& prior_scale,
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& d,
@@ -429,6 +434,8 @@ inline bool attempt_ld_swap_st_csr(
  const int d_j_old = d(ju);
  const int d_k_old = d(ku);
  if (d_j_old <= 0 || d_k_old != 0 || b_j_old == 0.0) return false;
+ const double vb_j = std::max(vb * prior_scale(ju), 1e-300);
+ const double vb_k = std::max(vb * prior_scale(ku), 1e-300);
 
  const double sse_old = residual_sse_st_csr(m, b, wy, r, yy);
  if (!std::isfinite(sse_old)) return false;
@@ -462,8 +469,16 @@ inline bool attempt_ld_swap_st_csr(
    const double log_q_reverse =
     -std::log(static_cast<double>(n_reverse_candidates)) -
     std::log(static_cast<double>(n_reverse_friends));
+   // With constant BayesC prior variance, active/null LD-swap relocations
+   // cancel the prior density. Fixed selection_s makes the included-marker
+   // prior variance marker-specific, so the N(0, vb * prior_scale_j) density
+   // must enter the MH ratio for the moved effect.
+   const double log_prior_ratio =
+    -0.5 * (std::log(vb_k / vb_j) +
+            b_j_old * b_j_old * (1.0 / vb_k - 1.0 / vb_j));
    const double log_alpha =
-    -0.5 * (sse_new - sse_old) / vei + log_q_reverse - log_q_forward;
+    -0.5 * (sse_new - sse_old) / vei +
+    log_prior_ratio + log_q_reverse - log_q_forward;
 
    std::uniform_real_distribution<double> runif(0.0, 1.0);
    accept = std::log(std::max(runif(gen), 1e-300)) < log_alpha;
@@ -523,7 +538,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -571,6 +587,18 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
 
  if (ld_swap_moves < 0) {
   throw std::runtime_error("stblr_cpg_omp_csr: ld_swap_moves must be non-negative.");
+ }
+
+ bool use_selection_s_prior_scale = selection_s_prior_scale.isNotNull();
+ Rcpp::NumericVector selection_s_prior_scale_vec;
+ if (use_selection_s_prior_scale) {
+  selection_s_prior_scale_vec = Rcpp::NumericVector(selection_s_prior_scale);
+  use_selection_s_prior_scale = selection_s_prior_scale_vec.size() > 0;
+ }
+
+ if (use_selection_s_prior_scale &&
+     static_cast<int>(selection_s_prior_scale_vec.size()) != m) {
+  throw std::runtime_error("stblr_cpg_omp_csr: selection_s_prior_scale must have length m.");
  }
 
  if ((int)ww.size() != nt || (int)b_init.size() != nt ||
@@ -642,6 +670,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
  arma::mat ww_mat(nt, m, arma::fill::zeros);
  arma::mat b_mat(nt, m, arma::fill::zeros);
  arma::mat r_mat(nt, m, arma::fill::zeros);
+ arma::rowvec prior_scale(m, arma::fill::ones);
 
  arma::vec yy_vec(nt, arma::fill::zeros);
  arma::mat ssb_prior_mat(nt, nt, arma::fill::zeros);
@@ -663,6 +692,18 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
   for (int t2 = 0; t2 < nt; ++t2) {
    ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t2)) = ssb_prior[t][t2];
    sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t2)) = sse_prior[t][t2];
+  }
+ }
+
+ if (use_selection_s_prior_scale) {
+  for (int i = 0; i < m; ++i) {
+   const double scale_i = selection_s_prior_scale_vec[static_cast<std::size_t>(i)];
+   if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+    throw std::runtime_error(
+      "stblr_cpg_omp_csr: selection_s_prior_scale must contain positive finite values."
+    );
+   }
+   prior_scale(static_cast<arma::uword>(i)) = scale_i;
   }
  }
 
@@ -979,6 +1020,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
       i,
       pi_t,
       vb_t,
+      prior_scale,
       vei_t,
       ww_t,
       r_t,
@@ -998,9 +1040,11 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
        if (attempt_ld_swap_st_csr(
             m,
             vei_t,
+            vb_t,
             yy_vec(static_cast<arma::uword>(t)),
             ww_t,
             wy_t,
+            prior_scale,
             r_t,
             b_t,
             d_t,
@@ -1024,6 +1068,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
       vb_t,
       b_t,
       d_t,
+      prior_scale,
       ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
       gen_t
      );

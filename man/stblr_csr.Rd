@@ -18,6 +18,7 @@ stblr_csr(
   pi_prior_a = NULL,
   pi_prior_b = NULL,
   h2 = 0.3,
+  selection_s = NULL,
   nub = 4,
   nue = 4,
   updateB = TRUE,
@@ -92,6 +93,12 @@ probability. Defaults to 5e5.}
 When supplied, these override `pi_prior_mean` and `pi_prior_strength`.}
 
 \item{h2}{Initial heritability. Defaults to 0.3.}
+
+\item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter
+for ordinary CSR BayesC. For the current standardized-genotype CSR effect
+scale, prior variances are scaled by `h^(selection_s + 1)`, where
+`h = 2p(1-p)`. `selection_s = NULL` preserves the ordinary BayesC prior.
+Sampler-level estimation of `selection_s` is not implemented.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 

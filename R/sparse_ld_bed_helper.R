@@ -151,6 +151,72 @@ NULL
   )
 }
 
+.stblr_prepare_csr_bayesc_selection_s <- function(selection_s, Glist, m,
+                                                  scheduled = FALSE) {
+  if (is.null(selection_s)) {
+    return(list(
+      prior_scale = numeric(),
+      selection_s = NULL,
+      fixed = FALSE,
+      exponent = NULL
+    ))
+  }
+
+  if (isTRUE(scheduled)) {
+    stop("selection_s is currently supported only for unscheduled CSR BayesC.")
+  }
+  if (!is.numeric(selection_s) || length(selection_s) != 1L ||
+      !is.finite(selection_s)) {
+    stop("selection_s must be NULL or a finite numeric scalar.")
+  }
+  if (is.null(Glist)) {
+    stop("Glist with rsidsLD, rsids, and maf is required for selection_s.")
+  }
+  if (is.null(Glist$rsidsLD) || is.null(Glist$rsids) || is.null(Glist$maf)) {
+    stop("Glist must contain rsidsLD, rsids, and maf for selection_s.")
+  }
+
+  maf_ld <- unlist(lapply(seq_along(Glist$rsidsLD), function(chr) {
+    if (length(Glist$rsids) < chr || is.null(Glist$rsids[[chr]]) ||
+        length(Glist$maf) < chr || is.null(Glist$maf[[chr]])) {
+      stop("Glist$rsids and Glist$maf must contain each chromosome in Glist$rsidsLD.")
+    }
+    idx <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
+    if (anyNA(idx)) {
+      stop("Could not align MAF to LD marker order for selection_s.")
+    }
+    Glist$maf[[chr]][idx]
+  }), use.names = FALSE)
+
+  if (length(maf_ld) != m) {
+    stop("Aligned MAF length must match the number of CSR markers for selection_s.")
+  }
+  if (!all(is.finite(maf_ld))) {
+    stop("Aligned MAF values for selection_s must be finite.")
+  }
+  if (any(maf_ld <= 0 | maf_ld > 0.5)) {
+    stop("Aligned MAF values for selection_s must be in (0, 0.5].")
+  }
+
+  h_ld <- pmax(2 * maf_ld * (1 - maf_ld), 1e-8)
+  if (length(h_ld) != m || !all(is.finite(h_ld)) || any(h_ld <= 0)) {
+    stop("Could not compute positive finite heterozygosity values for selection_s.")
+  }
+
+  exponent <- selection_s + 1
+  prior_scale <- h_ld ^ exponent
+  if (!all(is.finite(prior_scale)) || any(prior_scale <= 0)) {
+    stop("selection_s prior scale must contain positive finite values.")
+  }
+
+  list(
+    prior_scale = prior_scale,
+    selection_s = unname(selection_s),
+    fixed = TRUE,
+    exponent = unname(exponent)
+  )
+}
+
 
 .make_stblr_priors <- function(y, m, h2, nub, nue, pi_vb_init,
                                pi_prior_mean, trait_names = NULL) {
@@ -1311,6 +1377,11 @@ stblr_csr_bayesr <- function(
 #' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
 #' @param h2 Initial heritability. Defaults to 0.3.
+#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter
+#'   for ordinary CSR BayesC. For the current standardized-genotype CSR effect
+#'   scale, prior variances are scaled by `h^(selection_s + 1)`, where
+#'   `h = 2p(1-p)`. `selection_s = NULL` preserves the ordinary BayesC prior.
+#'   Sampler-level estimation of `selection_s` is not implemented.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
@@ -1379,6 +1450,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_init = 0.001, pi_vb_init = NULL,
                       pi_prior_mean = 0.001, pi_prior_strength = 5e5,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
+                      selection_s = NULL,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
                       nthin = 1, ncores = 1, seed = 10, nchains = 1L,
@@ -1403,6 +1475,9 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   stop("method must be one of 'bayesc' or 'bayesr'.")
  }
  if (method == "bayesr") {
+  if (!is.null(selection_s)) {
+   stop("selection_s is currently supported only for method = 'bayesc'.")
+  }
   bayesc_only <- character()
   if (!missing(pi_init) && !identical(pi_init, 0.001)) {
    bayesc_only <- c(bayesc_only, "pi_init")
@@ -1509,6 +1584,12 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  if (is.null(n)) n <- stats$n
  if (is.null(n)) stop("n must be supplied or available as stats$n.")
  if (is.null(m)) m <- if (!is.null(stats$m)) stats$m else length(stats$ww[[1]])
+ selection_s_info <- .stblr_prepare_csr_bayesc_selection_s(
+  selection_s = selection_s,
+  Glist = Glist,
+  m = m,
+  scheduled = scheduled
+ )
 
  if (is.null(ld_prefix)) {
    if (is.null(Glist) || is.null(Glist$sparseLD$prefix)) {
@@ -1576,7 +1657,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    updateLDswap = updateLDswap,
    ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
    ld_swap_max_friends = as.integer(ld_swap_max_friends),
-   ld_swap_moves = as.integer(ld_swap_moves)
+   ld_swap_moves = as.integer(ld_swap_moves),
+   selection_s_prior_scale = selection_s_info$prior_scale
   )))
  }
  fit <- .format_stblr_fit(raw, nt, m, trait_names, variable_names)
@@ -1600,6 +1682,10 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   backend = if (isTRUE(scheduled)) "csr_scheduled_bayesc" else "csr_bayesc",
   data_level = "summary",
   annotations = FALSE,
+  selection_s = selection_s_info$selection_s,
+  selection_s_fixed = selection_s_info$fixed,
+  selection_s_exponent = selection_s_info$exponent,
+  selection_s_scale = "standardized_genotype_effect",
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),

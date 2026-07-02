@@ -80,9 +80,13 @@ approximately one, not `h_j = 2p_j(1 - p_j)`.
 
 The diagonal LE trace `vle = sum_j ww_j * b_j^2 / n` is consequently
 consistent with standardized-genotype-scale effects in the standard CSR path.
-If a future BayesS-style prior is defined on allele-scale effects as
+If a BayesS-style prior is defined on allele-scale effects as
 `alpha_j ~ N(0, v_m h_j^S)`, then the corresponding standardized-effect prior
-for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`.
+for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
+`selection_s` currently implements this scaling only for `csr_bayesc`, where
+included-marker prior variances are `vb * h_j^(selection_s + 1)`. Other CSR
+backends and BED backends do not currently support sampler-level
+`selection_s`.
 
 `summarise_stblr_maf_architecture()` is a post-hoc descriptive diagnostic for
 the relationship between posterior marker signal and marker heterozygosity. It

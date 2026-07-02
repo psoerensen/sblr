@@ -55,15 +55,29 @@ selection_s_csr_stats <- function() {
   )
 }
 
-make_selection_s_csr_fit <- function() {
+selection_s_csr_glist <- function() {
+  list(
+    rsidsLD = list(c("m1", "m2", "m3")),
+    rsids = list(c("m3", "m1", "m2")),
+    maf = list(c(0.40, 0.05, 0.20))
+  )
+}
+
+make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
+                                     seed = 11) {
   stblr_csr(
+    Glist = selection_s_csr_glist(),
     stats = selection_s_csr_stats(),
     ld_prefix = make_selection_s_csr_prefix(),
+    selection_s = selection_s,
+    updateLDswap = updateLDswap,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.01,
     nit = 8,
     nburn = 2,
     nthin = 1,
     ncores = 1,
-    seed = 11,
+    seed = seed,
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -72,6 +86,166 @@ make_selection_s_csr_fit <- function() {
     updatePi = FALSE
   )
 }
+
+test_that("fixed selection_s is optional and preserves default CSR BayesC behavior", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  args <- list(
+    Glist = selection_s_csr_glist(),
+    stats = selection_s_csr_stats(),
+    ld_prefix = make_selection_s_csr_prefix(),
+    method = "bayesC",
+    nit = 8,
+    nburn = 2,
+    nthin = 1,
+    ncores = 1,
+    seed = 101,
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE
+  )
+  fit_omitted <- do.call(stblr_csr, args)
+  fit_null <- do.call(stblr_csr, c(args, list(selection_s = NULL)))
+
+  expect_equal(fit_null$dm, fit_omitted$dm)
+  expect_equal(fit_null$bm, fit_omitted$bm)
+  expect_equal(fit_null$vbs, fit_omitted$vbs)
+  expect_equal(fit_null$vgs, fit_omitted$vgs)
+  expect_equal(fit_null$ves, fit_omitted$ves)
+  expect_null(fit_null$input$selection_s)
+  expect_false(fit_null$input$selection_s_fixed)
+  expect_null(fit_null$input$selection_s_exponent)
+  expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
+})
+
+test_that("fixed selection_s CSR BayesC fits return finite outputs and metadata", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  for (s in c(0, -0.25)) {
+    fit <- make_selection_s_csr_fit(selection_s = s, seed = 110 + round(100 * s))
+    expect_true(all(is.finite(fit$dm)))
+    expect_true(all(is.finite(fit$bm)))
+    expect_true(all(is.finite(fit$vle)))
+    expect_true(all(is.finite(fit$vld)))
+    expect_equal(fit$input$selection_s, s)
+    expect_true(fit$input$selection_s_fixed)
+    expect_equal(fit$input$selection_s_exponent, s + 1)
+    expect_equal(fit$input$selection_s_scale, "standardized_genotype_effect")
+  }
+})
+
+test_that("selection_s = -1 gives unit prior scale and matches default", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  fit_default <- make_selection_s_csr_fit(seed = 121)
+  fit_s_minus_one <- make_selection_s_csr_fit(selection_s = -1, seed = 121)
+
+  expect_equal(fit_s_minus_one$dm, fit_default$dm)
+  expect_equal(fit_s_minus_one$bm, fit_default$bm)
+  expect_equal(fit_s_minus_one$vbs, fit_default$vbs)
+  expect_equal(fit_s_minus_one$ves, fit_default$ves)
+  expect_equal(fit_s_minus_one$input$selection_s, -1)
+  expect_true(fit_s_minus_one$input$selection_s_fixed)
+  expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
+})
+
+test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
+  expect_error(
+    make_selection_s_csr_fit(selection_s = c(0, 1)),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_fit(selection_s = NA_real_),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_fit(selection_s = NaN),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_fit(selection_s = Inf),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_fit(selection_s = "0"),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    stblr_csr(
+      Glist = selection_s_csr_glist(),
+      stats = selection_s_csr_stats(),
+      ld_prefix = make_selection_s_csr_prefix(),
+      method = "bayesR",
+      selection_s = 0,
+      nit = 2,
+      nburn = 0
+    ),
+    "selection_s is currently supported only for method = 'bayesc'"
+  )
+  expect_error(
+    stblr_csr(
+      Glist = selection_s_csr_glist(),
+      stats = selection_s_csr_stats(),
+      ld_prefix = make_selection_s_csr_prefix(),
+      scheduled = TRUE,
+      selection_s = 0,
+      nit = 2,
+      nburn = 0
+    ),
+    "selection_s is currently supported only for unscheduled CSR BayesC"
+  )
+})
+
+test_that("selection_s validates MAF alignment to CSR LD marker order", {
+  bad_glist <- selection_s_csr_glist()
+  bad_glist$rsids[[1]] <- c("m3", "m1", "missing")
+  expect_error(
+    stblr_csr(
+      Glist = bad_glist,
+      stats = selection_s_csr_stats(),
+      ld_prefix = make_selection_s_csr_prefix(),
+      selection_s = 0,
+      nit = 2,
+      nburn = 0
+    ),
+    "Could not align MAF to LD marker order for selection_s"
+  )
+})
+
+test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+  if (!exists("check_stblr_backend_consistency", mode = "function")) {
+    source_sblr_test_file("R/check-stblr-backend-consistency.R")
+  }
+
+  fit <- make_selection_s_csr_fit(selection_s = 0, updateLDswap = TRUE, seed = 131)
+
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(is.finite(fit$bm)))
+  expect_true(all(is.finite(fit$vle)))
+  expect_true(all(is.finite(fit$vld)))
+  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
+                    names(fit$ld_swap)))
+
+  chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
+  expect_true(all(chk$checks$ok))
+})
 
 make_selection_s_subset_fit <- function(n_markers = 20) {
   markers <- paste0("m", seq_len(n_markers))

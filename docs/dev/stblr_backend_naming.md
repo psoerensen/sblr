@@ -130,12 +130,17 @@ The cross-backend computation and return inventory is maintained in
 
 ## BayesS-Style Selection-S Terminology
 
-Use `selection_s` for a future BayesS-style global MAF-dependent marker-effect
+Use `selection_s` for a BayesS-style global MAF-dependent marker-effect
 variance scaling parameter. This is distinct from SBayesRC annotation-selection
 coefficients such as `alpha`, `eta_pi`, and annotation-dependent component
 probabilities.
 
-Preferred future public argument names are:
+Current support is fixed-S only and is limited to `csr_bayesc`
+(`stblr_csr(method = "bayesC", scheduled = FALSE)`). `csr_bayesr`,
+`csr_scheduled_bayesc`, annotation-aware CSR backends, SBayesRC CSR backends,
+and BED backends do not support sampler-level `selection_s`.
+
+Preferred public argument names are:
 
 - `selection_s = NULL`
 - `estimate_selection_s = FALSE`
@@ -153,10 +158,10 @@ Preferred future fit metadata fields are:
 For the standard CSR path, fitted `b`/`bm` values are
 standardized-genotype-scale effects. A BayesS allele-scale prior
 `alpha_j ~ N(0, v_m h_j^S)` therefore maps to a standardized-effect prior with
-exponent `S + 1`. Fixed or sampled sampler-level `selection_s` support should
-apply the same marker-specific variance factor consistently in conditional
-effect updates, prior-density or component-probability calculations, and
-marker-effect variance updates.
+exponent `S + 1`. Fixed sampler-level `selection_s` support applies the same
+marker-specific variance factor consistently in conditional effect updates,
+prior-density or component-probability calculations, LD-swap/MH prior terms,
+and marker-effect variance updates.
 
 Future sampled-`S` support should be implemented only after fixed-`S`
 validation. The active-marker log posterior contribution is:
