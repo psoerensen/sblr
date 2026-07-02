@@ -1530,3 +1530,65 @@ check_bayesr_component_consistency <- function(fit) {
 
 check_bayesr_component_consistency(fitR0)
 check_bayesr_component_consistency(fitR_minus1)
+
+
+
+## BayesC
+fitC0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = NULL,
+  seed = 10
+)
+
+fitC_minus1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = -1,
+  seed = 10
+)
+
+max(abs(fitC0$dm - fitC_minus1$dm))
+max(abs(fitC0$bm - fitC_minus1$bm))
+max(abs(fitC0$vle - fitC_minus1$vle))
+max(abs(fitC0$vld - fitC_minus1$vld))
+
+
+## BayesR
+system.time(fitC0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = NULL,
+  seed = 10
+))
+
+system.time(fitR0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = NULL,
+  seed = 10
+))
+
+system.time(fitR_minus1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = -1,
+  seed = 10
+))
+
+max(abs(fitR0$dm - fitR_minus1$dm))
+max(abs(fitR0$bm - fitR_minus1$bm))
+max(abs(fitR0$vle - fitR_minus1$vle))
+max(abs(fitR0$vld - fitR_minus1$vld))
+max(abs(fitR0$dm_component_mean - fitR_minus1$dm_component_mean))
+
+max(unlist(Map(
+  function(a, b) max(abs(a - b)),
+  fitR0$comp_prob,
+  fitR_minus1$comp_prob
+)))
