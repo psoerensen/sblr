@@ -1592,3 +1592,219 @@ max(unlist(Map(
   fitR0$comp_prob,
   fitR_minus1$comp_prob
 )))
+
+
+
+fit_sbayesrc0 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  selection_s = NULL,
+  seed = 10
+)
+
+fit_sbayesrc_minus1 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  selection_s = -1,
+  seed = 10
+)
+
+max(abs(fit_sbayesrc0$dm - fit_sbayesrc_minus1$dm))
+max(abs(fit_sbayesrc0$bm - fit_sbayesrc_minus1$bm))
+max(abs(fit_sbayesrc0$vle - fit_sbayesrc_minus1$vle))
+max(abs(fit_sbayesrc0$vld - fit_sbayesrc_minus1$vld))
+max(abs(fit_sbayesrc0$dm_component_mean - fit_sbayesrc_minus1$dm_component_mean))
+
+max(unlist(Map(
+  function(a, b) max(abs(a - b)),
+  fit_sbayesrc0$comp_prob,
+  fit_sbayesrc_minus1$comp_prob
+)))
+
+fit_sbayesrc_omit <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  seed = 10
+)
+
+fit_sbayesrc_null <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  selection_s = NULL,
+  seed = 10
+)
+
+max(abs(fit_sbayesrc_omit$dm - fit_sbayesrc_null$dm))
+max(abs(fit_sbayesrc_omit$bm - fit_sbayesrc_null$bm))
+max(abs(fit_sbayesrc_omit$vle - fit_sbayesrc_null$vle))
+max(abs(fit_sbayesrc_omit$vld - fit_sbayesrc_null$vld))
+
+fit_sbayesrc_s0 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  selection_s = 0,
+  seed = 10
+)
+
+fit_sbayesrc_sneg <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  selection_s = -0.5,
+  seed = 10
+)
+
+fit_sbayesrc_s0$input[c(
+  "selection_s",
+  "selection_s_fixed",
+  "selection_s_exponent",
+  "selection_s_scale"
+)]
+
+fit_sbayesrc_sneg$input[c(
+  "selection_s",
+  "selection_s_fixed",
+  "selection_s_exponent",
+  "selection_s_scale"
+)]
+
+
+get_null_component_col <- function(cp) {
+  cn <- colnames(cp)
+  
+  if (is.null(cn)) {
+    return(1L)
+  }
+  
+  candidates <- c(
+    "component_0",
+    "comp_0",
+    "gamma_0",
+    "class_0",
+    "0"
+  )
+  
+  hit <- intersect(candidates, cn)
+  
+  if (length(hit) > 0) {
+    return(hit[1])
+  }
+  
+  ## Fallback: assume first column is the null component.
+  1L
+}
+
+check_component_consistency <- function(fit) {
+  do.call(
+    rbind,
+    lapply(names(fit$comp_prob), function(trait) {
+      cp <- fit$comp_prob[[trait]]
+      null_col <- get_null_component_col(cp)
+      
+      data.frame(
+        trait = trait,
+        null_component = if (is.numeric(null_col)) {
+          colnames(cp)[null_col]
+        } else {
+          null_col
+        },
+        max_row_sum_error = max(abs(rowSums(cp) - 1)),
+        max_dm_error = max(abs(
+          unname(as.numeric(fit$dm[, trait])) -
+            unname(as.numeric(1 - cp[, null_col]))
+        )),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+get_null_component_col <- function(cp) {
+  cn <- colnames(cp)
+  
+  if (is.null(cn)) {
+    return(1L)
+  }
+  
+  candidates <- c(
+    "component_0",
+    "comp_0",
+    "gamma_0",
+    "class_0",
+    "0"
+  )
+  
+  hit <- intersect(candidates, cn)
+  
+  if (length(hit) > 0) {
+    return(hit[1])
+  }
+  
+  ## Fallback: assume first column is the null component.
+  1L
+}
+
+check_component_consistency <- function(fit) {
+  do.call(
+    rbind,
+    lapply(names(fit$comp_prob), function(trait) {
+      cp <- fit$comp_prob[[trait]]
+      null_col <- get_null_component_col(cp)
+      
+      data.frame(
+        trait = trait,
+        null_component = if (is.numeric(null_col)) {
+          colnames(cp)[null_col]
+        } else {
+          null_col
+        },
+        max_row_sum_error = max(abs(rowSums(cp) - 1)),
+        max_dm_error = max(abs(
+          unname(as.numeric(fit$dm[, trait])) -
+            unname(as.numeric(1 - cp[, null_col]))
+        )),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+check_component_consistency(fit_sbayesrc0)
+check_component_consistency(fit_sbayesrc_minus1)
+check_component_consistency(fit_sbayesrc_s0)
+check_component_consistency(fit_sbayesrc_sneg)
+
+check_component_consistency <- function(fit) {
+  do.call(
+    rbind,
+    lapply(names(fit$comp_prob), function(trait) {
+      cp <- fit$comp_prob[[trait]]
+      
+      data.frame(
+        trait = trait,
+        max_row_sum_error = max(abs(rowSums(cp) - 1)),
+        max_dm_error = max(abs(
+          unname(as.numeric(fit$dm[, trait])) -
+            unname(as.numeric(1 - cp[, "component_0"]))
+        )),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+check_component_consistency(fit_sbayesrc0)
+check_component_consistency(fit_sbayesrc_minus1)
+check_component_consistency(fit_sbayesrc_s0)
+check_component_consistency(fit_sbayesrc_sneg)

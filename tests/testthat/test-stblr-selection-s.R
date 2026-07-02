@@ -124,6 +124,111 @@ expect_selection_s_bayesr_dm_matches_component0 <- function(fit,
   }
 }
 
+selection_s_sbayesrc_annotations <- function() {
+  matrix(
+    c(1, 0, 0, 1, 1, 1),
+    nrow = 3,
+    ncol = 2,
+    dimnames = list(paste0("m", 1:3), c("annot1", "annot2"))
+  )
+}
+
+selection_s_sbayesrc_glist <- function() {
+  glist <- selection_s_csr_glist()
+  glist$sparseLD <- list(prefix = make_selection_s_csr_prefix())
+  glist
+}
+
+make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
+                                              updateLDswap = FALSE,
+                                              updateB = FALSE,
+                                              nchains = 1L,
+                                              keep_chains = FALSE,
+                                              chain_seeds = NULL,
+                                              seed = 11) {
+  stblr_csr_annot(
+    Glist = selection_s_sbayesrc_glist(),
+    stats = selection_s_csr_stats(),
+    annotations = selection_s_sbayesrc_annotations(),
+    annotation_model = "sbayesrc",
+    selection_s = selection_s,
+    updateLDswap = updateLDswap,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.01,
+    nit = 8,
+    nburn = 2,
+    nthin = 1,
+    ncores = 1,
+    seed = seed,
+    nchains = nchains,
+    keep_chains = keep_chains,
+    chain_seeds = chain_seeds,
+    gamma = c(0, 0.1, 1),
+    pi_init = 0.5,
+    pi_prior_mean = 0.5,
+    pi_prior_strength = 2,
+    updateAlpha = FALSE,
+    updateB = updateB,
+    updateE = FALSE
+  )
+}
+
+expect_selection_s_sbayesrc_finite <- function(fit) {
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(is.finite(fit$bm)))
+  expect_true(all(is.finite(fit$vle)))
+  expect_true(all(is.finite(fit$vld)))
+  expect_true(all(vapply(fit$comp_prob, function(cp) all(is.finite(cp)), logical(1))))
+}
+
+get_sbayesrc_null_component_col <- function(cp) {
+  cn <- colnames(cp)
+
+  if (is.null(cn)) {
+    return(1L)
+  }
+
+  ## SBayesRC names components by gamma values, e.g.
+  ## gamma_0.00, gamma_0.01, gamma_0.10, gamma_1.00.
+  ## The null component is the gamma value equal to zero.
+  hit <- grep("^gamma_0(\\.0+)?$", cn, value = TRUE)
+
+  if (length(hit) == 1L) {
+    return(hit)
+  }
+
+  ## If formatting changes but the first gamma component is still null,
+  ## accept exactly gamma_0.00 as the common observed convention.
+  if ("gamma_0.00" %in% cn) {
+    return("gamma_0.00")
+  }
+
+  stop(
+    "Could not uniquely identify SBayesRC null component. Found columns: ",
+    paste(cn, collapse = ", ")
+  )
+}
+
+expect_selection_s_sbayesrc_component_consistency <- function(fit,
+                                                             tolerance = 1e-12) {
+  for (trait in names(fit$comp_prob)) {
+    cp <- fit$comp_prob[[trait]]
+    null_col <- get_sbayesrc_null_component_col(cp)
+
+    expect_equal(
+      max(abs(rowSums(cp) - 1)),
+      0,
+      tolerance = tolerance
+    )
+
+    expect_equal(
+      unname(as.numeric(fit$dm[, trait])),
+      unname(as.numeric(1 - cp[, null_col])),
+      tolerance = tolerance
+    )
+  }
+}
+
 test_that("fixed selection_s is optional and preserves default CSR BayesC behavior", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
@@ -374,6 +479,168 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
 
   chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
+})
+
+test_that("fixed selection_s is optional and preserves default CSR SBayesRC behavior", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  fit_omitted <- make_selection_s_csr_sbayesrc_fit(seed = 171)
+  fit_null <- make_selection_s_csr_sbayesrc_fit(selection_s = NULL, seed = 171)
+
+  expect_equal(fit_null$dm, fit_omitted$dm)
+  expect_equal(fit_null$bm, fit_omitted$bm)
+  expect_equal(fit_null$vbs, fit_omitted$vbs)
+  expect_equal(fit_null$vle, fit_omitted$vle)
+  expect_equal(fit_null$vld, fit_omitted$vld)
+  expect_equal(fit_null$comp_prob, fit_omitted$comp_prob)
+  expect_null(fit_null$input$selection_s)
+  expect_false(fit_null$input$selection_s_fixed)
+  expect_null(fit_null$input$selection_s_exponent)
+  expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
+})
+
+test_that("selection_s = -1 gives unit prior scale and matches default CSR SBayesRC", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  fit_default <- make_selection_s_csr_sbayesrc_fit(seed = 172)
+  fit_s_minus_one <- make_selection_s_csr_sbayesrc_fit(selection_s = -1, seed = 172)
+
+  expect_equal(fit_s_minus_one$dm, fit_default$dm)
+  expect_equal(fit_s_minus_one$bm, fit_default$bm)
+  expect_equal(fit_s_minus_one$vbs, fit_default$vbs)
+  expect_equal(fit_s_minus_one$vle, fit_default$vle)
+  expect_equal(fit_s_minus_one$vld, fit_default$vld)
+  expect_equal(fit_s_minus_one$dm_component_mean, fit_default$dm_component_mean)
+  expect_equal(fit_s_minus_one$comp_prob, fit_default$comp_prob)
+  expect_equal(fit_s_minus_one$input$selection_s, -1)
+  expect_true(fit_s_minus_one$input$selection_s_fixed)
+  expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
+})
+
+test_that("fixed selection_s CSR SBayesRC fits return finite outputs and component probabilities", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  for (s in c(0, -0.25)) {
+    fit <- make_selection_s_csr_sbayesrc_fit(selection_s = s, seed = 180 + round(100 * s))
+    expect_selection_s_sbayesrc_finite(fit)
+    expect_selection_s_sbayesrc_component_consistency(fit)
+    expect_equal(fit$input$selection_s, s)
+    expect_true(fit$input$selection_s_fixed)
+    expect_equal(fit$input$selection_s_exponent, s + 1)
+    expect_equal(fit$input$selection_s_scale, "standardized_genotype_effect")
+  }
+
+  fit_update_b <- make_selection_s_csr_sbayesrc_fit(
+    selection_s = 0,
+    updateB = TRUE,
+    seed = 183
+  )
+  expect_selection_s_sbayesrc_finite(fit_update_b)
+})
+
+test_that("selection_s validates fixed-S inputs for CSR SBayesRC and annotation routing", {
+  expect_error(
+    make_selection_s_csr_sbayesrc_fit(selection_s = c(0, 1)),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_sbayesrc_fit(selection_s = NA_real_),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_sbayesrc_fit(selection_s = NaN),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_sbayesrc_fit(selection_s = Inf),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+
+  for (annotation_model in c("prior", "learned", "group")) {
+    expect_error(
+      stblr_csr_annot(
+        Glist = selection_s_sbayesrc_glist(),
+        stats = selection_s_csr_stats(),
+        annotations = selection_s_sbayesrc_annotations(),
+        annotation_model = annotation_model,
+        selection_s = 0,
+        nit = 2,
+        nburn = 0
+      ),
+      "selection_s is currently supported only for annotation_model = \"sbayesrc\""
+    )
+  }
+})
+
+test_that("selection_s works with CSR SBayesRC LD-swap and backend consistency", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+  if (!exists("check_stblr_backend_consistency", mode = "function")) {
+    source_sblr_test_file("R/check-stblr-backend-consistency.R")
+  }
+
+  fit <- make_selection_s_csr_sbayesrc_fit(
+    selection_s = 0,
+    updateLDswap = TRUE,
+    seed = 191
+  )
+
+  expect_selection_s_sbayesrc_finite(fit)
+  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
+                    names(fit$ld_swap)))
+  expect_selection_s_sbayesrc_component_consistency(fit)
+
+  chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
+  expect_true(all(chk$checks$ok))
+})
+
+test_that("multi-chain CSR SBayesRC selection_s = -1 matches default and keep_chains works", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  seeds <- c(211L, 212L)
+  fit_default <- make_selection_s_csr_sbayesrc_fit(
+    seed = 201,
+    nchains = 2,
+    chain_seeds = seeds
+  )
+  fit_s_minus_one <- make_selection_s_csr_sbayesrc_fit(
+    selection_s = -1,
+    seed = 201,
+    nchains = 2,
+    chain_seeds = seeds
+  )
+
+  expect_equal(fit_s_minus_one$dm, fit_default$dm)
+  expect_equal(fit_s_minus_one$bm, fit_default$bm)
+  expect_equal(fit_s_minus_one$vle, fit_default$vle)
+  expect_equal(fit_s_minus_one$vld, fit_default$vld)
+  expect_equal(fit_s_minus_one$comp_prob, fit_default$comp_prob)
+
+  fit_keep <- make_selection_s_csr_sbayesrc_fit(
+    selection_s = 0,
+    seed = 202,
+    nchains = 2,
+    keep_chains = TRUE,
+    chain_seeds = seeds
+  )
+  expect_selection_s_sbayesrc_finite(fit_keep)
+  expect_true(!is.null(fit_keep$chains))
+  expect_selection_s_sbayesrc_component_consistency(fit_keep)
 })
 
 make_selection_s_subset_fit <- function(n_markers = 20) {

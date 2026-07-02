@@ -27,6 +27,10 @@
 #'   supported.
 #' @param updateLDswap Logical; request optional LD-swap/MH. This is supported
 #'   for the current annotation-aware CSR models, including SBayesRC.
+#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
+#'   Currently supported only for `annotation_model = "sbayesrc"` in this
+#'   unified annotation interface. For CSR SBayesRC, non-null component prior
+#'   variances are scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
 #' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
 #'   moves when `updateLDswap = TRUE`.
 #' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
@@ -81,6 +85,7 @@ stblr_csr_annot <- function(
   updateE = TRUE,
   updatePi = TRUE,
   updateLDswap = FALSE,
+  selection_s = NULL,
   ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
@@ -128,6 +133,12 @@ stblr_csr_annot <- function(
  common$ld_swap_moves <- ld_swap_moves
 
  if (annotation_model %in% c("prior", "learned", "group")) {
+  if (!is.null(selection_s)) {
+   stop(
+    "selection_s is currently supported only for annotation_model = \"sbayesrc\".",
+    call. = FALSE
+   )
+  }
   common$updatePi <- updatePi
  }
 
@@ -156,7 +167,7 @@ stblr_csr_annot <- function(
  if ("A" %in% names(extra)) {
   stop("Supply SBayesRC annotations through annotations, not both annotations and A.")
  }
- args <- c(common, list(A = annotations), extra)
+ args <- c(common, list(Glist = Glist, A = annotations, selection_s = selection_s), extra)
  do.call(stblr_csr_sbayesrc_generic, args)
 }
 

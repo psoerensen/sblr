@@ -297,6 +297,101 @@ inline void sampleBeta_SBayesRC_ST_csr(
  comp(iu) = k_new;
 }
 
+inline void sampleBeta_SBayesRC_ST_csr_scaled(
+  int i,
+  const arma::rowvec& pi_i,
+  const arma::vec& gamma,
+  double vb_t,
+  const arma::rowvec& prior_scale,
+  double vei_i,
+  const arma::rowvec& ww,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& comp,
+  const STLDCSR& ld,
+  std::mt19937& gen
+) {
+ const arma::uword iu = static_cast<arma::uword>(i);
+ const double wi = ww(iu);
+
+ if (!std::isfinite(wi) || wi <= 0.0) {
+  throw std::runtime_error("sampleBeta_SBayesRC_ST_csr_scaled: invalid ww value.");
+ }
+
+ if (!std::isfinite(vb_t) || vb_t <= 0.0) {
+  throw std::runtime_error("sampleBeta_SBayesRC_ST_csr_scaled: invalid vb.");
+ }
+
+ const double scale_i = prior_scale(iu);
+ if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+  throw std::runtime_error("sampleBeta_SBayesRC_ST_csr_scaled: invalid prior_scale value.");
+ }
+
+ const int Kgamma = static_cast<int>(gamma.n_elem);
+ if (static_cast<int>(pi_i.n_elem) != Kgamma) {
+  throw std::runtime_error("sampleBeta_SBayesRC_ST_csr_scaled: pi_i/gamma length mismatch.");
+ }
+
+ const double vei_safe = std::max(vei_i, 1e-300);
+ const double score = r(iu) + wi * b(iu);
+
+ std::vector<double> logp(static_cast<std::size_t>(Kgamma));
+
+ for (int k = 0; k < Kgamma; ++k) {
+  const double pik = std::max(static_cast<double>(pi_i(static_cast<arma::uword>(k))), 1e-300);
+  const double gk = gamma(static_cast<arma::uword>(k));
+
+  if (!std::isfinite(gk) || gk < 0.0) {
+   throw std::runtime_error("sampleBeta_SBayesRC_ST_csr_scaled: gamma must be non-negative.");
+  }
+
+  if (gk <= 0.0) {
+   logp[static_cast<std::size_t>(k)] = std::log(pik);
+  } else {
+   const double vbk = std::max(vb_t * gk * scale_i, 1e-300);
+   const double denom = std::max(vei_safe + wi * vbk, 1e-300);
+
+   const double logBF =
+    0.5 * std::log(vei_safe / denom)
+    + 0.5 * score * score * vbk / (vei_safe * denom);
+
+   logp[static_cast<std::size_t>(k)] = std::log(pik) + logBF;
+  }
+ }
+
+ const int k_new = sample_categorical_logprob(logp, gen);
+
+ double b_new = 0.0;
+ const double gamma_new = gamma(static_cast<arma::uword>(k_new));
+
+ if (gamma_new > 0.0) {
+  std::normal_distribution<double> norm01(0.0, 1.0);
+  const double vbk = std::max(vb_t * gamma_new * scale_i, 1e-300);
+  const double lhs = wi + vei_safe / vbk;
+  const double mean = score / lhs;
+  const double sd = std::sqrt(vei_safe / lhs);
+  b_new = mean + sd * norm01(gen);
+ }
+
+ const double diff = b_new - b(iu);
+
+ if (diff != 0.0) {
+  r(iu) -= wi * diff;
+
+  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
+  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
+
+  for (uint64_t p = start; p < end; ++p) {
+   const int j = ld.idx[static_cast<std::size_t>(p)];
+   r(static_cast<arma::uword>(j)) -=
+    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
+  }
+ }
+
+ b(iu) = b_new;
+ comp(iu) = k_new;
+}
+
 struct SBayesRCLDLDFriends {
  std::vector<uint64_t> ptr;
  std::vector<int> idx;
@@ -675,6 +770,170 @@ inline bool attempt_ld_swap_sbayesrc_ST_csr(
  return accept;
 }
 
+inline bool attempt_ld_swap_sbayesrc_ST_csr_scaled(
+  int m,
+  int trait,
+  int chain,
+  int iter,
+  double vei,
+  double vb,
+  double yy,
+  const arma::rowvec& ww,
+  const arma::rowvec& wy,
+  const arma::vec& gamma,
+  const arma::mat& snpPi,
+  const arma::rowvec& prior_scale,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& comp,
+  const STLDCSR& ld,
+  const SBayesRCLDLDFriends& friends,
+  std::mt19937& gen,
+  bool& attempted
+) {
+ attempted = false;
+ if (!std::isfinite(vei) || vei <= 0.0) return false;
+
+ std::vector<int> candidates;
+ std::vector<int> n_null;
+ const int n_candidates =
+  collect_ld_swap_candidates_sbayesrc_ST_csr(m, comp, b, friends, candidates, n_null);
+ if (n_candidates <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_candidate(0, n_candidates - 1);
+ const int cand_pos = pick_candidate(gen);
+ const int j = candidates[static_cast<std::size_t>(cand_pos)];
+ const int n_forward_friends = n_null[static_cast<std::size_t>(cand_pos)];
+ if (n_forward_friends <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_friend(0, n_forward_friends - 1);
+ const int friend_pos = pick_friend(gen);
+
+ int k = -1;
+ int seen = 0;
+ const uint64_t start = friends.ptr[static_cast<std::size_t>(j)];
+ const uint64_t end = friends.ptr[static_cast<std::size_t>(j + 1)];
+
+ for (uint64_t p = start; p < end; ++p) {
+  const int jj = friends.idx[static_cast<std::size_t>(p)];
+  const arma::uword jju = static_cast<arma::uword>(jj);
+  if (comp(jju) != 0 || b(jju) != 0.0) continue;
+
+  if (seen == friend_pos) {
+   k = jj;
+   break;
+  }
+  ++seen;
+ }
+
+ if (k < 0) return false;
+
+ const arma::uword ju = static_cast<arma::uword>(j);
+ const arma::uword ku = static_cast<arma::uword>(k);
+ const double b_j_old = b(ju);
+ const double b_k_old = b(ku);
+ const int comp_j_old = comp(ju);
+ const int comp_k_old = comp(ku);
+ if (comp_j_old <= 0 || b_j_old == 0.0 || comp_k_old != 0 || b_k_old != 0.0) return false;
+ if (comp_j_old >= static_cast<int>(gamma.n_elem)) {
+  throw std::runtime_error("attempt_ld_swap_sbayesrc_ST_csr_scaled: component index out of range.");
+ }
+ const double gk = gamma(static_cast<arma::uword>(comp_j_old));
+ if (!std::isfinite(gk) || gk <= 0.0) {
+  throw std::runtime_error("attempt_ld_swap_sbayesrc_ST_csr_scaled: active component has invalid gamma.");
+ }
+ const double vb_j = std::max(vb * gk * prior_scale(ju), 1e-300);
+ const double vb_k = std::max(vb * gk * prior_scale(ku), 1e-300);
+
+ attempted = true;
+ const double sse_old = residual_sse_sbayesrc_ST_csr(m, b, wy, r, yy);
+ if (!std::isfinite(sse_old)) {
+  throw_ld_swap_error_sbayesrc_ST_csr(
+   trait, chain, iter, j, k, comp_j_old, sse_old,
+   std::numeric_limits<double>::quiet_NaN(), vei,
+   std::numeric_limits<double>::quiet_NaN(),
+   std::numeric_limits<double>::quiet_NaN(),
+   std::numeric_limits<double>::quiet_NaN(), b, r
+  );
+ }
+
+ const arma::rowvec r_old = r;
+ set_marker_state_sbayesrc_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
+ set_marker_state_sbayesrc_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+
+ const double sse_new = residual_sse_sbayesrc_ST_csr(m, b, wy, r, yy);
+
+ std::vector<int> reverse_candidates;
+ std::vector<int> reverse_n_null;
+ const int n_reverse_candidates =
+  collect_ld_swap_candidates_sbayesrc_ST_csr(
+   m, comp, b, friends, reverse_candidates, reverse_n_null
+  );
+
+ int n_reverse_friends = 0;
+ for (std::size_t pos = 0; pos < reverse_candidates.size(); ++pos) {
+  if (reverse_candidates[pos] == k) {
+   n_reverse_friends = reverse_n_null[pos];
+   break;
+  }
+ }
+
+ double log_q_forward = std::numeric_limits<double>::quiet_NaN();
+ double log_q_reverse = std::numeric_limits<double>::quiet_NaN();
+ if (n_candidates > 0 && n_forward_friends > 0) {
+  log_q_forward =
+   -std::log(static_cast<double>(n_candidates)) -
+   std::log(static_cast<double>(n_forward_friends));
+ }
+ if (n_reverse_candidates > 0 && n_reverse_friends > 0) {
+  log_q_reverse =
+   -std::log(static_cast<double>(n_reverse_candidates)) -
+   std::log(static_cast<double>(n_reverse_friends));
+ }
+
+ const double log_component_prior_ratio =
+  log_component_prior_ratio_sbayesrc_ST_csr(j, k, comp_j_old, snpPi);
+ // Prior terms cancel only when marker-specific prior scales are equal.
+ const double log_effect_prior_ratio =
+  -0.5 * (std::log(vb_k / vb_j) +
+          b_j_old * b_j_old * (1.0 / vb_k - 1.0 / vb_j));
+ const double log_prior_ratio =
+  log_component_prior_ratio + log_effect_prior_ratio;
+
+ if (!std::isfinite(sse_new) ||
+     !std::isfinite(log_prior_ratio) ||
+     !std::isfinite(log_q_forward) ||
+     !std::isfinite(log_q_reverse)) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  comp(ju) = comp_j_old;
+  comp(ku) = comp_k_old;
+  throw_ld_swap_error_sbayesrc_ST_csr(
+   trait, chain, iter, j, k, comp_j_old, sse_old, sse_new,
+   vei, log_prior_ratio, log_q_forward, log_q_reverse, b, r
+  );
+ }
+
+ const double log_alpha =
+  -0.5 * (sse_new - sse_old) / vei +
+  log_prior_ratio +
+  log_q_reverse - log_q_forward;
+
+ std::uniform_real_distribution<double> runif(0.0, 1.0);
+ const bool accept = std::log(std::max(runif(gen), 1e-300)) < log_alpha;
+
+ if (!accept) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  comp(ju) = comp_j_old;
+  comp(ku) = comp_k_old;
+ }
+
+ return accept;
+}
+
 inline void sampleB_SBayesRC_ST_csr(
   int m,
   double nub,
@@ -712,6 +971,59 @@ inline void sampleB_SBayesRC_ST_csr(
 
  if (!std::isfinite(scale) || scale <= 0.0) {
   throw std::runtime_error("sampleB_SBayesRC_ST_csr: invalid scale.");
+ }
+
+ std::chi_squared_distribution<double> rchisq(dfb + nub);
+ const double chi2 = std::max(rchisq(gen), 1e-300);
+
+ vb = std::max(scale / chi2, 1e-12);
+}
+
+inline void sampleB_SBayesRC_ST_csr_scaled(
+  int m,
+  double nub,
+  double& vb,
+  const arma::rowvec& b,
+  const arma::Row<int>& comp,
+  const arma::vec& gamma,
+  const arma::rowvec& prior_scale,
+  double ssb_prior,
+  std::mt19937& gen
+) {
+ double ssb_scaled = 0.0;
+ double dfb = 0.0;
+
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  const int k = comp(iu);
+
+  if (k > 0) {
+   if (k >= static_cast<int>(gamma.n_elem)) {
+    throw std::runtime_error("sampleB_SBayesRC_ST_csr_scaled: component index out of range.");
+   }
+
+   const double gk = gamma(static_cast<arma::uword>(k));
+
+   if (!std::isfinite(gk) || gk <= 0.0) {
+    throw std::runtime_error("sampleB_SBayesRC_ST_csr_scaled: active component has invalid gamma.");
+   }
+
+   const double scale_i = prior_scale(iu);
+   if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+    throw std::runtime_error("sampleB_SBayesRC_ST_csr_scaled: invalid prior_scale value.");
+   }
+
+   // vb is the global variance; fixed selection_s enters the sufficient
+   // statistic as b_j^2 / (gamma_m * prior_scale_j).
+   ssb_scaled += b(iu) * b(iu) / (gk * scale_i);
+   dfb += 1.0;
+  }
+ }
+
+ const double scale = ssb_scaled + nub * ssb_prior;
+
+ if (!std::isfinite(scale) || scale <= 0.0) {
+  throw std::runtime_error("sampleB_SBayesRC_ST_csr_scaled: invalid scale.");
  }
 
  std::chi_squared_distribution<double> rchisq(dfb + nub);
@@ -919,7 +1231,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -966,6 +1279,18 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
  }
  if (ld_swap_moves < 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: ld_swap_moves must be non-negative.");
+ }
+
+ bool use_selection_s_prior_scale = selection_s_prior_scale.isNotNull();
+ Rcpp::NumericVector selection_s_prior_scale_vec;
+ if (use_selection_s_prior_scale) {
+  selection_s_prior_scale_vec = Rcpp::NumericVector(selection_s_prior_scale);
+  use_selection_s_prior_scale = selection_s_prior_scale_vec.size() > 0;
+ }
+
+ if (use_selection_s_prior_scale &&
+     static_cast<int>(selection_s_prior_scale_vec.size()) != m) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_prior_scale must have length m.");
  }
 
  if ((int)ww.size() != nt || (int)b_init.size() != nt ||
@@ -1053,6 +1378,20 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
    if (static_cast<int>(comp_init[t].size()) != m) {
     throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: comp_init[t] must have length m.");
    }
+  }
+ }
+
+ arma::rowvec prior_scale;
+ if (use_selection_s_prior_scale) {
+  prior_scale.set_size(static_cast<arma::uword>(m));
+  for (int i = 0; i < m; ++i) {
+   const double scale_i = selection_s_prior_scale_vec[static_cast<std::size_t>(i)];
+   if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+    throw std::runtime_error(
+     "stblr_cpg_omp_csr_sbayesrc: selection_s_prior_scale must contain positive finite values."
+    );
+   }
+   prior_scale(static_cast<arma::uword>(i)) = scale_i;
   }
  }
 
@@ -1374,22 +1713,43 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
    double ld_swap_accepted_t = 0.0;
 
    for (int it = 0; it < nit + nburn; ++it) {
-    for (int isort = 0; isort < m; ++isort) {
-     const int i = order[static_cast<std::size_t>(isort)];
+    if (use_selection_s_prior_scale) {
+     for (int isort = 0; isort < m; ++isort) {
+      const int i = order[static_cast<std::size_t>(isort)];
 
-     sampleBeta_SBayesRC_ST_csr(
-      i,
-      snpPi_t.row(static_cast<arma::uword>(i)),
-      gamma,
-      vb_t,
-      vei_t,
-      ww_t,
-      r_t,
-      b_t,
-      comp_t,
-      ld,
-      gen_t
-     );
+      sampleBeta_SBayesRC_ST_csr_scaled(
+       i,
+       snpPi_t.row(static_cast<arma::uword>(i)),
+       gamma,
+       vb_t,
+       prior_scale,
+       vei_t,
+       ww_t,
+       r_t,
+       b_t,
+       comp_t,
+       ld,
+       gen_t
+      );
+     }
+    } else {
+     for (int isort = 0; isort < m; ++isort) {
+      const int i = order[static_cast<std::size_t>(isort)];
+
+      sampleBeta_SBayesRC_ST_csr(
+       i,
+       snpPi_t.row(static_cast<arma::uword>(i)),
+       gamma,
+       vb_t,
+       vei_t,
+       ww_t,
+       r_t,
+       b_t,
+       comp_t,
+       ld,
+       gen_t
+      );
+     }
     }
 
     if (updateLDswap && ld_swap_moves > 0 && ld_swap_prob > 0.0) {
@@ -1397,24 +1757,46 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
      if (runif(gen_t) < ld_swap_prob) {
       for (int move = 0; move < ld_swap_moves; ++move) {
        bool attempted = false;
-       const bool accepted = attempt_ld_swap_sbayesrc_ST_csr(
-        m,
-        t,
-        chain,
-        it,
-        vei_t,
-        yy_vec(static_cast<arma::uword>(t)),
-        ww_t,
-        wy_t,
-        snpPi_t,
-        r_t,
-        b_t,
-        comp_t,
-        ld,
-        ld_swap_friends,
-        gen_t,
-        attempted
-       );
+       const bool accepted = use_selection_s_prior_scale ?
+        attempt_ld_swap_sbayesrc_ST_csr_scaled(
+         m,
+         t,
+         chain,
+         it,
+         vei_t,
+         vb_t,
+         yy_vec(static_cast<arma::uword>(t)),
+         ww_t,
+         wy_t,
+         gamma,
+         snpPi_t,
+         prior_scale,
+         r_t,
+         b_t,
+         comp_t,
+         ld,
+         ld_swap_friends,
+         gen_t,
+         attempted
+        ) :
+        attempt_ld_swap_sbayesrc_ST_csr(
+         m,
+         t,
+         chain,
+         it,
+         vei_t,
+         yy_vec(static_cast<arma::uword>(t)),
+         ww_t,
+         wy_t,
+         snpPi_t,
+         r_t,
+         b_t,
+         comp_t,
+         ld,
+         ld_swap_friends,
+         gen_t,
+         attempted
+        );
        if (attempted) {
         ld_swap_attempted_t += 1.0;
         if (accepted) ld_swap_accepted_t += 1.0;
@@ -1439,16 +1821,30 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_sbayesrc(
     }
 
     if (updateB) {
-     sampleB_SBayesRC_ST_csr(
-      m,
-      nub,
-      vb_t,
-      b_t,
-      comp_t,
-      gamma,
-      ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
-      gen_t
-     );
+     if (use_selection_s_prior_scale) {
+      sampleB_SBayesRC_ST_csr_scaled(
+       m,
+       nub,
+       vb_t,
+       b_t,
+       comp_t,
+       gamma,
+       prior_scale,
+       ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
+       gen_t
+      );
+     } else {
+      sampleB_SBayesRC_ST_csr(
+       m,
+       nub,
+       vb_t,
+       b_t,
+       comp_t,
+       gamma,
+       ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
+       gen_t
+      );
+     }
 
      if (!std::isfinite(vb_t) || vb_t <= 0.0) {
       throw std::runtime_error(

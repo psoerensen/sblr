@@ -151,9 +151,16 @@ later design decision.
   `ld_swap_r2`, `ld_swap_max_friends`, and `ld_swap_moves`. The move relocates
   the full active `(component, b)` state to a null LD neighbor. The MH ratio
   uses the current annotation-dependent component probabilities implied by the
-  current `alpha`; the effect-prior variance term cancels because the component
-  and effect value move together and `vb * gamma[component]` is not
-  marker-specific.
+  current `alpha`. With fixed `selection_s = NULL`, the effect-prior variance
+  term cancels because the component and effect value move together and
+  `vb * gamma[component]` is not marker-specific. With fixed non-`NULL`
+  `selection_s`, the MH ratio also includes the marker-specific Gaussian
+  prior-density term from `vb * gamma[component] * h_j^(selection_s + 1)`.
+- Supports fixed global BayesS-style `selection_s` through the public
+  `stblr_csr_annot(annotation_model = "sbayesrc")` path. Annotations control
+  component probabilities; `selection_s` controls MAF-dependent non-null
+  effect-size variance scaling. Sampled `S` and annotation-specific `S` are not
+  implemented.
 - Unsupported compared with current CSR/BED main interfaces: scheduled updates.
 - Return layout: 25 slots. Slots 0-17 follow the BayesR-like CSR convention
   with `dm = P(component > 0)`; slot 18 is posterior mean `alpha`, slot 19 is

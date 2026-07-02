@@ -83,23 +83,27 @@ consistent with standardized-genotype-scale effects in the standard CSR path.
 If a BayesS-style prior is defined on allele-scale effects as
 `alpha_j ~ N(0, v_m h_j^S)`, then the corresponding standardized-effect prior
 for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
-`selection_s` currently implements this fixed scaling for `csr_bayesc` and
-`csr_bayesr`. For CSR BayesC, included-marker prior variances are
+`selection_s` currently implements this fixed scaling for `csr_bayesc`,
+`csr_bayesr`, and `csr_sbayesrc`. For CSR BayesC, included-marker prior variances are
 `vb * h_j^(selection_s + 1)`. For CSR BayesR, non-null component prior
 variances are `vb * mixture_var_m * h_j^(selection_s + 1)`, with component 0
-remaining the point-mass null. The scheduled CSR BayesC backend,
-annotation-aware CSR backends, SBayesRC CSR backends, and BED backends do not
-currently support sampler-level `selection_s`.
+remaining the point-mass null. For CSR SBayesRC, annotations continue to
+control marker-specific component probabilities, while fixed `selection_s`
+scales non-null effect prior variances as
+`vb * gamma_m * h_j^(selection_s + 1)`. The scheduled CSR BayesC backend,
+BayesC-like annotation-aware CSR backends (`csr_prior_bayesc`,
+`csr_annot_bayesc`, and `csr_group_bayesc`), and BED backends do not currently
+support sampler-level `selection_s`.
 
 ### Fixed `selection_s` Performance Path
 
 The default `selection_s = NULL` path should be treated as the baseline CSR
-BayesC/BayesR implementation. Native code should not allocate an all-ones prior
+BayesC/BayesR/SBayesRC implementation. Native code should not allocate an all-ones prior
 scale vector for this path, and hot marker-update loops should not read
 `prior_scale[j]`, multiply by a unit marker scale, or branch on
 `selection_s`.
 
-Current CSR BayesC and CSR BayesR native code uses separate unscaled helper
+Current CSR BayesC, CSR BayesR, and CSR SBayesRC native code uses separate unscaled helper
 paths when `selection_s_prior_scale` is absent or empty. The scaled helper paths
 are used only when a fixed `selection_s` is supplied. This intentionally
 duplicates a small amount of marker-update, variance-update, and LD-swap code
@@ -118,6 +122,9 @@ Audit conclusion:
 - CSR BayesR is the backend most likely to show overhead for fixed
   `selection_s`, because the component-posterior loop evaluates multiple
   mixture components per marker.
+- CSR SBayesRC has the same component-loop consideration as CSR BayesR and
+  additionally combines fixed MAF scaling with annotation-dependent component
+  probabilities.
 
 Manual timing helper for ad hoc development checks, assuming `stats` and
 `Glist` are already defined in the current R session:
@@ -227,7 +234,7 @@ optional `chains`, and optional `ld_swap_chains`.
 The R formatter resets `dm` to `1 - comp_prob[[trait]][, "component_0"]` and
 validates marker-by-component probabilities.
 
-Fixed `selection_s` is supported only for this annotation-unaware CSR BayesR
+Fixed `selection_s` is supported for this annotation-unaware CSR BayesR
 backend. The R wrapper aligns `Glist$maf` to `Glist$rsidsLD` with
 `match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, computes
 `h = pmax(2p(1-p), 1e-8)`, and passes `h^(selection_s + 1)` to native code as
@@ -325,6 +332,15 @@ Legacy slots:
 
 The R formatter derives `dm_component_mean` from `comp_prob` as posterior mean
 zero-based component index, matching BayesR output semantics.
+
+Fixed `selection_s` is supported for this annotation-aware CSR SBayesRC
+backend. The R wrapper reuses the CSR BayesC/BayesR MAF alignment helper:
+`match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, followed by
+`h = pmax(2p(1-p), 1e-8)` and `h^(selection_s + 1)`. Native SBayesRC uses this
+scale in non-null component posterior weights, conditional effect draws, the
+global `vb` update through `sum b_j^2 / (gamma_m * scale_j)`, and active/null
+LD-swap Gaussian prior-density terms. Annotation/alpha updates operate on
+component labels and do not require MAF-scale changes.
 
 ## Final R Fit Fields
 

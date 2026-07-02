@@ -24,6 +24,7 @@ stblr_csr_annot(
   updateE = TRUE,
   updatePi = TRUE,
   updateLDswap = FALSE,
+  selection_s = NULL,
   ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
@@ -73,6 +74,11 @@ is used by the BayesC-like annotation models and ignored by SBayesRC.}
 
 \item{updateLDswap}{Logical; request optional LD-swap/MH. This is supported
 for the current annotation-aware CSR models, including SBayesRC.}
+
+\item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter.
+Currently supported only for `annotation_model = "sbayesrc"` in this
+unified annotation interface. For CSR SBayesRC, non-null component prior
+variances are scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.}
 
 \item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
 moves when `updateLDswap = TRUE`.}

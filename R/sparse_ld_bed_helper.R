@@ -153,7 +153,7 @@ NULL
 
 .stblr_prepare_csr_selection_s <- function(selection_s, Glist, m,
                                            scheduled = FALSE,
-                                           backend = c("bayesc", "bayesr")) {
+                                           backend = c("bayesc", "bayesr", "sbayesrc")) {
   backend <- match.arg(backend)
   if (is.null(selection_s)) {
     return(list(
@@ -165,7 +165,7 @@ NULL
   }
 
   if (isTRUE(scheduled)) {
-    stop("selection_s is currently supported only for unscheduled CSR BayesC/BayesR.")
+    stop("selection_s is currently supported only for unscheduled CSR BayesC/BayesR/SBayesRC.")
   }
   if (!is.numeric(selection_s) || length(selection_s) != 1L ||
       !is.finite(selection_s)) {

@@ -58,7 +58,9 @@ stblr_csr_sbayesrc_generic(
   sigmaSqAlpha_a = 2,
   sigmaSqAlpha_b = 2,
   pi_floor = 1e-12,
-  alpha_update_every = 10
+  alpha_update_every = 10,
+  selection_s = NULL,
+  Glist = NULL
 )
 }
 \arguments{
@@ -151,6 +153,16 @@ controls.}
 \item{pi_floor}{Lower probability bound used by the sampler.}
 
 \item{alpha_update_every}{Iterations between annotation-effect updates.}
+
+\item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter.
+If supplied, non-null component prior variances are scaled by
+`h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL` preserves
+the ordinary SBayesRC prior. Sampler-level estimation of `selection_s` is
+not implemented.}
+
+\item{Glist}{Optional genotype/LD metadata. Required when `selection_s` is
+non-`NULL` so MAF can be aligned to the CSR LD marker order using
+`Glist$rsidsLD`, `Glist$rsids`, and `Glist$maf`.}
 }
 \value{
 A formatted SBayesRC-style ST-BLR fit with annotation and

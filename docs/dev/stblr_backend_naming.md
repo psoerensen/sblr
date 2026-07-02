@@ -136,10 +136,12 @@ coefficients such as `alpha`, `eta_pi`, and annotation-dependent component
 probabilities.
 
 Current support is fixed-S only and is limited to `csr_bayesc`
-(`stblr_csr(method = "bayesC", scheduled = FALSE)`) and `csr_bayesr`
-(`stblr_csr(method = "bayesR")` or `stblr_csr_bayesr()`). The
-`csr_scheduled_bayesc` backend, annotation-aware CSR backends, SBayesRC CSR
-backends, and BED backends do not support sampler-level `selection_s`.
+(`stblr_csr(method = "bayesC", scheduled = FALSE)`), `csr_bayesr`
+(`stblr_csr(method = "bayesR")` or `stblr_csr_bayesr()`), and `csr_sbayesrc`
+(`stblr_csr_annot(annotation_model = "sbayesrc")`). The
+`csr_scheduled_bayesc` backend, BayesC-like annotation-aware CSR backends
+(`csr_prior_bayesc`, `csr_annot_bayesc`, and `csr_group_bayesc`), and BED
+backends do not support sampler-level `selection_s`.
 
 Preferred public argument names are:
 
@@ -159,7 +161,7 @@ Preferred future fit metadata fields are:
 For the standard CSR path, fitted `b`/`bm` values are
 standardized-genotype-scale effects. A BayesS allele-scale prior
 `alpha_j ~ N(0, v_m h_j^S)` therefore maps to a standardized-effect prior with
-exponent `S + 1`. For CSR BayesC and BayesR, fixed sampler-level
+exponent `S + 1`. For CSR BayesC, BayesR, and SBayesRC, fixed sampler-level
 `selection_s` scales standardized-genotype effect prior variances by
 `h^(selection_s + 1)`, where `h = 2p(1-p)`. Fixed support applies the same
 marker-specific variance factor consistently in conditional effect updates,

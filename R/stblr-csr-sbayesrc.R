@@ -11,6 +11,9 @@
 #' @param ld_prefix Prefix of the disk-backed CSR LD files.
 #' @param A An `m` by `K` numeric marker annotation matrix. Rows must correspond
 #'   to the markers in `stats` and the sparse LD files.
+#' @param Glist Optional genotype/LD metadata. Required when `selection_s` is
+#'   non-`NULL` so MAF can be aligned to the CSR LD marker order using
+#'   `Glist$rsidsLD`, `Glist$rsids`, and `Glist$maf`.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
 #' @param gamma Numeric mixture variance multipliers. The first value must be
@@ -19,6 +22,11 @@
 #' @param pi_init,pi_vb_init,pi_prior_mean,pi_prior_strength,pi_prior_a,pi_prior_b
 #'   Active-marker probability and marker-variance prior controls.
 #' @param h2 Initial heritability.
+#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
+#'   If supplied, non-null component prior variances are scaled by
+#'   `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL` preserves
+#'   the ordinary SBayesRC prior. Sampler-level estimation of `selection_s` is
+#'   not implemented.
 #' @param nub,nue Prior degrees of freedom.
 #' @param B,E Optional initial marker-effect and residual covariance matrices.
 #' @param ssb_prior,sse_prior Optional prior scale matrices.
@@ -118,7 +126,9 @@ stblr_csr_sbayesrc_generic <- function(
   sigmaSqAlpha_a = 2,
   sigmaSqAlpha_b = 2,
   pi_floor = 1e-12,
-  alpha_update_every = 10
+  alpha_update_every = 10,
+  selection_s = NULL,
+  Glist = NULL
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
@@ -150,6 +160,13 @@ stblr_csr_sbayesrc_generic <- function(
  }
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ selection_s_info <- .stblr_prepare_csr_selection_s(
+  selection_s = selection_s,
+  Glist = Glist,
+  m = m,
+  scheduled = FALSE,
+  backend = "sbayesrc"
  )
 
  arch <- .stblr_resolve_architecture(
@@ -291,7 +308,8 @@ stblr_csr_sbayesrc_generic <- function(
   ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
-  ld_swap_moves = as.integer(ld_swap_moves)
+  ld_swap_moves = as.integer(ld_swap_moves),
+  selection_s_prior_scale = selection_s_info$prior_scale
  )
 
  fit <- format_sbayesrc_csr_fit(
@@ -334,6 +352,10 @@ stblr_csr_sbayesrc_generic <- function(
    standardize_annotations = standardize_annotations,
    center_binary_annotations = center_binary_annotations,
    h2 = h2,
+   selection_s = selection_s_info$selection_s,
+   selection_s_fixed = selection_s_info$fixed,
+   selection_s_exponent = selection_s_info$exponent,
+   selection_s_scale = "standardized_genotype_effect",
    nub = nub,
    nue = nue,
    vy = pri$vy,
