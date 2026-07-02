@@ -1785,6 +1785,81 @@ check_component_consistency(fit_sbayesrc_minus1)
 check_component_consistency(fit_sbayesrc_s0)
 check_component_consistency(fit_sbayesrc_sneg)
 
+
+fitC_default <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  seed = 10
+)
+
+fitC_null <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = NULL,
+  estimate_selection_s = FALSE,
+  seed = 10
+)
+
+max(abs(fitC_default$dm - fitC_null$dm))
+max(abs(fitC_default$bm - fitC_null$bm))
+max(abs(fitC_default$vbs - fitC_null$vbs))
+max(abs(fitC_default$vle - fitC_null$vle))
+max(abs(fitC_default$vld - fitC_null$vld))
+
+fitC_minus1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = -1,
+  estimate_selection_s = FALSE,
+  seed = 10
+)
+
+max(abs(fitC_default$dm - fitC_minus1$dm))
+max(abs(fitC_default$bm - fitC_minus1$bm))
+max(abs(fitC_default$vbs - fitC_minus1$vbs))
+max(abs(fitC_default$vle - fitC_minus1$vle))
+max(abs(fitC_default$vld - fitC_minus1$vld))
+
+
+fitC_sampleS <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  estimate_selection_s = TRUE,
+  selection_s_init = 0,
+  selection_s_prior = c(-2, 2),
+  selection_s_proposal_sd = 0.05,
+  seed = 10
+)
+
+fitC_sampleS$selection_s
+fitC_sampleS$selection_s_sd
+fitC_sampleS$selection_s_min
+fitC_sampleS$selection_s_max
+fitC_sampleS$selection_s_acceptance
+
+dim(fitC_sampleS$selection_s_trace)
+range(fitC_sampleS$selection_s_trace)
+apply(fitC_sampleS$selection_s_trace, 2, sd)
+
+fitC_sampleS_2 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  estimate_selection_s = TRUE,
+  selection_s_init = 0,
+  selection_s_prior = c(-2, 2),
+  selection_s_proposal_sd = 0.05,
+  seed = 10
+)
+
+max(abs(fitC_sampleS$dm - fitC_sampleS_2$dm))
+max(abs(fitC_sampleS$bm - fitC_sampleS_2$bm))
+max(abs(fitC_sampleS$selection_s_trace - fitC_sampleS_2$selection_s_trace))
+
 check_component_consistency <- function(fit) {
   do.call(
     rbind,

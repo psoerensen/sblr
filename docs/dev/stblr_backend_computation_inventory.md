@@ -83,9 +83,12 @@ consistent with standardized-genotype-scale effects in the standard CSR path.
 If a BayesS-style prior is defined on allele-scale effects as
 `alpha_j ~ N(0, v_m h_j^S)`, then the corresponding standardized-effect prior
 for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
-`selection_s` currently implements this fixed scaling for `csr_bayesc`,
-`csr_bayesr`, and `csr_sbayesrc`. For CSR BayesC, included-marker prior variances are
-`vb * h_j^(selection_s + 1)`. For CSR BayesR, non-null component prior
+`selection_s` implements this fixed scaling for `csr_bayesc`, `csr_bayesr`,
+and `csr_sbayesrc`. Sampled trait-specific `selection_s` is currently
+implemented only for annotation-unaware unscheduled `csr_bayesc`
+(`stblr_csr(method = "bayesC", scheduled = FALSE)`). For CSR BayesC,
+included-marker prior variances are `vb * h_j^(selection_s + 1)`. For CSR
+BayesR, non-null component prior
 variances are `vb * mixture_var_m * h_j^(selection_s + 1)`, with component 0
 remaining the point-mass null. For CSR SBayesRC, annotations continue to
 control marker-specific component probabilities, while fixed `selection_s`
@@ -94,6 +97,20 @@ scales non-null effect prior variances as
 BayesC-like annotation-aware CSR backends (`csr_prior_bayesc`,
 `csr_annot_bayesc`, and `csr_group_bayesc`), and BED backends do not currently
 support sampler-level `selection_s`.
+
+Sampled CSR BayesC uses a bounded uniform prior and the Metropolis-Hastings
+kernel
+
+```text
+log p(S_t | b_t, d_t, vb_t)
+  = log p(S_t)
+    - 0.5 * sum_{j: d_jt = 1} [
+        log(q_j(S_t)) + b_jt^2 / (vb_t * q_j(S_t))
+      ]
+```
+
+with `q_j(S_t) = h_j^(S_t + 1)`. Native code receives aligned `log(h_j)` and
+computes dynamic marker scales as `exp((S_t + 1) * log(h_j))`.
 
 ### Fixed `selection_s` Performance Path
 
@@ -108,6 +125,9 @@ paths when `selection_s_prior_scale` is absent or empty. The scaled helper paths
 are used only when a fixed `selection_s` is supplied. This intentionally
 duplicates a small amount of marker-update, variance-update, and LD-swap code
 so the default path stays close to the previous unscaled C++ code.
+Sampled `selection_s` for CSR BayesC is a third path: the sampler recomputes a
+dynamic marker-scale vector once per trait-chain iteration and reuses the
+scaled BayesC beta, `vb`, and LD-swap helpers.
 
 Audit conclusion:
 
@@ -214,6 +234,10 @@ Legacy base slots:
 When chain summaries are returned, slots 23-28 are `bm_sd`, `bm_min`,
 `bm_max`, `dm_sd`, `dm_min`, and `dm_max`. When compact chains are kept, slots
 29-31 are flattened chain `dm`, chain `bm`, and chain LD-swap diagnostics.
+When sampled `selection_s` is enabled, native CSR BayesC appends
+`selection_s_trace` and `selection_s_acceptance` after the usual slots. With
+`keep_chains = TRUE`, it also appends flattened chain-level `selection_s`
+traces and chain-level `selection_s_acceptance`.
 
 ### `csr_scheduled_bayesc`
 

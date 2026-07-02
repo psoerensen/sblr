@@ -153,11 +153,13 @@ NULL
 
 .stblr_prepare_csr_selection_s <- function(selection_s, Glist, m,
                                            scheduled = FALSE,
-                                           backend = c("bayesc", "bayesr", "sbayesrc")) {
+                                           backend = c("bayesc", "bayesr", "sbayesrc"),
+                                           return_log_h = FALSE) {
   backend <- match.arg(backend)
-  if (is.null(selection_s)) {
+  if (is.null(selection_s) && !isTRUE(return_log_h)) {
     return(list(
       prior_scale = numeric(),
+      log_h = numeric(),
       selection_s = NULL,
       fixed = FALSE,
       exponent = NULL
@@ -167,8 +169,9 @@ NULL
   if (isTRUE(scheduled)) {
     stop("selection_s is currently supported only for unscheduled CSR BayesC/BayesR/SBayesRC.")
   }
-  if (!is.numeric(selection_s) || length(selection_s) != 1L ||
-      !is.finite(selection_s)) {
+  if (!is.null(selection_s) &&
+      (!is.numeric(selection_s) || length(selection_s) != 1L ||
+      !is.finite(selection_s))) {
     stop("selection_s must be NULL or a finite numeric scalar.")
   }
   if (is.null(Glist)) {
@@ -205,14 +208,26 @@ NULL
     stop("Could not compute positive finite heterozygosity values for selection_s.")
   }
 
-  exponent <- selection_s + 1
-  prior_scale <- h_ld ^ exponent
-  if (!all(is.finite(prior_scale)) || any(prior_scale <= 0)) {
-    stop("selection_s prior scale must contain positive finite values.")
+  log_h <- log(h_ld)
+  if (is.null(selection_s)) {
+    return(list(
+      prior_scale = numeric(),
+      log_h = log_h,
+      selection_s = NULL,
+      fixed = FALSE,
+      exponent = NULL
+    ))
+  } else {
+    exponent <- selection_s + 1
+    prior_scale <- h_ld ^ exponent
+    if (!all(is.finite(prior_scale)) || any(prior_scale <= 0)) {
+      stop("selection_s prior scale must contain positive finite values.")
+    }
   }
 
   list(
     prior_scale = prior_scale,
+    log_h = log_h,
     selection_s = unname(selection_s),
     fixed = TRUE,
     exponent = unname(exponent)
@@ -220,14 +235,53 @@ NULL
 }
 
 .stblr_prepare_csr_bayesc_selection_s <- function(selection_s, Glist, m,
-                                                  scheduled = FALSE) {
+                                                  scheduled = FALSE,
+                                                  return_log_h = FALSE) {
   .stblr_prepare_csr_selection_s(
     selection_s = selection_s,
     Glist = Glist,
     m = m,
     scheduled = scheduled,
-    backend = "bayesc"
+    backend = "bayesc",
+    return_log_h = return_log_h
   )
+}
+
+.stblr_validate_sampled_selection_s <- function(estimate_selection_s,
+                                                selection_s,
+                                                selection_s_init,
+                                                selection_s_prior,
+                                                selection_s_proposal_sd) {
+  if (!is.logical(estimate_selection_s) || length(estimate_selection_s) != 1L ||
+      is.na(estimate_selection_s)) {
+    stop("estimate_selection_s must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!isTRUE(estimate_selection_s)) {
+    return(invisible(NULL))
+  }
+  if (!is.null(selection_s)) {
+    stop("selection_s and estimate_selection_s = TRUE cannot both be requested.", call. = FALSE)
+  }
+  if (!is.numeric(selection_s_init) || length(selection_s_init) != 1L ||
+      !is.finite(selection_s_init)) {
+    stop("selection_s_init must be a finite numeric scalar.", call. = FALSE)
+  }
+  if (!is.numeric(selection_s_prior) || length(selection_s_prior) != 2L ||
+      anyNA(selection_s_prior) || any(!is.finite(selection_s_prior))) {
+    stop("selection_s_prior must be a finite numeric vector of length 2.", call. = FALSE)
+  }
+  if (selection_s_prior[1L] >= selection_s_prior[2L]) {
+    stop("selection_s_prior lower bound must be less than upper bound.", call. = FALSE)
+  }
+  if (selection_s_init < selection_s_prior[1L] ||
+      selection_s_init > selection_s_prior[2L]) {
+    stop("selection_s_init must lie within selection_s_prior.", call. = FALSE)
+  }
+  if (!is.numeric(selection_s_proposal_sd) || length(selection_s_proposal_sd) != 1L ||
+      !is.finite(selection_s_proposal_sd) || selection_s_proposal_sd <= 0) {
+    stop("selection_s_proposal_sd must be a finite positive numeric scalar.", call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 
@@ -299,6 +353,27 @@ NULL
   all(vapply(fit[30:32], function(x) length(x) == nt, logical(1)))
  if (has_chain_details) {
   names(fit)[30:32] <- c("chain_dm_raw", "chain_bm_raw", "chain_ld_swap_raw")
+ }
+ selection_slots <- integer()
+ if (length(fit) == 25L) {
+  selection_slots <- 24:25
+ } else if (length(fit) == 31L) {
+  selection_slots <- 30:31
+ } else if (length(fit) >= 36L) {
+  selection_slots <- 33:36
+ }
+ has_selection_s_trace <- length(selection_slots) >= 2L &&
+  length(fit[[selection_slots[1L]]]) == nt &&
+  length(fit[[selection_slots[2L]]]) == nt
+ if (has_selection_s_trace) {
+  names(fit)[selection_slots[1:2]] <- c(
+   "selection_s_trace_raw", "selection_s_acceptance_raw"
+  )
+  if (length(selection_slots) >= 4L) {
+   names(fit)[selection_slots[3:4]] <- c(
+    "chain_selection_s_raw", "chain_selection_s_acceptance_raw"
+   )
+  }
  }
 
  for (i in 1:7) {
@@ -392,6 +467,32 @@ NULL
   }
   out$chains <- chains
   out$ld_swap_chains <- ld_swap_chains
+ }
+ if (has_selection_s_trace) {
+  out$selection_s_trace <- as.matrix(as.data.frame(fit$selection_s_trace_raw))
+  rownames(out$selection_s_trace) <- paste0("Iter", seq_len(nrow(out$selection_s_trace)))
+  colnames(out$selection_s_trace) <- trait_names
+  out$selection_s_acceptance <- stats::setNames(
+   as.numeric(unlist(fit$selection_s_acceptance_raw, use.names = FALSE)),
+   trait_names
+  )
+  if (!is.null(fit$chain_selection_s_raw) && !is.null(out$chains)) {
+   for (tt in seq_len(nt)) {
+    raw <- as.numeric(fit$chain_selection_s_raw[[tt]])
+    acc_raw <- as.numeric(fit$chain_selection_s_acceptance_raw[[tt]])
+    if (!length(raw)) next
+    nch <- length(out$chains[[tt]])
+    trace_n <- if (nch > 0L) length(raw) %/% nch else 0L
+    if (nch > 0L && trace_n > 0L) {
+     for (cc in seq_len(nch)) {
+      idx <- ((cc - 1L) * trace_n + 1L):(cc * trace_n)
+      out$chains[[tt]][[cc]]$selection_s <- raw[idx]
+      out$chains[[tt]][[cc]]$selection_s_acceptance <-
+       if (length(acc_raw) >= cc) acc_raw[cc] else out$selection_s_acceptance[[tt]]
+     }
+    }
+   }
+  }
  }
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
@@ -1413,7 +1514,15 @@ stblr_csr_bayesr <- function(
 #'   standardized-genotype CSR effect scale, non-null prior variances are
 #'   scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
 #'   `selection_s = NULL` preserves the ordinary BayesC/BayesR prior.
-#'   Sampler-level estimation of `selection_s` is not implemented.
+#' @param estimate_selection_s Logical; for unscheduled annotation-unaware CSR
+#'   BayesC only, estimate one trait-specific BayesS-style `selection_s` by
+#'   Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
+#'   mutually exclusive.
+#' @param selection_s_init Initial value for sampled `selection_s`.
+#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`selection_s` prior.
+#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `selection_s`.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
@@ -1482,7 +1591,10 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_init = 0.001, pi_vb_init = NULL,
                       pi_prior_mean = 0.001, pi_prior_strength = 5e5,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
-                      selection_s = NULL,
+                      selection_s = NULL, estimate_selection_s = FALSE,
+                      selection_s_init = 0,
+                      selection_s_prior = c(-2, 2),
+                      selection_s_proposal_sd = 0.05,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
                       nthin = 1, ncores = 1, seed = 10, nchains = 1L,
@@ -1506,7 +1618,17 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
      !method %in% c("bayesc", "bayesr")) {
   stop("method must be one of 'bayesc' or 'bayesr'.")
  }
+ .stblr_validate_sampled_selection_s(
+  estimate_selection_s = estimate_selection_s,
+  selection_s = selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd
+ )
  if (method == "bayesr") {
+  if (isTRUE(estimate_selection_s)) {
+   stop("estimate_selection_s is currently supported only for method = 'bayesC'.")
+  }
   bayesc_only <- character()
   if (!missing(pi_init) && !identical(pi_init, 0.001)) {
    bayesc_only <- c(bayesc_only, "pi_init")
@@ -1610,6 +1732,9 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  if (isTRUE(scheduled) && isTRUE(updateLDswap)) {
   stop("updateLDswap is currently implemented only for scheduled = FALSE.")
  }
+ if (isTRUE(scheduled) && isTRUE(estimate_selection_s)) {
+  stop("estimate_selection_s is currently supported only for unscheduled CSR BayesC.")
+ }
  nt <- length(stats$yy)
  if (is.null(n)) n <- stats$n
  if (is.null(n)) stop("n must be supplied or available as stats$n.")
@@ -1618,7 +1743,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   selection_s = selection_s,
   Glist = Glist,
   m = m,
-  scheduled = scheduled
+  scheduled = scheduled,
+  return_log_h = estimate_selection_s
  )
 
  if (is.null(ld_prefix)) {
@@ -1688,10 +1814,23 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
    ld_swap_max_friends = as.integer(ld_swap_max_friends),
    ld_swap_moves = as.integer(ld_swap_moves),
-   selection_s_prior_scale = selection_s_info$prior_scale
+   selection_s_prior_scale = selection_s_info$prior_scale,
+   estimate_selection_s = estimate_selection_s,
+   selection_s_init = selection_s_init,
+   selection_s_prior = selection_s_prior,
+   selection_s_proposal_sd = selection_s_proposal_sd,
+   selection_s_log_h = selection_s_info$log_h
   )))
  }
  fit <- .format_stblr_fit(raw, nt, m, trait_names, variable_names)
+ if (isTRUE(estimate_selection_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
+  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
+  fit$selection_s <- colMeans(s_trace_keep)
+  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
+  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ }
  fit$input <- c(list(
   n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue, vy = vy,
   B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior,
@@ -1715,6 +1854,10 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   selection_s = selection_s_info$selection_s,
   selection_s_fixed = selection_s_info$fixed,
   selection_s_exponent = selection_s_info$exponent,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
+  selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
+  selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
   selection_s_scale = "standardized_genotype_effect",
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,

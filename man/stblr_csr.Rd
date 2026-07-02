@@ -19,6 +19,10 @@ stblr_csr(
   pi_prior_b = NULL,
   h2 = 0.3,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-2, 2),
+  selection_s_proposal_sd = 0.05,
   nub = 4,
   nue = 4,
   updateB = TRUE,
@@ -98,8 +102,20 @@ When supplied, these override `pi_prior_mean` and `pi_prior_strength`.}
 for ordinary annotation-unaware CSR BayesC and BayesR. For the current
 standardized-genotype CSR effect scale, non-null prior variances are
 scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
-`selection_s = NULL` preserves the ordinary BayesC/BayesR prior.
-Sampler-level estimation of `selection_s` is not implemented.}
+`selection_s = NULL` preserves the ordinary BayesC/BayesR prior.}
+
+\item{estimate_selection_s}{Logical; for unscheduled annotation-unaware CSR
+BayesC only, estimate one trait-specific BayesS-style `selection_s` by
+Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
+mutually exclusive.}
+
+\item{selection_s_init}{Initial value for sampled `selection_s`.}
+
+\item{selection_s_prior}{Numeric length-2 lower and upper bounds for the
+uniform sampled-`selection_s` prior.}
+
+\item{selection_s_proposal_sd}{Random-walk proposal standard deviation for
+sampled `selection_s`.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 

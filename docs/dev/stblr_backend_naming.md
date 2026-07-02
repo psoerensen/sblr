@@ -135,21 +135,23 @@ variance scaling parameter. This is distinct from SBayesRC annotation-selection
 coefficients such as `alpha`, `eta_pi`, and annotation-dependent component
 probabilities.
 
-Current support is fixed-S only and is limited to `csr_bayesc`
+Fixed-S support is limited to `csr_bayesc`
 (`stblr_csr(method = "bayesC", scheduled = FALSE)`), `csr_bayesr`
 (`stblr_csr(method = "bayesR")` or `stblr_csr_bayesr()`), and `csr_sbayesrc`
-(`stblr_csr_annot(annotation_model = "sbayesrc")`). The
-`csr_scheduled_bayesc` backend, BayesC-like annotation-aware CSR backends
-(`csr_prior_bayesc`, `csr_annot_bayesc`, and `csr_group_bayesc`), and BED
-backends do not support sampler-level `selection_s`.
+(`stblr_csr_annot(annotation_model = "sbayesrc")`). Sampled trait-specific
+`selection_s` support is limited to annotation-unaware unscheduled
+`csr_bayesc`. The `csr_scheduled_bayesc` backend, BayesR/SBayesRC sampled-S
+paths, BayesC-like annotation-aware CSR backends (`csr_prior_bayesc`,
+`csr_annot_bayesc`, and `csr_group_bayesc`), and BED backends do not support
+sampled `selection_s`.
 
 Preferred public argument names are:
 
 - `selection_s = NULL`
 - `estimate_selection_s = FALSE`
 - `selection_s_proposal_sd = 0.05`
-- `selection_s_prior_mean = 0`
-- `selection_s_prior_sd = 1`
+- `selection_s_init = 0`
+- `selection_s_prior = c(-2, 2)`
 
 Preferred future fit metadata fields are:
 
@@ -157,6 +159,8 @@ Preferred future fit metadata fields are:
 - `fit$input$estimate_selection_s`
 - `fit$input$selection_s_scale`
 - `fit$input$selection_s_exponent`
+- `fit$selection_s_trace`
+- `fit$selection_s_acceptance`
 
 For the standard CSR path, fitted `b`/`bm` values are
 standardized-genotype-scale effects. A BayesS allele-scale prior
@@ -168,22 +172,22 @@ marker-specific variance factor consistently in conditional effect updates,
 prior-density or component-probability calculations, active/null LD-swap/MH
 prior terms, and marker-effect variance updates.
 
-Future sampled-`S` support should be implemented only after fixed-`S`
-validation. The active-marker log posterior contribution is:
+Sampled CSR BayesC estimates one `S_t` per trait and per chain using the
+active-marker log posterior contribution:
 
 ```text
-log p(S | b, gamma, v)
+log p(S | b, d, vb)
 = log p(S)
-- 0.5 * sum_{j: gamma_j > 0} [
-    log(v_gamma_j * q_j(S)) +
-    b_j^2 / (v_gamma_j * q_j(S))
+- 0.5 * sum_{j: d_j = 1} [
+    log(q_j(S)) +
+    b_j^2 / (vb * q_j(S))
   ]
 ```
 
 For current CSR standardized effects, `q_j(S) = h_j^(S + 1)`. A random-walk MH
-proposal can use `S_new = S_current + Normal(0, selection_s_proposal_sd)` and
-return future fields `fit$selection_s_trace`, `fit$selection_s_summary`, and
-`fit$selection_s_acceptance`.
+proposal uses `S_new = S_current + Normal(0, selection_s_proposal_sd)` with a
+uniform prior over `selection_s_prior`. CSR BayesR and CSR SBayesRC still
+support fixed `selection_s` only.
 
 ## Compatibility Aliases
 

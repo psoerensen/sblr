@@ -64,7 +64,7 @@ selection_s_csr_glist <- function() {
 }
 
 make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
-                                     seed = 11) {
+                                     seed = 11, ...) {
   stblr_csr(
     Glist = selection_s_csr_glist(),
     stats = selection_s_csr_stats(),
@@ -83,7 +83,8 @@ make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
     pi_prior_strength = 2,
     updateB = FALSE,
     updateE = FALSE,
-    updatePi = FALSE
+    updatePi = FALSE,
+    ...
   )
 }
 
@@ -448,6 +449,138 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
 
   chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
+})
+
+test_that("sampled selection_s runs for CSR BayesC and returns mechanics", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  fit <- make_selection_s_csr_fit(
+    estimate_selection_s = TRUE,
+    selection_s_init = 0,
+    selection_s_prior = c(-2, 2),
+    selection_s_proposal_sd = 0.25,
+    seed = 201
+  )
+
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(is.finite(fit$bm)))
+  expect_true(all(is.finite(fit$vbs)))
+  expect_true(all(is.finite(fit$vgs)))
+  expect_true(all(is.finite(fit$vle)))
+  expect_true(all(is.finite(fit$vld)))
+  expect_true(is.matrix(fit$selection_s_trace))
+  expect_equal(ncol(fit$selection_s_trace), length(selection_s_csr_stats()$yy))
+  expect_length(fit$selection_s, length(selection_s_csr_stats()$yy))
+  expect_true(all(is.finite(fit$selection_s)))
+  expect_true(all(fit$selection_s_trace >= -2 & fit$selection_s_trace <= 2))
+  expect_true(all(is.finite(fit$selection_s_acceptance)))
+  expect_true(all(fit$selection_s_acceptance >= 0 & fit$selection_s_acceptance <= 1))
+  expect_false(all(as.numeric(fit$selection_s_trace[, 1]) ==
+                     as.numeric(fit$selection_s_trace[1, 1])))
+  expect_false(fit$input$selection_s_fixed)
+  expect_true(fit$input$estimate_selection_s)
+  expect_null(fit$input$selection_s)
+  expect_equal(fit$input$selection_s_init, 0)
+  expect_equal(fit$input$selection_s_prior, c(-2, 2))
+  expect_equal(fit$input$selection_s_proposal_sd, 0.25)
+})
+
+test_that("sampled selection_s supports keep_chains and is reproducible", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  args <- list(
+    estimate_selection_s = TRUE,
+    selection_s_proposal_sd = 0.25,
+    seed = 202,
+    nchains = 2,
+    keep_chains = TRUE
+  )
+  fit1 <- do.call(make_selection_s_csr_fit, args)
+  fit2 <- do.call(make_selection_s_csr_fit, args)
+
+  expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
+  expect_equal(fit1$selection_s, fit2$selection_s)
+  expect_equal(length(fit1$chains), 1L)
+  expect_equal(length(fit1$chains[[1]]), 2L)
+  expect_true(all(vapply(fit1$chains[[1]], function(ch) {
+    is.numeric(ch$selection_s) &&
+      length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
+      is.finite(ch$selection_s_acceptance) &&
+      ch$selection_s_acceptance >= 0 &&
+      ch$selection_s_acceptance <= 1
+  }, logical(1))))
+})
+
+test_that("sampled selection_s validates inputs and unsupported combinations", {
+  expect_error(
+    make_selection_s_csr_fit(selection_s = 0, estimate_selection_s = TRUE),
+    "selection_s and estimate_selection_s = TRUE cannot both be requested"
+  )
+  expect_error(
+    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_init = 3),
+    "selection_s_init must lie within selection_s_prior"
+  )
+  expect_error(
+    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_prior = c(-2, 0, 2)),
+    "selection_s_prior must be a finite numeric vector of length 2"
+  )
+  expect_error(
+    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_prior = c(2, -2)),
+    "selection_s_prior lower bound must be less than upper bound"
+  )
+  expect_error(
+    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_proposal_sd = 0),
+    "selection_s_proposal_sd must be a finite positive numeric scalar"
+  )
+  expect_error(
+    stblr_csr(
+      Glist = selection_s_csr_glist(),
+      stats = selection_s_csr_stats(),
+      ld_prefix = make_selection_s_csr_prefix(),
+      method = "bayesR",
+      estimate_selection_s = TRUE,
+      nit = 2,
+      nburn = 0
+    ),
+    "estimate_selection_s is currently supported only for method = 'bayesC'"
+  )
+  expect_error(
+    stblr_csr(
+      Glist = selection_s_csr_glist(),
+      stats = selection_s_csr_stats(),
+      ld_prefix = make_selection_s_csr_prefix(),
+      scheduled = TRUE,
+      estimate_selection_s = TRUE,
+      nit = 2,
+      nburn = 0
+    ),
+    "estimate_selection_s is currently supported only for unscheduled CSR BayesC"
+  )
+})
+
+test_that("sampled selection_s works with CSR BayesC LD-swap", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  fit <- make_selection_s_csr_fit(
+    estimate_selection_s = TRUE,
+    selection_s_proposal_sd = 0.25,
+    updateLDswap = TRUE,
+    seed = 203
+  )
+
+  expect_true(all(is.finite(fit$selection_s_trace)))
+  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
+                    names(fit$ld_swap)))
 })
 
 test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
