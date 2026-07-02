@@ -154,9 +154,10 @@ controls.}
 }
 \value{
 A formatted SBayesRC-style ST-BLR fit with annotation and
-  mixture-component posterior summaries. The fit includes `vle` and `vld`
-  traces using the same definitions and formatting conventions as
-  annotation-unaware CSR fits.
+  mixture-component posterior summaries, including `comp_prob`,
+  `dm_component_mean`, `alpha`, `sigmaSqAlpha`, and `ncomp` where available.
+  The fit includes `vle` and `vld` traces using the same definitions and
+  formatting conventions as annotation-unaware CSR fits.
 }
 \description{
 Fits a CSR ST-BLR model with an SBayesRC-style annotation-dependent BayesR

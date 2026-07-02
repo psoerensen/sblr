@@ -519,6 +519,15 @@ format_sbayesrc_csr_fit <- function(
   )
  })
  names(comp_prob) <- trait_names
+ component_index <- seq.int(0L, Kgamma - 1L)
+ dm_component_mean <- vapply(
+  comp_prob,
+  function(x) as.numeric(x %*% component_index),
+  numeric(m)
+ )
+ if (nt == 1L) dm_component_mean <- matrix(dm_component_mean, ncol = 1L)
+ rownames(dm_component_mean) <- variable_names
+ colnames(dm_component_mean) <- trait_names
 
  ncomp <- matrix(
   unlist(fit$ncomp_raw),
@@ -535,6 +544,7 @@ format_sbayesrc_csr_fit <- function(
  out$vle <- fit$vle
  out$vld <- fit$vld
  out$comp_prob <- comp_prob
+ out$dm_component_mean <- dm_component_mean
  out$ncomp <- ncomp
 
  if (has_ld_swap) {
@@ -582,6 +592,10 @@ format_sbayesrc_csr_fit <- function(
      ncol = Kgamma,
      dimnames = list(variable_names, component_names)
     )
+    chain_dm_component_mean <- stats::setNames(
+     as.numeric(chain_comp %*% component_index),
+     variable_names
+    )
     chain_alpha <- matrix(
      alpha_raw[alpha_idx],
      nrow = n_anno,
@@ -593,6 +607,7 @@ format_sbayesrc_csr_fit <- function(
      dm = stats::setNames(dm_raw[marker_idx], variable_names),
      bm = stats::setNames(bm_raw[marker_idx], variable_names),
      comp_prob = chain_comp,
+     dm_component_mean = chain_dm_component_mean,
      alpha = chain_alpha,
      sigmaSqAlpha = chain_sigma
     )

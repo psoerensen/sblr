@@ -75,6 +75,7 @@ Supported fit objects should expose:
 - `fit$input$model`
 - `fit$input$backend`
 - `fit$input$data_level`
+- `fit$input$annotations`
 - `fit$input$scheduled`
 - `fit$input$nchains`
 - `fit$input$keep_chains` when applicable
@@ -98,9 +99,10 @@ Data-level values:
 - `summary` for CSR summary-statistics fits
 - `individual` for BED individual-level fits
 
-BayesR output convention is unchanged: `fit$dm` is
+BayesR and SBayesRC-like output convention is unchanged: `fit$dm` is
 `P(component > 0)`, `fit$comp_prob` stores marker-by-component probabilities,
-and `fit$dm_component_mean` stores posterior mean component index.
+and `fit$dm_component_mean` stores posterior mean zero-based component index
+where the quantity is returned or derivable.
 
 BayesC-like annotation-aware CSR backends now follow the standard native
 multi-chain output convention. `csr_prior_bayesc`, `csr_annot_bayesc`, and
@@ -122,6 +124,9 @@ annotation-dependent component probabilities in the MH ratio.
 Annotation-aware CSR models return `vle` and `vld` using the same definitions
 and conventions as annotation-unaware CSR models. The formatted fields are
 iteration-by-trait trace matrices with trait column names.
+
+The cross-backend computation and return inventory is maintained in
+`docs/dev/stblr_backend_computation_inventory.md`.
 
 ## Compatibility Aliases
 

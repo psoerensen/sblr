@@ -161,8 +161,9 @@ later design decision.
   marker component probabilities, slot 23 is posterior component counts, and
   slot 24 is LD-swap diagnostics. Multi-chain summary/chain slots follow the
   standard CSR convention.
-- ST-BLR resemblance: high for base fields and BayesR component outputs; the
-  annotation coefficient fields need standard names and metadata.
+- ST-BLR resemblance: high for base fields and BayesR component outputs. The
+  R formatter exposes `comp_prob`, derives `dm_component_mean` from posterior
+  component probabilities, and standardizes annotation metadata and aliases.
 
 ## R Wrapper and Helper Inventory
 
@@ -359,6 +360,7 @@ BayesR/SBayesRC-like fits should also expose:
 
 - `fit$comp_prob`
 - `fit$dm_component_mean` when available or derivable
+- `fit$ncomp` when component counts are accumulated
 
 Annotation-specific fields use stable aliases when they can be constructed
 reliably:

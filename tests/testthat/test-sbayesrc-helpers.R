@@ -213,7 +213,7 @@ test_that("format_sbayesrc_csr_fit formats a synthetic sampler result", {
    "bm", "dm", "wy", "r", "b", "component", "marker_index",
    "vbs", "vgs", "ves", "covb", "covg", "cove", "vb", "vg", "ve",
    "pi", "pim", "alpha_flat", "alpha", "sigmaSqAlpha", "vle", "vld",
-   "comp_prob", "ncomp", "rb", "rg", "re"
+   "comp_prob", "dm_component_mean", "ncomp", "rb", "rg", "re"
   )
  )
  expect_equal(dim(out$bm), c(m, nt))
@@ -226,6 +226,17 @@ test_that("format_sbayesrc_csr_fit formats a synthetic sampler result", {
  expect_equal(dim(out$sigmaSqAlpha), c(nt, nstep))
  expect_length(out$comp_prob, nt)
  expect_equal(dim(out$comp_prob[[1]]), c(m, ncomp))
+ expect_equal(dim(out$dm_component_mean), c(m, nt))
+ expected_component_mean <- vapply(
+  out$comp_prob,
+  function(x) as.numeric(x %*% seq.int(0L, ncol(x) - 1L)),
+  numeric(m)
+ )
+ expect_equal(
+  unname(out$dm_component_mean),
+  unname(expected_component_mean),
+  tolerance = 1e-12
+ )
  expect_equal(dim(out$ncomp), c(nt, ncomp))
  expect_identical(rownames(out$bm), variable_names)
  expect_identical(colnames(out$bm), trait_names)
