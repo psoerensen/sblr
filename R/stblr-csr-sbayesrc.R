@@ -25,8 +25,16 @@
 #' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
 #'   If supplied, non-null component prior variances are scaled by
 #'   `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL` preserves
-#'   the ordinary SBayesRC prior. Sampler-level estimation of `selection_s` is
-#'   not implemented.
+#'   the ordinary SBayesRC prior.
+#' @param estimate_selection_s Logical; estimate one trait-specific
+#'   BayesS-style `selection_s` by Metropolis-Hastings for CSR SBayesRC. Fixed
+#'   `selection_s` and sampled `selection_s` are mutually exclusive.
+#' @param selection_s_init Initial value for sampled `selection_s`.
+#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`selection_s` prior. Only used when
+#'   `estimate_selection_s = TRUE`.
+#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.
 #' @param nub,nue Prior degrees of freedom.
 #' @param B,E Optional initial marker-effect and residual covariance matrices.
 #' @param ssb_prior,sse_prior Optional prior scale matrices.
@@ -128,6 +136,10 @@ stblr_csr_sbayesrc_generic <- function(
   pi_floor = 1e-12,
   alpha_update_every = 10,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   Glist = NULL
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
@@ -161,12 +173,20 @@ stblr_csr_sbayesrc_generic <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
+ .stblr_validate_sampled_selection_s(
+  estimate_selection_s = estimate_selection_s,
+  selection_s = selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd
+ )
  selection_s_info <- .stblr_prepare_csr_selection_s(
   selection_s = selection_s,
   Glist = Glist,
   m = m,
   scheduled = FALSE,
-  backend = "sbayesrc"
+  backend = "sbayesrc",
+  return_log_h = estimate_selection_s
  )
 
  arch <- .stblr_resolve_architecture(
@@ -309,7 +329,12 @@ stblr_csr_sbayesrc_generic <- function(
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
-  selection_s_prior_scale = selection_s_info$prior_scale
+  selection_s_prior_scale = selection_s_info$prior_scale,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd,
+  selection_s_log_h = selection_s_info$log_h
  )
 
  fit <- format_sbayesrc_csr_fit(
@@ -324,6 +349,15 @@ stblr_csr_sbayesrc_generic <- function(
   nchains = nchains,
   keep_chains = keep_chains
  )
+
+ if (isTRUE(estimate_selection_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
+  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
+  fit$selection_s <- colMeans(s_trace_keep)
+  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
+  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ }
 
  fit$input <- c(
   list(
@@ -352,9 +386,13 @@ stblr_csr_sbayesrc_generic <- function(
    standardize_annotations = standardize_annotations,
    center_binary_annotations = center_binary_annotations,
    h2 = h2,
+   estimate_selection_s = estimate_selection_s,
    selection_s = selection_s_info$selection_s,
    selection_s_fixed = selection_s_info$fixed,
    selection_s_exponent = selection_s_info$exponent,
+   selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
+   selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
+   selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
    selection_s_scale = "standardized_genotype_effect",
    nub = nub,
    nue = nue,

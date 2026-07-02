@@ -159,8 +159,14 @@ later design decision.
 - Supports fixed global BayesS-style `selection_s` through the public
   `stblr_csr_annot(annotation_model = "sbayesrc")` path. Annotations control
   component probabilities; `selection_s` controls MAF-dependent non-null
-  effect-size variance scaling. Sampled `S` and annotation-specific `S` are not
+  effect-size variance scaling. Sampled trait-specific `S` is supported by
+  Metropolis-Hastings in the CSR SBayesRC path; annotation-specific `S` is not
   implemented.
+- Sampled `selection_s` uses the kernel
+  `log p(S | b, gamma, vb) = log p(S) - 0.5 sum_active [log q_j(S) +
+  b_j^2 / (vb * gamma_j * q_j(S))]`, with `q_j(S) = h_j^(S + 1)`.
+  Annotation/alpha updates condition on component labels and do not directly
+  use the MAF-dependent effect-size scale.
 - Unsupported compared with current CSR/BED main interfaces: scheduled updates.
 - Return layout: 25 slots. Slots 0-17 follow the BayesR-like CSR convention
   with `dm = P(component > 0)`; slot 18 is posterior mean `alpha`, slot 19 is

@@ -31,6 +31,14 @@
 #'   Currently supported only for `annotation_model = "sbayesrc"` in this
 #'   unified annotation interface. For CSR SBayesRC, non-null component prior
 #'   variances are scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
+#' @param estimate_selection_s Logical; estimate one trait-specific
+#'   BayesS-style `selection_s` by Metropolis-Hastings. Currently supported
+#'   only for `annotation_model = "sbayesrc"`.
+#' @param selection_s_init Initial value for sampled `selection_s`.
+#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`selection_s` prior.
+#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `selection_s`.
 #' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
 #'   moves when `updateLDswap = TRUE`.
 #' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
@@ -86,6 +94,10 @@ stblr_csr_annot <- function(
   updatePi = TRUE,
   updateLDswap = FALSE,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
@@ -102,6 +114,13 @@ stblr_csr_annot <- function(
  .stblr_check_annotation_chains(annotation_model, nchains, keep_chains, chain_seeds)
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ .stblr_validate_sampled_selection_s(
+  estimate_selection_s = estimate_selection_s,
+  selection_s = selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd
  )
  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(
   Glist = Glist,
@@ -133,6 +152,12 @@ stblr_csr_annot <- function(
  common$ld_swap_moves <- ld_swap_moves
 
  if (annotation_model %in% c("prior", "learned", "group")) {
+  if (isTRUE(estimate_selection_s)) {
+   stop(
+    "estimate_selection_s is currently supported only for annotation_model = \"sbayesrc\".",
+    call. = FALSE
+   )
+  }
   if (!is.null(selection_s)) {
    stop(
     "selection_s is currently supported only for annotation_model = \"sbayesrc\".",
@@ -167,7 +192,19 @@ stblr_csr_annot <- function(
  if ("A" %in% names(extra)) {
   stop("Supply SBayesRC annotations through annotations, not both annotations and A.")
  }
- args <- c(common, list(Glist = Glist, A = annotations, selection_s = selection_s), extra)
+ args <- c(
+  common,
+  list(
+   Glist = Glist,
+   A = annotations,
+   selection_s = selection_s,
+   estimate_selection_s = estimate_selection_s,
+   selection_s_init = selection_s_init,
+   selection_s_prior = selection_s_prior,
+   selection_s_proposal_sd = selection_s_proposal_sd
+  ),
+  extra
+ )
  do.call(stblr_csr_sbayesrc_generic, args)
 }
 

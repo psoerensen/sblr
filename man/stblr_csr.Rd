@@ -105,8 +105,8 @@ scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
 `selection_s = NULL` preserves the ordinary BayesC/BayesR prior.}
 
 \item{estimate_selection_s}{Logical; for unscheduled annotation-unaware CSR
-BayesC only, estimate one trait-specific BayesS-style `selection_s` by
-Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
+BayesC and BayesR, estimate one trait-specific BayesS-style `selection_s`
+by Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
 mutually exclusive.}
 
 \item{selection_s_init}{Initial value for sampled `selection_s`.}

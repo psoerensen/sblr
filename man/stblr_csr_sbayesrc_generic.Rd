@@ -60,6 +60,10 @@ stblr_csr_sbayesrc_generic(
   pi_floor = 1e-12,
   alpha_update_every = 10,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   Glist = NULL
 )
 }
@@ -157,8 +161,20 @@ controls.}
 \item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter.
 If supplied, non-null component prior variances are scaled by
 `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL` preserves
-the ordinary SBayesRC prior. Sampler-level estimation of `selection_s` is
-not implemented.}
+the ordinary SBayesRC prior.}
+
+\item{estimate_selection_s}{Logical; estimate one trait-specific
+BayesS-style `selection_s` by Metropolis-Hastings for CSR SBayesRC. Fixed
+`selection_s` and sampled `selection_s` are mutually exclusive.}
+
+\item{selection_s_init}{Initial value for sampled `selection_s`.}
+
+\item{selection_s_prior}{Numeric length-2 lower and upper bounds for the
+uniform sampled-`selection_s` prior. Only used when
+`estimate_selection_s = TRUE`.}
+
+\item{selection_s_proposal_sd}{Random-walk proposal standard deviation for
+sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.}
 
 \item{Glist}{Optional genotype/LD metadata. Required when `selection_s` is
 non-`NULL` so MAF can be aligned to the CSR LD marker order using

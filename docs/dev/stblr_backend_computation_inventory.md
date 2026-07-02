@@ -85,11 +85,12 @@ If a BayesS-style prior is defined on allele-scale effects as
 for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
 `selection_s` implements this fixed scaling for `csr_bayesc`, `csr_bayesr`,
 and `csr_sbayesrc`. Sampled trait-specific `selection_s` is currently
-implemented only for annotation-unaware unscheduled `csr_bayesc`
-(`stblr_csr(method = "bayesC", scheduled = FALSE)`). Its default bounded
+implemented for annotation-unaware unscheduled `csr_bayesc`
+(`stblr_csr(method = "bayesC", scheduled = FALSE)`), `csr_bayesr`
+(`stblr_csr(method = "bayesR")`), and annotation-aware `csr_sbayesrc`
+(`stblr_csr_annot(annotation_model = "sbayesrc")`). Its default bounded
 uniform prior is `c(-3, 2)`, and its default random-walk MH proposal SD is
-0.35. `csr_bayesr` and `csr_sbayesrc` do not yet support sampled
-`selection_s`. For CSR BayesC, included-marker prior variances are
+0.35. For CSR BayesC, included-marker prior variances are
 `vb * h_j^(selection_s + 1)`. For CSR BayesR, non-null component prior
 variances are `vb * mixture_var_m * h_j^(selection_s + 1)`, with component 0
 remaining the point-mass null. For CSR SBayesRC, annotations continue to
@@ -105,7 +106,7 @@ Selection-S support summary:
 | mode | `csr_bayesc` | `csr_bayesr` | `csr_sbayesrc` |
 | --- | --- | --- | --- |
 | fixed `selection_s` | supported | supported | supported |
-| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | not yet supported | not yet supported |
+| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 |
 
 Sampled CSR BayesC uses a bounded uniform prior and the Metropolis-Hastings
 kernel
@@ -121,6 +122,36 @@ log p(S_t | b_t, d_t, vb_t)
 with `q_j(S_t) = h_j^(S_t + 1)`. Native code receives aligned `log(h_j)` and
 computes dynamic marker scales as `exp((S_t + 1) * log(h_j))`.
 
+Sampled CSR BayesR uses the analogous trait-chain-specific MH update with
+active non-null components:
+
+```text
+log p(S_t | b_t, gamma_t, vb_t)
+  = log p(S_t)
+    - 0.5 * sum_{j: gamma_jt > 0} [
+        log(q_j(S_t)) + b_jt^2 / (vb_t * gamma_jt * q_j(S_t))
+      ]
+```
+
+where `gamma_jt` is the current BayesR non-null component variance multiplier
+and `q_j(S_t) = h_j^(S_t + 1)`.
+
+Sampled CSR SBayesRC uses the same active-component kernel with the current
+SBayesRC component labels:
+
+```text
+log p(S_t | b_t, gamma_t, vb_t)
+  = log p(S_t)
+    - 0.5 * sum_{j: gamma_jt > 0} [
+        log(q_j(S_t)) + b_jt^2 / (vb_t * gamma_jt * q_j(S_t))
+      ]
+```
+
+Here `gamma_jt` is the current non-null SBayesRC component variance multiplier
+and `q_j(S_t) = h_j^(S_t + 1)`. Annotations affect component probabilities and
+alpha updates; `selection_s` affects marker-specific effect-size prior
+variance.
+
 ### Fixed `selection_s` Performance Path
 
 The default `selection_s = NULL` path should be treated as the baseline CSR
@@ -134,9 +165,9 @@ paths when `selection_s_prior_scale` is absent or empty. The scaled helper paths
 are used only when a fixed `selection_s` is supplied. This intentionally
 duplicates a small amount of marker-update, variance-update, and LD-swap code
 so the default path stays close to the previous unscaled C++ code.
-Sampled `selection_s` for CSR BayesC is a third path: the sampler recomputes a
-dynamic marker-scale vector once per trait-chain iteration and reuses the
-scaled BayesC beta, `vb`, and LD-swap helpers.
+Sampled `selection_s` for CSR BayesC, CSR BayesR, and CSR SBayesRC is a third path: the
+sampler recomputes a dynamic marker-scale vector once per trait-chain
+iteration and reuses the scaled beta, `vb`, and LD-swap helpers.
 
 Audit conclusion:
 
@@ -267,14 +298,15 @@ optional `chains`, and optional `ld_swap_chains`.
 The R formatter resets `dm` to `1 - comp_prob[[trait]][, "component_0"]` and
 validates marker-by-component probabilities.
 
-Fixed `selection_s` is supported for this annotation-unaware CSR BayesR
+Fixed and sampled `selection_s` are supported for this annotation-unaware CSR BayesR
 backend. The R wrapper aligns `Glist$maf` to `Glist$rsidsLD` with
 `match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, computes
-`h = pmax(2p(1-p), 1e-8)`, and passes `h^(selection_s + 1)` to native code as
-`selection_s_prior_scale`. Native BayesR uses this scale in non-null component
-posterior weights, conditional effect draws, the global `vb` variance update
-through `sum b_j^2 / (mixture_var_m * scale_j)`, and active/null LD-swap prior
-density terms.
+`h = pmax(2p(1-p), 1e-8)`, and passes either `h^(selection_s + 1)` to native
+code as `selection_s_prior_scale` for fixed S or aligned `log(h)` for sampled
+S. Native BayesR uses the current scale in non-null component posterior
+weights, conditional effect draws, the global `vb` variance update through
+`sum b_j^2 / (mixture_var_m * scale_j)`, and active/null LD-swap prior density
+terms.
 
 ### `bed_bayesc`
 
@@ -362,18 +394,22 @@ Legacy slots:
 | 24 | LD-swap diagnostics |
 | 25-30 | `bm_sd`, `bm_min`, `bm_max`, `dm_sd`, `dm_min`, `dm_max` |
 | 31-36 | compact chain `dm`, `bm`, LD-swap, `comp_prob`, `alpha`, `sigmaSqAlpha` |
+| 37-38 | sampled `selection_s_trace`, sampled `selection_s_acceptance` |
+| 39-40 | compact chain sampled `selection_s_trace`, sampled `selection_s_acceptance` |
 
 The R formatter derives `dm_component_mean` from `comp_prob` as posterior mean
 zero-based component index, matching BayesR output semantics.
 
-Fixed `selection_s` is supported for this annotation-aware CSR SBayesRC
-backend. The R wrapper reuses the CSR BayesC/BayesR MAF alignment helper:
-`match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, followed by
-`h = pmax(2p(1-p), 1e-8)` and `h^(selection_s + 1)`. Native SBayesRC uses this
-scale in non-null component posterior weights, conditional effect draws, the
-global `vb` update through `sum b_j^2 / (gamma_m * scale_j)`, and active/null
-LD-swap Gaussian prior-density terms. Annotation/alpha updates operate on
-component labels and do not require MAF-scale changes.
+Fixed and sampled `selection_s` are supported for this annotation-aware CSR
+SBayesRC backend. The R wrapper reuses the CSR BayesC/BayesR MAF alignment
+helper: `match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, followed by
+`h = pmax(2p(1-p), 1e-8)`. For fixed S it passes `h^(selection_s + 1)`. For
+sampled S it passes aligned `log(h)` and native code computes the current
+dynamic scale as `exp((S_t + 1) * log(h_j))`. Native SBayesRC uses this scale
+in non-null component posterior weights, conditional effect draws, the global
+`vb` update through `sum b_j^2 / (gamma_m * scale_j)`, and active/null LD-swap
+Gaussian prior-density terms. Annotation/alpha updates operate on component
+labels and do not require MAF-scale changes.
 
 ## Final R Fit Fields
 

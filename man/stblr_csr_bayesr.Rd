@@ -34,6 +34,10 @@ stblr_csr_bayesr(
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -106,6 +110,19 @@ for ordinary CSR BayesR. For the standardized-genotype CSR effect scale,
 non-null component prior variances are scaled by
 `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL`
 preserves the ordinary BayesR prior.}
+
+\item{estimate_selection_s}{Logical; estimate one trait-specific
+BayesS-style `selection_s` by Metropolis-Hastings for CSR BayesR. Fixed
+`selection_s` and sampled `selection_s` are mutually exclusive.}
+
+\item{selection_s_init}{Initial value for sampled `selection_s`.}
+
+\item{selection_s_prior}{Numeric length-2 lower and upper bounds for the
+uniform sampled-`selection_s` prior. Only used when
+`estimate_selection_s = TRUE`.}
+
+\item{selection_s_proposal_sd}{Random-walk proposal standard deviation for
+sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 

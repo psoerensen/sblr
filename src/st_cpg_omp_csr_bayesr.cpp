@@ -391,6 +391,27 @@ inline void sampleBetaR_ST_csr_unscaled(
  comp(iu) = k_new;
 }
 
+inline double bayesr_selection_scale(double s, double log_h) {
+ return std::exp((s + 1.0) * log_h);
+}
+
+inline void fill_selection_s_prior_scale_bayesr(
+  int m,
+  double s,
+  const arma::rowvec& log_h,
+  arma::rowvec& prior_scale
+) {
+ prior_scale.set_size(static_cast<arma::uword>(m));
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  const double scale_i = bayesr_selection_scale(s, log_h(iu));
+  if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+   throw std::runtime_error("dynamic BayesR selection_s prior scale became invalid.");
+  }
+  prior_scale(iu) = scale_i;
+ }
+}
+
 struct BayesRLDLDFriends {
  std::vector<uint64_t> ptr;
  std::vector<int> idx;
@@ -970,6 +991,76 @@ inline void sampleB_bayesr_ST_csr_unscaled(
  vb = std::max(scale / chi2, 1e-12);
 }
 
+inline double logpost_selection_s_bayesr(
+  double s,
+  const arma::rowvec& b,
+  const arma::Row<int>& comp,
+  double vb,
+  const arma::vec& mixture_var,
+  const arma::rowvec& log_h,
+  double prior_lower,
+  double prior_upper
+) {
+ if (!std::isfinite(s) || s < prior_lower || s > prior_upper) {
+  return -std::numeric_limits<double>::infinity();
+ }
+ const double vb_safe = std::max(vb, 1e-300);
+ double lp = 0.0;
+ const arma::uword m = b.n_elem;
+ for (arma::uword j = 0; j < m; ++j) {
+  const int k = comp(j);
+  if (k <= 0) continue;
+  if (k >= static_cast<int>(mixture_var.n_elem)) {
+   return -std::numeric_limits<double>::infinity();
+  }
+  const double ck = mixture_var(static_cast<arma::uword>(k));
+  if (!std::isfinite(ck) || ck <= 0.0) {
+   return -std::numeric_limits<double>::infinity();
+  }
+  const double log_q = (s + 1.0) * log_h(j);
+  const double q = std::exp(log_q);
+  if (!std::isfinite(q) || q <= 0.0) {
+   return -std::numeric_limits<double>::infinity();
+  }
+  lp += -0.5 * (log_q + b(j) * b(j) / (vb_safe * ck * q));
+ }
+ return lp;
+}
+
+inline bool update_selection_s_bayesr(
+  double& selection_s_current,
+  const arma::rowvec& b,
+  const arma::Row<int>& comp,
+  double vb,
+  const arma::vec& mixture_var,
+  const arma::rowvec& log_h,
+  double prior_lower,
+  double prior_upper,
+  double proposal_sd,
+  std::mt19937& gen
+) {
+ std::normal_distribution<double> proposal(0.0, proposal_sd);
+ const double selection_s_prop = selection_s_current + proposal(gen);
+ if (selection_s_prop < prior_lower || selection_s_prop > prior_upper ||
+     !std::isfinite(selection_s_prop)) {
+  return false;
+ }
+
+ const double lp_current = logpost_selection_s_bayesr(
+  selection_s_current, b, comp, vb, mixture_var, log_h, prior_lower, prior_upper
+ );
+ const double lp_prop = logpost_selection_s_bayesr(
+  selection_s_prop, b, comp, vb, mixture_var, log_h, prior_lower, prior_upper
+ );
+ const double log_alpha = lp_prop - lp_current;
+ std::uniform_real_distribution<double> runif(0.0, 1.0);
+ if (std::log(std::max(runif(gen), 1e-300)) < log_alpha) {
+  selection_s_current = selection_s_prop;
+  return true;
+ }
+ return false;
+}
+
 inline void samplePi_bayesr_ST_csr(
   const arma::Row<int>& comp,
   std::vector<double>& pi,
@@ -1060,7 +1151,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
   int ld_swap_moves = 1,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
+  bool estimate_selection_s = false,
+  double selection_s_init = 0.0,
+  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
+  double selection_s_proposal_sd = 0.35,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
 ) {
  const int nt = static_cast<int>(wy.size());
  if (nt <= 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: nt must be positive.");
@@ -1099,6 +1195,32 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  if (use_selection_s_prior_scale &&
      static_cast<int>(selection_s_prior_scale_vec.size()) != m) {
   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_prior_scale must have length m.");
+ }
+ if (estimate_selection_s && use_selection_s_prior_scale) {
+  throw std::runtime_error(
+   "stblr_cpg_omp_csr_bayesr: fixed selection_s_prior_scale and estimate_selection_s cannot both be used."
+  );
+ }
+ if (estimate_selection_s) {
+  if (!std::isfinite(selection_s_init)) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_init must be finite.");
+  }
+  if (selection_s_prior.size() != 2) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_prior must have length 2.");
+  }
+  if (!std::isfinite(selection_s_prior[0]) || !std::isfinite(selection_s_prior[1]) ||
+      selection_s_prior[0] >= selection_s_prior[1]) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_prior must have finite lower < upper.");
+  }
+  if (selection_s_init < selection_s_prior[0] || selection_s_init > selection_s_prior[1]) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_init must lie within selection_s_prior.");
+  }
+  if (!std::isfinite(selection_s_proposal_sd) || selection_s_proposal_sd <= 0.0) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_proposal_sd must be positive.");
+  }
+  if (selection_s_log_h.isNull()) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_log_h is required when estimate_selection_s = TRUE.");
+  }
  }
 
  const int K = static_cast<int>(mixture_var.size());
@@ -1145,6 +1267,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat sse_prior_mat(nt, nt, arma::fill::zeros);
  arma::vec yy_vec(nt, arma::fill::zeros);
  arma::rowvec prior_scale;
+ arma::rowvec selection_s_log_h_row;
 
  for (int t = 0; t < nt; ++t) {
   if ((int)wy[t].size() != m || (int)ww[t].size() != m ||
@@ -1183,6 +1306,20 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     );
    }
    prior_scale(static_cast<arma::uword>(i)) = scale_i;
+  }
+ }
+ if (estimate_selection_s) {
+  Rcpp::NumericVector log_h_vec(selection_s_log_h);
+  if (static_cast<int>(log_h_vec.size()) != m) {
+   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_log_h must have length m.");
+  }
+  selection_s_log_h_row.set_size(static_cast<arma::uword>(m));
+  for (int i = 0; i < m; ++i) {
+   const double log_h_i = log_h_vec[static_cast<std::size_t>(i)];
+   if (!std::isfinite(log_h_i)) {
+    throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_log_h must contain finite values.");
+   }
+   selection_s_log_h_row(static_cast<arma::uword>(i)) = log_h_i;
   }
  }
 
@@ -1243,6 +1380,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ves_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat vles_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat vlds_task(ntasks, trace_len, arma::fill::zeros);
+ arma::mat selection_s_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat final_pi_task(ntasks, K, arma::fill::zeros);
  arma::mat mean_pi_task(ntasks, K, arma::fill::zeros);
  arma::vec final_vb_task(ntasks, arma::fill::zeros);
@@ -1257,6 +1395,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::ivec n_updateE_task(ntasks, arma::fill::zeros);
  arma::vec ld_swap_attempted_task(ntasks, arma::fill::zeros);
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
+ arma::vec selection_s_attempted_task(ntasks, arma::fill::zeros);
+ arma::vec selection_s_accepted_task(ntasks, arma::fill::zeros);
  std::vector<arma::mat> comp_prob_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::vec> ncomp_task(static_cast<std::size_t>(ntasks));
  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
@@ -1335,6 +1475,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    int n_updateE_t = 0;
    double ld_swap_attempted_t = 0.0;
    double ld_swap_accepted_t = 0.0;
+   double selection_s_current = selection_s_init;
+   double selection_s_attempted_t = 0.0;
+   double selection_s_accepted_t = 0.0;
+   arma::rowvec dynamic_prior_scale;
 
    double vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
    double vle_t = computeLE_bayesr_ST_csr(m, b_t, ww_t, n[t]);
@@ -1342,14 +1486,24 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    double vei_t = ve_t + adjE * vg_t;
 
    for (int it = 0; it < trace_len; ++it) {
-    if (use_selection_s_prior_scale) {
+    if (estimate_selection_s) {
+     fill_selection_s_prior_scale_bayesr(
+      m,
+      selection_s_current,
+      selection_s_log_h_row,
+      dynamic_prior_scale
+     );
+    }
+    if (estimate_selection_s || use_selection_s_prior_scale) {
+     const arma::rowvec& current_prior_scale =
+      estimate_selection_s ? dynamic_prior_scale : prior_scale;
      for (int isort = 0; isort < m; ++isort) {
       sampleBetaR_ST_csr(
        order_t[static_cast<std::size_t>(isort)],
        pi_t,
        mixture_var_vec,
        vb_t,
-       prior_scale,
+       current_prior_scale,
        vei_t,
        ww_t,
        r_t,
@@ -1383,7 +1537,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
      if (runif(gen_t) < ld_swap_prob) {
       for (int move = 0; move < ld_swap_moves; ++move) {
        bool attempted = false;
-       const bool accepted = use_selection_s_prior_scale ?
+       const bool accepted = (estimate_selection_s || use_selection_s_prior_scale) ?
         attempt_ld_swap_bayesr_ST_csr(
          m,
          t,
@@ -1395,7 +1549,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
          ww_t,
          wy_t,
          mixture_var_vec,
-         prior_scale,
+         estimate_selection_s ? dynamic_prior_scale : prior_scale,
          r_t,
          b_t,
          comp_t,
@@ -1430,7 +1584,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     }
 
     if (updateB) {
-     if (use_selection_s_prior_scale) {
+     if (estimate_selection_s || use_selection_s_prior_scale) {
       sampleB_bayesr_ST_csr(
        m,
        nub,
@@ -1438,7 +1592,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
        b_t,
        comp_t,
        mixture_var_vec,
-       prior_scale,
+       estimate_selection_s ? dynamic_prior_scale : prior_scale,
        ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
        gen_t
       );
@@ -1454,6 +1608,23 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
        gen_t
       );
      }
+    }
+
+    if (estimate_selection_s) {
+     selection_s_attempted_t += 1.0;
+     const bool accepted_s = update_selection_s_bayesr(
+      selection_s_current,
+      b_t,
+      comp_t,
+      vb_t,
+      mixture_var_vec,
+      selection_s_log_h_row,
+      selection_s_prior[0],
+      selection_s_prior[1],
+      selection_s_proposal_sd,
+      gen_t
+     );
+     if (accepted_s) selection_s_accepted_t += 1.0;
     }
 
     const bool do_updateE =
@@ -1530,6 +1701,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     ves_task(task_u, static_cast<arma::uword>(it)) = ve_t;
     vles_task(task_u, static_cast<arma::uword>(it)) = vle_t;
     vlds_task(task_u, static_cast<arma::uword>(it)) = vld_t;
+    selection_s_task(task_u, static_cast<arma::uword>(it)) = selection_s_current;
 
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
      nsamples_t += 1.0;
@@ -1579,6 +1751,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    n_updateE_task(task_u) = n_updateE_t;
    ld_swap_attempted_task(task_u) = ld_swap_attempted_t;
    ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
+   selection_s_attempted_task(task_u) = selection_s_attempted_t;
+   selection_s_accepted_task(task_u) = selection_s_accepted_t;
    comp_prob_task[static_cast<std::size_t>(task)] = comp_prob_t;
    ncomp_task[static_cast<std::size_t>(task)] = arma::sum(comp_prob_t, 0).t();
   } catch (const std::exception& e) {
@@ -1619,6 +1793,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ves(nt, trace_len, arma::fill::zeros);
  arma::mat vle(nt, trace_len, arma::fill::zeros);
  arma::mat vld(nt, trace_len, arma::fill::zeros);
+ arma::mat selection_s(nt, trace_len, arma::fill::zeros);
  arma::mat final_pi(nt, K, arma::fill::zeros);
  arma::mat mean_pi(nt, K, arma::fill::zeros);
  arma::vec final_vb(nt, arma::fill::zeros);
@@ -1627,6 +1802,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat updateE_diagnostics(ntasks, 9, arma::fill::zeros);
  arma::mat ld_swap_diagnostics(nt, 3, arma::fill::zeros);
  arma::mat ld_swap_chain_diagnostics(ntasks, 5, arma::fill::zeros);
+ arma::vec selection_s_attempted(nt, arma::fill::zeros);
+ arma::vec selection_s_accepted(nt, arma::fill::zeros);
  std::vector<arma::mat> comp_prob(static_cast<std::size_t>(nt));
  arma::mat ncomp(nt, K, arma::fill::zeros);
 
@@ -1654,6 +1831,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    attempted > 0.0 ? accepted / attempted : 0.0;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 0) += attempted;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 1) += accepted;
+  selection_s_attempted(static_cast<arma::uword>(task_trait)) +=
+   selection_s_attempted_task(task_u);
+  selection_s_accepted(static_cast<arma::uword>(task_trait)) +=
+   selection_s_accepted_task(task_u);
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1686,6 +1867,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    ves.row(tu) += ves_task.row(task_u);
    vle.row(tu) += vles_task.row(task_u);
    vld.row(tu) += vlds_task.row(task_u);
+   selection_s.row(tu) += selection_s_task.row(task_u);
    final_pi.row(tu) += final_pi_task.row(task_u);
    mean_pi.row(tu) += mean_pi_task.row(task_u);
    final_vb(tu) += final_vb_task(task_u);
@@ -1714,6 +1896,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   ves.row(tu) *= inv_chains;
   vle.row(tu) *= inv_chains;
   vld.row(tu) *= inv_chains;
+  selection_s.row(tu) *= inv_chains;
   final_pi.row(tu) *= inv_chains;
   mean_pi.row(tu) *= inv_chains;
   final_vb(tu) *= inv_chains;
@@ -1755,7 +1938,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     ld_swap_diag[0] = ld_swap_chain_diagnostics(task_u, 2);
     ld_swap_diag[1] = ld_swap_chain_diagnostics(task_u, 3);
     ld_swap_diag[2] = ld_swap_chain_diagnostics(task_u, 4);
-    trait_chains[chain] = Rcpp::List::create(
+    Rcpp::List chain_out = Rcpp::List::create(
      Rcpp::Named("dm") = dm_task.row(task_u).t(),
      Rcpp::Named("bm") = bm_task.row(task_u).t(),
      Rcpp::Named("comp_prob") = comp_prob_task[static_cast<std::size_t>(task)],
@@ -1770,6 +1953,14 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
      Rcpp::Named("updateE_diagnostics") = updateE_diag,
      Rcpp::Named("ld_swap") = ld_swap_diag
     );
+    if (estimate_selection_s) {
+     const double attempted = selection_s_attempted_task(task_u);
+     const double accepted = selection_s_accepted_task(task_u);
+     chain_out["selection_s"] = selection_s_task.row(task_u).t();
+     chain_out["selection_s_acceptance"] =
+      attempted > 0.0 ? accepted / attempted : 0.0;
+    }
+    trait_chains[chain] = chain_out;
    }
    chains_out[t] = trait_chains;
   }
@@ -1826,6 +2017,18 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   Rcpp::Named("ld_swap") = ld_swap_diagnostics,
   Rcpp::Named("ld_swap_chains") = ld_swap_chain_diagnostics
  );
+ if (estimate_selection_s) {
+  Rcpp::NumericVector selection_s_acceptance(nt);
+  for (int t = 0; t < nt; ++t) {
+   const arma::uword tu = static_cast<arma::uword>(t);
+   selection_s_acceptance[t] =
+    selection_s_attempted(tu) > 0.0
+    ? selection_s_accepted(tu) / selection_s_attempted(tu)
+    : 0.0;
+  }
+  out["selection_s_trace"] = selection_s.t();
+  out["selection_s_acceptance"] = selection_s_acceptance;
+ }
  if (keep_chains) out["chains"] = chains_out;
  return out;
 }

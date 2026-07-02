@@ -963,6 +963,13 @@ NULL
       c("attempted", "accepted", "acceptance_rate")
      )
     }
+    if (!is.null(ch$selection_s)) {
+     chain$selection_s <- as.numeric(ch$selection_s)
+     names(chain$selection_s) <- paste0("Iter", seq_along(chain$selection_s))
+    }
+    if (!is.null(ch$selection_s_acceptance)) {
+     chain$selection_s_acceptance <- as.numeric(ch$selection_s_acceptance)[1L]
+    }
     chain
    })
    names(trait_chains) <- paste0("chain", seq_along(trait_chains))
@@ -984,6 +991,18 @@ NULL
     out$ld_swap_chains <- ld_swap_chains
    }
   }
+ }
+
+ if (!is.null(fit$selection_s_trace)) {
+  out$selection_s_trace <- set_trace_matrix(
+   fit$selection_s_trace, "selection_s_trace"
+  )
+ }
+ if (!is.null(fit$selection_s_acceptance)) {
+  out$selection_s_acceptance <- stats::setNames(
+   as.numeric(fit$selection_s_acceptance),
+   trait_names
+  )
  }
 
  tol <- 1e-8
@@ -1052,6 +1071,15 @@ NULL
 #'   non-null component prior variances are scaled by
 #'   `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL`
 #'   preserves the ordinary BayesR prior.
+#' @param estimate_selection_s Logical; estimate one trait-specific
+#'   BayesS-style `selection_s` by Metropolis-Hastings for CSR BayesR. Fixed
+#'   `selection_s` and sampled `selection_s` are mutually exclusive.
+#' @param selection_s_init Initial value for sampled `selection_s`.
+#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`selection_s` prior. Only used when
+#'   `estimate_selection_s = TRUE`.
+#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.
 #' @param ld_prefix,n,m Optional low-level CSR LD prefix, sample sizes, and
 #'   marker count.
 #' @param nub,nue Prior degrees of freedom.
@@ -1092,6 +1120,10 @@ stblr_csr_bayesr <- function(
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -1119,6 +1151,13 @@ stblr_csr_bayesr <- function(
  }
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ .stblr_validate_sampled_selection_s(
+  estimate_selection_s = estimate_selection_s,
+  selection_s = selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd
  )
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -1201,7 +1240,8 @@ stblr_csr_bayesr <- function(
   Glist = Glist,
   m = m,
   scheduled = FALSE,
-  backend = "bayesr"
+  backend = "bayesr",
+  return_log_h = estimate_selection_s
  )
 
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
@@ -1265,7 +1305,12 @@ stblr_csr_bayesr <- function(
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
-  selection_s_prior_scale = selection_s_info$prior_scale
+  selection_s_prior_scale = selection_s_info$prior_scale,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd,
+  selection_s_log_h = selection_s_info$log_h
  )
 
  fit <- .format_stblr_csr_bayesr_fit(
@@ -1276,6 +1321,14 @@ stblr_csr_bayesr <- function(
   variable_names = variable_names,
   n_components = length(mixture_var)
  )
+ if (isTRUE(estimate_selection_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
+  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
+  fit$selection_s <- colMeans(s_trace_keep)
+  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
+  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ }
  fit$input <- list(
   method = "bayesr",
   model = "bayesr",
@@ -1309,6 +1362,10 @@ stblr_csr_bayesr <- function(
   selection_s = selection_s_info$selection_s,
   selection_s_fixed = selection_s_info$fixed,
   selection_s_exponent = selection_s_info$exponent,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
+  selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
+  selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
   selection_s_scale = "standardized_genotype_effect",
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
@@ -1515,8 +1572,8 @@ stblr_csr_bayesr <- function(
 #'   scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
 #'   `selection_s = NULL` preserves the ordinary BayesC/BayesR prior.
 #' @param estimate_selection_s Logical; for unscheduled annotation-unaware CSR
-#'   BayesC only, estimate one trait-specific BayesS-style `selection_s` by
-#'   Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
+#'   BayesC and BayesR, estimate one trait-specific BayesS-style `selection_s`
+#'   by Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
 #'   mutually exclusive.
 #' @param selection_s_init Initial value for sampled `selection_s`.
 #' @param selection_s_prior Numeric length-2 lower and upper bounds for the
@@ -1629,9 +1686,6 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   selection_s_proposal_sd = selection_s_proposal_sd
  )
  if (method == "bayesr") {
-  if (isTRUE(estimate_selection_s)) {
-   stop("estimate_selection_s is currently supported only for method = 'bayesC'.")
-  }
   bayesc_only <- character()
   if (!missing(pi_init) && !identical(pi_init, 0.001)) {
    bayesc_only <- c(bayesc_only, "pi_init")
@@ -1693,7 +1747,11 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    comp_init = comp_init,
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,
-   selection_s = selection_s
+   selection_s = selection_s,
+   estimate_selection_s = estimate_selection_s,
+   selection_s_init = selection_s_init,
+   selection_s_prior = selection_s_prior,
+   selection_s_proposal_sd = selection_s_proposal_sd
   )
   if (!is.null(mixture_var)) br_args$mixture_var <- mixture_var
   if (!is.null(pi)) br_args$pi <- pi

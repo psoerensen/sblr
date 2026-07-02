@@ -25,6 +25,10 @@ stblr_csr_annot(
   updatePi = TRUE,
   updateLDswap = FALSE,
   selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
@@ -79,6 +83,18 @@ for the current annotation-aware CSR models, including SBayesRC.}
 Currently supported only for `annotation_model = "sbayesrc"` in this
 unified annotation interface. For CSR SBayesRC, non-null component prior
 variances are scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.}
+
+\item{estimate_selection_s}{Logical; estimate one trait-specific
+BayesS-style `selection_s` by Metropolis-Hastings. Currently supported
+only for `annotation_model = "sbayesrc"`.}
+
+\item{selection_s_init}{Initial value for sampled `selection_s`.}
+
+\item{selection_s_prior}{Numeric length-2 lower and upper bounds for the
+uniform sampled-`selection_s` prior.}
+
+\item{selection_s_proposal_sd}{Random-walk proposal standard deviation for
+sampled `selection_s`.}
 
 \item{ld_swap_prob}{Probability per MCMC iteration of attempting LD-swap
 moves when `updateLDswap = TRUE`.}

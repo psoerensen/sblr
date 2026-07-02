@@ -139,10 +139,10 @@ Fixed-S support is limited to `csr_bayesc`
 (`stblr_csr(method = "bayesC", scheduled = FALSE)`), `csr_bayesr`
 (`stblr_csr(method = "bayesR")` or `stblr_csr_bayesr()`), and `csr_sbayesrc`
 (`stblr_csr_annot(annotation_model = "sbayesrc")`). Sampled trait-specific
-`selection_s` support is limited to annotation-unaware unscheduled
-`csr_bayesc`, with default prior `c(-3, 2)` and default random-walk MH
-proposal SD 0.35. The `csr_scheduled_bayesc` backend, BayesR/SBayesRC
-sampled-S paths, BayesC-like annotation-aware CSR backends
+`selection_s` support is limited to unscheduled `csr_bayesc`, `csr_bayesr`,
+and annotation-aware `csr_sbayesrc`, with default prior `c(-3, 2)` and default
+random-walk MH proposal SD 0.35. The `csr_scheduled_bayesc` backend,
+BayesC-like annotation-aware CSR backends
 (`csr_prior_bayesc`, `csr_annot_bayesc`, and `csr_group_bayesc`), and BED
 backends do not support sampled `selection_s`.
 
@@ -151,7 +151,7 @@ Selection-S support summary:
 | mode | `csr_bayesc` | `csr_bayesr` | `csr_sbayesrc` |
 | --- | --- | --- | --- |
 | fixed `selection_s` | supported | supported | supported |
-| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | not yet supported | not yet supported |
+| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 |
 
 Preferred public argument names are:
 
@@ -197,8 +197,35 @@ proposal uses `S_new = S_current + Normal(0, selection_s_proposal_sd)` with a
 uniform prior over `selection_s_prior`. For sampled `selection_s`, the default
 prior is Uniform(-3, 2) and the default proposal SD is 0.35. These tuning
 arguments only affect `estimate_selection_s = TRUE`; they do not affect
-ordinary BayesC or fixed `selection_s`. CSR BayesR and CSR SBayesRC still
-support fixed `selection_s` only.
+ordinary BayesC/BayesR/SBayesRC or fixed `selection_s`.
+
+Sampled CSR BayesR uses the active non-null component contribution:
+
+```text
+log p(S | b, gamma, vb)
+= log p(S)
+- 0.5 * sum_{j: gamma_j > 0} [
+    log(q_j(S)) +
+    b_j^2 / (vb * gamma_j * q_j(S))
+  ]
+```
+
+where `gamma_j` is the current non-null BayesR component variance multiplier
+and `q_j(S) = h_j^(S + 1)`.
+
+Sampled CSR SBayesRC uses the same active non-null component contribution:
+
+```text
+log p(S | b, gamma, vb)
+= log p(S)
+- 0.5 * sum_{j: gamma_j > 0} [
+    log(q_j(S)) +
+    b_j^2 / (vb * gamma_j * q_j(S))
+  ]
+```
+
+For SBayesRC, annotations affect component probabilities and alpha updates;
+`selection_s` affects marker-specific effect-size prior variance.
 
 ## Compatibility Aliases
 
