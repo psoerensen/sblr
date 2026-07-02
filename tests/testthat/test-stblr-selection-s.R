@@ -460,8 +460,6 @@ test_that("sampled selection_s runs for CSR BayesC and returns mechanics", {
   fit <- make_selection_s_csr_fit(
     estimate_selection_s = TRUE,
     selection_s_init = 0,
-    selection_s_prior = c(-2, 2),
-    selection_s_proposal_sd = 0.25,
     seed = 201
   )
 
@@ -475,7 +473,7 @@ test_that("sampled selection_s runs for CSR BayesC and returns mechanics", {
   expect_equal(ncol(fit$selection_s_trace), length(selection_s_csr_stats()$yy))
   expect_length(fit$selection_s, length(selection_s_csr_stats()$yy))
   expect_true(all(is.finite(fit$selection_s)))
-  expect_true(all(fit$selection_s_trace >= -2 & fit$selection_s_trace <= 2))
+  expect_true(all(fit$selection_s_trace >= -3 & fit$selection_s_trace <= 2))
   expect_true(all(is.finite(fit$selection_s_acceptance)))
   expect_true(all(fit$selection_s_acceptance >= 0 & fit$selection_s_acceptance <= 1))
   expect_false(all(as.numeric(fit$selection_s_trace[, 1]) ==
@@ -484,8 +482,8 @@ test_that("sampled selection_s runs for CSR BayesC and returns mechanics", {
   expect_true(fit$input$estimate_selection_s)
   expect_null(fit$input$selection_s)
   expect_equal(fit$input$selection_s_init, 0)
-  expect_equal(fit$input$selection_s_prior, c(-2, 2))
-  expect_equal(fit$input$selection_s_proposal_sd, 0.25)
+  expect_equal(fit$input$selection_s_prior, c(-3, 2))
+  expect_equal(fit$input$selection_s_proposal_sd, 0.35)
 })
 
 test_that("sampled selection_s supports keep_chains and is reproducible", {

@@ -840,8 +840,8 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
   bool estimate_selection_s = false,
   double selection_s_init = 0.0,
-  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-2.0, 2.0),
-  double selection_s_proposal_sd = 0.05,
+  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
+  double selection_s_proposal_sd = 0.35,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
 ) {
  const int nt = static_cast<int>(wy.size());

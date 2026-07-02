@@ -1983,6 +1983,24 @@ fitC_sampleS_wide$selection_s_max
 fitC_sampleS_wide$selection_s_acceptance
 
 
+matplot(
+  fitC_sampleS_wide$selection_s_trace,
+  type = "l",
+  lty = 1,
+  xlab = "Iteration",
+  ylab = "selection_s"
+)
+abline(h = c(-3, 2), lty = 2)
+
+
+apply(
+  fitC_sampleS_wide$selection_s_trace,
+  2,
+  quantile,
+  probs = c(0.025, 0.5, 0.975)
+)
+
+
 check_component_consistency <- function(fit) {
   do.call(
     rbind,

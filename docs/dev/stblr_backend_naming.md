@@ -140,18 +140,26 @@ Fixed-S support is limited to `csr_bayesc`
 (`stblr_csr(method = "bayesR")` or `stblr_csr_bayesr()`), and `csr_sbayesrc`
 (`stblr_csr_annot(annotation_model = "sbayesrc")`). Sampled trait-specific
 `selection_s` support is limited to annotation-unaware unscheduled
-`csr_bayesc`. The `csr_scheduled_bayesc` backend, BayesR/SBayesRC sampled-S
-paths, BayesC-like annotation-aware CSR backends (`csr_prior_bayesc`,
-`csr_annot_bayesc`, and `csr_group_bayesc`), and BED backends do not support
-sampled `selection_s`.
+`csr_bayesc`, with default prior `c(-3, 2)` and default random-walk MH
+proposal SD 0.35. The `csr_scheduled_bayesc` backend, BayesR/SBayesRC
+sampled-S paths, BayesC-like annotation-aware CSR backends
+(`csr_prior_bayesc`, `csr_annot_bayesc`, and `csr_group_bayesc`), and BED
+backends do not support sampled `selection_s`.
+
+Selection-S support summary:
+
+| mode | `csr_bayesc` | `csr_bayesr` | `csr_sbayesrc` |
+| --- | --- | --- | --- |
+| fixed `selection_s` | supported | supported | supported |
+| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | not yet supported | not yet supported |
 
 Preferred public argument names are:
 
 - `selection_s = NULL`
 - `estimate_selection_s = FALSE`
-- `selection_s_proposal_sd = 0.05`
 - `selection_s_init = 0`
-- `selection_s_prior = c(-2, 2)`
+- `selection_s_prior = c(-3, 2)`
+- `selection_s_proposal_sd = 0.35`
 
 Preferred future fit metadata fields are:
 
@@ -186,7 +194,10 @@ log p(S | b, d, vb)
 
 For current CSR standardized effects, `q_j(S) = h_j^(S + 1)`. A random-walk MH
 proposal uses `S_new = S_current + Normal(0, selection_s_proposal_sd)` with a
-uniform prior over `selection_s_prior`. CSR BayesR and CSR SBayesRC still
+uniform prior over `selection_s_prior`. For sampled `selection_s`, the default
+prior is Uniform(-3, 2) and the default proposal SD is 0.35. These tuning
+arguments only affect `estimate_selection_s = TRUE`; they do not affect
+ordinary BayesC or fixed `selection_s`. CSR BayesR and CSR SBayesRC still
 support fixed `selection_s` only.
 
 ## Compatibility Aliases

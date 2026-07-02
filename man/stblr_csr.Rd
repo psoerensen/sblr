@@ -21,8 +21,8 @@ stblr_csr(
   selection_s = NULL,
   estimate_selection_s = FALSE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
-  selection_s_proposal_sd = 0.05,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   nub = 4,
   nue = 4,
   updateB = TRUE,
@@ -112,10 +112,13 @@ mutually exclusive.}
 \item{selection_s_init}{Initial value for sampled `selection_s`.}
 
 \item{selection_s_prior}{Numeric length-2 lower and upper bounds for the
-uniform sampled-`selection_s` prior.}
+uniform sampled-`selection_s` prior. Only used when
+`estimate_selection_s = TRUE`; it does not affect ordinary BayesC or fixed
+`selection_s`. Defaults to `c(-3, 2)`, i.e. Uniform(-3, 2).}
 
 \item{selection_s_proposal_sd}{Random-walk proposal standard deviation for
-sampled `selection_s`.}
+sampled `selection_s`. Only used when `estimate_selection_s = TRUE`; it
+does not affect ordinary BayesC or fixed `selection_s`. Defaults to 0.35.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 

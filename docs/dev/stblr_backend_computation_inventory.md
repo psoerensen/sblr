@@ -86,9 +86,11 @@ for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
 `selection_s` implements this fixed scaling for `csr_bayesc`, `csr_bayesr`,
 and `csr_sbayesrc`. Sampled trait-specific `selection_s` is currently
 implemented only for annotation-unaware unscheduled `csr_bayesc`
-(`stblr_csr(method = "bayesC", scheduled = FALSE)`). For CSR BayesC,
-included-marker prior variances are `vb * h_j^(selection_s + 1)`. For CSR
-BayesR, non-null component prior
+(`stblr_csr(method = "bayesC", scheduled = FALSE)`). Its default bounded
+uniform prior is `c(-3, 2)`, and its default random-walk MH proposal SD is
+0.35. `csr_bayesr` and `csr_sbayesrc` do not yet support sampled
+`selection_s`. For CSR BayesC, included-marker prior variances are
+`vb * h_j^(selection_s + 1)`. For CSR BayesR, non-null component prior
 variances are `vb * mixture_var_m * h_j^(selection_s + 1)`, with component 0
 remaining the point-mass null. For CSR SBayesRC, annotations continue to
 control marker-specific component probabilities, while fixed `selection_s`
@@ -97,6 +99,13 @@ scales non-null effect prior variances as
 BayesC-like annotation-aware CSR backends (`csr_prior_bayesc`,
 `csr_annot_bayesc`, and `csr_group_bayesc`), and BED backends do not currently
 support sampler-level `selection_s`.
+
+Selection-S support summary:
+
+| mode | `csr_bayesc` | `csr_bayesr` | `csr_sbayesrc` |
+| --- | --- | --- | --- |
+| fixed `selection_s` | supported | supported | supported |
+| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | not yet supported | not yet supported |
 
 Sampled CSR BayesC uses a bounded uniform prior and the Metropolis-Hastings
 kernel

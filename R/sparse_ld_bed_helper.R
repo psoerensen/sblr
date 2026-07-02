@@ -1520,9 +1520,12 @@ stblr_csr_bayesr <- function(
 #'   mutually exclusive.
 #' @param selection_s_init Initial value for sampled `selection_s`.
 #' @param selection_s_prior Numeric length-2 lower and upper bounds for the
-#'   uniform sampled-`selection_s` prior.
+#'   uniform sampled-`selection_s` prior. Only used when
+#'   `estimate_selection_s = TRUE`; it does not affect ordinary BayesC or fixed
+#'   `selection_s`. Defaults to `c(-3, 2)`, i.e. Uniform(-3, 2).
 #' @param selection_s_proposal_sd Random-walk proposal standard deviation for
-#'   sampled `selection_s`.
+#'   sampled `selection_s`. Only used when `estimate_selection_s = TRUE`; it
+#'   does not affect ordinary BayesC or fixed `selection_s`. Defaults to 0.35.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
@@ -1593,8 +1596,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
                       selection_s = NULL, estimate_selection_s = FALSE,
                       selection_s_init = 0,
-                      selection_s_prior = c(-2, 2),
-                      selection_s_proposal_sd = 0.05,
+                      selection_s_prior = c(-3, 2),
+                      selection_s_proposal_sd = 0.35,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
                       nthin = 1, ncores = 1, seed = 10, nchains = 1L,
