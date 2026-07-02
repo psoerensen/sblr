@@ -41,11 +41,13 @@
 #' @param ... Additional model-specific arguments passed to the existing
 #'   annotation wrapper.
 #'
-#' @return A formatted ST-BLR fit. All returned fits contain `dm`, `bm`, and
-#'   `input`, standardized metadata fields (`method`, `model`, `backend`,
-#'   `data_level`, `annotation_model`, `annotations`, `nchains`,
-#'   `keep_chains`), and model-specific annotation aliases when they can be
-#'   constructed reliably. Existing wrapper-specific fields are preserved.
+#' @return A formatted ST-BLR fit. All returned fits contain `dm`, `bm`,
+#'   `vle`, `vld`, and `input`, standardized metadata fields (`method`,
+#'   `model`, `backend`, `data_level`, `annotation_model`, `annotations`,
+#'   `nchains`, `keep_chains`), and model-specific annotation aliases when they
+#'   can be constructed reliably. Existing wrapper-specific fields are
+#'   preserved. The `vle` and `vld` traces follow the same definitions and
+#'   formatting conventions as annotation-unaware CSR fits.
 #'
 #' @details
 #' This interface is CSR summary-statistics only. The current annotation-aware

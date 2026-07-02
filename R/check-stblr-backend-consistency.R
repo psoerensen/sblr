@@ -104,6 +104,19 @@ check_stblr_backend_consistency <- function(
     )
   }
 
+  .stblr_backend_check_optional_trace(
+    fit = fit,
+    name = "vle",
+    dm = dm,
+    add_check = add_check
+  )
+  .stblr_backend_check_optional_trace(
+    fit = fit,
+    name = "vld",
+    dm = dm,
+    add_check = add_check
+  )
+
   nchains_missing <- !is.list(input) || is.null(input$nchains)
   nchains <- if (nchains_missing) {
     1L
@@ -243,6 +256,42 @@ print.stblr_backend_check <- function(x, ...) {
 
 .stblr_backend_matrix_values_ok <- function(x) {
   all(is.na(x) | is.finite(x))
+}
+
+.stblr_backend_check_optional_trace <- function(fit, name, dm, add_check) {
+  if (is.null(fit[[name]])) return(invisible(NULL))
+
+  x <- .stblr_backend_as_matrix(fit[[name]])
+  add_check(
+    paste0("trace.", name, ".matrix"),
+    !is.null(x),
+    paste0("fit$", name, " is matrix-like")
+  )
+  if (is.null(x)) return(invisible(NULL))
+
+  add_check(
+    paste0("trace.", name, ".nonempty"),
+    nrow(x) > 0L && ncol(x) > 0L,
+    paste0("fit$", name, " has at least one iteration and one trait")
+  )
+  if (!is.null(dm)) {
+    add_check(
+      paste0("trace.", name, ".ntraits"),
+      ncol(x) == ncol(dm),
+      paste0("ncol(fit$", name, ") matches number of traits")
+    )
+    add_check(
+      paste0("trace.", name, ".colnames"),
+      .stblr_backend_dimnames_match(colnames(x), colnames(dm)),
+      paste0("colnames(fit$", name, ") match trait names when present")
+    )
+  }
+  add_check(
+    paste0("trace.", name, ".finite"),
+    .stblr_backend_matrix_values_ok(x),
+    paste0("fit$", name, " contains only finite values or NA")
+  )
+  invisible(x)
 }
 
 .stblr_backend_check_summary_matrix <- function(

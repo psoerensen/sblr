@@ -90,11 +90,13 @@ marker for swap proposals.}
 annotation wrapper.}
 }
 \value{
-A formatted ST-BLR fit. All returned fits contain `dm`, `bm`, and
-  `input`, standardized metadata fields (`method`, `model`, `backend`,
-  `data_level`, `annotation_model`, `annotations`, `nchains`,
-  `keep_chains`), and model-specific annotation aliases when they can be
-  constructed reliably. Existing wrapper-specific fields are preserved.
+A formatted ST-BLR fit. All returned fits contain `dm`, `bm`,
+  `vle`, `vld`, and `input`, standardized metadata fields (`method`,
+  `model`, `backend`, `data_level`, `annotation_model`, `annotations`,
+  `nchains`, `keep_chains`), and model-specific annotation aliases when they
+  can be constructed reliably. Existing wrapper-specific fields are
+  preserved. The `vle` and `vld` traces follow the same definitions and
+  formatting conventions as annotation-unaware CSR fits.
 }
 \description{
 `stblr_csr_annot()` is the unified public entry point for the current

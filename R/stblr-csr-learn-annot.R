@@ -214,7 +214,9 @@
 #' @param pi_min,pi_max Bounds for marker-specific inclusion probabilities.
 #' @param vb_multiplier_min,vb_multiplier_max Bounds for marker-specific
 #'   variance multipliers.
-#' @return A formatted ST-BLR fit with learned annotation effects.
+#' @return A formatted ST-BLR fit with learned annotation effects. The fit
+#'   includes `vle` and `vld` traces using the same definitions and formatting
+#'   conventions as annotation-unaware CSR fits.
 #' @export
 stblr_csr_learn_annot <- function(
   stats,

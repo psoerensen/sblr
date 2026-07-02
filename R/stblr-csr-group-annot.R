@@ -221,7 +221,9 @@
 #' @param nub_group Group variance-prior degrees of freedom.
 #' @param ssb_group_prior Group variance-prior scale.
 #' @param normalize_group_vb Normalize group variance multipliers.
-#' @return A formatted ST-BLR fit with group-level posterior summaries.
+#' @return A formatted ST-BLR fit with group-level posterior summaries. The
+#'   fit includes `vle` and `vld` traces using the same definitions and
+#'   formatting conventions as annotation-unaware CSR fits.
 #' @export
 stblr_csr_group_annot <- function(
   stats,

@@ -156,7 +156,9 @@ matrices.}
 variance multipliers.}
 }
 \value{
-A formatted ST-BLR fit with learned annotation effects.
+A formatted ST-BLR fit with learned annotation effects. The fit
+  includes `vle` and `vld` traces using the same definitions and formatting
+  conventions as annotation-unaware CSR fits.
 }
 \description{
 Fits the CSR ST-BLR sampler while learning annotation effects on

@@ -119,6 +119,10 @@ available as `fit$ld_swap_chains` and
 active `(component, b)` state to a null LD neighbor and uses current
 annotation-dependent component probabilities in the MH ratio.
 
+Annotation-aware CSR models return `vle` and `vld` using the same definitions
+and conventions as annotation-unaware CSR models. The formatted fields are
+iteration-by-trait trace matrices with trait column names.
+
 ## Compatibility Aliases
 
 Compatibility aliases are intentionally kept for local scripts and historical

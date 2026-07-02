@@ -59,7 +59,9 @@
 #' @param alpha_update_every Iterations between annotation-effect updates.
 #'
 #' @return A formatted SBayesRC-style ST-BLR fit with annotation and
-#'   mixture-component posterior summaries.
+#'   mixture-component posterior summaries. The fit includes `vle` and `vld`
+#'   traces using the same definitions and formatting conventions as
+#'   annotation-unaware CSR fits.
 #' @export
 stblr_csr_sbayesrc_generic <- function(
   stats,

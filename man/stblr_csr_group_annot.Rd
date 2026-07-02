@@ -143,7 +143,9 @@ marker for swap proposals.}
 \item{normalize_group_vb}{Normalize group variance multipliers.}
 }
 \value{
-A formatted ST-BLR fit with group-level posterior summaries.
+A formatted ST-BLR fit with group-level posterior summaries. The
+  fit includes `vle` and `vld` traces using the same definitions and
+  formatting conventions as annotation-unaware CSR fits.
 }
 \description{
 Fits the CSR ST-BLR sampler using group-level inclusion probabilities and

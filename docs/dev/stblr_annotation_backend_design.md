@@ -13,6 +13,11 @@ comparison with annotation-unaware CSR BayesC. The SBayesRC backend supports
 optional active/null LD-swap/MH for comparison with annotation-unaware CSR
 BayesR.
 
+Annotation-aware CSR models return `vle` and `vld` using the same definitions
+and conventions as annotation-unaware CSR models. Native slot 20 stores the
+linkage-equilibrium marker-effect component trace, and native slot 21 stores
+the LD contribution trace computed as `vgs - vle`.
+
 Do not rename C++ files or native symbols in the alignment phase. The first
 R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
 standardized annotation-aware metadata/output aliases while preserving existing
