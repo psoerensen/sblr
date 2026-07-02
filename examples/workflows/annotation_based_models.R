@@ -1,9 +1,10 @@
 # Annotation-based ST-BLR workflow
 #
 # Compares annotation-unaware CSR BayesC/BayesR models with annotation-aware
-# CSR models: fixed-prior, learned annotation, group annotation, and SBayesRC.
+# CSR fixed-prior, learned-annotation, group-prior, and SBayesRC models.
 #
-# Includes LD-swap/MH variants for comparison with annotation-unaware models.
+# See docs/dev/stblr_backend_computation_inventory.md for a detailed overview
+# of backend fields and return-value conventions.
 #
 # The MCMC settings shown here are demonstration settings. Real analyses need
 # longer chains and appropriate convergence and posterior predictive checks.
@@ -22,7 +23,6 @@ if (!nzchar(data_dir)) {
 chr <- 1L
 nthreads <- 4L
 seed <- 10L
-
 nit <- 1000L
 nburn <- 100L
 nthin <- 1L
@@ -31,10 +31,9 @@ Glist <- readRDS(file.path(data_dir, "Glist_sparseLD_1k.RDS"))
 
 # Simulate or load multi-trait phenotype data ------------------------------
 
-# mtsim_annotation() simulates overlapping annotations, enriches causal-marker
-# sampling in selected annotations, and creates marker-specific prior values.
-# Replace this simulation with phenotype and biological annotation data from
-# the study if desired.
+# mtsim_annotation() simulates overlapping annotations, enriched causal-marker
+# sampling, and marker-specific prior values. Replace this block with study
+# phenotypes and biological annotations for real data analyses.
 
 sim <- mtsim_annotation(
   Glist = Glist,
@@ -66,8 +65,6 @@ sim <- mtsim_annotation(
 
 y <- as.matrix(scale(sim$y))
 
-# Inspect the simulated annotation enrichment before model fitting.
-
 summarize_annotation_signal(sim)
 
 # Compute summary statistics -----------------------------------------------
@@ -75,6 +72,7 @@ summarize_annotation_signal(sim)
 stats <- make_stats(
   Glist = Glist,
   y = y,
+  chr = chr,
   nthreads = nthreads
 )
 
@@ -83,6 +81,7 @@ stats <- make_stats(
 Glist <- make_sparseLD(
   Glist = Glist,
   out_prefix = file.path(data_dir, "ld_test"),
+  chr = chr,
   pos_bp = NULL,
   max_distance_bp = 0,
   max_distance_variants = 1000,
@@ -93,9 +92,8 @@ Glist <- make_sparseLD(
 
 # Prepare annotation matrix ------------------------------------------------
 
-# A is an m x K marker annotation matrix. Rows of A must correspond exactly
-# to the marker ordering in stats and the sparse-LD files. Real analyses should
-# replace sim$annot with biological annotations in the same marker order.
+# A is an m x K marker annotation matrix. Rows of A must match the marker
+# order in stats, sparse LD, and returned marker-level posterior summaries.
 
 marker_id <- Glist$rsidsLD[[chr]]
 m <- length(marker_id)
@@ -108,7 +106,7 @@ stopifnot(
   identical(rownames(A), marker_id)
 )
 
-# Group annotation from the first simulated annotation ---------------------
+# Prepare group annotation -------------------------------------------------
 
 group <- ifelse(A[, 1] != 0, "annotated", "background")
 names(group) <- rownames(A)
@@ -121,12 +119,46 @@ base_args <- list(
   nit = nit,
   nburn = nburn,
   nthin = nthin,
+  ncores = nthreads,
   seed = seed
+)
+
+prior_annotations <- list(
+  A = A,
+  fixed_pi_marker = sim$pi_marker,
+  fixed_vb_multiplier = sim$vb_multiplier,
+  use_pi_marker = TRUE,
+  use_vb_multiplier = TRUE
+)
+
+learned_args <- list(
+  annotations = A,
+  annotation_model = "learned",
+  learn_pi_annot = TRUE,
+  learn_vb_annot = TRUE,
+  rw_sd_eta_pi = 0.02,
+  rw_sd_eta_vb = 0.02,
+  annot_update_every = 10
+)
+
+group_args <- list(
+  annotations = group,
+  annotation_model = "group",
+  group_names = c("annotated", "background"),
+  group_pi_init = c(0.002, 0.001),
+  group_vb_multiplier_init = c(1.1, 1.0),
+  updatePi = TRUE,
+  updateGroupVb = TRUE
+)
+
+sbayesrc_args <- list(
+  annotations = A,
+  annotation_model = "sbayesrc",
+  gamma = c(0, 0.01, 0.1, 1)
 )
 
 # LD-swap/MH settings ------------------------------------------------------
 
-# Conservative BayesC-like comparison.
 mh_conservative <- list(
   updateLDswap = TRUE,
   ld_swap_prob = 0.10,
@@ -134,7 +166,6 @@ mh_conservative <- list(
   ld_swap_moves = 5
 )
 
-# Permissive LD-relocation comparison.
 mh_permissive <- list(
   updateLDswap = TRUE,
   ld_swap_prob = 0.50,
@@ -142,282 +173,154 @@ mh_permissive <- list(
   ld_swap_moves = 20
 )
 
-# -------------------------------------------------------------------------
-# Annotation-unaware CSR models
-# -------------------------------------------------------------------------
+# Annotation-unaware CSR models -------------------------------------------
 
 fitC <- do.call(
   stblr_csr,
-  c(
-    base_args,
-    list(method = "bayesC")
-  )
+  c(base_args, list(method = "bayesC"))
 )
 
 fitC_MH <- do.call(
   stblr_csr,
-  c(
-    base_args,
-    list(method = "bayesC"),
-    mh_conservative
-  )
+  c(base_args, list(method = "bayesC"), mh_conservative)
 )
 
 fitR <- do.call(
   stblr_csr,
-  c(
-    base_args,
-    list(method = "bayesR")
-  )
+  c(base_args, list(method = "bayesR"))
 )
 
 fitR_MH <- do.call(
   stblr_csr,
-  c(
-    base_args,
-    list(method = "bayesR"),
-    mh_permissive
-  )
+  c(base_args, list(method = "bayesR"), mh_permissive)
 )
 
-# -------------------------------------------------------------------------
-# Annotation-aware CSR models
-# -------------------------------------------------------------------------
+# Annotation-aware CSR models ---------------------------------------------
 
 fit_prior <- do.call(
   stblr_csr_annot,
   c(
     base_args,
-    list(
-      annotations = list(
-        A = A,
-        fixed_pi_marker = sim$pi_marker,
-        fixed_vb_multiplier = sim$vb_multiplier,
-        use_pi_marker = TRUE,
-        use_vb_multiplier = TRUE
-      ),
-      annotation_model = "prior"
-    )
+    list(annotations = prior_annotations, annotation_model = "prior")
   )
 )
 
 fit_learned <- do.call(
   stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = A,
-      annotation_model = "learned",
-      learn_pi_annot = TRUE,
-      learn_vb_annot = TRUE,
-      rw_sd_eta_pi = 0.02,
-      rw_sd_eta_vb = 0.02,
-      annot_update_every = 10
-    )
-  )
+  c(base_args, learned_args)
 )
 
 fit_group <- do.call(
   stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = group,
-      annotation_model = "group",
-      group_names = c("annotated", "background"),
-      group_pi_init = c(0.002, 0.001),
-      group_vb_multiplier_init = c(1.1, 1.0),
-      updatePi = TRUE,
-      updateGroupVb = TRUE
-    )
-  )
+  c(base_args, group_args)
 )
 
 fit_sbayesrc <- do.call(
   stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = A,
-      annotation_model = "sbayesrc",
-      gamma = c(0, 0.01, 0.1, 1)
-    )
-  )
+  c(base_args, sbayesrc_args)
 )
 
-# -------------------------------------------------------------------------
-# Annotation-aware CSR models with conservative LD-swap/MH
-# -------------------------------------------------------------------------
+# Annotation-aware CSR models with conservative LD-swap/MH -----------------
 
 fit_prior_MH <- do.call(
   stblr_csr_annot,
   c(
     base_args,
-    list(
-      annotations = list(
-        A = A,
-        fixed_pi_marker = sim$pi_marker,
-        fixed_vb_multiplier = sim$vb_multiplier,
-        use_pi_marker = TRUE,
-        use_vb_multiplier = TRUE
-      ),
-      annotation_model = "prior"
-    ),
-    mh_conservative
-  )
-)
-
-fit_group_MH <- do.call(
-  stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = group,
-      annotation_model = "group",
-      group_names = c("annotated", "background"),
-      group_pi_init = c(0.002, 0.001),
-      group_vb_multiplier_init = c(1.1, 1.0),
-      updatePi = TRUE,
-      updateGroupVb = TRUE
-    ),
+    list(annotations = prior_annotations, annotation_model = "prior"),
     mh_conservative
   )
 )
 
 fit_learned_MH <- do.call(
   stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = A,
-      annotation_model = "learned",
-      learn_pi_annot = TRUE,
-      learn_vb_annot = TRUE,
-      rw_sd_eta_pi = 0.02,
-      rw_sd_eta_vb = 0.02,
-      annot_update_every = 10
-    ),
-    mh_conservative
-  )
+  c(base_args, learned_args, mh_conservative)
 )
 
-fit_sbayesrc_MH <- do.call(
+fit_group_MH <- do.call(
   stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = A,
-      annotation_model = "sbayesrc",
-      gamma = c(0, 0.01, 0.1, 1)
-    ),
-    mh_permissive
-  )
+  c(base_args, group_args, mh_conservative)
 )
 
-# -------------------------------------------------------------------------
-# Annotation-aware CSR models with permissive LD-swap/MH
-# -------------------------------------------------------------------------
-# These settings are useful for checking whether BayesC-like LD-swap moves
-# are actively accepted. They are not necessarily the preferred default for
-# final analyses.
+# Annotation-aware CSR models with permissive LD-swap/MH -------------------
+
+# These settings are useful diagnostics for active LD-swap acceptance. They are
+# not necessarily preferred defaults for final BayesC-like analyses.
 
 fit_prior_MH2 <- do.call(
   stblr_csr_annot,
   c(
     base_args,
-    list(
-      annotations = list(
-        A = A,
-        fixed_pi_marker = sim$pi_marker,
-        fixed_vb_multiplier = sim$vb_multiplier,
-        use_pi_marker = TRUE,
-        use_vb_multiplier = TRUE
-      ),
-      annotation_model = "prior"
-    ),
-    mh_permissive
-  )
-)
-
-fit_group_MH2 <- do.call(
-  stblr_csr_annot,
-  c(
-    base_args,
-    list(
-      annotations = group,
-      annotation_model = "group",
-      group_names = c("annotated", "background"),
-      group_pi_init = c(0.002, 0.001),
-      group_vb_multiplier_init = c(1.1, 1.0),
-      updatePi = TRUE,
-      updateGroupVb = TRUE
-    ),
+    list(annotations = prior_annotations, annotation_model = "prior"),
     mh_permissive
   )
 )
 
 fit_learned_MH2 <- do.call(
   stblr_csr_annot,
+  c(base_args, learned_args, mh_permissive)
+)
+
+fit_group_MH2 <- do.call(
+  stblr_csr_annot,
+  c(base_args, group_args, mh_permissive)
+)
+
+fit_sbayesrc_MH <- do.call(
+  stblr_csr_annot,
+  c(base_args, sbayesrc_args, mh_permissive)
+)
+
+# Optional multi-chain examples -------------------------------------------
+
+# Short demonstration runs only. Increase nit/nburn and inspect convergence
+# diagnostics before using multi-chain output for substantive analysis.
+
+fit_sbayesrc_2c <- do.call(
+  stblr_csr_annot,
   c(
-    base_args,
-    list(
-      annotations = A,
-      annotation_model = "learned",
-      learn_pi_annot = TRUE,
-      learn_vb_annot = TRUE,
-      rw_sd_eta_pi = 0.02,
-      rw_sd_eta_vb = 0.02,
-      annot_update_every = 10
+    modifyList(
+      base_args,
+      list(
+        nit = 200,
+        nburn = 50
+      )
     ),
-    mh_permissive
+    sbayesrc_args,
+    list(
+      nchains = 2,
+      chain_seeds = c(10, 20),
+      keep_chains = TRUE
+    )
   )
 )
 
-# -------------------------------------------------------------------------
-# Optional multi-chain examples
-# -------------------------------------------------------------------------
-# These are shorter demonstration runs. Increase nit/nburn for real analyses.
+fit_sbayesrc_2c$input[c("backend", "nchains", "keep_chains")]
+length(fit_sbayesrc_2c$chains)
 
-fit_sbayesrc_2c <- stblr_csr_annot(
-  stats = stats,
-  Glist = Glist,
-  annotations = A,
-  annotation_model = "sbayesrc",
-  gamma = c(0, 0.01, 0.1, 1),
-  nit = 200,
-  nburn = 50,
-  nthin = 1,
-  nchains = 2,
-  chain_seeds = c(10, 20),
-  keep_chains = TRUE
+fit_prior_MH_2c <- do.call(
+  stblr_csr_annot,
+  c(
+    modifyList(
+      base_args,
+      list(
+        nit = 200,
+        nburn = 50
+      )
+    ),
+    list(annotations = prior_annotations, annotation_model = "prior"),
+    mh_conservative,
+    list(
+      nchains = 2,
+      chain_seeds = c(10, 20),
+      keep_chains = TRUE
+    )
+  )
 )
 
-fit_prior_MH_2c <- stblr_csr_annot(
-  stats = stats,
-  Glist = Glist,
-  annotations = list(
-    A = A,
-    fixed_pi_marker = sim$pi_marker,
-    fixed_vb_multiplier = sim$vb_multiplier,
-    use_pi_marker = TRUE,
-    use_vb_multiplier = TRUE
-  ),
-  annotation_model = "prior",
-  updateLDswap = TRUE,
-  ld_swap_prob = 0.10,
-  ld_swap_r2 = 0.05,
-  ld_swap_moves = 5,
-  nit = 200,
-  nburn = 50,
-  nthin = 1,
-  nchains = 2,
-  chain_seeds = c(10, 20),
-  keep_chains = TRUE
-)
+fit_prior_MH_2c$input[c("backend", "nchains", "keep_chains", "updateLDswap")]
+fit_prior_MH_2c$ld_swap
 
-# -------------------------------------------------------------------------
-# Collect fits
-# -------------------------------------------------------------------------
+# Collect fits -------------------------------------------------------------
 
 fits <- list(
   bayesC = fitC,
@@ -437,24 +340,27 @@ fits <- list(
   sbayesrc_MH = fit_sbayesrc_MH
 )
 
-# -------------------------------------------------------------------------
-# Compact metadata
-# -------------------------------------------------------------------------
+# Compact metadata ---------------------------------------------------------
+
+metadata_value <- function(x, name, default = NA) {
+  value <- x[[name]]
+  if (is.null(value)) default else value
+}
 
 model_metadata <- do.call(
   rbind,
   lapply(names(fits), function(model_name) {
     x <- fits[[model_name]]$input
-    
+
     data.frame(
       model_name = model_name,
-      method = ifelse(is.null(x$method), NA, x$method),
-      model = ifelse(is.null(x$model), NA, x$model),
-      backend = ifelse(is.null(x$backend), NA, x$backend),
-      data_level = ifelse(is.null(x$data_level), NA, x$data_level),
-      annotation_model = ifelse(is.null(x$annotation_model), NA, x$annotation_model),
-      annotations = ifelse(is.null(x$annotations), FALSE, x$annotations),
-      updateLDswap = ifelse(is.null(x$updateLDswap), FALSE, x$updateLDswap),
+      method = metadata_value(x, "method"),
+      model = metadata_value(x, "model"),
+      backend = metadata_value(x, "backend"),
+      data_level = metadata_value(x, "data_level"),
+      annotations = metadata_value(x, "annotations", FALSE),
+      annotation_model = metadata_value(x, "annotation_model"),
+      updateLDswap = metadata_value(x, "updateLDswap", FALSE),
       n_markers = nrow(fits[[model_name]]$dm),
       n_traits = ncol(fits[[model_name]]$dm),
       stringsAsFactors = FALSE
@@ -464,19 +370,46 @@ model_metadata <- do.call(
 
 model_metadata
 
-# -------------------------------------------------------------------------
-# Compact fit summaries
-# -------------------------------------------------------------------------
+field_inventory <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    fit <- fits[[model_name]]
+
+    data.frame(
+      model = model_name,
+      backend = fit$input$backend,
+      data_level = fit$input$data_level,
+      annotations = fit$input$annotations,
+      annotation_model = ifelse(
+        is.null(fit$input$annotation_model),
+        NA,
+        fit$input$annotation_model
+      ),
+      has_dm = !is.null(fit$dm),
+      has_bm = !is.null(fit$bm),
+      has_vle = !is.null(fit$vle),
+      has_vld = !is.null(fit$vld),
+      has_comp_prob = !is.null(fit$comp_prob),
+      has_dm_component_mean = !is.null(fit$dm_component_mean),
+      has_ld_swap = !is.null(fit$ld_swap),
+      stringsAsFactors = FALSE
+    )
+  })
+)
+
+field_inventory
+
+# Compact fit summaries ----------------------------------------------------
 
 summarise_fit <- function(fit, model_name) {
   dm <- as.matrix(fit$dm)
   bm <- as.matrix(fit$bm)
-  
+
   trait_names <- colnames(dm)
   if (is.null(trait_names)) {
     trait_names <- paste0("T", seq_len(ncol(dm)))
   }
-  
+
   data.frame(
     model = model_name,
     trait = trait_names,
@@ -511,50 +444,302 @@ sum_pip_matrix <- do.call(
 
 sum_pip_matrix
 
-# -------------------------------------------------------------------------
-# LD-swap diagnostics
-# -------------------------------------------------------------------------
+# LD-swap diagnostics ------------------------------------------------------
 
 ld_swap_summary <- do.call(
   rbind,
   lapply(names(fits), function(model_name) {
     x <- fits[[model_name]]$ld_swap
-    if (is.null(x)) return(NULL)
-    
+    if (is.null(x)) {
+      return(NULL)
+    }
+
     x <- as.data.frame(x)
     x$model <- model_name
     x$trait <- rownames(x)
-    
-    x[, c("model", "trait", setdiff(names(x), c("model", "trait"))), drop = FALSE]
+    x[, c("model", "trait", setdiff(names(x), c("model", "trait")))]
   })
 )
 
 ld_swap_summary
 
-# -------------------------------------------------------------------------
-# Top marker summaries
-# -------------------------------------------------------------------------
+# True causal marker recovery ----------------------------------------------
+
+causal_shared <- sim$causal$shared
+causal_specific <- sim$causal$specific
+causal_all <- sim$causal$all
+
+causal_by_trait <- lapply(names(causal_specific), function(trait) {
+  unique(c(causal_shared, causal_specific[[trait]]))
+})
+names(causal_by_trait) <- names(causal_specific)
+
+causal_detection_summary <- function(
+    fit,
+    model_name,
+    causal_by_trait,
+    thresholds = c(0.001, 0.01, 0.05, 0.1, 0.5, 0.95)
+) {
+  dm <- as.matrix(fit$dm)
+  marker <- rownames(dm)
+  if (is.null(marker)) {
+    stop("fit$dm must have marker rownames.")
+  }
+
+  trait_names <- colnames(dm)
+  if (is.null(trait_names)) {
+    trait_names <- names(causal_by_trait)
+  }
+
+  out <- list()
+  for (trait in trait_names) {
+    causal <- intersect(causal_by_trait[[trait]], marker)
+    if (length(causal) == 0L) {
+      next
+    }
+
+    pip <- dm[, trait]
+    names(pip) <- marker
+
+    out[[trait]] <- do.call(
+      rbind,
+      lapply(thresholds, function(thr) {
+        n_detected <- sum(pip[causal] >= thr, na.rm = TRUE)
+        data.frame(
+          model = model_name,
+          trait = trait,
+          threshold = thr,
+          n_causal = length(causal),
+          n_detected = n_detected,
+          power = n_detected / length(causal),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  }
+
+  do.call(rbind, out)
+}
+
+causal_topn_summary <- function(
+    fit,
+    model_name,
+    causal_by_trait,
+    top_n = c(20, 50, 100, 200, 500, 1000)
+) {
+  dm <- as.matrix(fit$dm)
+  marker <- rownames(dm)
+  if (is.null(marker)) {
+    stop("fit$dm must have marker rownames.")
+  }
+
+  trait_names <- colnames(dm)
+  if (is.null(trait_names)) {
+    trait_names <- names(causal_by_trait)
+  }
+
+  out <- list()
+  for (trait in trait_names) {
+    causal <- intersect(causal_by_trait[[trait]], marker)
+    if (length(causal) == 0L) {
+      next
+    }
+
+    pip <- dm[, trait]
+    names(pip) <- marker
+    ranked_marker <- names(sort(pip, decreasing = TRUE))
+
+    out[[trait]] <- do.call(
+      rbind,
+      lapply(top_n, function(n) {
+        top_marker <- ranked_marker[seq_len(min(n, length(ranked_marker)))]
+        n_detected <- length(intersect(causal, top_marker))
+        data.frame(
+          model = model_name,
+          trait = trait,
+          top_n = n,
+          n_causal = length(causal),
+          n_detected = n_detected,
+          power = n_detected / length(causal),
+          precision = n_detected / length(top_marker),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  }
+
+  do.call(rbind, out)
+}
+
+causal_marker_ranks <- function(fit, model_name, causal_by_trait) {
+  dm <- as.matrix(fit$dm)
+  bm <- as.matrix(fit$bm)
+  marker <- rownames(dm)
+  if (is.null(marker)) {
+    stop("fit$dm must have marker rownames.")
+  }
+
+  trait_names <- colnames(dm)
+  if (is.null(trait_names)) {
+    trait_names <- names(causal_by_trait)
+  }
+
+  out <- list()
+  for (trait in trait_names) {
+    causal <- intersect(causal_by_trait[[trait]], marker)
+    pip <- dm[, trait]
+    effect <- bm[, trait]
+
+    names(pip) <- marker
+    names(effect) <- marker
+    marker_rank <- rank(-pip, ties.method = "min")
+    names(marker_rank) <- marker
+
+    out[[trait]] <- data.frame(
+      model = model_name,
+      trait = trait,
+      marker = causal,
+      pip = pip[causal],
+      rank = marker_rank[causal],
+      bm = effect[causal],
+      abs_bm = abs(effect[causal]),
+      causal_type = ifelse(
+        causal %in% causal_shared,
+        "shared",
+        "trait_specific"
+      ),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  do.call(rbind, out)
+}
+
+topn_power_matrix <- function(topn_power, top_n_value = 100) {
+  x <- topn_power[topn_power$top_n == top_n_value, ]
+  as.matrix(xtabs(power ~ model + trait, data = x))
+}
+
+topn_precision_matrix <- function(topn_power, top_n_value = 100) {
+  x <- topn_power[topn_power$top_n == top_n_value, ]
+  as.matrix(xtabs(precision ~ model + trait, data = x))
+}
+
+mean_rank_matrix <- function(
+    rank_summary_simple,
+    causal_type_value = "trait_specific"
+) {
+  x <- rank_summary_simple[
+    rank_summary_simple$causal_type == causal_type_value,
+  ]
+  xtabs(mean_rank ~ model + trait, data = x)
+}
+
+power_by_threshold <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    causal_detection_summary(
+      fit = fits[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+topn_power <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    causal_topn_summary(
+      fit = fits[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+causal_ranks <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    causal_marker_ranks(
+      fit = fits[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+rank_summary_simple <- do.call(
+  rbind,
+  lapply(
+    split(causal_ranks, list(
+      causal_ranks$model,
+      causal_ranks$trait,
+      causal_ranks$causal_type
+    )),
+    function(x) {
+      if (nrow(x) == 0L) {
+        return(NULL)
+      }
+
+      data.frame(
+        model = x$model[1],
+        trait = x$trait[1],
+        causal_type = x$causal_type[1],
+        mean_pip = mean(x$pip, na.rm = TRUE),
+        median_pip = median(x$pip, na.rm = TRUE),
+        mean_rank = mean(x$rank, na.rm = TRUE),
+        median_rank = median(x$rank, na.rm = TRUE),
+        n_rank_top20 = sum(x$rank <= 20, na.rm = TRUE),
+        n_rank_top100 = sum(x$rank <= 100, na.rm = TRUE),
+        n_rank_top500 = sum(x$rank <= 500, na.rm = TRUE),
+        n_causal = nrow(x),
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+)
+
+power_by_threshold
+topn_power
+causal_ranks
+rank_summary_simple
+
+topn_power_matrix(topn_power, top_n_value = 20)
+topn_power_matrix(topn_power, top_n_value = 50)
+topn_power_matrix(topn_power, top_n_value = 100)
+
+topn_precision_matrix(topn_power, top_n_value = 20)
+topn_precision_matrix(topn_power, top_n_value = 100)
+
+mean_rank_matrix(rank_summary_simple, "shared")
+mean_rank_matrix(rank_summary_simple, "trait_specific")
+
+# Top-marker summaries -----------------------------------------------------
 
 top_markers <- function(fit, model_name, trait = 1, top_n = 20) {
   dm <- as.matrix(fit$dm)
   bm <- as.matrix(fit$bm)
-  
+
   trait_index <- if (is.character(trait)) {
     match(trait, colnames(dm))
   } else {
     trait
   }
-  
-  if (length(trait_index) != 1 || is.na(trait_index)) {
+
+  if (length(trait_index) != 1L || is.na(trait_index)) {
     stop("trait must be a valid column name or column index.")
   }
-  
+
   marker <- rownames(dm)
-  if (is.null(marker)) marker <- paste0("V", seq_len(nrow(dm)))
-  
+  if (is.null(marker)) {
+    marker <- paste0("V", seq_len(nrow(dm)))
+  }
+
   trait_name <- colnames(dm)[trait_index]
-  if (is.null(trait_name)) trait_name <- paste0("T", trait_index)
-  
+  if (is.null(trait_name)) {
+    trait_name <- paste0("T", trait_index)
+  }
+
   out <- data.frame(
     model = model_name,
     trait = trait_name,
@@ -562,35 +747,40 @@ top_markers <- function(fit, model_name, trait = 1, top_n = 20) {
     pip = dm[, trait_index],
     bm = bm[, trait_index],
     abs_bm = abs(bm[, trait_index]),
+    true_causal = marker %in% causal_all,
     stringsAsFactors = FALSE
   )
-  
-  out <- out[order(-out$pip, -out$abs_bm), , drop = FALSE]
+
+  out <- out[order(-out$pip, -out$abs_bm), ]
   utils::head(out, top_n)
 }
 
 top_trait1 <- do.call(
   rbind,
   lapply(names(fits), function(model_name) {
-    top_markers(fits[[model_name]], model_name, trait = 1, top_n = 20)
+    top_markers(fits[[model_name]], model_name, trait = 1, top_n = 100)
   })
 )
 
-top_trait1
+head(top_trait1, 40)
 
-# -------------------------------------------------------------------------
-# Top-marker overlap
-# -------------------------------------------------------------------------
+# write.csv(top_trait1, file.path(data_dir, "stblr_annotation_top_trait1.csv"),
+#           row.names = FALSE)
+
+# Top-marker overlap -------------------------------------------------------
 
 top_overlap_matrix <- function(fits, trait = 1, top_n = 100) {
   top_sets <- lapply(fits, function(fit) {
     dm <- as.matrix(fit$dm)
     marker <- rownames(dm)
-    if (is.null(marker)) marker <- paste0("V", seq_len(nrow(dm)))
-    
-    marker[order(-dm[, trait])[seq_len(top_n)]]
+    if (is.null(marker)) {
+      marker <- paste0("V", seq_len(nrow(dm)))
+    }
+
+    ord <- order(-dm[, trait])
+    marker[ord[seq_len(min(top_n, length(ord)))]]
   })
-  
+
   out <- outer(
     names(top_sets),
     names(top_sets),
@@ -598,7 +788,7 @@ top_overlap_matrix <- function(fits, trait = 1, top_n = 100) {
       length(intersect(top_sets[[a]], top_sets[[b]]))
     })
   )
-  
+
   dimnames(out) <- list(names(top_sets), names(top_sets))
   out
 }
@@ -611,9 +801,7 @@ top20_overlap_trait1
 top100_overlap_trait1
 top500_overlap_trait1
 
-# -------------------------------------------------------------------------
-# PIP correlations
-# -------------------------------------------------------------------------
+# PIP correlations ---------------------------------------------------------
 
 pip_correlation_signal_markers <- function(
     fits,
@@ -627,11 +815,10 @@ pip_correlation_signal_markers <- function(
       as.matrix(fit$dm)[, trait]
     })
   )
-  
+
   colnames(pip_mat) <- names(fits)
-  
   keep <- apply(pip_mat, 1, max, na.rm = TRUE) > pip_threshold
-  
+
   stats::cor(
     pip_mat[keep, , drop = FALSE],
     use = "pairwise.complete.obs",
@@ -647,31 +834,23 @@ pip_cor_signal_trait1 <- pip_correlation_signal_markers(
 
 pip_cor_signal_trait1
 
-# -------------------------------------------------------------------------
-# Annotation summaries where available
-# -------------------------------------------------------------------------
+# Annotation summaries -----------------------------------------------------
 
-annotation_summaries <- lapply(
-  names(fits),
-  function(model_name) {
-    x <- fits[[model_name]]
-    
-    if (!is.null(x$annotation_summary)) {
-      out <- as.data.frame(x$annotation_summary)
-      out$model <- model_name
-      return(out)
-    }
-    
-    NULL
+annotation_summaries <- lapply(names(fits), function(model_name) {
+  x <- fits[[model_name]]
+  if (is.null(x$annotation_summary)) {
+    return(NULL)
   }
-)
+
+  out <- as.data.frame(x$annotation_summary)
+  out$model <- model_name
+  out[, c("model", setdiff(names(out), "model"))]
+})
 
 annotation_summaries <- Filter(Negate(is.null), annotation_summaries)
 annotation_summaries
 
-# -------------------------------------------------------------------------
-# BayesR / SBayesRC component summaries
-# -------------------------------------------------------------------------
+# BayesR / SBayesRC component summaries -----------------------------------
 
 bayesr_component_summaries <- lapply(
   c("bayesR", "bayesR_MH", "sbayesrc", "sbayesrc_MH"),
@@ -679,26 +858,49 @@ bayesr_component_summaries <- lapply(
     x <- fits[[model_name]]
     out <- summarise_stblr_bayesr_components(x)
     out$model <- model_name
-    out[, c("model", setdiff(names(out), "model")), drop = FALSE]
+    out[, c("model", setdiff(names(out), "model"))]
   }
 )
 
 bayesr_component_summaries
 
-# -------------------------------------------------------------------------
-# Compact input helper
-# -------------------------------------------------------------------------
+# Posterior component summaries -------------------------------------------
+
+posterior_summaries <- lapply(fits, function(fit) {
+  summarise_stblr_posterior(fit)
+})
+
+lapply(posterior_summaries, head)
+
+lapply(fits, function(fit) {
+  fit$input[c(
+    "method",
+    "model",
+    "backend",
+    "data_level",
+    "annotations",
+    "annotation_model",
+    "updateLDswap",
+    "nchains",
+    "keep_chains"
+  )]
+})
+
+# Example trace plot call for interactive use:
+# plot_stblr_posterior(posterior_summaries$prior_MH)
+
+# Compact input helper -----------------------------------------------------
 
 compact_input <- function(fit) {
   x <- fit$input
-  
+
   x[c(
     "method",
     "model",
     "backend",
     "data_level",
-    "annotation_model",
     "annotations",
+    "annotation_model",
     "updateLDswap",
     "ld_swap_prob",
     "ld_swap_r2",
@@ -716,422 +918,3 @@ compact_input <- function(fit) {
 }
 
 lapply(fits, compact_input)
-
-# -------------------------------------------------------------------------
-# Focused comparison of annotation-aware BayesC-like models
-# -------------------------------------------------------------------------
-
-rbind(
-  prior = colSums(fit_prior$dm),
-  prior_MH = colSums(fit_prior_MH$dm),
-  prior_MH2 = colSums(fit_prior_MH2$dm),
-  group = colSums(fit_group$dm),
-  group_MH = colSums(fit_group_MH$dm),
-  group_MH2 = colSums(fit_group_MH2$dm),
-  learned = colSums(fit_learned$dm),
-  learned_MH = colSums(fit_learned_MH$dm),
-  learned_MH2 = colSums(fit_learned_MH2$dm)
-)
-
-rbind(
-  prior_MH2 = fit_prior_MH2$ld_swap,
-  group_MH2 = fit_group_MH2$ld_swap,
-  learned_MH2 = fit_learned_MH2$ld_swap
-)
-
-
-
-# -------------------------------------------------------------------------
-# True causal marker sets
-# -------------------------------------------------------------------------
-
-causal_shared <- sim$causal$shared
-causal_specific <- sim$causal$specific
-causal_all <- sim$causal$all
-
-# Trait-specific true causal markers:
-# shared markers + trait-specific markers
-
-causal_by_trait <- lapply(names(causal_specific), function(trait) {
-  unique(c(causal_shared, causal_specific[[trait]]))
-})
-
-names(causal_by_trait) <- names(causal_specific)
-
-causal_by_trait
-
-
-# -------------------------------------------------------------------------
-# Detection power by PIP threshold
-# -------------------------------------------------------------------------
-
-causal_detection_summary <- function(fit, model_name, causal_by_trait,
-                                     thresholds = c(0.001, 0.01, 0.05, 0.1, 0.5, 0.95)) {
-  dm <- as.matrix(fit$dm)
-  marker <- rownames(dm)
-  
-  if (is.null(marker)) {
-    stop("fit$dm must have marker rownames.")
-  }
-  
-  trait_names <- colnames(dm)
-  if (is.null(trait_names)) {
-    trait_names <- names(causal_by_trait)
-  }
-  
-  out <- list()
-  
-  for (trait in trait_names) {
-    causal <- causal_by_trait[[trait]]
-    causal <- intersect(causal, marker)
-    
-    if (length(causal) == 0) {
-      next
-    }
-    
-    pip <- dm[, trait]
-    names(pip) <- marker
-    
-    trait_out <- lapply(thresholds, function(thr) {
-      detected <- causal[pip[causal] >= thr]
-      
-      data.frame(
-        model = model_name,
-        trait = trait,
-        threshold = thr,
-        n_causal = length(causal),
-        n_detected = length(detected),
-        power = length(detected) / length(causal),
-        stringsAsFactors = FALSE
-      )
-    })
-    
-    out[[trait]] <- do.call(rbind, trait_out)
-  }
-  
-  do.call(rbind, out)
-}
-
-power_by_threshold <- do.call(
-  rbind,
-  lapply(names(fits), function(model_name) {
-    causal_detection_summary(
-      fit = fits[[model_name]],
-      model_name = model_name,
-      causal_by_trait = causal_by_trait
-    )
-  })
-)
-
-power_by_threshold
-
-
-power_matrix <- function(power_by_threshold, threshold = 0.5) {
-  x <- subset(power_by_threshold, threshold == !!threshold)
-  
-  mat <- xtabs(power ~ model + trait, data = x)
-  as.matrix(mat)
-}
-
-power_matrix(power_by_threshold, threshold = 0.05)
-power_matrix(power_by_threshold, threshold = 0.5)
-power_matrix(power_by_threshold, threshold = 0.95)
-
-power_matrix <- function(power_by_threshold, threshold_value = 0.5) {
-  x <- power_by_threshold[power_by_threshold$threshold == threshold_value, ]
-  
-  mat <- xtabs(power ~ model + trait, data = x)
-  as.matrix(mat)
-}
-
-power_matrix(power_by_threshold, threshold_value = 0.05)
-power_matrix(power_by_threshold, threshold_value = 0.5)
-power_matrix(power_by_threshold, threshold_value = 0.95)
-
-
-# -------------------------------------------------------------------------
-# Detection power among top-N markers
-# -------------------------------------------------------------------------
-
-causal_topn_summary <- function(fit, model_name, causal_by_trait,
-                                top_n = c(20, 50, 100, 200, 500, 1000)) {
-  dm <- as.matrix(fit$dm)
-  marker <- rownames(dm)
-  
-  if (is.null(marker)) {
-    stop("fit$dm must have marker rownames.")
-  }
-  
-  trait_names <- colnames(dm)
-  if (is.null(trait_names)) {
-    trait_names <- names(causal_by_trait)
-  }
-  
-  out <- list()
-  
-  for (trait in trait_names) {
-    causal <- causal_by_trait[[trait]]
-    causal <- intersect(causal, marker)
-    
-    if (length(causal) == 0) {
-      next
-    }
-    
-    pip <- dm[, trait]
-    names(pip) <- marker
-    
-    ranked_marker <- names(sort(pip, decreasing = TRUE))
-    
-    trait_out <- lapply(top_n, function(n) {
-      top_marker <- ranked_marker[seq_len(min(n, length(ranked_marker)))]
-      detected <- intersect(causal, top_marker)
-      
-      data.frame(
-        model = model_name,
-        trait = trait,
-        top_n = n,
-        n_causal = length(causal),
-        n_detected = length(detected),
-        power = length(detected) / length(causal),
-        precision = length(detected) / length(top_marker),
-        stringsAsFactors = FALSE
-      )
-    })
-    
-    out[[trait]] <- do.call(rbind, trait_out)
-  }
-  
-  do.call(rbind, out)
-}
-
-topn_power <- do.call(
-  rbind,
-  lapply(names(fits), function(model_name) {
-    causal_topn_summary(
-      fit = fits[[model_name]],
-      model_name = model_name,
-      causal_by_trait = causal_by_trait
-    )
-  })
-)
-
-topn_power
-
-
-topn_power_matrix <- function(topn_power, top_n_value = 100) {
-  x <- topn_power[topn_power$top_n == top_n_value, ]
-  
-  mat <- xtabs(power ~ model + trait, data = x)
-  as.matrix(mat)
-}
-
-topn_precision_matrix <- function(topn_power, top_n_value = 100) {
-  x <- topn_power[topn_power$top_n == top_n_value, ]
-  
-  mat <- xtabs(precision ~ model + trait, data = x)
-  as.matrix(mat)
-}
-
-topn_power_matrix(topn_power, top_n_value = 20)
-topn_power_matrix(topn_power, top_n_value = 100)
-topn_power_matrix(topn_power, top_n_value = 500)
-
-topn_precision_matrix(topn_power, top_n_value = 20)
-topn_precision_matrix(topn_power, top_n_value = 100)
-
-# -------------------------------------------------------------------------
-# Rank and PIP of true causal markers
-# -------------------------------------------------------------------------
-
-causal_marker_ranks <- function(fit, model_name, causal_by_trait) {
-  dm <- as.matrix(fit$dm)
-  bm <- as.matrix(fit$bm)
-  marker <- rownames(dm)
-  
-  if (is.null(marker)) {
-    stop("fit$dm must have marker rownames.")
-  }
-  
-  trait_names <- colnames(dm)
-  if (is.null(trait_names)) {
-    trait_names <- names(causal_by_trait)
-  }
-  
-  out <- list()
-  
-  for (trait in trait_names) {
-    causal <- causal_by_trait[[trait]]
-    causal <- intersect(causal, marker)
-    
-    pip <- dm[, trait]
-    names(pip) <- marker
-    
-    effect <- bm[, trait]
-    names(effect) <- marker
-    
-    rank <- rank(-pip, ties.method = "min")
-    names(rank) <- marker
-    
-    out[[trait]] <- data.frame(
-      model = model_name,
-      trait = trait,
-      marker = causal,
-      pip = pip[causal],
-      rank = rank[causal],
-      bm = effect[causal],
-      abs_bm = abs(effect[causal]),
-      causal_type = ifelse(causal %in% causal_shared, "shared", "trait_specific"),
-      stringsAsFactors = FALSE
-    )
-  }
-  
-  do.call(rbind, out)
-}
-
-causal_ranks <- do.call(
-  rbind,
-  lapply(names(fits), function(model_name) {
-    causal_marker_ranks(
-      fit = fits[[model_name]],
-      model_name = model_name,
-      causal_by_trait = causal_by_trait
-    )
-  })
-)
-
-causal_ranks
-
-
-rank_summary <- aggregate(
-  cbind(pip, rank) ~ model + trait + causal_type,
-  data = causal_ranks,
-  FUN = function(x) c(
-    mean = mean(x, na.rm = TRUE),
-    median = median(x, na.rm = TRUE),
-    max = max(x, na.rm = TRUE)
-  )
-)
-
-rank_summary
-
-
-rank_summary_simple <- do.call(
-  rbind,
-  lapply(split(causal_ranks, list(causal_ranks$model, causal_ranks$trait, causal_ranks$causal_type)), function(x) {
-    if (nrow(x) == 0) return(NULL)
-    
-    data.frame(
-      model = x$model[1],
-      trait = x$trait[1],
-      causal_type = x$causal_type[1],
-      mean_pip = mean(x$pip, na.rm = TRUE),
-      median_pip = median(x$pip, na.rm = TRUE),
-      mean_rank = mean(x$rank, na.rm = TRUE),
-      median_rank = median(x$rank, na.rm = TRUE),
-      n_rank_top20 = sum(x$rank <= 20, na.rm = TRUE),
-      n_rank_top100 = sum(x$rank <= 100, na.rm = TRUE),
-      n_rank_top500 = sum(x$rank <= 500, na.rm = TRUE),
-      n_causal = nrow(x),
-      stringsAsFactors = FALSE
-    )
-  })
-)
-
-rank_summary_simple
-
-
-# -------------------------------------------------------------------------
-# Shared vs trait-specific causal detection
-# -------------------------------------------------------------------------
-
-causal_type_power <- function(causal_ranks, pip_threshold = 0.5) {
-  x <- causal_ranks
-  x$detected <- x$pip >= pip_threshold
-  
-  out <- aggregate(
-    detected ~ model + trait + causal_type,
-    data = x,
-    FUN = mean
-  )
-  
-  names(out)[names(out) == "detected"] <- "power"
-  out$pip_threshold <- pip_threshold
-  
-  out
-}
-
-causal_type_power_005 <- causal_type_power(causal_ranks, pip_threshold = 0.05)
-causal_type_power_05 <- causal_type_power(causal_ranks, pip_threshold = 0.5)
-causal_type_power_095 <- causal_type_power(causal_ranks, pip_threshold = 0.95)
-
-causal_type_power_005
-causal_type_power_05
-causal_type_power_095
-
-
-power_matrix(power_by_threshold, threshold_value = 0.5)
-topn_power_matrix(topn_power, top_n_value = 100)
-topn_power_matrix(topn_power, top_n_value = 500)
-rank_summary_simple
-
-
-topn_power_matrix(topn_power, top_n_value = 100)
-
-mean_rank_matrix <- function(rank_summary_simple, causal_type_value = "shared") {
-  x <- rank_summary_simple[rank_summary_simple$causal_type == causal_type_value, ]
-  xtabs(mean_rank ~ model + trait, data = x)
-}
-
-mean_rank_matrix(rank_summary_simple, "shared")
-mean_rank_matrix(rank_summary_simple, "trait_specific")
-
-
-trait_specific_rank_summary <- rank_summary_simple[
-  rank_summary_simple$causal_type == "trait_specific",
-]
-
-trait_specific_rank_summary[
-  order(trait_specific_rank_summary$trait,
-        trait_specific_rank_summary$mean_rank),
-  c(
-    "model",
-    "trait",
-    "mean_pip",
-    "median_pip",
-    "mean_rank",
-    "median_rank",
-    "n_rank_top20",
-    "n_rank_top100",
-    "n_rank_top500",
-    "n_causal"
-  )
-]
-
-trait_specific_rank_summary <- rank_summary_simple[
-  rank_summary_simple$causal_type == "trait_specific",
-]
-
-trait_specific_rank_summary$score <- with(
-  trait_specific_rank_summary,
-  n_rank_top100 / n_causal
-)
-
-trait_specific_rank_summary[
-  order(-trait_specific_rank_summary$score,
-        trait_specific_rank_summary$mean_rank),
-]
-
-trait_specific_top100 <- causal_ranks[
-  causal_ranks$causal_type == "trait_specific",
-]
-
-trait_specific_top100$detected_top100 <- trait_specific_top100$rank <= 100
-
-aggregate(
-  detected_top100 ~ model,
-  data = trait_specific_top100,
-  FUN = mean
-)
-
-
-

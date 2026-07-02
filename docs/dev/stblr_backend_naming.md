@@ -128,6 +128,53 @@ iteration-by-trait trace matrices with trait column names.
 The cross-backend computation and return inventory is maintained in
 `docs/dev/stblr_backend_computation_inventory.md`.
 
+## BayesS-Style Selection-S Terminology
+
+Use `selection_s` for a future BayesS-style global MAF-dependent marker-effect
+variance scaling parameter. This is distinct from SBayesRC annotation-selection
+coefficients such as `alpha`, `eta_pi`, and annotation-dependent component
+probabilities.
+
+Preferred future public argument names are:
+
+- `selection_s = NULL`
+- `estimate_selection_s = FALSE`
+- `selection_s_proposal_sd = 0.05`
+- `selection_s_prior_mean = 0`
+- `selection_s_prior_sd = 1`
+
+Preferred future fit metadata fields are:
+
+- `fit$input$selection_s`
+- `fit$input$estimate_selection_s`
+- `fit$input$selection_s_scale`
+- `fit$input$selection_s_exponent`
+
+For the standard CSR path, fitted `b`/`bm` values are
+standardized-genotype-scale effects. A BayesS allele-scale prior
+`alpha_j ~ N(0, v_m h_j^S)` therefore maps to a standardized-effect prior with
+exponent `S + 1`. Fixed or sampled sampler-level `selection_s` support should
+apply the same marker-specific variance factor consistently in conditional
+effect updates, prior-density or component-probability calculations, and
+marker-effect variance updates.
+
+Future sampled-`S` support should be implemented only after fixed-`S`
+validation. The active-marker log posterior contribution is:
+
+```text
+log p(S | b, gamma, v)
+= log p(S)
+- 0.5 * sum_{j: gamma_j > 0} [
+    log(v_gamma_j * q_j(S)) +
+    b_j^2 / (v_gamma_j * q_j(S))
+  ]
+```
+
+For current CSR standardized effects, `q_j(S) = h_j^(S + 1)`. A random-walk MH
+proposal can use `S_new = S_current + Normal(0, selection_s_proposal_sd)` and
+return future fields `fit$selection_s_trace`, `fit$selection_s_summary`, and
+`fit$selection_s_acceptance`.
+
 ## Compatibility Aliases
 
 Compatibility aliases are intentionally kept for local scripts and historical

@@ -69,6 +69,26 @@ summaries of marker-level posterior means. They are returned for multi-chain
 native backends that compute chain summaries; some BED and scheduled backends
 compute summaries but do not return compact per-chain objects.
 
+For the standard CSR workflow, `make_stats(..., scale = TRUE)` constructs
+summary statistics from standardized genotype columns,
+`(dosage - 2p) / sqrt(2p(1 - p))`, and `make_sparseLD()` stores correlations
+between the same standardized columns. The native CSR samplers update `b`
+against `wy`, `ww`, and sparse LD cross-products from that scale. Therefore
+CSR `bm` is a standardized-genotype-scale marker effect in the supported
+package path. `ww_j = x_j' x_j`; with standardized columns, `ww_j / n` is
+approximately one, not `h_j = 2p_j(1 - p_j)`.
+
+The diagonal LE trace `vle = sum_j ww_j * b_j^2 / n` is consequently
+consistent with standardized-genotype-scale effects in the standard CSR path.
+If a future BayesS-style prior is defined on allele-scale effects as
+`alpha_j ~ N(0, v_m h_j^S)`, then the corresponding standardized-effect prior
+for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`.
+
+`summarise_stblr_maf_architecture()` is a post-hoc descriptive diagnostic for
+the relationship between posterior marker signal and marker heterozygosity. It
+does not change backend return fields and is not an MCMC estimate of a BayesS
+selection parameter.
+
 ## Raw C++ Return Slots
 
 Slot numbers here are zero-based native indices. R formatters index them as
@@ -271,6 +291,11 @@ Annotation-unaware CSR and BED fits expose `fit$input$annotations = FALSE`.
 trace fields including `vbs`, `vgs`, `ves`, `vle`, and `vld`. There are no
 current repository functions named `summarize_stblr_components()` or
 `make_stblr_component_plot()`.
+
+`summarise_stblr_maf_architecture()` operates on fitted `dm` and `bm` marker
+summaries plus user-supplied MAF or heterozygosity values. It reports a
+post-hoc regression slope named `selection_s_posthoc` and should not be treated
+as a sampled or fixed sampler parameter.
 
 ## Gaps and Inconsistencies
 
