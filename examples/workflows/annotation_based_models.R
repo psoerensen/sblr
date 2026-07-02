@@ -2001,6 +2001,224 @@ apply(
 )
 
 
+
+## ------------------------------------------------------------
+## Quick sanity tests for sampled selection_s in BayesR/SBayesRC
+## Assumes objects exist:
+##   stats, Glist, A
+## ------------------------------------------------------------
+
+check_bayesr_component_consistency <- function(fit) {
+  do.call(
+    rbind,
+    lapply(names(fit$comp_prob), function(trait) {
+      cp <- fit$comp_prob[[trait]]
+      
+      data.frame(
+        trait = trait,
+        max_row_sum_error = max(abs(rowSums(cp) - 1)),
+        max_dm_error = max(abs(
+          unname(as.numeric(fit$dm[, trait])) -
+            unname(as.numeric(1 - cp[, "component_0"]))
+        )),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+get_sbayesrc_null_component_col <- function(cp) {
+  cn <- colnames(cp)
+  
+  if (is.null(cn)) {
+    return(1L)
+  }
+  
+  hit <- grep("^gamma_0(\\.0+)?$", cn, value = TRUE)
+  
+  if (length(hit) == 1L) {
+    return(hit)
+  }
+  
+  if ("gamma_0.00" %in% cn) {
+    return("gamma_0.00")
+  }
+  
+  stop(
+    "Could not identify SBayesRC null component. Columns: ",
+    paste(cn, collapse = ", ")
+  )
+}
+
+check_sbayesrc_component_consistency <- function(fit) {
+  do.call(
+    rbind,
+    lapply(names(fit$comp_prob), function(trait) {
+      cp <- fit$comp_prob[[trait]]
+      null_col <- get_sbayesrc_null_component_col(cp)
+      
+      data.frame(
+        trait = trait,
+        null_component = null_col,
+        max_row_sum_error = max(abs(rowSums(cp) - 1)),
+        max_dm_error = max(abs(
+          unname(as.numeric(fit$dm[, trait])) -
+            unname(as.numeric(1 - cp[, null_col]))
+        )),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+check_selection_s_fit <- function(fit) {
+  list(
+    selection_s = fit$selection_s,
+    selection_s_sd = fit$selection_s_sd,
+    selection_s_min = fit$selection_s_min,
+    selection_s_max = fit$selection_s_max,
+    selection_s_acceptance = fit$selection_s_acceptance,
+    trace_dim = dim(fit$selection_s_trace),
+    trace_range = range(fit$selection_s_trace),
+    trace_sd = apply(fit$selection_s_trace, 2, sd),
+    finite_dm = all(is.finite(fit$dm)),
+    finite_bm = all(is.finite(fit$bm)),
+    finite_vbs = all(is.finite(fit$vbs)),
+    finite_vle = all(is.finite(fit$vle)),
+    finite_vld = all(is.finite(fit$vld))
+  )
+}
+
+## ------------------------------------------------------------
+## 1. BayesR sampled S
+## ------------------------------------------------------------
+
+fitR_sampleS <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  estimate_selection_s = TRUE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
+  seed = 10
+)
+
+fitR_sampleS_check <- check_selection_s_fit(fitR_sampleS)
+fitR_sampleS_comp <- check_bayesr_component_consistency(fitR_sampleS)
+
+fitR_sampleS_2 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  estimate_selection_s = TRUE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
+  seed = 10
+)
+
+fitR_sampleS_repro <- c(
+  max_dm = max(abs(fitR_sampleS$dm - fitR_sampleS_2$dm)),
+  max_bm = max(abs(fitR_sampleS$bm - fitR_sampleS_2$bm)),
+  max_s_trace = max(abs(
+    fitR_sampleS$selection_s_trace -
+      fitR_sampleS_2$selection_s_trace
+  ))
+)
+
+## ------------------------------------------------------------
+## 2. SBayesRC sampled S
+## ------------------------------------------------------------
+
+fitS_sampleS <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  estimate_selection_s = TRUE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
+  seed = 10
+)
+
+fitS_sampleS_check <- check_selection_s_fit(fitS_sampleS)
+fitS_sampleS_comp <- check_sbayesrc_component_consistency(fitS_sampleS)
+
+fitS_sampleS_2 <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  estimate_selection_s = TRUE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
+  seed = 10
+)
+
+fitS_sampleS_repro <- c(
+  max_dm = max(abs(fitS_sampleS$dm - fitS_sampleS_2$dm)),
+  max_bm = max(abs(fitS_sampleS$bm - fitS_sampleS_2$bm)),
+  max_s_trace = max(abs(
+    fitS_sampleS$selection_s_trace -
+      fitS_sampleS_2$selection_s_trace
+  ))
+)
+
+## ------------------------------------------------------------
+## 3. Print quick summaries
+## ------------------------------------------------------------
+
+cat("\n--- BayesR sampled S check ---\n")
+print(fitR_sampleS_check)
+
+cat("\n--- BayesR component consistency ---\n")
+print(fitR_sampleS_comp)
+
+cat("\n--- BayesR reproducibility ---\n")
+print(fitR_sampleS_repro)
+
+cat("\n--- SBayesRC sampled S check ---\n")
+print(fitS_sampleS_check)
+
+cat("\n--- SBayesRC component consistency ---\n")
+print(fitS_sampleS_comp)
+
+cat("\n--- SBayesRC reproducibility ---\n")
+print(fitS_sampleS_repro)
+
+cat("\n--- Posterior mean selection_s ---\n")
+print(rbind(
+  bayesR = fitR_sampleS$selection_s,
+  sbayesrc = fitS_sampleS$selection_s
+))
+
+cat("\n--- selection_s acceptance ---\n")
+print(rbind(
+  bayesR = fitR_sampleS$selection_s_acceptance,
+  sbayesrc = fitS_sampleS$selection_s_acceptance
+))
+
+cat("\n--- BayesR selection_s trace quantiles ---\n")
+print(apply(
+  fitR_sampleS$selection_s_trace,
+  2,
+  quantile,
+  probs = c(0.025, 0.5, 0.975)
+))
+
+cat("\n--- SBayesRC selection_s trace quantiles ---\n")
+print(apply(
+  fitS_sampleS$selection_s_trace,
+  2,
+  quantile,
+  probs = c(0.025, 0.5, 0.975)
+))
+
+
+
 check_component_consistency <- function(fit) {
   do.call(
     rbind,
