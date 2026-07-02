@@ -91,6 +91,79 @@ remaining the point-mass null. The scheduled CSR BayesC backend,
 annotation-aware CSR backends, SBayesRC CSR backends, and BED backends do not
 currently support sampler-level `selection_s`.
 
+### Fixed `selection_s` Performance Path
+
+The default `selection_s = NULL` path should be treated as the baseline CSR
+BayesC/BayesR implementation. Native code should not allocate an all-ones prior
+scale vector for this path, and hot marker-update loops should not read
+`prior_scale[j]`, multiply by a unit marker scale, or branch on
+`selection_s`.
+
+Current CSR BayesC and CSR BayesR native code uses separate unscaled helper
+paths when `selection_s_prior_scale` is absent or empty. The scaled helper paths
+are used only when a fixed `selection_s` is supplied. This intentionally
+duplicates a small amount of marker-update, variance-update, and LD-swap code
+so the default path stays close to the previous unscaled C++ code.
+
+Audit conclusion:
+
+- `selection_s = NULL`: not expected to be meaningfully slower than the
+  previous C++ implementation from fixed-`selection_s` support, because the
+  marker-specific prior-scale lookup and multiply are not on the default hot
+  path.
+- `selection_s = -1`: expected to give identical fitted values to `NULL`, but
+  may be slower because it explicitly passes and validates a unit scale vector.
+- `selection_s = 0` or `selection_s = -0.5`: expected to be modestly slower
+  than `NULL`, because marker-specific prior variances are used.
+- CSR BayesR is the backend most likely to show overhead for fixed
+  `selection_s`, because the component-posterior loop evaluates multiple
+  mixture components per marker.
+
+Manual timing helper for ad hoc development checks, assuming `stats` and
+`Glist` are already defined in the current R session:
+
+```r
+bench_csr_selection_s <- function(method = c("bayesC", "bayesR"),
+                                  selection_s = NULL,
+                                  nrep = 3,
+                                  seed = 10) {
+  method <- match.arg(method)
+  out <- numeric(nrep)
+
+  for (i in seq_len(nrep)) {
+    gc()
+    out[i] <- system.time({
+      stblr_csr(
+        stats = stats,
+        Glist = Glist,
+        method = method,
+        selection_s = selection_s,
+        seed = seed
+      )
+    })[["elapsed"]]
+  }
+
+  data.frame(
+    method = method,
+    selection_s = if (is.null(selection_s)) NA_real_ else selection_s,
+    mean_seconds = mean(out),
+    sd_seconds = sd(out),
+    min_seconds = min(out),
+    max_seconds = max(out),
+    nrep = nrep
+  )
+}
+
+rbind(
+  bench_csr_selection_s("bayesC", NULL),
+  bench_csr_selection_s("bayesC", -1),
+  bench_csr_selection_s("bayesC", -0.5),
+  bench_csr_selection_s("bayesR", NULL),
+  bench_csr_selection_s("bayesR", -1),
+  bench_csr_selection_s("bayesR", -0.5)
+)
+```
+
 `summarise_stblr_maf_architecture()` is a post-hoc descriptive diagnostic for
 the relationship between posterior marker signal and marker heterozygosity. It
 does not change backend return fields and is not an MCMC estimate of a BayesS

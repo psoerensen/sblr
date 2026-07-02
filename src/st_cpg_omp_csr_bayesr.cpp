@@ -306,6 +306,91 @@ inline void sampleBetaR_ST_csr(
  comp(iu) = k_new;
 }
 
+inline void sampleBetaR_ST_csr_unscaled(
+  int i,
+  const std::vector<double>& pi,
+  const arma::vec& mixture_var,
+  double vb,
+  double vei_i,
+  const arma::rowvec& ww,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& comp,
+  const STLDCSR& ld,
+  std::mt19937& gen
+) {
+ const arma::uword iu = static_cast<arma::uword>(i);
+ const double wi = ww(iu);
+
+ if (!std::isfinite(wi) || wi <= 0.0) {
+  throw std::runtime_error("sampleBetaR_ST_csr_unscaled: invalid ww value.");
+ }
+ if (!std::isfinite(vb) || vb <= 0.0) {
+  throw std::runtime_error("sampleBetaR_ST_csr_unscaled: invalid vb.");
+ }
+
+ const int K = static_cast<int>(mixture_var.n_elem);
+ if (static_cast<int>(pi.size()) != K) {
+  throw std::runtime_error("sampleBetaR_ST_csr_unscaled: pi and mixture_var length mismatch.");
+ }
+
+ const double vei_safe = std::max(vei_i, 1e-300);
+ const double score = r(iu) + wi * b(iu);
+ std::vector<double> logp(static_cast<std::size_t>(K));
+
+ for (int k = 0; k < K; ++k) {
+  const double pik = std::max(pi[static_cast<std::size_t>(k)], 1e-300);
+  const double ck = mixture_var(static_cast<arma::uword>(k));
+
+  if (!std::isfinite(ck) || ck < 0.0) {
+   throw std::runtime_error("sampleBetaR_ST_csr_unscaled: mixture_var must be non-negative.");
+  }
+
+  if (ck <= 0.0) {
+   logp[static_cast<std::size_t>(k)] = std::log(pik);
+  } else {
+   const double vbk = std::max(vb * ck, 1e-300);
+   const double denom = std::max(vei_safe + wi * vbk, 1e-300);
+   const double logBF =
+    0.5 * std::log(vei_safe / denom) +
+    0.5 * score * score * vbk / (vei_safe * denom);
+   logp[static_cast<std::size_t>(k)] = std::log(pik) + logBF;
+  }
+ }
+
+ const int k_new = sample_categorical_logprob_bayesr(logp, gen);
+
+ double b_new = 0.0;
+ const double ck_new = mixture_var(static_cast<arma::uword>(k_new));
+
+ if (ck_new > 0.0) {
+  std::normal_distribution<double> norm01(0.0, 1.0);
+  const double vbk = std::max(vb * ck_new, 1e-300);
+  const double lhs = wi + vei_safe / vbk;
+  const double mean = score / lhs;
+  const double sd = std::sqrt(vei_safe / lhs);
+  b_new = mean + sd * norm01(gen);
+ }
+
+ const double diff = b_new - b(iu);
+
+ if (diff != 0.0) {
+  r(iu) -= wi * diff;
+
+  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
+  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
+
+  for (uint64_t p = start; p < end; ++p) {
+   const int j = ld.idx[static_cast<std::size_t>(p)];
+   r(static_cast<arma::uword>(j)) -=
+    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
+  }
+ }
+
+ b(iu) = b_new;
+ comp(iu) = k_new;
+}
+
 struct BayesRLDLDFriends {
  std::vector<uint64_t> ptr;
  std::vector<int> idx;
@@ -657,6 +742,149 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
  return accept;
 }
 
+inline bool attempt_ld_swap_bayesr_ST_csr_unscaled(
+  int m,
+  int trait,
+  int chain,
+  int iter,
+  double vei,
+  double yy,
+  const arma::rowvec& ww,
+  const arma::rowvec& wy,
+  arma::rowvec& r,
+  arma::rowvec& b,
+  arma::Row<int>& comp,
+  const STLDCSR& ld,
+  const BayesRLDLDFriends& friends,
+  std::mt19937& gen,
+  bool& attempted
+) {
+ attempted = false;
+ if (!std::isfinite(vei) || vei <= 0.0) return false;
+
+ std::vector<int> candidates;
+ std::vector<int> n_null;
+ const int n_candidates =
+  collect_ld_swap_candidates_bayesr_ST_csr(m, comp, b, friends, candidates, n_null);
+ if (n_candidates <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_candidate(0, n_candidates - 1);
+ const int cand_pos = pick_candidate(gen);
+ const int j = candidates[static_cast<std::size_t>(cand_pos)];
+ const int n_forward_friends = n_null[static_cast<std::size_t>(cand_pos)];
+ if (n_forward_friends <= 0) return false;
+
+ std::uniform_int_distribution<int> pick_friend(0, n_forward_friends - 1);
+ const int friend_pos = pick_friend(gen);
+
+ int k = -1;
+ int seen = 0;
+ const uint64_t start = friends.ptr[static_cast<std::size_t>(j)];
+ const uint64_t end = friends.ptr[static_cast<std::size_t>(j + 1)];
+
+ for (uint64_t p = start; p < end; ++p) {
+  const int jj = friends.idx[static_cast<std::size_t>(p)];
+  const arma::uword jju = static_cast<arma::uword>(jj);
+  if (comp(jju) != 0 || b(jju) != 0.0) continue;
+
+  if (seen == friend_pos) {
+   k = jj;
+   break;
+  }
+  ++seen;
+ }
+
+ if (k < 0) return false;
+
+ const arma::uword ju = static_cast<arma::uword>(j);
+ const arma::uword ku = static_cast<arma::uword>(k);
+ const double b_j_old = b(ju);
+ const double b_k_old = b(ku);
+ const int comp_j_old = comp(ju);
+ const int comp_k_old = comp(ku);
+ if (comp_j_old <= 0 || b_j_old == 0.0 || comp_k_old != 0 || b_k_old != 0.0) return false;
+
+ attempted = true;
+ const double sse_old = residual_diagnostics_bayesr_ST_csr(
+  m, 0.0, b, r, comp, wy, 0.0, yy
+ ).sse;
+ if (!std::isfinite(sse_old)) {
+  throw_ld_swap_error_bayesr_ST_csr(
+   trait, chain, iter, j, k, comp_j_old, sse_old,
+   std::numeric_limits<double>::quiet_NaN(), vei,
+   std::numeric_limits<double>::quiet_NaN(),
+   std::numeric_limits<double>::quiet_NaN(), b, r
+  );
+ }
+
+ const arma::rowvec r_old = r;
+ set_marker_state_bayesr_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
+ set_marker_state_bayesr_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+
+ const double sse_new = residual_diagnostics_bayesr_ST_csr(
+  m, 0.0, b, r, comp, wy, 0.0, yy
+ ).sse;
+
+ std::vector<int> reverse_candidates;
+ std::vector<int> reverse_n_null;
+ const int n_reverse_candidates =
+  collect_ld_swap_candidates_bayesr_ST_csr(
+   m, comp, b, friends, reverse_candidates, reverse_n_null
+  );
+
+ int n_reverse_friends = 0;
+ for (std::size_t pos = 0; pos < reverse_candidates.size(); ++pos) {
+  if (reverse_candidates[pos] == k) {
+   n_reverse_friends = reverse_n_null[pos];
+   break;
+  }
+ }
+
+ double log_q_forward = std::numeric_limits<double>::quiet_NaN();
+ double log_q_reverse = std::numeric_limits<double>::quiet_NaN();
+ if (n_candidates > 0 && n_forward_friends > 0) {
+  log_q_forward =
+   -std::log(static_cast<double>(n_candidates)) -
+   std::log(static_cast<double>(n_forward_friends));
+ }
+ if (n_reverse_candidates > 0 && n_reverse_friends > 0) {
+  log_q_reverse =
+   -std::log(static_cast<double>(n_reverse_candidates)) -
+   std::log(static_cast<double>(n_reverse_friends));
+ }
+
+ if (!std::isfinite(sse_new) ||
+     !std::isfinite(log_q_forward) ||
+     !std::isfinite(log_q_reverse)) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  comp(ju) = comp_j_old;
+  comp(ku) = comp_k_old;
+  throw_ld_swap_error_bayesr_ST_csr(
+   trait, chain, iter, j, k, comp_j_old, sse_old, sse_new,
+   vei, log_q_forward, log_q_reverse, b, r
+  );
+ }
+
+ const double log_alpha =
+  -0.5 * (sse_new - sse_old) / vei +
+  log_q_reverse - log_q_forward;
+
+ std::uniform_real_distribution<double> runif(0.0, 1.0);
+ const bool accept = std::log(std::max(runif(gen), 1e-300)) < log_alpha;
+
+ if (!accept) {
+  r = r_old;
+  b(ju) = b_j_old;
+  b(ku) = b_k_old;
+  comp(ju) = comp_j_old;
+  comp(ku) = comp_k_old;
+ }
+
+ return accept;
+}
+
 inline void sampleB_bayesr_ST_csr(
   int m,
   double nub,
@@ -695,6 +923,46 @@ inline void sampleB_bayesr_ST_csr(
  const double scale = ssb_scaled + nub * ssb_prior;
  if (!std::isfinite(scale) || scale <= 0.0) {
   throw std::runtime_error("sampleB_bayesr_ST_csr: invalid scale.");
+ }
+
+ std::chi_squared_distribution<double> rchisq(dfb + nub);
+ const double chi2 = std::max(rchisq(gen), 1e-300);
+ vb = std::max(scale / chi2, 1e-12);
+}
+
+inline void sampleB_bayesr_ST_csr_unscaled(
+  int m,
+  double nub,
+  double& vb,
+  const arma::rowvec& b,
+  const arma::Row<int>& comp,
+  const arma::vec& mixture_var,
+  double ssb_prior,
+  std::mt19937& gen
+) {
+ double ssb_scaled = 0.0;
+ double dfb = 0.0;
+
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  const int k = comp(iu);
+
+  if (k > 0) {
+   if (k >= static_cast<int>(mixture_var.n_elem)) {
+    throw std::runtime_error("sampleB_bayesr_ST_csr_unscaled: component index out of range.");
+   }
+   const double ck = mixture_var(static_cast<arma::uword>(k));
+   if (!std::isfinite(ck) || ck <= 0.0) {
+    throw std::runtime_error("sampleB_bayesr_ST_csr_unscaled: active component has invalid mixture_var.");
+   }
+   ssb_scaled += b(iu) * b(iu) / ck;
+   dfb += 1.0;
+  }
+ }
+
+ const double scale = ssb_scaled + nub * ssb_prior;
+ if (!std::isfinite(scale) || scale <= 0.0) {
+  throw std::runtime_error("sampleB_bayesr_ST_csr_unscaled: invalid scale.");
  }
 
  std::chi_squared_distribution<double> rchisq(dfb + nub);
@@ -876,7 +1144,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ssb_prior_mat(nt, nt, arma::fill::zeros);
  arma::mat sse_prior_mat(nt, nt, arma::fill::zeros);
  arma::vec yy_vec(nt, arma::fill::zeros);
- arma::rowvec prior_scale(m, arma::fill::ones);
+ arma::rowvec prior_scale;
 
  for (int t = 0; t < nt; ++t) {
   if ((int)wy[t].size() != m || (int)ww[t].size() != m ||
@@ -906,6 +1174,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  }
 
  if (use_selection_s_prior_scale) {
+  prior_scale.set_size(static_cast<arma::uword>(m));
   for (int i = 0; i < m; ++i) {
    const double scale_i = selection_s_prior_scale_vec[static_cast<std::size_t>(i)];
    if (!std::isfinite(scale_i) || scale_i <= 0.0) {
@@ -1073,21 +1342,39 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    double vei_t = ve_t + adjE * vg_t;
 
    for (int it = 0; it < trace_len; ++it) {
-    for (int isort = 0; isort < m; ++isort) {
-     sampleBetaR_ST_csr(
-      order_t[static_cast<std::size_t>(isort)],
-      pi_t,
-      mixture_var_vec,
-      vb_t,
-      prior_scale,
-      vei_t,
-      ww_t,
-      r_t,
-      b_t,
-      comp_t,
-      ld,
-      gen_t
-     );
+    if (use_selection_s_prior_scale) {
+     for (int isort = 0; isort < m; ++isort) {
+      sampleBetaR_ST_csr(
+       order_t[static_cast<std::size_t>(isort)],
+       pi_t,
+       mixture_var_vec,
+       vb_t,
+       prior_scale,
+       vei_t,
+       ww_t,
+       r_t,
+       b_t,
+       comp_t,
+       ld,
+       gen_t
+      );
+     }
+    } else {
+     for (int isort = 0; isort < m; ++isort) {
+      sampleBetaR_ST_csr_unscaled(
+       order_t[static_cast<std::size_t>(isort)],
+       pi_t,
+       mixture_var_vec,
+       vb_t,
+       vei_t,
+       ww_t,
+       r_t,
+       b_t,
+       comp_t,
+       ld,
+       gen_t
+      );
+     }
     }
 
     if (updateLDswap && ld_swap_moves > 0 && ld_swap_prob > 0.0) {
@@ -1096,26 +1383,44 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
      if (runif(gen_t) < ld_swap_prob) {
       for (int move = 0; move < ld_swap_moves; ++move) {
        bool attempted = false;
-       const bool accepted = attempt_ld_swap_bayesr_ST_csr(
-        m,
-        t,
-        chain,
-        it,
-        vei_t,
-        vb_t,
-        yy_vec(static_cast<arma::uword>(t)),
-        ww_t,
-        wy_t,
-        mixture_var_vec,
-        prior_scale,
-        r_t,
-        b_t,
-        comp_t,
-        ld,
-        ld_swap_friends,
-        gen_t,
-        attempted
-       );
+       const bool accepted = use_selection_s_prior_scale ?
+        attempt_ld_swap_bayesr_ST_csr(
+         m,
+         t,
+         chain,
+         it,
+         vei_t,
+         vb_t,
+         yy_vec(static_cast<arma::uword>(t)),
+         ww_t,
+         wy_t,
+         mixture_var_vec,
+         prior_scale,
+         r_t,
+         b_t,
+         comp_t,
+         ld,
+         ld_swap_friends,
+         gen_t,
+         attempted
+        ) :
+        attempt_ld_swap_bayesr_ST_csr_unscaled(
+         m,
+         t,
+         chain,
+         it,
+         vei_t,
+         yy_vec(static_cast<arma::uword>(t)),
+         ww_t,
+         wy_t,
+         r_t,
+         b_t,
+         comp_t,
+         ld,
+         ld_swap_friends,
+         gen_t,
+         attempted
+        );
        if (attempted) {
         ld_swap_attempted_t += 1.0;
         if (accepted) ld_swap_accepted_t += 1.0;
@@ -1125,17 +1430,30 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     }
 
     if (updateB) {
-     sampleB_bayesr_ST_csr(
-      m,
-      nub,
-      vb_t,
-      b_t,
-      comp_t,
-      mixture_var_vec,
-      prior_scale,
-      ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
-      gen_t
-     );
+     if (use_selection_s_prior_scale) {
+      sampleB_bayesr_ST_csr(
+       m,
+       nub,
+       vb_t,
+       b_t,
+       comp_t,
+       mixture_var_vec,
+       prior_scale,
+       ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
+       gen_t
+      );
+     } else {
+      sampleB_bayesr_ST_csr_unscaled(
+       m,
+       nub,
+       vb_t,
+       b_t,
+       comp_t,
+       mixture_var_vec,
+       ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
+       gen_t
+      );
+     }
     }
 
     const bool do_updateE =
