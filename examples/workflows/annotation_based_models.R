@@ -918,3 +918,162 @@ compact_input <- function(fit) {
 }
 
 lapply(fits, compact_input)
+
+maf <- Glist$maf[[1]][Glist$rsids[[1]]%in%Glist$rsidsLD[[1]]]
+maf_architecture <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    out <- summarise_stblr_maf_architecture(
+      fit = fits[[model_name]],
+      maf = maf
+    )
+    out$model <- model_name
+    out
+  })
+)
+
+maf_architecture[
+  order(maf_architecture$trait, maf_architecture$selection_s_posthoc),
+]
+
+maf_named <- maf
+names(maf_named) <- Glist$rsidsLD[[1]]
+
+h_named <- 2 * maf_named * (1 - maf_named)
+
+causal_maf_architecture <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    fit <- fits[[model_name]]
+    dm <- as.matrix(fit$dm)
+    bm <- as.matrix(fit$bm)
+    
+    do.call(
+      rbind,
+      lapply(colnames(dm), function(trait) {
+        causal <- causal_by_trait[[trait]]
+        causal <- intersect(causal, rownames(dm))
+        
+        y <- log(dm[causal, trait] * bm[causal, trait]^2 + 1e-12)
+        x <- log(h_named[causal])
+        
+        fit_lm <- lm(y ~ x)
+        
+        data.frame(
+          model = model_name,
+          trait = trait,
+          selection_s_posthoc_causal = unname(coef(fit_lm)[2]),
+          intercept = unname(coef(fit_lm)[1]),
+          n_causal = length(causal),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  })
+)
+
+causal_maf_architecture[
+  order(causal_maf_architecture$trait,
+        causal_maf_architecture$selection_s_posthoc_causal),
+]
+
+causal_maf_architecture <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    fit <- fits[[model_name]]
+    dm <- as.matrix(fit$dm)
+    bm <- as.matrix(fit$bm)
+    
+    do.call(
+      rbind,
+      lapply(colnames(dm), function(trait) {
+        causal <- causal_by_trait[[trait]]
+        causal <- intersect(causal, rownames(dm))
+        
+        y <- log(dm[causal, trait] * bm[causal, trait]^2 + 1e-12)
+        x <- log(h_named[causal])
+        
+        fit_lm <- lm(y ~ x)
+        sm <- summary(fit_lm)
+        
+        data.frame(
+          model = model_name,
+          trait = trait,
+          selection_s_posthoc_causal = unname(coef(fit_lm)[2]),
+          se = sm$coefficients[2, 2],
+          p_value = sm$coefficients[2, 4],
+          r2 = sm$r.squared,
+          intercept = unname(coef(fit_lm)[1]),
+          n_causal = length(causal),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  })
+)
+
+causal_maf_architecture[
+  order(causal_maf_architecture$trait,
+        causal_maf_architecture$selection_s_posthoc_causal),
+]
+
+
+aggregate(
+  selection_s_posthoc_causal ~ trait,
+  data = causal_maf_architecture,
+  FUN = function(x) c(
+    mean = mean(x),
+    sd = sd(x),
+    min = min(x),
+    max = max(x)
+  )
+)
+
+
+maf_architecture_signal <- do.call(
+  rbind,
+  lapply(names(fits), function(model_name) {
+    fit <- fits[[model_name]]
+    dm <- as.matrix(fit$dm)
+    bm <- as.matrix(fit$bm)
+    
+    do.call(
+      rbind,
+      lapply(colnames(dm), function(trait) {
+        keep <- dm[, trait] >= 0.01
+        keep <- keep & rownames(dm) %in% names(h_named)
+        
+        y <- log(dm[keep, trait] * bm[keep, trait]^2 + 1e-12)
+        x <- log(h_named[rownames(dm)[keep]])
+        
+        if (length(y) < 5) {
+          return(data.frame(
+            model = model_name,
+            trait = trait,
+            selection_s_posthoc_signal = NA_real_,
+            intercept = NA_real_,
+            n_markers = length(y),
+            stringsAsFactors = FALSE
+          ))
+        }
+        
+        fit_lm <- lm(y ~ x)
+        
+        data.frame(
+          model = model_name,
+          trait = trait,
+          selection_s_posthoc_signal = unname(coef(fit_lm)[2]),
+          intercept = unname(coef(fit_lm)[1]),
+          n_markers = length(y),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  })
+)
+
+maf_architecture_signal[
+  order(maf_architecture_signal$trait,
+        maf_architecture_signal$selection_s_posthoc_signal),
+]
+
