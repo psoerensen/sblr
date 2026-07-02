@@ -8,6 +8,10 @@ summarise_stblr_maf_architecture(
   fit,
   maf = NULL,
   h = NULL,
+  markers = NULL,
+  min_pip = NULL,
+  top_n = NULL,
+  response = c("log_pip_weighted_bm2", "log_bm2"),
   epsilon = 1e-12,
   use_pip_weights = TRUE
 )
@@ -16,27 +20,41 @@ summarise_stblr_maf_architecture(
 \item{fit}{Fitted ST-BLR object with marker-by-trait `dm` and `bm` fields.}
 
 \item{maf}{Optional numeric vector of minor allele frequencies. Values in
-`[0, 1]` are accepted and converted to minor-allele frequencies with
-`pmin(maf, 1 - maf)`.}
+`(0, 0.5]` are accepted.}
 
 \item{h}{Optional numeric vector of marker heterozygosities,
-`2 * maf * (1 - maf)`. If supplied, `maf` is ignored.}
+`2 * maf * (1 - maf)`. If supplied, `maf` is ignored. If neither `h` nor
+`maf` is supplied, the helper looks for recoverable values in `fit`.}
+
+\item{markers}{Optional marker subset. A character vector is applied to all
+traits. A named list can provide trait-specific character vectors.}
+
+\item{min_pip}{Optional PIP threshold in `[0, 1]`; applied separately by
+trait after any explicit `markers` subset.}
+
+\item{top_n}{Optional positive integer number of highest-PIP markers to keep
+per trait after any explicit `markers` and `min_pip` filters.}
+
+\item{response}{Response used in the post-hoc regression. The default
+`"log_pip_weighted_bm2"` regresses `log(PIP * bm^2 + epsilon)`.
+`"log_bm2"` regresses `log(bm^2 + epsilon)`.}
 
 \item{epsilon}{Positive scalar added before taking logs.}
 
-\item{use_pip_weights}{Logical. If `TRUE`, regress
-`log(PIP * bm^2 + epsilon)`; otherwise regress `log(bm^2 + epsilon)`.}
+\item{use_pip_weights}{Deprecated compatibility argument. If `response` is
+left at its default, `FALSE` selects `response = "log_bm2"`.}
 }
 \value{
 A data frame with one row per trait and columns `trait`,
-  `selection_s_posthoc`, `intercept`, `n_markers`, `n_effective_markers`,
-  `method`, and `response`.
+  `selection_s_posthoc`, `se`, `p_value`, `r2`, `intercept`, `n_markers`,
+  `n_effective_markers`, `method`, `response`, and `marker_filter`.
 }
 \description{
 Computes a lightweight post-hoc diagnostic for the relationship between
 marker heterozygosity and posterior marker signal. This is a descriptive
-regression on fitted marker summaries, not an MCMC estimate of a BayesS
-selection parameter and not a sampler-level prior.
+regression on fitted marker summaries, not a sampler-level estimate of the
+BayesS `S` parameter, not an MCMC estimate of a BayesS selection parameter,
+and not a sampler-level prior.
 }
 \details{
 The diagnostic regresses either `log(PIP * bm^2 + epsilon)` or
@@ -44,11 +62,16 @@ The diagnostic regresses either `log(PIP * bm^2 + epsilon)` or
 }
 \examples{
 fit <- list(
-  dm = matrix(c(0.2, 0.8, 0.5), ncol = 1,
-              dimnames = list(paste0("m", 1:3), "trait1")),
-  bm = matrix(c(0.01, 0.04, -0.02), ncol = 1,
-              dimnames = list(paste0("m", 1:3), "trait1"))
+  dm = matrix(seq(0.1, 0.8, length.out = 8), ncol = 1,
+              dimnames = list(paste0("m", 1:8), "trait1")),
+  bm = matrix(seq(0.01, 0.08, length.out = 8), ncol = 1,
+              dimnames = list(paste0("m", 1:8), "trait1"))
 )
-summarise_stblr_maf_architecture(fit, maf = c(0.05, 0.2, 0.4))
+maf <- stats::setNames(seq(0.05, 0.4, length.out = 8), paste0("m", 1:8))
+summarise_stblr_maf_architecture(fit, maf = maf)
+summarise_stblr_maf_architecture(fit, maf = maf, min_pip = 0.01)
+summarise_stblr_maf_architecture(fit, maf = maf, top_n = 5)
+causal_by_trait <- list(trait1 = paste0("m", 1:5))
+summarise_stblr_maf_architecture(fit, maf = maf, markers = causal_by_trait)
 
 }

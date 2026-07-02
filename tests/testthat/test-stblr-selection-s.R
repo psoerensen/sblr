@@ -73,6 +73,26 @@ make_selection_s_csr_fit <- function() {
   )
 }
 
+make_selection_s_subset_fit <- function(n_markers = 20) {
+  markers <- paste0("m", seq_len(n_markers))
+  trait_names <- c("D1", "D2")
+  pip_d1 <- seq(0.001, 0.2, length.out = n_markers)
+  pip_d2 <- rev(pip_d1)
+  effect_d1 <- seq(0.01, 0.08, length.out = n_markers)
+  effect_d2 <- rev(effect_d1)
+  dm <- cbind(D1 = pip_d1, D2 = pip_d2)
+  bm <- cbind(D1 = effect_d1, D2 = effect_d2)
+  rownames(dm) <- markers
+  rownames(bm) <- markers
+  list(
+    dm = dm,
+    bm = bm,
+    maf = stats::setNames(seq(0.05, 0.45, length.out = n_markers), markers),
+    markers = markers,
+    trait_names = trait_names
+  )
+}
+
 test_that("summarise_stblr_maf_architecture works for a small CSR fit", {
   fit <- make_selection_s_csr_fit()
 
@@ -87,22 +107,22 @@ test_that("summarise_stblr_maf_architecture works for a small CSR fit", {
   expect_equal(out$response, "log_pip_weighted_bm2")
   expect_equal(out$n_markers, 3)
   expect_equal(out$n_effective_markers, 3)
-  expect_true(all(is.finite(out$selection_s_posthoc)))
-  expect_true(all(is.finite(out$intercept)))
+  expect_true(is.na(out$selection_s_posthoc))
+  expect_true(is.na(out$intercept))
 })
 
 test_that("summarise_stblr_maf_architecture handles h and unweighted response", {
   fit <- list(
-    dm = matrix(c(0.1, 0.5, 0.9), ncol = 1,
-                dimnames = list(paste0("m", 1:3), "trait1")),
-    bm = matrix(c(0.01, -0.02, 0.03), ncol = 1,
-                dimnames = list(paste0("m", 1:3), "trait1"))
+    dm = matrix(seq(0.1, 0.9, length.out = 6), ncol = 1,
+                dimnames = list(paste0("m", 1:6), "trait1")),
+    bm = matrix(seq(0.01, 0.06, length.out = 6), ncol = 1,
+                dimnames = list(paste0("m", 1:6), "trait1"))
   )
   fit_before <- fit
 
   out <- summarise_stblr_maf_architecture(
     fit,
-    h = c(m1 = 0.095, m2 = 0.32, m3 = 0.48),
+    h = stats::setNames(seq(0.095, 0.48, length.out = 6), paste0("m", 1:6)),
     use_pip_weights = FALSE
   )
 
@@ -110,6 +130,113 @@ test_that("summarise_stblr_maf_architecture handles h and unweighted response", 
   expect_equal(out$response, "log_bm2")
   expect_true(all(is.finite(out$selection_s_posthoc)))
   expect_identical(fit, fit_before)
+})
+
+test_that("summarise_stblr_maf_architecture supports all-marker and filtered subsets", {
+  fit <- make_selection_s_subset_fit()
+
+  out_all <- summarise_stblr_maf_architecture(fit, maf = fit$maf)
+  expect_equal(out_all$n_markers, c(20L, 20L))
+  expect_equal(out_all$marker_filter, c("all", "all"))
+  expect_true(all(c("se", "p_value", "r2", "marker_filter") %in% names(out_all)))
+  expect_true(all(is.finite(out_all$selection_s_posthoc)))
+
+  out_min <- summarise_stblr_maf_architecture(fit, maf = fit$maf, min_pip = 0.01)
+  expect_equal(out_min$marker_filter, rep("min_pip=0.01", 2))
+  expect_true(all(out_min$n_markers < out_all$n_markers))
+  expect_true(all(out_min$n_markers >= 5))
+
+  out_top <- summarise_stblr_maf_architecture(fit, maf = fit$maf, top_n = 10)
+  expect_equal(out_top$n_markers, c(10L, 10L))
+  expect_equal(out_top$marker_filter, rep("top_n=10", 2))
+})
+
+test_that("summarise_stblr_maf_architecture supports character marker subsets", {
+  fit <- make_selection_s_subset_fit()
+  marker_subset <- paste0("m", 1:8)
+
+  out <- summarise_stblr_maf_architecture(
+    fit,
+    maf = unname(fit$maf),
+    markers = marker_subset
+  )
+
+  expect_equal(out$n_markers, c(8L, 8L))
+  expect_equal(out$n_effective_markers, c(8L, 8L))
+  expect_equal(out$marker_filter, rep("markers=character", 2))
+  expect_true(all(is.finite(out$selection_s_posthoc)))
+})
+
+test_that("summarise_stblr_maf_architecture supports trait-specific marker subsets", {
+  fit <- make_selection_s_subset_fit()
+  causal_by_trait <- list(
+    D1 = paste0("m", 1:6),
+    D2 = paste0("m", 7:14)
+  )
+
+  out <- summarise_stblr_maf_architecture(
+    fit,
+    maf = fit$maf,
+    markers = causal_by_trait
+  )
+
+  expect_equal(out$n_markers, c(6L, 8L))
+  expect_equal(out$marker_filter, rep("markers=list", 2))
+  expect_true(all(is.finite(out$selection_s_posthoc)))
+})
+
+test_that("summarise_stblr_maf_architecture combines marker and min_pip filters", {
+  fit <- make_selection_s_subset_fit()
+  marker_subset <- paste0("m", 1:12)
+
+  out <- summarise_stblr_maf_architecture(
+    fit,
+    maf = fit$maf,
+    markers = marker_subset,
+    min_pip = 0.05
+  )
+
+  expected_d1 <- sum(fit$dm[marker_subset, "D1"] >= 0.05)
+  expected_d2 <- sum(fit$dm[marker_subset, "D2"] >= 0.05)
+  expect_equal(out$n_markers, c(expected_d1, expected_d2))
+  expect_equal(out$marker_filter, rep("markers=character;min_pip=0.05", 2))
+})
+
+test_that("summarise_stblr_maf_architecture returns NA statistics with fewer than five markers", {
+  fit <- make_selection_s_subset_fit()
+
+  out <- summarise_stblr_maf_architecture(
+    fit,
+    maf = fit$maf,
+    markers = paste0("m", 1:4)
+  )
+
+  expect_equal(out$n_markers, c(4L, 4L))
+  expect_true(all(is.na(out$selection_s_posthoc)))
+  expect_true(all(is.na(out$se)))
+  expect_true(all(is.na(out$p_value)))
+  expect_true(all(is.na(out$r2)))
+})
+
+test_that("summarise_stblr_maf_architecture validates marker filter inputs", {
+  fit <- make_selection_s_subset_fit()
+
+  expect_error(
+    summarise_stblr_maf_architecture(fit, maf = fit$maf, min_pip = -0.1),
+    "min_pip"
+  )
+  expect_error(
+    summarise_stblr_maf_architecture(fit, maf = fit$maf, min_pip = 1.1),
+    "min_pip"
+  )
+  expect_error(
+    summarise_stblr_maf_architecture(fit, maf = fit$maf, top_n = 0),
+    "top_n"
+  )
+  expect_error(
+    summarise_stblr_maf_architecture(fit, maf = fit$maf, top_n = 1.5),
+    "top_n"
+  )
 })
 
 test_that("summarise_stblr_maf_architecture handles missing MAF or h clearly", {
@@ -120,14 +247,14 @@ test_that("summarise_stblr_maf_architecture handles missing MAF or h clearly", {
 
   expect_error(
     summarise_stblr_maf_architecture(fit),
-    "Either maf or h must be supplied"
+    "Either maf or h must be supplied or recoverable from fit"
   )
   expect_error(
     summarise_stblr_maf_architecture(fit, maf = c(0.1, 0.2)),
     "length equal to the number of markers"
   )
   expect_error(
-    summarise_stblr_maf_architecture(fit, h = c(0.1, 0.2, 0.7)),
-    "h must contain heterozygosity values"
+    summarise_stblr_maf_architecture(fit, maf = c(0.1, 0.2, 0.7)),
+    "maf must contain values"
   )
 })
