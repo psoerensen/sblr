@@ -136,9 +136,10 @@ coefficients such as `alpha`, `eta_pi`, and annotation-dependent component
 probabilities.
 
 Current support is fixed-S only and is limited to `csr_bayesc`
-(`stblr_csr(method = "bayesC", scheduled = FALSE)`). `csr_bayesr`,
-`csr_scheduled_bayesc`, annotation-aware CSR backends, SBayesRC CSR backends,
-and BED backends do not support sampler-level `selection_s`.
+(`stblr_csr(method = "bayesC", scheduled = FALSE)`) and `csr_bayesr`
+(`stblr_csr(method = "bayesR")` or `stblr_csr_bayesr()`). The
+`csr_scheduled_bayesc` backend, annotation-aware CSR backends, SBayesRC CSR
+backends, and BED backends do not support sampler-level `selection_s`.
 
 Preferred public argument names are:
 
@@ -158,10 +159,12 @@ Preferred future fit metadata fields are:
 For the standard CSR path, fitted `b`/`bm` values are
 standardized-genotype-scale effects. A BayesS allele-scale prior
 `alpha_j ~ N(0, v_m h_j^S)` therefore maps to a standardized-effect prior with
-exponent `S + 1`. Fixed sampler-level `selection_s` support applies the same
+exponent `S + 1`. For CSR BayesC and BayesR, fixed sampler-level
+`selection_s` scales standardized-genotype effect prior variances by
+`h^(selection_s + 1)`, where `h = 2p(1-p)`. Fixed support applies the same
 marker-specific variance factor consistently in conditional effect updates,
-prior-density or component-probability calculations, LD-swap/MH prior terms,
-and marker-effect variance updates.
+prior-density or component-probability calculations, active/null LD-swap/MH
+prior terms, and marker-effect variance updates.
 
 Future sampled-`S` support should be implemented only after fixed-`S`
 validation. The active-marker log posterior contribution is:
@@ -201,8 +204,7 @@ These limitations remain explicit:
 
 - scheduled CSR BayesR is not implemented
 - active/active BayesR LD-swap is not implemented
-- marker-specific or annotation-specific BayesR LD-swap priors are not
-  implemented
+- annotation-specific BayesR LD-swap priors are not implemented
 - BED `chain_seeds` are not supported
 - BED `covar` currently requires pre-adjusted phenotypes
 

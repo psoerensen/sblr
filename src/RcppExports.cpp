@@ -562,8 +562,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_cpg_omp_csr_bayesr
-Rcpp::List stblr_cpg_omp_csr_bayesr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, int updateE_start, int updateE_every, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves);
-RcppExport SEXP _sblr_stblr_cpg_omp_csr_bayesr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateE_startSEXP, SEXP updateE_everySEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP) {
+Rcpp::List stblr_cpg_omp_csr_bayesr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, int updateE_start, int updateE_every, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_bayesr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateE_startSEXP, SEXP updateE_everySEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP selection_s_prior_scaleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -606,7 +606,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type ld_swap_r2(ld_swap_r2SEXP);
     Rcpp::traits::input_parameter< int >::type ld_swap_max_friends(ld_swap_max_friendsSEXP);
     Rcpp::traits::input_parameter< int >::type ld_swap_moves(ld_swap_movesSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_bayesr(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type selection_s_prior_scale(selection_s_prior_scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_bayesr(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1082,7 +1083,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_color_blocks_from_ld", (DL_FUNC) &_sblr_stblr_color_blocks_from_ld, 7},
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 38},
     {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 51},
-    {"_sblr_stblr_cpg_omp_csr_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr, 39},
+    {"_sblr_stblr_cpg_omp_csr_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr, 40},
     {"_sblr_stblr_cpg_omp_csr_group_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_group_annot, 45},
     {"_sblr_stblr_cpg_omp_csr_prior", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_prior, 41},
     {"_sblr_stblr_cpg_omp_csr_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_scheduled, 41},

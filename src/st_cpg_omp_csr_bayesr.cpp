@@ -221,6 +221,7 @@ inline void sampleBetaR_ST_csr(
   const std::vector<double>& pi,
   const arma::vec& mixture_var,
   double vb,
+  const arma::rowvec& prior_scale,
   double vei_i,
   const arma::rowvec& ww,
   arma::rowvec& r,
@@ -246,6 +247,10 @@ inline void sampleBetaR_ST_csr(
 
  const double vei_safe = std::max(vei_i, 1e-300);
  const double score = r(iu) + wi * b(iu);
+ const double scale_i = prior_scale(iu);
+ if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+  throw std::runtime_error("sampleBetaR_ST_csr: invalid prior_scale value.");
+ }
  std::vector<double> logp(static_cast<std::size_t>(K));
 
  for (int k = 0; k < K; ++k) {
@@ -259,7 +264,7 @@ inline void sampleBetaR_ST_csr(
   if (ck <= 0.0) {
    logp[static_cast<std::size_t>(k)] = std::log(pik);
   } else {
-   const double vbk = std::max(vb * ck, 1e-300);
+   const double vbk = std::max(vb * ck * scale_i, 1e-300);
    const double denom = std::max(vei_safe + wi * vbk, 1e-300);
    const double logBF =
     0.5 * std::log(vei_safe / denom) +
@@ -275,7 +280,7 @@ inline void sampleBetaR_ST_csr(
 
  if (ck_new > 0.0) {
   std::normal_distribution<double> norm01(0.0, 1.0);
-  const double vbk = std::max(vb * ck_new, 1e-300);
+  const double vbk = std::max(vb * ck_new * scale_i, 1e-300);
   const double lhs = wi + vei_safe / vbk;
   const double mean = score / lhs;
   const double sd = std::sqrt(vei_safe / lhs);
@@ -496,9 +501,12 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
   int chain,
   int iter,
   double vei,
+  double vb,
   double yy,
   const arma::rowvec& ww,
   const arma::rowvec& wy,
+  const arma::vec& mixture_var,
+  const arma::rowvec& prior_scale,
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
@@ -551,6 +559,15 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
  const int comp_j_old = comp(ju);
  const int comp_k_old = comp(ku);
  if (comp_j_old <= 0 || b_j_old == 0.0 || comp_k_old != 0 || b_k_old != 0.0) return false;
+ if (comp_j_old >= static_cast<int>(mixture_var.n_elem)) {
+  throw std::runtime_error("attempt_ld_swap_bayesr_ST_csr: component index out of range.");
+ }
+ const double ck = mixture_var(static_cast<arma::uword>(comp_j_old));
+ if (!std::isfinite(ck) || ck <= 0.0) {
+  throw std::runtime_error("attempt_ld_swap_bayesr_ST_csr: active component has invalid mixture_var.");
+ }
+ const double vb_j = std::max(vb * ck * prior_scale(ju), 1e-300);
+ const double vb_k = std::max(vb * ck * prior_scale(ku), 1e-300);
 
  attempted = true;
  const double sse_old = residual_diagnostics_bayesr_ST_csr(
@@ -615,8 +632,16 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
   );
  }
 
+ // With constant BayesR prior variance, active/null LD-swap relocations
+ // cancel the prior density. Fixed selection_s makes the moved component's
+ // N(0, vb * mixture_var_m * prior_scale_j) density marker-specific unless
+ // prior_scale_j == prior_scale_k, so it must enter the MH ratio.
+ const double log_prior_ratio =
+  -0.5 * (std::log(vb_k / vb_j) +
+          b_j_old * b_j_old * (1.0 / vb_k - 1.0 / vb_j));
  const double log_alpha =
-  -0.5 * (sse_new - sse_old) / vei + log_q_reverse - log_q_forward;
+  -0.5 * (sse_new - sse_old) / vei +
+  log_prior_ratio + log_q_reverse - log_q_forward;
 
  std::uniform_real_distribution<double> runif(0.0, 1.0);
  const bool accept = std::log(std::max(runif(gen), 1e-300)) < log_alpha;
@@ -639,6 +664,7 @@ inline void sampleB_bayesr_ST_csr(
   const arma::rowvec& b,
   const arma::Row<int>& comp,
   const arma::vec& mixture_var,
+  const arma::rowvec& prior_scale,
   double ssb_prior,
   std::mt19937& gen
 ) {
@@ -657,7 +683,11 @@ inline void sampleB_bayesr_ST_csr(
    if (!std::isfinite(ck) || ck <= 0.0) {
     throw std::runtime_error("sampleB_bayesr_ST_csr: active component has invalid mixture_var.");
    }
-   ssb_scaled += b(iu) * b(iu) / ck;
+   const double scale_i = prior_scale(iu);
+   if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+    throw std::runtime_error("sampleB_bayesr_ST_csr: invalid prior_scale value.");
+   }
+   ssb_scaled += b(iu) * b(iu) / (ck * scale_i);
    dfb += 1.0;
   }
  }
@@ -761,7 +791,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue
 ) {
  const int nt = static_cast<int>(wy.size());
  if (nt <= 0) throw std::runtime_error("stblr_cpg_omp_csr_bayesr: nt must be positive.");
@@ -788,6 +819,18 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  }
  if (!chain_seeds.empty() && static_cast<int>(chain_seeds.size()) != nchains) {
   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: chain_seeds must have length nchains.");
+ }
+
+ bool use_selection_s_prior_scale = selection_s_prior_scale.isNotNull();
+ Rcpp::NumericVector selection_s_prior_scale_vec;
+ if (use_selection_s_prior_scale) {
+  selection_s_prior_scale_vec = Rcpp::NumericVector(selection_s_prior_scale);
+  use_selection_s_prior_scale = selection_s_prior_scale_vec.size() > 0;
+ }
+
+ if (use_selection_s_prior_scale &&
+     static_cast<int>(selection_s_prior_scale_vec.size()) != m) {
+  throw std::runtime_error("stblr_cpg_omp_csr_bayesr: selection_s_prior_scale must have length m.");
  }
 
  const int K = static_cast<int>(mixture_var.size());
@@ -833,6 +876,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ssb_prior_mat(nt, nt, arma::fill::zeros);
  arma::mat sse_prior_mat(nt, nt, arma::fill::zeros);
  arma::vec yy_vec(nt, arma::fill::zeros);
+ arma::rowvec prior_scale(m, arma::fill::ones);
 
  for (int t = 0; t < nt; ++t) {
   if ((int)wy[t].size() != m || (int)ww[t].size() != m ||
@@ -858,6 +902,18 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   for (int t2 = 0; t2 < nt; ++t2) {
    ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t2)) = ssb_prior[t][t2];
    sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t2)) = sse_prior[t][t2];
+  }
+ }
+
+ if (use_selection_s_prior_scale) {
+  for (int i = 0; i < m; ++i) {
+   const double scale_i = selection_s_prior_scale_vec[static_cast<std::size_t>(i)];
+   if (!std::isfinite(scale_i) || scale_i <= 0.0) {
+    throw std::runtime_error(
+     "stblr_cpg_omp_csr_bayesr: selection_s_prior_scale must contain positive finite values."
+    );
+   }
+   prior_scale(static_cast<arma::uword>(i)) = scale_i;
   }
  }
 
@@ -1023,6 +1079,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
       pi_t,
       mixture_var_vec,
       vb_t,
+      prior_scale,
       vei_t,
       ww_t,
       r_t,
@@ -1045,9 +1102,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
         chain,
         it,
         vei_t,
+        vb_t,
         yy_vec(static_cast<arma::uword>(t)),
         ww_t,
         wy_t,
+        mixture_var_vec,
+        prior_scale,
         r_t,
         b_t,
         comp_t,
@@ -1072,6 +1132,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
       b_t,
       comp_t,
       mixture_var_vec,
+      prior_scale,
       ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
       gen_t
      );

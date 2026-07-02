@@ -83,10 +83,13 @@ consistent with standardized-genotype-scale effects in the standard CSR path.
 If a BayesS-style prior is defined on allele-scale effects as
 `alpha_j ~ N(0, v_m h_j^S)`, then the corresponding standardized-effect prior
 for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
-`selection_s` currently implements this scaling only for `csr_bayesc`, where
-included-marker prior variances are `vb * h_j^(selection_s + 1)`. Other CSR
-backends and BED backends do not currently support sampler-level
-`selection_s`.
+`selection_s` currently implements this fixed scaling for `csr_bayesc` and
+`csr_bayesr`. For CSR BayesC, included-marker prior variances are
+`vb * h_j^(selection_s + 1)`. For CSR BayesR, non-null component prior
+variances are `vb * mixture_var_m * h_j^(selection_s + 1)`, with component 0
+remaining the point-mass null. The scheduled CSR BayesC backend,
+annotation-aware CSR backends, SBayesRC CSR backends, and BED backends do not
+currently support sampler-level `selection_s`.
 
 `summarise_stblr_maf_architecture()` is a post-hoc descriptive diagnostic for
 the relationship between posterior marker signal and marker heterozygosity. It
@@ -150,6 +153,15 @@ optional `chains`, and optional `ld_swap_chains`.
 
 The R formatter resets `dm` to `1 - comp_prob[[trait]][, "component_0"]` and
 validates marker-by-component probabilities.
+
+Fixed `selection_s` is supported only for this annotation-unaware CSR BayesR
+backend. The R wrapper aligns `Glist$maf` to `Glist$rsidsLD` with
+`match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, computes
+`h = pmax(2p(1-p), 1e-8)`, and passes `h^(selection_s + 1)` to native code as
+`selection_s_prior_scale`. Native BayesR uses this scale in non-null component
+posterior weights, conditional effect draws, the global `vb` variance update
+through `sum b_j^2 / (mixture_var_m * scale_j)`, and active/null LD-swap prior
+density terms.
 
 ### `bed_bayesc`
 

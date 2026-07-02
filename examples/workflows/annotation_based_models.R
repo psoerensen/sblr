@@ -919,6 +919,10 @@ compact_input <- function(fit) {
 
 lapply(fits, compact_input)
 
+
+
+# Testing S parameter
+
 maf <- Glist$maf[[1]][Glist$rsids[[1]]%in%Glist$rsidsLD[[1]]]
 maf_architecture <- do.call(
   rbind,
@@ -1077,3 +1081,452 @@ maf_architecture_signal[
         maf_architecture_signal$selection_s_posthoc_signal),
 ]
 
+
+fit0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = NULL,
+  seed = 10
+)
+
+fit_minus1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = -1,
+  seed = 10
+)
+
+max(abs(fit0$dm - fit_minus1$dm))
+max(abs(fit0$bm - fit_minus1$bm))
+max(abs(fit0$vle - fit_minus1$vle))
+max(abs(fit0$vld - fit_minus1$vld))
+
+
+
+fit_omit <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  seed = 10
+)
+
+fit_null <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = NULL,
+  seed = 10
+)
+
+max(abs(fit_omit$dm - fit_null$dm))
+max(abs(fit_omit$bm - fit_null$bm))
+
+
+
+fit_s0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = 0,
+  seed = 10
+)
+
+fit_sneg <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = -0.5,
+  seed = 10
+)
+
+fit_s0$input[c(
+  "selection_s",
+  "selection_s_fixed",
+  "selection_s_exponent",
+  "selection_s_scale"
+)]
+
+fit_sneg$input[c(
+  "selection_s",
+  "selection_s_fixed",
+  "selection_s_exponent",
+  "selection_s_scale"
+)]
+
+
+fits_s <- list(
+  bayesC = fit0,
+  bayesC_s0 = fit_s0,
+  bayesC_sneg05 = fit_sneg
+)
+
+topn_power_s <- do.call(
+  rbind,
+  lapply(names(fits_s), function(model_name) {
+    causal_topn_summary(
+      fit = fits_s[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+topn_power_matrix(topn_power_s, top_n_value = 20)
+topn_power_matrix(topn_power_s, top_n_value = 50)
+topn_power_matrix(topn_power_s, top_n_value = 100)
+
+do.call(
+  rbind,
+  lapply(names(fits_s), function(model_name) {
+    out <- summarise_stblr_maf_architecture(
+      fit = fits_s[[model_name]],
+      maf = maf,
+      markers = causal_by_trait
+    )
+    out$model <- model_name
+    out
+  })
+)
+
+
+fit_spos1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = 1,
+  seed = 10
+)
+
+fit_sneg1_5 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  selection_s = -1.5,
+  seed = 10
+)
+
+fits_s_extreme <- list(
+  bayesC = fit0,
+  bayesC_spos1 = fit_spos1,
+  bayesC_sneg15 = fit_sneg1_5
+)
+
+do.call(
+  rbind,
+  lapply(names(fits_s_extreme), function(model_name) {
+    out <- summarise_stblr_maf_architecture(
+      fit = fits_s_extreme[[model_name]],
+      maf = maf,
+      markers = causal_by_trait
+    )
+    out$model <- model_name
+    out
+  })
+)
+
+topn_power_s_extreme <- do.call(
+  rbind,
+  lapply(names(fits_s_extreme), function(model_name) {
+    causal_topn_summary(
+      fit = fits_s_extreme[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+topn_power_matrix(topn_power_s_extreme, top_n_value = 20)
+topn_power_matrix(topn_power_s_extreme, top_n_value = 50)
+topn_power_matrix(topn_power_s_extreme, top_n_value = 100)
+
+
+
+## ------------------------------------------------------------
+## Minimal sanity checks for fixed selection_s in CSR BayesR
+## ------------------------------------------------------------
+
+fitR0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = NULL,
+  seed = 10
+)
+
+fitR_minus1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = -1,
+  seed = 10
+)
+
+## selection_s = -1 should reproduce the ordinary BayesR model
+## because exponent = selection_s + 1 = 0 and h^0 = 1.
+
+max(abs(fitR0$dm - fitR_minus1$dm))
+max(abs(fitR0$bm - fitR_minus1$bm))
+max(abs(fitR0$vle - fitR_minus1$vle))
+max(abs(fitR0$vld - fitR_minus1$vld))
+
+## BayesR-specific checks
+max(abs(fitR0$dm_component_mean - fitR_minus1$dm_component_mean))
+
+max_comp_prob_diff <- max(unlist(
+  Map(
+    function(a, b) max(abs(a - b)),
+    fitR0$comp_prob,
+    fitR_minus1$comp_prob
+  )
+))
+
+max_comp_prob_diff
+
+## ------------------------------------------------------------
+## Check omitted selection_s versus explicit NULL
+## ------------------------------------------------------------
+
+fitR_omit <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  seed = 10
+)
+
+fitR_null <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = NULL,
+  seed = 10
+)
+
+max(abs(fitR_omit$dm - fitR_null$dm))
+max(abs(fitR_omit$bm - fitR_null$bm))
+max(abs(fitR_omit$vle - fitR_null$vle))
+max(abs(fitR_omit$vld - fitR_null$vld))
+
+max(abs(fitR_omit$dm_component_mean - fitR_null$dm_component_mean))
+
+max_comp_prob_diff_null <- max(unlist(
+  Map(
+    function(a, b) max(abs(a - b)),
+    fitR_omit$comp_prob,
+    fitR_null$comp_prob
+  )
+))
+
+max_comp_prob_diff_null
+
+## ------------------------------------------------------------
+## Run fixed-S BayesR models
+## ------------------------------------------------------------
+
+fitR_s0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = 0,
+  seed = 10
+)
+
+fitR_sneg <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = -0.5,
+  seed = 10
+)
+
+fitR_s0$input[c(
+  "selection_s",
+  "selection_s_fixed",
+  "selection_s_exponent",
+  "selection_s_scale"
+)]
+
+fitR_sneg$input[c(
+  "selection_s",
+  "selection_s_fixed",
+  "selection_s_exponent",
+  "selection_s_scale"
+)]
+
+## ------------------------------------------------------------
+## Check BayesR component-probability consistency
+## ------------------------------------------------------------
+
+check_bayesr_component_consistency <- function(fit) {
+  out <- lapply(names(fit$comp_prob), function(trait) {
+    cp <- fit$comp_prob[[trait]]
+    
+    data.frame(
+      trait = trait,
+      max_row_sum_error = max(abs(rowSums(cp) - 1)),
+      max_dm_error = max(abs(fit$dm[, trait] - (1 - cp[, "component_0"]))),
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  do.call(rbind, out)
+}
+
+check_bayesr_component_consistency(fitR0)
+check_bayesr_component_consistency(fitR_minus1)
+check_bayesr_component_consistency(fitR_s0)
+check_bayesr_component_consistency(fitR_sneg)
+
+## ------------------------------------------------------------
+## Compare causal recovery
+## ------------------------------------------------------------
+
+fits_R_s <- list(
+  bayesR = fitR0,
+  bayesR_s0 = fitR_s0,
+  bayesR_sneg05 = fitR_sneg
+)
+
+topn_power_R_s <- do.call(
+  rbind,
+  lapply(names(fits_R_s), function(model_name) {
+    causal_topn_summary(
+      fit = fits_R_s[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+topn_power_matrix(topn_power_R_s, top_n_value = 20)
+topn_power_matrix(topn_power_R_s, top_n_value = 50)
+topn_power_matrix(topn_power_R_s, top_n_value = 100)
+
+
+## ------------------------------------------------------------
+## Compare post-hoc MAF architecture on known causal markers
+## ------------------------------------------------------------
+
+do.call(
+  rbind,
+  lapply(names(fits_R_s), function(model_name) {
+    out <- summarise_stblr_maf_architecture(
+      fit = fits_R_s[[model_name]],
+      maf = maf,
+      markers = causal_by_trait
+    )
+    
+    out$model <- model_name
+    out
+  })
+)
+
+## ------------------------------------------------------------
+## Optional more extreme fixed-S values
+## ------------------------------------------------------------
+
+fitR_spos1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = 1,
+  seed = 10
+)
+
+fitR_sneg1_5 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = -1.5,
+  seed = 10
+)
+
+fits_R_s_extreme <- list(
+  bayesR = fitR0,
+  bayesR_spos1 = fitR_spos1,
+  bayesR_sneg15 = fitR_sneg1_5
+)
+
+do.call(
+  rbind,
+  lapply(names(fits_R_s_extreme), function(model_name) {
+    out <- summarise_stblr_maf_architecture(
+      fit = fits_R_s_extreme[[model_name]],
+      maf = maf,
+      markers = causal_by_trait
+    )
+    
+    out$model <- model_name
+    out
+  })
+)
+
+topn_power_R_s_extreme <- do.call(
+  rbind,
+  lapply(names(fits_R_s_extreme), function(model_name) {
+    causal_topn_summary(
+      fit = fits_R_s_extreme[[model_name]],
+      model_name = model_name,
+      causal_by_trait = causal_by_trait
+    )
+  })
+)
+
+topn_power_matrix(topn_power_R_s_extreme, top_n_value = 20)
+topn_power_matrix(topn_power_R_s_extreme, top_n_value = 50)
+topn_power_matrix(topn_power_R_s_extreme, top_n_value = 100)
+
+max(abs(fitR0$dm - fitR_minus1$dm))
+max(abs(fitR0$bm - fitR_minus1$bm))
+max(abs(fitR0$vle - fitR_minus1$vle))
+max(abs(fitR0$vld - fitR_minus1$vld))
+max_comp_prob_diff
+
+
+fitR0 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = NULL,
+  seed = 10
+)
+
+fitR_minus1 <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  selection_s = -1,
+  seed = 10
+)
+
+max(abs(fitR0$dm - fitR_minus1$dm))
+max(abs(fitR0$bm - fitR_minus1$bm))
+max(abs(fitR0$vle - fitR_minus1$vle))
+max(abs(fitR0$vld - fitR_minus1$vld))
+max(abs(fitR0$dm_component_mean - fitR_minus1$dm_component_mean))
+
+max(unlist(Map(
+  function(a, b) max(abs(a - b)),
+  fitR0$comp_prob,
+  fitR_minus1$comp_prob
+)))
+
+check_bayesr_component_consistency <- function(fit) {
+  do.call(
+    rbind,
+    lapply(names(fit$comp_prob), function(trait) {
+      cp <- fit$comp_prob[[trait]]
+      
+      data.frame(
+        trait = trait,
+        max_row_sum_error = max(abs(rowSums(cp) - 1)),
+        max_dm_error = max(abs(fit$dm[, trait] - (1 - cp[, "component_0"]))),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+check_bayesr_component_consistency(fitR0)
+check_bayesr_component_consistency(fitR_minus1)

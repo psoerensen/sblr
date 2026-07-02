@@ -151,8 +151,10 @@ NULL
   )
 }
 
-.stblr_prepare_csr_bayesc_selection_s <- function(selection_s, Glist, m,
-                                                  scheduled = FALSE) {
+.stblr_prepare_csr_selection_s <- function(selection_s, Glist, m,
+                                           scheduled = FALSE,
+                                           backend = c("bayesc", "bayesr")) {
+  backend <- match.arg(backend)
   if (is.null(selection_s)) {
     return(list(
       prior_scale = numeric(),
@@ -163,7 +165,7 @@ NULL
   }
 
   if (isTRUE(scheduled)) {
-    stop("selection_s is currently supported only for unscheduled CSR BayesC.")
+    stop("selection_s is currently supported only for unscheduled CSR BayesC/BayesR.")
   }
   if (!is.numeric(selection_s) || length(selection_s) != 1L ||
       !is.finite(selection_s)) {
@@ -214,6 +216,17 @@ NULL
     selection_s = unname(selection_s),
     fixed = TRUE,
     exponent = unname(exponent)
+  )
+}
+
+.stblr_prepare_csr_bayesc_selection_s <- function(selection_s, Glist, m,
+                                                  scheduled = FALSE) {
+  .stblr_prepare_csr_selection_s(
+    selection_s = selection_s,
+    Glist = Glist,
+    m = m,
+    scheduled = scheduled,
+    backend = "bayesc"
   )
 }
 
@@ -897,9 +910,9 @@ NULL
 #' Exact CSR BayesR supports multiple chains, compact per-chain output with
 #' `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
 #' SSE validation. Optional BayesR LD-swap/MH moves relocate the full
-#' `(component, b)` state from an active marker to a null LD friend. Active/active
-#' swaps, marker-specific swap priors, and scheduled CSR BayesR are not
-#' implemented.
+#' `(component, b)` state from an active marker to a null LD friend.
+#' Active/active swaps, annotation-specific swap priors, and scheduled CSR
+#' BayesR are not implemented.
 #'
 #' @param stats Summary-statistics object with `yy`, `ww`, `wy`, and usually
 #'   `n`/`m`, as used by [stblr_csr()].
@@ -933,6 +946,11 @@ NULL
 #' @param ld_swap_max_friends Maximum number of high-LD friends stored per
 #'   marker for swap proposals.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
+#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter
+#'   for ordinary CSR BayesR. For the standardized-genotype CSR effect scale,
+#'   non-null component prior variances are scaled by
+#'   `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL`
+#'   preserves the ordinary BayesR prior.
 #' @param ld_prefix,n,m Optional low-level CSR LD prefix, sample sizes, and
 #'   marker count.
 #' @param nub,nue Prior degrees of freedom.
@@ -972,6 +990,7 @@ stblr_csr_bayesr <- function(
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
+  selection_s = NULL,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -1076,6 +1095,13 @@ stblr_csr_bayesr <- function(
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
  variable_names <- names(stats$ww[[1L]])
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
+ selection_s_info <- .stblr_prepare_csr_selection_s(
+  selection_s = selection_s,
+  Glist = Glist,
+  m = m,
+  scheduled = FALSE,
+  backend = "bayesr"
+ )
 
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
  pi_active <- sum(pi[-1L])
@@ -1137,7 +1163,8 @@ stblr_csr_bayesr <- function(
   ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
-  ld_swap_moves = as.integer(ld_swap_moves)
+  ld_swap_moves = as.integer(ld_swap_moves),
+  selection_s_prior_scale = selection_s_info$prior_scale
  )
 
  fit <- .format_stblr_csr_bayesr_fit(
@@ -1178,6 +1205,10 @@ stblr_csr_bayesr <- function(
   updateE = updateE,
   updateE_start = updateE_start,
   updateE_every = updateE_every,
+  selection_s = selection_s_info$selection_s,
+  selection_s_fixed = selection_s_info$fixed,
+  selection_s_exponent = selection_s_info$exponent,
+  selection_s_scale = "standardized_genotype_effect",
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
  fit
@@ -1378,9 +1409,10 @@ stblr_csr_bayesr <- function(
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
 #' @param h2 Initial heritability. Defaults to 0.3.
 #' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter
-#'   for ordinary CSR BayesC. For the current standardized-genotype CSR effect
-#'   scale, prior variances are scaled by `h^(selection_s + 1)`, where
-#'   `h = 2p(1-p)`. `selection_s = NULL` preserves the ordinary BayesC prior.
+#'   for ordinary annotation-unaware CSR BayesC and BayesR. For the current
+#'   standardized-genotype CSR effect scale, non-null prior variances are
+#'   scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
+#'   `selection_s = NULL` preserves the ordinary BayesC/BayesR prior.
 #'   Sampler-level estimation of `selection_s` is not implemented.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
@@ -1475,9 +1507,6 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   stop("method must be one of 'bayesc' or 'bayesr'.")
  }
  if (method == "bayesr") {
-  if (!is.null(selection_s)) {
-   stop("selection_s is currently supported only for method = 'bayesc'.")
-  }
   bayesc_only <- character()
   if (!missing(pi_init) && !identical(pi_init, 0.001)) {
    bayesc_only <- c(bayesc_only, "pi_init")
@@ -1538,7 +1567,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    use_comp_init = use_comp_init,
    comp_init = comp_init,
    use_r_init = use_r_init,
-   rebuild_r_before_updateE = rebuild_r_before_updateE
+   rebuild_r_before_updateE = rebuild_r_before_updateE,
+   selection_s = selection_s
   )
   if (!is.null(mixture_var)) br_args$mixture_var <- mixture_var
   if (!is.null(pi)) br_args$pi <- pi

@@ -87,6 +87,43 @@ make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
   )
 }
 
+make_selection_s_csr_bayesr_fit <- function(selection_s = NULL,
+                                            updateLDswap = FALSE,
+                                            seed = 11) {
+  stblr_csr(
+    Glist = selection_s_csr_glist(),
+    stats = selection_s_csr_stats(),
+    ld_prefix = make_selection_s_csr_prefix(),
+    method = "bayesR",
+    selection_s = selection_s,
+    updateLDswap = updateLDswap,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.01,
+    nit = 8,
+    nburn = 2,
+    nthin = 1,
+    ncores = 1,
+    seed = seed,
+    mixture_var = c(0, 0.1, 1),
+    pi = c(0.4, 0.3, 0.3),
+    alpha = c(1, 1, 1),
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE
+  )
+}
+
+expect_selection_s_bayesr_dm_matches_component0 <- function(fit,
+                                                            tolerance = 1e-12) {
+  for (trait in names(fit$comp_prob)) {
+    expect_equal(
+      unname(as.numeric(fit$dm[, trait])),
+      unname(as.numeric(1 - fit$comp_prob[[trait]][, "component_0"])),
+      tolerance = tolerance
+    )
+  }
+}
+
 test_that("fixed selection_s is optional and preserves default CSR BayesC behavior", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
@@ -161,6 +198,71 @@ test_that("selection_s = -1 gives unit prior scale and matches default", {
   expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
 })
 
+test_that("fixed selection_s is optional and preserves default CSR BayesR behavior", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native BayesR CSR symbol is not loaded"
+  )
+
+  fit_omitted <- make_selection_s_csr_bayesr_fit(seed = 141)
+  fit_null <- make_selection_s_csr_bayesr_fit(selection_s = NULL, seed = 141)
+
+  expect_equal(fit_null$dm, fit_omitted$dm)
+  expect_equal(fit_null$bm, fit_omitted$bm)
+  expect_equal(fit_null$vbs, fit_omitted$vbs)
+  expect_equal(fit_null$vle, fit_omitted$vle)
+  expect_equal(fit_null$vld, fit_omitted$vld)
+  expect_equal(fit_null$comp_prob, fit_omitted$comp_prob)
+  expect_null(fit_null$input$selection_s)
+  expect_false(fit_null$input$selection_s_fixed)
+  expect_null(fit_null$input$selection_s_exponent)
+  expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
+})
+
+test_that("selection_s = -1 gives unit prior scale and matches default CSR BayesR", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native BayesR CSR symbol is not loaded"
+  )
+
+  fit_default <- make_selection_s_csr_bayesr_fit(seed = 142)
+  fit_s_minus_one <- make_selection_s_csr_bayesr_fit(selection_s = -1, seed = 142)
+
+  expect_equal(fit_s_minus_one$dm, fit_default$dm)
+  expect_equal(fit_s_minus_one$bm, fit_default$bm)
+  expect_equal(fit_s_minus_one$vbs, fit_default$vbs)
+  expect_equal(fit_s_minus_one$vle, fit_default$vle)
+  expect_equal(fit_s_minus_one$vld, fit_default$vld)
+  expect_equal(fit_s_minus_one$comp_prob, fit_default$comp_prob)
+  expect_equal(fit_s_minus_one$input$selection_s, -1)
+  expect_true(fit_s_minus_one$input$selection_s_fixed)
+  expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
+})
+
+test_that("fixed selection_s CSR BayesR fits return finite outputs and component probabilities", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native BayesR CSR symbol is not loaded"
+  )
+
+  for (s in c(0, -0.25)) {
+    fit <- make_selection_s_csr_bayesr_fit(selection_s = s, seed = 150 + round(100 * s))
+    expect_true(all(is.finite(fit$dm)))
+    expect_true(all(is.finite(fit$bm)))
+    expect_true(all(is.finite(fit$vle)))
+    expect_true(all(is.finite(fit$vld)))
+    expect_true(all(vapply(fit$comp_prob, function(cp) all(is.finite(cp)), logical(1))))
+    expect_true(all(vapply(fit$comp_prob, function(cp) {
+      all(abs(rowSums(cp) - 1) < 1e-8)
+    }, logical(1))))
+    expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
+    expect_equal(fit$input$selection_s, s)
+    expect_true(fit$input$selection_s_fixed)
+    expect_equal(fit$input$selection_s_exponent, s + 1)
+    expect_equal(fit$input$selection_s_scale, "standardized_genotype_effect")
+  }
+})
+
 test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
   expect_error(
     make_selection_s_csr_fit(selection_s = c(0, 1)),
@@ -183,16 +285,12 @@ test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
     "selection_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    stblr_csr(
-      Glist = selection_s_csr_glist(),
-      stats = selection_s_csr_stats(),
-      ld_prefix = make_selection_s_csr_prefix(),
-      method = "bayesR",
-      selection_s = 0,
-      nit = 2,
-      nburn = 0
-    ),
-    "selection_s is currently supported only for method = 'bayesc'"
+    make_selection_s_csr_bayesr_fit(selection_s = c(0, 1)),
+    "selection_s must be NULL or a finite numeric scalar"
+  )
+  expect_error(
+    make_selection_s_csr_bayesr_fit(selection_s = NA_real_),
+    "selection_s must be NULL or a finite numeric scalar"
   )
   expect_error(
     stblr_csr(
@@ -204,7 +302,7 @@ test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
       nit = 2,
       nburn = 0
     ),
-    "selection_s is currently supported only for unscheduled CSR BayesC"
+    "selection_s is currently supported only for unscheduled CSR BayesC/BayesR"
   )
 })
 
@@ -242,6 +340,37 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
   expect_s3_class(fit$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$ld_swap)))
+
+  chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
+  expect_true(all(chk$checks$ok))
+})
+
+test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
+    "native BayesR CSR symbol is not loaded"
+  )
+  if (!exists("check_stblr_backend_consistency", mode = "function")) {
+    source_sblr_test_file("R/check-stblr-backend-consistency.R")
+  }
+
+  fit <- make_selection_s_csr_bayesr_fit(
+    selection_s = 0,
+    updateLDswap = TRUE,
+    seed = 161
+  )
+
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(is.finite(fit$bm)))
+  expect_true(all(is.finite(fit$vle)))
+  expect_true(all(is.finite(fit$vld)))
+  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
+                    names(fit$ld_swap)))
+  expect_true(all(vapply(fit$comp_prob, function(cp) {
+    all(abs(rowSums(cp) - 1) < 1e-8)
+  }, logical(1))))
+  expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
 
   chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))

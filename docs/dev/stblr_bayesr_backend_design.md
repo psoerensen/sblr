@@ -23,8 +23,9 @@ Plain exact CSR BayesR is supported through `stblr_csr_bayesr()` and
 architectural template and the SBayesRC CSR code only as a source of
 mixture-update math. Scheduled CSR BayesR remains future work. Exact CSR BayesR
 supports the first LD-swap scope: active/null full-state relocation of
-`(component, b)`. Active/active swaps and marker-specific swap priors remain
-future work.
+`(component, b)`. Fixed global `selection_s` adds marker-specific prior terms
+for that active/null move. Active/active swaps and annotation-specific swap
+priors remain future work.
 
 The detailed exact CSR BayesR design and implementation status are in
 `docs/dev/stblr_csr_bayesr_design.md`. That path keeps CSR BayesR separate from
@@ -511,9 +512,10 @@ The key design question is whether a swap exchanges:
 The correct Metropolis-Hastings ratio depends on the component prior
 probabilities, component variance multipliers, and any marker-specific mixture
 probabilities. The implemented exact CSR BayesR scope is active/null
-full-state relocation under global `pi` and global `mixture_var`. Active/active
-swaps and marker-specific or annotation-specific swap prior terms remain
-separate future work.
+full-state relocation under global `pi` and global `mixture_var`, with fixed
+global `selection_s` marker-specific variance scaling when supplied.
+Active/active swaps and annotation-specific swap prior terms remain separate
+future work.
 
 ## Recommended Implementation Order
 

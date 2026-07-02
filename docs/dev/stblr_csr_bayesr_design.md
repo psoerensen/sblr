@@ -34,7 +34,8 @@ The BayesR LD-swap/MH design is recorded separately in
 the full BayesR `(component, b)` state from an active marker to a null LD
 friend, with the BayesC likelihood/proposal-ratio machinery reused only after
 accounting for BayesR component priors. Active/active swaps and
-marker-specific or annotation-specific swap prior terms are not implemented.
+annotation-specific swap prior terms are not implemented. Fixed global
+`selection_s` supplies marker-specific variance terms for the active/null move.
 
 ## Implementation Status
 
@@ -432,15 +433,16 @@ For each trait and marker:
 Exact CSR BayesR supports active/null LD-swap. The move relocates the full
 BayesR state `(component, b)` from an active marker to a null LD friend, updates
 `r = X'y - X'Xb`, and accepts/rejects with the same likelihood/proposal-ratio
-structure used by exact CSR BayesC. Under the current plain CSR BayesR model,
-global `pi` and global `mixture_var` make component/effect prior terms cancel
-for this full-state relocation.
+structure used by exact CSR BayesC. Under the plain CSR BayesR model without
+fixed `selection_s`, global `pi` and global `mixture_var` make
+component/effect prior terms cancel for this full-state relocation. With fixed
+`selection_s`, the marker-specific prior variance terms enter the MH ratio.
 
 Not implemented:
 
 - active/active BayesR swaps;
 - scheduled CSR BayesR swaps;
-- marker-specific or annotation-specific swap prior terms.
+- annotation-specific swap prior terms.
 
 ## Residual Variance Update and Prior Scaling
 

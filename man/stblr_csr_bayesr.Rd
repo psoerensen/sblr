@@ -33,6 +33,7 @@ stblr_csr_bayesr(
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
+  selection_s = NULL,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -100,6 +101,12 @@ marker for swap proposals.}
 
 \item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 
+\item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter
+for ordinary CSR BayesR. For the standardized-genotype CSR effect scale,
+non-null component prior variances are scaled by
+`h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL`
+preserves the ordinary BayesR prior.}
+
 \item{nub, nue}{Prior degrees of freedom.}
 
 \item{use_comp_init, comp_init, use_r_init, r_init, rebuild_r_before_updateE}{Advanced initialization controls.}
@@ -122,7 +129,7 @@ explicit convenience wrapper is also available through
 Exact CSR BayesR supports multiple chains, compact per-chain output with
 `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
 SSE validation. Optional BayesR LD-swap/MH moves relocate the full
-`(component, b)` state from an active marker to a null LD friend. Active/active
-swaps, marker-specific swap priors, and scheduled CSR BayesR are not
-implemented.
+`(component, b)` state from an active marker to a null LD friend.
+Active/active swaps, annotation-specific swap priors, and scheduled CSR
+BayesR are not implemented.
 }
