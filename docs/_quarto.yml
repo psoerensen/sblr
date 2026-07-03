@@ -39,12 +39,3 @@ format:
     code-fold: true
     code-tools: true
     highlight-style: github
-  pdf:
-    toc: true
-    number-sections: true
-    highlight-style: kate
-    fig-pos: "H"
-    fig-width: 6
-    fig-height: 4
-    fontsize: 11pt
-    geometry: margin=1in
