@@ -40,14 +40,14 @@
 #'               dimnames = list(paste0("m", 1:8), "trait1"))
 #' )
 #' maf <- stats::setNames(seq(0.05, 0.4, length.out = 8), paste0("m", 1:8))
-#' summarise_stblr_maf_architecture(fit, maf = maf)
-#' summarise_stblr_maf_architecture(fit, maf = maf, min_pip = 0.01)
-#' summarise_stblr_maf_architecture(fit, maf = maf, top_n = 5)
+#' summarise_architecture(fit, maf = maf)
+#' summarise_architecture(fit, maf = maf, min_pip = 0.01)
+#' summarise_architecture(fit, maf = maf, top_n = 5)
 #' causal_by_trait <- list(trait1 = paste0("m", 1:5))
-#' summarise_stblr_maf_architecture(fit, maf = maf, markers = causal_by_trait)
+#' summarise_architecture(fit, maf = maf, markers = causal_by_trait)
 #'
 #' @export
-summarise_stblr_maf_architecture <- function(
+summarise_architecture <- function(
     fit,
     maf = NULL,
     h = NULL,

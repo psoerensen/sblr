@@ -496,7 +496,7 @@ compact diagnostics:
 ```text
 mtsim_annotation()
     -> summarize_annotation_signal()
-    -> make_stats() + make_sparseLD()
+    -> make_summary_stats() + make_sparse_ld()
     -> align A with stats and sparse LD
     -> stblr_csr_annot(annotation_model = "prior")
     -> stblr_csr_annot(annotation_model = "learned")

@@ -169,7 +169,7 @@ Detailed storage and construction contracts belong in
 
 ## Sufficient Statistics: `wy`, `ww`, and `yy`
 
-`make_stats()` is the package bridge from a BED-backed `Glist` and phenotypes
+`make_summary_stats()` is the package bridge from a BED-backed `Glist` and phenotypes
 to the sufficient statistics consumed by `stblr_csr()`. It resolves BED files,
 selected chromosomes, selected BED marker columns `cls`, allele frequencies,
 phenotype-to-BED row matching, and marker names from `Glist`. Optional `rows`
@@ -185,7 +185,7 @@ related quantities required by the ST-BLR wrapper:
 - `stats$yy`: $y_t^\top y_t$ for each trait;
 - `stats$n` and `stats$m`, when available, for sample and marker counts.
 
-`make_sparseLD()` computes disk-backed sparse LD from the same BED-backed
+`make_sparse_ld()` computes disk-backed sparse LD from the same BED-backed
 `Glist` and stores the resulting CSR prefix and resolved marker metadata in
 `Glist$sparseLD`. This metadata includes the sparse-LD prefix, marker order,
 selected BED columns, rows, allele frequencies, distance limits, threshold,
@@ -200,9 +200,9 @@ The complete conceptual bridge is:
 ```text
 BED files + aligned phenotypes
           |
-          +--> make_stats() ---------> wy, ww, yy, n, marker names
+          +--> make_summary_stats() ---------> wy, ww, yy, n, marker names
           |
-          +--> make_sparseLD() ------> Glist$sparseLD prefix and metadata
+          +--> make_sparse_ld() ------> Glist$sparseLD prefix and metadata
                                         |
                                         v
                         stblr_csr() summary-statistics model
@@ -293,7 +293,7 @@ cls <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
 stopifnot(!anyNA(cls))
 ```
 
-The same `cls` is then supplied to `make_stats()` and `make_sparseLD()`.
+The same `cls` is then supplied to `make_summary_stats()` and `make_sparse_ld()`.
 Allele frequencies or MAF are subset with the same indices:
 
 ```r
@@ -342,7 +342,7 @@ At minimum, validate the following before fitting:
 
 1. `cls` contains no missing marker matches and has the expected length.
 2. Allele frequencies correspond to the selected marker columns.
-3. `make_stats()` and `make_sparseLD()` use identical marker order, sample
+3. `make_summary_stats()` and `make_sparse_ld()` use identical marker order, sample
    rows, and scaling choices.
 4. CSR dimensions and indexing are consistent with the number of markers.
 5. Annotation rows and marker/group vectors use the same marker order.

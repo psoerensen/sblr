@@ -5,7 +5,7 @@ source_sblr_test_file <- function(path) {
   source(path)
 }
 
-if (!exists("check_stblr_backend_consistency", mode = "function")) {
+if (!exists("check_stblr_consistency", mode = "function")) {
   source_sblr_test_file("R/check-stblr-backend-consistency.R")
 }
 
@@ -30,7 +30,7 @@ make_backend_consistency_fit <- function(nchains = 1L, summaries = FALSE) {
 }
 
 test_that("backend consistency checker accepts minimal single-chain fit", {
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     make_backend_consistency_fit(nchains = 1L),
     verbose = FALSE
   )
@@ -42,7 +42,7 @@ test_that("backend consistency checker accepts minimal single-chain fit", {
 })
 
 test_that("backend consistency checker accepts valid multi-chain summaries", {
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     make_backend_consistency_fit(nchains = 2L, summaries = TRUE),
     verbose = FALSE
   )
@@ -54,11 +54,11 @@ test_that("backend consistency checker accepts valid multi-chain summaries", {
 test_that("backend consistency checker handles missing multi-chain summaries", {
   fit <- make_backend_consistency_fit(nchains = 2L, summaries = FALSE)
 
-  chk_default <- check_stblr_backend_consistency(fit, verbose = FALSE)
+  chk_default <- check_stblr_consistency(fit, verbose = FALSE)
   expect_false(chk_default$ok)
   expect_true("chain_summaries.required" %in% chk_default$checks$check)
 
-  chk_optional <- check_stblr_backend_consistency(
+  chk_optional <- check_stblr_consistency(
     fit,
     require_chain_summaries = FALSE,
     verbose = FALSE
@@ -70,7 +70,7 @@ test_that("backend consistency checker catches invalid dimensions", {
   fit <- make_backend_consistency_fit()
   fit$bm <- fit$bm[1:2, , drop = FALSE]
 
-  chk <- check_stblr_backend_consistency(fit, verbose = FALSE)
+  chk <- check_stblr_consistency(fit, verbose = FALSE)
 
   expect_false(chk$ok)
   expect_false(chk$checks$ok[match("dimensions.dm_bm", chk$checks$check)])
@@ -81,7 +81,7 @@ test_that("backend consistency checker catches invalid min and max summaries", {
   fit$dm_min[1, 1] <- fit$dm[1, 1] + 0.1
   fit$bm_max[2, 1] <- fit$bm[2, 1] - 0.1
 
-  chk <- check_stblr_backend_consistency(fit, verbose = FALSE)
+  chk <- check_stblr_consistency(fit, verbose = FALSE)
 
   expect_false(chk$ok)
   expect_false(chk$checks$ok[match("chain_summary.dm.bounds", chk$checks$check)])
@@ -89,7 +89,7 @@ test_that("backend consistency checker catches invalid min and max summaries", {
 })
 
 test_that("backend consistency checker validates single-chain summaries", {
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     make_backend_consistency_fit(nchains = 1L, summaries = TRUE),
     require_chain_summaries = TRUE,
     verbose = FALSE
@@ -120,7 +120,7 @@ test_that("backend consistency checker validates compact chain summaries", {
     fit[[nm]] <- matrix(fit[[nm]], ncol = 1, dimnames = dimnames(fit$dm))
   }
 
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_chains = TRUE,
     verbose = FALSE
@@ -139,7 +139,7 @@ test_that("backend consistency checker validates LD-swap diagnostics", {
     acceptance_rate = 0.4
   )
 
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_ld_swap = TRUE,
     verbose = FALSE
@@ -157,7 +157,7 @@ test_that("backend consistency checker catches invalid LD-swap diagnostics", {
     acceptance_rate = 1.5
   )
 
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_ld_swap = TRUE,
     verbose = FALSE

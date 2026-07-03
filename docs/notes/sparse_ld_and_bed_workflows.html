@@ -187,8 +187,8 @@ window.Quarto = {
   <li><a href="#selecting-samples-and-markers-from-a-bed-backed-glist" id="toc-selecting-samples-and-markers-from-a-bed-backed-glist" class="nav-link" data-scroll-target="#selecting-samples-and-markers-from-a-bed-backed-glist">Selecting Samples and Markers From a BED-Backed <code>Glist</code></a></li>
   <li><a href="#simulating-or-supplying-aligned-phenotypes" id="toc-simulating-or-supplying-aligned-phenotypes" class="nav-link" data-scroll-target="#simulating-or-supplying-aligned-phenotypes">Simulating or Supplying Aligned Phenotypes</a></li>
   <li><a href="#path-a-direct-individual-level-fitting-with-stblr_bed" id="toc-path-a-direct-individual-level-fitting-with-stblr_bed" class="nav-link" data-scroll-target="#path-a-direct-individual-level-fitting-with-stblr_bed">Path A: Direct Individual-Level Fitting With <code>stblr_bed()</code></a></li>
-  <li><a href="#path-b-step-1-deriving-wy-ww-and-yy-with-make_stats" id="toc-path-b-step-1-deriving-wy-ww-and-yy-with-make_stats" class="nav-link" data-scroll-target="#path-b-step-1-deriving-wy-ww-and-yy-with-make_stats">Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>make_stats()</code></a></li>
-  <li><a href="#path-b-step-2-computing-sparse-ld-with-make_sparseld" id="toc-path-b-step-2-computing-sparse-ld-with-make_sparseld" class="nav-link" data-scroll-target="#path-b-step-2-computing-sparse-ld-with-make_sparseld">Path B, Step 2: Computing Sparse LD With <code>make_sparseLD()</code></a>
+  <li><a href="#path-b-step-1-deriving-wy-ww-and-yy-with-make_summary_stats" id="toc-path-b-step-1-deriving-wy-ww-and-yy-with-make_summary_stats" class="nav-link" data-scroll-target="#path-b-step-1-deriving-wy-ww-and-yy-with-make_summary_stats">Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>make_summary_stats()</code></a></li>
+  <li><a href="#path-b-step-2-computing-sparse-ld-with-make_sparse_ld" id="toc-path-b-step-2-computing-sparse-ld-with-make_sparse_ld" class="nav-link" data-scroll-target="#path-b-step-2-computing-sparse-ld-with-make_sparse_ld">Path B, Step 2: Computing Sparse LD With <code>make_sparse_ld()</code></a>
   <ul class="collapse">
   <li><a href="#related-sparse-ld-helpers" id="toc-related-sparse-ld-helpers" class="nav-link" data-scroll-target="#related-sparse-ld-helpers">Related Sparse-LD Helpers</a></li>
   </ul></li>
@@ -200,7 +200,7 @@ window.Quarto = {
   <li><a href="#runtime-disk-reproducibility-and-convergence-cautions" id="toc-runtime-disk-reproducibility-and-convergence-cautions" class="nav-link" data-scroll-target="#runtime-disk-reproducibility-and-convergence-cautions">Runtime, Disk, Reproducibility, and Convergence Cautions</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="sparse_ld_and_bed_workflows.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -247,12 +247,12 @@ window.Quarto = {
         v
 align markers with cls and select sample rows
         |
-        +--&gt; make_stats()
+        +--&gt; make_summary_stats()
         |       |
         |       v
         |    stats$wy, stats$ww, stats$yy, n, marker names
         |
-        +--&gt; make_sparseLD()
+        +--&gt; make_sparse_ld()
                 |
                 v
              Glist$sparseLD$prefix
@@ -333,7 +333,7 @@ optional BED-versus-CSR posterior comparison</code></pre>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>bed_files <span class="ot">&lt;-</span> Glist<span class="sc">$</span>bedfiles[chr]</span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>af <span class="ot">&lt;-</span> Glist<span class="sc">$</span>af[[chr]][cls]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><code>cls[j]</code> identifies the BED column containing <code>marker_id[j]</code>. Its order, not just its set of values, determines the order of every downstream marker-indexed object.</p>
-<p>For one BED file, <code>make_stats()</code> and <code>make_sparseLD()</code> can infer <code>cls</code> from <code>match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])</code> when it is not supplied. For multiple BED files, each <code>cls[[k]]</code> selects and orders markers from <code>Glist$bedfiles[chr[k]]</code>; the concatenated selection is the model order.</p>
+<p>For one BED file, <code>make_summary_stats()</code> and <code>make_sparse_ld()</code> can infer <code>cls</code> from <code>match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])</code> when it is not supplied. For multiple BED files, each <code>cls[[k]]</code> selects and orders markers from <code>Glist$bedfiles[chr[k]]</code>; the concatenated selection is the model order.</p>
 <p><code>n</code> is the total number of BED rows. If <code>rows = NULL</code>, all BED rows are used and <code>y</code> should have <code>n</code> rows. If <code>rows</code> is supplied, it selects the individuals used to construct statistics and LD, and <code>y</code> must describe that same selected sample in the expected order. The same <code>rows</code> value must be used for both branches of CSR preparation.</p>
 </section>
 <section id="simulating-or-supplying-aligned-phenotypes" class="level2">
@@ -348,7 +348,7 @@ optional BED-versus-CSR posterior comparison</code></pre>
 <li>centering and scaling choices affect <code>stats$yy</code> and prior initialization;</li>
 <li>missing phenotype handling must be consistent with the chosen sample.</li>
 </ul>
-<p>For trait <span class="math inline">\(t\)</span>, <code>make_stats()</code> constructs quantities including</p>
+<p>For trait <span class="math inline">\(t\)</span>, <code>make_summary_stats()</code> constructs quantities including</p>
 <p><span class="math display">\[
 wy_t = X^\top y_t,
 \qquad
@@ -384,10 +384,10 @@ yy_t = y_t^\top y_t.
 </ul>
 <p><code>stblr_bed()</code> derives BED paths, allele frequencies, and marker names from <code>Glist</code>. If <code>cls</code> is omitted, the wrapper matches <code>Glist$rsidsLD</code> against <code>Glist$rsids</code>; supplying <code>cls</code> explicitly makes the comparison contract visible.</p>
 </section>
-<section id="path-b-step-1-deriving-wy-ww-and-yy-with-make_stats" class="level2">
-<h2 class="anchored" data-anchor-id="path-b-step-1-deriving-wy-ww-and-yy-with-make_stats">Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>make_stats()</code></h2>
-<p><code>make_stats()</code> converts the selected BED genotypes and phenotype matrix into sufficient statistics for ST-BLR fitting:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<section id="path-b-step-1-deriving-wy-ww-and-yy-with-make_summary_stats" class="level2">
+<h2 class="anchored" data-anchor-id="path-b-step-1-deriving-wy-ww-and-yy-with-make_summary_stats">Path B, Step 1: Deriving <code>wy</code>, <code>ww</code>, and <code>yy</code> With <code>make_summary_stats()</code></h2>
+<p><code>make_summary_stats()</code> converts the selected BED genotypes and phenotype matrix into sufficient statistics for ST-BLR fitting:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_summary_stats</span>(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> chr,</span>
@@ -432,12 +432,12 @@ yy_t = y_t^\top y_t.
 </tbody>
 </table>
 <p><code>stats$wy</code> and <code>stats$ww</code> must each describe the same <span class="math inline">\(m\)</span> markers, in the same order later used by the CSR LD matrix. <code>stats$yy</code> has one entry per trait, not one entry per marker.</p>
-<p><code>make_stats()</code> accepts a single chromosome/file or a list of chromosomes/files through <code>chr</code> and <code>cls</code>, and records the resolved marker order in <code>stats$marker_names</code>.</p>
+<p><code>make_summary_stats()</code> accepts a single chromosome/file or a list of chromosomes/files through <code>chr</code> and <code>cls</code>, and records the resolved marker order in <code>stats$marker_names</code>.</p>
 </section>
-<section id="path-b-step-2-computing-sparse-ld-with-make_sparseld" class="level2">
-<h2 class="anchored" data-anchor-id="path-b-step-2-computing-sparse-ld-with-make_sparseld">Path B, Step 2: Computing Sparse LD With <code>make_sparseLD()</code></h2>
-<p><code>make_sparseLD()</code> computes marker correlations from BED-backed <code>Glist</code> data, applies distance and <span class="math inline">\(r^2\)</span> retention rules, writes a disk-backed CSR representation, and stores the resolved sparse-LD metadata in <code>Glist$sparseLD</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<section id="path-b-step-2-computing-sparse-ld-with-make_sparse_ld" class="level2">
+<h2 class="anchored" data-anchor-id="path-b-step-2-computing-sparse-ld-with-make_sparse_ld">Path B, Step 2: Computing Sparse LD With <code>make_sparse_ld()</code></h2>
+<p><code>make_sparse_ld()</code> computes marker correlations from BED-backed <code>Glist</code> data, applies distance and <span class="math inline">\(r^2\)</span> retention rules, writes a disk-backed CSR representation, and stores the resolved sparse-LD metadata in <code>Glist$sparseLD</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparse_ld</span>(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>),</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> chr,</span>
@@ -497,7 +497,7 @@ yy_t = y_t^\top y_t.
 </tr>
 </tbody>
 </table>
-<p>Use <code>make_sparseLD()</code> for the high-level BED-to-disk workflow. It calls the exported <code>sparseLD_stream_CSR()</code> writer after resolving marker and sample metadata from <code>Glist</code>. The in-memory <code>sparseLD_to_CSR()</code> representation can be useful during development, but it materializes sparse arrays in R and is not the input contract used by <code>stblr_csr()</code>. The <code>sparseLD_write_CSR()</code> alias should not be treated as a separate stable public API while it remains unexported.</p>
+<p>Use <code>make_sparse_ld()</code> for the high-level BED-to-disk workflow. It calls the exported <code>sparseLD_stream_CSR()</code> writer after resolving marker and sample metadata from <code>Glist</code>. The in-memory <code>sparseLD_to_CSR()</code> representation can be useful during development, but it materializes sparse arrays in R and is not the input contract used by <code>stblr_csr()</code>. The <code>sparseLD_write_CSR()</code> alias should not be treated as a separate stable public API while it remains unexported.</p>
 </section>
 </section>
 <section id="inspecting-and-validating-csr-files-with-sparseld_read_csr" class="level2">
@@ -575,7 +575,7 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(Glist<span class="sc">$</span>rsids[[chr]][cls], Glist<span class="sc">$</span>rsidsLD[[chr]])</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The remaining equalities are positional contracts. Sparse LD binary files do not supply biological marker IDs to repair a mismatch later. Retain <code>marker_id &lt;- Glist$rsidsLD[[chr]]</code> beside the preparation outputs and attach or verify it whenever annotations and posterior summaries are joined.</p>
-<p>Scaling also has to match. If <code>make_stats(..., scale = TRUE)</code> standardizes markers using <code>af</code>, then sparse LD must be constructed from the same selected samples and corresponding allele frequencies. If <code>rows</code> is used, use it in both calls and ensure <code>y</code> describes those rows. LD thresholds and distance limits should be treated as recorded model-input settings, not merely performance options.</p>
+<p>Scaling also has to match. If <code>make_summary_stats(..., scale = TRUE)</code> standardizes markers using <code>af</code>, then sparse LD must be constructed from the same selected samples and corresponding allele frequencies. If <code>rows</code> is used, use it in both calls and ensure <code>y</code> describes those rows. LD thresholds and distance limits should be treated as recorded model-input settings, not merely performance options.</p>
 <p>The annotation workflow extends this contract with:</p>
 <div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> marker_id</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(A) <span class="sc">==</span> <span class="fu">length</span>(cls), <span class="fu">identical</span>(<span class="fu">rownames</span>(A), marker_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1110,12 +1110,12 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="in">        v</span></span>
 <span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a><span class="in">align markers with cls and select sample rows</span></span>
 <span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="in">        |</span></span>
-<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="in">        +--&gt; make_stats()</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="in">        +--&gt; make_summary_stats()</span></span>
 <span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="in">        |       |</span></span>
 <span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a><span class="in">        |       v</span></span>
 <span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="in">        |    stats$wy, stats$ww, stats$yy, n, marker names</span></span>
 <span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a><span class="in">        |</span></span>
-<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a><span class="in">        +--&gt; make_sparseLD()</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a><span class="in">        +--&gt; make_sparse_ld()</span></span>
 <span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a><span class="in">                |</span></span>
 <span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a><span class="in">                v</span></span>
 <span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a><span class="in">             Glist$sparseLD$prefix</span></span>
@@ -1178,7 +1178,7 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-94"><a href="#cb14-94" aria-hidden="true" tabindex="-1"></a>just its set of values, determines the order of every downstream</span>
 <span id="cb14-95"><a href="#cb14-95" aria-hidden="true" tabindex="-1"></a>marker-indexed object.</span>
 <span id="cb14-96"><a href="#cb14-96" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-97"><a href="#cb14-97" aria-hidden="true" tabindex="-1"></a>For one BED file, <span class="in">`make_stats()`</span> and <span class="in">`make_sparseLD()`</span> can infer <span class="in">`cls`</span> from</span>
+<span id="cb14-97"><a href="#cb14-97" aria-hidden="true" tabindex="-1"></a>For one BED file, <span class="in">`make_summary_stats()`</span> and <span class="in">`make_sparse_ld()`</span> can infer <span class="in">`cls`</span> from</span>
 <span id="cb14-98"><a href="#cb14-98" aria-hidden="true" tabindex="-1"></a><span class="in">`match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`</span> when it is not supplied. For</span>
 <span id="cb14-99"><a href="#cb14-99" aria-hidden="true" tabindex="-1"></a>multiple BED files, each <span class="in">`cls[[k]]`</span> selects and orders markers from</span>
 <span id="cb14-100"><a href="#cb14-100" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$bedfiles[chr[k]]`</span>; the concatenated selection is the model order.</span>
@@ -1207,7 +1207,7 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-123"><a href="#cb14-123" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>centering and scaling choices affect <span class="in">`stats$yy`</span> and prior initialization;</span>
 <span id="cb14-124"><a href="#cb14-124" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>missing phenotype handling must be consistent with the chosen sample.</span>
 <span id="cb14-125"><a href="#cb14-125" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-126"><a href="#cb14-126" aria-hidden="true" tabindex="-1"></a>For trait $t$, <span class="in">`make_stats()`</span> constructs quantities including</span>
+<span id="cb14-126"><a href="#cb14-126" aria-hidden="true" tabindex="-1"></a>For trait $t$, <span class="in">`make_summary_stats()`</span> constructs quantities including</span>
 <span id="cb14-127"><a href="#cb14-127" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-128"><a href="#cb14-128" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb14-129"><a href="#cb14-129" aria-hidden="true" tabindex="-1"></a>wy_t = X^\top y_t,</span>
@@ -1257,13 +1257,13 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-173"><a href="#cb14-173" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$rsids`</span>; supplying <span class="in">`cls`</span> explicitly makes the comparison contract</span>
 <span id="cb14-174"><a href="#cb14-174" aria-hidden="true" tabindex="-1"></a>visible.</span>
 <span id="cb14-175"><a href="#cb14-175" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-176"><a href="#cb14-176" aria-hidden="true" tabindex="-1"></a><span class="fu">## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `make_stats()`</span></span>
+<span id="cb14-176"><a href="#cb14-176" aria-hidden="true" tabindex="-1"></a><span class="fu">## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `make_summary_stats()`</span></span>
 <span id="cb14-177"><a href="#cb14-177" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-178"><a href="#cb14-178" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> converts the selected BED genotypes and phenotype matrix into</span>
+<span id="cb14-178"><a href="#cb14-178" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> converts the selected BED genotypes and phenotype matrix into</span>
 <span id="cb14-179"><a href="#cb14-179" aria-hidden="true" tabindex="-1"></a>sufficient statistics for ST-BLR fitting:</span>
 <span id="cb14-180"><a href="#cb14-180" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-181"><a href="#cb14-181" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb14-182"><a href="#cb14-182" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<span id="cb14-182"><a href="#cb14-182" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_summary_stats</span>(</span>
 <span id="cb14-183"><a href="#cb14-183" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb14-184"><a href="#cb14-184" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
 <span id="cb14-185"><a href="#cb14-185" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> chr,</span>
@@ -1288,19 +1288,19 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-204"><a href="#cb14-204" aria-hidden="true" tabindex="-1"></a>same order later used by the CSR LD matrix. <span class="in">`stats$yy`</span> has one entry per trait,</span>
 <span id="cb14-205"><a href="#cb14-205" aria-hidden="true" tabindex="-1"></a>not one entry per marker.</span>
 <span id="cb14-206"><a href="#cb14-206" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-207"><a href="#cb14-207" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> accepts a single chromosome/file or a list of chromosomes/files</span>
+<span id="cb14-207"><a href="#cb14-207" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> accepts a single chromosome/file or a list of chromosomes/files</span>
 <span id="cb14-208"><a href="#cb14-208" aria-hidden="true" tabindex="-1"></a>through <span class="in">`chr`</span> and <span class="in">`cls`</span>, and records the resolved marker order in</span>
 <span id="cb14-209"><a href="#cb14-209" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$marker_names`</span>.</span>
 <span id="cb14-210"><a href="#cb14-210" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-211"><a href="#cb14-211" aria-hidden="true" tabindex="-1"></a><span class="fu">## Path B, Step 2: Computing Sparse LD With `make_sparseLD()`</span></span>
+<span id="cb14-211"><a href="#cb14-211" aria-hidden="true" tabindex="-1"></a><span class="fu">## Path B, Step 2: Computing Sparse LD With `make_sparse_ld()`</span></span>
 <span id="cb14-212"><a href="#cb14-212" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-213"><a href="#cb14-213" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> computes marker correlations from BED-backed <span class="in">`Glist`</span> data,</span>
+<span id="cb14-213"><a href="#cb14-213" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparse_ld()`</span> computes marker correlations from BED-backed <span class="in">`Glist`</span> data,</span>
 <span id="cb14-214"><a href="#cb14-214" aria-hidden="true" tabindex="-1"></a>applies distance and $r^2$ retention rules, writes a disk-backed CSR</span>
 <span id="cb14-215"><a href="#cb14-215" aria-hidden="true" tabindex="-1"></a>representation, and stores the resolved sparse-LD metadata in</span>
 <span id="cb14-216"><a href="#cb14-216" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span>:</span>
 <span id="cb14-217"><a href="#cb14-217" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-218"><a href="#cb14-218" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb14-219"><a href="#cb14-219" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb14-219"><a href="#cb14-219" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparse_ld</span>(</span>
 <span id="cb14-220"><a href="#cb14-220" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb14-221"><a href="#cb14-221" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(output_dir, <span class="st">"chr1_ld"</span>),</span>
 <span id="cb14-222"><a href="#cb14-222" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> chr,</span>
@@ -1347,7 +1347,7 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-263"><a href="#cb14-263" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_write_CSR()`</span> <span class="pp">|</span> Currently delegates to <span class="in">`sparseLD_stream_CSR()`</span> and writes the same disk-backed representation. <span class="pp">|</span> Generated internal wrapper; not currently exported or separately documented. <span class="pp">|</span></span>
 <span id="cb14-264"><a href="#cb14-264" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_read_CSR()`</span> <span class="pp">|</span> Reads an existing disk-backed CSR prefix into an R list for inspection. <span class="pp">|</span> Exported. <span class="pp">|</span></span>
 <span id="cb14-265"><a href="#cb14-265" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-266"><a href="#cb14-266" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`make_sparseLD()`</span> for the high-level BED-to-disk workflow. It calls the</span>
+<span id="cb14-266"><a href="#cb14-266" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`make_sparse_ld()`</span> for the high-level BED-to-disk workflow. It calls the</span>
 <span id="cb14-267"><a href="#cb14-267" aria-hidden="true" tabindex="-1"></a>exported <span class="in">`sparseLD_stream_CSR()`</span> writer after resolving marker and sample</span>
 <span id="cb14-268"><a href="#cb14-268" aria-hidden="true" tabindex="-1"></a>metadata from <span class="in">`Glist`</span>. The in-memory <span class="in">`sparseLD_to_CSR()`</span> representation can be</span>
 <span id="cb14-269"><a href="#cb14-269" aria-hidden="true" tabindex="-1"></a>useful during development, but it materializes sparse arrays in R and is not</span>
@@ -1484,7 +1484,7 @@ stats$wy + stats$ww + Glist$sparseLD$prefix
 <span id="cb14-400"><a href="#cb14-400" aria-hidden="true" tabindex="-1"></a><span class="in">`marker_id &lt;- Glist$rsidsLD[[chr]]`</span> beside the preparation outputs and attach</span>
 <span id="cb14-401"><a href="#cb14-401" aria-hidden="true" tabindex="-1"></a>or verify it whenever annotations and posterior summaries are joined.</span>
 <span id="cb14-402"><a href="#cb14-402" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-403"><a href="#cb14-403" aria-hidden="true" tabindex="-1"></a>Scaling also has to match. If <span class="in">`make_stats(..., scale = TRUE)`</span> standardizes</span>
+<span id="cb14-403"><a href="#cb14-403" aria-hidden="true" tabindex="-1"></a>Scaling also has to match. If <span class="in">`make_summary_stats(..., scale = TRUE)`</span> standardizes</span>
 <span id="cb14-404"><a href="#cb14-404" aria-hidden="true" tabindex="-1"></a>markers using <span class="in">`af`</span>, then sparse LD must be constructed from the same selected</span>
 <span id="cb14-405"><a href="#cb14-405" aria-hidden="true" tabindex="-1"></a>samples and corresponding allele frequencies. If <span class="in">`rows`</span> is used, use it in</span>
 <span id="cb14-406"><a href="#cb14-406" aria-hidden="true" tabindex="-1"></a>both calls and ensure <span class="in">`y`</span> describes those rows. LD thresholds and distance</span>

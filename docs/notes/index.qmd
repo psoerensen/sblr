@@ -75,7 +75,7 @@ New readers can follow this sequence:
 
 - [Sparse-LD and BED Workflows](sparse_ld_and_bed_workflows.html) is the
   practical guide to aligning BED markers, deriving sufficient statistics,
-  constructing sparse LD with `make_sparseLD()`, fitting `stblr_csr()`, and
+  constructing sparse LD with `make_sparse_ld()`, fitting `stblr_csr()`, and
   cautiously comparing BED and CSR fits.
 
 - [Workflows and Outputs](workflows_and_outputs.html) connects the executable

@@ -31,7 +31,7 @@ as final inference.
 | Question | Starting data | Principal workflow or function | Main output |
 |---|---|---|---|
 | Fit directly from individual-level PLINK genotypes | BED-backed `Glist`, phenotype matrix, aligned marker columns | `stblr_bed()` | BED ST-BLR fit |
-| Prepare reusable summary-statistics inputs from BED | BED-backed `Glist`, phenotypes, marker IDs, allele frequencies | `make_stats()` and `make_sparseLD()` | `stats` and an updated `Glist$sparseLD` |
+| Prepare reusable summary-statistics inputs from BED | BED-backed `Glist`, phenotypes, marker IDs, allele frequencies | `make_summary_stats()` and `make_sparse_ld()` | `stats` and an updated `Glist$sparseLD` |
 | Fit plain ST-BLR from summary statistics and sparse LD | `stats` and sparse-LD metadata in `Glist` | `stblr_csr()` | CSR ST-BLR fit |
 | Fit BayesS-style MAF-scaled CSR models | `stats`, `Glist`, and CSR LD metadata with MAF | `stblr_csr(..., selection_s = ...)` or `stblr_csr(..., estimate_selection_s = TRUE)` | CSR BayesC/BayesR fit with fixed global or sampled trait-specific `selection_s` |
 | Compare annotation prior families | `stats`, sparse-LD metadata in `Glist`, aligned annotations or groups | `stblr_csr_annot()` or `annotation_based_models.R` | Fixed, learned, group, and SBayesRC-style fits |
@@ -77,8 +77,8 @@ Its stages are:
 BED-backed Glist + phenotypes
     -> align LD markers with BED columns using cls
     -> optionally fit stblr_bed()
-    -> compute stats with make_stats()
-    -> compute sparse LD with make_sparseLD()
+    -> compute stats with make_summary_stats()
+    -> compute sparse LD with make_sparse_ld()
     -> fit stblr_csr()
     -> compare BED and CSR summaries cautiously
 ```
@@ -115,7 +115,7 @@ when comparing its output with a CSR fit.
 
 ### Compute Sufficient Statistics and Sparse LD
 
-`make_stats()` computes the marker-trait and phenotype cross-products used by
+`make_summary_stats()` computes the marker-trait and phenotype cross-products used by
 the CSR model from a BED-backed `Glist`. The important returned quantities
 include:
 
@@ -124,7 +124,7 @@ include:
 - `stats$yy`, containing phenotype sums of squares;
 - metadata such as marker count, trait count, and sample size when available.
 
-`make_sparseLD()` then writes thresholded sparse LD from the same BED-backed
+`make_sparse_ld()` then writes thresholded sparse LD from the same BED-backed
 `Glist` and stores the sparse-LD prefix, selected chromosomes, marker columns,
 allele frequencies, rows, threshold, window, and block metadata in
 `Glist$sparseLD`. Its `r2_threshold`, distance limits, selected rows, allele
@@ -167,8 +167,8 @@ Its stages are:
 ```text
 mtsim_annotation()
     -> summarize_annotation_signal()
-    -> make_stats()
-    -> make_sparseLD()
+    -> make_summary_stats()
+    -> make_sparse_ld()
     -> align annotation matrix A
     -> fit fixed, learned, group, and SBayesRC-style CSR models with stblr_csr_annot()
     -> compact fit, marker, variance, and annotation summaries
@@ -379,7 +379,7 @@ diagnostics are represented by `fit$ld_swap` and chain-level `ld_swap` outputs
 such as `fit$ld_swap_chains` or compact entries in `fit$chains`.
 
 Credible sets are constructed by helper functions rather than returned as core
-sampler objects. `make_stblr_credible_sets()` extracts marker PIPs from
+sampler objects. `make_credible_sets()` extracts marker PIPs from
 `fit$dm`, then uses supplied dense `LD` or `Glist$sparseLD$prefix` to build
 regional credible sets. It accepts optional marker `sets`; otherwise it
 defines loci around high-PIP markers. The returned object contains `summary`,

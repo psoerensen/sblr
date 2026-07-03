@@ -226,7 +226,7 @@ A formatted ST-BLR fit. Common posterior fields include `dm`
 
   Fine-mapping diagnostics are available through PIP summaries in `dm` and
   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
-  performed by helper functions such as [make_stblr_credible_sets()] and
+  performed by helper functions such as [make_credible_sets()] and
   [extract_stblr_finemap_loci()] from posterior inclusion probabilities and
   LD, rather than being a separate sampler return object.
 }

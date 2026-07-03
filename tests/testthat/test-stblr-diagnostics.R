@@ -18,8 +18,8 @@ fake_stblr_fit <- function() {
   )
 }
 
-test_that("summarise_stblr_posterior returns expected columns", {
-  post <- sblr::summarise_stblr_posterior(
+test_that("summarise_posterior returns expected columns", {
+  post <- sblr::summarise_posterior(
     fake_stblr_fit(),
     include_diagnostics = FALSE
   )
@@ -34,8 +34,8 @@ test_that("summarise_stblr_posterior returns expected columns", {
   )
 })
 
-test_that("summarise_stblr_posterior includes expected marker count", {
-  post <- sblr::summarise_stblr_posterior(
+test_that("summarise_posterior includes expected marker count", {
+  post <- sblr::summarise_posterior(
     fake_stblr_fit(),
     include_m_included = TRUE,
     include_diagnostics = FALSE
@@ -44,8 +44,8 @@ test_that("summarise_stblr_posterior includes expected marker count", {
   expect_true("m_included" %in% post$parameter)
 })
 
-test_that("summarise_stblr_posterior uses internal parameter names", {
-  post <- sblr::summarise_stblr_posterior(
+test_that("summarise_posterior uses internal parameter names", {
+  post <- sblr::summarise_posterior(
     fake_stblr_fit(),
     include_diagnostics = FALSE
   )
@@ -69,8 +69,8 @@ test_that("check_stblr_convergence returns diagnostics list", {
   expect_s3_class(conv$diagnostics, "data.frame")
 })
 
-test_that("plot_stblr_posterior invisibly returns filtered data", {
-  post <- sblr::summarise_stblr_posterior(
+test_that("plot_posterior invisibly returns filtered data", {
+  post <- sblr::summarise_posterior(
     fake_stblr_fit(),
     include_diagnostics = FALSE
   )
@@ -79,7 +79,7 @@ test_that("plot_stblr_posterior invisibly returns filtered data", {
   grDevices::pdf(file = tempfile(fileext = ".pdf"))
   on.exit(grDevices::dev.off(), add = TRUE)
 
-  plotted <- sblr::plot_stblr_posterior(
+  plotted <- sblr::plot_posterior(
     post,
     parameters = c("vg", "ve"),
     facet_by = "trait"

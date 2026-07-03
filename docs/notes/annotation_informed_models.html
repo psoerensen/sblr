@@ -197,7 +197,7 @@ window.Quarto = {
   <li><a href="#interpretation-and-causal-limits" id="toc-interpretation-and-causal-limits" class="nav-link" data-scroll-target="#interpretation-and-causal-limits">Interpretation and Causal Limits</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="annotation_informed_models.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -506,7 +506,7 @@ E(\gamma_i\mid A_i,\alpha)
 <p>The current workflow connects simulation, CSR preparation, four models, and compact diagnostics:</p>
 <pre class="text"><code>mtsim_annotation()
     -&gt; summarize_annotation_signal()
-    -&gt; make_stats() + make_sparseLD()
+    -&gt; make_summary_stats() + make_sparse_ld()
     -&gt; align A with stats and sparse LD
     -&gt; stblr_csr_annot(annotation_model = "prior")
     -&gt; stblr_csr_annot(annotation_model = "learned")
@@ -1609,7 +1609,7 @@ m^{\mathrm{eff}}_{k,t}
 <span id="cb11-496"><a href="#cb11-496" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
 <span id="cb11-497"><a href="#cb11-497" aria-hidden="true" tabindex="-1"></a><span class="in">mtsim_annotation()</span></span>
 <span id="cb11-498"><a href="#cb11-498" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; summarize_annotation_signal()</span></span>
-<span id="cb11-499"><a href="#cb11-499" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; make_stats() + make_sparseLD()</span></span>
+<span id="cb11-499"><a href="#cb11-499" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; make_summary_stats() + make_sparse_ld()</span></span>
 <span id="cb11-500"><a href="#cb11-500" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; align A with stats and sparse LD</span></span>
 <span id="cb11-501"><a href="#cb11-501" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; stblr_csr_annot(annotation_model = "prior")</span></span>
 <span id="cb11-502"><a href="#cb11-502" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; stblr_csr_annot(annotation_model = "learned")</span></span>

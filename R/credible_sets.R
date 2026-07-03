@@ -427,7 +427,7 @@ make_multisignal_credible_sets_from_ld <- function(
 #' @return A list with combined `summary`, nested credible `sets`, `loci`,
 #'   `parameters`, and resolved `trait`.
 #' @export
-make_stblr_credible_sets <- function(
+make_credible_sets <- function(
     fit,
     Glist = NULL,
     LD = NULL,

@@ -34,10 +34,10 @@
 #'               dimnames = list(markers, "trait1")),
 #'   input = list(nchains = 1)
 #' )
-#' check_stblr_backend_consistency(fit)
+#' check_stblr_consistency(fit)
 #'
 #' @export
-check_stblr_backend_consistency <- function(
+check_stblr_consistency <- function(
     fit,
     require_chain_summaries = NULL,
     require_chains = FALSE,
@@ -202,7 +202,7 @@ check_stblr_backend_consistency <- function(
 
 #' Print an ST-BLR Backend Consistency Check
 #'
-#' @param x Object returned by [check_stblr_backend_consistency()].
+#' @param x Object returned by [check_stblr_consistency()].
 #' @param ... Unused.
 #'
 #' @return Invisibly returns `x`.

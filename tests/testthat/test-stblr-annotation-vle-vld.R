@@ -65,7 +65,7 @@ expect_vle_vld_trace_contract <- function(fit, stats) {
     expect_true(all(is.na(fit[[nm]]) | is.finite(fit[[nm]])), info = nm)
   }
 
-  post <- sblr::summarise_stblr_posterior(
+  post <- sblr::summarise_posterior(
     fit,
     traces = c("vle", "vld"),
     derived = FALSE,
@@ -73,7 +73,7 @@ expect_vle_vld_trace_contract <- function(fit, stats) {
   )
   expect_setequal(post$parameter, c("vle", "vld"))
 
-  chk <- sblr::check_stblr_backend_consistency(fit, verbose = FALSE)
+  chk <- sblr::check_stblr_consistency(fit, verbose = FALSE)
   expect_true(chk$ok)
   expect_true(all(c("trace.vle.finite", "trace.vld.finite") %in% chk$checks$check))
 }

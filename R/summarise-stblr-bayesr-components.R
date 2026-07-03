@@ -42,10 +42,10 @@
 #'               dimnames = list(rownames(comp), "trait1")),
 #'   comp_prob = list(trait1 = comp)
 #' )
-#' summarise_stblr_bayesr_components(fit)
+#' summarise_components(fit)
 #'
 #' @export
-summarise_stblr_bayesr_components <- function(
+summarise_components <- function(
     fit,
     pip_thresholds = c(0.001, 0.01, 0.05, 0.5, 0.95),
     include_components = TRUE,

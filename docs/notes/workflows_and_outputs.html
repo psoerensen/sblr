@@ -216,7 +216,7 @@ window.Quarto = {
   <li><a href="#recommended-reporting-checklist" id="toc-recommended-reporting-checklist" class="nav-link" data-scroll-target="#recommended-reporting-checklist">Recommended Reporting Checklist</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="workflows_and_outputs.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -288,7 +288,7 @@ window.Quarto = {
 <tr class="even">
 <td>Prepare reusable summary-statistics inputs from BED</td>
 <td>BED-backed <code>Glist</code>, phenotypes, marker IDs, allele frequencies</td>
-<td><code>make_stats()</code> and <code>make_sparseLD()</code></td>
+<td><code>make_summary_stats()</code> and <code>make_sparse_ld()</code></td>
 <td><code>stats</code> and an updated <code>Glist$sparseLD</code></td>
 </tr>
 <tr class="odd">
@@ -338,8 +338,8 @@ window.Quarto = {
 <pre class="text"><code>BED-backed Glist + phenotypes
     -&gt; align LD markers with BED columns using cls
     -&gt; optionally fit stblr_bed()
-    -&gt; compute stats with make_stats()
-    -&gt; compute sparse LD with make_sparseLD()
+    -&gt; compute stats with make_summary_stats()
+    -&gt; compute sparse LD with make_sparse_ld()
     -&gt; fit stblr_csr()
     -&gt; compare BED and CSR summaries cautiously</code></pre>
 <section id="prepare-bed-glist-and-phenotype-inputs" class="level3">
@@ -357,14 +357,14 @@ window.Quarto = {
 </section>
 <section id="compute-sufficient-statistics-and-sparse-ld" class="level3">
 <h3 class="anchored" data-anchor-id="compute-sufficient-statistics-and-sparse-ld">Compute Sufficient Statistics and Sparse LD</h3>
-<p><code>make_stats()</code> computes the marker-trait and phenotype cross-products used by the CSR model from a BED-backed <code>Glist</code>. The important returned quantities include:</p>
+<p><code>make_summary_stats()</code> computes the marker-trait and phenotype cross-products used by the CSR model from a BED-backed <code>Glist</code>. The important returned quantities include:</p>
 <ul>
 <li><code>stats$wy</code>, corresponding to marker-trait cross-products;</li>
 <li><code>stats$ww</code>, containing marker diagonal cross-products;</li>
 <li><code>stats$yy</code>, containing phenotype sums of squares;</li>
 <li>metadata such as marker count, trait count, and sample size when available.</li>
 </ul>
-<p><code>make_sparseLD()</code> then writes thresholded sparse LD from the same BED-backed <code>Glist</code> and stores the sparse-LD prefix, selected chromosomes, marker columns, allele frequencies, rows, threshold, window, and block metadata in <code>Glist$sparseLD</code>. Its <code>r2_threshold</code>, distance limits, selected rows, allele frequencies, marker columns, and scaling assumptions should be reported. <code>sparseLD_read_CSR()</code> can inspect the resulting representation, but users should rely on package readers and writers rather than treating the on-disk files as a stable manual file-format API.</p>
+<p><code>make_sparse_ld()</code> then writes thresholded sparse LD from the same BED-backed <code>Glist</code> and stores the sparse-LD prefix, selected chromosomes, marker columns, allele frequencies, rows, threshold, window, and block metadata in <code>Glist$sparseLD</code>. Its <code>r2_threshold</code>, distance limits, selected rows, allele frequencies, marker columns, and scaling assumptions should be reported. <code>sparseLD_read_CSR()</code> can inspect the resulting representation, but users should rely on package readers and writers rather than treating the on-disk files as a stable manual file-format API.</p>
 </section>
 <section id="fit-and-compare-the-csr-model" class="level3">
 <h3 class="anchored" data-anchor-id="fit-and-compare-the-csr-model">Fit and Compare the CSR Model</h3>
@@ -386,8 +386,8 @@ window.Quarto = {
 <p>Its stages are:</p>
 <pre class="text"><code>mtsim_annotation()
     -&gt; summarize_annotation_signal()
-    -&gt; make_stats()
-    -&gt; make_sparseLD()
+    -&gt; make_summary_stats()
+    -&gt; make_sparse_ld()
     -&gt; align annotation matrix A
     -&gt; fit fixed, learned, group, and SBayesRC-style CSR models with stblr_csr_annot()
     -&gt; compact fit, marker, variance, and annotation summaries</code></pre>
@@ -560,7 +560,7 @@ window.Quarto = {
 <section id="fine-mapping-ld-swap-and-credible-sets" class="level2">
 <h2 class="anchored" data-anchor-id="fine-mapping-ld-swap-and-credible-sets">Fine-Mapping, LD-Swap, and Credible Sets</h2>
 <p>Fine-mapping diagnostics are layered on top of fit outputs. PIP is represented by <code>fit$dm</code>. When <code>updateLDswap = TRUE</code> and the backend supports it, LD-swap diagnostics are represented by <code>fit$ld_swap</code> and chain-level <code>ld_swap</code> outputs such as <code>fit$ld_swap_chains</code> or compact entries in <code>fit$chains</code>.</p>
-<p>Credible sets are constructed by helper functions rather than returned as core sampler objects. <code>make_stblr_credible_sets()</code> extracts marker PIPs from <code>fit$dm</code>, then uses supplied dense <code>LD</code> or <code>Glist$sparseLD$prefix</code> to build regional credible sets. It accepts optional marker <code>sets</code>; otherwise it defines loci around high-PIP markers. The returned object contains <code>summary</code>, <code>sets</code>, <code>locus_sets</code>, <code>loci</code>, <code>parameters</code>, and the resolved <code>trait</code>.</p>
+<p>Credible sets are constructed by helper functions rather than returned as core sampler objects. <code>make_credible_sets()</code> extracts marker PIPs from <code>fit$dm</code>, then uses supplied dense <code>LD</code> or <code>Glist$sparseLD$prefix</code> to build regional credible sets. It accepts optional marker <code>sets</code>; otherwise it defines loci around high-PIP markers. The returned object contains <code>summary</code>, <code>sets</code>, <code>locus_sets</code>, <code>loci</code>, <code>parameters</code>, and the resolved <code>trait</code>.</p>
 <p><code>extract_stblr_finemap_loci()</code> and <code>finemap_stblr_csr()</code> return their own post-processing objects and may include credible-set outputs when requested, but those are helper-level diagnostics, not native sampler return fields.</p>
 </section>
 <section id="variance-and-covariance-summaries" class="level2">
@@ -1128,7 +1128,7 @@ window.Quarto = {
 <span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Question <span class="pp">|</span> Starting data <span class="pp">|</span> Principal workflow or function <span class="pp">|</span> Main output <span class="pp">|</span></span>
 <span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|</span></span>
 <span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fit directly from individual-level PLINK genotypes <span class="pp">|</span> BED-backed <span class="in">`Glist`</span>, phenotype matrix, aligned marker columns <span class="pp">|</span> <span class="in">`stblr_bed()`</span> <span class="pp">|</span> BED ST-BLR fit <span class="pp">|</span></span>
-<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Prepare reusable summary-statistics inputs from BED <span class="pp">|</span> BED-backed <span class="in">`Glist`</span>, phenotypes, marker IDs, allele frequencies <span class="pp">|</span> <span class="in">`make_stats()`</span> and <span class="in">`make_sparseLD()`</span> <span class="pp">|</span> <span class="in">`stats`</span> and an updated <span class="in">`Glist$sparseLD`</span> <span class="pp">|</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Prepare reusable summary-statistics inputs from BED <span class="pp">|</span> BED-backed <span class="in">`Glist`</span>, phenotypes, marker IDs, allele frequencies <span class="pp">|</span> <span class="in">`make_summary_stats()`</span> and <span class="in">`make_sparse_ld()`</span> <span class="pp">|</span> <span class="in">`stats`</span> and an updated <span class="in">`Glist$sparseLD`</span> <span class="pp">|</span></span>
 <span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fit plain ST-BLR from summary statistics and sparse LD <span class="pp">|</span> <span class="in">`stats`</span> and sparse-LD metadata in <span class="in">`Glist`</span> <span class="pp">|</span> <span class="in">`stblr_csr()`</span> <span class="pp">|</span> CSR ST-BLR fit <span class="pp">|</span></span>
 <span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fit BayesS-style MAF-scaled CSR models <span class="pp">|</span> <span class="in">`stats`</span>, <span class="in">`Glist`</span>, and CSR LD metadata with MAF <span class="pp">|</span> <span class="in">`stblr_csr(..., selection_s = ...)`</span> or <span class="in">`stblr_csr(..., estimate_selection_s = TRUE)`</span> <span class="pp">|</span> CSR BayesC/BayesR fit with fixed global or sampled trait-specific <span class="in">`selection_s`</span> <span class="pp">|</span></span>
 <span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Compare annotation prior families <span class="pp">|</span> <span class="in">`stats`</span>, sparse-LD metadata in <span class="in">`Glist`</span>, aligned annotations or groups <span class="pp">|</span> <span class="in">`stblr_csr_annot()`</span> or <span class="in">`annotation_based_models.R`</span> <span class="pp">|</span> Fixed, learned, group, and SBayesRC-style fits <span class="pp">|</span></span>
@@ -1174,8 +1174,8 @@ window.Quarto = {
 <span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a><span class="in">BED-backed Glist + phenotypes</span></span>
 <span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; align LD markers with BED columns using cls</span></span>
 <span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; optionally fit stblr_bed()</span></span>
-<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compute stats with make_stats()</span></span>
-<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compute sparse LD with make_sparseLD()</span></span>
+<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compute stats with make_summary_stats()</span></span>
+<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compute sparse LD with make_sparse_ld()</span></span>
 <span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; fit stblr_csr()</span></span>
 <span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compare BED and CSR summaries cautiously</span></span>
 <span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
@@ -1212,7 +1212,7 @@ window.Quarto = {
 <span id="cb11-115"><a href="#cb11-115" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-116"><a href="#cb11-116" aria-hidden="true" tabindex="-1"></a><span class="fu">### Compute Sufficient Statistics and Sparse LD</span></span>
 <span id="cb11-117"><a href="#cb11-117" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-118"><a href="#cb11-118" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> computes the marker-trait and phenotype cross-products used by</span>
+<span id="cb11-118"><a href="#cb11-118" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> computes the marker-trait and phenotype cross-products used by</span>
 <span id="cb11-119"><a href="#cb11-119" aria-hidden="true" tabindex="-1"></a>the CSR model from a BED-backed <span class="in">`Glist`</span>. The important returned quantities</span>
 <span id="cb11-120"><a href="#cb11-120" aria-hidden="true" tabindex="-1"></a>include:</span>
 <span id="cb11-121"><a href="#cb11-121" aria-hidden="true" tabindex="-1"></a></span>
@@ -1221,7 +1221,7 @@ window.Quarto = {
 <span id="cb11-124"><a href="#cb11-124" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>, containing phenotype sums of squares;</span>
 <span id="cb11-125"><a href="#cb11-125" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>metadata such as marker count, trait count, and sample size when available.</span>
 <span id="cb11-126"><a href="#cb11-126" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-127"><a href="#cb11-127" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> then writes thresholded sparse LD from the same BED-backed</span>
+<span id="cb11-127"><a href="#cb11-127" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparse_ld()`</span> then writes thresholded sparse LD from the same BED-backed</span>
 <span id="cb11-128"><a href="#cb11-128" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist`</span> and stores the sparse-LD prefix, selected chromosomes, marker columns,</span>
 <span id="cb11-129"><a href="#cb11-129" aria-hidden="true" tabindex="-1"></a>allele frequencies, rows, threshold, window, and block metadata in</span>
 <span id="cb11-130"><a href="#cb11-130" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span>. Its <span class="in">`r2_threshold`</span>, distance limits, selected rows, allele</span>
@@ -1264,8 +1264,8 @@ window.Quarto = {
 <span id="cb11-167"><a href="#cb11-167" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
 <span id="cb11-168"><a href="#cb11-168" aria-hidden="true" tabindex="-1"></a><span class="in">mtsim_annotation()</span></span>
 <span id="cb11-169"><a href="#cb11-169" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; summarize_annotation_signal()</span></span>
-<span id="cb11-170"><a href="#cb11-170" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; make_stats()</span></span>
-<span id="cb11-171"><a href="#cb11-171" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; make_sparseLD()</span></span>
+<span id="cb11-170"><a href="#cb11-170" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; make_summary_stats()</span></span>
+<span id="cb11-171"><a href="#cb11-171" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; make_sparse_ld()</span></span>
 <span id="cb11-172"><a href="#cb11-172" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; align annotation matrix A</span></span>
 <span id="cb11-173"><a href="#cb11-173" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; fit fixed, learned, group, and SBayesRC-style CSR models with stblr_csr_annot()</span></span>
 <span id="cb11-174"><a href="#cb11-174" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compact fit, marker, variance, and annotation summaries</span></span>
@@ -1476,7 +1476,7 @@ window.Quarto = {
 <span id="cb11-379"><a href="#cb11-379" aria-hidden="true" tabindex="-1"></a>such as <span class="in">`fit$ld_swap_chains`</span> or compact entries in <span class="in">`fit$chains`</span>.</span>
 <span id="cb11-380"><a href="#cb11-380" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-381"><a href="#cb11-381" aria-hidden="true" tabindex="-1"></a>Credible sets are constructed by helper functions rather than returned as core</span>
-<span id="cb11-382"><a href="#cb11-382" aria-hidden="true" tabindex="-1"></a>sampler objects. <span class="in">`make_stblr_credible_sets()`</span> extracts marker PIPs from</span>
+<span id="cb11-382"><a href="#cb11-382" aria-hidden="true" tabindex="-1"></a>sampler objects. <span class="in">`make_credible_sets()`</span> extracts marker PIPs from</span>
 <span id="cb11-383"><a href="#cb11-383" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$dm`</span>, then uses supplied dense <span class="in">`LD`</span> or <span class="in">`Glist$sparseLD$prefix`</span> to build</span>
 <span id="cb11-384"><a href="#cb11-384" aria-hidden="true" tabindex="-1"></a>regional credible sets. It accepts optional marker <span class="in">`sets`</span>; otherwise it</span>
 <span id="cb11-385"><a href="#cb11-385" aria-hidden="true" tabindex="-1"></a>defines loci around high-PIP markers. The returned object contains <span class="in">`summary`</span>,</span>

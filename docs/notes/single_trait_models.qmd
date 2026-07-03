@@ -296,8 +296,8 @@ LD is present in the observed genotype columns.
 ### Summary Statistics and CSR LD: `stblr_csr()`
 
 `stblr_csr()` fits the same broad global-prior ST-BLR family using
-`make_stats()` output and disk-backed sparse LD metadata stored in
-`Glist$sparseLD` by `make_sparseLD()`:
+`make_summary_stats()` output and disk-backed sparse LD metadata stored in
+`Glist$sparseLD` by `make_sparse_ld()`:
 
 ```r
 fit_csr <- stblr_csr(

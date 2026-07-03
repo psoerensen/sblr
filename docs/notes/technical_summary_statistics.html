@@ -205,7 +205,7 @@ window.Quarto = {
   <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_summary_statistics.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -487,11 +487,11 @@ yy_t=y_t^\top y_t.
 + same selected individuals
 + same allele frequencies and scaling
     -&gt; compatible wy, ww, yy, and sparse LD</code></pre>
-<p><code>make_sparseLD()</code> constructs retained marker correlations from BED data, writes them under a sparse-LD prefix, and records the metadata in <code>Glist$sparseLD</code>. It must use the same marker ordering, sample rows, allele frequencies, and scaling convention used to create the sufficient statistics. The lower-level writer behind this workflow is <code>sparseLD_stream_CSR()</code>.</p>
+<p><code>make_sparse_ld()</code> constructs retained marker correlations from BED data, writes them under a sparse-LD prefix, and records the metadata in <code>Glist$sparseLD</code>. It must use the same marker ordering, sample rows, allele frequencies, and scaling convention used to create the sufficient statistics. The lower-level writer behind this workflow is <code>sparseLD_stream_CSR()</code>.</p>
 <p>The central workflow handoff is:</p>
 <pre class="text"><code>BED + phenotype
-  -&gt; make_stats()     -&gt; wy, ww, yy, n
-  -&gt; make_sparseLD()  -&gt; Glist$sparseLD
+  -&gt; make_summary_stats()     -&gt; wy, ww, yy, n
+  -&gt; make_sparse_ld()  -&gt; Glist$sparseLD
   -&gt; stblr_csr(stats = stats, Glist = Glist)</code></pre>
 <p>The complete operational sequence is documented in <a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
 </section>
@@ -1565,7 +1565,7 @@ c^{\mathrm{weighted}}_{it}
 <span id="cb4-379"><a href="#cb4-379" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compatible wy, ww, yy, and sparse LD</span></span>
 <span id="cb4-380"><a href="#cb4-380" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb4-381"><a href="#cb4-381" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-382"><a href="#cb4-382" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> constructs retained marker correlations from BED data,</span>
+<span id="cb4-382"><a href="#cb4-382" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparse_ld()`</span> constructs retained marker correlations from BED data,</span>
 <span id="cb4-383"><a href="#cb4-383" aria-hidden="true" tabindex="-1"></a>writes them under a sparse-LD prefix, and records the metadata in</span>
 <span id="cb4-384"><a href="#cb4-384" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span>. It must use the same marker ordering, sample rows, allele</span>
 <span id="cb4-385"><a href="#cb4-385" aria-hidden="true" tabindex="-1"></a>frequencies, and scaling convention used to create the sufficient statistics.</span>
@@ -1575,8 +1575,8 @@ c^{\mathrm{weighted}}_{it}
 <span id="cb4-389"><a href="#cb4-389" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-390"><a href="#cb4-390" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
 <span id="cb4-391"><a href="#cb4-391" aria-hidden="true" tabindex="-1"></a><span class="in">BED + phenotype</span></span>
-<span id="cb4-392"><a href="#cb4-392" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; make_stats()     -&gt; wy, ww, yy, n</span></span>
-<span id="cb4-393"><a href="#cb4-393" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; make_sparseLD()  -&gt; Glist$sparseLD</span></span>
+<span id="cb4-392"><a href="#cb4-392" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; make_summary_stats()     -&gt; wy, ww, yy, n</span></span>
+<span id="cb4-393"><a href="#cb4-393" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; make_sparse_ld()  -&gt; Glist$sparseLD</span></span>
 <span id="cb4-394"><a href="#cb4-394" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; stblr_csr(stats = stats, Glist = Glist)</span></span>
 <span id="cb4-395"><a href="#cb4-395" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb4-396"><a href="#cb4-396" aria-hidden="true" tabindex="-1"></a></span>

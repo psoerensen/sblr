@@ -198,7 +198,7 @@ test_that("multi-signal remove behavior controls secondary LD-neighborhood signa
   expect_equal(nrow(remove_ld$summary), 1)
 })
 
-test_that("make_stblr_credible_sets works with predefined sets and dense LD", {
+test_that("make_credible_sets works with predefined sets and dense LD", {
   fit <- list(dm = matrix(
     c(0.55, 0.20, 0.10, 0.03, 0.002),
     ncol = 1,
@@ -209,7 +209,7 @@ test_that("make_stblr_credible_sets works with predefined sets and dense LD", {
   LD[2, 3] <- LD[3, 2] <- sqrt(0.6)
   rownames(LD) <- colnames(LD) <- paste0("m", 1:5)
 
-  out <- make_stblr_credible_sets(
+  out <- make_credible_sets(
     fit = fit,
     LD = LD,
     sets = list(regionA = c("m1", "m2", "m3")),

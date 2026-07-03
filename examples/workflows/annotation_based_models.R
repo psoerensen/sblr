@@ -95,14 +95,14 @@ summarize_annotation_signal(sim)
 
 # 2. Summary statistics and sparse LD --------------------------------------
 
-stats <- make_stats(
+stats <- make_summary_stats(
   Glist = Glist,
   y = y,
   chr = chr,
   nthreads = nthreads
 )
 
-Glist <- make_sparseLD(
+Glist <- make_sparse_ld(
   Glist = Glist,
   out_prefix = file.path(data_dir, "ld_test"),
   chr = chr,
@@ -492,7 +492,7 @@ ld_swap_summary
 # Credible sets are post-processing diagnostics built from fit$dm and LD.
 # Uncomment for a small fitted-model credible-set example.
 #
-# credible_sets_fitC <- make_stblr_credible_sets(
+# credible_sets_fitC <- make_credible_sets(
 #   fit = fitC,
 #   Glist = Glist,
 #   trait = "D1",
@@ -897,7 +897,7 @@ bayesr_component_summaries <- lapply(
   c("bayesR", "bayesR_MH", "sbayesrc", "sbayesrc_MH"),
   function(model_name) {
     x <- fits[[model_name]]
-    out <- summarise_stblr_bayesr_components(x)
+    out <- summarise_components(x)
     out$model <- model_name
     out[, c("model", setdiff(names(out), "model"))]
   }
@@ -908,7 +908,7 @@ bayesr_component_summaries
 # 7. Posterior summaries and component summaries ---------------------------
 
 posterior_summaries <- lapply(fits, function(fit) {
-  summarise_stblr_posterior(fit)
+  summarise_posterior(fit)
 })
 
 lapply(posterior_summaries, head)
@@ -928,7 +928,7 @@ lapply(fits, function(fit) {
 })
 
 # Example trace plot call for interactive use:
-# plot_stblr_posterior(posterior_summaries$prior_MH)
+# plot_posterior(posterior_summaries$prior_MH)
 
 # Compact input helper -----------------------------------------------------
 
@@ -970,7 +970,7 @@ maf <- Glist$maf[[chr]][maf_idx]
 maf_architecture <- do.call(
   rbind,
   lapply(names(fits), function(model_name) {
-    out <- summarise_stblr_maf_architecture(
+    out <- summarise_architecture(
       fit = fits[[model_name]],
       maf = maf
     )
@@ -1223,7 +1223,7 @@ topn_power_matrix(topn_power_s, top_n_value = 100)
 do.call(
   rbind,
   lapply(names(fits_s), function(model_name) {
-    out <- summarise_stblr_maf_architecture(
+    out <- summarise_architecture(
       fit = fits_s[[model_name]],
       maf = maf,
       markers = causal_by_trait
@@ -1259,7 +1259,7 @@ fits_s_extreme <- list(
 do.call(
   rbind,
   lapply(names(fits_s_extreme), function(model_name) {
-    out <- summarise_stblr_maf_architecture(
+    out <- summarise_architecture(
       fit = fits_s_extreme[[model_name]],
       maf = maf,
       markers = causal_by_trait
@@ -1454,7 +1454,7 @@ topn_power_matrix(topn_power_R_s, top_n_value = 100)
 do.call(
   rbind,
   lapply(names(fits_R_s), function(model_name) {
-    out <- summarise_stblr_maf_architecture(
+    out <- summarise_architecture(
       fit = fits_R_s[[model_name]],
       maf = maf,
       markers = causal_by_trait
@@ -1494,7 +1494,7 @@ fits_R_s_extreme <- list(
 do.call(
   rbind,
   lapply(names(fits_R_s_extreme), function(model_name) {
-    out <- summarise_stblr_maf_architecture(
+    out <- summarise_architecture(
       fit = fits_R_s_extreme[[model_name]],
       maf = maf,
       markers = causal_by_trait

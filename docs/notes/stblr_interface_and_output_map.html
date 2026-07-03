@@ -164,7 +164,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#helper-function-map" id="toc-helper-function-map" class="nav-link" data-scroll-target="#helper-function-map">Helper Function Map</a></li>
   <li><a href="#fine-mapping-ld-swap-and-credible-sets" id="toc-fine-mapping-ld-swap-and-credible-sets" class="nav-link" data-scroll-target="#fine-mapping-ld-swap-and-credible-sets">Fine-Mapping, LD-Swap, and Credible Sets</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="stblr_interface_and_output_map.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -221,7 +221,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>Glist$rsids</code>, marker IDs in BED-file order by chromosome/file;</li>
 <li><code>Glist$rsidsLD</code>, selected LD/model marker IDs by chromosome/file;</li>
 <li><code>Glist$af</code>, allele frequencies used for marker standardization and MAF dependent calculations;</li>
-<li><code>Glist$sparseLD</code>, added by <code>make_sparseLD()</code>, with <code>prefix</code>, <code>chr</code>, <code>bed_files</code>, <code>cls</code>, <code>af</code>, <code>rows</code>, <code>max_distance_bp</code>, <code>max_distance_variants</code>, <code>r2_threshold</code>, and <code>block_size</code>.</li>
+<li><code>Glist$sparseLD</code>, added by <code>make_sparse_ld()</code>, with <code>prefix</code>, <code>chr</code>, <code>bed_files</code>, <code>cls</code>, <code>af</code>, <code>rows</code>, <code>max_distance_bp</code>, <code>max_distance_variants</code>, <code>r2_threshold</code>, and <code>block_size</code>.</li>
 </ul>
 <p>For sparse-LD CSR models, marker-level information such as MAF must be aligned to the LD marker order. The package preparation helpers use positional alignment equivalent to:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>idx <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -231,17 +231,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="csr-workflow">CSR Workflow</h2>
 <ol type="1">
 <li>Prepare or load a BED-backed <code>Glist</code>.</li>
-<li>Compute summary statistics with <code>make_stats()</code>.</li>
-<li>Compute sparse LD with <code>make_sparseLD()</code>.</li>
+<li>Compute summary statistics with <code>make_summary_stats()</code>.</li>
+<li>Compute sparse LD with <code>make_sparse_ld()</code>.</li>
 <li>Fit summary-statistics BLR models with <code>stblr_csr()</code> or annotation-aware CSR models with <code>stblr_csr_annot()</code>.</li>
 </ol>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_summary_stats</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  Glist,</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  y,</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> nthreads</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparse_ld</span>(</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(data_dir, <span class="st">"ld_test"</span>),</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">pos_bp =</span> <span class="cn">NULL</span>,</span>
@@ -257,7 +257,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"bayesC"</span></span>
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>make_stats()</code> computes marker-trait summary statistics used by <code>stblr_csr()</code>. <code>make_sparseLD()</code> computes disk-backed sparse LD and stores sparse-LD metadata in <code>Glist$sparseLD</code>. The updated <code>Glist</code> is then passed to <code>stblr_csr()</code> and related CSR functions.</p>
+<p><code>make_summary_stats()</code> computes marker-trait summary statistics used by <code>stblr_csr()</code>. <code>make_sparse_ld()</code> computes disk-backed sparse LD and stores sparse-LD metadata in <code>Glist$sparseLD</code>. The updated <code>Glist</code> is then passed to <code>stblr_csr()</code> and related CSR functions.</p>
 </section>
 <section id="bed-workflow" class="level2">
 <h2 class="anchored" data-anchor-id="bed-workflow">BED Workflow</h2>
@@ -493,28 +493,28 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>summarise_stblr_posterior()</code></td>
+<td><code>summarise_posterior()</code></td>
 <td>A fit with trace matrices such as <code>vbs</code>, <code>vgs</code>, <code>ves</code>, <code>pis</code>, <code>vle</code>, <code>vld</code></td>
 <td>Data frame of posterior means, intervals, diagnostics, and derived quantities</td>
 <td>Fits with compatible traces</td>
 <td>General posterior trace summary helper</td>
 </tr>
 <tr class="even">
-<td><code>plot_stblr_posterior()</code></td>
-<td>Output from <code>summarise_stblr_posterior()</code></td>
+<td><code>plot_posterior()</code></td>
+<td>Output from <code>summarise_posterior()</code></td>
 <td>Base R posterior interval plot, invisibly returns plotted data</td>
 <td>Any compatible posterior summary</td>
 <td>Plot helper, not a sampler</td>
 </tr>
 <tr class="odd">
-<td><code>summarise_stblr_bayesr_components()</code></td>
+<td><code>summarise_components()</code></td>
 <td>A BayesR/SBayesRC-style fit with <code>dm</code> and <code>comp_prob</code></td>
 <td>Trait-level component and PIP diagnostics, optionally unstable markers</td>
 <td>BayesR/SBayesRC component fits</td>
 <td>Uses <code>component_0</code> for BayesR and the detected null component such as <code>gamma_0.00</code> for SBayesRC</td>
 </tr>
 <tr class="even">
-<td><code>summarise_stblr_maf_architecture()</code></td>
+<td><code>summarise_architecture()</code></td>
 <td>A fit with <code>dm</code>/<code>bm</code> plus <code>maf</code> or <code>h</code>, or recoverable MAF/heterozygosity</td>
 <td>Post-hoc MAF architecture regression summary</td>
 <td>Any fit with marker summaries</td>
@@ -535,7 +535,7 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <td>Uses marginal PIPs, not posterior inclusion configurations</td>
 </tr>
 <tr class="odd">
-<td><code>make_stblr_credible_sets()</code></td>
+<td><code>make_credible_sets()</code></td>
 <td>Fit with <code>fit$dm</code>, optional <code>Glist</code>, optional dense <code>LD</code>, optional marker sets</td>
 <td>Combined <code>summary</code>, nested <code>sets</code>, <code>loci</code>, <code>parameters</code>, and resolved <code>trait</code></td>
 <td>ST-BLR fits with marker-level PIPs</td>
@@ -556,7 +556,7 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <td>Runs local CSR fine-mapping using global architecture estimates</td>
 </tr>
 <tr class="even">
-<td><code>check_stblr_backend_consistency()</code></td>
+<td><code>check_stblr_consistency()</code></td>
 <td>Formatted ST-BLR fit</td>
 <td>Backend consistency check object</td>
 <td>Standardized fit objects</td>
@@ -575,8 +575,8 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <section id="fine-mapping-ld-swap-and-credible-sets" class="level2">
 <h2 class="anchored" data-anchor-id="fine-mapping-ld-swap-and-credible-sets">Fine-Mapping, LD-Swap, and Credible Sets</h2>
 <p>LD-swap diagnostics are available through <code>fit$ld_swap</code> and chain-level <code>ld_swap</code> / <code>ld_swap_chains</code> output when <code>updateLDswap = TRUE</code> and the backend supports it. LD-swap is a sampler mixing diagnostic and proposal mechanism, not a standalone credible-set object.</p>
-<p>PIP is represented by <code>fit$dm</code>. Credible sets are constructed by helper functions such as <code>make_stblr_credible_sets()</code>, <code>make_credible_sets_from_ld()</code>, and <code>make_multisignal_credible_sets_from_ld()</code> from PIPs and LD. They are workflow/helper-level diagnostics unless a specific fine-mapping helper returns them in its own post-processing object.</p>
-<p><code>make_stblr_credible_sets()</code> requires a fit containing marker PIPs in <code>fit$dm</code>. It can use a supplied dense LD matrix or, for CSR workflows, use <code>Glist$sparseLD$prefix</code> to extract regional dense LD from disk-backed sparse LD. It defines automatic loci around high-PIP markers when explicit <code>sets</code> are not supplied. Credible-set probability is cumulative marginal PIP within the selected LD neighborhood, reported as <code>cs_pip</code>; the helper returns <code>summary</code>, nested <code>sets</code>, <code>locus_sets</code>, <code>loci</code>, <code>parameters</code>, and the resolved <code>trait</code>.</p>
+<p>PIP is represented by <code>fit$dm</code>. Credible sets are constructed by helper functions such as <code>make_credible_sets()</code>, <code>make_credible_sets_from_ld()</code>, and <code>make_multisignal_credible_sets_from_ld()</code> from PIPs and LD. They are workflow/helper-level diagnostics unless a specific fine-mapping helper returns them in its own post-processing object.</p>
+<p><code>make_credible_sets()</code> requires a fit containing marker PIPs in <code>fit$dm</code>. It can use a supplied dense LD matrix or, for CSR workflows, use <code>Glist$sparseLD$prefix</code> to extract regional dense LD from disk-backed sparse LD. It defines automatic loci around high-PIP markers when explicit <code>sets</code> are not supplied. Credible-set probability is cumulative marginal PIP within the selected LD neighborhood, reported as <code>cs_pip</code>; the helper returns <code>summary</code>, nested <code>sets</code>, <code>locus_sets</code>, <code>loci</code>, <code>parameters</code>, and the resolved <code>trait</code>.</p>
 
 
 <!-- -->
@@ -1067,7 +1067,7 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$rsidsLD`</span>, selected LD/model marker IDs by chromosome/file;</span>
 <span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$af`</span>, allele frequencies used for marker standardization and MAF</span>
 <span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>  dependent calculations;</span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$sparseLD`</span>, added by <span class="in">`make_sparseLD()`</span>, with <span class="in">`prefix`</span>, <span class="in">`chr`</span>,</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$sparseLD`</span>, added by <span class="in">`make_sparse_ld()`</span>, with <span class="in">`prefix`</span>, <span class="in">`chr`</span>,</span>
 <span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>  <span class="in">`bed_files`</span>, <span class="in">`cls`</span>, <span class="in">`af`</span>, <span class="in">`rows`</span>, <span class="in">`max_distance_bp`</span>,</span>
 <span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>  <span class="in">`max_distance_variants`</span>, <span class="in">`r2_threshold`</span>, and <span class="in">`block_size`</span>.</span>
 <span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a></span>
@@ -1085,19 +1085,19 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## CSR Workflow</span></span>
 <span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Prepare or load a BED-backed <span class="in">`Glist`</span>.</span>
-<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Compute summary statistics with <span class="in">`make_stats()`</span>.</span>
-<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Compute sparse LD with <span class="in">`make_sparseLD()`</span>.</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Compute summary statistics with <span class="in">`make_summary_stats()`</span>.</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Compute sparse LD with <span class="in">`make_sparse_ld()`</span>.</span>
 <span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Fit summary-statistics BLR models with <span class="in">`stblr_csr()`</span> or annotation-aware CSR</span>
 <span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>   models with <span class="in">`stblr_csr_annot()`</span>.</span>
 <span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_summary_stats</span>(</span>
 <span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>  Glist,</span>
 <span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>  y,</span>
 <span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> nthreads</span>
 <span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparse_ld</span>(</span>
 <span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(data_dir, <span class="st">"ld_test"</span>),</span>
 <span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a>  <span class="at">pos_bp =</span> <span class="cn">NULL</span>,</span>
@@ -1115,8 +1115,8 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> computes marker-trait summary statistics used by <span class="in">`stblr_csr()`</span>.</span>
-<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> computes disk-backed sparse LD and stores sparse-LD metadata</span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> computes marker-trait summary statistics used by <span class="in">`stblr_csr()`</span>.</span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparse_ld()`</span> computes disk-backed sparse LD and stores sparse-LD metadata</span>
 <span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a>in <span class="in">`Glist$sparseLD`</span>. The updated <span class="in">`Glist`</span> is then passed to <span class="in">`stblr_csr()`</span> and</span>
 <span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>related CSR functions.</span>
 <span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a></span>
@@ -1240,16 +1240,16 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <span id="cb6-204"><a href="#cb6-204" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-205"><a href="#cb6-205" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Helper <span class="pp">|</span> Consumes <span class="pp">|</span> Returns <span class="pp">|</span> Applies to <span class="pp">|</span> Notes <span class="pp">|</span></span>
 <span id="cb6-206"><a href="#cb6-206" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|</span></span>
-<span id="cb6-207"><a href="#cb6-207" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_stblr_posterior()`</span> <span class="pp">|</span> A fit with trace matrices such as <span class="in">`vbs`</span>, <span class="in">`vgs`</span>, <span class="in">`ves`</span>, <span class="in">`pis`</span>, <span class="in">`vle`</span>, <span class="in">`vld`</span> <span class="pp">|</span> Data frame of posterior means, intervals, diagnostics, and derived quantities <span class="pp">|</span> Fits with compatible traces <span class="pp">|</span> General posterior trace summary helper <span class="pp">|</span></span>
-<span id="cb6-208"><a href="#cb6-208" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`plot_stblr_posterior()`</span> <span class="pp">|</span> Output from <span class="in">`summarise_stblr_posterior()`</span> <span class="pp">|</span> Base R posterior interval plot, invisibly returns plotted data <span class="pp">|</span> Any compatible posterior summary <span class="pp">|</span> Plot helper, not a sampler <span class="pp">|</span></span>
-<span id="cb6-209"><a href="#cb6-209" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_stblr_bayesr_components()`</span> <span class="pp">|</span> A BayesR/SBayesRC-style fit with <span class="in">`dm`</span> and <span class="in">`comp_prob`</span> <span class="pp">|</span> Trait-level component and PIP diagnostics, optionally unstable markers <span class="pp">|</span> BayesR/SBayesRC component fits <span class="pp">|</span> Uses <span class="in">`component_0`</span> for BayesR and the detected null component such as <span class="in">`gamma_0.00`</span> for SBayesRC <span class="pp">|</span></span>
-<span id="cb6-210"><a href="#cb6-210" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_stblr_maf_architecture()`</span> <span class="pp">|</span> A fit with <span class="in">`dm`</span>/<span class="in">`bm`</span> plus <span class="in">`maf`</span> or <span class="in">`h`</span>, or recoverable MAF/heterozygosity <span class="pp">|</span> Post-hoc MAF architecture regression summary <span class="pp">|</span> Any fit with marker summaries <span class="pp">|</span> Descriptive post-hoc diagnostic, distinct from sampler-level <span class="in">`selection_s`</span> <span class="pp">|</span></span>
+<span id="cb6-207"><a href="#cb6-207" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_posterior()`</span> <span class="pp">|</span> A fit with trace matrices such as <span class="in">`vbs`</span>, <span class="in">`vgs`</span>, <span class="in">`ves`</span>, <span class="in">`pis`</span>, <span class="in">`vle`</span>, <span class="in">`vld`</span> <span class="pp">|</span> Data frame of posterior means, intervals, diagnostics, and derived quantities <span class="pp">|</span> Fits with compatible traces <span class="pp">|</span> General posterior trace summary helper <span class="pp">|</span></span>
+<span id="cb6-208"><a href="#cb6-208" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`plot_posterior()`</span> <span class="pp">|</span> Output from <span class="in">`summarise_posterior()`</span> <span class="pp">|</span> Base R posterior interval plot, invisibly returns plotted data <span class="pp">|</span> Any compatible posterior summary <span class="pp">|</span> Plot helper, not a sampler <span class="pp">|</span></span>
+<span id="cb6-209"><a href="#cb6-209" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_components()`</span> <span class="pp">|</span> A BayesR/SBayesRC-style fit with <span class="in">`dm`</span> and <span class="in">`comp_prob`</span> <span class="pp">|</span> Trait-level component and PIP diagnostics, optionally unstable markers <span class="pp">|</span> BayesR/SBayesRC component fits <span class="pp">|</span> Uses <span class="in">`component_0`</span> for BayesR and the detected null component such as <span class="in">`gamma_0.00`</span> for SBayesRC <span class="pp">|</span></span>
+<span id="cb6-210"><a href="#cb6-210" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_architecture()`</span> <span class="pp">|</span> A fit with <span class="in">`dm`</span>/<span class="in">`bm`</span> plus <span class="in">`maf`</span> or <span class="in">`h`</span>, or recoverable MAF/heterozygosity <span class="pp">|</span> Post-hoc MAF architecture regression summary <span class="pp">|</span> Any fit with marker summaries <span class="pp">|</span> Descriptive post-hoc diagnostic, distinct from sampler-level <span class="in">`selection_s`</span> <span class="pp">|</span></span>
 <span id="cb6-211"><a href="#cb6-211" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_credible_sets_from_ld()`</span> <span class="pp">|</span> Named PIP vector and dense regional LD matrix <span class="pp">|</span> Credible-set summary, sets, aligned PIP, parameters <span class="pp">|</span> Any named PIP/LD input <span class="pp">|</span> R-level post-processing <span class="pp">|</span></span>
 <span id="cb6-212"><a href="#cb6-212" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_multisignal_credible_sets_from_ld()`</span> <span class="pp">|</span> Named PIP vector and dense regional LD matrix <span class="pp">|</span> Approximate multi-signal credible-set summary and sets <span class="pp">|</span> Any named PIP/LD input <span class="pp">|</span> Uses marginal PIPs, not posterior inclusion configurations <span class="pp">|</span></span>
-<span id="cb6-213"><a href="#cb6-213" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_stblr_credible_sets()`</span> <span class="pp">|</span> Fit with <span class="in">`fit$dm`</span>, optional <span class="in">`Glist`</span>, optional dense <span class="in">`LD`</span>, optional marker sets <span class="pp">|</span> Combined <span class="in">`summary`</span>, nested <span class="in">`sets`</span>, <span class="in">`loci`</span>, <span class="in">`parameters`</span>, and resolved <span class="in">`trait`</span> <span class="pp">|</span> ST-BLR fits with marker-level PIPs <span class="pp">|</span> Uses <span class="in">`fit$dm`</span>; can extract regional LD from <span class="in">`Glist$sparseLD`</span> <span class="pp">|</span></span>
+<span id="cb6-213"><a href="#cb6-213" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_credible_sets()`</span> <span class="pp">|</span> Fit with <span class="in">`fit$dm`</span>, optional <span class="in">`Glist`</span>, optional dense <span class="in">`LD`</span>, optional marker sets <span class="pp">|</span> Combined <span class="in">`summary`</span>, nested <span class="in">`sets`</span>, <span class="in">`loci`</span>, <span class="in">`parameters`</span>, and resolved <span class="in">`trait`</span> <span class="pp">|</span> ST-BLR fits with marker-level PIPs <span class="pp">|</span> Uses <span class="in">`fit$dm`</span>; can extract regional LD from <span class="in">`Glist$sparseLD`</span> <span class="pp">|</span></span>
 <span id="cb6-214"><a href="#cb6-214" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`extract_stblr_finemap_loci()`</span> <span class="pp">|</span> Genome-wide fit, <span class="in">`Glist`</span>, and predefined locus sets <span class="pp">|</span> <span class="in">`stblr_finemap`</span> object with <span class="in">`summary`</span>, <span class="in">`markers`</span>, optional <span class="in">`credible_sets`</span>, <span class="in">`loci`</span>, <span class="in">`parameters`</span> <span class="pp">|</span> Genome-wide fits with named <span class="in">`fit$dm`</span>/<span class="in">`fit$bm`</span> <span class="pp">|</span> Post-processing only; does not rerun MCMC <span class="pp">|</span></span>
 <span id="cb6-215"><a href="#cb6-215" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`finemap_stblr_csr()`</span> <span class="pp">|</span> Global CSR fit, <span class="in">`Glist`</span>, <span class="in">`stats`</span>, and local marker sets <span class="pp">|</span> <span class="in">`stblr_finemap`</span> object with local run summaries and optional credible sets <span class="pp">|</span> CSR fits <span class="pp">|</span> Runs local CSR fine-mapping using global architecture estimates <span class="pp">|</span></span>
-<span id="cb6-216"><a href="#cb6-216" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`check_stblr_backend_consistency()`</span> <span class="pp">|</span> Formatted ST-BLR fit <span class="pp">|</span> Backend consistency check object <span class="pp">|</span> Standardized fit objects <span class="pp">|</span> Validates expected fields, dimensions, metadata, and optional LD-swap output <span class="pp">|</span></span>
+<span id="cb6-216"><a href="#cb6-216" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`check_stblr_consistency()`</span> <span class="pp">|</span> Formatted ST-BLR fit <span class="pp">|</span> Backend consistency check object <span class="pp">|</span> Standardized fit objects <span class="pp">|</span> Validates expected fields, dimensions, metadata, and optional LD-swap output <span class="pp">|</span></span>
 <span id="cb6-217"><a href="#cb6-217" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`check_stblr_convergence()`</span> <span class="pp">|</span> Fit with MCMC trace matrices <span class="pp">|</span> Simple convergence diagnostic list <span class="pp">|</span> Fits with compatible traces <span class="pp">|</span> Screening diagnostics, not proof of convergence <span class="pp">|</span></span>
 <span id="cb6-218"><a href="#cb6-218" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-219"><a href="#cb6-219" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fine-Mapping, LD-Swap, and Credible Sets</span></span>
@@ -1260,12 +1260,12 @@ h_j = 2 p_j (1 - p_j)</code></pre>
 <span id="cb6-224"><a href="#cb6-224" aria-hidden="true" tabindex="-1"></a>not a standalone credible-set object.</span>
 <span id="cb6-225"><a href="#cb6-225" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-226"><a href="#cb6-226" aria-hidden="true" tabindex="-1"></a>PIP is represented by <span class="in">`fit$dm`</span>. Credible sets are constructed by helper</span>
-<span id="cb6-227"><a href="#cb6-227" aria-hidden="true" tabindex="-1"></a>functions such as <span class="in">`make_stblr_credible_sets()`</span>, <span class="in">`make_credible_sets_from_ld()`</span>,</span>
+<span id="cb6-227"><a href="#cb6-227" aria-hidden="true" tabindex="-1"></a>functions such as <span class="in">`make_credible_sets()`</span>, <span class="in">`make_credible_sets_from_ld()`</span>,</span>
 <span id="cb6-228"><a href="#cb6-228" aria-hidden="true" tabindex="-1"></a>and <span class="in">`make_multisignal_credible_sets_from_ld()`</span> from PIPs and LD. They are</span>
 <span id="cb6-229"><a href="#cb6-229" aria-hidden="true" tabindex="-1"></a>workflow/helper-level diagnostics unless a specific fine-mapping helper returns</span>
 <span id="cb6-230"><a href="#cb6-230" aria-hidden="true" tabindex="-1"></a>them in its own post-processing object.</span>
 <span id="cb6-231"><a href="#cb6-231" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-232"><a href="#cb6-232" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stblr_credible_sets()`</span> requires a fit containing marker PIPs in</span>
+<span id="cb6-232"><a href="#cb6-232" aria-hidden="true" tabindex="-1"></a><span class="in">`make_credible_sets()`</span> requires a fit containing marker PIPs in</span>
 <span id="cb6-233"><a href="#cb6-233" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$dm`</span>. It can use a supplied dense LD matrix or, for CSR workflows, use</span>
 <span id="cb6-234"><a href="#cb6-234" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD$prefix`</span> to extract regional dense LD from disk-backed sparse</span>
 <span id="cb6-235"><a href="#cb6-235" aria-hidden="true" tabindex="-1"></a>LD. It defines automatic loci around high-PIP markers when explicit <span class="in">`sets`</span> are</span>

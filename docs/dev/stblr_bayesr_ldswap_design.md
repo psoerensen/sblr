@@ -622,7 +622,7 @@ Implementation tests cover the enabled API.
 5. BayesR conventions:
    - `dm = 1 - component_0`
    - component probabilities sum to 1
-   - `check_stblr_backend_consistency()` passes
+   - `check_stblr_consistency()` passes
    - fine-mapping extractor compatibility remains intact
 
 6. Controlled LD toy example:

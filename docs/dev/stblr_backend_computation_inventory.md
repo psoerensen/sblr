@@ -69,9 +69,9 @@ summaries of marker-level posterior means. They are returned for multi-chain
 native backends that compute chain summaries; some BED and scheduled backends
 compute summaries but do not return compact per-chain objects.
 
-For the standard CSR workflow, `make_stats(..., scale = TRUE)` constructs
+For the standard CSR workflow, `make_summary_stats(..., scale = TRUE)` constructs
 summary statistics from standardized genotype columns,
-`(dosage - 2p) / sqrt(2p(1 - p))`, and `make_sparseLD()` stores correlations
+`(dosage - 2p) / sqrt(2p(1 - p))`, and `make_sparse_ld()` stores correlations
 between the same standardized columns. The native CSR samplers update `b`
 against `wy`, `ww`, and sparse LD cross-products from that scale. Therefore
 CSR `bm` is a standardized-genotype-scale marker effect in the supported
@@ -257,7 +257,7 @@ rbind(
 )
 ```
 
-`summarise_stblr_maf_architecture()` is a post-hoc descriptive diagnostic for
+`summarise_architecture()` is a post-hoc descriptive diagnostic for
 the relationship between posterior marker signal and marker heterozygosity. It
 does not change backend return fields and is not an MCMC estimate of a BayesS
 selection parameter.
@@ -493,10 +493,10 @@ Annotation-unaware CSR and BED fits expose `fit$input$annotations = FALSE`.
 | `chains` | CSR compact-chain backends | CSR BayesC/BayesR and annotation-aware CSR when `keep_chains = TRUE` | trait list of chain lists | named marker vectors | chain-level LD-swap when supported |
 | `ld_swap` | LD-swap-capable CSR backends | capable CSR fits when enabled | trait x attempted/accepted/rate data frame | `ld_swap_chains` with compact chains | n/a |
 
-`summarise_stblr_posterior()` and `plot_stblr_posterior()` operate on standard
+`summarise_posterior()` and `plot_posterior()` operate on standard
 trace fields including `vbs`, `vgs`, `ves`, `vle`, and `vld`.
 
-`summarise_stblr_maf_architecture()` operates on fitted `dm` and `bm` marker
+`summarise_architecture()` operates on fitted `dm` and `bm` marker
 summaries plus user-supplied MAF or heterozygosity values. It reports a
 post-hoc regression slope named `selection_s_posthoc` and should not be treated
 as a sampled or fixed sampler parameter.

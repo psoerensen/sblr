@@ -113,13 +113,13 @@ or the corresponding allele-frequency field used by the workflow.
 The standard summary-statistics CSR workflow is:
 
 ```r
-stats <- make_stats(
+stats <- make_summary_stats(
   Glist,
   y,
   nthreads = nthreads
 )
 
-Glist <- make_sparseLD(
+Glist <- make_sparse_ld(
   Glist = Glist,
   out_prefix = file.path(data_dir, "ld_test"),
   pos_bp = NULL,
@@ -131,9 +131,9 @@ Glist <- make_sparseLD(
 )
 ```
 
-`make_stats()` computes genome-wide sufficient statistics such as marker-trait
+`make_summary_stats()` computes genome-wide sufficient statistics such as marker-trait
 cross-products (`wy`), marker cross-products (`ww`), and phenotype sums of
-squares (`yy`) from BED-backed `Glist` data. `make_sparseLD()` computes a
+squares (`yy`) from BED-backed `Glist` data. `make_sparse_ld()` computes a
 disk-backed sparse-LD CSR matrix and stores the resolved LD metadata in
 `Glist$sparseLD`.
 
@@ -220,8 +220,8 @@ $$
 r = X^\top y - X^\top Xb.
 $$
 
-`stblr_csr()` uses sufficient statistics from `make_stats()` with disk-backed
-sparse-LD metadata written into `Glist$sparseLD` by `make_sparseLD()`. The
+`stblr_csr()` uses sufficient statistics from `make_summary_stats()` with disk-backed
+sparse-LD metadata written into `Glist$sparseLD` by `make_sparse_ld()`. The
 public `sblr()` interface represents the broader summary-statistics model
 family and accepts dense or sparse marker cross-product structures through
 `XX`.
@@ -354,17 +354,17 @@ credible sets.
 
 Common helper functions include:
 
-- `summarise_stblr_posterior()`: summarizes posterior traces such as `vbs`,
+- `summarise_posterior()`: summarizes posterior traces such as `vbs`,
   `vgs`, `ves`, `vle`, `vld`, and sampled-`selection_s` traces where present;
-- `plot_stblr_posterior()`: plots posterior summaries and trace diagnostics;
-- `summarise_stblr_bayesr_components()`: summarizes BayesR/SBayesRC component
+- `plot_posterior()`: plots posterior summaries and trace diagnostics;
+- `summarise_components()`: summarizes BayesR/SBayesRC component
   probability outputs;
-- `summarise_stblr_maf_architecture()`: provides post-hoc descriptive
+- `summarise_architecture()`: provides post-hoc descriptive
   summaries of MAF-dependent architecture, separate from sampler-level
   `selection_s`;
-- `make_stblr_credible_sets()`: constructs credible sets from posterior marker
+- `make_credible_sets()`: constructs credible sets from posterior marker
   probabilities and marker/LD information;
-- `check_stblr_backend_consistency()`: checks that fit objects contain the
+- `check_stblr_consistency()`: checks that fit objects contain the
   expected backend-specific fields.
 
 Fine-mapping diagnostics are primarily represented through marker PIPs in
@@ -390,8 +390,8 @@ required.
 
 ### BED to Sufficient Statistics and Sparse LD
 
-Use `make_stats()` to derive `wy`, `ww`, and `yy` from a BED-backed `Glist` and
-phenotypes. Use `make_sparseLD()` to derive disk-backed sparse LD from the same
+Use `make_summary_stats()` to derive `wy`, `ww`, and `yy` from a BED-backed `Glist` and
+phenotypes. Use `make_sparse_ld()` to derive disk-backed sparse LD from the same
 markers, samples, allele frequencies, and scaling convention. This preparation
 workflow creates reusable inputs for CSR models.
 
@@ -432,8 +432,8 @@ hold in real data.
 |---|---|---|---|---|
 | `stblr_bed()` | Fit ST-BLR directly from PLINK BED markers and phenotypes. | Individual-level BED through `Glist`. | Plain/global BayesC or BayesR ST-BLR; accepts one or more phenotype columns; no sampler-level `selection_s`. | [ST-BLR interface and output map](stblr_interface_and_output_map.qmd), [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Single-trait models](single_trait_models.qmd) |
 | `stblr_bed_marker()` | Lower-level direct BED marker interface retained for compatibility and specialized workflows. | Individual-level BED. | Plain/global ST-BLR. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd) |
-| `make_stats()` | Derive marker-trait and phenotype sufficient statistics from BED-backed `Glist` data. | BED to summary statistics. | Preparation, not a fitted model. | [Data representations](data_representations.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
-| `make_sparseLD()` | Construct disk-backed sparse LD from BED-backed `Glist` data and store metadata in `Glist$sparseLD`. | BED to CSR LD. | Preparation, not a fitted model. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
+| `make_summary_stats()` | Derive marker-trait and phenotype sufficient statistics from BED-backed `Glist` data. | BED to summary statistics. | Preparation, not a fitted model. | [Data representations](data_representations.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
+| `make_sparse_ld()` | Construct disk-backed sparse LD from BED-backed `Glist` data and store metadata in `Glist$sparseLD`. | BED to CSR LD. | Preparation, not a fitted model. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
 | `stblr_csr()` | Fit annotation-unaware ST-BLR from `stats` and sparse LD in `Glist`. | Summary statistics plus disk-backed sparse LD. | CSR BayesC or BayesR, with fixed global or sampled trait-specific `selection_s` where supported. | [Single-trait models](single_trait_models.qmd), [selection_s status](selection_s_status.md), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
 | `stblr_csr_annot()` | Unified annotation-aware CSR interface. | Summary statistics plus CSR LD and annotations. | `annotation_model = "prior"`, `"learned"`, `"group"`, or `"sbayesrc"`; only SBayesRC supports fixed and sampled `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
 | `stblr_csr_prior_annot()` | Compatibility wrapper for fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. | Summary statistics plus CSR LD and optional annotations. | Fixed annotation-informed prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd) |
@@ -442,7 +442,7 @@ hold in real data.
 | `stblr_csr_sbayesrc_generic()` | Compatibility wrapper for SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. | Summary statistics plus CSR LD and overlapping annotations. | SBayesRC mixture prior; supports fixed and sampled `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd) |
 | `sblr()` | Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models. | Summary statistics plus marker cross-products/LD. | Plain single- or multi-trait model components. | [Multi-trait models](multi_trait_models.qmd) |
 | `finemap_stblr_csr()` | Local fine-mapping/refitting around predefined marker regions using architecture from a global CSR fit. | Global CSR fit plus `Glist`, `stats`, and marker sets. | Local regional summaries and optional credible sets. | [Workflows and outputs](workflows_and_outputs.qmd) |
-| `make_stblr_credible_sets()` | Construct credible sets from fitted posterior marker probabilities and marker/LD information. | Fit summaries and marker/LD metadata. | Post-processing helper, not a core sampler. | [Workflows and outputs](workflows_and_outputs.qmd) |
+| `make_credible_sets()` | Construct credible sets from fitted posterior marker probabilities and marker/LD information. | Fit summaries and marker/LD metadata. | Post-processing helper, not a core sampler. | [Workflows and outputs](workflows_and_outputs.qmd) |
 | `mtsim()` | Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals. | Simulated matrix or `Glist` genotypes. | Model checking and multi-trait truth. | [Workflows and outputs](workflows_and_outputs.qmd) |
 | `mtsim_annotation()` | Simulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors. | Simulated matrix or `Glist` genotypes plus annotations. | Annotation-model checking. | [Annotation-informed models](annotation_informed_models.qmd), [Workflows and outputs](workflows_and_outputs.qmd) |
 

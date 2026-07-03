@@ -44,14 +44,14 @@ y <- as.matrix(scale(sim$y))
 
 
 # Compute summary statistics
-stats <- make_stats(
+stats <- make_summary_stats(
   Glist,
   y,
   nthreads = nthreads
 )
 
 # Compute sparse LD
-Glist <- make_sparseLD(
+Glist <- make_sparse_ld(
   Glist = Glist,
   out_prefix = file.path(data_dir, "ld_test"),
   pos_bp = NULL,
@@ -154,17 +154,17 @@ fits <- list(
 ## Check fits
 ## ------------------------------------------------------------
 
-check_stblr_backend_consistency(fitC, require_chain_summaries = TRUE)
+check_stblr_consistency(fitC, require_chain_summaries = TRUE)
 
-check_stblr_backend_consistency(
+check_stblr_consistency(
   fitC_MH,
   require_chain_summaries = TRUE,
   require_ld_swap = TRUE
 )
 
-check_stblr_backend_consistency(fitR, require_chain_summaries = TRUE)
+check_stblr_consistency(fitR, require_chain_summaries = TRUE)
 
-check_stblr_backend_consistency(
+check_stblr_consistency(
   fitR_MH,
   require_chain_summaries = TRUE,
   require_ld_swap = TRUE
@@ -193,8 +193,8 @@ max_pip_summary <- rbind(
 max_pip_summary
 
 ## BayesR component summaries
-summarise_stblr_bayesr_components(fitR)
-summarise_stblr_bayesr_components(fitR_MH)
+summarise_components(fitR)
+summarise_components(fitR_MH)
 
 ## LD-swap diagnostics
 fitC_MH$ld_swap
@@ -205,7 +205,7 @@ fitR_MH$ld_swap
 ## ------------------------------------------------------------
 
 run_finemap <- function(fit, Glist, trait = "D1") {
-  cs <- make_stblr_credible_sets(
+  cs <- make_credible_sets(
     fit = fit,
     Glist = Glist,
     trait = trait,
@@ -294,8 +294,8 @@ Reduce(
 )
 
 
-summarise_stblr_posterior(fit)
-summarise_stblr_posterior(fitMH)
+summarise_posterior(fit)
+summarise_posterior(fitMH)
 
 
 `%||%` <- function(x, y) {
@@ -307,13 +307,13 @@ summarise_stblr_posterior(fitMH)
 ## ------------------------------------------------------------
 
 ## 1. Basic backend consistency checks
-chk_fit <- check_stblr_backend_consistency(
+chk_fit <- check_stblr_consistency(
   fit,
   require_chain_summaries = FALSE,
   require_ld_swap = FALSE
 )
 
-chk_fitMH <- check_stblr_backend_consistency(
+chk_fitMH <- check_stblr_consistency(
   fitMH,
   require_chain_summaries = TRUE,
   require_ld_swap = TRUE
@@ -532,7 +532,7 @@ fit_br_noE <- sblr:::.stblr_csr_bayesr_experimental(
   updateE = FALSE
 )
 
-check_stblr_backend_consistency(
+check_stblr_consistency(
   fit_br_noE,
   require_chain_summaries = TRUE
 )
@@ -541,19 +541,19 @@ range(fit_br_noE$dm, na.rm = TRUE)
 head(fit_br_noE$comp_prob[[1]])
 
 
-post <- sblr:::summarise_stblr_posterior(fit)
+post <- sblr:::summarise_posterior(fit)
 
-plot_stblr_posterior(
+plot_posterior(
   post,
   parameters = c("vg", "ve", "vb", "varch")
 )
 
-plot_stblr_posterior(
+plot_posterior(
   post,
   parameters = c("pi","m_included")
 )
 
-cs <- make_stblr_credible_sets(
+cs <- make_credible_sets(
   fit = fit,
   Glist = Glist,
   trait = "D1",
@@ -570,7 +570,7 @@ cs$loci
 cs$summary
 cs$sets[[1]]
 
-cs_global <- make_stblr_credible_sets(
+cs_global <- make_credible_sets(
   fit = fit,
   Glist = Glist,
   trait = "D1",
@@ -668,9 +668,9 @@ matplot(fit_bed$vle)
 matplot(fit_bed$vgs)
 
 
-post <- summarise_stblr_posterior(fit_bed)
+post <- summarise_posterior(fit_bed)
 
-plot_stblr_posterior(
+plot_posterior(
   post,
   parameters = c("vg", "ve", "vb", "varch")
 )

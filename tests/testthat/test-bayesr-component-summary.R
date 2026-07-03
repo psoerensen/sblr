@@ -5,7 +5,7 @@ source_sblr_test_file <- function(path) {
   source(path)
 }
 
-if (!exists("summarise_stblr_bayesr_components", mode = "function")) {
+if (!exists("summarise_components", mode = "function")) {
   source_sblr_test_file("R/summarise-stblr-bayesr-components.R")
 }
 
@@ -66,9 +66,9 @@ make_bayesr_component_summary_fit <- function(optional = TRUE) {
   fit
 }
 
-test_that("summarise_stblr_bayesr_components returns basic PIP and component summaries", {
+test_that("summarise_components returns basic PIP and component summaries", {
   fit <- make_bayesr_component_summary_fit(optional = FALSE)
-  out <- summarise_stblr_bayesr_components(
+  out <- summarise_components(
     fit,
     pip_thresholds = c(0.05, 0.5, 0.95)
   )
@@ -88,9 +88,9 @@ test_that("summarise_stblr_bayesr_components returns basic PIP and component sum
   expect_equal(out$max_component_2[out$trait == "D1"], max(fit$comp_prob$D1[, "component_2"]))
 })
 
-test_that("summarise_stblr_bayesr_components includes chain stability fields", {
+test_that("summarise_components includes chain stability fields", {
   fit <- make_bayesr_component_summary_fit(optional = TRUE)
-  out <- summarise_stblr_bayesr_components(fit)
+  out <- summarise_components(fit)
 
   expect_equal(out$mean_pip_sd[out$trait == "D1"], mean(fit$dm_sd[, "D1"]))
   expect_equal(out$max_pip_sd[out$trait == "D1"], max(fit$dm_sd[, "D1"]))
@@ -102,20 +102,20 @@ test_that("summarise_stblr_bayesr_components includes chain stability fields", {
   expect_equal(out$max_component_index[out$trait == "D1"], max(fit$dm_component_mean[, "D1"]))
 })
 
-test_that("summarise_stblr_bayesr_components reports component convention differences", {
+test_that("summarise_components reports component convention differences", {
   fit <- make_bayesr_component_summary_fit(optional = FALSE)
-  out <- summarise_stblr_bayesr_components(fit)
+  out <- summarise_components(fit)
   expect_equal(out$max_dm_component0_diff, c(0, 0), tolerance = 1e-12)
 
   fit$dm[1, "D1"] <- fit$dm[1, "D1"] + 0.05
-  out_bad <- summarise_stblr_bayesr_components(fit)
+  out_bad <- summarise_components(fit)
   expect_equal(out_bad$max_dm_component0_diff[out_bad$trait == "D1"], 0.05, tolerance = 1e-12)
 })
 
-test_that("summarise_stblr_bayesr_components handles missing optional fields", {
+test_that("summarise_components handles missing optional fields", {
   fit <- make_bayesr_component_summary_fit(optional = FALSE)
   fit$bm <- NULL
-  out <- summarise_stblr_bayesr_components(fit)
+  out <- summarise_components(fit)
 
   expect_equal(nrow(out), 2L)
   expect_false("mean_pip_sd" %in% names(out))
@@ -124,37 +124,37 @@ test_that("summarise_stblr_bayesr_components handles missing optional fields", {
   expect_false("mean_abs_effect" %in% names(out))
 })
 
-test_that("summarise_stblr_bayesr_components validates required fields", {
+test_that("summarise_components validates required fields", {
   fit <- make_bayesr_component_summary_fit(optional = FALSE)
 
   fit_no_dm <- fit
   fit_no_dm$dm <- NULL
   expect_error(
-    summarise_stblr_bayesr_components(fit_no_dm),
+    summarise_components(fit_no_dm),
     "fit\\$dm must be present"
   )
 
   fit_no_comp <- fit
   fit_no_comp$comp_prob <- NULL
   expect_error(
-    summarise_stblr_bayesr_components(fit_no_comp),
+    summarise_components(fit_no_comp),
     "fit\\$comp_prob must be present"
   )
 })
 
-test_that("summarise_stblr_bayesr_components uses sensible missing trait names", {
+test_that("summarise_components uses sensible missing trait names", {
   fit <- make_bayesr_component_summary_fit(optional = FALSE)
   colnames(fit$dm) <- NULL
   names(fit$comp_prob) <- c("trait1", "trait2")
 
-  out <- summarise_stblr_bayesr_components(fit)
+  out <- summarise_components(fit)
 
   expect_equal(out$trait, c("trait1", "trait2"))
 })
 
-test_that("summarise_stblr_bayesr_components can return top unstable markers", {
+test_that("summarise_components can return top unstable markers", {
   fit <- make_bayesr_component_summary_fit(optional = TRUE)
-  out <- summarise_stblr_bayesr_components(fit, top_unstable = 2L)
+  out <- summarise_components(fit, top_unstable = 2L)
 
   expect_type(out, "list")
   expect_named(out, c("summary", "unstable"))

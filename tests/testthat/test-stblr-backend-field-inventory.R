@@ -106,7 +106,7 @@ expect_field_inventory_core <- function(fit, backend, data_level, annotations) {
   expect_equal(fit$input$data_level, data_level)
   expect_identical(fit$input$annotations, annotations)
 
-  chk <- sblr::check_stblr_backend_consistency(fit, verbose = FALSE)
+  chk <- sblr::check_stblr_consistency(fit, verbose = FALSE)
   expect_true(chk$ok)
 }
 

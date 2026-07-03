@@ -207,7 +207,7 @@ window.Quarto = {
   <li><a href="#bed-versus-csr-comparison-and-reproducibility" id="toc-bed-versus-csr-comparison-and-reproducibility" class="nav-link" data-scroll-target="#bed-versus-csr-comparison-and-reproducibility">BED-Versus-CSR Comparison and Reproducibility</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="technical_sparse_ld_csr.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -247,7 +247,7 @@ window.Quarto = {
 <p>This appendix defines the sparse linkage disequilibrium (LD) representation used by the current <code>sblr</code> BED-to-CSR workflow. It describes the statistical matrix, compressed sparse row (CSR) structure, disk-backed construction, indexing conventions, alignment requirements, and downstream conversion used by <code>stblr_csr()</code> and related wrappers.</p>
 <p>The stable user-facing contract is deliberately narrower than the current binary-file implementation:</p>
 <ol type="1">
-<li>create sparse LD with <code>make_sparseLD()</code>, which records metadata in <code>Glist$sparseLD</code>;</li>
+<li>create sparse LD with <code>make_sparse_ld()</code>, which records metadata in <code>Glist$sparseLD</code>;</li>
 <li>inspect the resulting prefix with <code>sparseLD_read_CSR()</code> when needed; and</li>
 <li>pass the updated <code>Glist</code> to <code>stblr_csr()</code> or <code>stblr_csr_annot()</code>.</li>
 </ol>
@@ -270,13 +270,13 @@ r=X^\top(y-Xb)=wy-X^\top Xb.
 <p>In the BED-derived workflow, these inputs are prepared in two coordinated branches:</p>
 <pre class="text"><code>the same BED files + cls + rows + allele frequencies
     |
-    +--&gt; make_stats() ------&gt; stats$wy, stats$ww, stats$yy
+    +--&gt; make_summary_stats() ------&gt; stats$wy, stats$ww, stats$yy
     |
-    +--&gt; make_sparseLD() ---&gt; Glist$sparseLD$prefix
+    +--&gt; make_sparse_ld() ---&gt; Glist$sparseLD$prefix
                                       |
                                       v
                        stblr_csr(stats = stats, Glist = Glist, ...)</code></pre>
-<p><code>make_stats()</code> supplies the phenotype cross-products and diagonal marker cross-products. <code>make_sparseLD()</code> supplies retained off-diagonal marker correlations and records their prefix and metadata in <code>Glist$sparseLD</code>. During CSR model setup, the sampler combines the stored correlations with <code>stats$ww</code> to recover the corresponding off-diagonal cross-product scale.</p>
+<p><code>make_summary_stats()</code> supplies the phenotype cross-products and diagonal marker cross-products. <code>make_sparse_ld()</code> supplies retained off-diagonal marker correlations and records their prefix and metadata in <code>Glist$sparseLD</code>. During CSR model setup, the sampler combines the stored correlations with <code>stats$ww</code> to recover the corresponding off-diagonal cross-product scale.</p>
 <p>This split is important: the on-disk values are correlations, not raw <span class="math inline">\(X_i^\top X_j\)</span>, and the diagonal cross-products are supplied separately by <code>stats$ww</code>.</p>
 </section>
 <section id="matrix-represented-by-the-current-writer" class="level2">
@@ -429,7 +429,7 @@ path/chr1_ld.meta.txt</code></pre>
 <tr class="odd">
 <td><code>sparseLD_stream_CSR()</code></td>
 <td>Computes BED-derived sparse LD and streams the disk-backed prefix.</td>
-<td>Exported lower-level writer used by <code>make_sparseLD()</code>.</td>
+<td>Exported lower-level writer used by <code>make_sparse_ld()</code>.</td>
 </tr>
 <tr class="even">
 <td><code>sparseLD_read_CSR()</code></td>
@@ -1148,7 +1148,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>The stable user-facing contract is deliberately narrower than the current</span>
 <span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>binary-file implementation:</span>
 <span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>create sparse LD with <span class="in">`make_sparseLD()`</span>, which records metadata in</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>create sparse LD with <span class="in">`make_sparse_ld()`</span>, which records metadata in</span>
 <span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>   <span class="in">`Glist$sparseLD`</span>;</span>
 <span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>inspect the resulting prefix with <span class="in">`sparseLD_read_CSR()`</span> when needed; and</span>
 <span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>pass the updated <span class="in">`Glist`</span> to <span class="in">`stblr_csr()`</span> or <span class="in">`stblr_csr_annot()`</span>.</span>
@@ -1188,16 +1188,16 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
 <span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a><span class="in">the same BED files + cls + rows + allele frequencies</span></span>
 <span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a><span class="in">    |</span></span>
-<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a><span class="in">    +--&gt; make_stats() ------&gt; stats$wy, stats$ww, stats$yy</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a><span class="in">    +--&gt; make_summary_stats() ------&gt; stats$wy, stats$ww, stats$yy</span></span>
 <span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a><span class="in">    |</span></span>
-<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a><span class="in">    +--&gt; make_sparseLD() ---&gt; Glist$sparseLD$prefix</span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a><span class="in">    +--&gt; make_sparse_ld() ---&gt; Glist$sparseLD$prefix</span></span>
 <span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a><span class="in">                                      |</span></span>
 <span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a><span class="in">                                      v</span></span>
 <span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a><span class="in">                       stblr_csr(stats = stats, Glist = Glist, ...)</span></span>
 <span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> supplies the phenotype cross-products and diagonal marker</span>
-<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a>cross-products. <span class="in">`make_sparseLD()`</span> supplies retained off-diagonal marker</span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> supplies the phenotype cross-products and diagonal marker</span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a>cross-products. <span class="in">`make_sparse_ld()`</span> supplies retained off-diagonal marker</span>
 <span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>correlations and records their prefix and metadata in <span class="in">`Glist$sparseLD`</span>.</span>
 <span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a>During CSR model setup, the sampler combines the stored correlations with</span>
 <span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$ww`</span> to recover the corresponding off-diagonal cross-product scale.</span>
@@ -1388,7 +1388,7 @@ Requested OpenMP thread count. It affects construction performance and may affec
 <span id="cb12-251"><a href="#cb12-251" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-252"><a href="#cb12-252" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Helper <span class="pp">|</span> Current role <span class="pp">|</span> Current status <span class="pp">|</span></span>
 <span id="cb12-253"><a href="#cb12-253" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
-<span id="cb12-254"><a href="#cb12-254" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_stream_CSR()`</span> <span class="pp">|</span> Computes BED-derived sparse LD and streams the disk-backed prefix. <span class="pp">|</span> Exported lower-level writer used by <span class="in">`make_sparseLD()`</span>. <span class="pp">|</span></span>
+<span id="cb12-254"><a href="#cb12-254" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_stream_CSR()`</span> <span class="pp">|</span> Computes BED-derived sparse LD and streams the disk-backed prefix. <span class="pp">|</span> Exported lower-level writer used by <span class="in">`make_sparse_ld()`</span>. <span class="pp">|</span></span>
 <span id="cb12-255"><a href="#cb12-255" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_read_CSR()`</span> <span class="pp">|</span> Reads a written prefix into R for inspection and validation. <span class="pp">|</span> Exported; user-facing reader. <span class="pp">|</span></span>
 <span id="cb12-256"><a href="#cb12-256" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_to_CSR()`</span> <span class="pp">|</span> Computes the same upper-triangle sparse representation and returns arrays in memory. <span class="pp">|</span> Generated lower-level wrapper; not exported in the current <span class="in">`NAMESPACE`</span>. <span class="pp">|</span></span>
 <span id="cb12-257"><a href="#cb12-257" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sparseLD_write_CSR()`</span> <span class="pp">|</span> Delegates to <span class="in">`sparseLD_stream_CSR()`</span> with an output prefix. <span class="pp">|</span> Generated alias/internal wrapper; not exported in the current <span class="in">`NAMESPACE`</span>. <span class="pp">|</span></span>

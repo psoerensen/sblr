@@ -1226,7 +1226,7 @@ stblr_csr_bayesr <- function(
  if (is.null(m)) m <- if (!is.null(stats$m)) stats$m else length(stats$ww[[1L]])
  if (is.null(ld_prefix)) {
   if (is.null(Glist) || is.null(Glist$sparseLD$prefix)) {
-   stop("Provide ld_prefix or run make_sparseLD() and supply Glist.")
+   stop("Provide ld_prefix or run make_sparse_ld() and supply Glist.")
   }
   ld_prefix <- Glist$sparseLD$prefix
  }
@@ -1672,7 +1672,7 @@ stblr_csr_bayesr <- function(
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
 #'   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
-#'   performed by helper functions such as [make_stblr_credible_sets()] and
+#'   performed by helper functions such as [make_credible_sets()] and
 #'   [extract_stblr_finemap_loci()] from posterior inclusion probabilities and
 #'   LD, rather than being a separate sampler return object.
 #'
@@ -1906,7 +1906,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
 
  if (is.null(ld_prefix)) {
    if (is.null(Glist) || is.null(Glist$sparseLD$prefix)) {
-     stop("Provide ld_prefix or run make_sparseLD() and supply Glist.")
+     stop("Provide ld_prefix or run make_sparse_ld() and supply Glist.")
    }
    ld_prefix <- Glist$sparseLD$prefix
  }
@@ -3047,7 +3047,7 @@ stblr_bed <- function(
 #' }
 #'
 #' @export
-make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
+make_summary_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
                        scale = TRUE, nthreads = 1) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
@@ -3226,7 +3226,7 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
 #' Computes a disk-backed sparse-LD CSR matrix from PLINK BED files referenced
 #' by a `Glist` object and stores the sparse-LD prefix and resolved marker
 #' structure in `Glist$sparseLD`. The returned `Glist` can be used directly
-#' with [make_stats()] and [stblr_csr()].
+#' with [make_summary_stats()] and [stblr_csr()].
 #'
 #' @param Glist A qgg genotype list containing `bedfiles`, `n`, `ids`,
 #'   `rsids`, `rsidsLD`, `af`, and optionally `idsLD`.
@@ -3272,7 +3272,7 @@ make_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
 #' }
 #'
 #' @export
-make_sparseLD <- function(Glist,
+make_sparse_ld <- function(Glist,
                           rows = NULL,
                           out_prefix = NULL,
                           chr = NULL,

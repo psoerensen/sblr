@@ -440,7 +440,7 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
-  if (!exists("check_stblr_backend_consistency", mode = "function")) {
+  if (!exists("check_stblr_consistency", mode = "function")) {
     source_sblr_test_file("R/check-stblr-backend-consistency.R")
   }
 
@@ -454,7 +454,7 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$ld_swap)))
 
-  chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
+  chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
 })
 
@@ -695,7 +695,7 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
-  if (!exists("check_stblr_backend_consistency", mode = "function")) {
+  if (!exists("check_stblr_consistency", mode = "function")) {
     source_sblr_test_file("R/check-stblr-backend-consistency.R")
   }
 
@@ -717,7 +717,7 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
   }, logical(1))))
   expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
 
-  chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
+  chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
 })
 
@@ -826,7 +826,7 @@ test_that("selection_s works with CSR SBayesRC LD-swap and backend consistency",
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
-  if (!exists("check_stblr_backend_consistency", mode = "function")) {
+  if (!exists("check_stblr_consistency", mode = "function")) {
     source_sblr_test_file("R/check-stblr-backend-consistency.R")
   }
 
@@ -842,7 +842,7 @@ test_that("selection_s works with CSR SBayesRC LD-swap and backend consistency",
                     names(fit$ld_swap)))
   expect_selection_s_sbayesrc_component_consistency(fit)
 
-  chk <- check_stblr_backend_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
+  chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
 })
 
@@ -1033,10 +1033,10 @@ make_selection_s_subset_fit <- function(n_markers = 20) {
   )
 }
 
-test_that("summarise_stblr_maf_architecture works for a small CSR fit", {
+test_that("summarise_architecture works for a small CSR fit", {
   fit <- make_selection_s_csr_fit()
 
-  out <- summarise_stblr_maf_architecture(
+  out <- summarise_architecture(
     fit,
     maf = c(m1 = 0.05, m2 = 0.2, m3 = 0.4)
   )
@@ -1051,7 +1051,7 @@ test_that("summarise_stblr_maf_architecture works for a small CSR fit", {
   expect_true(is.na(out$intercept))
 })
 
-test_that("summarise_stblr_maf_architecture handles h and unweighted response", {
+test_that("summarise_architecture handles h and unweighted response", {
   fit <- list(
     dm = matrix(seq(0.1, 0.9, length.out = 6), ncol = 1,
                 dimnames = list(paste0("m", 1:6), "trait1")),
@@ -1060,7 +1060,7 @@ test_that("summarise_stblr_maf_architecture handles h and unweighted response", 
   )
   fit_before <- fit
 
-  out <- summarise_stblr_maf_architecture(
+  out <- summarise_architecture(
     fit,
     h = stats::setNames(seq(0.095, 0.48, length.out = 6), paste0("m", 1:6)),
     use_pip_weights = FALSE
@@ -1072,30 +1072,30 @@ test_that("summarise_stblr_maf_architecture handles h and unweighted response", 
   expect_identical(fit, fit_before)
 })
 
-test_that("summarise_stblr_maf_architecture supports all-marker and filtered subsets", {
+test_that("summarise_architecture supports all-marker and filtered subsets", {
   fit <- make_selection_s_subset_fit()
 
-  out_all <- summarise_stblr_maf_architecture(fit, maf = fit$maf)
+  out_all <- summarise_architecture(fit, maf = fit$maf)
   expect_equal(out_all$n_markers, c(20L, 20L))
   expect_equal(out_all$marker_filter, c("all", "all"))
   expect_true(all(c("se", "p_value", "r2", "marker_filter") %in% names(out_all)))
   expect_true(all(is.finite(out_all$selection_s_posthoc)))
 
-  out_min <- summarise_stblr_maf_architecture(fit, maf = fit$maf, min_pip = 0.01)
+  out_min <- summarise_architecture(fit, maf = fit$maf, min_pip = 0.01)
   expect_equal(out_min$marker_filter, rep("min_pip=0.01", 2))
   expect_true(all(out_min$n_markers < out_all$n_markers))
   expect_true(all(out_min$n_markers >= 5))
 
-  out_top <- summarise_stblr_maf_architecture(fit, maf = fit$maf, top_n = 10)
+  out_top <- summarise_architecture(fit, maf = fit$maf, top_n = 10)
   expect_equal(out_top$n_markers, c(10L, 10L))
   expect_equal(out_top$marker_filter, rep("top_n=10", 2))
 })
 
-test_that("summarise_stblr_maf_architecture supports character marker subsets", {
+test_that("summarise_architecture supports character marker subsets", {
   fit <- make_selection_s_subset_fit()
   marker_subset <- paste0("m", 1:8)
 
-  out <- summarise_stblr_maf_architecture(
+  out <- summarise_architecture(
     fit,
     maf = unname(fit$maf),
     markers = marker_subset
@@ -1107,14 +1107,14 @@ test_that("summarise_stblr_maf_architecture supports character marker subsets", 
   expect_true(all(is.finite(out$selection_s_posthoc)))
 })
 
-test_that("summarise_stblr_maf_architecture supports trait-specific marker subsets", {
+test_that("summarise_architecture supports trait-specific marker subsets", {
   fit <- make_selection_s_subset_fit()
   causal_by_trait <- list(
     D1 = paste0("m", 1:6),
     D2 = paste0("m", 7:14)
   )
 
-  out <- summarise_stblr_maf_architecture(
+  out <- summarise_architecture(
     fit,
     maf = fit$maf,
     markers = causal_by_trait
@@ -1125,11 +1125,11 @@ test_that("summarise_stblr_maf_architecture supports trait-specific marker subse
   expect_true(all(is.finite(out$selection_s_posthoc)))
 })
 
-test_that("summarise_stblr_maf_architecture combines marker and min_pip filters", {
+test_that("summarise_architecture combines marker and min_pip filters", {
   fit <- make_selection_s_subset_fit()
   marker_subset <- paste0("m", 1:12)
 
-  out <- summarise_stblr_maf_architecture(
+  out <- summarise_architecture(
     fit,
     maf = fit$maf,
     markers = marker_subset,
@@ -1142,10 +1142,10 @@ test_that("summarise_stblr_maf_architecture combines marker and min_pip filters"
   expect_equal(out$marker_filter, rep("markers=character;min_pip=0.05", 2))
 })
 
-test_that("summarise_stblr_maf_architecture returns NA statistics with fewer than five markers", {
+test_that("summarise_architecture returns NA statistics with fewer than five markers", {
   fit <- make_selection_s_subset_fit()
 
-  out <- summarise_stblr_maf_architecture(
+  out <- summarise_architecture(
     fit,
     maf = fit$maf,
     markers = paste0("m", 1:4)
@@ -1158,43 +1158,43 @@ test_that("summarise_stblr_maf_architecture returns NA statistics with fewer tha
   expect_true(all(is.na(out$r2)))
 })
 
-test_that("summarise_stblr_maf_architecture validates marker filter inputs", {
+test_that("summarise_architecture validates marker filter inputs", {
   fit <- make_selection_s_subset_fit()
 
   expect_error(
-    summarise_stblr_maf_architecture(fit, maf = fit$maf, min_pip = -0.1),
+    summarise_architecture(fit, maf = fit$maf, min_pip = -0.1),
     "min_pip"
   )
   expect_error(
-    summarise_stblr_maf_architecture(fit, maf = fit$maf, min_pip = 1.1),
+    summarise_architecture(fit, maf = fit$maf, min_pip = 1.1),
     "min_pip"
   )
   expect_error(
-    summarise_stblr_maf_architecture(fit, maf = fit$maf, top_n = 0),
+    summarise_architecture(fit, maf = fit$maf, top_n = 0),
     "top_n"
   )
   expect_error(
-    summarise_stblr_maf_architecture(fit, maf = fit$maf, top_n = 1.5),
+    summarise_architecture(fit, maf = fit$maf, top_n = 1.5),
     "top_n"
   )
 })
 
-test_that("summarise_stblr_maf_architecture handles missing MAF or h clearly", {
+test_that("summarise_architecture handles missing MAF or h clearly", {
   fit <- list(
     dm = matrix(c(0.1, 0.5, 0.9), ncol = 1),
     bm = matrix(c(0.01, -0.02, 0.03), ncol = 1)
   )
 
   expect_error(
-    summarise_stblr_maf_architecture(fit),
+    summarise_architecture(fit),
     "Either maf or h must be supplied or recoverable from fit"
   )
   expect_error(
-    summarise_stblr_maf_architecture(fit, maf = c(0.1, 0.2)),
+    summarise_architecture(fit, maf = c(0.1, 0.2)),
     "length equal to the number of markers"
   )
   expect_error(
-    summarise_stblr_maf_architecture(fit, maf = c(0.1, 0.2, 0.7)),
+    summarise_architecture(fit, maf = c(0.1, 0.2, 0.7)),
     "maf must contain values"
   )
 })

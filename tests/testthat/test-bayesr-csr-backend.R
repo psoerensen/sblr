@@ -8,7 +8,7 @@ source_sblr_test_file <- function(path) {
 if (!exists(".format_stblr_csr_bayesr_fit", mode = "function")) {
   source_sblr_test_file("R/sparse_ld_bed_helper.R")
 }
-if (!exists("check_stblr_backend_consistency", mode = "function")) {
+if (!exists("check_stblr_consistency", mode = "function")) {
   source_sblr_test_file("R/check-stblr-backend-consistency.R")
 }
 if (!exists("extract_stblr_finemap_loci", mode = "function")) {
@@ -145,7 +145,7 @@ test_that("CSR BayesR formatter exposes finite multi-chain summaries", {
   expect_true(all(fit$dm_min <= fit$dm + 1e-12))
   expect_true(all(fit$dm <= fit$dm_max + 1e-12))
 
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_chain_summaries = TRUE,
     verbose = FALSE
@@ -277,7 +277,7 @@ make_small_bayesr_csr_stats <- function() {
 }
 
 expect_bayesr_csr_conventions <- function(fit) {
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_chain_summaries = TRUE,
     verbose = FALSE
@@ -299,7 +299,7 @@ expect_bayesr_csr_conventions <- function(fit) {
 }
 
 expect_bayesr_csr_chain_aggregation <- function(fit) {
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_chain_summaries = TRUE,
     require_chains = TRUE,
@@ -326,7 +326,7 @@ expect_bayesr_csr_chain_aggregation <- function(fit) {
 }
 
 expect_bayesr_ld_swap_diagnostics <- function(fit, require_chains = FALSE) {
-  chk <- check_stblr_backend_consistency(
+  chk <- check_stblr_consistency(
     fit,
     require_chain_summaries = TRUE,
     require_chains = require_chains,

@@ -211,7 +211,7 @@ window.Quarto = {
   <li><a href="#what-is-not-guaranteed" id="toc-what-is-not-guaranteed" class="nav-link" data-scroll-target="#what-is-not-guaranteed">What Is Not Guaranteed</a></li>
   <li><a href="#how-to-read-these-notes" id="toc-how-to-read-these-notes" class="nav-link" data-scroll-target="#how-to-read-these-notes">How to Read These Notes</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="model_overview.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -315,13 +315,13 @@ Y = XB + E,
 <section id="preparing-summary-statistics-and-sparse-ld" class="level2">
 <h2 class="anchored" data-anchor-id="preparing-summary-statistics-and-sparse-ld">Preparing Summary Statistics and Sparse LD</h2>
 <p>The standard summary-statistics CSR workflow is:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_summary_stats</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  Glist,</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  y,</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> nthreads</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparse_ld</span>(</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(data_dir, <span class="st">"ld_test"</span>),</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">pos_bp =</span> <span class="cn">NULL</span>,</span>
@@ -331,7 +331,7 @@ Y = XB + E,
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">block_size =</span> <span class="dv">1024</span>,</span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>make_stats()</code> computes genome-wide sufficient statistics such as marker-trait cross-products (<code>wy</code>), marker cross-products (<code>ww</code>), and phenotype sums of squares (<code>yy</code>) from BED-backed <code>Glist</code> data. <code>make_sparseLD()</code> computes a disk-backed sparse-LD CSR matrix and stores the resolved LD metadata in <code>Glist$sparseLD</code>.</p>
+<p><code>make_summary_stats()</code> computes genome-wide sufficient statistics such as marker-trait cross-products (<code>wy</code>), marker cross-products (<code>ww</code>), and phenotype sums of squares (<code>yy</code>) from BED-backed <code>Glist</code> data. <code>make_sparse_ld()</code> computes a disk-backed sparse-LD CSR matrix and stores the resolved LD metadata in <code>Glist$sparseLD</code>.</p>
 <p>The updated <code>Glist</code> is then passed to CSR model fits:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
@@ -376,7 +376,7 @@ yy = y^\top y,
 <p><span class="math display">\[
 r = X^\top y - X^\top Xb.
 \]</span></p>
-<p><code>stblr_csr()</code> uses sufficient statistics from <code>make_stats()</code> with disk-backed sparse-LD metadata written into <code>Glist$sparseLD</code> by <code>make_sparseLD()</code>. The public <code>sblr()</code> interface represents the broader summary-statistics model family and accepts dense or sparse marker cross-product structures through <code>XX</code>.</p>
+<p><code>stblr_csr()</code> uses sufficient statistics from <code>make_summary_stats()</code> with disk-backed sparse-LD metadata written into <code>Glist$sparseLD</code> by <code>make_sparse_ld()</code>. The public <code>sblr()</code> interface represents the broader summary-statistics model family and accepts dense or sparse marker cross-product structures through <code>XX</code>.</p>
 <p>These representations, their information requirements, and sample-overlap issues are covered in <a href="../notes/data_representations.html">Data representations</a>. The practical BED-to-CSR handoff is covered in <a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
 </section>
 <section id="plain-versus-annotation-informed-priors" class="level3">
@@ -508,12 +508,12 @@ h_j = 2p_j(1-p_j),
 <p>The core samplers return posterior summaries and traces. Several R helpers turn those outputs into model diagnostics, plots, fine-mapping summaries, and credible sets.</p>
 <p>Common helper functions include:</p>
 <ul>
-<li><code>summarise_stblr_posterior()</code>: summarizes posterior traces such as <code>vbs</code>, <code>vgs</code>, <code>ves</code>, <code>vle</code>, <code>vld</code>, and sampled-<code>selection_s</code> traces where present;</li>
-<li><code>plot_stblr_posterior()</code>: plots posterior summaries and trace diagnostics;</li>
-<li><code>summarise_stblr_bayesr_components()</code>: summarizes BayesR/SBayesRC component probability outputs;</li>
-<li><code>summarise_stblr_maf_architecture()</code>: provides post-hoc descriptive summaries of MAF-dependent architecture, separate from sampler-level <code>selection_s</code>;</li>
-<li><code>make_stblr_credible_sets()</code>: constructs credible sets from posterior marker probabilities and marker/LD information;</li>
-<li><code>check_stblr_backend_consistency()</code>: checks that fit objects contain the expected backend-specific fields.</li>
+<li><code>summarise_posterior()</code>: summarizes posterior traces such as <code>vbs</code>, <code>vgs</code>, <code>ves</code>, <code>vle</code>, <code>vld</code>, and sampled-<code>selection_s</code> traces where present;</li>
+<li><code>plot_posterior()</code>: plots posterior summaries and trace diagnostics;</li>
+<li><code>summarise_components()</code>: summarizes BayesR/SBayesRC component probability outputs;</li>
+<li><code>summarise_architecture()</code>: provides post-hoc descriptive summaries of MAF-dependent architecture, separate from sampler-level <code>selection_s</code>;</li>
+<li><code>make_credible_sets()</code>: constructs credible sets from posterior marker probabilities and marker/LD information;</li>
+<li><code>check_stblr_consistency()</code>: checks that fit objects contain the expected backend-specific fields.</li>
 </ul>
 <p>Fine-mapping diagnostics are primarily represented through marker PIPs in <code>fit$dm</code>, optional LD-swap summaries in <code>fit$ld_swap</code>, and helper-level post-processing such as credible-set construction. Credible sets are therefore not the core sampler return object; they are constructed from fitted model outputs.</p>
 <p>LD-swap output is available where <code>updateLDswap = TRUE</code> is supported. The regular CSR backends use LD-swap diagnostics for fine-mapping and high-LD regions. Scheduled CSR and BED backends should not be assumed to provide the same LD-swap output unless the specific backend documentation says so.</p>
@@ -527,7 +527,7 @@ h_j = 2p_j(1-p_j),
 </section>
 <section id="bed-to-sufficient-statistics-and-sparse-ld" class="level3">
 <h3 class="anchored" data-anchor-id="bed-to-sufficient-statistics-and-sparse-ld">BED to Sufficient Statistics and Sparse LD</h3>
-<p>Use <code>make_stats()</code> to derive <code>wy</code>, <code>ww</code>, and <code>yy</code> from a BED-backed <code>Glist</code> and phenotypes. Use <code>make_sparseLD()</code> to derive disk-backed sparse LD from the same markers, samples, allele frequencies, and scaling convention. This preparation workflow creates reusable inputs for CSR models.</p>
+<p>Use <code>make_summary_stats()</code> to derive <code>wy</code>, <code>ww</code>, and <code>yy</code> from a BED-backed <code>Glist</code> and phenotypes. Use <code>make_sparse_ld()</code> to derive disk-backed sparse LD from the same markers, samples, allele frequencies, and scaling convention. This preparation workflow creates reusable inputs for CSR models.</p>
 </section>
 <section id="csr-summary-statistics-st-blr" class="level3">
 <h3 class="anchored" data-anchor-id="csr-summary-statistics-st-blr">CSR Summary-Statistics ST-BLR</h3>
@@ -575,14 +575,14 @@ h_j = 2p_j(1-p_j),
 <td><a href="../notes/sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a></td>
 </tr>
 <tr class="odd">
-<td><code>make_stats()</code></td>
+<td><code>make_summary_stats()</code></td>
 <td>Derive marker-trait and phenotype sufficient statistics from BED-backed <code>Glist</code> data.</td>
 <td>BED to summary statistics.</td>
 <td>Preparation, not a fitted model.</td>
 <td><a href="../notes/data_representations.html">Data representations</a>, <a href="../notes/stblr_interface_and_output_map.html">ST-BLR interface and output map</a></td>
 </tr>
 <tr class="even">
-<td><code>make_sparseLD()</code></td>
+<td><code>make_sparse_ld()</code></td>
 <td>Construct disk-backed sparse LD from BED-backed <code>Glist</code> data and store metadata in <code>Glist$sparseLD</code>.</td>
 <td>BED to CSR LD.</td>
 <td>Preparation, not a fitted model.</td>
@@ -645,7 +645,7 @@ h_j = 2p_j(1-p_j),
 <td><a href="../notes/workflows_and_outputs.html">Workflows and outputs</a></td>
 </tr>
 <tr class="odd">
-<td><code>make_stblr_credible_sets()</code></td>
+<td><code>make_credible_sets()</code></td>
 <td>Construct credible sets from fitted posterior marker probabilities and marker/LD information.</td>
 <td>Fit summaries and marker/LD metadata.</td>
 <td>Post-processing helper, not a core sampler.</td>
@@ -1381,13 +1381,13 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-113"><a href="#cb7-113" aria-hidden="true" tabindex="-1"></a>The standard summary-statistics CSR workflow is:</span>
 <span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_summary_stats</span>(</span>
 <span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a>  Glist,</span>
 <span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a>  y,</span>
 <span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> nthreads</span>
 <span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparse_ld</span>(</span>
 <span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
 <span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(data_dir, <span class="st">"ld_test"</span>),</span>
 <span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a>  <span class="at">pos_bp =</span> <span class="cn">NULL</span>,</span>
@@ -1399,9 +1399,9 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> computes genome-wide sufficient statistics such as marker-trait</span>
+<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> computes genome-wide sufficient statistics such as marker-trait</span>
 <span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a>cross-products (<span class="in">`wy`</span>), marker cross-products (<span class="in">`ww`</span>), and phenotype sums of</span>
-<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a>squares (<span class="in">`yy`</span>) from BED-backed <span class="in">`Glist`</span> data. <span class="in">`make_sparseLD()`</span> computes a</span>
+<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a>squares (<span class="in">`yy`</span>) from BED-backed <span class="in">`Glist`</span> data. <span class="in">`make_sparse_ld()`</span> computes a</span>
 <span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a>disk-backed sparse-LD CSR matrix and stores the resolved LD metadata in</span>
 <span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span>.</span>
 <span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a></span>
@@ -1488,8 +1488,8 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-220"><a href="#cb7-220" aria-hidden="true" tabindex="-1"></a>r = X^\top y - X^\top Xb.</span>
 <span id="cb7-221"><a href="#cb7-221" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb7-222"><a href="#cb7-222" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> uses sufficient statistics from <span class="in">`make_stats()`</span> with disk-backed</span>
-<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a>sparse-LD metadata written into <span class="in">`Glist$sparseLD`</span> by <span class="in">`make_sparseLD()`</span>. The</span>
+<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> uses sufficient statistics from <span class="in">`make_summary_stats()`</span> with disk-backed</span>
+<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a>sparse-LD metadata written into <span class="in">`Glist$sparseLD`</span> by <span class="in">`make_sparse_ld()`</span>. The</span>
 <span id="cb7-225"><a href="#cb7-225" aria-hidden="true" tabindex="-1"></a>public <span class="in">`sblr()`</span> interface represents the broader summary-statistics model</span>
 <span id="cb7-226"><a href="#cb7-226" aria-hidden="true" tabindex="-1"></a>family and accepts dense or sparse marker cross-product structures through</span>
 <span id="cb7-227"><a href="#cb7-227" aria-hidden="true" tabindex="-1"></a><span class="in">`XX`</span>.</span>
@@ -1622,17 +1622,17 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-354"><a href="#cb7-354" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-355"><a href="#cb7-355" aria-hidden="true" tabindex="-1"></a>Common helper functions include:</span>
 <span id="cb7-356"><a href="#cb7-356" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-357"><a href="#cb7-357" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summarise_stblr_posterior()`</span>: summarizes posterior traces such as <span class="in">`vbs`</span>,</span>
+<span id="cb7-357"><a href="#cb7-357" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summarise_posterior()`</span>: summarizes posterior traces such as <span class="in">`vbs`</span>,</span>
 <span id="cb7-358"><a href="#cb7-358" aria-hidden="true" tabindex="-1"></a>  <span class="in">`vgs`</span>, <span class="in">`ves`</span>, <span class="in">`vle`</span>, <span class="in">`vld`</span>, and sampled-<span class="in">`selection_s`</span> traces where present;</span>
-<span id="cb7-359"><a href="#cb7-359" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`plot_stblr_posterior()`</span>: plots posterior summaries and trace diagnostics;</span>
-<span id="cb7-360"><a href="#cb7-360" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summarise_stblr_bayesr_components()`</span>: summarizes BayesR/SBayesRC component</span>
+<span id="cb7-359"><a href="#cb7-359" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`plot_posterior()`</span>: plots posterior summaries and trace diagnostics;</span>
+<span id="cb7-360"><a href="#cb7-360" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summarise_components()`</span>: summarizes BayesR/SBayesRC component</span>
 <span id="cb7-361"><a href="#cb7-361" aria-hidden="true" tabindex="-1"></a>  probability outputs;</span>
-<span id="cb7-362"><a href="#cb7-362" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summarise_stblr_maf_architecture()`</span>: provides post-hoc descriptive</span>
+<span id="cb7-362"><a href="#cb7-362" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summarise_architecture()`</span>: provides post-hoc descriptive</span>
 <span id="cb7-363"><a href="#cb7-363" aria-hidden="true" tabindex="-1"></a>  summaries of MAF-dependent architecture, separate from sampler-level</span>
 <span id="cb7-364"><a href="#cb7-364" aria-hidden="true" tabindex="-1"></a>  <span class="in">`selection_s`</span>;</span>
-<span id="cb7-365"><a href="#cb7-365" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`make_stblr_credible_sets()`</span>: constructs credible sets from posterior marker</span>
+<span id="cb7-365"><a href="#cb7-365" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`make_credible_sets()`</span>: constructs credible sets from posterior marker</span>
 <span id="cb7-366"><a href="#cb7-366" aria-hidden="true" tabindex="-1"></a>  probabilities and marker/LD information;</span>
-<span id="cb7-367"><a href="#cb7-367" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`check_stblr_backend_consistency()`</span>: checks that fit objects contain the</span>
+<span id="cb7-367"><a href="#cb7-367" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`check_stblr_consistency()`</span>: checks that fit objects contain the</span>
 <span id="cb7-368"><a href="#cb7-368" aria-hidden="true" tabindex="-1"></a>  expected backend-specific fields.</span>
 <span id="cb7-369"><a href="#cb7-369" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-370"><a href="#cb7-370" aria-hidden="true" tabindex="-1"></a>Fine-mapping diagnostics are primarily represented through marker PIPs in</span>
@@ -1658,8 +1658,8 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-390"><a href="#cb7-390" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-391"><a href="#cb7-391" aria-hidden="true" tabindex="-1"></a><span class="fu">### BED to Sufficient Statistics and Sparse LD</span></span>
 <span id="cb7-392"><a href="#cb7-392" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-393"><a href="#cb7-393" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`make_stats()`</span> to derive <span class="in">`wy`</span>, <span class="in">`ww`</span>, and <span class="in">`yy`</span> from a BED-backed <span class="in">`Glist`</span> and</span>
-<span id="cb7-394"><a href="#cb7-394" aria-hidden="true" tabindex="-1"></a>phenotypes. Use <span class="in">`make_sparseLD()`</span> to derive disk-backed sparse LD from the same</span>
+<span id="cb7-393"><a href="#cb7-393" aria-hidden="true" tabindex="-1"></a>Use <span class="in">`make_summary_stats()`</span> to derive <span class="in">`wy`</span>, <span class="in">`ww`</span>, and <span class="in">`yy`</span> from a BED-backed <span class="in">`Glist`</span> and</span>
+<span id="cb7-394"><a href="#cb7-394" aria-hidden="true" tabindex="-1"></a>phenotypes. Use <span class="in">`make_sparse_ld()`</span> to derive disk-backed sparse LD from the same</span>
 <span id="cb7-395"><a href="#cb7-395" aria-hidden="true" tabindex="-1"></a>markers, samples, allele frequencies, and scaling convention. This preparation</span>
 <span id="cb7-396"><a href="#cb7-396" aria-hidden="true" tabindex="-1"></a>workflow creates reusable inputs for CSR models.</span>
 <span id="cb7-397"><a href="#cb7-397" aria-hidden="true" tabindex="-1"></a></span>
@@ -1700,8 +1700,8 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-432"><a href="#cb7-432" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|</span></span>
 <span id="cb7-433"><a href="#cb7-433" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_bed()`</span> <span class="pp">|</span> Fit ST-BLR directly from PLINK BED markers and phenotypes. <span class="pp">|</span> Individual-level BED through <span class="in">`Glist`</span>. <span class="pp">|</span> Plain/global BayesC or BayesR ST-BLR; accepts one or more phenotype columns; no sampler-level <span class="in">`selection_s`</span>. <span class="pp">|</span> <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span>, <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>, <span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-434"><a href="#cb7-434" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_bed_marker()`</span> <span class="pp">|</span> Lower-level direct BED marker interface retained for compatibility and specialized workflows. <span class="pp">|</span> Individual-level BED. <span class="pp">|</span> Plain/global ST-BLR. <span class="pp">|</span> <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span> <span class="pp">|</span></span>
-<span id="cb7-435"><a href="#cb7-435" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_stats()`</span> <span class="pp">|</span> Derive marker-trait and phenotype sufficient statistics from BED-backed <span class="in">`Glist`</span> data. <span class="pp">|</span> BED to summary statistics. <span class="pp">|</span> Preparation, not a fitted model. <span class="pp">|</span> <span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span>, <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span> <span class="pp">|</span></span>
-<span id="cb7-436"><a href="#cb7-436" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_sparseLD()`</span> <span class="pp">|</span> Construct disk-backed sparse LD from BED-backed <span class="in">`Glist`</span> data and store metadata in <span class="in">`Glist$sparseLD`</span>. <span class="pp">|</span> BED to CSR LD. <span class="pp">|</span> Preparation, not a fitted model. <span class="pp">|</span> <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>, <span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.qmd)</span>, <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span> <span class="pp">|</span></span>
+<span id="cb7-435"><a href="#cb7-435" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_summary_stats()`</span> <span class="pp">|</span> Derive marker-trait and phenotype sufficient statistics from BED-backed <span class="in">`Glist`</span> data. <span class="pp">|</span> BED to summary statistics. <span class="pp">|</span> Preparation, not a fitted model. <span class="pp">|</span> <span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.qmd)</span>, <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span> <span class="pp">|</span></span>
+<span id="cb7-436"><a href="#cb7-436" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_sparse_ld()`</span> <span class="pp">|</span> Construct disk-backed sparse LD from BED-backed <span class="in">`Glist`</span> data and store metadata in <span class="in">`Glist$sparseLD`</span>. <span class="pp">|</span> BED to CSR LD. <span class="pp">|</span> Preparation, not a fitted model. <span class="pp">|</span> <span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.qmd)</span>, <span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.qmd)</span>, <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-437"><a href="#cb7-437" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr()`</span> <span class="pp">|</span> Fit annotation-unaware ST-BLR from <span class="in">`stats`</span> and sparse LD in <span class="in">`Glist`</span>. <span class="pp">|</span> Summary statistics plus disk-backed sparse LD. <span class="pp">|</span> CSR BayesC or BayesR, with fixed global or sampled trait-specific <span class="in">`selection_s`</span> where supported. <span class="pp">|</span> <span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.qmd)</span>, <span class="co">[</span><span class="ot">selection_s status</span><span class="co">](selection_s_status.md)</span>, <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-438"><a href="#cb7-438" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_annot()`</span> <span class="pp">|</span> Unified annotation-aware CSR interface. <span class="pp">|</span> Summary statistics plus CSR LD and annotations. <span class="pp">|</span> <span class="in">`annotation_model = "prior"`</span>, <span class="in">`"learned"`</span>, <span class="in">`"group"`</span>, or <span class="in">`"sbayesrc"`</span>; only SBayesRC supports fixed and sampled <span class="in">`selection_s`</span>. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>, <span class="co">[</span><span class="ot">ST-BLR interface and output map</span><span class="co">](stblr_interface_and_output_map.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-439"><a href="#cb7-439" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_prior_annot()`</span> <span class="pp">|</span> Compatibility wrapper for fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. <span class="pp">|</span> Summary statistics plus CSR LD and optional annotations. <span class="pp">|</span> Fixed annotation-informed prior; no sampler-level <span class="in">`selection_s`</span>. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span> <span class="pp">|</span></span>
@@ -1710,7 +1710,7 @@ h_j = 2p_j(1-p_j),
 <span id="cb7-442"><a href="#cb7-442" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`stblr_csr_sbayesrc_generic()`</span> <span class="pp">|</span> Compatibility wrapper for SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. <span class="pp">|</span> Summary statistics plus CSR LD and overlapping annotations. <span class="pp">|</span> SBayesRC mixture prior; supports fixed and sampled <span class="in">`selection_s`</span>. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>, <span class="co">[</span><span class="ot">Technical SBayesRC-style annotations</span><span class="co">](technical_sbayesrc_annotations.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-443"><a href="#cb7-443" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`sblr()`</span> <span class="pp">|</span> Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models. <span class="pp">|</span> Summary statistics plus marker cross-products/LD. <span class="pp">|</span> Plain single- or multi-trait model components. <span class="pp">|</span> <span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-444"><a href="#cb7-444" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`finemap_stblr_csr()`</span> <span class="pp">|</span> Local fine-mapping/refitting around predefined marker regions using architecture from a global CSR fit. <span class="pp">|</span> Global CSR fit plus <span class="in">`Glist`</span>, <span class="in">`stats`</span>, and marker sets. <span class="pp">|</span> Local regional summaries and optional credible sets. <span class="pp">|</span> <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
-<span id="cb7-445"><a href="#cb7-445" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_stblr_credible_sets()`</span> <span class="pp">|</span> Construct credible sets from fitted posterior marker probabilities and marker/LD information. <span class="pp">|</span> Fit summaries and marker/LD metadata. <span class="pp">|</span> Post-processing helper, not a core sampler. <span class="pp">|</span> <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
+<span id="cb7-445"><a href="#cb7-445" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_credible_sets()`</span> <span class="pp">|</span> Construct credible sets from fitted posterior marker probabilities and marker/LD information. <span class="pp">|</span> Fit summaries and marker/LD metadata. <span class="pp">|</span> Post-processing helper, not a core sampler. <span class="pp">|</span> <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-446"><a href="#cb7-446" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`mtsim()`</span> <span class="pp">|</span> Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals. <span class="pp">|</span> Simulated matrix or <span class="in">`Glist`</span> genotypes. <span class="pp">|</span> Model checking and multi-trait truth. <span class="pp">|</span> <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-447"><a href="#cb7-447" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`mtsim_annotation()`</span> <span class="pp">|</span> Simulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors. <span class="pp">|</span> Simulated matrix or <span class="in">`Glist`</span> genotypes plus annotations. <span class="pp">|</span> Annotation-model checking. <span class="pp">|</span> <span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.qmd)</span>, <span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.qmd)</span> <span class="pp">|</span></span>
 <span id="cb7-448"><a href="#cb7-448" aria-hidden="true" tabindex="-1"></a></span>

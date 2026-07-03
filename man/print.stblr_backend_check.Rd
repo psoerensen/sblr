@@ -7,7 +7,7 @@
 \method{print}{stblr_backend_check}(x, ...)
 }
 \arguments{
-\item{x}{Object returned by [check_stblr_backend_consistency()].}
+\item{x}{Object returned by [check_stblr_consistency()].}
 
 \item{...}{Unused.}
 }

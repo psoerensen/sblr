@@ -6,7 +6,12 @@ posterior output semantics, or public user-facing behavior.
 
 ## Public Interfaces
 
-Supported user-facing entry points:
+Supported user-facing data preparation entry points:
+
+- `make_summary_stats()`
+- `make_sparse_ld()`
+
+Supported user-facing model fitters:
 
 - `stblr_csr(..., method = "bayesC")`
 - `stblr_csr(..., method = "bayesR")`
@@ -16,6 +21,15 @@ Supported user-facing entry points:
 - `stblr_csr_annot(..., annotation_model = "sbayesrc")`
 - `stblr_bed(..., method = "bayesC")`
 - `stblr_bed(..., method = "bayesR")`
+
+Supported user-facing posterior summaries and diagnostics:
+
+- `summarise_posterior()`
+- `plot_posterior()`
+- `summarise_components()`
+- `summarise_architecture()`
+- `make_credible_sets()`
+- `check_stblr_consistency()`
 
 The explicit public convenience wrapper `stblr_csr_bayesr()` remains supported.
 The older public `stblr_bed_marker()` remains available for direct BED marker

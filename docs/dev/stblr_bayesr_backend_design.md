@@ -260,7 +260,7 @@ Formatted BayesR component probabilities can be inspected with the exported
 diagnostic helper:
 
 ```r
-summarise_stblr_bayesr_components(fit)
+summarise_components(fit)
 ```
 
 This reports per-trait aggregate PIP summaries, expected active marker counts
@@ -320,7 +320,7 @@ as the six standard chain summaries. The internal
 probabilities from slot `23`, enforces standard `dm = 1 - P(component 0)`, and
 exposes slot `30` as `dm_component_mean`.
 
-`check_stblr_backend_consistency()` should work unchanged for BayesR fits if:
+`check_stblr_consistency()` should work unchanged for BayesR fits if:
 
 - `fit$dm` is marker-by-trait and in `[0, 1]`.
 - `fit$bm` has the same dimensions and dimnames.
@@ -547,7 +547,7 @@ Existing BED BayesR chains:
 - Verify standard fields after formatting:
   `dm`, `bm`, `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, `bm_max`.
 - Check dimensions, dimnames, finite values, and `min <= mean <= max`.
-- Run `check_stblr_backend_consistency()` with `require_chain_summaries = TRUE`
+- Run `check_stblr_consistency()` with `require_chain_summaries = TRUE`
   for multi-chain fits.
 
 BayesR-specific outputs:
@@ -585,7 +585,7 @@ The first BayesR harmonization step has been implemented:
 - R formatting exposes BayesR slot `22` as component probabilities and slot
   `29` as `dm_component_mean`.
 - Focused tests cover formatted fields, component probabilities,
-  `check_stblr_backend_consistency()`, and extractor compatibility.
+  `check_stblr_consistency()`, and extractor compatibility.
 
 Suggested next implementation prompt:
 

@@ -26,12 +26,12 @@ BED files + phenotype y
         v
 align markers with cls and select sample rows
         |
-        +--> make_stats()
+        +--> make_summary_stats()
         |       |
         |       v
         |    stats$wy, stats$ww, stats$yy, n, marker names
         |
-        +--> make_sparseLD()
+        +--> make_sparse_ld()
                 |
                 v
              Glist$sparseLD$prefix
@@ -94,7 +94,7 @@ af <- Glist$af[[chr]][cls]
 just its set of values, determines the order of every downstream
 marker-indexed object.
 
-For one BED file, `make_stats()` and `make_sparseLD()` can infer `cls` from
+For one BED file, `make_summary_stats()` and `make_sparse_ld()` can infer `cls` from
 `match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])` when it is not supplied. For
 multiple BED files, each `cls[[k]]` selects and orders markers from
 `Glist$bedfiles[chr[k]]`; the concatenated selection is the model order.
@@ -123,7 +123,7 @@ preprocessing must be explicit:
 - centering and scaling choices affect `stats$yy` and prior initialization;
 - missing phenotype handling must be consistent with the chosen sample.
 
-For trait $t$, `make_stats()` constructs quantities including
+For trait $t$, `make_summary_stats()` constructs quantities including
 
 $$
 wy_t = X^\top y_t,
@@ -173,13 +173,13 @@ This path is appropriate when:
 `Glist$rsids`; supplying `cls` explicitly makes the comparison contract
 visible.
 
-## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `make_stats()`
+## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `make_summary_stats()`
 
-`make_stats()` converts the selected BED genotypes and phenotype matrix into
+`make_summary_stats()` converts the selected BED genotypes and phenotype matrix into
 sufficient statistics for ST-BLR fitting:
 
 ```r
-stats <- make_stats(
+stats <- make_summary_stats(
   Glist = Glist,
   y = y,
   chr = chr,
@@ -204,19 +204,19 @@ The main output handoff is:
 same order later used by the CSR LD matrix. `stats$yy` has one entry per trait,
 not one entry per marker.
 
-`make_stats()` accepts a single chromosome/file or a list of chromosomes/files
+`make_summary_stats()` accepts a single chromosome/file or a list of chromosomes/files
 through `chr` and `cls`, and records the resolved marker order in
 `stats$marker_names`.
 
-## Path B, Step 2: Computing Sparse LD With `make_sparseLD()`
+## Path B, Step 2: Computing Sparse LD With `make_sparse_ld()`
 
-`make_sparseLD()` computes marker correlations from BED-backed `Glist` data,
+`make_sparse_ld()` computes marker correlations from BED-backed `Glist` data,
 applies distance and $r^2$ retention rules, writes a disk-backed CSR
 representation, and stores the resolved sparse-LD metadata in
 `Glist$sparseLD`:
 
 ```r
-Glist <- make_sparseLD(
+Glist <- make_sparse_ld(
   Glist = Glist,
   out_prefix = file.path(output_dir, "chr1_ld"),
   chr = chr,
@@ -263,7 +263,7 @@ The package source currently contains four related Rcpp wrappers:
 | `sparseLD_write_CSR()` | Currently delegates to `sparseLD_stream_CSR()` and writes the same disk-backed representation. | Generated internal wrapper; not currently exported or separately documented. |
 | `sparseLD_read_CSR()` | Reads an existing disk-backed CSR prefix into an R list for inspection. | Exported. |
 
-Use `make_sparseLD()` for the high-level BED-to-disk workflow. It calls the
+Use `make_sparse_ld()` for the high-level BED-to-disk workflow. It calls the
 exported `sparseLD_stream_CSR()` writer after resolving marker and sample
 metadata from `Glist`. The in-memory `sparseLD_to_CSR()` representation can be
 useful during development, but it materializes sparse arrays in R and is not
@@ -400,7 +400,7 @@ not supply biological marker IDs to repair a mismatch later. Retain
 `marker_id <- Glist$rsidsLD[[chr]]` beside the preparation outputs and attach
 or verify it whenever annotations and posterior summaries are joined.
 
-Scaling also has to match. If `make_stats(..., scale = TRUE)` standardizes
+Scaling also has to match. If `make_summary_stats(..., scale = TRUE)` standardizes
 markers using `af`, then sparse LD must be constructed from the same selected
 samples and corresponding allele frequencies. If `rows` is used, use it in
 both calls and ensure `y` describes those rows. LD thresholds and distance

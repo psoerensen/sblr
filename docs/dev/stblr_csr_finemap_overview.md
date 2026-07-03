@@ -38,7 +38,7 @@ stblr_csr()
 global fit with bm, dm, parameter traces, optional ld_swap diagnostics
     |
     v
-make_stblr_credible_sets()
+make_credible_sets()
     |
     v
 cs_global$locus_sets
@@ -141,7 +141,7 @@ fitMH <- stblr_csr(
   ld_swap_moves = 5
 )
 
-cs_global <- make_stblr_credible_sets(
+cs_global <- make_credible_sets(
   fit = fitMH,
   Glist = Glist,
   trait = "D1",
@@ -185,7 +185,7 @@ Credible-set construction is R-level post-processing in `R/credible_sets.R`:
   a dense regional LD matrix.
 - `make_multisignal_credible_sets_from_ld()` builds approximate multi-signal
   credible sets from marginal PIPs and dense regional LD.
-- `make_stblr_credible_sets()` extracts PIPs from a fitted ST-BLR object,
+- `make_credible_sets()` extracts PIPs from a fitted ST-BLR object,
   defines or accepts loci, obtains regional LD either from dense input or by
   densifying sparse CSR slices, and returns `summary`, `sets`, `loci`, and
   `locus_sets`.

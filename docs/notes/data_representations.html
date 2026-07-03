@@ -192,7 +192,7 @@ window.Quarto = {
   <li><a href="#representation-specific-limitations-and-validation-checks" id="toc-representation-specific-limitations-and-validation-checks" class="nav-link" data-scroll-target="#representation-specific-limitations-and-validation-checks">Representation-Specific Limitations and Validation Checks</a></li>
   <li><a href="#related-notes" id="toc-related-notes" class="nav-link" data-scroll-target="#related-notes">Related Notes</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="data_representations.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -313,7 +313,7 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 </section>
 <section id="sufficient-statistics-wy-ww-and-yy" class="level2">
 <h2 class="anchored" data-anchor-id="sufficient-statistics-wy-ww-and-yy">Sufficient Statistics: <code>wy</code>, <code>ww</code>, and <code>yy</code></h2>
-<p><code>make_stats()</code> is the package bridge from a BED-backed <code>Glist</code> and phenotypes to the sufficient statistics consumed by <code>stblr_csr()</code>. It resolves BED files, selected chromosomes, selected BED marker columns <code>cls</code>, allele frequencies, phenotype-to-BED row matching, and marker names from <code>Glist</code>. Optional <code>rows</code> and <code>scale</code> determine which individuals and marker standardization are used. The lower-level <code>bed_xtx_xty()</code> helper performs per-BED cross-product work.</p>
+<p><code>make_summary_stats()</code> is the package bridge from a BED-backed <code>Glist</code> and phenotypes to the sufficient statistics consumed by <code>stblr_csr()</code>. It resolves BED files, selected chromosomes, selected BED marker columns <code>cls</code>, allele frequencies, phenotype-to-BED row matching, and marker names from <code>Glist</code>. Optional <code>rows</code> and <code>scale</code> determine which individuals and marker standardization are used. The lower-level <code>bed_xtx_xty()</code> helper performs per-BED cross-product work.</p>
 <p>The returned <code>stats</code> object contains the marker-trait cross-products and related quantities required by the ST-BLR wrapper:</p>
 <ul>
 <li><code>stats$wy</code>: <span class="math inline">\(X^\top Y\)</span>, represented by trait;</li>
@@ -321,13 +321,13 @@ r_{\text{old}} - (X^\top X)_{\cdot j}\Delta b_j.
 <li><code>stats$yy</code>: <span class="math inline">\(y_t^\top y_t\)</span> for each trait;</li>
 <li><code>stats$n</code> and <code>stats$m</code>, when available, for sample and marker counts.</li>
 </ul>
-<p><code>make_sparseLD()</code> computes disk-backed sparse LD from the same BED-backed <code>Glist</code> and stores the resulting CSR prefix and resolved marker metadata in <code>Glist$sparseLD</code>. This metadata includes the sparse-LD prefix, marker order, selected BED columns, rows, allele frequencies, distance limits, threshold, and construction settings used by CSR models. <code>stblr_csr()</code> combines <code>stats</code> with this sparse-LD metadata from <code>Glist</code>, or with an explicit <code>ld_prefix</code> when supplied. The wrapper initializes per-trait variance quantities using <code>stats$yy</code>, <span class="math inline">\(n\)</span>, and <span class="math inline">\(m\)</span>, then passes <code>wy</code>, <code>ww</code>, <code>yy</code>, and the CSR prefix to the sparse-LD sampler.</p>
+<p><code>make_sparse_ld()</code> computes disk-backed sparse LD from the same BED-backed <code>Glist</code> and stores the resulting CSR prefix and resolved marker metadata in <code>Glist$sparseLD</code>. This metadata includes the sparse-LD prefix, marker order, selected BED columns, rows, allele frequencies, distance limits, threshold, and construction settings used by CSR models. <code>stblr_csr()</code> combines <code>stats</code> with this sparse-LD metadata from <code>Glist</code>, or with an explicit <code>ld_prefix</code> when supplied. The wrapper initializes per-trait variance quantities using <code>stats$yy</code>, <span class="math inline">\(n\)</span>, and <span class="math inline">\(m\)</span>, then passes <code>wy</code>, <code>ww</code>, <code>yy</code>, and the CSR prefix to the sparse-LD sampler.</p>
 <p>The complete conceptual bridge is:</p>
 <pre class="text"><code>BED files + aligned phenotypes
           |
-          +--&gt; make_stats() ---------&gt; wy, ww, yy, n, marker names
+          +--&gt; make_summary_stats() ---------&gt; wy, ww, yy, n, marker names
           |
-          +--&gt; make_sparseLD() ------&gt; Glist$sparseLD prefix and metadata
+          +--&gt; make_sparse_ld() ------&gt; Glist$sparseLD prefix and metadata
                                         |
                                         v
                         stblr_csr() summary-statistics model</code></pre>
@@ -371,7 +371,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <p>In the workflows, the intended LD marker order is established by <code>Glist$rsidsLD[[chr]]</code>. The BED column indices are derived with</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>cls <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(cls))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The same <code>cls</code> is then supplied to <code>make_stats()</code> and <code>make_sparseLD()</code>. Allele frequencies or MAF are subset with the same indices:</p>
+<p>The same <code>cls</code> is then supplied to <code>make_summary_stats()</code> and <code>make_sparse_ld()</code>. Allele frequencies or MAF are subset with the same indices:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>maf_ld <span class="ot">&lt;-</span> Glist<span class="sc">$</span>maf[[chr]][<span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Do not use <code>%in%</code> for this alignment because it tests membership but does not preserve the requested LD/model order. For annotation models, the <span class="math inline">\(m \times K\)</span> annotation matrix <code>A</code> must have one row per selected marker in exactly this order. The annotation workflow makes that contract explicit by assigning <code>Glist$rsidsLD[[chr]]</code> as row names and checking that they are identical to the expected marker IDs.</p>
 <p>Posterior matrices such as <code>fit$bm</code> and <code>fit$dm</code> inherit the marker ordering used by the model input. A plausible-looking result is still invalid if its rows are joined to annotations or marker metadata in a different order.</p>
@@ -399,7 +399,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <ol type="1">
 <li><code>cls</code> contains no missing marker matches and has the expected length.</li>
 <li>Allele frequencies correspond to the selected marker columns.</li>
-<li><code>make_stats()</code> and <code>make_sparseLD()</code> use identical marker order, sample rows, and scaling choices.</li>
+<li><code>make_summary_stats()</code> and <code>make_sparse_ld()</code> use identical marker order, sample rows, and scaling choices.</li>
 <li>CSR dimensions and indexing are consistent with the number of markers.</li>
 <li>Annotation rows and marker/group vectors use the same marker order.</li>
 <li><code>stats$wy</code>, <code>stats$ww</code>, and posterior marker matrices have compatible dimensions.</li>
@@ -1044,7 +1044,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb5-169"><a href="#cb5-169" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-170"><a href="#cb5-170" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sufficient Statistics: `wy`, `ww`, and `yy`</span></span>
 <span id="cb5-171"><a href="#cb5-171" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-172"><a href="#cb5-172" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> is the package bridge from a BED-backed <span class="in">`Glist`</span> and phenotypes</span>
+<span id="cb5-172"><a href="#cb5-172" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> is the package bridge from a BED-backed <span class="in">`Glist`</span> and phenotypes</span>
 <span id="cb5-173"><a href="#cb5-173" aria-hidden="true" tabindex="-1"></a>to the sufficient statistics consumed by <span class="in">`stblr_csr()`</span>. It resolves BED files,</span>
 <span id="cb5-174"><a href="#cb5-174" aria-hidden="true" tabindex="-1"></a>selected chromosomes, selected BED marker columns <span class="in">`cls`</span>, allele frequencies,</span>
 <span id="cb5-175"><a href="#cb5-175" aria-hidden="true" tabindex="-1"></a>phenotype-to-BED row matching, and marker names from <span class="in">`Glist`</span>. Optional <span class="in">`rows`</span></span>
@@ -1060,7 +1060,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb5-185"><a href="#cb5-185" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>: $y_t^\top y_t$ for each trait;</span>
 <span id="cb5-186"><a href="#cb5-186" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$n`</span> and <span class="in">`stats$m`</span>, when available, for sample and marker counts.</span>
 <span id="cb5-187"><a href="#cb5-187" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-188"><a href="#cb5-188" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> computes disk-backed sparse LD from the same BED-backed</span>
+<span id="cb5-188"><a href="#cb5-188" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparse_ld()`</span> computes disk-backed sparse LD from the same BED-backed</span>
 <span id="cb5-189"><a href="#cb5-189" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist`</span> and stores the resulting CSR prefix and resolved marker metadata in</span>
 <span id="cb5-190"><a href="#cb5-190" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span>. This metadata includes the sparse-LD prefix, marker order,</span>
 <span id="cb5-191"><a href="#cb5-191" aria-hidden="true" tabindex="-1"></a>selected BED columns, rows, allele frequencies, distance limits, threshold,</span>
@@ -1075,9 +1075,9 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb5-200"><a href="#cb5-200" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
 <span id="cb5-201"><a href="#cb5-201" aria-hidden="true" tabindex="-1"></a><span class="in">BED files + aligned phenotypes</span></span>
 <span id="cb5-202"><a href="#cb5-202" aria-hidden="true" tabindex="-1"></a><span class="in">          |</span></span>
-<span id="cb5-203"><a href="#cb5-203" aria-hidden="true" tabindex="-1"></a><span class="in">          +--&gt; make_stats() ---------&gt; wy, ww, yy, n, marker names</span></span>
+<span id="cb5-203"><a href="#cb5-203" aria-hidden="true" tabindex="-1"></a><span class="in">          +--&gt; make_summary_stats() ---------&gt; wy, ww, yy, n, marker names</span></span>
 <span id="cb5-204"><a href="#cb5-204" aria-hidden="true" tabindex="-1"></a><span class="in">          |</span></span>
-<span id="cb5-205"><a href="#cb5-205" aria-hidden="true" tabindex="-1"></a><span class="in">          +--&gt; make_sparseLD() ------&gt; Glist$sparseLD prefix and metadata</span></span>
+<span id="cb5-205"><a href="#cb5-205" aria-hidden="true" tabindex="-1"></a><span class="in">          +--&gt; make_sparse_ld() ------&gt; Glist$sparseLD prefix and metadata</span></span>
 <span id="cb5-206"><a href="#cb5-206" aria-hidden="true" tabindex="-1"></a><span class="in">                                        |</span></span>
 <span id="cb5-207"><a href="#cb5-207" aria-hidden="true" tabindex="-1"></a><span class="in">                                        v</span></span>
 <span id="cb5-208"><a href="#cb5-208" aria-hidden="true" tabindex="-1"></a><span class="in">                        stblr_csr() summary-statistics model</span></span>
@@ -1168,7 +1168,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb5-293"><a href="#cb5-293" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(cls))</span>
 <span id="cb5-294"><a href="#cb5-294" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb5-295"><a href="#cb5-295" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-296"><a href="#cb5-296" aria-hidden="true" tabindex="-1"></a>The same <span class="in">`cls`</span> is then supplied to <span class="in">`make_stats()`</span> and <span class="in">`make_sparseLD()`</span>.</span>
+<span id="cb5-296"><a href="#cb5-296" aria-hidden="true" tabindex="-1"></a>The same <span class="in">`cls`</span> is then supplied to <span class="in">`make_summary_stats()`</span> and <span class="in">`make_sparse_ld()`</span>.</span>
 <span id="cb5-297"><a href="#cb5-297" aria-hidden="true" tabindex="-1"></a>Allele frequencies or MAF are subset with the same indices:</span>
 <span id="cb5-298"><a href="#cb5-298" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-299"><a href="#cb5-299" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
@@ -1217,7 +1217,7 @@ N \odot \widehat{\operatorname{Cov}}(Y),
 <span id="cb5-342"><a href="#cb5-342" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-343"><a href="#cb5-343" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span><span class="in">`cls`</span> contains no missing marker matches and has the expected length.</span>
 <span id="cb5-344"><a href="#cb5-344" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Allele frequencies correspond to the selected marker columns.</span>
-<span id="cb5-345"><a href="#cb5-345" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`make_stats()`</span> and <span class="in">`make_sparseLD()`</span> use identical marker order, sample</span>
+<span id="cb5-345"><a href="#cb5-345" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`make_summary_stats()`</span> and <span class="in">`make_sparse_ld()`</span> use identical marker order, sample</span>
 <span id="cb5-346"><a href="#cb5-346" aria-hidden="true" tabindex="-1"></a>   rows, and scaling choices.</span>
 <span id="cb5-347"><a href="#cb5-347" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>CSR dimensions and indexing are consistent with the number of markers.</span>
 <span id="cb5-348"><a href="#cb5-348" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Annotation rows and marker/group vectors use the same marker order.</span>

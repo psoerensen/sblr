@@ -149,7 +149,7 @@ R formatting and downstream compatibility depend on:
   layout;
 - `format_sbayesrc_csr_fit()` for existing SBayesRC marker-by-component
   formatting;
-- `check_stblr_backend_consistency()` for standard `dm`/`bm` and chain summary
+- `check_stblr_consistency()` for standard `dm`/`bm` and chain summary
   validation;
 - `extract_stblr_finemap_loci()` using `fit$dm`, `fit$bm`, and optional
   `dm_*`/`bm_*` summaries.
@@ -386,7 +386,7 @@ The formatted component fields can be summarized without printing marker-level
 matrices:
 
 ```r
-summarise_stblr_bayesr_components(fit)
+summarise_components(fit)
 ```
 
 This helper is an R-side diagnostic summary only. It does not implement
@@ -638,7 +638,7 @@ BayesC `.format_stblr_fit()` stable.
 Formatted CSR BayesR fits should pass:
 
 ```r
-check_stblr_backend_consistency(fit, require_chain_summaries = TRUE)
+check_stblr_consistency(fit, require_chain_summaries = TRUE)
 ```
 
 and should work with:

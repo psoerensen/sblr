@@ -11,7 +11,7 @@ by `stblr_csr()` and related wrappers.
 The stable user-facing contract is deliberately narrower than the current
 binary-file implementation:
 
-1. create sparse LD with `make_sparseLD()`, which records metadata in
+1. create sparse LD with `make_sparse_ld()`, which records metadata in
    `Glist$sparseLD`;
 2. inspect the resulting prefix with `sparseLD_read_CSR()` when needed; and
 3. pass the updated `Glist` to `stblr_csr()` or `stblr_csr_annot()`.
@@ -51,16 +51,16 @@ branches:
 ```text
 the same BED files + cls + rows + allele frequencies
     |
-    +--> make_stats() ------> stats$wy, stats$ww, stats$yy
+    +--> make_summary_stats() ------> stats$wy, stats$ww, stats$yy
     |
-    +--> make_sparseLD() ---> Glist$sparseLD$prefix
+    +--> make_sparse_ld() ---> Glist$sparseLD$prefix
                                       |
                                       v
                        stblr_csr(stats = stats, Glist = Glist, ...)
 ```
 
-`make_stats()` supplies the phenotype cross-products and diagonal marker
-cross-products. `make_sparseLD()` supplies retained off-diagonal marker
+`make_summary_stats()` supplies the phenotype cross-products and diagonal marker
+cross-products. `make_sparse_ld()` supplies retained off-diagonal marker
 correlations and records their prefix and metadata in `Glist$sparseLD`.
 During CSR model setup, the sampler combines the stored correlations with
 `stats$ww` to recover the corresponding off-diagonal cross-product scale.
@@ -251,7 +251,7 @@ from lower-level generated functions:
 
 | Helper | Current role | Current status |
 |---|---|---|
-| `sparseLD_stream_CSR()` | Computes BED-derived sparse LD and streams the disk-backed prefix. | Exported lower-level writer used by `make_sparseLD()`. |
+| `sparseLD_stream_CSR()` | Computes BED-derived sparse LD and streams the disk-backed prefix. | Exported lower-level writer used by `make_sparse_ld()`. |
 | `sparseLD_read_CSR()` | Reads a written prefix into R for inspection and validation. | Exported; user-facing reader. |
 | `sparseLD_to_CSR()` | Computes the same upper-triangle sparse representation and returns arrays in memory. | Generated lower-level wrapper; not exported in the current `NAMESPACE`. |
 | `sparseLD_write_CSR()` | Delegates to `sparseLD_stream_CSR()` with an output prefix. | Generated alias/internal wrapper; not exported in the current `NAMESPACE`. |

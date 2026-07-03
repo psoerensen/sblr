@@ -8,7 +8,7 @@
 #'
 #' A typical workflow is to fit the genome-wide CSR model first, optionally with
 #' LD-swap proposals, define loci from the fitted PIPs with
-#' [make_stblr_credible_sets()], and then extract locus summaries:
+#' [make_credible_sets()], and then extract locus summaries:
 #'
 #' ```r
 #' fitMH <- stblr_csr(
@@ -30,7 +30,7 @@
 #'   ld_swap_moves = 5
 #' )
 #'
-#' cs_global <- make_stblr_credible_sets(
+#' cs_global <- make_credible_sets(
 #'   fit = fitMH,
 #'   Glist = Glist,
 #'   trait = "D1",
@@ -58,7 +58,7 @@
 #'   must identify a readable sparse LD CSR prefix.
 #' @param locus_sets Named or unnamed list of marker vectors defining loci to
 #'   summarize, for example `cs_global$locus_sets` from
-#'   [make_stblr_credible_sets()].
+#'   [make_credible_sets()].
 #' @param trait Trait column name or index in `fit$dm` and `fit$bm`.
 #' @param credible_sets Logical; construct credible sets from the genome-wide
 #'   PIPs restricted to each locus.

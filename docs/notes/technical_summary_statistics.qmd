@@ -379,7 +379,7 @@ same BED marker selection and order
     -> compatible wy, ww, yy, and sparse LD
 ```
 
-`make_sparseLD()` constructs retained marker correlations from BED data,
+`make_sparse_ld()` constructs retained marker correlations from BED data,
 writes them under a sparse-LD prefix, and records the metadata in
 `Glist$sparseLD`. It must use the same marker ordering, sample rows, allele
 frequencies, and scaling convention used to create the sufficient statistics.
@@ -389,8 +389,8 @@ The central workflow handoff is:
 
 ```text
 BED + phenotype
-  -> make_stats()     -> wy, ww, yy, n
-  -> make_sparseLD()  -> Glist$sparseLD
+  -> make_summary_stats()     -> wy, ww, yy, n
+  -> make_sparse_ld()  -> Glist$sparseLD
   -> stblr_csr(stats = stats, Glist = Glist)
 ```
 

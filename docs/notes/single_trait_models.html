@@ -210,7 +210,7 @@ window.Quarto = {
   <li><a href="#practical-model-choice-summary" id="toc-practical-model-choice-summary" class="nav-link" data-scroll-target="#practical-model-choice-summary">Practical Model-Choice Summary</a></li>
   <li><a href="#related-notes-and-sources" id="toc-related-notes-and-sources" class="nav-link" data-scroll-target="#related-notes-and-sources">Related Notes and Sources</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="single_trait_models.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -425,7 +425,7 @@ b_j\mid \mathrm{component}_j=m,v_b,S
 </section>
 <section id="summary-statistics-and-csr-ld-stblr_csr" class="level3">
 <h3 class="anchored" data-anchor-id="summary-statistics-and-csr-ld-stblr_csr">Summary Statistics and CSR LD: <code>stblr_csr()</code></h3>
-<p><code>stblr_csr()</code> fits the same broad global-prior ST-BLR family using <code>make_stats()</code> output and disk-backed sparse LD metadata stored in <code>Glist$sparseLD</code> by <code>make_sparseLD()</code>:</p>
+<p><code>stblr_csr()</code> fits the same broad global-prior ST-BLR family using <code>make_summary_stats()</code> output and disk-backed sparse LD metadata stored in <code>Glist$sparseLD</code> by <code>make_sparse_ld()</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
@@ -1436,8 +1436,8 @@ b_i
 <span id="cb5-296"><a href="#cb5-296" aria-hidden="true" tabindex="-1"></a><span class="fu">### Summary Statistics and CSR LD: `stblr_csr()`</span></span>
 <span id="cb5-297"><a href="#cb5-297" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-298"><a href="#cb5-298" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> fits the same broad global-prior ST-BLR family using</span>
-<span id="cb5-299"><a href="#cb5-299" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> output and disk-backed sparse LD metadata stored in</span>
-<span id="cb5-300"><a href="#cb5-300" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span> by <span class="in">`make_sparseLD()`</span>:</span>
+<span id="cb5-299"><a href="#cb5-299" aria-hidden="true" tabindex="-1"></a><span class="in">`make_summary_stats()`</span> output and disk-backed sparse LD metadata stored in</span>
+<span id="cb5-300"><a href="#cb5-300" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span> by <span class="in">`make_sparse_ld()`</span>:</span>
 <span id="cb5-301"><a href="#cb5-301" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-302"><a href="#cb5-302" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
 <span id="cb5-303"><a href="#cb5-303" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>

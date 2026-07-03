@@ -135,14 +135,14 @@ check_stblr_convergence <- function(
 #'
 #' Plots posterior means or medians with HPD intervals, equal-tail intervals,
 #' or both interval types from the data frame returned by
-#' [summarise_stblr_posterior()]. The `parameters` argument uses internal
+#' [summarise_posterior()]. The `parameters` argument uses internal
 #' parameter names such as `vg`, `ve`, `h2`, `pi`, `vb`, and `varch`, while plot
 #' labels use the `label` column or built-in plotmath labels.
 #'
 #' The function uses base R graphics.
 #'
 #' @param post Posterior summary data frame from
-#'   [summarise_stblr_posterior()].
+#'   [summarise_posterior()].
 #' @param parameters Optional character vector of internal parameter names to
 #'   plot.
 #' @param traits Optional character vector of traits to plot.
@@ -182,11 +182,11 @@ check_stblr_convergence <- function(
 #'   max = c(0.66, 0.46, 0.66, 0.03, 0.13)
 #' )
 #' if (interactive()) {
-#'   plot_stblr_posterior(fake_post, parameters = c("vg", "ve", "h2"))
+#'   plot_posterior(fake_post, parameters = c("vg", "ve", "h2"))
 #' }
 #'
 #' @export
-plot_stblr_posterior <- function(
+plot_posterior <- function(
     post,
     parameters = NULL,
     traits = NULL,
@@ -503,11 +503,11 @@ plot_stblr_posterior <- function(
 #'   vld = matrix(rnorm(40, mean = 0.2, sd = 0.01), ncol = 1,
 #'                dimnames = list(NULL, "trait1"))
 #' )
-#' post <- summarise_stblr_posterior(fake_fit)
+#' post <- summarise_posterior(fake_fit)
 #' post[post$parameter %in% c("vg", "ve", "h2", "pi", "varch"), ]
 #'
 #' @export
-summarise_stblr_posterior <- function(
+summarise_posterior <- function(
     fit,
     nburn = NULL,
     traces = c("vbs", "vgs", "ves", "pis", "vle", "vld"),
