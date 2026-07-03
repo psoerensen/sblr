@@ -487,12 +487,12 @@ yy_t=y_t^\top y_t.
 + same selected individuals
 + same allele frequencies and scaling
     -&gt; compatible wy, ww, yy, and sparse LD</code></pre>
-<p><code>sparseLD_stream_CSR()</code> constructs retained marker correlations from BED data and writes them under <code>ld_prefix</code>. It must receive the same marker ordering, sample rows, allele frequencies, and scaling convention used to create the sufficient statistics.</p>
+<p><code>make_sparseLD()</code> constructs retained marker correlations from BED data, writes them under a sparse-LD prefix, and records the metadata in <code>Glist$sparseLD</code>. It must use the same marker ordering, sample rows, allele frequencies, and scaling convention used to create the sufficient statistics. The lower-level writer behind this workflow is <code>sparseLD_stream_CSR()</code>.</p>
 <p>The central workflow handoff is:</p>
 <pre class="text"><code>BED + phenotype
-  -&gt; bed_xtx_xty()        -&gt; wy, ww, yy, n
-  -&gt; sparseLD_stream_CSR() -&gt; ld_prefix
-  -&gt; stblr_csr()</code></pre>
+  -&gt; make_stats()     -&gt; wy, ww, yy, n
+  -&gt; make_sparseLD()  -&gt; Glist$sparseLD
+  -&gt; stblr_csr(stats = stats, Glist = Glist)</code></pre>
 <p>The complete operational sequence is documented in <a href="sparse_ld_and_bed_workflows.html">Sparse-LD and BED workflows</a>.</p>
 </section>
 <section id="how-stblr_csr-consumes-the-statistics" class="level2">
@@ -503,7 +503,7 @@ yy_t=y_t^\top y_t.
 <li><code>stats$ww</code>, one positive marker-diagonal vector per trait;</li>
 <li><code>stats$yy</code>, one phenotype sum of squares per trait;</li>
 <li><span class="math inline">\(n\)</span>, supplied explicitly or taken from <code>stats$n</code>;</li>
-<li><code>ld_prefix</code>, identifying the compatible disk-backed sparse LD; and</li>
+<li><code>Glist$sparseLD$prefix</code>, or an explicit <code>ld_prefix</code>, identifying the compatible disk-backed sparse LD; and</li>
 <li>prior, variance-update, scheduling, and MCMC controls.</li>
 </ul>
 <p>The wrapper uses <code>yy/(n-1)</code> to initialize phenotype-variance-related prior scales. The native sampler validates marker and trait dimensions, reconstructs retained off-diagonal cross-products from LD correlations and <code>ww</code>, initializes or rebuilds</p>
@@ -1565,374 +1565,376 @@ c^{\mathrm{weighted}}_{it}
 <span id="cb4-379"><a href="#cb4-379" aria-hidden="true" tabindex="-1"></a><span class="in">    -&gt; compatible wy, ww, yy, and sparse LD</span></span>
 <span id="cb4-380"><a href="#cb4-380" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb4-381"><a href="#cb4-381" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-382"><a href="#cb4-382" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_stream_CSR()`</span> constructs retained marker correlations from BED data</span>
-<span id="cb4-383"><a href="#cb4-383" aria-hidden="true" tabindex="-1"></a>and writes them under <span class="in">`ld_prefix`</span>. It must receive the same marker ordering,</span>
-<span id="cb4-384"><a href="#cb4-384" aria-hidden="true" tabindex="-1"></a>sample rows, allele frequencies, and scaling convention used to create the</span>
-<span id="cb4-385"><a href="#cb4-385" aria-hidden="true" tabindex="-1"></a>sufficient statistics.</span>
-<span id="cb4-386"><a href="#cb4-386" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-387"><a href="#cb4-387" aria-hidden="true" tabindex="-1"></a>The central workflow handoff is:</span>
-<span id="cb4-388"><a href="#cb4-388" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-389"><a href="#cb4-389" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
-<span id="cb4-390"><a href="#cb4-390" aria-hidden="true" tabindex="-1"></a><span class="in">BED + phenotype</span></span>
-<span id="cb4-391"><a href="#cb4-391" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; bed_xtx_xty()        -&gt; wy, ww, yy, n</span></span>
-<span id="cb4-392"><a href="#cb4-392" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; sparseLD_stream_CSR() -&gt; ld_prefix</span></span>
-<span id="cb4-393"><a href="#cb4-393" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; stblr_csr()</span></span>
-<span id="cb4-394"><a href="#cb4-394" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb4-395"><a href="#cb4-395" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-396"><a href="#cb4-396" aria-hidden="true" tabindex="-1"></a>The complete operational sequence is documented in</span>
-<span id="cb4-397"><a href="#cb4-397" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span>.</span>
-<span id="cb4-398"><a href="#cb4-398" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-399"><a href="#cb4-399" aria-hidden="true" tabindex="-1"></a><span class="fu">## How `stblr_csr()` Consumes the Statistics</span></span>
-<span id="cb4-400"><a href="#cb4-400" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-401"><a href="#cb4-401" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> accepts:</span>
-<span id="cb4-402"><a href="#cb4-402" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-403"><a href="#cb4-403" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$wy`</span>, one marker vector per trait;</span>
-<span id="cb4-404"><a href="#cb4-404" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$ww`</span>, one positive marker-diagonal vector per trait;</span>
-<span id="cb4-405"><a href="#cb4-405" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>, one phenotype sum of squares per trait;</span>
-<span id="cb4-406"><a href="#cb4-406" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$n$, supplied explicitly or taken from <span class="in">`stats$n`</span>;</span>
-<span id="cb4-407"><a href="#cb4-407" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`ld_prefix`</span>, identifying the compatible disk-backed sparse LD; and</span>
-<span id="cb4-408"><a href="#cb4-408" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>prior, variance-update, scheduling, and MCMC controls.</span>
-<span id="cb4-409"><a href="#cb4-409" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-410"><a href="#cb4-410" aria-hidden="true" tabindex="-1"></a>The wrapper uses <span class="in">`yy/(n-1)`</span> to initialize phenotype-variance-related prior</span>
-<span id="cb4-411"><a href="#cb4-411" aria-hidden="true" tabindex="-1"></a>scales. The native sampler validates marker and trait dimensions, reconstructs</span>
-<span id="cb4-412"><a href="#cb4-412" aria-hidden="true" tabindex="-1"></a>retained off-diagonal cross-products from LD correlations and <span class="in">`ww`</span>, initializes</span>
-<span id="cb4-413"><a href="#cb4-413" aria-hidden="true" tabindex="-1"></a>or rebuilds</span>
-<span id="cb4-414"><a href="#cb4-414" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-415"><a href="#cb4-415" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-416"><a href="#cb4-416" aria-hidden="true" tabindex="-1"></a>r=wy-\widetilde{XX}b,</span>
+<span id="cb4-382"><a href="#cb4-382" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> constructs retained marker correlations from BED data,</span>
+<span id="cb4-383"><a href="#cb4-383" aria-hidden="true" tabindex="-1"></a>writes them under a sparse-LD prefix, and records the metadata in</span>
+<span id="cb4-384"><a href="#cb4-384" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD`</span>. It must use the same marker ordering, sample rows, allele</span>
+<span id="cb4-385"><a href="#cb4-385" aria-hidden="true" tabindex="-1"></a>frequencies, and scaling convention used to create the sufficient statistics.</span>
+<span id="cb4-386"><a href="#cb4-386" aria-hidden="true" tabindex="-1"></a>The lower-level writer behind this workflow is <span class="in">`sparseLD_stream_CSR()`</span>.</span>
+<span id="cb4-387"><a href="#cb4-387" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-388"><a href="#cb4-388" aria-hidden="true" tabindex="-1"></a>The central workflow handoff is:</span>
+<span id="cb4-389"><a href="#cb4-389" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-390"><a href="#cb4-390" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb4-391"><a href="#cb4-391" aria-hidden="true" tabindex="-1"></a><span class="in">BED + phenotype</span></span>
+<span id="cb4-392"><a href="#cb4-392" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; make_stats()     -&gt; wy, ww, yy, n</span></span>
+<span id="cb4-393"><a href="#cb4-393" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; make_sparseLD()  -&gt; Glist$sparseLD</span></span>
+<span id="cb4-394"><a href="#cb4-394" aria-hidden="true" tabindex="-1"></a><span class="in">  -&gt; stblr_csr(stats = stats, Glist = Glist)</span></span>
+<span id="cb4-395"><a href="#cb4-395" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-396"><a href="#cb4-396" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-397"><a href="#cb4-397" aria-hidden="true" tabindex="-1"></a>The complete operational sequence is documented in</span>
+<span id="cb4-398"><a href="#cb4-398" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span>.</span>
+<span id="cb4-399"><a href="#cb4-399" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-400"><a href="#cb4-400" aria-hidden="true" tabindex="-1"></a><span class="fu">## How `stblr_csr()` Consumes the Statistics</span></span>
+<span id="cb4-401"><a href="#cb4-401" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-402"><a href="#cb4-402" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_csr()`</span> accepts:</span>
+<span id="cb4-403"><a href="#cb4-403" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-404"><a href="#cb4-404" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$wy`</span>, one marker vector per trait;</span>
+<span id="cb4-405"><a href="#cb4-405" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$ww`</span>, one positive marker-diagonal vector per trait;</span>
+<span id="cb4-406"><a href="#cb4-406" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stats$yy`</span>, one phenotype sum of squares per trait;</span>
+<span id="cb4-407"><a href="#cb4-407" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$n$, supplied explicitly or taken from <span class="in">`stats$n`</span>;</span>
+<span id="cb4-408"><a href="#cb4-408" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$sparseLD$prefix`</span>, or an explicit <span class="in">`ld_prefix`</span>, identifying the</span>
+<span id="cb4-409"><a href="#cb4-409" aria-hidden="true" tabindex="-1"></a>  compatible disk-backed sparse LD; and</span>
+<span id="cb4-410"><a href="#cb4-410" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>prior, variance-update, scheduling, and MCMC controls.</span>
+<span id="cb4-411"><a href="#cb4-411" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-412"><a href="#cb4-412" aria-hidden="true" tabindex="-1"></a>The wrapper uses <span class="in">`yy/(n-1)`</span> to initialize phenotype-variance-related prior</span>
+<span id="cb4-413"><a href="#cb4-413" aria-hidden="true" tabindex="-1"></a>scales. The native sampler validates marker and trait dimensions, reconstructs</span>
+<span id="cb4-414"><a href="#cb4-414" aria-hidden="true" tabindex="-1"></a>retained off-diagonal cross-products from LD correlations and <span class="in">`ww`</span>, initializes</span>
+<span id="cb4-415"><a href="#cb4-415" aria-hidden="true" tabindex="-1"></a>or rebuilds</span>
+<span id="cb4-416"><a href="#cb4-416" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-417"><a href="#cb4-417" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-418"><a href="#cb4-418" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-419"><a href="#cb4-419" aria-hidden="true" tabindex="-1"></a>and performs marker and variance updates from the resulting summary-statistic</span>
-<span id="cb4-420"><a href="#cb4-420" aria-hidden="true" tabindex="-1"></a>state.</span>
-<span id="cb4-421"><a href="#cb4-421" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-422"><a href="#cb4-422" aria-hidden="true" tabindex="-1"></a>For the current shared-LD single-trait-per-trait CSR path, <span class="in">`ww`</span> and $n$ must</span>
-<span id="cb4-423"><a href="#cb4-423" aria-hidden="true" tabindex="-1"></a>agree across traits. This reflects one common genotype sample and scaling</span>
-<span id="cb4-424"><a href="#cb4-424" aria-hidden="true" tabindex="-1"></a>scheme. Supplying trait-specific summary statistics from materially different</span>
-<span id="cb4-425"><a href="#cb4-425" aria-hidden="true" tabindex="-1"></a>samples requires a model and LD contract that explicitly supports those</span>
-<span id="cb4-426"><a href="#cb4-426" aria-hidden="true" tabindex="-1"></a>differences.</span>
-<span id="cb4-427"><a href="#cb4-427" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-428"><a href="#cb4-428" aria-hidden="true" tabindex="-1"></a><span class="fu">## Multi-Trait Summary-Statistic Notation</span></span>
+<span id="cb4-418"><a href="#cb4-418" aria-hidden="true" tabindex="-1"></a>r=wy-\widetilde{XX}b,</span>
+<span id="cb4-419"><a href="#cb4-419" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-420"><a href="#cb4-420" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-421"><a href="#cb4-421" aria-hidden="true" tabindex="-1"></a>and performs marker and variance updates from the resulting summary-statistic</span>
+<span id="cb4-422"><a href="#cb4-422" aria-hidden="true" tabindex="-1"></a>state.</span>
+<span id="cb4-423"><a href="#cb4-423" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-424"><a href="#cb4-424" aria-hidden="true" tabindex="-1"></a>For the current shared-LD single-trait-per-trait CSR path, <span class="in">`ww`</span> and $n$ must</span>
+<span id="cb4-425"><a href="#cb4-425" aria-hidden="true" tabindex="-1"></a>agree across traits. This reflects one common genotype sample and scaling</span>
+<span id="cb4-426"><a href="#cb4-426" aria-hidden="true" tabindex="-1"></a>scheme. Supplying trait-specific summary statistics from materially different</span>
+<span id="cb4-427"><a href="#cb4-427" aria-hidden="true" tabindex="-1"></a>samples requires a model and LD contract that explicitly supports those</span>
+<span id="cb4-428"><a href="#cb4-428" aria-hidden="true" tabindex="-1"></a>differences.</span>
 <span id="cb4-429"><a href="#cb4-429" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-430"><a href="#cb4-430" aria-hidden="true" tabindex="-1"></a>For $n_t$ traits, collect phenotypes in</span>
+<span id="cb4-430"><a href="#cb4-430" aria-hidden="true" tabindex="-1"></a><span class="fu">## Multi-Trait Summary-Statistic Notation</span></span>
 <span id="cb4-431"><a href="#cb4-431" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-432"><a href="#cb4-432" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-433"><a href="#cb4-433" aria-hidden="true" tabindex="-1"></a>Y=</span>
-<span id="cb4-434"><a href="#cb4-434" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
-<span id="cb4-435"><a href="#cb4-435" aria-hidden="true" tabindex="-1"></a>y_1 &amp; \cdots &amp; y_{n_t}</span>
-<span id="cb4-436"><a href="#cb4-436" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}</span>
-<span id="cb4-437"><a href="#cb4-437" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-438"><a href="#cb4-438" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-439"><a href="#cb4-439" aria-hidden="true" tabindex="-1"></a>and marker effects in an $m\times n_t$ matrix</span>
+<span id="cb4-432"><a href="#cb4-432" aria-hidden="true" tabindex="-1"></a>For $n_t$ traits, collect phenotypes in</span>
+<span id="cb4-433"><a href="#cb4-433" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-434"><a href="#cb4-434" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-435"><a href="#cb4-435" aria-hidden="true" tabindex="-1"></a>Y=</span>
+<span id="cb4-436"><a href="#cb4-436" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
+<span id="cb4-437"><a href="#cb4-437" aria-hidden="true" tabindex="-1"></a>y_1 &amp; \cdots &amp; y_{n_t}</span>
+<span id="cb4-438"><a href="#cb4-438" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}</span>
+<span id="cb4-439"><a href="#cb4-439" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-440"><a href="#cb4-440" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-441"><a href="#cb4-441" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-442"><a href="#cb4-442" aria-hidden="true" tabindex="-1"></a>B=</span>
-<span id="cb4-443"><a href="#cb4-443" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
-<span id="cb4-444"><a href="#cb4-444" aria-hidden="true" tabindex="-1"></a>b_1 &amp; \cdots &amp; b_{n_t}</span>
-<span id="cb4-445"><a href="#cb4-445" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}.</span>
-<span id="cb4-446"><a href="#cb4-446" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-447"><a href="#cb4-447" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-448"><a href="#cb4-448" aria-hidden="true" tabindex="-1"></a>The individual-level model is</span>
+<span id="cb4-441"><a href="#cb4-441" aria-hidden="true" tabindex="-1"></a>and marker effects in an $m\times n_t$ matrix</span>
+<span id="cb4-442"><a href="#cb4-442" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-443"><a href="#cb4-443" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-444"><a href="#cb4-444" aria-hidden="true" tabindex="-1"></a>B=</span>
+<span id="cb4-445"><a href="#cb4-445" aria-hidden="true" tabindex="-1"></a>\begin{bmatrix}</span>
+<span id="cb4-446"><a href="#cb4-446" aria-hidden="true" tabindex="-1"></a>b_1 &amp; \cdots &amp; b_{n_t}</span>
+<span id="cb4-447"><a href="#cb4-447" aria-hidden="true" tabindex="-1"></a>\end{bmatrix}.</span>
+<span id="cb4-448"><a href="#cb4-448" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-449"><a href="#cb4-449" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-450"><a href="#cb4-450" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-451"><a href="#cb4-451" aria-hidden="true" tabindex="-1"></a>Y=XB+E_Y,</span>
+<span id="cb4-450"><a href="#cb4-450" aria-hidden="true" tabindex="-1"></a>The individual-level model is</span>
+<span id="cb4-451"><a href="#cb4-451" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-452"><a href="#cb4-452" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-453"><a href="#cb4-453" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-454"><a href="#cb4-454" aria-hidden="true" tabindex="-1"></a>where the rows of $E_Y$ may have residual covariance matrix</span>
-<span id="cb4-455"><a href="#cb4-455" aria-hidden="true" tabindex="-1"></a>$\Sigma_e$. The central multi-trait cross-products are</span>
-<span id="cb4-456"><a href="#cb4-456" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-457"><a href="#cb4-457" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-458"><a href="#cb4-458" aria-hidden="true" tabindex="-1"></a>WY=X^\top Y</span>
+<span id="cb4-453"><a href="#cb4-453" aria-hidden="true" tabindex="-1"></a>Y=XB+E_Y,</span>
+<span id="cb4-454"><a href="#cb4-454" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-455"><a href="#cb4-455" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-456"><a href="#cb4-456" aria-hidden="true" tabindex="-1"></a>where the rows of $E_Y$ may have residual covariance matrix</span>
+<span id="cb4-457"><a href="#cb4-457" aria-hidden="true" tabindex="-1"></a>$\Sigma_e$. The central multi-trait cross-products are</span>
+<span id="cb4-458"><a href="#cb4-458" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-459"><a href="#cb4-459" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-460"><a href="#cb4-460" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-461"><a href="#cb4-461" aria-hidden="true" tabindex="-1"></a>and</span>
+<span id="cb4-460"><a href="#cb4-460" aria-hidden="true" tabindex="-1"></a>WY=X^\top Y</span>
+<span id="cb4-461"><a href="#cb4-461" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-462"><a href="#cb4-462" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-463"><a href="#cb4-463" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-464"><a href="#cb4-464" aria-hidden="true" tabindex="-1"></a>SSY=Y^\top Y.</span>
+<span id="cb4-463"><a href="#cb4-463" aria-hidden="true" tabindex="-1"></a>and</span>
+<span id="cb4-464"><a href="#cb4-464" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-465"><a href="#cb4-465" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-466"><a href="#cb4-466" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-467"><a href="#cb4-467" aria-hidden="true" tabindex="-1"></a>Column $t$ of $WY$ is $wy_t=X^\top y_t$. Entry</span>
-<span id="cb4-468"><a href="#cb4-468" aria-hidden="true" tabindex="-1"></a>$SSY_{ts}=y_t^\top y_s$ is the observed cross-trait phenotype product among</span>
-<span id="cb4-469"><a href="#cb4-469" aria-hidden="true" tabindex="-1"></a>individuals shared by traits $t$ and $s$.</span>
-<span id="cb4-470"><a href="#cb4-470" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-471"><a href="#cb4-471" aria-hidden="true" tabindex="-1"></a>For a common $X$, define the marker-score matrix</span>
+<span id="cb4-466"><a href="#cb4-466" aria-hidden="true" tabindex="-1"></a>SSY=Y^\top Y.</span>
+<span id="cb4-467"><a href="#cb4-467" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-468"><a href="#cb4-468" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-469"><a href="#cb4-469" aria-hidden="true" tabindex="-1"></a>Column $t$ of $WY$ is $wy_t=X^\top y_t$. Entry</span>
+<span id="cb4-470"><a href="#cb4-470" aria-hidden="true" tabindex="-1"></a>$SSY_{ts}=y_t^\top y_s$ is the observed cross-trait phenotype product among</span>
+<span id="cb4-471"><a href="#cb4-471" aria-hidden="true" tabindex="-1"></a>individuals shared by traits $t$ and $s$.</span>
 <span id="cb4-472"><a href="#cb4-472" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-473"><a href="#cb4-473" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-474"><a href="#cb4-474" aria-hidden="true" tabindex="-1"></a>R=X^\top(Y-XB)=WY-XXB.</span>
+<span id="cb4-473"><a href="#cb4-473" aria-hidden="true" tabindex="-1"></a>For a common $X$, define the marker-score matrix</span>
+<span id="cb4-474"><a href="#cb4-474" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-475"><a href="#cb4-475" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-476"><a href="#cb4-476" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-477"><a href="#cb4-477" aria-hidden="true" tabindex="-1"></a>Trait by trait,</span>
+<span id="cb4-476"><a href="#cb4-476" aria-hidden="true" tabindex="-1"></a>R=X^\top(Y-XB)=WY-XXB.</span>
+<span id="cb4-477"><a href="#cb4-477" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-478"><a href="#cb4-478" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-479"><a href="#cb4-479" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-480"><a href="#cb4-480" aria-hidden="true" tabindex="-1"></a>XXb_t=wy_t-r_t.</span>
+<span id="cb4-479"><a href="#cb4-479" aria-hidden="true" tabindex="-1"></a>Trait by trait,</span>
+<span id="cb4-480"><a href="#cb4-480" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-481"><a href="#cb4-481" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-482"><a href="#cb4-482" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-483"><a href="#cb4-483" aria-hidden="true" tabindex="-1"></a>This permits a symmetric genetic covariance estimate:</span>
+<span id="cb4-482"><a href="#cb4-482" aria-hidden="true" tabindex="-1"></a>XXb_t=wy_t-r_t.</span>
+<span id="cb4-483"><a href="#cb4-483" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-484"><a href="#cb4-484" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-485"><a href="#cb4-485" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-486"><a href="#cb4-486" aria-hidden="true" tabindex="-1"></a>\widehat G_{ts}</span>
-<span id="cb4-487"><a href="#cb4-487" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-488"><a href="#cb4-488" aria-hidden="true" tabindex="-1"></a>\frac{1}{2\sqrt{n_tn_s}}</span>
-<span id="cb4-489"><a href="#cb4-489" aria-hidden="true" tabindex="-1"></a>\left[</span>
-<span id="cb4-490"><a href="#cb4-490" aria-hidden="true" tabindex="-1"></a>b_t^\top(wy_s-r_s)</span>
-<span id="cb4-491"><a href="#cb4-491" aria-hidden="true" tabindex="-1"></a>+</span>
-<span id="cb4-492"><a href="#cb4-492" aria-hidden="true" tabindex="-1"></a>b_s^\top(wy_t-r_t)</span>
-<span id="cb4-493"><a href="#cb4-493" aria-hidden="true" tabindex="-1"></a>\right].</span>
-<span id="cb4-494"><a href="#cb4-494" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-495"><a href="#cb4-495" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-496"><a href="#cb4-496" aria-hidden="true" tabindex="-1"></a>When $t=s$, this reduces to the single-trait genetic-variance expression.</span>
-<span id="cb4-497"><a href="#cb4-497" aria-hidden="true" tabindex="-1"></a>When all traits use the same $n$, the denominator becomes $n$.</span>
-<span id="cb4-498"><a href="#cb4-498" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-499"><a href="#cb4-499" aria-hidden="true" tabindex="-1"></a><span class="fu">## Cross-Trait Phenotype Products and Sample Overlap</span></span>
+<span id="cb4-485"><a href="#cb4-485" aria-hidden="true" tabindex="-1"></a>This permits a symmetric genetic covariance estimate:</span>
+<span id="cb4-486"><a href="#cb4-486" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-487"><a href="#cb4-487" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-488"><a href="#cb4-488" aria-hidden="true" tabindex="-1"></a>\widehat G_{ts}</span>
+<span id="cb4-489"><a href="#cb4-489" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-490"><a href="#cb4-490" aria-hidden="true" tabindex="-1"></a>\frac{1}{2\sqrt{n_tn_s}}</span>
+<span id="cb4-491"><a href="#cb4-491" aria-hidden="true" tabindex="-1"></a>\left[</span>
+<span id="cb4-492"><a href="#cb4-492" aria-hidden="true" tabindex="-1"></a>b_t^\top(wy_s-r_s)</span>
+<span id="cb4-493"><a href="#cb4-493" aria-hidden="true" tabindex="-1"></a>+</span>
+<span id="cb4-494"><a href="#cb4-494" aria-hidden="true" tabindex="-1"></a>b_s^\top(wy_t-r_t)</span>
+<span id="cb4-495"><a href="#cb4-495" aria-hidden="true" tabindex="-1"></a>\right].</span>
+<span id="cb4-496"><a href="#cb4-496" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-497"><a href="#cb4-497" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-498"><a href="#cb4-498" aria-hidden="true" tabindex="-1"></a>When $t=s$, this reduces to the single-trait genetic-variance expression.</span>
+<span id="cb4-499"><a href="#cb4-499" aria-hidden="true" tabindex="-1"></a>When all traits use the same $n$, the denominator becomes $n$.</span>
 <span id="cb4-500"><a href="#cb4-500" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-501"><a href="#cb4-501" aria-hidden="true" tabindex="-1"></a>The diagonal of <span class="in">`SSY`</span> contains the single-trait values:</span>
+<span id="cb4-501"><a href="#cb4-501" aria-hidden="true" tabindex="-1"></a><span class="fu">## Cross-Trait Phenotype Products and Sample Overlap</span></span>
 <span id="cb4-502"><a href="#cb4-502" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-503"><a href="#cb4-503" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-504"><a href="#cb4-504" aria-hidden="true" tabindex="-1"></a>SSY_{tt}=yy_t.</span>
+<span id="cb4-503"><a href="#cb4-503" aria-hidden="true" tabindex="-1"></a>The diagonal of <span class="in">`SSY`</span> contains the single-trait values:</span>
+<span id="cb4-504"><a href="#cb4-504" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-505"><a href="#cb4-505" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-506"><a href="#cb4-506" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-507"><a href="#cb4-507" aria-hidden="true" tabindex="-1"></a>The off-diagonals contain information not recoverable from separate <span class="in">`yy`</span></span>
-<span id="cb4-508"><a href="#cb4-508" aria-hidden="true" tabindex="-1"></a>values:</span>
-<span id="cb4-509"><a href="#cb4-509" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-510"><a href="#cb4-510" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-511"><a href="#cb4-511" aria-hidden="true" tabindex="-1"></a>SSY_{ts}</span>
-<span id="cb4-512"><a href="#cb4-512" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-513"><a href="#cb4-513" aria-hidden="true" tabindex="-1"></a>\sum_{i\in\mathcal I_{ts}}y_{it}y_{is},</span>
-<span id="cb4-514"><a href="#cb4-514" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-515"><a href="#cb4-515" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-516"><a href="#cb4-516" aria-hidden="true" tabindex="-1"></a>where $\mathcal I_{ts}$ is the set of individuals observed for both traits.</span>
-<span id="cb4-517"><a href="#cb4-517" aria-hidden="true" tabindex="-1"></a>These terms are required for a full residual covariance update because</span>
-<span id="cb4-518"><a href="#cb4-518" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-519"><a href="#cb4-519" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-520"><a href="#cb4-520" aria-hidden="true" tabindex="-1"></a>(Y-XB)^\top(Y-XB)</span>
-<span id="cb4-521"><a href="#cb4-521" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-522"><a href="#cb4-522" aria-hidden="true" tabindex="-1"></a>SSY</span>
-<span id="cb4-523"><a href="#cb4-523" aria-hidden="true" tabindex="-1"></a>-Y^\top XB</span>
-<span id="cb4-524"><a href="#cb4-524" aria-hidden="true" tabindex="-1"></a>-B^\top X^\top Y</span>
-<span id="cb4-525"><a href="#cb4-525" aria-hidden="true" tabindex="-1"></a>+B^\top XXB.</span>
-<span id="cb4-526"><a href="#cb4-526" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-527"><a href="#cb4-527" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-528"><a href="#cb4-528" aria-hidden="true" tabindex="-1"></a>With individual-level data, <span class="in">`SSY`</span> and overlap counts are directly observable.</span>
-<span id="cb4-529"><a href="#cb4-529" aria-hidden="true" tabindex="-1"></a>With summary statistics, they must be supplied or reconstructed. If</span>
-<span id="cb4-530"><a href="#cb4-530" aria-hidden="true" tabindex="-1"></a>$N_{ts}=|\mathcal I_{ts}|$ and the cross-trait phenotype covariance is</span>
-<span id="cb4-531"><a href="#cb4-531" aria-hidden="true" tabindex="-1"></a>$\sigma_{ts}$, then under random missingness and covariance homogeneity,</span>
-<span id="cb4-532"><a href="#cb4-532" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-533"><a href="#cb4-533" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-534"><a href="#cb4-534" aria-hidden="true" tabindex="-1"></a>E(SSY_{ts})=N_{ts}\sigma_{ts}.</span>
+<span id="cb4-506"><a href="#cb4-506" aria-hidden="true" tabindex="-1"></a>SSY_{tt}=yy_t.</span>
+<span id="cb4-507"><a href="#cb4-507" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-508"><a href="#cb4-508" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-509"><a href="#cb4-509" aria-hidden="true" tabindex="-1"></a>The off-diagonals contain information not recoverable from separate <span class="in">`yy`</span></span>
+<span id="cb4-510"><a href="#cb4-510" aria-hidden="true" tabindex="-1"></a>values:</span>
+<span id="cb4-511"><a href="#cb4-511" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-512"><a href="#cb4-512" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-513"><a href="#cb4-513" aria-hidden="true" tabindex="-1"></a>SSY_{ts}</span>
+<span id="cb4-514"><a href="#cb4-514" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-515"><a href="#cb4-515" aria-hidden="true" tabindex="-1"></a>\sum_{i\in\mathcal I_{ts}}y_{it}y_{is},</span>
+<span id="cb4-516"><a href="#cb4-516" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-517"><a href="#cb4-517" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-518"><a href="#cb4-518" aria-hidden="true" tabindex="-1"></a>where $\mathcal I_{ts}$ is the set of individuals observed for both traits.</span>
+<span id="cb4-519"><a href="#cb4-519" aria-hidden="true" tabindex="-1"></a>These terms are required for a full residual covariance update because</span>
+<span id="cb4-520"><a href="#cb4-520" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-521"><a href="#cb4-521" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-522"><a href="#cb4-522" aria-hidden="true" tabindex="-1"></a>(Y-XB)^\top(Y-XB)</span>
+<span id="cb4-523"><a href="#cb4-523" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-524"><a href="#cb4-524" aria-hidden="true" tabindex="-1"></a>SSY</span>
+<span id="cb4-525"><a href="#cb4-525" aria-hidden="true" tabindex="-1"></a>-Y^\top XB</span>
+<span id="cb4-526"><a href="#cb4-526" aria-hidden="true" tabindex="-1"></a>-B^\top X^\top Y</span>
+<span id="cb4-527"><a href="#cb4-527" aria-hidden="true" tabindex="-1"></a>+B^\top XXB.</span>
+<span id="cb4-528"><a href="#cb4-528" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-529"><a href="#cb4-529" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-530"><a href="#cb4-530" aria-hidden="true" tabindex="-1"></a>With individual-level data, <span class="in">`SSY`</span> and overlap counts are directly observable.</span>
+<span id="cb4-531"><a href="#cb4-531" aria-hidden="true" tabindex="-1"></a>With summary statistics, they must be supplied or reconstructed. If</span>
+<span id="cb4-532"><a href="#cb4-532" aria-hidden="true" tabindex="-1"></a>$N_{ts}=|\mathcal I_{ts}|$ and the cross-trait phenotype covariance is</span>
+<span id="cb4-533"><a href="#cb4-533" aria-hidden="true" tabindex="-1"></a>$\sigma_{ts}$, then under random missingness and covariance homogeneity,</span>
+<span id="cb4-534"><a href="#cb4-534" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-535"><a href="#cb4-535" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-536"><a href="#cb4-536" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-537"><a href="#cb4-537" aria-hidden="true" tabindex="-1"></a>Given phenotype correlations $R_y$ and approximate trait variances</span>
+<span id="cb4-536"><a href="#cb4-536" aria-hidden="true" tabindex="-1"></a>E(SSY_{ts})=N_{ts}\sigma_{ts}.</span>
+<span id="cb4-537"><a href="#cb4-537" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-538"><a href="#cb4-538" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-539"><a href="#cb4-539" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-540"><a href="#cb4-540" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_t)</span>
-<span id="cb4-541"><a href="#cb4-541" aria-hidden="true" tabindex="-1"></a>\approx</span>
-<span id="cb4-542"><a href="#cb4-542" aria-hidden="true" tabindex="-1"></a>\frac{yy_t}{n_t},</span>
-<span id="cb4-543"><a href="#cb4-543" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-544"><a href="#cb4-544" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-545"><a href="#cb4-545" aria-hidden="true" tabindex="-1"></a>one can form</span>
+<span id="cb4-539"><a href="#cb4-539" aria-hidden="true" tabindex="-1"></a>Given phenotype correlations $R_y$ and approximate trait variances</span>
+<span id="cb4-540"><a href="#cb4-540" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-541"><a href="#cb4-541" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-542"><a href="#cb4-542" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_t)</span>
+<span id="cb4-543"><a href="#cb4-543" aria-hidden="true" tabindex="-1"></a>\approx</span>
+<span id="cb4-544"><a href="#cb4-544" aria-hidden="true" tabindex="-1"></a>\frac{yy_t}{n_t},</span>
+<span id="cb4-545"><a href="#cb4-545" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-546"><a href="#cb4-546" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-547"><a href="#cb4-547" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-548"><a href="#cb4-548" aria-hidden="true" tabindex="-1"></a>\widehat{\sigma}_{ts}</span>
-<span id="cb4-549"><a href="#cb4-549" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-550"><a href="#cb4-550" aria-hidden="true" tabindex="-1"></a>R_{y,ts}</span>
-<span id="cb4-551"><a href="#cb4-551" aria-hidden="true" tabindex="-1"></a>\sqrt{</span>
-<span id="cb4-552"><a href="#cb4-552" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_t)</span>
-<span id="cb4-553"><a href="#cb4-553" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_s)</span>
-<span id="cb4-554"><a href="#cb4-554" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-555"><a href="#cb4-555" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-556"><a href="#cb4-556" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-557"><a href="#cb4-557" aria-hidden="true" tabindex="-1"></a>and reconstruct</span>
+<span id="cb4-547"><a href="#cb4-547" aria-hidden="true" tabindex="-1"></a>one can form</span>
+<span id="cb4-548"><a href="#cb4-548" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-549"><a href="#cb4-549" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-550"><a href="#cb4-550" aria-hidden="true" tabindex="-1"></a>\widehat{\sigma}_{ts}</span>
+<span id="cb4-551"><a href="#cb4-551" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-552"><a href="#cb4-552" aria-hidden="true" tabindex="-1"></a>R_{y,ts}</span>
+<span id="cb4-553"><a href="#cb4-553" aria-hidden="true" tabindex="-1"></a>\sqrt{</span>
+<span id="cb4-554"><a href="#cb4-554" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_t)</span>
+<span id="cb4-555"><a href="#cb4-555" aria-hidden="true" tabindex="-1"></a>\widehat{\operatorname{Var}}(y_s)</span>
+<span id="cb4-556"><a href="#cb4-556" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-557"><a href="#cb4-557" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-558"><a href="#cb4-558" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-559"><a href="#cb4-559" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-560"><a href="#cb4-560" aria-hidden="true" tabindex="-1"></a>\widehat{SSY}</span>
-<span id="cb4-561"><a href="#cb4-561" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-562"><a href="#cb4-562" aria-hidden="true" tabindex="-1"></a>N\odot\widehat{\operatorname{Cov}}(Y),</span>
-<span id="cb4-563"><a href="#cb4-563" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-564"><a href="#cb4-564" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-565"><a href="#cb4-565" aria-hidden="true" tabindex="-1"></a>forcing the diagonal to the observed <span class="in">`yy`</span> values.</span>
+<span id="cb4-559"><a href="#cb4-559" aria-hidden="true" tabindex="-1"></a>and reconstruct</span>
+<span id="cb4-560"><a href="#cb4-560" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-561"><a href="#cb4-561" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-562"><a href="#cb4-562" aria-hidden="true" tabindex="-1"></a>\widehat{SSY}</span>
+<span id="cb4-563"><a href="#cb4-563" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-564"><a href="#cb4-564" aria-hidden="true" tabindex="-1"></a>N\odot\widehat{\operatorname{Cov}}(Y),</span>
+<span id="cb4-565"><a href="#cb4-565" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-566"><a href="#cb4-566" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-567"><a href="#cb4-567" aria-hidden="true" tabindex="-1"></a>Full-overlap and fractional-overlap assumptions define different $N$</span>
-<span id="cb4-568"><a href="#cb4-568" aria-hidden="true" tabindex="-1"></a>matrices and therefore different reconstructed likelihood information.</span>
-<span id="cb4-569"><a href="#cb4-569" aria-hidden="true" tabindex="-1"></a>Missing or incorrect cross-trait information limits residual covariance</span>
-<span id="cb4-570"><a href="#cb4-570" aria-hidden="true" tabindex="-1"></a>inference even when every trait has valid marginal summary statistics. The</span>
-<span id="cb4-571"><a href="#cb4-571" aria-hidden="true" tabindex="-1"></a>complete derivation and sensitivity considerations belong in</span>
-<span id="cb4-572"><a href="#cb4-572" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical multi-trait sample overlap</span><span class="co">](technical_multitrait_overlap.html)</span>.</span>
-<span id="cb4-573"><a href="#cb4-573" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-574"><a href="#cb4-574" aria-hidden="true" tabindex="-1"></a><span class="fu">## Residual and Genetic Covariance From Summary Scores</span></span>
+<span id="cb4-567"><a href="#cb4-567" aria-hidden="true" tabindex="-1"></a>forcing the diagonal to the observed <span class="in">`yy`</span> values.</span>
+<span id="cb4-568"><a href="#cb4-568" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-569"><a href="#cb4-569" aria-hidden="true" tabindex="-1"></a>Full-overlap and fractional-overlap assumptions define different $N$</span>
+<span id="cb4-570"><a href="#cb4-570" aria-hidden="true" tabindex="-1"></a>matrices and therefore different reconstructed likelihood information.</span>
+<span id="cb4-571"><a href="#cb4-571" aria-hidden="true" tabindex="-1"></a>Missing or incorrect cross-trait information limits residual covariance</span>
+<span id="cb4-572"><a href="#cb4-572" aria-hidden="true" tabindex="-1"></a>inference even when every trait has valid marginal summary statistics. The</span>
+<span id="cb4-573"><a href="#cb4-573" aria-hidden="true" tabindex="-1"></a>complete derivation and sensitivity considerations belong in</span>
+<span id="cb4-574"><a href="#cb4-574" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Technical multi-trait sample overlap</span><span class="co">](technical_multitrait_overlap.html)</span>.</span>
 <span id="cb4-575"><a href="#cb4-575" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-576"><a href="#cb4-576" aria-hidden="true" tabindex="-1"></a>For a joint multi-trait model, the residual cross-product matrix can be</span>
-<span id="cb4-577"><a href="#cb4-577" aria-hidden="true" tabindex="-1"></a>constructed from <span class="in">`SSY`</span>, $WY$, current effects, and residual scores. One</span>
-<span id="cb4-578"><a href="#cb4-578" aria-hidden="true" tabindex="-1"></a>orientation is</span>
-<span id="cb4-579"><a href="#cb4-579" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-580"><a href="#cb4-580" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-581"><a href="#cb4-581" aria-hidden="true" tabindex="-1"></a>\widehat S_e</span>
-<span id="cb4-582"><a href="#cb4-582" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-583"><a href="#cb4-583" aria-hidden="true" tabindex="-1"></a>SSY</span>
-<span id="cb4-584"><a href="#cb4-584" aria-hidden="true" tabindex="-1"></a>-B^\top WY</span>
-<span id="cb4-585"><a href="#cb4-585" aria-hidden="true" tabindex="-1"></a>-WY^\top B</span>
-<span id="cb4-586"><a href="#cb4-586" aria-hidden="true" tabindex="-1"></a>+B^\top XXB.</span>
-<span id="cb4-587"><a href="#cb4-587" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-588"><a href="#cb4-588" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-589"><a href="#cb4-589" aria-hidden="true" tabindex="-1"></a>Using $XXB=WY-R$,</span>
+<span id="cb4-576"><a href="#cb4-576" aria-hidden="true" tabindex="-1"></a><span class="fu">## Residual and Genetic Covariance From Summary Scores</span></span>
+<span id="cb4-577"><a href="#cb4-577" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-578"><a href="#cb4-578" aria-hidden="true" tabindex="-1"></a>For a joint multi-trait model, the residual cross-product matrix can be</span>
+<span id="cb4-579"><a href="#cb4-579" aria-hidden="true" tabindex="-1"></a>constructed from <span class="in">`SSY`</span>, $WY$, current effects, and residual scores. One</span>
+<span id="cb4-580"><a href="#cb4-580" aria-hidden="true" tabindex="-1"></a>orientation is</span>
+<span id="cb4-581"><a href="#cb4-581" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-582"><a href="#cb4-582" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-583"><a href="#cb4-583" aria-hidden="true" tabindex="-1"></a>\widehat S_e</span>
+<span id="cb4-584"><a href="#cb4-584" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-585"><a href="#cb4-585" aria-hidden="true" tabindex="-1"></a>SSY</span>
+<span id="cb4-586"><a href="#cb4-586" aria-hidden="true" tabindex="-1"></a>-B^\top WY</span>
+<span id="cb4-587"><a href="#cb4-587" aria-hidden="true" tabindex="-1"></a>-WY^\top B</span>
+<span id="cb4-588"><a href="#cb4-588" aria-hidden="true" tabindex="-1"></a>+B^\top XXB.</span>
+<span id="cb4-589"><a href="#cb4-589" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-590"><a href="#cb4-590" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-591"><a href="#cb4-591" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-592"><a href="#cb4-592" aria-hidden="true" tabindex="-1"></a>\widehat S_e</span>
-<span id="cb4-593"><a href="#cb4-593" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-594"><a href="#cb4-594" aria-hidden="true" tabindex="-1"></a>SSY</span>
-<span id="cb4-595"><a href="#cb4-595" aria-hidden="true" tabindex="-1"></a>-B^\top WY</span>
-<span id="cb4-596"><a href="#cb4-596" aria-hidden="true" tabindex="-1"></a>-WY^\top B</span>
-<span id="cb4-597"><a href="#cb4-597" aria-hidden="true" tabindex="-1"></a>+B^\top(WY-R).</span>
-<span id="cb4-598"><a href="#cb4-598" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-599"><a href="#cb4-599" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-600"><a href="#cb4-600" aria-hidden="true" tabindex="-1"></a>Finite precision, asymmetric inputs, or trait-specific constructions can make</span>
-<span id="cb4-601"><a href="#cb4-601" aria-hidden="true" tabindex="-1"></a>cross-trait expressions differ slightly by orientation. The native multi-trait</span>
-<span id="cb4-602"><a href="#cb4-602" aria-hidden="true" tabindex="-1"></a>CSR implementation symmetrizes off-diagonal residual and genetic covariance</span>
-<span id="cb4-603"><a href="#cb4-603" aria-hidden="true" tabindex="-1"></a>quantities before covariance updates.</span>
-<span id="cb4-604"><a href="#cb4-604" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-605"><a href="#cb4-605" aria-hidden="true" tabindex="-1"></a>These calculations require a compatible definition of $X$, trait sample</span>
-<span id="cb4-606"><a href="#cb4-606" aria-hidden="true" tabindex="-1"></a>sizes, and cross-trait phenotype products. A vector of per-trait <span class="in">`yy`</span> values</span>
-<span id="cb4-607"><a href="#cb4-607" aria-hidden="true" tabindex="-1"></a>supports separate trait-wise residual variance updates; it does not by itself</span>
-<span id="cb4-608"><a href="#cb4-608" aria-hidden="true" tabindex="-1"></a>identify a full residual covariance matrix.</span>
-<span id="cb4-609"><a href="#cb4-609" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-610"><a href="#cb4-610" aria-hidden="true" tabindex="-1"></a><span class="fu">## Set-Specific and Weighted Genetic Contributions</span></span>
+<span id="cb4-591"><a href="#cb4-591" aria-hidden="true" tabindex="-1"></a>Using $XXB=WY-R$,</span>
+<span id="cb4-592"><a href="#cb4-592" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-593"><a href="#cb4-593" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-594"><a href="#cb4-594" aria-hidden="true" tabindex="-1"></a>\widehat S_e</span>
+<span id="cb4-595"><a href="#cb4-595" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-596"><a href="#cb4-596" aria-hidden="true" tabindex="-1"></a>SSY</span>
+<span id="cb4-597"><a href="#cb4-597" aria-hidden="true" tabindex="-1"></a>-B^\top WY</span>
+<span id="cb4-598"><a href="#cb4-598" aria-hidden="true" tabindex="-1"></a>-WY^\top B</span>
+<span id="cb4-599"><a href="#cb4-599" aria-hidden="true" tabindex="-1"></a>+B^\top(WY-R).</span>
+<span id="cb4-600"><a href="#cb4-600" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-601"><a href="#cb4-601" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-602"><a href="#cb4-602" aria-hidden="true" tabindex="-1"></a>Finite precision, asymmetric inputs, or trait-specific constructions can make</span>
+<span id="cb4-603"><a href="#cb4-603" aria-hidden="true" tabindex="-1"></a>cross-trait expressions differ slightly by orientation. The native multi-trait</span>
+<span id="cb4-604"><a href="#cb4-604" aria-hidden="true" tabindex="-1"></a>CSR implementation symmetrizes off-diagonal residual and genetic covariance</span>
+<span id="cb4-605"><a href="#cb4-605" aria-hidden="true" tabindex="-1"></a>quantities before covariance updates.</span>
+<span id="cb4-606"><a href="#cb4-606" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-607"><a href="#cb4-607" aria-hidden="true" tabindex="-1"></a>These calculations require a compatible definition of $X$, trait sample</span>
+<span id="cb4-608"><a href="#cb4-608" aria-hidden="true" tabindex="-1"></a>sizes, and cross-trait phenotype products. A vector of per-trait <span class="in">`yy`</span> values</span>
+<span id="cb4-609"><a href="#cb4-609" aria-hidden="true" tabindex="-1"></a>supports separate trait-wise residual variance updates; it does not by itself</span>
+<span id="cb4-610"><a href="#cb4-610" aria-hidden="true" tabindex="-1"></a>identify a full residual covariance matrix.</span>
 <span id="cb4-611"><a href="#cb4-611" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-612"><a href="#cb4-612" aria-hidden="true" tabindex="-1"></a>The identity $XXb_t=wy_t-r_t$ also supports marker-set summaries. For a</span>
-<span id="cb4-613"><a href="#cb4-613" aria-hidden="true" tabindex="-1"></a>marker set $S_k$, define</span>
-<span id="cb4-614"><a href="#cb4-614" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-615"><a href="#cb4-615" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-616"><a href="#cb4-616" aria-hidden="true" tabindex="-1"></a>\widehat V_{G,k,t}</span>
-<span id="cb4-617"><a href="#cb4-617" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-618"><a href="#cb4-618" aria-hidden="true" tabindex="-1"></a>\frac{1}{n_t}</span>
-<span id="cb4-619"><a href="#cb4-619" aria-hidden="true" tabindex="-1"></a>\sum_{i\in S_k}</span>
-<span id="cb4-620"><a href="#cb4-620" aria-hidden="true" tabindex="-1"></a>\widehat b_{it}(wy_{it}-r_{it}).</span>
-<span id="cb4-621"><a href="#cb4-621" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-622"><a href="#cb4-622" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-623"><a href="#cb4-623" aria-hidden="true" tabindex="-1"></a>The corresponding marker-level contribution is</span>
+<span id="cb4-612"><a href="#cb4-612" aria-hidden="true" tabindex="-1"></a><span class="fu">## Set-Specific and Weighted Genetic Contributions</span></span>
+<span id="cb4-613"><a href="#cb4-613" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-614"><a href="#cb4-614" aria-hidden="true" tabindex="-1"></a>The identity $XXb_t=wy_t-r_t$ also supports marker-set summaries. For a</span>
+<span id="cb4-615"><a href="#cb4-615" aria-hidden="true" tabindex="-1"></a>marker set $S_k$, define</span>
+<span id="cb4-616"><a href="#cb4-616" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-617"><a href="#cb4-617" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-618"><a href="#cb4-618" aria-hidden="true" tabindex="-1"></a>\widehat V_{G,k,t}</span>
+<span id="cb4-619"><a href="#cb4-619" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-620"><a href="#cb4-620" aria-hidden="true" tabindex="-1"></a>\frac{1}{n_t}</span>
+<span id="cb4-621"><a href="#cb4-621" aria-hidden="true" tabindex="-1"></a>\sum_{i\in S_k}</span>
+<span id="cb4-622"><a href="#cb4-622" aria-hidden="true" tabindex="-1"></a>\widehat b_{it}(wy_{it}-r_{it}).</span>
+<span id="cb4-623"><a href="#cb4-623" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-624"><a href="#cb4-624" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-625"><a href="#cb4-625" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-626"><a href="#cb4-626" aria-hidden="true" tabindex="-1"></a>c_{it}</span>
-<span id="cb4-627"><a href="#cb4-627" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-628"><a href="#cb4-628" aria-hidden="true" tabindex="-1"></a>\frac{\widehat b_{it}(wy_{it}-r_{it})}{n_t}.</span>
-<span id="cb4-629"><a href="#cb4-629" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-630"><a href="#cb4-630" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-631"><a href="#cb4-631" aria-hidden="true" tabindex="-1"></a>An optional posterior-inclusion-weighted version is</span>
+<span id="cb4-625"><a href="#cb4-625" aria-hidden="true" tabindex="-1"></a>The corresponding marker-level contribution is</span>
+<span id="cb4-626"><a href="#cb4-626" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-627"><a href="#cb4-627" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-628"><a href="#cb4-628" aria-hidden="true" tabindex="-1"></a>c_{it}</span>
+<span id="cb4-629"><a href="#cb4-629" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-630"><a href="#cb4-630" aria-hidden="true" tabindex="-1"></a>\frac{\widehat b_{it}(wy_{it}-r_{it})}{n_t}.</span>
+<span id="cb4-631"><a href="#cb4-631" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb4-632"><a href="#cb4-632" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-633"><a href="#cb4-633" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-634"><a href="#cb4-634" aria-hidden="true" tabindex="-1"></a>c^{\mathrm{weighted}}_{it}</span>
-<span id="cb4-635"><a href="#cb4-635" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb4-636"><a href="#cb4-636" aria-hidden="true" tabindex="-1"></a>\frac{</span>
-<span id="cb4-637"><a href="#cb4-637" aria-hidden="true" tabindex="-1"></a>\widehat{dm}_{it}\widehat b_{it}(wy_{it}-r_{it})</span>
-<span id="cb4-638"><a href="#cb4-638" aria-hidden="true" tabindex="-1"></a>}{n_t}.</span>
-<span id="cb4-639"><a href="#cb4-639" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb4-640"><a href="#cb4-640" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-641"><a href="#cb4-641" aria-hidden="true" tabindex="-1"></a>These are useful descriptive summaries for annotations or genomic regions.</span>
-<span id="cb4-642"><a href="#cb4-642" aria-hidden="true" tabindex="-1"></a>For disjoint sets, their sums can approximate a partition of the fitted</span>
-<span id="cb4-643"><a href="#cb4-643" aria-hidden="true" tabindex="-1"></a>genetic-variance expression. For overlapping sets, a marker contributes to</span>
-<span id="cb4-644"><a href="#cb4-644" aria-hidden="true" tabindex="-1"></a>every set containing it, so set totals are attributions rather than an</span>
-<span id="cb4-645"><a href="#cb4-645" aria-hidden="true" tabindex="-1"></a>additive partition.</span>
-<span id="cb4-646"><a href="#cb4-646" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-647"><a href="#cb4-647" aria-hidden="true" tabindex="-1"></a>The formulas also mix posterior summaries nonlinearly when posterior mean</span>
-<span id="cb4-648"><a href="#cb4-648" aria-hidden="true" tabindex="-1"></a><span class="in">`bm`</span>, PIP <span class="in">`dm`</span>, and a returned residual score are combined. They should not be</span>
-<span id="cb4-649"><a href="#cb4-649" aria-hidden="true" tabindex="-1"></a>confused with exact posterior expectations unless calculated draw by draw.</span>
-<span id="cb4-650"><a href="#cb4-650" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-651"><a href="#cb4-651" aria-hidden="true" tabindex="-1"></a><span class="fu">## Exact Equivalence and Practical Differences</span></span>
+<span id="cb4-633"><a href="#cb4-633" aria-hidden="true" tabindex="-1"></a>An optional posterior-inclusion-weighted version is</span>
+<span id="cb4-634"><a href="#cb4-634" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-635"><a href="#cb4-635" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-636"><a href="#cb4-636" aria-hidden="true" tabindex="-1"></a>c^{\mathrm{weighted}}_{it}</span>
+<span id="cb4-637"><a href="#cb4-637" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb4-638"><a href="#cb4-638" aria-hidden="true" tabindex="-1"></a>\frac{</span>
+<span id="cb4-639"><a href="#cb4-639" aria-hidden="true" tabindex="-1"></a>\widehat{dm}_{it}\widehat b_{it}(wy_{it}-r_{it})</span>
+<span id="cb4-640"><a href="#cb4-640" aria-hidden="true" tabindex="-1"></a>}{n_t}.</span>
+<span id="cb4-641"><a href="#cb4-641" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb4-642"><a href="#cb4-642" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-643"><a href="#cb4-643" aria-hidden="true" tabindex="-1"></a>These are useful descriptive summaries for annotations or genomic regions.</span>
+<span id="cb4-644"><a href="#cb4-644" aria-hidden="true" tabindex="-1"></a>For disjoint sets, their sums can approximate a partition of the fitted</span>
+<span id="cb4-645"><a href="#cb4-645" aria-hidden="true" tabindex="-1"></a>genetic-variance expression. For overlapping sets, a marker contributes to</span>
+<span id="cb4-646"><a href="#cb4-646" aria-hidden="true" tabindex="-1"></a>every set containing it, so set totals are attributions rather than an</span>
+<span id="cb4-647"><a href="#cb4-647" aria-hidden="true" tabindex="-1"></a>additive partition.</span>
+<span id="cb4-648"><a href="#cb4-648" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-649"><a href="#cb4-649" aria-hidden="true" tabindex="-1"></a>The formulas also mix posterior summaries nonlinearly when posterior mean</span>
+<span id="cb4-650"><a href="#cb4-650" aria-hidden="true" tabindex="-1"></a><span class="in">`bm`</span>, PIP <span class="in">`dm`</span>, and a returned residual score are combined. They should not be</span>
+<span id="cb4-651"><a href="#cb4-651" aria-hidden="true" tabindex="-1"></a>confused with exact posterior expectations unless calculated draw by draw.</span>
 <span id="cb4-652"><a href="#cb4-652" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-653"><a href="#cb4-653" aria-hidden="true" tabindex="-1"></a>Suppose the following are all exact and compatible:</span>
+<span id="cb4-653"><a href="#cb4-653" aria-hidden="true" tabindex="-1"></a><span class="fu">## Exact Equivalence and Practical Differences</span></span>
 <span id="cb4-654"><a href="#cb4-654" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-655"><a href="#cb4-655" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the same centered or otherwise identically coded $X$;</span>
-<span id="cb4-656"><a href="#cb4-656" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the same phenotype $y$;</span>
-<span id="cb4-657"><a href="#cb4-657" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>complete $wy=X^\top y$, $yy=y^\top y$, and $XX=X^\top X$;</span>
-<span id="cb4-658"><a href="#cb4-658" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the same prior, initialization, and variance model; and</span>
-<span id="cb4-659"><a href="#cb4-659" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>an exact implementation of the same update schedule.</span>
-<span id="cb4-660"><a href="#cb4-660" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-661"><a href="#cb4-661" aria-hidden="true" tabindex="-1"></a>Then individual-level and summary-statistics marker updates can target the</span>
-<span id="cb4-662"><a href="#cb4-662" aria-hidden="true" tabindex="-1"></a>same model family because their likelihood calculations are algebraically</span>
-<span id="cb4-663"><a href="#cb4-663" aria-hidden="true" tabindex="-1"></a>equivalent.</span>
-<span id="cb4-664"><a href="#cb4-664" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-665"><a href="#cb4-665" aria-hidden="true" tabindex="-1"></a>Practical BED and CSR fits are not expected to be numerically identical:</span>
+<span id="cb4-655"><a href="#cb4-655" aria-hidden="true" tabindex="-1"></a>Suppose the following are all exact and compatible:</span>
+<span id="cb4-656"><a href="#cb4-656" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-657"><a href="#cb4-657" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the same centered or otherwise identically coded $X$;</span>
+<span id="cb4-658"><a href="#cb4-658" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the same phenotype $y$;</span>
+<span id="cb4-659"><a href="#cb4-659" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>complete $wy=X^\top y$, $yy=y^\top y$, and $XX=X^\top X$;</span>
+<span id="cb4-660"><a href="#cb4-660" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the same prior, initialization, and variance model; and</span>
+<span id="cb4-661"><a href="#cb4-661" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>an exact implementation of the same update schedule.</span>
+<span id="cb4-662"><a href="#cb4-662" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-663"><a href="#cb4-663" aria-hidden="true" tabindex="-1"></a>Then individual-level and summary-statistics marker updates can target the</span>
+<span id="cb4-664"><a href="#cb4-664" aria-hidden="true" tabindex="-1"></a>same model family because their likelihood calculations are algebraically</span>
+<span id="cb4-665"><a href="#cb4-665" aria-hidden="true" tabindex="-1"></a>equivalent.</span>
 <span id="cb4-666"><a href="#cb4-666" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-667"><a href="#cb4-667" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sparse LD omits weak or distant off-diagonal entries;</span>
-<span id="cb4-668"><a href="#cb4-668" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>stored correlations and reconstructed cross-products use finite precision;</span>
-<span id="cb4-669"><a href="#cb4-669" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>BED and CSR implementations can maintain residuals differently;</span>
-<span id="cb4-670"><a href="#cb4-670" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>update scheduling and marker order can differ;</span>
-<span id="cb4-671"><a href="#cb4-671" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>prior and residual-adjustment settings may differ; and</span>
-<span id="cb4-672"><a href="#cb4-672" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>MCMC output contains Monte Carlo variation.</span>
-<span id="cb4-673"><a href="#cb4-673" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-674"><a href="#cb4-674" aria-hidden="true" tabindex="-1"></a>Agreement should therefore be assessed through posterior patterns,</span>
-<span id="cb4-675"><a href="#cb4-675" aria-hidden="true" tabindex="-1"></a>predictions, variance summaries, and sensitivity analyses rather than equality</span>
-<span id="cb4-676"><a href="#cb4-676" aria-hidden="true" tabindex="-1"></a>of individual draws.</span>
-<span id="cb4-677"><a href="#cb4-677" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-678"><a href="#cb4-678" aria-hidden="true" tabindex="-1"></a><span class="fu">## Validation and Diagnostics</span></span>
+<span id="cb4-667"><a href="#cb4-667" aria-hidden="true" tabindex="-1"></a>Practical BED and CSR fits are not expected to be numerically identical:</span>
+<span id="cb4-668"><a href="#cb4-668" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-669"><a href="#cb4-669" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sparse LD omits weak or distant off-diagonal entries;</span>
+<span id="cb4-670"><a href="#cb4-670" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>stored correlations and reconstructed cross-products use finite precision;</span>
+<span id="cb4-671"><a href="#cb4-671" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>BED and CSR implementations can maintain residuals differently;</span>
+<span id="cb4-672"><a href="#cb4-672" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>update scheduling and marker order can differ;</span>
+<span id="cb4-673"><a href="#cb4-673" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>prior and residual-adjustment settings may differ; and</span>
+<span id="cb4-674"><a href="#cb4-674" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>MCMC output contains Monte Carlo variation.</span>
+<span id="cb4-675"><a href="#cb4-675" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-676"><a href="#cb4-676" aria-hidden="true" tabindex="-1"></a>Agreement should therefore be assessed through posterior patterns,</span>
+<span id="cb4-677"><a href="#cb4-677" aria-hidden="true" tabindex="-1"></a>predictions, variance summaries, and sensitivity analyses rather than equality</span>
+<span id="cb4-678"><a href="#cb4-678" aria-hidden="true" tabindex="-1"></a>of individual draws.</span>
 <span id="cb4-679"><a href="#cb4-679" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-680"><a href="#cb4-680" aria-hidden="true" tabindex="-1"></a>Before fitting a summary-statistics model, check:</span>
+<span id="cb4-680"><a href="#cb4-680" aria-hidden="true" tabindex="-1"></a><span class="fu">## Validation and Diagnostics</span></span>
 <span id="cb4-681"><a href="#cb4-681" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-682"><a href="#cb4-682" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Every trait's <span class="in">`wy`</span> vector has length $m$.</span>
-<span id="cb4-683"><a href="#cb4-683" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Every trait's <span class="in">`ww`</span> vector has length $m$, contains finite positive values,</span>
-<span id="cb4-684"><a href="#cb4-684" aria-hidden="true" tabindex="-1"></a>   and is compatible with the LD scaling.</span>
-<span id="cb4-685"><a href="#cb4-685" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`yy`</span> has one value per trait for parallel single-trait fitting, or <span class="in">`SSY`</span> is</span>
-<span id="cb4-686"><a href="#cb4-686" aria-hidden="true" tabindex="-1"></a>   a valid $n_t\times n_t$ matrix for a full joint multi-trait likelihood.</span>
-<span id="cb4-687"><a href="#cb4-687" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>The supplied $n$ is the sample size used to calculate the corresponding</span>
-<span id="cb4-688"><a href="#cb4-688" aria-hidden="true" tabindex="-1"></a>   statistics; trait-specific $n_t$ values and overlap assumptions are</span>
-<span id="cb4-689"><a href="#cb4-689" aria-hidden="true" tabindex="-1"></a>   recorded where relevant.</span>
-<span id="cb4-690"><a href="#cb4-690" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Sparse-LD dimensions equal $m\times m$, and its marker order matches</span>
-<span id="cb4-691"><a href="#cb4-691" aria-hidden="true" tabindex="-1"></a>   <span class="in">`wy`</span> and <span class="in">`ww`</span>.</span>
-<span id="cb4-692"><a href="#cb4-692" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span><span class="in">`cls`</span>, allele frequencies, <span class="in">`rows`</span>, and <span class="in">`scale`</span> choices match between</span>
-<span id="cb4-693"><a href="#cb4-693" aria-hidden="true" tabindex="-1"></a>   <span class="in">`bed_xtx_xty()`</span> and sparse-LD construction.</span>
-<span id="cb4-694"><a href="#cb4-694" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>Marker names, annotation rows, and posterior output rows use the same order.</span>
-<span id="cb4-695"><a href="#cb4-695" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>Phenotypes are centered or the intercept/centering convention is otherwise</span>
-<span id="cb4-696"><a href="#cb4-696" aria-hidden="true" tabindex="-1"></a>   explicit.</span>
-<span id="cb4-697"><a href="#cb4-697" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span><span class="in">`ww`</span> magnitude is plausible for the coding and sample size.</span>
-<span id="cb4-698"><a href="#cb4-698" aria-hidden="true" tabindex="-1"></a><span class="ss">10. </span>LD thresholds, windows, precision, and reference-sample provenance are</span>
-<span id="cb4-699"><a href="#cb4-699" aria-hidden="true" tabindex="-1"></a>    recorded.</span>
-<span id="cb4-700"><a href="#cb4-700" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-701"><a href="#cb4-701" aria-hidden="true" tabindex="-1"></a>Useful diagnostics include inspecting <span class="in">`stats$n`</span>, <span class="in">`stats$m`</span>, <span class="in">`stats$scale`</span>,</span>
-<span id="cb4-702"><a href="#cb4-702" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$min_xx`</span>, <span class="in">`stats$mean_xx`</span>, and <span class="in">`stats$max_xx`</span>; reading CSR metadata with</span>
-<span id="cb4-703"><a href="#cb4-703" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_read_CSR()`</span>; and comparing BED-direct and CSR fits when the same</span>
-<span id="cb4-704"><a href="#cb4-704" aria-hidden="true" tabindex="-1"></a>individual-level data are available.</span>
-<span id="cb4-705"><a href="#cb4-705" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-706"><a href="#cb4-706" aria-hidden="true" tabindex="-1"></a><span class="fu">## Limitations</span></span>
+<span id="cb4-682"><a href="#cb4-682" aria-hidden="true" tabindex="-1"></a>Before fitting a summary-statistics model, check:</span>
+<span id="cb4-683"><a href="#cb4-683" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-684"><a href="#cb4-684" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Every trait's <span class="in">`wy`</span> vector has length $m$.</span>
+<span id="cb4-685"><a href="#cb4-685" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Every trait's <span class="in">`ww`</span> vector has length $m$, contains finite positive values,</span>
+<span id="cb4-686"><a href="#cb4-686" aria-hidden="true" tabindex="-1"></a>   and is compatible with the LD scaling.</span>
+<span id="cb4-687"><a href="#cb4-687" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`yy`</span> has one value per trait for parallel single-trait fitting, or <span class="in">`SSY`</span> is</span>
+<span id="cb4-688"><a href="#cb4-688" aria-hidden="true" tabindex="-1"></a>   a valid $n_t\times n_t$ matrix for a full joint multi-trait likelihood.</span>
+<span id="cb4-689"><a href="#cb4-689" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>The supplied $n$ is the sample size used to calculate the corresponding</span>
+<span id="cb4-690"><a href="#cb4-690" aria-hidden="true" tabindex="-1"></a>   statistics; trait-specific $n_t$ values and overlap assumptions are</span>
+<span id="cb4-691"><a href="#cb4-691" aria-hidden="true" tabindex="-1"></a>   recorded where relevant.</span>
+<span id="cb4-692"><a href="#cb4-692" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Sparse-LD dimensions equal $m\times m$, and its marker order matches</span>
+<span id="cb4-693"><a href="#cb4-693" aria-hidden="true" tabindex="-1"></a>   <span class="in">`wy`</span> and <span class="in">`ww`</span>.</span>
+<span id="cb4-694"><a href="#cb4-694" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span><span class="in">`cls`</span>, allele frequencies, <span class="in">`rows`</span>, and <span class="in">`scale`</span> choices match between</span>
+<span id="cb4-695"><a href="#cb4-695" aria-hidden="true" tabindex="-1"></a>   <span class="in">`bed_xtx_xty()`</span> and sparse-LD construction.</span>
+<span id="cb4-696"><a href="#cb4-696" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>Marker names, annotation rows, and posterior output rows use the same order.</span>
+<span id="cb4-697"><a href="#cb4-697" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>Phenotypes are centered or the intercept/centering convention is otherwise</span>
+<span id="cb4-698"><a href="#cb4-698" aria-hidden="true" tabindex="-1"></a>   explicit.</span>
+<span id="cb4-699"><a href="#cb4-699" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span><span class="in">`ww`</span> magnitude is plausible for the coding and sample size.</span>
+<span id="cb4-700"><a href="#cb4-700" aria-hidden="true" tabindex="-1"></a><span class="ss">10. </span>LD thresholds, windows, precision, and reference-sample provenance are</span>
+<span id="cb4-701"><a href="#cb4-701" aria-hidden="true" tabindex="-1"></a>    recorded.</span>
+<span id="cb4-702"><a href="#cb4-702" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-703"><a href="#cb4-703" aria-hidden="true" tabindex="-1"></a>Useful diagnostics include inspecting <span class="in">`stats$n`</span>, <span class="in">`stats$m`</span>, <span class="in">`stats$scale`</span>,</span>
+<span id="cb4-704"><a href="#cb4-704" aria-hidden="true" tabindex="-1"></a><span class="in">`stats$min_xx`</span>, <span class="in">`stats$mean_xx`</span>, and <span class="in">`stats$max_xx`</span>; reading CSR metadata with</span>
+<span id="cb4-705"><a href="#cb4-705" aria-hidden="true" tabindex="-1"></a><span class="in">`sparseLD_read_CSR()`</span>; and comparing BED-direct and CSR fits when the same</span>
+<span id="cb4-706"><a href="#cb4-706" aria-hidden="true" tabindex="-1"></a>individual-level data are available.</span>
 <span id="cb4-707"><a href="#cb4-707" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-708"><a href="#cb4-708" aria-hidden="true" tabindex="-1"></a>Summary-statistics inference cannot recover information that was not retained</span>
-<span id="cb4-709"><a href="#cb4-709" aria-hidden="true" tabindex="-1"></a>or supplied.</span>
-<span id="cb4-710"><a href="#cb4-710" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-711"><a href="#cb4-711" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LD compatibility:** <span class="in">`wy`</span> and <span class="in">`ww`</span> from one sample or scaling convention</span>
-<span id="cb4-712"><a href="#cb4-712" aria-hidden="true" tabindex="-1"></a>  combined with LD from another imply an approximate and potentially biased</span>
-<span id="cb4-713"><a href="#cb4-713" aria-hidden="true" tabindex="-1"></a>  likelihood.</span>
-<span id="cb4-714"><a href="#cb4-714" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LD-reference mismatch:** ancestry, allele frequencies, imputation quality,</span>
-<span id="cb4-715"><a href="#cb4-715" aria-hidden="true" tabindex="-1"></a>  marker filtering, and sample selection can make reference LD differ from</span>
-<span id="cb4-716"><a href="#cb4-716" aria-hidden="true" tabindex="-1"></a>  study LD.</span>
-<span id="cb4-717"><a href="#cb4-717" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Sparsification:** thresholding and windowing deliberately remove</span>
-<span id="cb4-718"><a href="#cb4-718" aria-hidden="true" tabindex="-1"></a>  off-diagonal information.</span>
-<span id="cb4-719"><a href="#cb4-719" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Phenotype preprocessing:** unrecorded centering, scaling, covariate</span>
-<span id="cb4-720"><a href="#cb4-720" aria-hidden="true" tabindex="-1"></a>  adjustment, or residualization changes the meaning of <span class="in">`wy`</span> and <span class="in">`yy`</span>.</span>
-<span id="cb4-721"><a href="#cb4-721" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Multi-trait information:** marginal trait statistics do not identify</span>
-<span id="cb4-722"><a href="#cb4-722" aria-hidden="true" tabindex="-1"></a>  cross-trait phenotype products or sample overlap.</span>
-<span id="cb4-723"><a href="#cb4-723" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Overlap assumptions:** incorrect $N$ or phenotype covariance assumptions</span>
-<span id="cb4-724"><a href="#cb4-724" aria-hidden="true" tabindex="-1"></a>  can distort full residual covariance inference.</span>
-<span id="cb4-725"><a href="#cb4-725" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Posterior summaries:** set contributions calculated from posterior means</span>
-<span id="cb4-726"><a href="#cb4-726" aria-hidden="true" tabindex="-1"></a>  do not automatically propagate full posterior uncertainty.</span>
-<span id="cb4-727"><a href="#cb4-727" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-728"><a href="#cb4-728" aria-hidden="true" tabindex="-1"></a>These limitations should be treated as model-input assumptions, not merely</span>
-<span id="cb4-729"><a href="#cb4-729" aria-hidden="true" tabindex="-1"></a>implementation details.</span>
-<span id="cb4-730"><a href="#cb4-730" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-731"><a href="#cb4-731" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb4-708"><a href="#cb4-708" aria-hidden="true" tabindex="-1"></a><span class="fu">## Limitations</span></span>
+<span id="cb4-709"><a href="#cb4-709" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-710"><a href="#cb4-710" aria-hidden="true" tabindex="-1"></a>Summary-statistics inference cannot recover information that was not retained</span>
+<span id="cb4-711"><a href="#cb4-711" aria-hidden="true" tabindex="-1"></a>or supplied.</span>
+<span id="cb4-712"><a href="#cb4-712" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-713"><a href="#cb4-713" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LD compatibility:** <span class="in">`wy`</span> and <span class="in">`ww`</span> from one sample or scaling convention</span>
+<span id="cb4-714"><a href="#cb4-714" aria-hidden="true" tabindex="-1"></a>  combined with LD from another imply an approximate and potentially biased</span>
+<span id="cb4-715"><a href="#cb4-715" aria-hidden="true" tabindex="-1"></a>  likelihood.</span>
+<span id="cb4-716"><a href="#cb4-716" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LD-reference mismatch:** ancestry, allele frequencies, imputation quality,</span>
+<span id="cb4-717"><a href="#cb4-717" aria-hidden="true" tabindex="-1"></a>  marker filtering, and sample selection can make reference LD differ from</span>
+<span id="cb4-718"><a href="#cb4-718" aria-hidden="true" tabindex="-1"></a>  study LD.</span>
+<span id="cb4-719"><a href="#cb4-719" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Sparsification:** thresholding and windowing deliberately remove</span>
+<span id="cb4-720"><a href="#cb4-720" aria-hidden="true" tabindex="-1"></a>  off-diagonal information.</span>
+<span id="cb4-721"><a href="#cb4-721" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Phenotype preprocessing:** unrecorded centering, scaling, covariate</span>
+<span id="cb4-722"><a href="#cb4-722" aria-hidden="true" tabindex="-1"></a>  adjustment, or residualization changes the meaning of <span class="in">`wy`</span> and <span class="in">`yy`</span>.</span>
+<span id="cb4-723"><a href="#cb4-723" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Multi-trait information:** marginal trait statistics do not identify</span>
+<span id="cb4-724"><a href="#cb4-724" aria-hidden="true" tabindex="-1"></a>  cross-trait phenotype products or sample overlap.</span>
+<span id="cb4-725"><a href="#cb4-725" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Overlap assumptions:** incorrect $N$ or phenotype covariance assumptions</span>
+<span id="cb4-726"><a href="#cb4-726" aria-hidden="true" tabindex="-1"></a>  can distort full residual covariance inference.</span>
+<span id="cb4-727"><a href="#cb4-727" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Posterior summaries:** set contributions calculated from posterior means</span>
+<span id="cb4-728"><a href="#cb4-728" aria-hidden="true" tabindex="-1"></a>  do not automatically propagate full posterior uncertainty.</span>
+<span id="cb4-729"><a href="#cb4-729" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-730"><a href="#cb4-730" aria-hidden="true" tabindex="-1"></a>These limitations should be treated as model-input assumptions, not merely</span>
+<span id="cb4-731"><a href="#cb4-731" aria-hidden="true" tabindex="-1"></a>implementation details.</span>
 <span id="cb4-732"><a href="#cb4-732" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-733"><a href="#cb4-733" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.html)</span> introduces the two data</span>
-<span id="cb4-734"><a href="#cb4-734" aria-hidden="true" tabindex="-1"></a>  representations and their alignment contracts.</span>
-<span id="cb4-735"><a href="#cb4-735" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span> gives the</span>
-<span id="cb4-736"><a href="#cb4-736" aria-hidden="true" tabindex="-1"></a>  practical BED-to-statistics-to-CSR sequence.</span>
-<span id="cb4-737"><a href="#cb4-737" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.html)</span> documents the</span>
-<span id="cb4-738"><a href="#cb4-738" aria-hidden="true" tabindex="-1"></a>  disk-backed sparse-LD contract.</span>
-<span id="cb4-739"><a href="#cb4-739" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical multi-trait sample overlap</span><span class="co">](technical_multitrait_overlap.html)</span></span>
-<span id="cb4-740"><a href="#cb4-740" aria-hidden="true" tabindex="-1"></a>  preserves the full <span class="in">`SSY`</span> and overlap reconstruction theory.</span>
-<span id="cb4-741"><a href="#cb4-741" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.html)</span> develops the sparse BLR prior</span>
-<span id="cb4-742"><a href="#cb4-742" aria-hidden="true" tabindex="-1"></a>  and marker-update interpretation.</span>
-<span id="cb4-743"><a href="#cb4-743" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.html)</span> places cross-trait sufficient</span>
-<span id="cb4-744"><a href="#cb4-744" aria-hidden="true" tabindex="-1"></a>  statistics within joint MTBLR models.</span>
-<span id="cb4-745"><a href="#cb4-745" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-746"><a href="#cb4-746" aria-hidden="true" tabindex="-1"></a>This appendix reorganizes the summary-statistic residual identities and</span>
-<span id="cb4-747"><a href="#cb4-747" aria-hidden="true" tabindex="-1"></a>set-contribution derivations from the archived annotation draft together with</span>
-<span id="cb4-748"><a href="#cb4-748" aria-hidden="true" tabindex="-1"></a>the <span class="in">`SSY`</span> foundations from the archived theory draft, aligned to the current</span>
-<span id="cb4-749"><a href="#cb4-749" aria-hidden="true" tabindex="-1"></a>BED sufficient-statistics and CSR implementations.</span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+<span id="cb4-733"><a href="#cb4-733" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb4-734"><a href="#cb4-734" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-735"><a href="#cb4-735" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Data representations</span><span class="co">](data_representations.html)</span> introduces the two data</span>
+<span id="cb4-736"><a href="#cb4-736" aria-hidden="true" tabindex="-1"></a>  representations and their alignment contracts.</span>
+<span id="cb4-737"><a href="#cb4-737" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Sparse-LD and BED workflows</span><span class="co">](sparse_ld_and_bed_workflows.html)</span> gives the</span>
+<span id="cb4-738"><a href="#cb4-738" aria-hidden="true" tabindex="-1"></a>  practical BED-to-statistics-to-CSR sequence.</span>
+<span id="cb4-739"><a href="#cb4-739" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical sparse LD and CSR</span><span class="co">](technical_sparse_ld_csr.html)</span> documents the</span>
+<span id="cb4-740"><a href="#cb4-740" aria-hidden="true" tabindex="-1"></a>  disk-backed sparse-LD contract.</span>
+<span id="cb4-741"><a href="#cb4-741" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical multi-trait sample overlap</span><span class="co">](technical_multitrait_overlap.html)</span></span>
+<span id="cb4-742"><a href="#cb4-742" aria-hidden="true" tabindex="-1"></a>  preserves the full <span class="in">`SSY`</span> and overlap reconstruction theory.</span>
+<span id="cb4-743"><a href="#cb4-743" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Single-trait models</span><span class="co">](single_trait_models.html)</span> develops the sparse BLR prior</span>
+<span id="cb4-744"><a href="#cb4-744" aria-hidden="true" tabindex="-1"></a>  and marker-update interpretation.</span>
+<span id="cb4-745"><a href="#cb4-745" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Multi-trait models</span><span class="co">](multi_trait_models.html)</span> places cross-trait sufficient</span>
+<span id="cb4-746"><a href="#cb4-746" aria-hidden="true" tabindex="-1"></a>  statistics within joint MTBLR models.</span>
+<span id="cb4-747"><a href="#cb4-747" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-748"><a href="#cb4-748" aria-hidden="true" tabindex="-1"></a>This appendix reorganizes the summary-statistic residual identities and</span>
+<span id="cb4-749"><a href="#cb4-749" aria-hidden="true" tabindex="-1"></a>set-contribution derivations from the archived annotation draft together with</span>
+<span id="cb4-750"><a href="#cb4-750" aria-hidden="true" tabindex="-1"></a>the <span class="in">`SSY`</span> foundations from the archived theory draft, aligned to the current</span>
+<span id="cb4-751"><a href="#cb4-751" aria-hidden="true" tabindex="-1"></a>BED sufficient-statistics and CSR implementations.</span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 
