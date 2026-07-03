@@ -3,13 +3,14 @@ title: "Technical Appendix: SBayesRC-Style Annotation Priors"
 ---
 
 This appendix describes the SBayesRC-style annotation-dependent BayesR prior
-implemented by `stblr_csr_sbayesrc_generic()`. The core prior family is closely
-aligned with published SBayesRC: marker effects follow a multi-normal mixture,
-and marker-specific mixture probabilities are determined by conditional
-probit stick-breaking regressions on annotations. The exposed `sblr` model is
-not an exact reproduction of the published GCTB SBayesRC implementation. Its
-default gamma grid differs, and it uses a CSR sparse-LD likelihood rather than
-the GCTB low-rank rotated summary-statistics likelihood.
+available through `stblr_csr_annot(annotation_model = "sbayesrc")` and the
+compatibility wrapper `stblr_csr_sbayesrc_generic()`. The core prior family is
+closely aligned with published SBayesRC: marker effects follow a multi-normal
+mixture, and marker-specific mixture probabilities are determined by
+conditional probit stick-breaking regressions on annotations. The exposed
+`sblr` model is not an exact reproduction of the published GCTB SBayesRC
+implementation. Its default gamma grid differs, and it uses a CSR sparse-LD
+likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.
 
 This note focuses on the annotation-dependent prior and its diagnostics. It
 does not claim computational equivalence between the two likelihood
@@ -131,10 +132,11 @@ gamma = c(0, 0.001, 0.01, 0.1, 1)
 Users can request that published gamma grid explicitly:
 
 ```r
-fit <- stblr_csr_sbayesrc_generic(
+fit <- stblr_csr_annot(
   stats = stats,
-  ld_prefix = ld_prefix,
-  A = A,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
   gamma = c(0, 0.001, 0.01, 0.1, 1)
 )
 ```

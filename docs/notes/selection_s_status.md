@@ -46,15 +46,17 @@ selection_s = -0.5
 estimate_selection_s = FALSE
 ```
 
-fits a fixed global `selection_s` model.
+fits a fixed global `selection_s` model. The same supplied value is used for
+all traits and chains.
 
 ```r
 selection_s = NULL
 estimate_selection_s = TRUE
 ```
 
-samples one trait-specific `selection_s` by Metropolis-Hastings for each trait
-and chain.
+samples `selection_s` by Metropolis-Hastings. Internally, sampled `S` is
+trait-specific and chain-specific; the formatted fit reports posterior
+summaries across retained iterations and chains.
 
 Supplying both a numeric `selection_s` and `estimate_selection_s = TRUE` is
 invalid.

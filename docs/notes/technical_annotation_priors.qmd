@@ -355,22 +355,23 @@ responsibilities rather than a single exported package workflow.
 
 ## Fixed Marker-Specific Prior Wrapper
 
-`stblr_csr_prior_annot()` fits a CSR summary-statistics model with fixed
-marker-specific inclusion probabilities and effect-variance multipliers.
-Users may either supply `fixed_pi_marker` and `fixed_vb_multiplier` directly,
-or supply $A$ and fixed annotation coefficients from which the wrapper
-constructs them.
+`stblr_csr_annot(annotation_model = "prior")` fits a CSR summary-statistics
+model with fixed marker-specific inclusion probabilities and effect-variance
+multipliers. Users may either supply `fixed_pi_marker` and
+`fixed_vb_multiplier` directly, or supply $A$ and fixed annotation
+coefficients from which the wrapper constructs them. The compatibility wrapper
+`stblr_csr_prior_annot()` exposes the same fixed-prior backend.
 
 ```r
-fit_fixed <- stblr_csr_prior_annot(
-  ld_prefix = ld_prefix,
-  n = n,
-  yy = stats$yy,
-  wy = stats$wy,
-  ww = stats$ww,
-  A = A,
-  beta_pi = beta_pi,
-  beta_vb = beta_vb
+fit_fixed <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = list(
+    A = A,
+    beta_pi = beta_pi,
+    beta_vb = beta_vb
+  ),
+  annotation_model = "prior"
 )
 ```
 

@@ -1,5 +1,12 @@
 # sblr Note Strategy
 
+> Historical planning note. This file records the documentation migration
+> strategy and may mention lower-level or superseded interface names. For the
+> current package-level architecture, user-facing interface map, `Glist`
+> workflow, outputs, and `selection_s` support, use
+> `docs/notes/model_overview.qmd` and
+> `docs/notes/stblr_interface_and_output_map.qmd` as the source of truth.
+
 ## Purpose
 
 This file defines a documentation structure for `sblr` that makes the main

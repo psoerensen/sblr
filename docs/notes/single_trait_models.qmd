@@ -266,21 +266,22 @@ matrix, MH kernels, and SBayesRC details.
 
 ## Two Fitted Representations
 
-### Individual-Level BED: `stblr_bed_marker()`
+### Individual-Level BED: `stblr_bed()`
 
-`stblr_bed_marker()` fits ST-BLR directly from PLINK BED markers referenced by
-a qgg `Glist`. It reads selected genotype columns during sampling and maintains
-individual-level residual information. A short illustrative call is:
+`stblr_bed()` is the high-level interface for fitting ST-BLR directly from
+PLINK BED markers referenced by a qgg `Glist`. It reads selected genotype
+columns during sampling and maintains individual-level residual information.
+A short illustrative call is:
 
 ```r
-fit_bed <- stblr_bed_marker(
+fit_bed <- stblr_bed(
   Glist = Glist,
   y = y,
+  method = "bayesC",
   chr = 1,
   cls = cls,
-  pi_marker = 0.001,
+  pi_init = 0.001,
   h2 = 0.5,
-  scheduled = TRUE,
   nit = 1000,
   nburn = 100
 )
@@ -294,15 +295,16 @@ LD is present in the observed genotype columns.
 
 ### Summary Statistics and CSR LD: `stblr_csr()`
 
-`stblr_csr()` fits the same broad global-prior ST-BLR family using BED-derived
-or otherwise compatible sufficient statistics and disk-backed sparse LD:
+`stblr_csr()` fits the same broad global-prior ST-BLR family using
+`make_stats()` output and disk-backed sparse LD metadata stored in
+`Glist$sparseLD` by `make_sparseLD()`:
 
 ```r
 fit_csr <- stblr_csr(
   stats = stats,
-  ld_prefix = ld_prefix,
-  n = n,
-  pi_marker = 0.001,
+  Glist = Glist,
+  method = "bayesC",
+  pi_init = 0.001,
   h2 = 0.5,
   scheduled = FALSE,
   nit = 1000,
@@ -311,9 +313,9 @@ fit_csr <- stblr_csr(
 ```
 
 Here `stats$wy`, `stats$ww`, and `stats$yy` replace repeated phenotype and
-diagonal genotype calculations, while `ld_prefix` supplies retained
-off-diagonal LD relationships. The CSR representation makes large sparse-LD
-analyses possible without loading dense $XX$ into memory.
+diagonal genotype calculations, while `Glist$sparseLD$prefix` supplies
+retained off-diagonal LD relationships. The CSR representation makes large
+sparse-LD analyses possible without loading dense $XX$ into memory.
 
 The two paths target closely related single-trait sparse-regression models
 when samples, markers, scaling, priors, and likelihood information are
@@ -448,9 +450,9 @@ mass or effect scale varies across markers.
 
 ### Fixed Marker-Specific Priors
 
-`stblr_csr_prior_annot()` can replace the global values with fixed
-marker-specific inclusion probabilities $\pi_i$, variance multipliers, or
-both:
+`stblr_csr_annot(annotation_model = "prior")` can replace the global values
+with fixed marker-specific inclusion probabilities $\pi_i$, variance
+multipliers, or both:
 
 $$
 b_i
@@ -465,11 +467,12 @@ probability and $v_b\lambda_i$ replaces the global active-effect variance.
 
 ### Learned, Group, and Mixture Priors
 
-- `stblr_csr_learn_annot()` learns annotation effects on marker-specific
-  inclusion probabilities and optionally variance multipliers.
-- `stblr_csr_group_annot()` gives mutually exclusive marker groups their own
-  inclusion probabilities and variance multipliers.
-- `stblr_csr_sbayesrc_generic()` uses an **SBayesRC-style
+- `stblr_csr_annot(annotation_model = "learned")` learns annotation effects
+  on marker-specific inclusion probabilities and optionally variance
+  multipliers.
+- `stblr_csr_annot(annotation_model = "group")` gives mutually exclusive
+  marker groups their own inclusion probabilities and variance multipliers.
+- `stblr_csr_annot(annotation_model = "sbayesrc")` uses an **SBayesRC-style
   annotation-dependent BayesR prior**, assigning annotation-dependent
   probabilities to an exact-null component and multiple active variance
   components.
@@ -489,13 +492,13 @@ interpretation cautions are developed in
 
 | Need | Principal interface | Main consideration |
 |---|---|---|
-| Fit directly from available individual-level BED genotypes | `stblr_bed_marker()` | Repeated BED access; no separately prepared sparse LD required. |
+| Fit directly from available individual-level BED genotypes | `stblr_bed()` | Repeated BED access; no separately prepared sparse LD required. |
 | Reuse sufficient statistics and disk-backed sparse LD | `stblr_csr()` | LD approximation, marker alignment, compatible cross-products, and optional `selection_s` settings are explicit inputs. |
 | Reduce time spent repeatedly updating unlikely null markers | Scheduled BED or CSR path | Computational schedule must be validated for mixing and sensitivity. |
-| Supply fixed marker-specific prior information | `stblr_csr_prior_annot()` | Prior values are treated as fixed during fitting. |
-| Learn annotation effects during fitting | `stblr_csr_learn_annot()` | Additional parameters require regularization and convergence checks. |
-| Use mutually exclusive category priors | `stblr_csr_group_annot()` | Group assignment simplifies or discards overlap. |
-| Use annotation-dependent null and multiple active components | `stblr_csr_sbayesrc_generic()` | SBayesRC-style prior is more expressive and diagnostically demanding. |
+| Supply fixed marker-specific prior information | `stblr_csr_annot(annotation_model = "prior")` | Prior values are treated as fixed during fitting. |
+| Learn annotation effects during fitting | `stblr_csr_annot(annotation_model = "learned")` | Additional parameters require regularization and convergence checks. |
+| Use mutually exclusive category priors | `stblr_csr_annot(annotation_model = "group")` | Group assignment simplifies or discards overlap. |
+| Use annotation-dependent null and multiple active components | `stblr_csr_annot(annotation_model = "sbayesrc")` | SBayesRC-style prior is more expressive and diagnostically demanding. |
 
 Whichever path is used, marker order, phenotype preprocessing, scaling,
 priors, MCMC settings, and computational controls should be recorded with the

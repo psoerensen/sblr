@@ -18,8 +18,9 @@ New readers can follow this sequence:
 1. [Model Overview](model_overview.html) for the package landscape and model
    selection map.
 2. [ST-BLR Interface and Output Map](stblr_interface_and_output_map.html) for
-   the current `stblr_csr()` and `stblr_bed()` interfaces, shared `Glist`
-   object, standardized outputs, helpers, and unsupported combinations.
+   the current `stblr_csr()`, `stblr_bed()`, and `stblr_csr_annot()`
+   interfaces, shared `Glist` object, standardized outputs, helpers, and
+   unsupported combinations.
 3. [Data Representations](data_representations.html) for the relationship
    between individual-level data and summary statistics plus LD.
 4. [Single-Trait Models](single_trait_models.html) for the core sparse BLR
@@ -45,9 +46,10 @@ New readers can follow this sequence:
   and plain versus annotation-informed priors.
 
 - [ST-BLR Interface and Output Map](stblr_interface_and_output_map.html)
-  maps `stblr_csr()` and `stblr_bed()`, the shared `Glist` object,
-  summary-statistics and sparse-LD preparation, current model-family support,
-  standardized outputs, helper functions, and fine-mapping diagnostics.
+  maps `stblr_csr()`, `stblr_bed()`, and `stblr_csr_annot()`, the shared
+  `Glist` object, summary-statistics and sparse-LD preparation, current
+  model-family support, standardized outputs, helper functions, and
+  fine-mapping diagnostics.
 
 - [Data Representations](data_representations.html) explains individual-level
   genotype and phenotype inputs, sufficient statistics, LD, CSR storage, and
@@ -73,8 +75,8 @@ New readers can follow this sequence:
 
 - [Sparse-LD and BED Workflows](sparse_ld_and_bed_workflows.html) is the
   practical guide to aligning BED markers, deriving sufficient statistics,
-  streaming sparse LD, fitting `stblr_csr()`, and cautiously comparing BED and
-  CSR fits.
+  constructing sparse LD with `make_sparseLD()`, fitting `stblr_csr()`, and
+  cautiously comparing BED and CSR fits.
 
 - [Workflows and Outputs](workflows_and_outputs.html) connects the executable
   workflow scripts to fit-object components, compact summaries, diagnostics,

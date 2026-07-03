@@ -11,10 +11,14 @@ by `stblr_csr()` and related wrappers.
 The stable user-facing contract is deliberately narrower than the current
 binary-file implementation:
 
-1. create sparse LD with `sparseLD_stream_CSR()`;
-2. identify the resulting artifact by its `ld_prefix`;
-3. inspect it with `sparseLD_read_CSR()`; and
-4. pass the same prefix to `stblr_csr()` or an annotation-aware CSR wrapper.
+1. create sparse LD with `make_sparseLD()`, which records metadata in
+   `Glist$sparseLD`;
+2. inspect the resulting prefix with `sparseLD_read_CSR()` when needed; and
+3. pass the updated `Glist` to `stblr_csr()` or `stblr_csr_annot()`.
+
+`sparseLD_stream_CSR()` is the lower-level writer used by the preparation
+helper. Its `ld_prefix` remains the disk-backed artifact identifier, but the
+current high-level workflow carries that prefix through `Glist$sparseLD`.
 
 The present file suffixes, integer widths, floating-point widths, metadata
 keys, and upper-triangle storage convention are documented here to explain
@@ -47,19 +51,19 @@ branches:
 ```text
 the same BED files + cls + rows + allele frequencies
     |
-    +--> bed_xtx_xty() ------> stats$wy, stats$ww, stats$yy
+    +--> make_stats() ------> stats$wy, stats$ww, stats$yy
     |
-    +--> sparseLD_stream_CSR() ------> disk-backed sparse correlations
-                                              |
-                                              v
-                              stblr_csr(stats, ld_prefix, ...)
+    +--> make_sparseLD() ---> Glist$sparseLD$prefix
+                                      |
+                                      v
+                       stblr_csr(stats = stats, Glist = Glist, ...)
 ```
 
-`bed_xtx_xty()` supplies the phenotype cross-products and diagonal marker
-cross-products. `sparseLD_stream_CSR()` supplies retained off-diagonal marker
-correlations. During CSR model setup, the sampler combines the stored
-correlations with `stats$ww` to recover the corresponding off-diagonal
-cross-product scale.
+`make_stats()` supplies the phenotype cross-products and diagonal marker
+cross-products. `make_sparseLD()` supplies retained off-diagonal marker
+correlations and records their prefix and metadata in `Glist$sparseLD`.
+During CSR model setup, the sampler combines the stored correlations with
+`stats$ww` to recover the corresponding off-diagonal cross-product scale.
 
 This split is important: the on-disk values are correlations, not raw
 $X_i^\top X_j$, and the diagonal cross-products are supplied separately by
@@ -199,7 +203,9 @@ The stable usage expectations are:
 
 - all files belonging to a prefix are created and retained together;
 - `sparseLD_read_CSR(ld_prefix)` is used for inspection and validation;
-- `stblr_csr(..., ld_prefix = ld_prefix)` and related wrappers consume it;
+- `stblr_csr(..., Glist = Glist)` and `stblr_csr_annot()` normally consume
+  it through `Glist$sparseLD$prefix`; explicit `ld_prefix` remains available
+  for lower-level workflows;
 - marker order and construction settings are recorded externally; and
 - package functions handle file naming, binary types, index bases, diagonal
   convention, and conversion to sampler structures.
@@ -245,7 +251,7 @@ from lower-level generated functions:
 
 | Helper | Current role | Current status |
 |---|---|---|
-| `sparseLD_stream_CSR()` | Computes BED-derived sparse LD and streams the disk-backed prefix. | Exported; principal user-facing constructor. |
+| `sparseLD_stream_CSR()` | Computes BED-derived sparse LD and streams the disk-backed prefix. | Exported lower-level writer used by `make_sparseLD()`. |
 | `sparseLD_read_CSR()` | Reads a written prefix into R for inspection and validation. | Exported; user-facing reader. |
 | `sparseLD_to_CSR()` | Computes the same upper-triangle sparse representation and returns arrays in memory. | Generated lower-level wrapper; not exported in the current `NAMESPACE`. |
 | `sparseLD_write_CSR()` | Delegates to `sparseLD_stream_CSR()` with an output prefix. | Generated alias/internal wrapper; not exported in the current `NAMESPACE`. |
@@ -488,8 +494,7 @@ The public model handoff is short:
 ```r
 fit <- stblr_csr(
   stats = stats,
-  ld_prefix = ld_prefix,
-  n = n,
+  Glist = Glist,
   scheduled = FALSE
 )
 ```
@@ -556,7 +561,7 @@ architecture, and inferential target.
 ## BED-Versus-CSR Comparison and Reproducibility
 
 When both paths use the same BED source, markers, samples, phenotype,
-standardization, and priors, `stblr_bed_marker()` and `stblr_csr()` should
+standardization, and priors, `stblr_bed()` and `stblr_csr()` should
 usually show qualitatively comparable posterior patterns. Exact equality is
 not expected because:
 

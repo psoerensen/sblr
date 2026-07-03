@@ -379,18 +379,19 @@ same BED marker selection and order
     -> compatible wy, ww, yy, and sparse LD
 ```
 
-`sparseLD_stream_CSR()` constructs retained marker correlations from BED data
-and writes them under `ld_prefix`. It must receive the same marker ordering,
-sample rows, allele frequencies, and scaling convention used to create the
-sufficient statistics.
+`make_sparseLD()` constructs retained marker correlations from BED data,
+writes them under a sparse-LD prefix, and records the metadata in
+`Glist$sparseLD`. It must use the same marker ordering, sample rows, allele
+frequencies, and scaling convention used to create the sufficient statistics.
+The lower-level writer behind this workflow is `sparseLD_stream_CSR()`.
 
 The central workflow handoff is:
 
 ```text
 BED + phenotype
-  -> bed_xtx_xty()        -> wy, ww, yy, n
-  -> sparseLD_stream_CSR() -> ld_prefix
-  -> stblr_csr()
+  -> make_stats()     -> wy, ww, yy, n
+  -> make_sparseLD()  -> Glist$sparseLD
+  -> stblr_csr(stats = stats, Glist = Glist)
 ```
 
 The complete operational sequence is documented in
@@ -404,7 +405,8 @@ The complete operational sequence is documented in
 - `stats$ww`, one positive marker-diagonal vector per trait;
 - `stats$yy`, one phenotype sum of squares per trait;
 - $n$, supplied explicitly or taken from `stats$n`;
-- `ld_prefix`, identifying the compatible disk-backed sparse LD; and
+- `Glist$sparseLD$prefix`, or an explicit `ld_prefix`, identifying the
+  compatible disk-backed sparse LD; and
 - prior, variance-update, scheduling, and MCMC controls.
 
 The wrapper uses `yy/(n-1)` to initialize phenotype-variance-related prior

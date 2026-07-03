@@ -52,7 +52,8 @@ BED file paths and related metadata:
 - `Glist$bedfiles` identifies the BED files;
 - `Glist$n` gives the number of individuals;
 - `Glist$rsids` identifies the marker columns in each BED file;
-- `Glist$af` supplies allele frequencies used when markers are standardized;
+- `Glist$af` or `Glist$maf` supplies allele frequencies or MAF used when
+  markers are standardized or when MAF-dependent priors are used;
 - `Glist$rsidsLD` identifies the selected markers and their intended LD order.
 
 `stblr_bed()` is the high-level direct BED interface. It receives the `Glist`,
@@ -186,8 +187,11 @@ related quantities required by the ST-BLR wrapper:
 
 `make_sparseLD()` computes disk-backed sparse LD from the same BED-backed
 `Glist` and stores the resulting CSR prefix and resolved marker metadata in
-`Glist$sparseLD`. `stblr_csr()` combines `stats` with this sparse-LD metadata
-from `Glist`, or with an explicit `ld_prefix` when supplied. The wrapper
+`Glist$sparseLD`. This metadata includes the sparse-LD prefix, marker order,
+selected BED columns, rows, allele frequencies, distance limits, threshold,
+and construction settings used by CSR models. `stblr_csr()` combines `stats`
+with this sparse-LD metadata from `Glist`, or with an explicit `ld_prefix`
+when supplied. The wrapper
 initializes per-trait variance quantities using `stats$yy`, $n$, and $m$, then
 passes `wy`, `ww`, `yy`, and the CSR prefix to the sparse-LD sampler.
 
@@ -290,7 +294,14 @@ stopifnot(!anyNA(cls))
 ```
 
 The same `cls` is then supplied to `make_stats()` and `make_sparseLD()`.
-Allele frequencies are subset with the same indices.
+Allele frequencies or MAF are subset with the same indices:
+
+```r
+maf_ld <- Glist$maf[[chr]][match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])]
+```
+
+Do not use `%in%` for this alignment because it tests membership but does not
+preserve the requested LD/model order.
 For annotation models, the $m \times K$ annotation matrix `A` must have one
 row per selected marker in exactly this order. The annotation workflow makes
 that contract explicit by assigning `Glist$rsidsLD[[chr]]` as row names and

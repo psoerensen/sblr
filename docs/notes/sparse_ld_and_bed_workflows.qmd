@@ -69,13 +69,13 @@ allele frequencies. The principal objects are:
 
 | Object | Practical role |
 |---|---|
-| `bed_files` | Paths to one or more PLINK BED files containing individual-level genotypes. |
+| `Glist$bedfiles` | Paths to one or more PLINK BED files containing individual-level genotypes. |
 | `n` | Number of individuals encoded in the BED files. |
 | `Glist$rsids[[chr]]` | Marker identities in BED column order for a chromosome. |
 | `Glist$rsidsLD[[chr]]` | Selected marker identities in the intended LD/model order. |
 | `cls` | BED column indices that map the intended LD/model order into `Glist$rsids`. |
 | `rows` | Optional 1-based BED row indices selecting individuals. |
-| `af` | Allele frequencies corresponding exactly to `cls`, used for genotype scaling. |
+| `af` or `maf` | Allele frequencies or MAF corresponding exactly to `cls`, used for genotype scaling and MAF-dependent priors. |
 | `y` | Phenotype vector or matrix aligned to all individuals or to `rows`. |
 
 The workflow establishes marker order with:
@@ -232,8 +232,8 @@ Glist <- make_sparseLD(
 
 `Glist$sparseLD$prefix` is not a matrix object. It is the common prefix for the
 metadata, row-pointer, column-index, and value files consumed by `stblr_csr()`.
-`Glist$sparseLD` also records selected chromosomes, BED files, `cls`, allele
-frequencies, rows, distance limits, threshold, and block size.
+`Glist$sparseLD` also records selected chromosomes, BED files, marker IDs,
+`cls`, allele frequencies, rows, distance limits, threshold, and block size.
 
 Conceptually, CSR stores:
 

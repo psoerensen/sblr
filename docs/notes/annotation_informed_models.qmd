@@ -13,7 +13,7 @@ contract:
 
 ```text
 stats + disk-backed sparse LD + aligned marker annotations
-    -> fixed, learned, group, or SBayesRC-style annotation prior
+    -> stblr_csr_annot(annotation_model = ...)
     -> posterior marker effects, inclusion probabilities, and diagnostics
 ```
 
@@ -204,16 +204,22 @@ $v_{b,it}=v_{b,t}\lambda_{it}$.
 The direct route is illustrated by the annotation workflow:
 
 ```r
-fit_fixed <- stblr_csr_prior_annot(
+fit_fixed <- stblr_csr_annot(
   stats = stats,
-  ld_prefix = ld_prefix,
-  A = A,
-  fixed_pi_marker = sim$pi_marker,
-  fixed_vb_multiplier = sim$vb_multiplier,
-  use_pi_marker = TRUE,
-  use_vb_multiplier = TRUE
+  Glist = Glist,
+  annotations = list(
+    A = A,
+    fixed_pi_marker = sim$pi_marker,
+    fixed_vb_multiplier = sim$vb_multiplier,
+    use_pi_marker = TRUE,
+    use_vb_multiplier = TRUE
+  ),
+  annotation_model = "prior"
 )
 ```
+
+The compatibility wrapper `stblr_csr_prior_annot()` accepts the same underlying
+prior information for explicit fixed-prior workflows.
 
 Fixed priors are appropriate when prior values come from external biological
 knowledge, an independent study, cross-fitted estimates, or a deliberately
@@ -268,10 +274,11 @@ coefficients; proposal scales `rw_sd_eta_pi` and `rw_sd_eta_vb` control
 Metropolis movement.
 
 ```r
-fit_learned <- stblr_csr_learn_annot(
+fit_learned <- stblr_csr_annot(
   stats = stats,
-  ld_prefix = ld_prefix,
-  A = A,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "learned",
   learn_pi_annot = TRUE,
   learn_vb_annot = TRUE,
   rw_sd_eta_pi = 0.02,
@@ -284,6 +291,9 @@ The fit reports posterior annotation coefficients as `eta_pi` and `eta_vb`.
 They should be interpreted jointly with annotation scaling, coefficient
 shrinkage, bounds, proposal behavior, marker-level posterior summaries, and
 convergence diagnostics.
+
+The compatibility wrapper `stblr_csr_learn_annot()` remains available when a
+workflow needs the lower-level learned-annotation call explicitly.
 
 Use the learned model when annotation effects are genuinely part of the
 inferential target and there is enough information to estimate them. It is
@@ -314,16 +324,20 @@ included-marker counts.
 group <- ifelse(A[, "Anno1"] != 0, "annotated", "background")
 names(group) <- rownames(A)
 
-fit_group <- stblr_csr_group_annot(
+fit_group <- stblr_csr_annot(
   stats = stats,
-  ld_prefix = ld_prefix,
-  group = group,
+  Glist = Glist,
+  annotations = group,
+  annotation_model = "group",
   group_pi_init = c(0.002, 0.001),
   group_vb_multiplier_init = c(1.1, 1.0),
   updatePi = TRUE,
   updateGroupVb = TRUE
 )
 ```
+
+The compatibility wrapper `stblr_csr_group_annot()` exposes the same grouped
+backend for workflows that prefer an explicit group-prior function.
 
 Group inclusion probabilities have group-specific beta-prior controls.
 Variance multipliers can be updated and optionally normalized. Small groups
@@ -365,10 +379,11 @@ summary-statistics likelihood. Users can explicitly request the published
 gamma grid:
 
 ```r
-fit_sbayesrc_published_gamma <- stblr_csr_sbayesrc_generic(
+fit_sbayesrc_published_gamma <- stblr_csr_annot(
   stats = stats,
-  ld_prefix = ld_prefix,
-  A = A,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
   gamma = c(0, 0.001, 0.01, 0.1, 1)
 )
 ```
@@ -414,10 +429,11 @@ that intercept row of `alpha_init`. Other coefficients begin at zero unless
 supplied.
 
 ```r
-fit_sbayesrc <- stblr_csr_sbayesrc_generic(
+fit_sbayesrc <- stblr_csr_annot(
   stats = stats,
-  ld_prefix = ld_prefix,
-  A = A,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
   gamma = c(0, 0.01, 0.1, 1),
   updateAlpha = TRUE,
   alpha_update_every = 10
@@ -480,12 +496,12 @@ compact diagnostics:
 ```text
 mtsim_annotation()
     -> summarize_annotation_signal()
-    -> bed_xtx_xty() + sparseLD_stream_CSR()
+    -> make_stats() + make_sparseLD()
     -> align A with stats and sparse LD
-    -> stblr_csr_prior_annot()
-    -> stblr_csr_learn_annot()
-    -> stblr_csr_group_annot()
-    -> stblr_csr_sbayesrc_generic()
+    -> stblr_csr_annot(annotation_model = "prior")
+    -> stblr_csr_annot(annotation_model = "learned")
+    -> stblr_csr_annot(annotation_model = "group")
+    -> stblr_csr_annot(annotation_model = "sbayesrc")
     -> compact fit, annotation, and expected-gamma summaries
 ```
 
@@ -500,8 +516,9 @@ inclusion and mean absolute posterior effect summaries. These summaries are
 descriptive: annotation overlap and LD mean they are not additive variance
 partitions.
 
-The workflow then constructs `stats` and `ld_prefix` from the same BED marker
-order, verifies `A`, and fits all four prior families. Full marker matrices
+The workflow then constructs `stats` and updates `Glist$sparseLD` from the
+same BED marker order, verifies `A`, and fits all four prior families through
+`stblr_csr_annot()`. Full marker matrices
 remain available in fit objects, while compact summaries prevent
 marker-scale output from flooding the console. See
 [Workflows and outputs](workflows_and_outputs.qmd) for reporting patterns.
