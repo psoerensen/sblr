@@ -18,6 +18,24 @@ and conventions as annotation-unaware CSR models. Native slot 20 stores the
 linkage-equilibrium marker-effect component trace, and native slot 21 stores
 the LD contribution trace computed as `vgs - vle`.
 
+BayesS-style `selection_s` support is intentionally narrower than the broader
+annotation-aware backend set. Fixed and sampled `selection_s` are supported for
+plain `csr_bayesc`, plain `csr_bayesr`, and annotation-aware `csr_sbayesrc`.
+They are not supported for the BayesC-like annotation-aware CSR backends or BED
+backends.
+
+| Backend | Fixed `selection_s` | Sampled `selection_s` |
+| --- | --- | --- |
+| `csr_bayesc` | yes | yes |
+| `csr_bayesr` | yes | yes |
+| `csr_sbayesrc` | yes | yes |
+| `csr_scheduled_bayesc` | no | no |
+| `csr_prior_bayesc` | no | no |
+| `csr_annot_bayesc` | no | no |
+| `csr_group_bayesc` | no | no |
+| `bed_bayesc` | no | no |
+| `bed_bayesr` | no | no |
+
 Do not rename C++ files or native symbols in the alignment phase. The first
 R-side alignment step adds a dedicated `stblr_csr_annot()` entry point and
 standardized annotation-aware metadata/output aliases while preserving existing

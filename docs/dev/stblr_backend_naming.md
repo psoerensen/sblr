@@ -102,7 +102,10 @@ Data-level values:
 BayesR and SBayesRC-like output convention is unchanged: `fit$dm` is
 `P(component > 0)`, `fit$comp_prob` stores marker-by-component probabilities,
 and `fit$dm_component_mean` stores posterior mean zero-based component index
-where the quantity is returned or derivable.
+where the quantity is returned or derivable. CSR BayesR uses `component_0` for
+the null component column and `dm = 1 - P(component_0)`. CSR SBayesRC names
+components by gamma values; its null component column is `gamma_0.00` and
+`dm = 1 - P(gamma_0.00)`.
 
 BayesC-like annotation-aware CSR backends now follow the standard native
 multi-chain output convention. `csr_prior_bayesc`, `csr_annot_bayesc`, and
@@ -148,10 +151,17 @@ backends do not support sampled `selection_s`.
 
 Selection-S support summary:
 
-| mode | `csr_bayesc` | `csr_bayesr` | `csr_sbayesrc` |
-| --- | --- | --- | --- |
-| fixed `selection_s` | supported | supported | supported |
-| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 |
+| Backend | Fixed `selection_s` | Sampled `selection_s` |
+| --- | --- | --- |
+| `csr_bayesc` | yes | yes |
+| `csr_bayesr` | yes | yes |
+| `csr_sbayesrc` | yes | yes |
+| `csr_scheduled_bayesc` | no | no |
+| `csr_prior_bayesc` | no | no |
+| `csr_annot_bayesc` | no | no |
+| `csr_group_bayesc` | no | no |
+| `bed_bayesc` | no | no |
+| `bed_bayesr` | no | no |
 
 Preferred public argument names are:
 
@@ -167,8 +177,18 @@ Preferred future fit metadata fields are:
 - `fit$input$estimate_selection_s`
 - `fit$input$selection_s_scale`
 - `fit$input$selection_s_exponent`
+- `fit$selection_s`
+- `fit$selection_s_sd`
+- `fit$selection_s_min`
+- `fit$selection_s_max`
 - `fit$selection_s_trace`
 - `fit$selection_s_acceptance`
+
+`fit$selection_s_trace` is an iteration x trait matrix. `fit$selection_s` is
+the posterior mean by trait, and `fit$selection_s_acceptance` is the MH
+acceptance rate by trait. With `keep_chains = TRUE`, compact chain output uses
+`fit$chains[[trait]][[chain]]$selection_s` and
+`fit$chains[[trait]][[chain]]$selection_s_acceptance`.
 
 For the standard CSR path, fitted `b`/`bm` values are
 standardized-genotype-scale effects. A BayesS allele-scale prior

@@ -29,16 +29,23 @@
 #'   for the current annotation-aware CSR models, including SBayesRC.
 #' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
 #'   Currently supported only for `annotation_model = "sbayesrc"` in this
-#'   unified annotation interface. For CSR SBayesRC, non-null component prior
-#'   variances are scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
+#'   unified annotation interface. The default `selection_s = NULL` with
+#'   `estimate_selection_s = FALSE` fits the ordinary model. A finite numeric
+#'   scalar with `estimate_selection_s = FALSE` fits a fixed global-S model.
+#'   `selection_s` must remain `NULL` when `estimate_selection_s = TRUE`;
+#'   fixed and sampled S cannot both be requested.
 #' @param estimate_selection_s Logical; estimate one trait-specific
 #'   BayesS-style `selection_s` by Metropolis-Hastings. Currently supported
-#'   only for `annotation_model = "sbayesrc"`.
-#' @param selection_s_init Initial value for sampled `selection_s`.
+#'   only for `annotation_model = "sbayesrc"`. Sampled `selection_s` is not
+#'   supported for `annotation_model = "prior"`, `"learned"`, or `"group"`.
+#' @param selection_s_init Initial value for sampled `selection_s`. Defaults to
+#'   0 and is used only when `estimate_selection_s = TRUE`.
 #' @param selection_s_prior Numeric length-2 lower and upper bounds for the
-#'   uniform sampled-`selection_s` prior.
+#'   uniform sampled-`selection_s` prior. Defaults to `c(-3, 2)` and is used
+#'   only when `estimate_selection_s = TRUE`.
 #' @param selection_s_proposal_sd Random-walk proposal standard deviation for
-#'   sampled `selection_s`.
+#'   sampled `selection_s`. Defaults to 0.35 and is used only when
+#'   `estimate_selection_s = TRUE`.
 #' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
 #'   moves when `updateLDswap = TRUE`.
 #' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
@@ -60,6 +67,14 @@
 #'   can be constructed reliably. Existing wrapper-specific fields are
 #'   preserved. The `vle` and `vld` traces follow the same definitions and
 #'   formatting conventions as annotation-unaware CSR fits.
+#'   For sampled SBayesRC `selection_s`, the fit also contains `selection_s`,
+#'   `selection_s_sd`, `selection_s_min`, `selection_s_max`,
+#'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
+#'   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
+#'   and `selection_s_acceptance` is the MH acceptance rate by trait. With
+#'   `keep_chains = TRUE`, chain-level sampled-S output is available as
+#'   `fit$chains[[trait]][[chain]]$selection_s` and
+#'   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
 #'
 #' @details
 #' This interface is CSR summary-statistics only. The current annotation-aware
@@ -71,6 +86,44 @@
 #' Existing wrappers remain supported:
 #' [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
 #' [stblr_csr_group_annot()], and [stblr_csr_sbayesrc_generic()].
+#'
+#' CSR effects are on the standardized-genotype scale. The BayesS-style
+#' MAF-dependent prior scale used by fixed and sampled `selection_s` is
+#' `q_j(S) = h_j^(S + 1)`, where `h_j = 2 p_j (1 - p_j)` and `p_j` is the
+#' minor allele frequency. The `+1` exponent appears because the sampler effects
+#' are standardized-genotype-scale effects rather than allele-scale effects.
+#'
+#' For CSR SBayesRC, annotations affect component probabilities and
+#' `selection_s` affects marker-specific effect-size prior variance. Fixed
+#' `selection_s` uses
+#' `b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))`. The null
+#' component column is `gamma_0.00` and `dm = 1 - P(gamma_0.00)`.
+#'
+#' Sampled CSR SBayesRC uses the trait-specific MH log posterior contribution
+#'
+#' ```text
+#' log p(S_t | b_t, gamma_t, vb_t)
+#'   = log p(S_t)
+#'     - 0.5 sum_\{j: gamma_jt > 0\} [
+#'         log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))
+#'       ]
+#' ```
+#'
+#' `S_t` is sampled separately for each trait and chain. Posterior summaries
+#' are averaged or summarized across chains in the returned fit object.
+#'
+#' @examples
+#' \dontrun{
+#' fit_sampled_s_sbayesrc <- stblr_csr_annot(
+#'   stats = stats,
+#'   Glist = Glist,
+#'   annotations = annotations,
+#'   annotation_model = "sbayesrc",
+#'   estimate_selection_s = TRUE,
+#'   selection_s_prior = c(-3, 2),
+#'   selection_s_proposal_sd = 0.35
+#' )
+#' }
 #'
 #' @export
 stblr_csr_annot <- function(

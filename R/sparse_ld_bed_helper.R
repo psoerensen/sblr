@@ -1567,15 +1567,20 @@ stblr_csr_bayesr <- function(
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
 #' @param h2 Initial heritability. Defaults to 0.3.
 #' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter
-#'   for ordinary annotation-unaware CSR BayesC and BayesR. For the current
-#'   standardized-genotype CSR effect scale, non-null prior variances are
-#'   scaled by `h^(selection_s + 1)`, where `h = 2p(1-p)`.
-#'   `selection_s = NULL` preserves the ordinary BayesC/BayesR prior.
+#'   for ordinary annotation-unaware CSR BayesC and BayesR. The default
+#'   `selection_s = NULL` with `estimate_selection_s = FALSE` fits the ordinary
+#'   model. A finite numeric scalar with `estimate_selection_s = FALSE` fits a
+#'   fixed global-S model. `selection_s` must remain `NULL` when
+#'   `estimate_selection_s = TRUE`; fixed and sampled S cannot both be
+#'   requested.
 #' @param estimate_selection_s Logical; for unscheduled annotation-unaware CSR
 #'   BayesC and BayesR, estimate one trait-specific BayesS-style `selection_s`
-#'   by Metropolis-Hastings. Fixed `selection_s` and sampled `selection_s` are
-#'   mutually exclusive.
-#' @param selection_s_init Initial value for sampled `selection_s`.
+#'   by Metropolis-Hastings. `selection_s = NULL` and
+#'   `estimate_selection_s = TRUE` samples S separately for each trait and
+#'   chain. Sampled `selection_s` is not supported by scheduled CSR BayesC,
+#'   BayesC-like annotation-aware CSR backends, or BED backends.
+#' @param selection_s_init Initial value for sampled `selection_s`. Defaults to
+#'   0 and is used only when `estimate_selection_s = TRUE`.
 #' @param selection_s_prior Numeric length-2 lower and upper bounds for the
 #'   uniform sampled-`selection_s` prior. Only used when
 #'   `estimate_selection_s = TRUE`; it does not affect ordinary BayesC or fixed
@@ -1639,11 +1644,79 @@ stblr_csr_bayesr <- function(
 #'   `P(component > 0)`, `comp_prob` contains marker-by-component posterior
 #'   probabilities, `dm_component_mean` contains posterior mean component
 #'   indices, and LD-swap relocates the active/null full `(component, b)` state.
+#'   When sampled `selection_s` is enabled, the fit also contains
+#'   `selection_s`, `selection_s_sd`, `selection_s_min`, `selection_s_max`,
+#'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
+#'   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
+#'   and `selection_s_acceptance` is the MH acceptance rate by trait. With
+#'   `keep_chains = TRUE`, chain-level sampled-S output is available as
+#'   `fit$chains[[trait]][[chain]]$selection_s` and
+#'   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+#'
+#' @details
+#' CSR effects are on the standardized-genotype scale. The BayesS-style
+#' MAF-dependent prior scale used by fixed and sampled `selection_s` is
+#' `q_j(S) = h_j^(S + 1)`, where `h_j = 2 p_j (1 - p_j)` and `p_j` is the
+#' minor allele frequency. The `+1` exponent appears because the sampler effects
+#' are standardized-genotype-scale effects rather than allele-scale effects.
+#'
+#' For fixed `selection_s`, CSR BayesC uses
+#' `b_j | d_j = 1, vb, S ~ N(0, vb * q_j(S))`. CSR BayesR uses
+#' `b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))`, with
+#' component 0 as the point-mass null. In BayesR output, the null component
+#' column is `component_0` and `dm = 1 - P(component_0)`.
+#'
+#' For sampled `selection_s`, BayesC uses the trait-specific MH log posterior
+#' contribution
+#'
+#' ```text
+#' log p(S_t | b_t, d_t, vb_t)
+#'   = log p(S_t)
+#'     - 0.5 sum_\{j: d_jt = 1\} [
+#'         log q_j(S_t) + b_jt^2 / (vb_t q_j(S_t))
+#'       ]
+#' ```
+#'
+#' BayesR uses
+#'
+#' ```text
+#' log p(S_t | b_t, gamma_t, vb_t)
+#'   = log p(S_t)
+#'     - 0.5 sum_\{j: gamma_jt > 0\} [
+#'         log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))
+#'       ]
+#' ```
+#'
+#' `S_t` is sampled separately for each trait and chain. Posterior summaries
+#' are averaged or summarized across chains in the returned fit object.
 #'
 #' @examples
 #' \dontrun{
 #' fit_bc <- stblr_csr(stats = stats, Glist = Glist, method = "bayesc")
 #' fit_br <- stblr_csr(stats = stats, Glist = Glist, method = "bayesr")
+#'
+#' fit_fixed_s <- stblr_csr(
+#'   stats = stats,
+#'   Glist = Glist,
+#'   method = "bayesC",
+#'   selection_s = -0.5
+#' )
+#'
+#' fit_sampled_s_bc <- stblr_csr(
+#'   stats = stats,
+#'   Glist = Glist,
+#'   method = "bayesC",
+#'   estimate_selection_s = TRUE
+#' )
+#'
+#' fit_sampled_s_br <- stblr_csr(
+#'   stats = stats,
+#'   Glist = Glist,
+#'   method = "bayesR",
+#'   estimate_selection_s = TRUE,
+#'   selection_s_prior = c(-3, 2),
+#'   selection_s_proposal_sd = 0.35
+#' )
 #' }
 #' @export
 stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,

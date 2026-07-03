@@ -103,10 +103,17 @@ support sampler-level `selection_s`.
 
 Selection-S support summary:
 
-| mode | `csr_bayesc` | `csr_bayesr` | `csr_sbayesrc` |
-| --- | --- | --- | --- |
-| fixed `selection_s` | supported | supported | supported |
-| sampled `selection_s` | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 | supported; default prior `c(-3, 2)`, default proposal SD 0.35 |
+| Backend | Fixed `selection_s` | Sampled `selection_s` |
+| --- | --- | --- |
+| `csr_bayesc` | yes | yes |
+| `csr_bayesr` | yes | yes |
+| `csr_sbayesrc` | yes | yes |
+| `csr_scheduled_bayesc` | no | no |
+| `csr_prior_bayesc` | no | no |
+| `csr_annot_bayesc` | no | no |
+| `csr_group_bayesc` | no | no |
+| `bed_bayesc` | no | no |
+| `bed_bayesr` | no | no |
 
 Sampled CSR BayesC uses a bounded uniform prior and the Metropolis-Hastings
 kernel
@@ -298,6 +305,9 @@ optional `chains`, and optional `ld_swap_chains`.
 The R formatter resets `dm` to `1 - comp_prob[[trait]][, "component_0"]` and
 validates marker-by-component probabilities.
 
+BayesR component-probability columns use `component_0` for the null component;
+therefore `dm = 1 - P(component_0)`.
+
 Fixed and sampled `selection_s` are supported for this annotation-unaware CSR BayesR
 backend. The R wrapper aligns `Glist$maf` to `Glist$rsidsLD` with
 `match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])`, computes
@@ -399,6 +409,9 @@ Legacy slots:
 
 The R formatter derives `dm_component_mean` from `comp_prob` as posterior mean
 zero-based component index, matching BayesR output semantics.
+
+SBayesRC component-probability columns are named by gamma values. The null
+component column is `gamma_0.00`; therefore `dm = 1 - P(gamma_0.00)`.
 
 Fixed and sampled `selection_s` are supported for this annotation-aware CSR
 SBayesRC backend. The R wrapper reuses the CSR BayesC/BayesR MAF alignment

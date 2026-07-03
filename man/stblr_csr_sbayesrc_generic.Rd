@@ -159,26 +159,32 @@ controls.}
 \item{alpha_update_every}{Iterations between annotation-effect updates.}
 
 \item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter.
-If supplied, non-null component prior variances are scaled by
-`h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL` preserves
-the ordinary SBayesRC prior.}
+The default `selection_s = NULL` with `estimate_selection_s = FALSE` fits
+the ordinary SBayesRC model. A finite numeric scalar with
+`estimate_selection_s = FALSE` fits a fixed global-S model. `selection_s`
+must remain `NULL` when `estimate_selection_s = TRUE`; fixed and sampled S
+cannot both be requested.}
 
 \item{estimate_selection_s}{Logical; estimate one trait-specific
 BayesS-style `selection_s` by Metropolis-Hastings for CSR SBayesRC. Fixed
-`selection_s` and sampled `selection_s` are mutually exclusive.}
+`selection_s` and sampled `selection_s` are mutually exclusive. Sampled S
+is supported for CSR SBayesRC, but not for the BayesC-like annotation-aware
+CSR backends.}
 
-\item{selection_s_init}{Initial value for sampled `selection_s`.}
+\item{selection_s_init}{Initial value for sampled `selection_s`. Defaults to
+0 and is used only when `estimate_selection_s = TRUE`.}
 
 \item{selection_s_prior}{Numeric length-2 lower and upper bounds for the
 uniform sampled-`selection_s` prior. Only used when
-`estimate_selection_s = TRUE`.}
+`estimate_selection_s = TRUE`. Defaults to `c(-3, 2)`.}
 
 \item{selection_s_proposal_sd}{Random-walk proposal standard deviation for
-sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.}
+sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.
+Defaults to 0.35.}
 
 \item{Glist}{Optional genotype/LD metadata. Required when `selection_s` is
-non-`NULL` so MAF can be aligned to the CSR LD marker order using
-`Glist$rsidsLD`, `Glist$rsids`, and `Glist$maf`.}
+non-`NULL` or `estimate_selection_s = TRUE` so MAF can be aligned to the
+CSR LD marker order using `Glist$rsidsLD`, `Glist$rsids`, and `Glist$maf`.}
 }
 \value{
 A formatted SBayesRC-style ST-BLR fit with annotation and
@@ -186,6 +192,14 @@ A formatted SBayesRC-style ST-BLR fit with annotation and
   `dm_component_mean`, `alpha`, `sigmaSqAlpha`, and `ncomp` where available.
   The fit includes `vle` and `vld` traces using the same definitions and
   formatting conventions as annotation-unaware CSR fits.
+  For sampled `selection_s`, the fit also contains `selection_s`,
+  `selection_s_sd`, `selection_s_min`, `selection_s_max`,
+  `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
+  an iteration x trait matrix, `selection_s` is the posterior mean by trait,
+  and `selection_s_acceptance` is the MH acceptance rate by trait. With
+  `keep_chains = TRUE`, chain-level sampled-S output is available as
+  `fit$chains[[trait]][[chain]]$selection_s` and
+  `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
 }
 \description{
 Fits a CSR ST-BLR model with an SBayesRC-style annotation-dependent BayesR
@@ -194,4 +208,43 @@ stick-breaking regressions on an annotation matrix. The core prior family is
 closely aligned with the published SBayesRC prior structure, but the exposed
 default gamma grid and CSR sparse-LD likelihood differ from the published
 GCTB SBayesRC implementation.
+}
+\details{
+CSR effects are on the standardized-genotype scale. The BayesS-style
+MAF-dependent prior scale used by fixed and sampled `selection_s` is
+`q_j(S) = h_j^(S + 1)`, where `h_j = 2 p_j (1 - p_j)` and `p_j` is the
+minor allele frequency. The `+1` exponent appears because the sampler effects
+are standardized-genotype-scale effects rather than allele-scale effects.
+
+For fixed `selection_s`, CSR SBayesRC uses
+`b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))`.
+Annotations affect component probabilities, while `selection_s` affects
+marker-specific effect-size prior variance. The null component column is
+`gamma_0.00` and `dm = 1 - P(gamma_0.00)`.
+
+Sampled CSR SBayesRC uses the trait-specific MH log posterior contribution
+
+```text
+log p(S_t | b_t, gamma_t, vb_t)
+  = log p(S_t)
+    - 0.5 sum_\{j: gamma_jt > 0\} [
+        log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))
+      ]
+```
+
+`S_t` is sampled separately for each trait and chain. Posterior summaries
+are averaged or summarized across chains in the returned fit object.
+}
+\examples{
+\dontrun{
+fit_sampled_s_sbayesrc <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = annotations,
+  annotation_model = "sbayesrc",
+  estimate_selection_s = TRUE,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35
+)
+}
 }
