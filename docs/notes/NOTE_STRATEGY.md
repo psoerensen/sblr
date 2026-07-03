@@ -104,6 +104,7 @@ docs/
     sparse_ld_and_bed_workflows.qmd
     single_trait_models.qmd
     multi_trait_models.qmd
+    selection_s_status.md
     annotation_informed_models.qmd
     workflows_and_outputs.qmd
     technical_summary_statistics.qmd

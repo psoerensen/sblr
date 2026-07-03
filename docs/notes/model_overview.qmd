@@ -128,6 +128,15 @@ b_{it}\mid d_{it}=1 \sim N(0,v_{b,t}),
 b_{it}\mid d_{it}=0 = 0.
 $$
 
+CSR BayesC, CSR BayesR, and CSR SBayesRC also support an optional
+BayesS-style MAF-dependent prior variance scaling argument named
+`selection_s`. Fixed global `selection_s` and sampled trait-specific
+`selection_s` are supported for those three CSR backends. Scheduled CSR
+BayesC, BayesC-like annotation-aware CSR backends, and BED backends do not
+support sampler-level `selection_s`. See
+[selection_s implementation status](selection_s_status.md) for the current
+support matrix, scale convention, defaults, and MH kernels.
+
 An **annotation-informed prior** allows prior inclusion probabilities,
 variance scales, or mixture-component probabilities to vary by marker,
 marker group, or annotation profile. Current public CSR wrappers distinguish
@@ -214,11 +223,11 @@ hold in real data.
 | `stblr_bed_marker()` | Fit ST-BLR directly from selected PLINK BED markers and phenotypes. | Individual-level BED | Plain/global ST-BLR; accepts one or more phenotype columns. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Single-trait models](single_trait_models.qmd) |
 | `bed_xtx_xty()` | Derive marker-trait and phenotype sufficient statistics from BED data. | BED to summary statistics | Preparation, not a fitted model. | [Data representations](data_representations.qmd) |
 | `sparseLD_stream_CSR()` | Construct disk-backed sparse LD from BED data. | BED to CSR LD | Preparation, not a fitted model. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd) |
-| `stblr_csr()` | Fit ST-BLR from `stats` and a CSR LD prefix. | Summary statistics plus disk-backed sparse LD | Plain/global ST-BLR. | [Single-trait models](single_trait_models.qmd) |
+| `stblr_csr()` | Fit ST-BLR from `stats` and a CSR LD prefix. | Summary statistics plus disk-backed sparse LD | Plain/global ST-BLR, with optional fixed global or sampled trait-specific `selection_s` for CSR BayesC and CSR BayesR. | [Single-trait models](single_trait_models.qmd), [selection_s status](selection_s_status.md) |
 | `stblr_csr_prior_annot()` | Fit CSR ST-BLR with fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. | Summary statistics plus CSR LD and optional annotations | Fixed annotation-informed prior. | [Annotation-informed models](annotation_informed_models.qmd) |
 | `stblr_csr_learn_annot()` | Learn annotation effects on marker inclusion and optionally effect-variance multipliers during CSR fitting. | Summary statistics plus CSR LD and annotations | Direct learned annotation prior. | [Annotation-informed models](annotation_informed_models.qmd), [Technical annotation priors](technical_annotation_priors.qmd) |
 | `stblr_csr_group_annot()` | Fit CSR ST-BLR with group-level inclusion probabilities and variance multipliers. | Summary statistics plus CSR LD and marker groups | Group prior. | [Annotation-informed models](annotation_informed_models.qmd) |
-| `stblr_csr_sbayesrc_generic()` | Fit an SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. It is not an exact reproduction of GCTB SBayesRC as exposed by default. | Summary statistics plus CSR LD and overlapping annotations | Probit stick-breaking mixture prior. | [Annotation-informed models](annotation_informed_models.qmd), [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd) |
+| `stblr_csr_sbayesrc_generic()` | Fit an SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. It is not an exact reproduction of GCTB SBayesRC as exposed by default. | Summary statistics plus CSR LD and overlapping annotations | Probit stick-breaking mixture prior, with optional fixed global or sampled trait-specific `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd), [selection_s status](selection_s_status.md) |
 | `sblr()` | Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models. | Summary statistics plus marker cross-products/LD | Plain single- or multi-trait model components. | [Multi-trait models](multi_trait_models.qmd) |
 | `mtsim()` | Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals. | Simulated matrix or `Glist` genotypes | Model checking and multi-trait truth. | [Workflows and outputs](workflows_and_outputs.qmd) |
 | `mtsim_annotation()` | Simulate multi-trait phenotypes with overlapping annotation enrichment and marker-specific priors. | Simulated matrix or `Glist` genotypes plus annotations | Annotation-model checking. | [Annotation-informed models](annotation_informed_models.qmd), [Workflows and outputs](workflows_and_outputs.qmd) |

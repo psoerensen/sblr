@@ -1,0 +1,158 @@
+# selection_s implementation status
+
+The package argument is `selection_s`. It corresponds to the BayesS-style
+MAF architecture parameter `S`, applied as marker-specific prior variance
+scaling in the CSR samplers that currently support it.
+
+## Scale convention
+
+CSR effects are on the standardized-genotype scale. The MAF-dependent prior
+scale is
+
+```text
+q_j(S) = h_j^(S + 1)
+h_j = 2 p_j (1 - p_j)
+```
+
+where `p_j` is the minor allele frequency. The `S + 1` exponent is used
+because CSR marker effects are standardized-genotype-scale effects rather than
+allele-scale effects.
+
+## Backend support
+
+| Backend | Fixed `selection_s` | Sampled `selection_s` |
+|---|---:|---:|
+| `csr_bayesc` | yes | yes |
+| `csr_bayesr` | yes | yes |
+| `csr_sbayesrc` | yes | yes |
+| `csr_scheduled_bayesc` | no | no |
+| `csr_prior_bayesc` | no | no |
+| `csr_annot_bayesc` | no | no |
+| `csr_group_bayesc` | no | no |
+| `bed_bayesc` | no | no |
+| `bed_bayesr` | no | no |
+
+## User-facing modes
+
+```r
+selection_s = NULL
+estimate_selection_s = FALSE
+```
+
+fits the ordinary model.
+
+```r
+selection_s = -0.5
+estimate_selection_s = FALSE
+```
+
+fits a fixed global `selection_s` model.
+
+```r
+selection_s = NULL
+estimate_selection_s = TRUE
+```
+
+samples one trait-specific `selection_s` by Metropolis-Hastings for each trait
+and chain.
+
+Supplying both a numeric `selection_s` and `estimate_selection_s = TRUE` is
+invalid.
+
+## Fixed-S prior forms
+
+For CSR BayesC:
+
+```text
+b_j | d_j = 1, vb, S ~ N(0, vb * q_j(S))
+```
+
+For CSR BayesR:
+
+```text
+b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))
+```
+
+For CSR SBayesRC:
+
+```text
+b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))
+```
+
+In SBayesRC, annotations affect component probabilities. `selection_s` affects
+marker-specific effect-size prior variance.
+
+## Sampled-S defaults
+
+```r
+selection_s_init = 0
+selection_s_prior = c(-3, 2)
+selection_s_proposal_sd = 0.35
+```
+
+## Sampled-S MH kernels
+
+For BayesC:
+
+```text
+log p(S_t | b_t, d_t, vb_t)
+  = log p(S_t)
+    - 0.5 sum_{j: d_jt = 1} [
+        log q_j(S_t) + b_jt^2 / (vb_t q_j(S_t))
+      ]
+```
+
+For BayesR and SBayesRC:
+
+```text
+log p(S_t | b_t, gamma_t, vb_t)
+  = log p(S_t)
+    - 0.5 sum_{j: gamma_jt > 0} [
+        log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))
+      ]
+```
+
+Posterior summaries are averaged or summarized across chains in the returned
+fit object.
+
+## Component naming
+
+BayesR component probabilities use `component_0` for the null component, and
+`dm = 1 - P(component_0)`.
+
+SBayesRC component probabilities are named by gamma values. The null component
+column is `gamma_0.00`, and `dm = 1 - P(gamma_0.00)`.
+
+## Interpretation
+
+`selection_s = -1` gives `q_j(S) = 1`, so it reproduces the ordinary unscaled
+model under the same seed for fixed-S fits.
+
+Valid compact examples:
+
+```r
+fitC <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  estimate_selection_s = TRUE
+)
+
+fitR <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  estimate_selection_s = TRUE
+)
+
+fitS <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = annotations,
+  annotation_model = "sbayesrc",
+  estimate_selection_s = TRUE
+)
+```
+
+Unsupported examples include sampled `selection_s` with
+`annotation_model = "prior"`, `"learned"`, or `"group"`, and all BED backends.

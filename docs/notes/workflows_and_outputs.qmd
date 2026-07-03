@@ -33,6 +33,7 @@ as final inference.
 | Fit directly from individual-level PLINK genotypes | BED-backed `Glist`, phenotype matrix, aligned marker columns | `stblr_bed_marker()` in `sparse_ld_bed_workflow.R` | BED ST-BLR fit |
 | Prepare reusable summary-statistics inputs from BED | BED files, phenotypes, marker columns, allele frequencies | `bed_xtx_xty()` and `sparseLD_stream_CSR()` | Sufficient statistics and a CSR LD prefix |
 | Fit plain ST-BLR from summary statistics and sparse LD | `stats` and `ld_prefix` | `stblr_csr()` | CSR ST-BLR fit |
+| Fit BayesS-style MAF-scaled CSR models | `stats`, `Glist`, and CSR LD metadata with MAF | `stblr_csr(..., selection_s = ...)` or `stblr_csr(..., estimate_selection_s = TRUE)` | CSR BayesC/BayesR fit with fixed global or sampled trait-specific `selection_s` |
 | Compare annotation prior families | `stats`, `ld_prefix`, aligned annotations or groups | `annotation_based_models.R` | Fixed, learned, group, and SBayesRC-style fits |
 | Check recovery against known truth | Simulated genotypes/phenotypes and causal markers | `mtsim()` or `mtsim_annotation()` | Simulation truth plus fitted-model diagnostics |
 
@@ -223,6 +224,26 @@ make the complete implementation identical to GCTB SBayesRC. See
 [Annotation-informed models](annotation_informed_models.html) for the model
 comparison.
 
+CSR SBayesRC also supports optional BayesS-style `selection_s`. In this model,
+annotations affect component probabilities and `selection_s` affects
+marker-specific effect-size prior variance. Sampled trait-specific
+`selection_s` is requested through the unified annotation interface:
+
+```r
+fitS <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = annotations,
+  annotation_model = "sbayesrc",
+  estimate_selection_s = TRUE
+)
+```
+
+Sampled `selection_s` is not supported for `annotation_model = "prior"`,
+`"learned"`, or `"group"`. See
+[selection_s implementation status](selection_s_status.md) for the complete
+support matrix and defaults.
+
 ## Fit Object Structure
 
 The public wrappers format native sampler results into named lists. Always
@@ -250,6 +271,14 @@ the corresponding covariance matrices are valid. CSR fits may also return
 `vle` and `vld`, separating linkage-equilibrium and LD contributions under
 the sampler's definitions.
 
+Sampled `selection_s` fits return `selection_s`, `selection_s_sd`,
+`selection_s_min`, `selection_s_max`, `selection_s_trace`, and
+`selection_s_acceptance`. The trace is an iteration-by-trait matrix,
+`selection_s` is the posterior mean by trait, and `selection_s_acceptance` is
+the MH acceptance rate by trait. With `keep_chains = TRUE`, compact chain
+objects contain `selection_s` and `selection_s_acceptance` for each trait and
+chain.
+
 ### Annotation-Specific Components
 
 - Learned-annotation fits return `eta_pi` and `eta_vb`, summarizing annotation
@@ -261,6 +290,9 @@ the sampler's definitions.
   steps, `sigmaSqAlpha` summarizes their variance parameters, `comp_prob`
   contains marker-level posterior component probabilities, and `ncomp`
   summarizes numbers of markers assigned to components.
+- In CSR BayesR, the null component column is `component_0` and
+  `dm = 1 - P(component_0)`. In CSR SBayesRC, the null component column is
+  `gamma_0.00` and `dm = 1 - P(gamma_0.00)`.
 
 These components have different dimensions and meanings. Do not compare an
 `eta_pi` coefficient directly with an `alpha` coefficient without accounting
@@ -426,7 +458,8 @@ For each reported fit, record:
   block settings, and CSR prefix provenance.
 - **Model and priors:** wrapper name, plain or annotation-informed prior,
   inclusion and variance-prior settings, annotation preprocessing, group
-  definitions, and gamma grid where relevant.
+  definitions, gamma grid where relevant, and whether fixed global or sampled
+  trait-specific `selection_s` was used.
 - **MCMC settings:** `nit`, `nburn`, `nthin`, chains, seed, scheduling choices,
   and thread count.
 - **Convergence caveat:** diagnostics performed and any limitations caused by

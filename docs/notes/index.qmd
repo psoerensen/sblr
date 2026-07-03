@@ -26,11 +26,13 @@ New readers can follow this sequence:
    CSR LD.
 5. [Annotation-Informed Models](annotation_informed_models.html) for fixed,
    learned, group, and SBayesRC-style annotation priors.
-6. [Workflows and Outputs](workflows_and_outputs.html) for running the main
+6. [selection_s Implementation Status](selection_s_status.md) for the current
+   fixed global and sampled trait-specific BayesS-style MAF-scaling support.
+7. [Workflows and Outputs](workflows_and_outputs.html) for running the main
    workflows and interpreting returned fit objects.
-7. [Multi-Trait Models](multi_trait_models.html) for joint trait-sharing and
+8. [Multi-Trait Models](multi_trait_models.html) for joint trait-sharing and
    covariance models.
-8. Consult the [technical appendices](#technical-appendices) as needed for
+9. Consult the [technical appendices](#technical-appendices) as needed for
    derivations, implementation contracts, and detailed assumptions.
 
 ## Main Explanatory Notes
@@ -54,6 +56,10 @@ New readers can follow this sequence:
 - [Annotation-Informed Models](annotation_informed_models.html) compares
   fixed marker-specific priors, learned annotation effects, group priors, and
   the SBayesRC-style annotation-dependent BayesR prior.
+
+- [selection_s Implementation Status](selection_s_status.md) summarizes the
+  current fixed global and sampled trait-specific `selection_s` support matrix,
+  scale convention, defaults, and BayesR/SBayesRC component naming.
 
 ## Practical Workflow Notes
 

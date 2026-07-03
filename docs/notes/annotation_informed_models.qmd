@@ -428,6 +428,27 @@ The fit contains annotation coefficients `alpha`, annotation-effect variances
 `sigmaSqAlpha`, marker component probabilities `comp_prob`, and component
 counts `ncomp`.
 
+CSR SBayesRC also supports BayesS-style MAF-dependent prior variance scaling
+through `selection_s`. Fixed global `selection_s` and sampled trait-specific
+`selection_s` are supported for `annotation_model = "sbayesrc"`:
+
+```r
+fit_sbayesrc_sampled_s <- stblr_csr_annot(
+  stats = stats,
+  Glist = Glist,
+  annotations = A,
+  annotation_model = "sbayesrc",
+  estimate_selection_s = TRUE
+)
+```
+
+In this model, annotations affect component probabilities and `selection_s`
+affects marker-specific effect-size prior variance. Sampled `selection_s` is
+not supported by the BayesC-like annotation-aware CSR backends
+`annotation_model = "prior"`, `"learned"`, or `"group"`. See
+[selection_s implementation status](selection_s_status.md) for the scale
+convention, sampled-S defaults, and backend support matrix.
+
 The exported diagnostic helpers convert fitted coefficients into compact,
 deterministic summaries:
 

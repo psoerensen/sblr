@@ -204,6 +204,66 @@ PIPs quantify posterior evidence under the chosen data representation, LD,
 prior, and sampler. They are not probabilities that a marker is biologically
 causal.
 
+## BayesS-Style `selection_s` in CSR Models
+
+The package argument `selection_s` corresponds to the BayesS-style MAF
+architecture parameter `S`. It is currently implemented only for the
+unscheduled CSR BayesC, CSR BayesR, and CSR SBayesRC backends. Scheduled CSR
+BayesC, BayesC-like annotation-aware CSR backends, and BED backends do not
+support sampler-level `selection_s`.
+
+CSR effects are on the standardized-genotype scale. The MAF-dependent prior
+scale is
+
+$$
+q_j(S)=h_j^{S+1},
+\qquad
+h_j=2p_j(1-p_j),
+$$
+
+where $p_j$ is the minor allele frequency. The `+1` exponent is used because
+the sampler effects are standardized-genotype-scale effects rather than
+allele-scale effects.
+
+For CSR BayesC, fixed global `selection_s` changes the active-effect prior to
+
+$$
+b_j\mid d_j=1,v_b,S\sim N\{0,v_b q_j(S)\}.
+$$
+
+For CSR BayesR, fixed global `selection_s` changes non-null component priors
+to
+
+$$
+b_j\mid \mathrm{component}_j=m,v_b,S
+\sim N\{0,v_b\gamma_m q_j(S)\}.
+$$
+
+Sampled trait-specific `selection_s` is requested with:
+
+```r
+fitC <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC",
+  estimate_selection_s = TRUE
+)
+
+fitR <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesR",
+  estimate_selection_s = TRUE
+)
+```
+
+The sampled-S defaults are `selection_s_init = 0`,
+`selection_s_prior = c(-3, 2)`, and `selection_s_proposal_sd = 0.35`.
+`selection_s = -1` gives `q_j(S) = 1`, so it reproduces the ordinary unscaled
+model under the same seed for fixed-S fits. See
+[selection_s implementation status](selection_s_status.md) for the support
+matrix, MH kernels, and SBayesRC details.
+
 ## Two Fitted Representations
 
 ### Individual-Level BED: `stblr_bed_marker()`
@@ -430,7 +490,7 @@ interpretation cautions are developed in
 | Need | Principal interface | Main consideration |
 |---|---|---|
 | Fit directly from available individual-level BED genotypes | `stblr_bed_marker()` | Repeated BED access; no separately prepared sparse LD required. |
-| Reuse sufficient statistics and disk-backed sparse LD | `stblr_csr()` | LD approximation, marker alignment, and compatible cross-products are explicit inputs. |
+| Reuse sufficient statistics and disk-backed sparse LD | `stblr_csr()` | LD approximation, marker alignment, compatible cross-products, and optional `selection_s` settings are explicit inputs. |
 | Reduce time spent repeatedly updating unlikely null markers | Scheduled BED or CSR path | Computational schedule must be validated for mixing and sensitivity. |
 | Supply fixed marker-specific prior information | `stblr_csr_prior_annot()` | Prior values are treated as fixed during fitting. |
 | Learn annotation effects during fitting | `stblr_csr_learn_annot()` | Additional parameters require regularization and convergence checks. |

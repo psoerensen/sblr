@@ -55,6 +55,65 @@ annotation coefficients are fitted separately by trait. The formatted fit
 therefore stores one `alpha` matrix and one set of marker component summaries
 per trait.
 
+## Optional BayesS-Style `selection_s`
+
+The package argument is `selection_s`. It corresponds to the BayesS-style MAF
+architecture parameter `S`.
+
+Current CSR SBayesRC supports both fixed global `selection_s` and sampled
+trait-specific `selection_s` by Metropolis-Hastings. SBayesRC annotations and
+`selection_s` affect different parts of the prior:
+
+- annotations affect marker-specific component probabilities through
+  $A\alpha$ and probit stick-breaking;
+- `selection_s` affects marker-specific effect-size prior variance.
+
+CSR effects are on the standardized-genotype scale. The MAF-dependent prior
+scale is
+
+$$
+q_j(S)=h_j^{S+1},
+\qquad
+h_j=2p_j(1-p_j),
+$$
+
+where $p_j$ is the minor allele frequency. The `+1` exponent is used because
+the CSR sampler effects are standardized-genotype-scale effects rather than
+allele-scale effects.
+
+With fixed `selection_s`, the active SBayesRC component prior is
+
+$$
+b_j \mid \mathrm{component}_j=m,v_b,S
+\sim
+N\{0, v_b\gamma_m q_j(S)\}.
+$$
+
+With sampled `selection_s`, the current implementation samples one $S_t$ per
+trait and chain using the active-component MH log posterior contribution
+
+```text
+log p(S_t | b_t, gamma_t, vb_t)
+  = log p(S_t)
+    - 0.5 sum_{j: gamma_jt > 0} [
+        log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))
+      ]
+```
+
+The sampled-S defaults are:
+
+```r
+selection_s_init = 0
+selection_s_prior = c(-3, 2)
+selection_s_proposal_sd = 0.35
+```
+
+The same fixed and sampled `selection_s` support is available for plain CSR
+BayesC and plain CSR BayesR. Scheduled CSR BayesC, BayesC-like
+annotation-aware CSR backends, and BED backends do not support sampler-level
+`selection_s`. See [selection_s implementation status](selection_s_status.md)
+for the complete backend support matrix and BayesC/BayesR kernels.
+
 ## Gamma Grids
 
 The public `sblr` default is:
@@ -345,6 +404,10 @@ diagnostics.
 contains posterior frequencies of sampled component assignments after burn-in
 and thinning. It is not the same object as the annotation-derived prior
 probability matrix computed from $A\alpha$.
+
+Component probability columns are named by gamma values. The exact null
+component column is `gamma_0.00`, so `dm = 1 - P(gamma_0.00)`. This differs
+from CSR BayesR, which uses `component_0` for the null component column.
 
 ### `ncomp`
 
