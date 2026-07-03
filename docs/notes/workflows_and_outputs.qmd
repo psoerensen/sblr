@@ -30,11 +30,11 @@ as final inference.
 
 | Question | Starting data | Principal workflow or function | Main output |
 |---|---|---|---|
-| Fit directly from individual-level PLINK genotypes | BED-backed `Glist`, phenotype matrix, aligned marker columns | `stblr_bed_marker()` in `sparse_ld_bed_workflow.R` | BED ST-BLR fit |
-| Prepare reusable summary-statistics inputs from BED | BED files, phenotypes, marker columns, allele frequencies | `bed_xtx_xty()` and `sparseLD_stream_CSR()` | Sufficient statistics and a CSR LD prefix |
-| Fit plain ST-BLR from summary statistics and sparse LD | `stats` and `ld_prefix` | `stblr_csr()` | CSR ST-BLR fit |
+| Fit directly from individual-level PLINK genotypes | BED-backed `Glist`, phenotype matrix, aligned marker columns | `stblr_bed()` | BED ST-BLR fit |
+| Prepare reusable summary-statistics inputs from BED | BED-backed `Glist`, phenotypes, marker IDs, allele frequencies | `make_stats()` and `make_sparseLD()` | `stats` and an updated `Glist$sparseLD` |
+| Fit plain ST-BLR from summary statistics and sparse LD | `stats` and sparse-LD metadata in `Glist` | `stblr_csr()` | CSR ST-BLR fit |
 | Fit BayesS-style MAF-scaled CSR models | `stats`, `Glist`, and CSR LD metadata with MAF | `stblr_csr(..., selection_s = ...)` or `stblr_csr(..., estimate_selection_s = TRUE)` | CSR BayesC/BayesR fit with fixed global or sampled trait-specific `selection_s` |
-| Compare annotation prior families | `stats`, `ld_prefix`, aligned annotations or groups | `annotation_based_models.R` | Fixed, learned, group, and SBayesRC-style fits |
+| Compare annotation prior families | `stats`, sparse-LD metadata in `Glist`, aligned annotations or groups | `annotation_based_models.R` | Fixed, learned, group, and SBayesRC-style fits |
 | Check recovery against known truth | Simulated genotypes/phenotypes and causal markers | `mtsim()` or `mtsim_annotation()` | Simulation truth plus fitted-model diagnostics |
 
 Choose the workflow from the available data and the intended prior, not from
@@ -76,9 +76,9 @@ Its stages are:
 ```text
 BED-backed Glist + phenotypes
     -> align LD markers with BED columns using cls
-    -> optionally fit stblr_bed_marker()
-    -> compute stats with bed_xtx_xty()
-    -> stream sparse LD with sparseLD_stream_CSR()
+    -> optionally fit stblr_bed()
+    -> compute stats with make_stats()
+    -> compute sparse LD with make_sparseLD()
     -> fit stblr_csr()
     -> compare BED and CSR summaries cautiously
 ```
@@ -104,9 +104,9 @@ posterior interpretation.
 
 ### Optionally Fit the Direct BED Model
 
-`stblr_bed_marker()` reads marker data from BED files during fitting. It is the
-direct individual-level comparison path and does not need a separately
-prepared sparse-LD artifact.
+`stblr_bed()` reads marker data from BED files during fitting. It is the direct
+individual-level comparison path and does not need a separately prepared
+sparse-LD artifact.
 
 Use it when individual-level genotypes remain available and direct marker
 updates are desired. Record the selected rows, `cls`, scaling choice, prior
@@ -115,16 +115,19 @@ when comparing its output with a CSR fit.
 
 ### Compute Sufficient Statistics and Sparse LD
 
-`bed_xtx_xty()` computes the marker-trait and phenotype cross-products used by
-the CSR model. The important returned quantities include:
+`make_stats()` computes the marker-trait and phenotype cross-products used by
+the CSR model from a BED-backed `Glist`. The important returned quantities
+include:
 
 - `stats$wy`, corresponding to marker-trait cross-products;
 - `stats$ww`, containing marker diagonal cross-products;
 - `stats$yy`, containing phenotype sums of squares;
 - metadata such as marker count, trait count, and sample size when available.
 
-`sparseLD_stream_CSR()` then writes thresholded sparse LD from the same BED
-source. Its `r2_threshold`, distance limits, selected rows, allele
+`make_sparseLD()` then writes thresholded sparse LD from the same BED-backed
+`Glist` and stores the sparse-LD prefix, selected chromosomes, marker columns,
+allele frequencies, rows, threshold, window, and block metadata in
+`Glist$sparseLD`. Its `r2_threshold`, distance limits, selected rows, allele
 frequencies, marker columns, and scaling assumptions should be reported.
 `sparseLD_read_CSR()` can inspect the resulting representation, but users
 should rely on package readers and writers rather than treating the on-disk
@@ -132,13 +135,14 @@ files as a stable manual file-format API.
 
 ### Fit and Compare the CSR Model
 
-`stblr_csr()` combines `stats` with the CSR `ld_prefix`. A short call is:
+`stblr_csr()` combines `stats` with the sparse-LD metadata in `Glist`. A short
+call is:
 
 ```r
 fit_csr <- stblr_csr(
   stats = stats,
-  ld_prefix = ld_prefix,
-  n = Glist$n,
+  Glist = Glist,
+  method = "bayesC",
   nit = 1000,
   nburn = 100,
   seed = 10
@@ -163,8 +167,8 @@ Its stages are:
 ```text
 mtsim_annotation()
     -> summarize_annotation_signal()
-    -> bed_xtx_xty()
-    -> sparseLD_stream_CSR()
+    -> make_stats()
+    -> make_sparseLD()
     -> align annotation matrix A
     -> fit fixed, learned, group, and SBayesRC-style CSR models
     -> compact fit, marker, variance, and annotation summaries
@@ -201,12 +205,18 @@ and the returned marker-level posterior summaries.
 
 The script fits:
 
-1. `stblr_csr_prior_annot()` with fixed marker-specific inclusion
-   probabilities and variance multipliers;
-2. `stblr_csr_learn_annot()` with annotation effects learned during fitting;
-3. `stblr_csr_group_annot()` with mutually exclusive group-level priors;
-4. `stblr_csr_sbayesrc_generic()` with an **SBayesRC-style
-   annotation-dependent BayesR prior**.
+1. `stblr_csr_annot(annotation_model = "prior")` with fixed marker-specific
+   inclusion probabilities and variance multipliers;
+2. `stblr_csr_annot(annotation_model = "learned")` with annotation effects
+   learned during fitting;
+3. `stblr_csr_annot(annotation_model = "group")` with mutually exclusive
+   group-level priors;
+4. `stblr_csr_annot(annotation_model = "sbayesrc")` with an
+   **SBayesRC-style annotation-dependent BayesR prior**.
+
+The compatibility wrappers `stblr_csr_prior_annot()`,
+`stblr_csr_learn_annot()`, `stblr_csr_group_annot()`, and
+`stblr_csr_sbayesrc_generic()` remain supported.
 
 The fourth model uses annotation-dependent probit stick-breaking probabilities
 over an exact null and multiple active variance components. It is not an exact
@@ -291,8 +301,9 @@ chain.
   contains marker-level posterior component probabilities, and `ncomp`
   summarizes numbers of markers assigned to components.
 - In CSR BayesR, the null component column is `component_0` and
-  `dm = 1 - P(component_0)`. In CSR SBayesRC, the null component column is
-  `gamma_0.00` and `dm = 1 - P(gamma_0.00)`.
+  `dm = 1 - P(component_0)`.
+- In CSR SBayesRC, the null component column is `gamma_0.00` and
+  `dm = 1 - P(gamma_0.00)`.
 
 These components have different dimensions and meanings. Do not compare an
 `eta_pi` coefficient directly with an `alpha` coefficient without accounting

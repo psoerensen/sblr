@@ -5,7 +5,7 @@ title: "Sparse-LD and BED Workflows"
 This note describes the practical bridge from individual-level PLINK BED
 genotypes and aligned phenotypes to a disk-backed sparse-LD representation and
 the sufficient statistics required by `stblr_csr()`. The same starting data
-can also be fitted directly with `stblr_bed_marker()`, making the workflow
+can also be fitted directly with `stblr_bed()`, making the workflow
 useful for understanding and checking the relationship between the
 individual-level and summary-statistics paths.
 
@@ -26,15 +26,15 @@ BED files + phenotype y
         v
 align markers with cls and select sample rows
         |
-        +--> bed_xtx_xty()
+        +--> make_stats()
         |       |
         |       v
-        |    stats$wy, stats$ww, stats$yy, n
+        |    stats$wy, stats$ww, stats$yy, n, marker names
         |
-        +--> sparseLD_stream_CSR()
+        +--> make_sparseLD()
                 |
                 v
-             ld_prefix
+             Glist$sparseLD$prefix
                 |
                 +--> sparseLD_read_CSR() for inspection
                 |
@@ -47,7 +47,7 @@ align markers with cls and select sample rows
 BED files + phenotype y + the same cls/rows/scaling
         |
         v
-stblr_bed_marker()
+stblr_bed()
         |
         v
 optional BED-versus-CSR posterior comparison
@@ -94,11 +94,10 @@ af <- Glist$af[[chr]][cls]
 just its set of values, determines the order of every downstream
 marker-indexed object.
 
-For one BED file, `bed_xtx_xty()` receives `cls` as an integer vector. The
-sparse-LD helpers accept `bed_files` and `cls` as parallel collections, so
-`cls` is supplied as `list(cls)`. For multiple BED files, each `cls[[k]]`
-selects and orders markers from `bed_files[k]`; the concatenated selection is
-the model order.
+For one BED file, `make_stats()` and `make_sparseLD()` can infer `cls` from
+`match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])` when it is not supplied. For
+multiple BED files, each `cls[[k]]` selects and orders markers from
+`Glist$bedfiles[chr[k]]`; the concatenated selection is the model order.
 
 `n` is the total number of BED rows. If `rows = NULL`, all BED rows are used
 and `y` should have `n` rows. If `rows` is supplied, it selects the individuals
@@ -124,7 +123,7 @@ preprocessing must be explicit:
 - centering and scaling choices affect `stats$yy` and prior initialization;
 - missing phenotype handling must be consistent with the chosen sample.
 
-For trait $t$, `bed_xtx_xty()` constructs quantities including
+For trait $t$, `make_stats()` constructs quantities including
 
 $$
 wy_t = X^\top y_t,
@@ -137,27 +136,27 @@ $$
 The sparse-LD branch must use the same version of $X$, including sample rows
 and marker scaling, that generated these statistics.
 
-## Path A: Direct Individual-Level Fitting With `stblr_bed_marker()`
+## Path A: Direct Individual-Level Fitting With `stblr_bed()`
 
-Use `stblr_bed_marker()` when individual-level BED genotypes and aligned
-phenotypes remain available during fitting and a separate sparse-LD artifact
-is not required. The sampler reads selected genotype blocks from BED and uses
-observed marker values directly.
+Use `stblr_bed()` when individual-level BED genotypes and aligned phenotypes
+remain available during fitting and a separate sparse-LD artifact is not
+required. The sampler reads selected genotype blocks from BED and uses observed
+marker values directly.
 
 ```r
-fit_bed <- stblr_bed_marker(
+fit_bed <- stblr_bed(
   Glist = Glist,
   y = y,
+  method = "bayesC",
   chr = chr,
   cls = cls,
   scale = TRUE,
   rows = NULL,
-  pi_marker = 0.001,
+  pi_init = 0.001,
   h2 = 0.5,
   nit = 1000,
   nburn = 100,
-  seed = 10,
-  scheduled = TRUE
+  seed = 10
 )
 ```
 
@@ -169,23 +168,22 @@ This path is appropriate when:
   approximation;
 - the fit is being used as a reference for CSR preparation or model behavior.
 
-`stblr_bed_marker()` derives BED paths, allele frequencies, and marker names
-from `Glist`. If `cls` is omitted, the wrapper matches `Glist$rsidsLD` against
+`stblr_bed()` derives BED paths, allele frequencies, and marker names from
+`Glist`. If `cls` is omitted, the wrapper matches `Glist$rsidsLD` against
 `Glist$rsids`; supplying `cls` explicitly makes the comparison contract
 visible.
 
-## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `bed_xtx_xty()`
+## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `make_stats()`
 
-`bed_xtx_xty()` converts the selected BED genotypes and phenotype matrix into
+`make_stats()` converts the selected BED genotypes and phenotype matrix into
 sufficient statistics for ST-BLR fitting:
 
 ```r
-stats <- bed_xtx_xty(
-  bed_file = bed_files,
-  n = Glist$n,
-  cls = cls,
-  af = af,
+stats <- make_stats(
+  Glist = Glist,
   y = y,
+  chr = chr,
+  cls = cls,
   rows = NULL,
   scale = TRUE,
   nthreads = 4
@@ -206,27 +204,24 @@ The main output handoff is:
 same order later used by the CSR LD matrix. `stats$yy` has one entry per trait,
 not one entry per marker.
 
-`bed_xtx_xty()` accepts a single BED file path and a single `cls` vector.
-Current multi-file sparse-LD preparation therefore needs statistics assembled
-with a compatible marker order and sample definition; the clean workflow uses
-one chromosome and one BED file.
+`make_stats()` accepts a single chromosome/file or a list of chromosomes/files
+through `chr` and `cls`, and records the resolved marker order in
+`stats$marker_names`.
 
-## Path B, Step 2: Streaming Sparse LD With `sparseLD_stream_CSR()`
+## Path B, Step 2: Computing Sparse LD With `make_sparseLD()`
 
-`sparseLD_stream_CSR()` computes marker correlations from BED data, applies
-distance and $r^2$ retention rules, and writes a disk-backed CSR
-representation:
+`make_sparseLD()` computes marker correlations from BED-backed `Glist` data,
+applies distance and $r^2$ retention rules, writes a disk-backed CSR
+representation, and stores the resolved sparse-LD metadata in
+`Glist$sparseLD`:
 
 ```r
-ld_prefix <- file.path(output_dir, "chr1_ld")
-
-ld_written <- sparseLD_stream_CSR(
-  bed_files = bed_files,
-  n = Glist$n,
-  cls = list(cls),
-  out_prefix = ld_prefix,
+Glist <- make_sparseLD(
+  Glist = Glist,
+  out_prefix = file.path(output_dir, "chr1_ld"),
+  chr = chr,
+  cls = cls,
   rows = NULL,
-  af = list(af),
   r2_threshold = 0.001,
   max_distance_bp = 0,
   max_distance_variants = 1000,
@@ -235,10 +230,10 @@ ld_written <- sparseLD_stream_CSR(
 )
 ```
 
-`ld_prefix` is not a matrix object. It is the common prefix for the metadata,
-row-pointer, column-index, and value files consumed by `stblr_csr()`. The
-writer returns a compact summary containing file paths, dimensions, the number
-of stored nonzero entries, construction settings, and sample counts.
+`Glist$sparseLD$prefix` is not a matrix object. It is the common prefix for the
+metadata, row-pointer, column-index, and value files consumed by `stblr_csr()`.
+`Glist$sparseLD` also records selected chromosomes, BED files, `cls`, allele
+frequencies, rows, distance limits, threshold, and block size.
 
 Conceptually, CSR stores:
 
@@ -268,18 +263,21 @@ The package source currently contains four related Rcpp wrappers:
 | `sparseLD_write_CSR()` | Currently delegates to `sparseLD_stream_CSR()` and writes the same disk-backed representation. | Generated internal wrapper; not currently exported or separately documented. |
 | `sparseLD_read_CSR()` | Reads an existing disk-backed CSR prefix into an R list for inspection. | Exported. |
 
-Use `sparseLD_stream_CSR()` for the supported BED-to-disk workflow. The
-in-memory `sparseLD_to_CSR()` representation can be useful during development,
-but it materializes sparse arrays in R and is not the input contract used by
-`stblr_csr()`. The `sparseLD_write_CSR()` alias should not be treated as a
-separate stable public API while it remains unexported.
+Use `make_sparseLD()` for the high-level BED-to-disk workflow. It calls the
+exported `sparseLD_stream_CSR()` writer after resolving marker and sample
+metadata from `Glist`. The in-memory `sparseLD_to_CSR()` representation can be
+useful during development, but it materializes sparse arrays in R and is not
+the input contract used by `stblr_csr()`. The `sparseLD_write_CSR()` alias
+should not be treated as a separate stable public API while it remains
+unexported.
 
 ## Inspecting and Validating CSR Files With `sparseLD_read_CSR()`
 
-Before fitting, `sparseLD_read_CSR()` can inspect the files at `ld_prefix`:
+Before fitting, `sparseLD_read_CSR()` can inspect the files at
+`Glist$sparseLD$prefix`:
 
 ```r
-ld <- sparseLD_read_CSR(ld_prefix, one_based = TRUE)
+ld <- sparseLD_read_CSR(Glist$sparseLD$prefix, one_based = TRUE)
 
 stopifnot(
   ld$nrow == length(cls),
@@ -309,14 +307,14 @@ The binary-file and metadata details are documented further in
 ## Path B, Step 3: Fitting Summary-Statistics BLR With `stblr_csr()`
 
 `stblr_csr()` combines the sufficient-statistics object with the disk-backed
-LD prefix:
+LD metadata in `Glist`:
 
 ```r
 fit_csr <- stblr_csr(
   stats = stats,
-  ld_prefix = ld_prefix,
-  n = Glist$n,
-  pi_marker = 0.001,
+  Glist = Glist,
+  method = "bayesC",
+  pi_init = 0.001,
   h2 = 0.5,
   nit = 1000,
   nburn = 100,
@@ -331,7 +329,7 @@ Its core data handoff is:
 n + stats$yy
     -> phenotype variance and prior initialization
 
-stats$wy + stats$ww + ld_prefix
+stats$wy + stats$ww + Glist$sparseLD$prefix
     -> marker-update and residual-score calculations
 ```
 
@@ -341,15 +339,15 @@ argument, `stats$m`, or `length(stats$ww[[1]])`. Explicitly supplying `n` and
 checking $m$ before fitting makes the data contract easier to audit.
 
 `stats$wy`, `stats$ww`, and `stats$yy` summarize the phenotype side and
-diagonal marker information. The files at `ld_prefix` provide the retained
-off-diagonal marker relationships needed to update residual scores after
-marker effects change. The summary-statistics path therefore depends on both
-objects; neither is sufficient by itself.
+diagonal marker information. The files at `Glist$sparseLD$prefix` provide the
+retained off-diagonal marker relationships needed to update residual scores
+after marker effects change. The summary-statistics path therefore depends on
+both objects; neither is sufficient by itself.
 
 ## Comparing BED-Direct and CSR Posterior Outputs
 
 When both representations are prepared from the same individual-level data,
-`stblr_bed_marker()` provides a useful comparison for `stblr_csr()`. Compare
+`stblr_bed()` provides a useful comparison for `stblr_csr()`. Compare
 posterior quantities that share the same marker and trait order, such as
 posterior mean effects `fit$bm` and posterior inclusion probabilities
 `fit$dm`.
@@ -402,7 +400,7 @@ not supply biological marker IDs to repair a mismatch later. Retain
 `marker_id <- Glist$rsidsLD[[chr]]` beside the preparation outputs and attach
 or verify it whenever annotations and posterior summaries are joined.
 
-Scaling also has to match. If `bed_xtx_xty(..., scale = TRUE)` standardizes
+Scaling also has to match. If `make_stats(..., scale = TRUE)` standardizes
 markers using `af`, then sparse LD must be constructed from the same selected
 samples and corresponding allele frequencies. If `rows` is used, use it in
 both calls and ensure `y` describes those rows. LD thresholds and distance
@@ -448,10 +446,11 @@ runtime-heavy. `block_size` and `nthreads` affect construction performance,
 while `r2_threshold` and distance restrictions also affect the statistical LD
 approximation. Record all of them.
 
-Disk-backed CSR preparation writes multiple files sharing `ld_prefix`. Treat
-them as one artifact: moving, replacing, or mixing files from different runs
-can invalidate the prefix. Use distinct prefixes for different marker sets,
-sample subsets, scaling choices, and LD thresholds.
+Disk-backed CSR preparation writes multiple files sharing
+`Glist$sparseLD$prefix`. Treat them as one artifact: moving, replacing, or
+mixing files from different runs can invalidate the prefix. Use distinct
+prefixes for different marker sets, sample subsets, scaling choices, and LD
+thresholds.
 
 For reproducibility, retain:
 

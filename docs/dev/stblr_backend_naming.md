@@ -103,8 +103,8 @@ BayesR and SBayesRC-like output convention is unchanged: `fit$dm` is
 `P(component > 0)`, `fit$comp_prob` stores marker-by-component probabilities,
 and `fit$dm_component_mean` stores posterior mean zero-based component index
 where the quantity is returned or derivable. CSR BayesR uses `component_0` for
-the null component column and `dm = 1 - P(component_0)`. CSR SBayesRC names
-components by gamma values; its null component column is `gamma_0.00` and
+the null component column and `dm = 1 - P(component_0)`.
+CSR SBayesRC names components by gamma values; its null component column is `gamma_0.00` and
 `dm = 1 - P(gamma_0.00)`.
 
 BayesC-like annotation-aware CSR backends now follow the standard native
@@ -191,8 +191,8 @@ acceptance rate by trait. With `keep_chains = TRUE`, compact chain output uses
 `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
 
 For the standard CSR path, fitted `b`/`bm` values are
-standardized-genotype-scale effects. A BayesS allele-scale prior
-`alpha_j ~ N(0, v_m h_j^S)` therefore maps to a standardized-effect prior with
+standardized-genotype-scale effects. A BayesS allele-scale prior with
+heterozygosity exponent `S` therefore maps to a standardized-effect prior with
 exponent `S + 1`. For CSR BayesC, BayesR, and SBayesRC, fixed sampler-level
 `selection_s` scales standardized-genotype effect prior variances by
 `h^(selection_s + 1)`, where `h = 2p(1-p)`. Fixed support applies the same

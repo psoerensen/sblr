@@ -17,22 +17,25 @@ New readers can follow this sequence:
 
 1. [Model Overview](model_overview.html) for the package landscape and model
    selection map.
-2. [Data Representations](data_representations.html) for the relationship
+2. [ST-BLR Interface and Output Map](stblr_interface_and_output_map.html) for
+   the current `stblr_csr()` and `stblr_bed()` interfaces, shared `Glist`
+   object, standardized outputs, helpers, and unsupported combinations.
+3. [Data Representations](data_representations.html) for the relationship
    between individual-level data and summary statistics plus LD.
-3. [Single-Trait Models](single_trait_models.html) for the core sparse BLR
+4. [Single-Trait Models](single_trait_models.html) for the core sparse BLR
    model used by the current BED and CSR workflows.
-4. [Sparse-LD and BED Workflows](sparse_ld_and_bed_workflows.html) for the
+5. [Sparse-LD and BED Workflows](sparse_ld_and_bed_workflows.html) for the
    practical path from PLINK BED data to sufficient statistics and disk-backed
    CSR LD.
-5. [Annotation-Informed Models](annotation_informed_models.html) for fixed,
+6. [Annotation-Informed Models](annotation_informed_models.html) for fixed,
    learned, group, and SBayesRC-style annotation priors.
-6. [selection_s Implementation Status](selection_s_status.md) for the current
+7. [selection_s Implementation Status](selection_s_status.md) for the current
    fixed global and sampled trait-specific BayesS-style MAF-scaling support.
-7. [Workflows and Outputs](workflows_and_outputs.html) for running the main
+8. [Workflows and Outputs](workflows_and_outputs.html) for running the main
    workflows and interpreting returned fit objects.
-8. [Multi-Trait Models](multi_trait_models.html) for joint trait-sharing and
+9. [Multi-Trait Models](multi_trait_models.html) for joint trait-sharing and
    covariance models.
-9. Consult the [technical appendices](#technical-appendices) as needed for
+10. Consult the [technical appendices](#technical-appendices) as needed for
    derivations, implementation contracts, and detailed assumptions.
 
 ## Main Explanatory Notes
@@ -40,6 +43,11 @@ New readers can follow this sequence:
 - [Model Overview](model_overview.html) maps the main package axes:
   single-trait versus multi-trait, individual-level versus summary-statistics,
   and plain versus annotation-informed priors.
+
+- [ST-BLR Interface and Output Map](stblr_interface_and_output_map.html)
+  maps `stblr_csr()` and `stblr_bed()`, the shared `Glist` object,
+  summary-statistics and sparse-LD preparation, current model-family support,
+  standardized outputs, helper functions, and fine-mapping diagnostics.
 
 - [Data Representations](data_representations.html) explains individual-level
   genotype and phenotype inputs, sufficient statistics, LD, CSR storage, and

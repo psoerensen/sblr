@@ -39,7 +39,7 @@
 
 library(sblr)
 
-# Data setup ---------------------------------------------------------------
+# 1. Data setup and Glist preparation --------------------------------------
 
 data_dir <- Sys.getenv("SBLR_EXAMPLE_DATA_DIR")
 if (!nzchar(data_dir)) {
@@ -93,7 +93,7 @@ y <- as.matrix(scale(sim$y))
 
 summarize_annotation_signal(sim)
 
-# Compute summary statistics -----------------------------------------------
+# 2. Summary statistics and sparse LD --------------------------------------
 
 stats <- make_stats(
   Glist = Glist,
@@ -101,8 +101,6 @@ stats <- make_stats(
   chr = chr,
   nthreads = nthreads
 )
-
-# Compute sparse LD --------------------------------------------------------
 
 Glist <- make_sparseLD(
   Glist = Glist,
@@ -183,7 +181,7 @@ sbayesrc_args <- list(
   gamma = c(0, 0.01, 0.1, 1)
 )
 
-# LD-swap/MH settings ------------------------------------------------------
+# 6. LD-swap / fine-mapping examples ---------------------------------------
 
 mh_conservative <- list(
   updateLDswap = TRUE,
@@ -199,7 +197,7 @@ mh_permissive <- list(
   ld_swap_moves = 20
 )
 
-# Annotation-unaware CSR models -------------------------------------------
+# 3. Annotation-unaware CSR models -----------------------------------------
 
 fitC <- do.call(
   stblr_csr,
@@ -221,7 +219,7 @@ fitR_MH <- do.call(
   c(base_args, list(method = "bayesR"), mh_permissive)
 )
 
-# Annotation-aware CSR models ---------------------------------------------
+# 4. Annotation-aware CSR models -------------------------------------------
 
 fit_prior <- do.call(
   stblr_csr_annot,
@@ -246,7 +244,7 @@ fit_sbayesrc <- do.call(
   c(base_args, sbayesrc_args)
 )
 
-# Annotation-aware CSR models with conservative LD-swap/MH -----------------
+# 6. LD-swap / fine-mapping examples: conservative settings ----------------
 
 fit_prior_MH <- do.call(
   stblr_csr_annot,
@@ -267,7 +265,7 @@ fit_group_MH <- do.call(
   c(base_args, group_args, mh_conservative)
 )
 
-# Annotation-aware CSR models with permissive LD-swap/MH -------------------
+# 6. LD-swap / fine-mapping examples: permissive settings ------------------
 
 # These settings are useful diagnostics for active LD-swap acceptance. They are
 # not necessarily preferred defaults for final BayesC-like analyses.
@@ -425,7 +423,7 @@ field_inventory <- do.call(
 
 field_inventory
 
-# Compact fit summaries ----------------------------------------------------
+# 7. Posterior summaries and component summaries ---------------------------
 
 summarise_fit <- function(fit, model_name) {
   dm <- as.matrix(fit$dm)
@@ -470,7 +468,7 @@ sum_pip_matrix <- do.call(
 
 sum_pip_matrix
 
-# LD-swap diagnostics ------------------------------------------------------
+# 6. LD-swap / fine-mapping diagnostics ------------------------------------
 
 ld_swap_summary <- do.call(
   rbind,
@@ -489,7 +487,24 @@ ld_swap_summary <- do.call(
 
 ld_swap_summary
 
-# True causal marker recovery ----------------------------------------------
+# 8. Credible-set construction ---------------------------------------------
+
+# Credible sets are post-processing diagnostics built from fit$dm and LD.
+# Uncomment for a small fitted-model credible-set example.
+#
+# credible_sets_fitC <- make_stblr_credible_sets(
+#   fit = fitC,
+#   Glist = Glist,
+#   trait = "D1",
+#   coverage = 0.95,
+#   min_r2 = 0.5,
+#   pip_cutoff = 0.001,
+#   locus_pip_cutoff = 0.01,
+#   max_loci = 5
+# )
+# credible_sets_fitC$summary
+
+# 9. Cross-model comparison: true causal marker recovery --------------------
 
 causal_shared <- sim$causal$shared
 causal_specific <- sim$causal$specific
@@ -740,7 +755,7 @@ topn_precision_matrix(topn_power, top_n_value = 100)
 mean_rank_matrix(rank_summary_simple, "shared")
 mean_rank_matrix(rank_summary_simple, "trait_specific")
 
-# Top-marker summaries -----------------------------------------------------
+# 9. Cross-model comparison: top-marker summaries ---------------------------
 
 top_markers <- function(fit, model_name, trait = 1, top_n = 20) {
   dm <- as.matrix(fit$dm)
@@ -793,7 +808,7 @@ head(top_trait1, 40)
 # write.csv(top_trait1, file.path(data_dir, "stblr_annotation_top_trait1.csv"),
 #           row.names = FALSE)
 
-# Top-marker overlap -------------------------------------------------------
+# 9. Cross-model comparison: top-marker overlap -----------------------------
 
 top_overlap_matrix <- function(fits, trait = 1, top_n = 100) {
   top_sets <- lapply(fits, function(fit) {
@@ -827,7 +842,7 @@ top20_overlap_trait1
 top100_overlap_trait1
 top500_overlap_trait1
 
-# PIP correlations ---------------------------------------------------------
+# 9. Cross-model comparison: PIP correlations -------------------------------
 
 pip_correlation_signal_markers <- function(
     fits,
@@ -876,7 +891,7 @@ annotation_summaries <- lapply(names(fits), function(model_name) {
 annotation_summaries <- Filter(Negate(is.null), annotation_summaries)
 annotation_summaries
 
-# BayesR / SBayesRC component summaries -----------------------------------
+# 7. Posterior summaries and component summaries ---------------------------
 
 bayesr_component_summaries <- lapply(
   c("bayesR", "bayesR_MH", "sbayesrc", "sbayesrc_MH"),
@@ -890,7 +905,7 @@ bayesr_component_summaries <- lapply(
 
 bayesr_component_summaries
 
-# Posterior component summaries -------------------------------------------
+# 7. Posterior summaries and component summaries ---------------------------
 
 posterior_summaries <- lapply(fits, function(fit) {
   summarise_stblr_posterior(fit)
@@ -947,9 +962,11 @@ lapply(fits, compact_input)
 
 
 
-# Testing S parameter
+# 5. Fixed and sampled selection_s examples --------------------------------
 
-maf <- Glist$maf[[1]][Glist$rsids[[1]]%in%Glist$rsidsLD[[1]]]
+maf_idx <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
+stopifnot(!anyNA(maf_idx))
+maf <- Glist$maf[[chr]][maf_idx]
 maf_architecture <- do.call(
   rbind,
   lapply(names(fits), function(model_name) {

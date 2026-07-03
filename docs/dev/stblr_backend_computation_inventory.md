@@ -80,9 +80,9 @@ approximately one, not `h_j = 2p_j(1 - p_j)`.
 
 The diagonal LE trace `vle = sum_j ww_j * b_j^2 / n` is consequently
 consistent with standardized-genotype-scale effects in the standard CSR path.
-If a BayesS-style prior is defined on allele-scale effects as
-`alpha_j ~ N(0, v_m h_j^S)`, then the corresponding standardized-effect prior
-for current CSR samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
+If a BayesS-style prior is defined on allele-scale effects with heterozygosity
+exponent `S`, then the corresponding standardized-effect prior for current CSR
+samplers is `b_j ~ N(0, v_m h_j^(S + 1))`. Fixed global
 `selection_s` implements this fixed scaling for `csr_bayesc`, `csr_bayesr`,
 and `csr_sbayesrc`. Sampled trait-specific `selection_s` is currently
 implemented for annotation-unaware unscheduled `csr_bayesc`
@@ -127,8 +127,9 @@ User-facing model capability map:
 | `stblr_csr_annot(annotation_model = "sbayesrc")` | yes | yes | yes | yes | yes | yes |
 
 `comp_prob` follows backend-specific null component names. CSR BayesR uses
-`component_0`, so `dm = 1 - P(component_0)`. CSR SBayesRC uses `gamma_0.00`,
-so `dm = 1 - P(gamma_0.00)`. Fine-mapping diagnostics are represented by
+`component_0`, so `dm = 1 - P(component_0)`.
+CSR SBayesRC uses `gamma_0.00`, so `dm = 1 - P(gamma_0.00)`.
+Fine-mapping diagnostics are represented by
 marker PIPs in `dm` and optional LD-swap summaries in `ld_swap` when
 `updateLDswap = TRUE`. Credible sets are produced by R helper functions from
 PIPs and LD rather than returned as a separate native sampler object.
@@ -493,9 +494,7 @@ Annotation-unaware CSR and BED fits expose `fit$input$annotations = FALSE`.
 | `ld_swap` | LD-swap-capable CSR backends | capable CSR fits when enabled | trait x attempted/accepted/rate data frame | `ld_swap_chains` with compact chains | n/a |
 
 `summarise_stblr_posterior()` and `plot_stblr_posterior()` operate on standard
-trace fields including `vbs`, `vgs`, `ves`, `vle`, and `vld`. There are no
-current repository functions named `summarize_stblr_components()` or
-`make_stblr_component_plot()`.
+trace fields including `vbs`, `vgs`, `ves`, `vle`, and `vld`.
 
 `summarise_stblr_maf_architecture()` operates on fitted `dm` and `bm` marker
 summaries plus user-supplied MAF or heterozygosity values. It reports a

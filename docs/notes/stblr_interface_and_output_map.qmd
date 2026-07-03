@@ -1,0 +1,236 @@
+---
+title: "ST-BLR Interface and Output Map"
+---
+
+This note is a compact map of the current ST-BLR user-facing interfaces,
+shared data object, model families, standardized outputs, and post-processing
+helpers. It is intentionally not a replacement for function help pages.
+
+## Main Modelling Interfaces
+
+- `stblr_csr()`: summary-statistics CSR backend using `stats` and sparse LD
+  from `Glist` or an explicit `ld_prefix`.
+- `stblr_bed()`: individual-level PLINK/BED backend using genotype information
+  from `Glist`.
+
+`stblr_bed_marker()` remains available as a lower-level direct BED marker
+interface, but the high-level BED model entry point is `stblr_bed()`.
+
+## Shared Data Object
+
+`Glist` is the common carrier for genotype and marker metadata used by both
+CSR and BED workflows. In current code, relevant fields include:
+
+- `Glist$bedfiles`, the PLINK BED file paths used by BED and preparation
+  helpers;
+- `Glist$n`, the number of BED individuals;
+- `Glist$ids` and optionally `Glist$idsLD`, used for sample matching;
+- `Glist$rsids`, marker IDs in BED-file order by chromosome/file;
+- `Glist$rsidsLD`, selected LD/model marker IDs by chromosome/file;
+- `Glist$af`, allele frequencies used for marker standardization and MAF
+  dependent calculations;
+- `Glist$sparseLD`, added by `make_sparseLD()`, with `prefix`, `chr`,
+  `bed_files`, `cls`, `af`, `rows`, `max_distance_bp`,
+  `max_distance_variants`, `r2_threshold`, and `block_size`.
+
+For sparse-LD CSR models, marker-level information such as MAF must be aligned
+to the LD marker order. The package preparation helpers use positional
+alignment equivalent to:
+
+```r
+idx <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
+```
+
+Do not use `%in%` as the recommended alignment operation because it loses the
+requested LD marker order.
+
+## CSR Workflow
+
+1. Prepare or load a BED-backed `Glist`.
+2. Compute summary statistics with `make_stats()`.
+3. Compute sparse LD with `make_sparseLD()`.
+4. Fit summary-statistics BLR models with `stblr_csr()` or annotation-aware CSR
+   models with `stblr_csr_annot()`.
+
+```r
+stats <- make_stats(
+  Glist,
+  y,
+  nthreads = nthreads
+)
+
+Glist <- make_sparseLD(
+  Glist = Glist,
+  out_prefix = file.path(data_dir, "ld_test"),
+  pos_bp = NULL,
+  max_distance_bp = 0,
+  max_distance_variants = 1000,
+  r2_threshold = 0.001,
+  block_size = 1024,
+  nthreads = 4
+)
+
+fit_csr <- stblr_csr(
+  stats = stats,
+  Glist = Glist,
+  method = "bayesC"
+)
+```
+
+`make_stats()` computes marker-trait summary statistics used by `stblr_csr()`.
+`make_sparseLD()` computes disk-backed sparse LD and stores sparse-LD metadata
+in `Glist$sparseLD`. The updated `Glist` is then passed to `stblr_csr()` and
+related CSR functions.
+
+## BED Workflow
+
+1. Prepare or load a BED-backed `Glist`.
+2. Fit individual-level BLR models using `stblr_bed()`.
+3. Use standardized output fields where available.
+
+```r
+fit_bed <- stblr_bed(
+  Glist = Glist,
+  y = y,
+  method = "bayesC"
+)
+```
+
+`stblr_bed()` supports `method = "bayesC"` and `method = "bayesR"`. Its current
+arguments include phenotype data `y`, `Glist`, optional `chr`, `cls`, `rows`,
+`scale`, MCMC controls, BayesC prior controls, BayesR mixture controls, and BED
+scheduled-chain controls. `covar` is not currently adjusted by this interface;
+pass pre-adjusted phenotypes. `chain_seeds` are not currently supported by the
+BED scheduled-chain backends.
+
+## Model Family Map
+
+| Family | Function | Backend | Requires sparse LD | Uses individual BED genotypes | Uses annotations | Component probabilities | `selection_s` | LD-swap / fine-mapping | Main outputs |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| Annotation-unaware CSR BayesC | `stblr_csr(..., method = "bayesC")` | `csr_bayesc` or scheduled CSR BayesC | yes | no | no | no | fixed and sampled in unscheduled CSR; not scheduled | LD-swap for unscheduled CSR with `updateLDswap = TRUE`; fine-mapping helpers use `fit$dm` and LD | `dm`, `bm`, `vbs`, `vgs`, `ves`, `vle`, `vld`, `input`, optional `chains` |
+| Annotation-unaware CSR BayesR | `stblr_csr(..., method = "bayesR")` | `csr_bayesr` | yes | no | no | yes, `component_0` is null | fixed and sampled | LD-swap with `updateLDswap = TRUE`; fine-mapping helpers use `fit$dm` and LD | common outputs plus `comp_prob`, `dm_component_mean`, `ncomp` where available |
+| Individual-level BED BayesC | `stblr_bed(..., method = "bayesC")` | BED scheduled-chain backend | no | yes | no | no | no | no LD-swap; compatible with post-processing that only needs `fit$dm`/`fit$bm` | `dm`, `bm`, `input`, CPO/log-CPO diagnostics, chain-summary matrices |
+| Individual-level BED BayesR | `stblr_bed(..., method = "bayesR")` | BED BayesR scheduled-chain backend | no | yes | no | yes, `component_0` is null | no | no LD-swap; compatible with post-processing that only needs `fit$dm`/`fit$bm` | BED common outputs plus `comp_prob`, `dm_component_mean` |
+| Fixed-prior annotation CSR | `stblr_csr_annot(..., annotation_model = "prior")`; wrapper `stblr_csr_prior_annot()` | `csr_prior_bayesc` | yes | no | fixed marker priors | no | no | LD-swap supported | common outputs plus fixed-prior metadata where returned |
+| Learned annotation CSR | `stblr_csr_annot(..., annotation_model = "learned")`; wrapper `stblr_csr_learn_annot()` | `csr_annot_bayesc` | yes | no | learned inclusion/variance effects | no | no | LD-swap supported | common outputs plus `eta_pi`, `eta_vb` |
+| Group annotation CSR | `stblr_csr_annot(..., annotation_model = "group")`; wrapper `stblr_csr_group_annot()` | `csr_group_bayesc` | yes | no | mutually exclusive groups | no | no | LD-swap supported | common outputs plus `group_pi`, `group_vb_multiplier`, `group_nincluded`, `group_size` |
+| SBayesRC-style annotation CSR | `stblr_csr_annot(..., annotation_model = "sbayesrc")`; wrapper `stblr_csr_sbayesrc_generic()` | `csr_sbayesrc` | yes | no | component probabilities | yes, `gamma_0.00` is null | fixed and sampled | LD-swap supported | common outputs plus `comp_prob`, `dm_component_mean`, `alpha`, `sigmaSqAlpha`, `ncomp` |
+
+## `selection_s` Support
+
+Fixed global `selection_s` and sampled trait-specific `selection_s` are
+supported for:
+
+- `csr_bayesc`;
+- `csr_bayesr`;
+- `csr_sbayesrc`.
+
+They are not supported for:
+
+- `csr_scheduled_bayesc`;
+- `csr_prior_bayesc`;
+- `csr_annot_bayesc`;
+- `csr_group_bayesc`;
+- BED backends.
+
+Sampled-S defaults are:
+
+```r
+selection_s_init = 0
+selection_s_prior = c(-3, 2)
+selection_s_proposal_sd = 0.35
+```
+
+CSR effects are on the standardized-genotype scale. The MAF-dependent prior
+scale is:
+
+```text
+q_j(S) = h_j^(S + 1)
+h_j = 2 p_j (1 - p_j)
+```
+
+## Standardized Output Fields
+
+Model outputs are standardized across backends where possible:
+
+- `fit$dm`: marker-by-trait posterior inclusion probability or non-null
+  probability.
+- `fit$bm`: marker-by-trait posterior mean effect.
+- `fit$vbs`: posterior trace of marker-effect variance.
+- `fit$vgs`: posterior trace of genetic variance.
+- `fit$ves`: posterior trace of residual variance.
+- `fit$vle`: posterior trace of linkage-equilibrium contribution, where
+  returned.
+- `fit$vld`: posterior trace of LD contribution, where returned.
+- `fit$input`: backend, model, settings, and metadata.
+- `fit$chains`: optional compact chain-level output when supported and
+  `keep_chains = TRUE`.
+
+BayesR and SBayesRC outputs:
+
+- `fit$comp_prob`: marker-by-component posterior probabilities by trait.
+- `fit$dm_component_mean`: posterior mean component/effect-class summary.
+- BayesR null component: `component_0`.
+- SBayesRC null component: `gamma_0.00`.
+
+Annotation-aware outputs are model-specific and may include:
+
+- `fit$eta_pi`, `fit$eta_vb` for learned annotation BayesC;
+- `fit$group_pi`, `fit$group_vb_multiplier`, `fit$group_nincluded`,
+  `fit$group_size` for group BayesC;
+- `fit$alpha`, `fit$sigmaSqAlpha`, and `fit$ncomp` for SBayesRC-style fits;
+- annotation helper outputs such as `annotation_summary`, `annotation_pi`,
+  `annotation_effects`, and `annotation_prior` when produced by workflow or
+  summarizing helpers.
+
+Sampled-S outputs:
+
+- `fit$selection_s`;
+- `fit$selection_s_sd`;
+- `fit$selection_s_min`;
+- `fit$selection_s_max`;
+- `fit$selection_s_trace`;
+- `fit$selection_s_acceptance`.
+
+With `keep_chains = TRUE`, supported CSR chain objects include:
+
+- `fit$chains[[trait]][[chain]]$selection_s`;
+- `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+
+## Helper Function Map
+
+| Helper | Consumes | Returns | Applies to | Notes |
+|---|---|---|---|---|
+| `summarise_stblr_posterior()` | A fit with trace matrices such as `vbs`, `vgs`, `ves`, `pis`, `vle`, `vld` | Data frame of posterior means, intervals, diagnostics, and derived quantities | Fits with compatible traces | General posterior trace summary helper |
+| `plot_stblr_posterior()` | Output from `summarise_stblr_posterior()` | Base R posterior interval plot, invisibly returns plotted data | Any compatible posterior summary | Plot helper, not a sampler |
+| `summarise_stblr_bayesr_components()` | A BayesR/SBayesRC-style fit with `dm` and `comp_prob` | Trait-level component and PIP diagnostics, optionally unstable markers | BayesR/SBayesRC component fits | Uses `component_0` when present to check `dm = 1 - P(null)` |
+| `summarise_stblr_maf_architecture()` | A fit with `dm`/`bm` plus `maf` or `h`, or recoverable MAF/heterozygosity | Post-hoc MAF architecture regression summary | Any fit with marker summaries | Descriptive post-hoc diagnostic, distinct from sampler-level `selection_s` |
+| `make_credible_sets_from_ld()` | Named PIP vector and dense regional LD matrix | Credible-set summary, sets, aligned PIP, parameters | Any named PIP/LD input | R-level post-processing |
+| `make_multisignal_credible_sets_from_ld()` | Named PIP vector and dense regional LD matrix | Approximate multi-signal credible-set summary and sets | Any named PIP/LD input | Uses marginal PIPs, not posterior inclusion configurations |
+| `make_stblr_credible_sets()` | Fit with `fit$dm`, optional `Glist`, optional dense `LD`, optional marker sets | Combined `summary`, nested `sets`, `loci`, `parameters`, and resolved `trait` | ST-BLR fits with marker-level PIPs | Uses `fit$dm`; can extract regional LD from `Glist$sparseLD` |
+| `extract_stblr_finemap_loci()` | Genome-wide fit, `Glist`, and predefined locus sets | `stblr_finemap` object with `summary`, `markers`, optional `credible_sets`, `loci`, `parameters` | Genome-wide fits with named `fit$dm`/`fit$bm` | Post-processing only; does not rerun MCMC |
+| `finemap_stblr_csr()` | Global CSR fit, `Glist`, `stats`, and local marker sets | `stblr_finemap` object with local run summaries and optional credible sets | CSR fits | Runs local CSR fine-mapping using global architecture estimates |
+| `check_stblr_backend_consistency()` | Formatted ST-BLR fit | Backend consistency check object | Standardized fit objects | Validates expected fields, dimensions, metadata, and optional LD-swap output |
+| `check_stblr_convergence()` | Fit with MCMC trace matrices | Simple convergence diagnostic list | Fits with compatible traces | Screening diagnostics, not proof of convergence |
+
+## Fine-Mapping, LD-Swap, and Credible Sets
+
+LD-swap diagnostics are available through `fit$ld_swap` and chain-level
+`ld_swap` / `ld_swap_chains` output when `updateLDswap = TRUE` and the backend
+supports it. LD-swap is a sampler mixing diagnostic and proposal mechanism,
+not a standalone credible-set object.
+
+PIP is represented by `fit$dm`. Credible sets are constructed by helper
+functions such as `make_stblr_credible_sets()`, `make_credible_sets_from_ld()`,
+and `make_multisignal_credible_sets_from_ld()` from PIPs and LD. They are
+workflow/helper-level diagnostics unless a specific fine-mapping helper returns
+them in its own post-processing object.
+
+`make_stblr_credible_sets()` requires a fit containing marker PIPs in
+`fit$dm`. It can use a supplied dense LD matrix or, for CSR workflows, use
+`Glist$sparseLD$prefix` to extract regional dense LD from disk-backed sparse
+LD. It defines automatic loci around high-PIP markers when explicit `sets` are
+not supplied. Credible-set probability is cumulative marginal PIP within the
+selected LD neighborhood, reported as `cs_pip`; the helper returns combined
+summary tables, nested marker sets, locus definitions, parameters, and the
+resolved trait.

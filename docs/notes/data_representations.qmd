@@ -55,13 +55,14 @@ BED file paths and related metadata:
 - `Glist$af` supplies allele frequencies used when markers are standardized;
 - `Glist$rsidsLD` identifies the selected markers and their intended LD order.
 
-`stblr_bed_marker()` fits directly from this representation. It receives the
-`Glist`, phenotype vector or matrix `y`, chromosome selection, and marker
-column indices `cls`. Its BED samplers read marker blocks from disk and perform
-marker updates without first materializing all of $X$ or a full
+`stblr_bed()` is the high-level direct BED interface. It receives the `Glist`,
+phenotype vector or matrix `y`, optional chromosome selection, and optional
+marker column indices `cls`. Its BED samplers read marker blocks from disk and
+perform marker updates without first materializing all of $X$ or a full
 $X^\top X$ matrix. Optional `rows` select 1-based individual indices, and
 `scale = TRUE` standardizes markers using the corresponding allele
-frequencies.
+frequencies. `stblr_bed_marker()` remains available as a lower-level BED marker
+interface.
 
 The individual-level representation is information-rich: if the same
 individuals have multiple measured traits, cross-trait phenotype and residual
@@ -167,12 +168,12 @@ Detailed storage and construction contracts belong in
 
 ## Sufficient Statistics: `wy`, `ww`, and `yy`
 
-`bed_xtx_xty()` is the package bridge from individual-level BED data and
-phenotypes to the sufficient statistics consumed by `stblr_csr()`. It accepts
-a BED file, the total number of individuals, selected BED marker columns
-`cls`, corresponding allele frequencies `af`, and a phenotype matrix `y`.
-Optional `rows` and `scale` determine which individuals and marker
-standardization are used.
+`make_stats()` is the package bridge from a BED-backed `Glist` and phenotypes
+to the sufficient statistics consumed by `stblr_csr()`. It resolves BED files,
+selected chromosomes, selected BED marker columns `cls`, allele frequencies,
+phenotype-to-BED row matching, and marker names from `Glist`. Optional `rows`
+and `scale` determine which individuals and marker standardization are used.
+The lower-level `bed_xtx_xty()` helper performs per-BED cross-product work.
 
 The returned `stats` object contains the marker-trait cross-products and
 related quantities required by the ST-BLR wrapper:
@@ -183,28 +184,30 @@ related quantities required by the ST-BLR wrapper:
 - `stats$yy`: $y_t^\top y_t$ for each trait;
 - `stats$n` and `stats$m`, when available, for sample and marker counts.
 
-`stblr_csr()` combines this object with `ld_prefix`, the prefix written by
-`sparseLD_stream_CSR()`. The wrapper initializes per-trait variance quantities
-using `stats$yy`, $n$, and $m$, then passes `wy`, `ww`, `yy`, and the CSR
-prefix to the sparse-LD sampler.
+`make_sparseLD()` computes disk-backed sparse LD from the same BED-backed
+`Glist` and stores the resulting CSR prefix and resolved marker metadata in
+`Glist$sparseLD`. `stblr_csr()` combines `stats` with this sparse-LD metadata
+from `Glist`, or with an explicit `ld_prefix` when supplied. The wrapper
+initializes per-trait variance quantities using `stats$yy`, $n$, and $m$, then
+passes `wy`, `ww`, `yy`, and the CSR prefix to the sparse-LD sampler.
 
 The complete conceptual bridge is:
 
 ```text
 BED files + aligned phenotypes
           |
-          +--> bed_xtx_xty() --------> wy, ww, yy, n
+          +--> make_stats() ---------> wy, ww, yy, n, marker names
           |
-          +--> sparseLD_stream_CSR() -> disk-backed sparse X'X / LD
-                                         |
-                                         v
-                         stblr_csr() summary-statistics model
+          +--> make_sparseLD() ------> Glist$sparseLD prefix and metadata
+                                        |
+                                        v
+                        stblr_csr() summary-statistics model
 ```
 
 The two branches must be produced from the same marker selection, sample
 selection, allele frequencies, and scaling convention. In contrast,
-`stblr_bed_marker()` follows a direct branch from BED files and phenotypes to
-the individual-level sampler. The worked comparison is described in
+`stblr_bed()` follows a direct branch from BED files and phenotypes to the
+individual-level sampler. The worked comparison is described in
 [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd).
 
 ## Multi-Trait Cross-Products, Sample Overlap, and `SSY`
@@ -286,8 +289,8 @@ cls <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
 stopifnot(!anyNA(cls))
 ```
 
-The same `cls` is then supplied to `bed_xtx_xty()` and, as a list,
-`sparseLD_stream_CSR()`. Allele frequencies are subset with the same indices.
+The same `cls` is then supplied to `make_stats()` and `make_sparseLD()`.
+Allele frequencies are subset with the same indices.
 For annotation models, the $m \times K$ annotation matrix `A` must have one
 row per selected marker in exactly this order. The annotation workflow makes
 that contract explicit by assigning `Glist$rsidsLD[[chr]]` as row names and
@@ -328,8 +331,8 @@ At minimum, validate the following before fitting:
 
 1. `cls` contains no missing marker matches and has the expected length.
 2. Allele frequencies correspond to the selected marker columns.
-3. `bed_xtx_xty()` and `sparseLD_stream_CSR()` use identical marker order,
-   sample rows, and scaling choices.
+3. `make_stats()` and `make_sparseLD()` use identical marker order, sample
+   rows, and scaling choices.
 4. CSR dimensions and indexing are consistent with the number of markers.
 5. Annotation rows and marker/group vectors use the same marker order.
 6. `stats$wy`, `stats$ww`, and posterior marker matrices have compatible
@@ -338,10 +341,10 @@ At minimum, validate the following before fitting:
 8. Multi-trait summary analyses state how `SSY` and sample overlap were
    observed, assumed, or reconstructed.
 
-Comparing posterior summaries from `stblr_bed_marker()` and `stblr_csr()` on
-the same prepared data is a useful integration check, but exact numerical
-agreement is not expected automatically. Sparse-LD approximation, scaling,
-sampler scheduling, finite MCMC error, and prior settings can all affect the
+Comparing posterior summaries from `stblr_bed()` and `stblr_csr()` on the same
+prepared data is a useful integration check, but exact numerical agreement is
+not expected automatically. Sparse-LD approximation, scaling, sampler
+scheduling, finite MCMC error, and prior settings can all affect the
 comparison.
 
 ## Related Notes

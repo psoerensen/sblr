@@ -79,8 +79,9 @@ For CSR SBayesRC:
 b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))
 ```
 
-In SBayesRC, annotations affect component probabilities. `selection_s` affects
-marker-specific effect-size prior variance.
+For the SBayesRC backend, annotations affect component probabilities. The
+BayesS-style MAF-scaling argument affects marker-specific effect-size prior
+variance.
 
 ## Sampled-S defaults
 
