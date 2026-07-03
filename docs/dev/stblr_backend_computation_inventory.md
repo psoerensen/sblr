@@ -115,6 +115,24 @@ Selection-S support summary:
 | `bed_bayesc` | no | no |
 | `bed_bayesr` | no | no |
 
+User-facing model capability map:
+
+| Model/API | Fixed `selection_s` | Sampled `selection_s` | Annotation-aware | `comp_prob` | Annotation outputs | LD-swap |
+| --- | --- | --- | --- | --- | --- | --- |
+| `stblr_csr(method = "bayesC")` | yes | yes | no | no | no | yes |
+| `stblr_csr(method = "bayesR")` | yes | yes | no | yes | no | yes |
+| `stblr_csr_annot(annotation_model = "prior")` | no | no | yes | no | yes | yes |
+| `stblr_csr_annot(annotation_model = "learned")` | no | no | yes | no | yes | yes |
+| `stblr_csr_annot(annotation_model = "group")` | no | no | yes | no | yes | yes |
+| `stblr_csr_annot(annotation_model = "sbayesrc")` | yes | yes | yes | yes | yes | yes |
+
+`comp_prob` follows backend-specific null component names. CSR BayesR uses
+`component_0`, so `dm = 1 - P(component_0)`. CSR SBayesRC uses `gamma_0.00`,
+so `dm = 1 - P(gamma_0.00)`. Fine-mapping diagnostics are represented by
+marker PIPs in `dm` and optional LD-swap summaries in `ld_swap` when
+`updateLDswap = TRUE`. Credible sets are produced by R helper functions from
+PIPs and LD rather than returned as a separate native sampler object.
+
 Sampled CSR BayesC uses a bounded uniform prior and the Metropolis-Hastings
 kernel
 

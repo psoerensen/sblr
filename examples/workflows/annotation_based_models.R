@@ -8,6 +8,32 @@
 #
 # The MCMC settings shown here are demonstration settings. Real analyses need
 # longer chains and appropriate convergence and posterior predictive checks.
+#
+# Model map:
+# - stblr_csr(method = "bayesC") fits annotation-unaware CSR BayesC.
+# - stblr_csr(method = "bayesR") fits annotation-unaware CSR BayesR.
+# - stblr_csr_annot(annotation_model = "prior") uses fixed annotation-informed
+#   BayesC inclusion and variance priors.
+# - stblr_csr_annot(annotation_model = "learned") learns annotation effects on
+#   BayesC inclusion and variance priors.
+# - stblr_csr_annot(annotation_model = "group") uses grouped BayesC prior
+#   parameters.
+# - stblr_csr_annot(annotation_model = "sbayesrc") fits SBayesRC-style
+#   annotation-dependent BayesR component probabilities.
+#
+# fixed global selection_s and sampled trait-specific selection_s are available
+# for CSR BayesC, CSR BayesR, and CSR SBayesRC only. They are not supported by
+# the prior, learned, or group annotation-aware BayesC backends.
+#
+# Inspect fit$dm for PIP/non-null probability, fit$bm for posterior mean
+# effects, fit$vbs/fit$vgs/fit$ves and fit$vle/fit$vld for variance traces,
+# fit$comp_prob and fit$dm_component_mean for BayesR/SBayesRC components, and
+# annotation_summary/annotation_pi/annotation_effects/annotation_prior/alpha
+# fields where those are produced by annotation-aware models. With
+# updateLDswap = TRUE, LD-swap diagnostics are in fit$ld_swap and, when
+# keep_chains = TRUE, in chain-level summaries. Credible sets are constructed
+# by helper functions from PIPs and LD; they are not separate sampler return
+# objects in this workflow.
 
 # Packages -----------------------------------------------------------------
 
@@ -1688,9 +1714,10 @@ get_null_component_col <- function(cp) {
   }
   
   candidates <- c(
+    "gamma_0.00",
+    "gamma_0",
     "component_0",
     "comp_0",
-    "gamma_0",
     "class_0",
     "0"
   )
@@ -1738,9 +1765,10 @@ get_null_component_col <- function(cp) {
   }
   
   candidates <- c(
+    "gamma_0.00",
+    "gamma_0",
     "component_0",
     "comp_0",
-    "gamma_0",
     "class_0",
     "0"
   )
@@ -1830,8 +1858,8 @@ fitC_sampleS <- stblr_csr(
   method = "bayesC",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
-  selection_s_proposal_sd = 0.05,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   seed = 10
 )
 
@@ -1851,8 +1879,8 @@ fitC_sampleS_2 <- stblr_csr(
   method = "bayesC",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
-  selection_s_proposal_sd = 0.05,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
   seed = 10
 )
 
@@ -1867,7 +1895,7 @@ fitC_sampleS_sd010 <- stblr_csr(
   method = "bayesC",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
+  selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.10,
   seed = 10
 )
@@ -1878,13 +1906,13 @@ fitC_sampleS_sd015 <- stblr_csr(
   method = "bayesC",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
+  selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.15,
   seed = 10
 )
 
 rbind(
-  sd005 = fitC_sampleS$selection_s_acceptance,
+  sd035_default = fitC_sampleS$selection_s_acceptance,
   sd010 = fitC_sampleS_sd010$selection_s_acceptance,
   sd015 = fitC_sampleS_sd015$selection_s_acceptance
 )
@@ -1916,19 +1944,19 @@ colSums(fitC_sampleS_sd010$dm > 0.1)
 colSums(fitC_sampleS_sd015$dm > 0.1)
 
 rbind(
-  sd005_mean = fitC_sampleS$selection_s,
+  sd035_default_mean = fitC_sampleS$selection_s,
   sd010_mean = fitC_sampleS_sd010$selection_s,
   sd015_mean = fitC_sampleS_sd015$selection_s
 )
 
 rbind(
-  sd005_min = fitC_sampleS$selection_s_min,
+  sd035_default_min = fitC_sampleS$selection_s_min,
   sd010_min = fitC_sampleS_sd010$selection_s_min,
   sd015_min = fitC_sampleS_sd015$selection_s_min
 )
 
 rbind(
-  sd005_max = fitC_sampleS$selection_s_max,
+  sd035_default_max = fitC_sampleS$selection_s_max,
   sd010_max = fitC_sampleS_sd010$selection_s_max,
   sd015_max = fitC_sampleS_sd015$selection_s_max
 )
@@ -1939,7 +1967,7 @@ fitC_sampleS_sd025 <- stblr_csr(
   method = "bayesC",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
+  selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.25,
   seed = 10
 )
@@ -1950,13 +1978,13 @@ fitC_sampleS_sd035 <- stblr_csr(
   method = "bayesC",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
-  selection_s_prior = c(-2, 2),
+  selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.35,
   seed = 10
 )
 
 rbind(
-  sd005 = fitC_sampleS$selection_s_acceptance,
+  sd035_default = fitC_sampleS$selection_s_acceptance,
   sd010 = fitC_sampleS_sd010$selection_s_acceptance,
   sd015 = fitC_sampleS_sd015$selection_s_acceptance,
   sd025 = fitC_sampleS_sd025$selection_s_acceptance,
@@ -2003,9 +2031,13 @@ apply(
 
 
 ## ------------------------------------------------------------
-## Quick sanity tests for sampled selection_s in BayesR/SBayesRC
+## Quick sanity checks for fixed and sampled selection_s
 ## Assumes objects exist:
 ##   stats, Glist, A
+## Current sampled-S defaults are:
+##   selection_s_init = 0
+##   selection_s_prior = c(-3, 2)
+##   selection_s_proposal_sd = 0.35
 ## ------------------------------------------------------------
 
 check_bayesr_component_consistency <- function(fit) {
@@ -2219,18 +2251,20 @@ print(apply(
 
 
 
-check_component_consistency <- function(fit) {
+check_sbayesrc_component_consistency <- function(fit) {
   do.call(
     rbind,
     lapply(names(fit$comp_prob), function(trait) {
       cp <- fit$comp_prob[[trait]]
+      null_col <- get_sbayesrc_null_component_col(cp)
       
       data.frame(
         trait = trait,
+        null_component = null_col,
         max_row_sum_error = max(abs(rowSums(cp) - 1)),
         max_dm_error = max(abs(
           unname(as.numeric(fit$dm[, trait])) -
-            unname(as.numeric(1 - cp[, "component_0"]))
+            unname(as.numeric(1 - cp[, null_col]))
         )),
         stringsAsFactors = FALSE
       )
@@ -2238,7 +2272,7 @@ check_component_consistency <- function(fit) {
   )
 }
 
-check_component_consistency(fit_sbayesrc0)
-check_component_consistency(fit_sbayesrc_minus1)
-check_component_consistency(fit_sbayesrc_s0)
-check_component_consistency(fit_sbayesrc_sneg)
+check_sbayesrc_component_consistency(fit_sbayesrc0)
+check_sbayesrc_component_consistency(fit_sbayesrc_minus1)
+check_sbayesrc_component_consistency(fit_sbayesrc_s0)
+check_sbayesrc_component_consistency(fit_sbayesrc_sneg)

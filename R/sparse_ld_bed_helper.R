@@ -1540,9 +1540,14 @@ stblr_csr_bayesr <- function(
 
 #' Fit ST-BLR from BED Sufficient Statistics and Sparse LD
 #'
-#' Fits the single-trait ST-BLR sampler using sufficient statistics from
-#' [bed_xtx_xty()] and a disk-backed CSR LD prefix from
-#' [sparseLD_stream_CSR()].
+#' Annotation-unaware summary-statistics CSR interface. Fits ST-BLR samplers
+#' using sufficient statistics from [bed_xtx_xty()] and a disk-backed CSR LD
+#' prefix from [sparseLD_stream_CSR()].
+#'
+#' Available methods are `method = "bayesC"` and `method = "bayesR"`. Both
+#' support fixed global `selection_s`, sampled trait-specific `selection_s`,
+#' LD-swap/fine-mapping diagnostics where `updateLDswap = TRUE`, and native
+#' multi-chain posterior summaries.
 #'
 #'
 #' @param Glist Optional qgg genotype list containing `sparseLD`. If
@@ -1635,15 +1640,27 @@ stblr_csr_bayesr <- function(
 #'   Used only when `method = "bayesr"`.
 #' @param use_comp_init,comp_init BayesR component-state initialization
 #'   controls. Used only when `method = "bayesr"`.
-#' @return A formatted ST-BLR fit. For scheduled CSR fits, `pis` contains the
-#'   sampled inclusion-probability trace for each trait, averaged by iteration
-#'   across chains when `nchains > 1`. Chain-capable CSR fits provide `dm_sd`,
-#'   `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`; standard traces are
-#'   averaged by iteration across chains. LD-swap remains available only for
-#'   `scheduled = FALSE`. For `method = "bayesr"`, `dm` is
-#'   `P(component > 0)`, `comp_prob` contains marker-by-component posterior
-#'   probabilities, `dm_component_mean` contains posterior mean component
-#'   indices, and LD-swap relocates the active/null full `(component, b)` state.
+#' @return A formatted ST-BLR fit. Common posterior fields include `dm`
+#'   (marker-by-trait posterior inclusion or non-null probability), `bm`
+#'   (marker-by-trait posterior mean effects), `vbs`, `vgs`, `ves`, `vle`,
+#'   `vld`, and `input` model/backend/settings metadata. Chain-capable CSR fits
+#'   provide `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`;
+#'   standard traces are averaged by iteration across chains. With
+#'   `keep_chains = TRUE`, compact per-chain summaries are returned in
+#'   `chains` for unscheduled CSR fits.
+#'
+#'   For scheduled CSR fits, `pis` contains the sampled inclusion-probability
+#'   trace for each trait, averaged by iteration across chains when
+#'   `nchains > 1`. LD-swap remains available only for `scheduled = FALSE`;
+#'   enabled fits include `ld_swap` and, where chain summaries are retained,
+#'   `ld_swap_chains` or chain-level LD-swap entries.
+#'
+#'   For `method = "bayesR"`, `dm` is `P(component > 0)`, `comp_prob` contains
+#'   marker-by-component posterior probabilities by trait, and
+#'   `dm_component_mean` contains posterior mean component/effect-class
+#'   summaries. The BayesR null component column is `component_0`, so
+#'   `dm = 1 - P(component_0)`.
+#'
 #'   When sampled `selection_s` is enabled, the fit also contains
 #'   `selection_s`, `selection_s_sd`, `selection_s_min`, `selection_s_max`,
 #'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
@@ -1652,6 +1669,12 @@ stblr_csr_bayesr <- function(
 #'   `keep_chains = TRUE`, chain-level sampled-S output is available as
 #'   `fit$chains[[trait]][[chain]]$selection_s` and
 #'   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+#'
+#'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
+#'   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
+#'   performed by helper functions such as [make_stblr_credible_sets()] and
+#'   [extract_stblr_finemap_loci()] from posterior inclusion probabilities and
+#'   LD, rather than being a separate sampler return object.
 #'
 #' @details
 #' CSR effects are on the standardized-genotype scale. The BayesS-style

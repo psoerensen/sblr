@@ -119,13 +119,28 @@ marker for swap proposals.}
 annotation wrapper.}
 }
 \value{
-A formatted ST-BLR fit. All returned fits contain `dm`, `bm`,
-  `vle`, `vld`, and `input`, standardized metadata fields (`method`,
-  `model`, `backend`, `data_level`, `annotation_model`, `annotations`,
-  `nchains`, `keep_chains`), and model-specific annotation aliases when they
-  can be constructed reliably. Existing wrapper-specific fields are
-  preserved. The `vle` and `vld` traces follow the same definitions and
-  formatting conventions as annotation-unaware CSR fits.
+A formatted ST-BLR fit. All returned fits contain `dm`
+  (marker-by-trait posterior inclusion or non-null probability), `bm`
+  (marker-by-trait posterior mean effects), `vbs`, `vgs`, `ves`, `vle`,
+  `vld`, and `input`, plus standardized metadata fields (`method`, `model`,
+  `backend`, `data_level`, `annotation_model`, `annotations`, `nchains`,
+  `keep_chains`). Existing wrapper-specific fields are preserved. The `vle`
+  and `vld` traces follow the same definitions and formatting conventions as
+  annotation-unaware CSR fits.
+
+  Annotation-aware outputs are model-specific and may include
+  `annotation_summary`, `annotation_pi`, `annotation_effects`,
+  `annotation_prior`, `alpha`, and `sigmaSqAlpha`. SBayesRC fits also
+  include BayesR-style `comp_prob` marker-by-component posterior
+  probabilities by trait, `dm_component_mean`, and `ncomp` where available.
+  The SBayesRC null component column is `gamma_0.00`, so
+  `dm = 1 - P(gamma_0.00)`.
+
+  LD-swap-enabled fits include `ld_swap` and, where chain summaries are
+  retained, `ld_swap_chains` or chain-level LD-swap entries. With
+  `keep_chains = TRUE`, compact per-chain summaries are returned in
+  `chains` for supported CSR annotation backends.
+
   For sampled SBayesRC `selection_s`, the fit also contains `selection_s`,
   `selection_s_sd`, `selection_s_min`, `selection_s_max`,
   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
@@ -134,6 +149,12 @@ A formatted ST-BLR fit. All returned fits contain `dm`, `bm`,
   `keep_chains = TRUE`, chain-level sampled-S output is available as
   `fit$chains[[trait]][[chain]]$selection_s` and
   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+
+  Fine-mapping diagnostics are available through PIP summaries in `dm` and
+  LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
+  performed by helper functions such as [make_stblr_credible_sets()] and
+  [extract_stblr_finemap_loci()] from posterior inclusion probabilities and
+  LD, rather than being a separate sampler return object.
 }
 \description{
 `stblr_csr_annot()` is the unified public entry point for the current
@@ -142,11 +163,27 @@ existing explicit wrappers and standardizes fit metadata and annotation
 output aliases while preserving wrapper-specific fields.
 }
 \details{
+Available annotation models are `annotation_model = "prior"` for fixed
+annotation-informed prior probabilities and variance multipliers,
+`annotation_model = "learned"` for learned annotation effects on BayesC-like
+inclusion and variance priors, `annotation_model = "group"` for grouped
+annotation architectures, and `annotation_model = "sbayesrc"` for
+SBayesRC-style annotation-dependent component probabilities. Only
+`annotation_model = "sbayesrc"` supports fixed global `selection_s` and
+sampled trait-specific `selection_s`.
+
+
 This interface is CSR summary-statistics only. The current annotation-aware
 SBayesRC and the BayesC-like annotation-aware CSR backends support multiple
 native chains and compact chain summaries. LD-swap/MH is currently available
 for the fixed-prior, group, and learned annotation-aware CSR BayesC
 backends and the annotation-aware CSR SBayesRC backend.
+
+Annotation-aware BayesC models differ from SBayesRC in what annotations
+control. The `"prior"`, `"learned"`, and `"group"` models affect BayesC-like
+inclusion probabilities and/or marker-effect variance priors directly.
+SBayesRC uses annotations to affect component probabilities; `selection_s`,
+when requested, affects only marker-specific effect-size prior variance.
 
 Existing wrappers remain supported:
 [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
