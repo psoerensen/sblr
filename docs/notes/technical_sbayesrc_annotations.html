@@ -184,6 +184,7 @@ window.Quarto = {
    
   <ul>
   <li><a href="#model-definition" id="toc-model-definition" class="nav-link active" data-scroll-target="#model-definition">Model Definition</a></li>
+  <li><a href="#optional-bayess-style-selection_s" id="toc-optional-bayess-style-selection_s" class="nav-link" data-scroll-target="#optional-bayess-style-selection_s">Optional BayesS-Style <code>selection_s</code></a></li>
   <li><a href="#gamma-grids" id="toc-gamma-grids" class="nav-link" data-scroll-target="#gamma-grids">Gamma Grids</a></li>
   <li><a href="#annotation-dependent-component-probabilities" id="toc-annotation-dependent-component-probabilities" class="nav-link" data-scroll-target="#annotation-dependent-component-probabilities">Annotation-Dependent Component Probabilities</a>
   <ul class="collapse">
@@ -252,7 +253,7 @@ window.Quarto = {
 </header>
 
 
-<p>This appendix describes the SBayesRC-style annotation-dependent BayesR prior implemented by <code>stblr_csr_sbayesrc_generic()</code>. The core prior family is closely aligned with published SBayesRC: marker effects follow a multi-normal mixture, and marker-specific mixture probabilities are determined by conditional probit stick-breaking regressions on annotations. The exposed <code>sblr</code> model is not an exact reproduction of the published GCTB SBayesRC implementation. Its default gamma grid differs, and it uses a CSR sparse-LD likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.</p>
+<p>This appendix describes the SBayesRC-style annotation-dependent BayesR prior available through <code>stblr_csr_annot(annotation_model = "sbayesrc")</code> and the compatibility wrapper <code>stblr_csr_sbayesrc_generic()</code>. The core prior family is closely aligned with published SBayesRC: marker effects follow a multi-normal mixture, and marker-specific mixture probabilities are determined by conditional probit stick-breaking regressions on annotations. The exposed <code>sblr</code> model is not an exact reproduction of the published GCTB SBayesRC implementation. Its default gamma grid differs, and it uses a CSR sparse-LD likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.</p>
 <p>This note focuses on the annotation-dependent prior and its diagnostics. It does not claim computational equivalence between the two likelihood implementations.</p>
 <section id="model-definition" class="level2">
 <h2 class="anchored" data-anchor-id="model-definition">Model Definition</h2>
@@ -279,19 +280,53 @@ N(0,\gamma_k v_b).
 <p>The remaining components represent increasingly diffuse active-effect distributions when their gamma multipliers increase.</p>
 <p>For multiple traits supplied to the wrapper, this mixture construction and its annotation coefficients are fitted separately by trait. The formatted fit therefore stores one <code>alpha</code> matrix and one set of marker component summaries per trait.</p>
 </section>
+<section id="optional-bayess-style-selection_s" class="level2">
+<h2 class="anchored" data-anchor-id="optional-bayess-style-selection_s">Optional BayesS-Style <code>selection_s</code></h2>
+<p>The package argument is <code>selection_s</code>. It corresponds to the BayesS-style MAF architecture parameter <code>S</code>.</p>
+<p>Current CSR SBayesRC supports both fixed global <code>selection_s</code> and sampled trait-specific <code>selection_s</code> by Metropolis-Hastings. SBayesRC annotations and <code>selection_s</code> affect different parts of the prior:</p>
+<ul>
+<li>annotations affect marker-specific component probabilities through <span class="math inline">\(A\alpha\)</span> and probit stick-breaking;</li>
+<li><code>selection_s</code> affects marker-specific effect-size prior variance.</li>
+</ul>
+<p>CSR effects are on the standardized-genotype scale. The MAF-dependent prior scale is</p>
+<p><span class="math display">\[
+q_j(S)=h_j^{S+1},
+\qquad
+h_j=2p_j(1-p_j),
+\]</span></p>
+<p>where <span class="math inline">\(p_j\)</span> is the minor allele frequency. The <code>+1</code> exponent is used because the CSR sampler effects are standardized-genotype-scale effects rather than allele-scale effects.</p>
+<p>With fixed <code>selection_s</code>, the active SBayesRC component prior is</p>
+<p><span class="math display">\[
+b_j \mid \mathrm{component}_j=m,v_b,S
+\sim
+N\{0, v_b\gamma_m q_j(S)\}.
+\]</span></p>
+<p>With sampled <code>selection_s</code>, the current implementation samples one <span class="math inline">\(S_t\)</span> per trait and chain using the active-component MH log posterior contribution</p>
+<pre class="text"><code>log p(S_t | b_t, gamma_t, vb_t)
+  = log p(S_t)
+    - 0.5 sum_{j: gamma_jt &gt; 0} [
+        log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))
+      ]</code></pre>
+<p>The sampled-S defaults are:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>selection_s_init <span class="ot">=</span> <span class="dv">0</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>selection_s_prior <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">2</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>selection_s_proposal_sd <span class="ot">=</span> <span class="fl">0.35</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The same fixed and sampled <code>selection_s</code> support is available for plain CSR BayesC and plain CSR BayesR. Scheduled CSR BayesC, BayesC-like annotation-aware CSR backends, and BED backends do not support sampler-level <code>selection_s</code>. See <a href="selection_s_status.md">selection_s implementation status</a> for the complete backend support matrix and BayesC/BayesR kernels.</p>
+</section>
 <section id="gamma-grids" class="level2">
 <h2 class="anchored" data-anchor-id="gamma-grids">Gamma Grids</h2>
 <p>The public <code>sblr</code> default is:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Published SBayesRC uses the five-component grid:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Users can request that published gamma grid explicitly:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr_sbayesrc_generic</span>(</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr_annot</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotations =</span> A,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotation_model =</span> <span class="st">"sbayesrc"</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Matching the gamma grid aligns this part of the prior specification. It does not make the complete <code>sblr</code> model identical to GCTB SBayesRC because the likelihood, sparse-LD representation, exposed defaults, and implementation details remain distinct.</p>
 </section>
 <section id="annotation-dependent-component-probabilities" class="level2">
@@ -434,6 +469,7 @@ v_{b,k}=\gamma_k v_b.
 <section id="comp_prob" class="level3">
 <h3 class="anchored" data-anchor-id="comp_prob"><code>comp_prob</code></h3>
 <p><code>fit$comp_prob</code> is a list with one marker-by-component matrix per trait. It contains posterior frequencies of sampled component assignments after burn-in and thinning. It is not the same object as the annotation-derived prior probability matrix computed from <span class="math inline">\(A\alpha\)</span>.</p>
+<p>Component probability columns are named by gamma values. The exact null component column is <code>gamma_0.00</code>, so <code>dm = 1 - P(gamma_0.00)</code>. This differs from CSR BayesR, which uses <code>component_0</code> for the null component column.</p>
 </section>
 <section id="ncomp" class="level3">
 <h3 class="anchored" data-anchor-id="ncomp"><code>ncomp</code></h3>
@@ -466,11 +502,11 @@ v_{b,k}=\gamma_k v_b.
 \sum_{c=1}^{C}\pi_{ic}\gamma_c.
 \]</span></p>
 <p>These marker-profile helpers include the complete annotation combination in each row of <span class="math inline">\(A\)</span>. They are generally more directly relevant to the fitted prior architecture than standalone annotation-row summaries.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>alpha_t <span class="ot">&lt;-</span> fit<span class="sc">$</span>alpha[[<span class="dv">1</span>]]</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>prior_pi <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_pi</span>(fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>expected_gamma <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_gamma_mean</span>(</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>alpha_t <span class="ot">&lt;-</span> fit<span class="sc">$</span>alpha[[<span class="dv">1</span>]]</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>prior_pi <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_pi</span>(fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>expected_gamma <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_gamma_mean</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Because these diagnostics transform posterior mean alpha coefficients, they do not propagate the full posterior uncertainty in alpha. Compact reports can show annotation-row expected gamma, <code>summary(expected_gamma)</code>, and the correlation between marker expected gamma and PIP. That correlation describes the fitted prior-posterior relationship; it is not a calibration statistic or causal estimate.</p>
 </section>
 </section>
@@ -1056,514 +1092,579 @@ v_{b,k}=\gamma_k v_b.
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb5" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: SBayesRC-Style Annotation Priors"</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>This appendix describes the SBayesRC-style annotation-dependent BayesR prior</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>implemented by <span class="in">`stblr_csr_sbayesrc_generic()`</span>. The core prior family is closely</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>aligned with published SBayesRC: marker effects follow a multi-normal mixture,</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>and marker-specific mixture probabilities are determined by conditional</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>probit stick-breaking regressions on annotations. The exposed <span class="in">`sblr`</span> model is</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>not an exact reproduction of the published GCTB SBayesRC implementation. Its</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>default gamma grid differs, and it uses a CSR sparse-LD likelihood rather than</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>the GCTB low-rank rotated summary-statistics likelihood.</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>This note focuses on the annotation-dependent prior and its diagnostics. It</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>does not claim computational equivalence between the two likelihood</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>implementations.</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## Model Definition</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>For marker $i$, let $z_i \in <span class="sc">\{</span>1,\ldots,C<span class="sc">\}</span>$ identify one of $C$ mixture</span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>components. Conditional on $z_i=k$, the marker effect is</span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>\beta_i \mid z_i=k, v_b, \gamma</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>\sim</span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>N(0,\gamma_k v_b).</span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>The vector</span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>\gamma=(\gamma_1,\ldots,\gamma_C)</span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>contains fixed variance multipliers, while $v_b$ is the sampled global</span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>active-effect variance scale. The implementation requires</span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>\gamma_1=0,</span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>\qquad</span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>\gamma_k&gt;0 \quad \text{for } k&gt;1.</span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>The first component is therefore an exact null component:</span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>\beta_i=0 \quad \text{when } z_i=1.</span>
-<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>The remaining components represent increasingly diffuse active-effect</span>
-<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>distributions when their gamma multipliers increase.</span>
-<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>For multiple traits supplied to the wrapper, this mixture construction and its</span>
-<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>annotation coefficients are fitted separately by trait. The formatted fit</span>
-<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>therefore stores one <span class="in">`alpha`</span> matrix and one set of marker component summaries</span>
-<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>per trait.</span>
-<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## Gamma Grids</span></span>
-<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>The public <span class="in">`sblr`</span> default is:</span>
-<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
-<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a>Published SBayesRC uses the five-component grid:</span>
-<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
-<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a>Users can request that published gamma grid explicitly:</span>
-<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr_sbayesrc_generic</span>(</span>
-<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
-<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a>  <span class="at">ld_prefix =</span> ld_prefix,</span>
-<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> A,</span>
-<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
-<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a>Matching the gamma grid aligns this part of the prior specification. It does</span>
-<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a>not make the complete <span class="in">`sblr`</span> model identical to GCTB SBayesRC because the</span>
-<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a>likelihood, sparse-LD representation, exposed defaults, and implementation</span>
-<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a>details remain distinct.</span>
-<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-88"><a href="#cb5-88" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Dependent Component Probabilities</span></span>
-<span id="cb5-89"><a href="#cb5-89" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-90"><a href="#cb5-90" aria-hidden="true" tabindex="-1"></a>Let $A$ be an $m \times K$ marker-by-annotation matrix. For $C$ mixture</span>
-<span id="cb5-91"><a href="#cb5-91" aria-hidden="true" tabindex="-1"></a>components, let $\alpha$ be a $K \times (C-1)$ coefficient matrix. Column</span>
-<span id="cb5-92"><a href="#cb5-92" aria-hidden="true" tabindex="-1"></a>$\alpha_j$ controls conditional stick-breaking step $j$.</span>
-<span id="cb5-93"><a href="#cb5-93" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-94"><a href="#cb5-94" aria-hidden="true" tabindex="-1"></a>For marker $i$ and step $j$, the linear predictor and conditional</span>
-<span id="cb5-95"><a href="#cb5-95" aria-hidden="true" tabindex="-1"></a>continuation probability are</span>
-<span id="cb5-96"><a href="#cb5-96" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-97"><a href="#cb5-97" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-98"><a href="#cb5-98" aria-hidden="true" tabindex="-1"></a>\eta_{ij}=A_i\alpha_j,</span>
-<span id="cb5-99"><a href="#cb5-99" aria-hidden="true" tabindex="-1"></a>\qquad</span>
-<span id="cb5-100"><a href="#cb5-100" aria-hidden="true" tabindex="-1"></a>p_{ij}=\Phi(\eta_{ij}),</span>
-<span id="cb5-101"><a href="#cb5-101" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-102"><a href="#cb5-102" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-103"><a href="#cb5-103" aria-hidden="true" tabindex="-1"></a>where $\Phi$ is the standard normal distribution function. The marker-level</span>
-<span id="cb5-104"><a href="#cb5-104" aria-hidden="true" tabindex="-1"></a>component probabilities are</span>
-<span id="cb5-105"><a href="#cb5-105" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-106"><a href="#cb5-106" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-107"><a href="#cb5-107" aria-hidden="true" tabindex="-1"></a>\begin{aligned}</span>
-<span id="cb5-108"><a href="#cb5-108" aria-hidden="true" tabindex="-1"></a>\pi_{i1} &amp;= 1-p_{i1},<span class="sc">\\</span></span>
-<span id="cb5-109"><a href="#cb5-109" aria-hidden="true" tabindex="-1"></a>\pi_{i2} &amp;= p_{i1}(1-p_{i2}),<span class="sc">\\</span></span>
-<span id="cb5-110"><a href="#cb5-110" aria-hidden="true" tabindex="-1"></a>\pi_{i3} &amp;= p_{i1}p_{i2}(1-p_{i3}),<span class="sc">\\</span></span>
-<span id="cb5-111"><a href="#cb5-111" aria-hidden="true" tabindex="-1"></a>&amp;\ \vdots<span class="sc">\\</span></span>
-<span id="cb5-112"><a href="#cb5-112" aria-hidden="true" tabindex="-1"></a>\pi_{iC} &amp;= \prod_{j=1}^{C-1}p_{ij}.</span>
-<span id="cb5-113"><a href="#cb5-113" aria-hidden="true" tabindex="-1"></a>\end{aligned}</span>
-<span id="cb5-114"><a href="#cb5-114" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-115"><a href="#cb5-115" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-116"><a href="#cb5-116" aria-hidden="true" tabindex="-1"></a>Equivalently, component $k&lt;C$ receives the probability of continuing through</span>
-<span id="cb5-117"><a href="#cb5-117" aria-hidden="true" tabindex="-1"></a>all earlier steps and stopping at step $k$; the final component receives the</span>
-<span id="cb5-118"><a href="#cb5-118" aria-hidden="true" tabindex="-1"></a>probability of continuing through every step.</span>
-<span id="cb5-119"><a href="#cb5-119" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-120"><a href="#cb5-120" aria-hidden="true" tabindex="-1"></a><span class="fu">### Why the probabilities sum to one</span></span>
-<span id="cb5-121"><a href="#cb5-121" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-122"><a href="#cb5-122" aria-hidden="true" tabindex="-1"></a>For a marker with step probabilities $p_1,\ldots,p_{C-1}$,</span>
-<span id="cb5-123"><a href="#cb5-123" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-124"><a href="#cb5-124" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-125"><a href="#cb5-125" aria-hidden="true" tabindex="-1"></a>\sum_{k=1}^{C}\pi_k</span>
-<span id="cb5-126"><a href="#cb5-126" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb5-127"><a href="#cb5-127" aria-hidden="true" tabindex="-1"></a>(1-p_1)</span>
-<span id="cb5-128"><a href="#cb5-128" aria-hidden="true" tabindex="-1"></a>+p_1(1-p_2)</span>
-<span id="cb5-129"><a href="#cb5-129" aria-hidden="true" tabindex="-1"></a>+\cdots+</span>
-<span id="cb5-130"><a href="#cb5-130" aria-hidden="true" tabindex="-1"></a>\left(\prod_{j=1}^{C-2}p_j\right)(1-p_{C-1})</span>
-<span id="cb5-131"><a href="#cb5-131" aria-hidden="true" tabindex="-1"></a>+\prod_{j=1}^{C-1}p_j</span>
-<span id="cb5-132"><a href="#cb5-132" aria-hidden="true" tabindex="-1"></a>=1.</span>
-<span id="cb5-133"><a href="#cb5-133" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-134"><a href="#cb5-134" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-135"><a href="#cb5-135" aria-hidden="true" tabindex="-1"></a>The expression telescopes: probability either stops at one of the first</span>
-<span id="cb5-136"><a href="#cb5-136" aria-hidden="true" tabindex="-1"></a>$C-1$ steps or reaches the final component.</span>
-<span id="cb5-137"><a href="#cb5-137" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-138"><a href="#cb5-138" aria-hidden="true" tabindex="-1"></a><span class="fu">### Numerical flooring and renormalization</span></span>
-<span id="cb5-139"><a href="#cb5-139" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-140"><a href="#cb5-140" aria-hidden="true" tabindex="-1"></a>The native sampler computes these probabilities from $A\alpha$, floors each</span>
-<span id="cb5-141"><a href="#cb5-141" aria-hidden="true" tabindex="-1"></a>component probability at <span class="in">`pi_floor`</span>, and renormalizes each marker row to sum to</span>
-<span id="cb5-142"><a href="#cb5-142" aria-hidden="true" tabindex="-1"></a>one. The public default is <span class="in">`pi_floor = 1e-12`</span>.</span>
-<span id="cb5-143"><a href="#cb5-143" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-144"><a href="#cb5-144" aria-hidden="true" tabindex="-1"></a>Flooring prevents exact numerical zero probabilities when probit predictors are</span>
-<span id="cb5-145"><a href="#cb5-145" aria-hidden="true" tabindex="-1"></a>extreme. Because flooring slightly changes the unnormalized stick-breaking</span>
-<span id="cb5-146"><a href="#cb5-146" aria-hidden="true" tabindex="-1"></a>probabilities, the subsequent row renormalization is required. This is a</span>
-<span id="cb5-147"><a href="#cb5-147" aria-hidden="true" tabindex="-1"></a>numerical-stability adjustment, not a different conceptual link function.</span>
-<span id="cb5-148"><a href="#cb5-148" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-149"><a href="#cb5-149" aria-hidden="true" tabindex="-1"></a>The deterministic R diagnostic helpers apply the mathematical</span>
-<span id="cb5-150"><a href="#cb5-150" aria-hidden="true" tabindex="-1"></a>stick-breaking transform without the native sampler's floor-and-renormalize</span>
-<span id="cb5-151"><a href="#cb5-151" aria-hidden="true" tabindex="-1"></a>step. For ordinary finite coefficients, their rows sum to one up to numerical</span>
-<span id="cb5-152"><a href="#cb5-152" aria-hidden="true" tabindex="-1"></a>tolerance.</span>
-<span id="cb5-153"><a href="#cb5-153" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-154"><a href="#cb5-154" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation Matrix and Preprocessing</span></span>
-<span id="cb5-155"><a href="#cb5-155" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-156"><a href="#cb5-156" aria-hidden="true" tabindex="-1"></a>Rows of $A$ must be aligned with the markers in the sufficient statistics,</span>
-<span id="cb5-157"><a href="#cb5-157" aria-hidden="true" tabindex="-1"></a>CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or</span>
-<span id="cb5-158"><a href="#cb5-158" aria-hidden="true" tabindex="-1"></a>quantitative annotations, and overlap is allowed.</span>
-<span id="cb5-159"><a href="#cb5-159" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-160"><a href="#cb5-160" aria-hidden="true" tabindex="-1"></a>Before fitting, <span class="in">`stblr_csr_sbayesrc_generic()`</span> calls the shared annotation</span>
-<span id="cb5-161"><a href="#cb5-161" aria-hidden="true" tabindex="-1"></a>preparation helper using these controls:</span>
-<span id="cb5-162"><a href="#cb5-162" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-163"><a href="#cb5-163" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`add_intercept = TRUE`</span> adds an all-ones first column when one is not already</span>
-<span id="cb5-164"><a href="#cb5-164" aria-hidden="true" tabindex="-1"></a>  recognized;</span>
-<span id="cb5-165"><a href="#cb5-165" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`standardize_annotations = TRUE`</span> centers and scales nonbinary quantitative</span>
-<span id="cb5-166"><a href="#cb5-166" aria-hidden="true" tabindex="-1"></a>  annotations;</span>
-<span id="cb5-167"><a href="#cb5-167" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`center_binary_annotations = FALSE`</span> leaves binary columns unchanged by</span>
-<span id="cb5-168"><a href="#cb5-168" aria-hidden="true" tabindex="-1"></a>  default;</span>
-<span id="cb5-169"><a href="#cb5-169" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>row names can be used to reorder $A$ to known marker names when all names</span>
-<span id="cb5-170"><a href="#cb5-170" aria-hidden="true" tabindex="-1"></a>  are available.</span>
-<span id="cb5-171"><a href="#cb5-171" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-172"><a href="#cb5-172" aria-hidden="true" tabindex="-1"></a>The preprocessing choices determine the meaning and scale of <span class="in">`alpha`</span>.</span>
-<span id="cb5-173"><a href="#cb5-173" aria-hidden="true" tabindex="-1"></a>Quantitative coefficients are effects per standardized annotation unit under</span>
-<span id="cb5-174"><a href="#cb5-174" aria-hidden="true" tabindex="-1"></a>the defaults. An unchanged binary coefficient is a contrast associated with</span>
-<span id="cb5-175"><a href="#cb5-175" aria-hidden="true" tabindex="-1"></a>membership in that annotation, conditional on the remaining columns.</span>
-<span id="cb5-176"><a href="#cb5-176" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-177"><a href="#cb5-177" aria-hidden="true" tabindex="-1"></a><span class="fu">### Intercept prior</span></span>
-<span id="cb5-178"><a href="#cb5-178" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-179"><a href="#cb5-179" aria-hidden="true" tabindex="-1"></a>With <span class="in">`intercept_flat = TRUE`</span>, the first annotation coefficient at every</span>
-<span id="cb5-180"><a href="#cb5-180" aria-hidden="true" tabindex="-1"></a>stick-breaking step receives a flat prior in the native alpha update. This</span>
-<span id="cb5-181"><a href="#cb5-181" aria-hidden="true" tabindex="-1"></a>assumes the first column is the intercept, which is the arrangement produced</span>
-<span id="cb5-182"><a href="#cb5-182" aria-hidden="true" tabindex="-1"></a>when the wrapper adds it. All other annotation coefficients receive the</span>
-<span id="cb5-183"><a href="#cb5-183" aria-hidden="true" tabindex="-1"></a>normal prior described below.</span>
-<span id="cb5-184"><a href="#cb5-184" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-185"><a href="#cb5-185" aria-hidden="true" tabindex="-1"></a>If a custom matrix already contains an intercept, place it first when relying</span>
-<span id="cb5-186"><a href="#cb5-186" aria-hidden="true" tabindex="-1"></a>on <span class="in">`intercept_flat = TRUE`</span>. An all-ones column elsewhere in the matrix is not</span>
-<span id="cb5-187"><a href="#cb5-187" aria-hidden="true" tabindex="-1"></a>treated as the flat-prior intercept by the native update.</span>
-<span id="cb5-188"><a href="#cb5-188" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-189"><a href="#cb5-189" aria-hidden="true" tabindex="-1"></a><span class="fu">## Alpha and SigmaSqAlpha Priors</span></span>
-<span id="cb5-190"><a href="#cb5-190" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-191"><a href="#cb5-191" aria-hidden="true" tabindex="-1"></a>For non-intercept annotation coefficient $k$ at stick-breaking step $j$,</span>
-<span id="cb5-192"><a href="#cb5-192" aria-hidden="true" tabindex="-1"></a>the implemented prior is</span>
-<span id="cb5-193"><a href="#cb5-193" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-194"><a href="#cb5-194" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-195"><a href="#cb5-195" aria-hidden="true" tabindex="-1"></a>\alpha_{kj}\mid \sigma_{\alpha,j}^2</span>
-<span id="cb5-196"><a href="#cb5-196" aria-hidden="true" tabindex="-1"></a>\sim</span>
-<span id="cb5-197"><a href="#cb5-197" aria-hidden="true" tabindex="-1"></a>N(0,\sigma_{\alpha,j}^2).</span>
-<span id="cb5-198"><a href="#cb5-198" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-199"><a href="#cb5-199" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-200"><a href="#cb5-200" aria-hidden="true" tabindex="-1"></a>Each step has its own annotation-effect variance</span>
-<span id="cb5-201"><a href="#cb5-201" aria-hidden="true" tabindex="-1"></a>$\sigma_{\alpha,j}^2$, represented by <span class="in">`sigmaSqAlpha[j]`</span>. Under</span>
-<span id="cb5-202"><a href="#cb5-202" aria-hidden="true" tabindex="-1"></a><span class="in">`intercept_flat = TRUE`</span>, the first coefficient is excluded from this normal</span>
-<span id="cb5-203"><a href="#cb5-203" aria-hidden="true" tabindex="-1"></a>shrinkage prior and from the variance update.</span>
-<span id="cb5-204"><a href="#cb5-204" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-205"><a href="#cb5-205" aria-hidden="true" tabindex="-1"></a>The variance update has scaled-inverse-chi-square or inverse-gamma family form:</span>
-<span id="cb5-206"><a href="#cb5-206" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-207"><a href="#cb5-207" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-208"><a href="#cb5-208" aria-hidden="true" tabindex="-1"></a>\sigma_{\alpha,j}^2</span>
-<span id="cb5-209"><a href="#cb5-209" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb5-210"><a href="#cb5-210" aria-hidden="true" tabindex="-1"></a>\frac{</span>
-<span id="cb5-211"><a href="#cb5-211" aria-hidden="true" tabindex="-1"></a>\sum_{k \in \mathcal{R}}\alpha_{kj}^2 + b_\alpha</span>
-<span id="cb5-212"><a href="#cb5-212" aria-hidden="true" tabindex="-1"></a>}{</span>
-<span id="cb5-213"><a href="#cb5-213" aria-hidden="true" tabindex="-1"></a>\chi^2_{|\mathcal{R}|+a_\alpha}</span>
-<span id="cb5-214"><a href="#cb5-214" aria-hidden="true" tabindex="-1"></a>},</span>
-<span id="cb5-215"><a href="#cb5-215" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-216"><a href="#cb5-216" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-217"><a href="#cb5-217" aria-hidden="true" tabindex="-1"></a>where $\mathcal{R}$ contains coefficients subject to shrinkage,</span>
-<span id="cb5-218"><a href="#cb5-218" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha_a`</span> supplies $a_\alpha$, and <span class="in">`sigmaSqAlpha_b`</span> supplies</span>
-<span id="cb5-219"><a href="#cb5-219" aria-hidden="true" tabindex="-1"></a>$b_\alpha$. Both public defaults are 2.</span>
-<span id="cb5-220"><a href="#cb5-220" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-221"><a href="#cb5-221" aria-hidden="true" tabindex="-1"></a>This construction is aligned with the published SBayesRC use of normal</span>
-<span id="cb5-222"><a href="#cb5-222" aria-hidden="true" tabindex="-1"></a>annotation-coefficient priors and a scaled-inverse-chi-square-family variance</span>
-<span id="cb5-223"><a href="#cb5-223" aria-hidden="true" tabindex="-1"></a>prior. The exact published hyperparameter specification should not be inferred</span>
-<span id="cb5-224"><a href="#cb5-224" aria-hidden="true" tabindex="-1"></a>from the <span class="in">`sblr`</span> defaults. Users should report the values supplied to</span>
-<span id="cb5-225"><a href="#cb5-225" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha_a`</span>, <span class="in">`sigmaSqAlpha_b`</span>, <span class="in">`sigmaSqAlpha_init`</span>, and</span>
-<span id="cb5-226"><a href="#cb5-226" aria-hidden="true" tabindex="-1"></a><span class="in">`intercept_flat`</span>.</span>
-<span id="cb5-227"><a href="#cb5-227" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-228"><a href="#cb5-228" aria-hidden="true" tabindex="-1"></a><span class="fu">## Gibbs-Style Alpha Updating</span></span>
-<span id="cb5-229"><a href="#cb5-229" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-230"><a href="#cb5-230" aria-hidden="true" tabindex="-1"></a>When <span class="in">`updateAlpha = TRUE`</span>, the native sampler updates alpha every</span>
-<span id="cb5-231"><a href="#cb5-231" aria-hidden="true" tabindex="-1"></a><span class="in">`alpha_update_every`</span> iterations. The public default interval is 10.</span>
-<span id="cb5-232"><a href="#cb5-232" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-233"><a href="#cb5-233" aria-hidden="true" tabindex="-1"></a>The update uses conditional probit data augmentation. At stick-breaking step</span>
-<span id="cb5-234"><a href="#cb5-234" aria-hidden="true" tabindex="-1"></a>$j$, only markers that reached that step are included. A latent normal</span>
-<span id="cb5-235"><a href="#cb5-235" aria-hidden="true" tabindex="-1"></a>variable is sampled for each eligible marker:</span>
-<span id="cb5-236"><a href="#cb5-236" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-237"><a href="#cb5-237" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-238"><a href="#cb5-238" aria-hidden="true" tabindex="-1"></a>\ell_{ij}\mid \alpha_j</span>
-<span id="cb5-239"><a href="#cb5-239" aria-hidden="true" tabindex="-1"></a>\sim</span>
-<span id="cb5-240"><a href="#cb5-240" aria-hidden="true" tabindex="-1"></a>N(A_i\alpha_j,1),</span>
-<span id="cb5-241"><a href="#cb5-241" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-242"><a href="#cb5-242" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-243"><a href="#cb5-243" aria-hidden="true" tabindex="-1"></a>truncated above zero when the marker continues beyond step $j$, and truncated</span>
-<span id="cb5-244"><a href="#cb5-244" aria-hidden="true" tabindex="-1"></a>at or below zero when it stops at that step.</span>
-<span id="cb5-245"><a href="#cb5-245" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-246"><a href="#cb5-246" aria-hidden="true" tabindex="-1"></a>Conditional on the latent variables and the other coefficients, each</span>
-<span id="cb5-247"><a href="#cb5-247" aria-hidden="true" tabindex="-1"></a>annotation coefficient has a normal full conditional. For a non-intercept</span>
-<span id="cb5-248"><a href="#cb5-248" aria-hidden="true" tabindex="-1"></a>coefficient, the prior precision $1/\sigma_{\alpha,j}^2$ is added to the</span>
-<span id="cb5-249"><a href="#cb5-249" aria-hidden="true" tabindex="-1"></a>data precision. With <span class="in">`intercept_flat = TRUE`</span>, the first coefficient omits that</span>
-<span id="cb5-250"><a href="#cb5-250" aria-hidden="true" tabindex="-1"></a>prior precision. After the coefficients for a step are updated,</span>
-<span id="cb5-251"><a href="#cb5-251" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha[j]`</span> is drawn from the scaled-inverse-chi-square-family update.</span>
-<span id="cb5-252"><a href="#cb5-252" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-253"><a href="#cb5-253" aria-hidden="true" tabindex="-1"></a>This is a Gibbs-style conditional update using truncated-normal augmentation</span>
-<span id="cb5-254"><a href="#cb5-254" aria-hidden="true" tabindex="-1"></a>and normal draws. It is not a random-walk Metropolis-Hastings alpha update.</span>
-<span id="cb5-255"><a href="#cb5-255" aria-hidden="true" tabindex="-1"></a>After an alpha update, the native sampler recomputes all marker-specific prior</span>
-<span id="cb5-256"><a href="#cb5-256" aria-hidden="true" tabindex="-1"></a>component probabilities from $A\alpha$.</span>
-<span id="cb5-257"><a href="#cb5-257" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-258"><a href="#cb5-258" aria-hidden="true" tabindex="-1"></a><span class="fu">## Initialization</span></span>
-<span id="cb5-259"><a href="#cb5-259" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-260"><a href="#cb5-260" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sbayesrc_alpha_init()`</span> creates deterministic initial values for the</span>
-<span id="cb5-261"><a href="#cb5-261" aria-hidden="true" tabindex="-1"></a>annotation-dependent mixture architecture.</span>
-<span id="cb5-262"><a href="#cb5-262" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-263"><a href="#cb5-263" aria-hidden="true" tabindex="-1"></a>Given an initial overall active probability <span class="in">`pi_init`</span>, it distributes active</span>
-<span id="cb5-264"><a href="#cb5-264" aria-hidden="true" tabindex="-1"></a>mass across the $C-1$ non-null components using normalized</span>
-<span id="cb5-265"><a href="#cb5-265" aria-hidden="true" tabindex="-1"></a><span class="in">`active_comp_weights`</span>. This produces initial marginal component probabilities</span>
-<span id="cb5-266"><a href="#cb5-266" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-267"><a href="#cb5-267" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-268"><a href="#cb5-268" aria-hidden="true" tabindex="-1"></a>\pi^{(0)}</span>
-<span id="cb5-269"><a href="#cb5-269" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb5-270"><a href="#cb5-270" aria-hidden="true" tabindex="-1"></a>\left(</span>
-<span id="cb5-271"><a href="#cb5-271" aria-hidden="true" tabindex="-1"></a>1-\pi_{\mathrm{init}},</span>
-<span id="cb5-272"><a href="#cb5-272" aria-hidden="true" tabindex="-1"></a>\pi_{\mathrm{init}}w_2,</span>
-<span id="cb5-273"><a href="#cb5-273" aria-hidden="true" tabindex="-1"></a>\ldots,</span>
-<span id="cb5-274"><a href="#cb5-274" aria-hidden="true" tabindex="-1"></a>\pi_{\mathrm{init}}w_C</span>
-<span id="cb5-275"><a href="#cb5-275" aria-hidden="true" tabindex="-1"></a>\right).</span>
-<span id="cb5-276"><a href="#cb5-276" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-277"><a href="#cb5-277" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-278"><a href="#cb5-278" aria-hidden="true" tabindex="-1"></a>The helper then converts these marginal probabilities to conditional</span>
-<span id="cb5-279"><a href="#cb5-279" aria-hidden="true" tabindex="-1"></a>continuation probabilities for the stick-breaking representation. When $A$</span>
-<span id="cb5-280"><a href="#cb5-280" aria-hidden="true" tabindex="-1"></a>contains an all-ones column, the first such column receives intercept</span>
-<span id="cb5-281"><a href="#cb5-281" aria-hidden="true" tabindex="-1"></a>coefficients</span>
-<span id="cb5-282"><a href="#cb5-282" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-283"><a href="#cb5-283" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-284"><a href="#cb5-284" aria-hidden="true" tabindex="-1"></a>\alpha_{0j}^{(0)}</span>
-<span id="cb5-285"><a href="#cb5-285" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb5-286"><a href="#cb5-286" aria-hidden="true" tabindex="-1"></a>\Phi^{-1}<span class="sc">\{</span>p_j^{(0)}<span class="sc">\}</span>,</span>
-<span id="cb5-287"><a href="#cb5-287" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-288"><a href="#cb5-288" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-289"><a href="#cb5-289" aria-hidden="true" tabindex="-1"></a>and all other coefficients begin at zero. If no all-ones column exists, all</span>
-<span id="cb5-290"><a href="#cb5-290" aria-hidden="true" tabindex="-1"></a>default coefficients are zero. Supplied <span class="in">`alpha_init`</span> and</span>
-<span id="cb5-291"><a href="#cb5-291" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha_init`</span> values are accepted after dimension and finite-value</span>
-<span id="cb5-292"><a href="#cb5-292" aria-hidden="true" tabindex="-1"></a>validation.</span>
-<span id="cb5-293"><a href="#cb5-293" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-294"><a href="#cb5-294" aria-hidden="true" tabindex="-1"></a>The helper also returns named initial component probabilities, normalized</span>
-<span id="cb5-295"><a href="#cb5-295" aria-hidden="true" tabindex="-1"></a>active-component weights, conditional step probabilities, gamma values, and</span>
-<span id="cb5-296"><a href="#cb5-296" aria-hidden="true" tabindex="-1"></a>component names. These make initialization auditable without running the</span>
-<span id="cb5-297"><a href="#cb5-297" aria-hidden="true" tabindex="-1"></a>sampler.</span>
-<span id="cb5-298"><a href="#cb5-298" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-299"><a href="#cb5-299" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker-Effect and Component Updates</span></span>
-<span id="cb5-300"><a href="#cb5-300" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-301"><a href="#cb5-301" aria-hidden="true" tabindex="-1"></a>For each marker, the sampler combines the annotation-derived prior component</span>
-<span id="cb5-302"><a href="#cb5-302" aria-hidden="true" tabindex="-1"></a>probabilities with the summary-statistics likelihood. The exact null component</span>
-<span id="cb5-303"><a href="#cb5-303" aria-hidden="true" tabindex="-1"></a>has $\gamma_1=0$ and leaves the marker effect at zero. For active component</span>
-<span id="cb5-304"><a href="#cb5-304" aria-hidden="true" tabindex="-1"></a>$k$, the effect prior variance is</span>
-<span id="cb5-305"><a href="#cb5-305" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-306"><a href="#cb5-306" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-307"><a href="#cb5-307" aria-hidden="true" tabindex="-1"></a>v_{b,k}=\gamma_k v_b.</span>
-<span id="cb5-308"><a href="#cb5-308" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-309"><a href="#cb5-309" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-310"><a href="#cb5-310" aria-hidden="true" tabindex="-1"></a>The sampler forms a component-specific Bayes factor using the current marker</span>
-<span id="cb5-311"><a href="#cb5-311" aria-hidden="true" tabindex="-1"></a>score, residual variance, marker diagonal cross-product, and $v_{b,k}$.</span>
-<span id="cb5-312"><a href="#cb5-312" aria-hidden="true" tabindex="-1"></a>It samples a new component from the resulting posterior component</span>
-<span id="cb5-313"><a href="#cb5-313" aria-hidden="true" tabindex="-1"></a>probabilities, then samples the marker effect from its conditional normal</span>
-<span id="cb5-314"><a href="#cb5-314" aria-hidden="true" tabindex="-1"></a>distribution when the selected gamma is positive.</span>
-<span id="cb5-315"><a href="#cb5-315" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-316"><a href="#cb5-316" aria-hidden="true" tabindex="-1"></a>The global scale $v_b$ may also be updated from currently active marker</span>
-<span id="cb5-317"><a href="#cb5-317" aria-hidden="true" tabindex="-1"></a>effects and their selected gamma values when <span class="in">`updateB = TRUE`</span>. Thus gamma</span>
-<span id="cb5-318"><a href="#cb5-318" aria-hidden="true" tabindex="-1"></a>defines relative component scales, while $v_b$ supplies the shared sampled</span>
-<span id="cb5-319"><a href="#cb5-319" aria-hidden="true" tabindex="-1"></a>scale.</span>
-<span id="cb5-320"><a href="#cb5-320" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-321"><a href="#cb5-321" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit Outputs</span></span>
-<span id="cb5-322"><a href="#cb5-322" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-323"><a href="#cb5-323" aria-hidden="true" tabindex="-1"></a>The formatted fit exposes the standard marker and variance summaries together</span>
-<span id="cb5-324"><a href="#cb5-324" aria-hidden="true" tabindex="-1"></a>with SBayesRC-style architecture summaries.</span>
-<span id="cb5-325"><a href="#cb5-325" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-326"><a href="#cb5-326" aria-hidden="true" tabindex="-1"></a><span class="fu">### `alpha`</span></span>
-<span id="cb5-327"><a href="#cb5-327" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-328"><a href="#cb5-328" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$alpha`</span> is a list with one posterior-mean coefficient matrix per trait.</span>
-<span id="cb5-329"><a href="#cb5-329" aria-hidden="true" tabindex="-1"></a>Each matrix has annotations in rows and stick-breaking steps in columns.</span>
-<span id="cb5-330"><a href="#cb5-330" aria-hidden="true" tabindex="-1"></a>Because it is a posterior mean, applying a nonlinear probability transform to</span>
-<span id="cb5-331"><a href="#cb5-331" aria-hidden="true" tabindex="-1"></a>it gives a plug-in diagnostic, not the posterior mean of that transformed</span>
-<span id="cb5-332"><a href="#cb5-332" aria-hidden="true" tabindex="-1"></a>quantity.</span>
-<span id="cb5-333"><a href="#cb5-333" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-334"><a href="#cb5-334" aria-hidden="true" tabindex="-1"></a><span class="fu">### `sigmaSqAlpha`</span></span>
-<span id="cb5-335"><a href="#cb5-335" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-336"><a href="#cb5-336" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$sigmaSqAlpha`</span> is a trait-by-step matrix of posterior mean annotation-effect</span>
-<span id="cb5-337"><a href="#cb5-337" aria-hidden="true" tabindex="-1"></a>variance parameters. Large values permit more dispersion among non-intercept</span>
-<span id="cb5-338"><a href="#cb5-338" aria-hidden="true" tabindex="-1"></a>annotation coefficients at that stick-breaking step. They should be</span>
-<span id="cb5-339"><a href="#cb5-339" aria-hidden="true" tabindex="-1"></a>interpreted together with alpha coefficients, annotation scaling, and chain</span>
-<span id="cb5-340"><a href="#cb5-340" aria-hidden="true" tabindex="-1"></a>diagnostics.</span>
-<span id="cb5-341"><a href="#cb5-341" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-342"><a href="#cb5-342" aria-hidden="true" tabindex="-1"></a><span class="fu">### `comp_prob`</span></span>
-<span id="cb5-343"><a href="#cb5-343" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-344"><a href="#cb5-344" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$comp_prob`</span> is a list with one marker-by-component matrix per trait. It</span>
-<span id="cb5-345"><a href="#cb5-345" aria-hidden="true" tabindex="-1"></a>contains posterior frequencies of sampled component assignments after burn-in</span>
-<span id="cb5-346"><a href="#cb5-346" aria-hidden="true" tabindex="-1"></a>and thinning. It is not the same object as the annotation-derived prior</span>
-<span id="cb5-347"><a href="#cb5-347" aria-hidden="true" tabindex="-1"></a>probability matrix computed from $A\alpha$.</span>
-<span id="cb5-348"><a href="#cb5-348" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-349"><a href="#cb5-349" aria-hidden="true" tabindex="-1"></a><span class="fu">### `ncomp`</span></span>
-<span id="cb5-350"><a href="#cb5-350" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-351"><a href="#cb5-351" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$ncomp`</span> is a trait-by-component matrix containing posterior mean counts of</span>
-<span id="cb5-352"><a href="#cb5-352" aria-hidden="true" tabindex="-1"></a>markers assigned to each component. Its row sum should equal the number of</span>
-<span id="cb5-353"><a href="#cb5-353" aria-hidden="true" tabindex="-1"></a>markers, subject only to numerical representation.</span>
-<span id="cb5-354"><a href="#cb5-354" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-355"><a href="#cb5-355" aria-hidden="true" tabindex="-1"></a>The usual outputs remain available when returned, including <span class="in">`bm`</span>, <span class="in">`dm`</span>,</span>
-<span id="cb5-356"><a href="#cb5-356" aria-hidden="true" tabindex="-1"></a>variance traces, covariance summaries, current effects, and residual state.</span>
-<span id="cb5-357"><a href="#cb5-357" aria-hidden="true" tabindex="-1"></a>Full marker-scale matrices should be retained for analysis rather than printed</span>
-<span id="cb5-358"><a href="#cb5-358" aria-hidden="true" tabindex="-1"></a>in full.</span>
-<span id="cb5-359"><a href="#cb5-359" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-360"><a href="#cb5-360" aria-hidden="true" tabindex="-1"></a><span class="fu">## Diagnostic Helpers</span></span>
-<span id="cb5-361"><a href="#cb5-361" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-362"><a href="#cb5-362" aria-hidden="true" tabindex="-1"></a>Four deterministic exported helpers translate alpha coefficients into compact</span>
-<span id="cb5-363"><a href="#cb5-363" aria-hidden="true" tabindex="-1"></a>prior-architecture diagnostics.</span>
-<span id="cb5-364"><a href="#cb5-364" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-365"><a href="#cb5-365" aria-hidden="true" tabindex="-1"></a><span class="fu">### Annotation-row diagnostics</span></span>
-<span id="cb5-366"><a href="#cb5-366" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-367"><a href="#cb5-367" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_annotation_pi(alpha, gamma)`</span> applies the probit stick-breaking</span>
-<span id="cb5-368"><a href="#cb5-368" aria-hidden="true" tabindex="-1"></a>transform separately to each row of <span class="in">`alpha`</span>. It returns an</span>
-<span id="cb5-369"><a href="#cb5-369" aria-hidden="true" tabindex="-1"></a>annotation-by-component probability matrix.</span>
-<span id="cb5-370"><a href="#cb5-370" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-371"><a href="#cb5-371" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_annotation_gamma_mean(alpha, gamma)`</span> computes</span>
-<span id="cb5-372"><a href="#cb5-372" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-373"><a href="#cb5-373" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-374"><a href="#cb5-374" aria-hidden="true" tabindex="-1"></a>\overline{\gamma}_k^{\mathrm{annotation}}</span>
-<span id="cb5-375"><a href="#cb5-375" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb5-376"><a href="#cb5-376" aria-hidden="true" tabindex="-1"></a>\sum_{c=1}^{C}\pi_{kc}\gamma_c</span>
-<span id="cb5-377"><a href="#cb5-377" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-378"><a href="#cb5-378" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-379"><a href="#cb5-379" aria-hidden="true" tabindex="-1"></a>for each alpha row.</span>
-<span id="cb5-380"><a href="#cb5-380" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-381"><a href="#cb5-381" aria-hidden="true" tabindex="-1"></a>These are coefficient-row diagnostics. A binary annotation row, for example,</span>
-<span id="cb5-382"><a href="#cb5-382" aria-hidden="true" tabindex="-1"></a>is evaluated as a standalone predictor row. It does not automatically include</span>
-<span id="cb5-383"><a href="#cb5-383" aria-hidden="true" tabindex="-1"></a>the fitted intercept or the effects of correlated annotations. It should not</span>
-<span id="cb5-384"><a href="#cb5-384" aria-hidden="true" tabindex="-1"></a>be described as the literal component probability for every marker carrying</span>
-<span id="cb5-385"><a href="#cb5-385" aria-hidden="true" tabindex="-1"></a>that annotation.</span>
-<span id="cb5-386"><a href="#cb5-386" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-387"><a href="#cb5-387" aria-hidden="true" tabindex="-1"></a><span class="fu">### Marker-profile diagnostics</span></span>
-<span id="cb5-388"><a href="#cb5-388" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-389"><a href="#cb5-389" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_marker_pi(A, alpha, gamma)`</span> first computes $A\alpha$, then applies</span>
-<span id="cb5-390"><a href="#cb5-390" aria-hidden="true" tabindex="-1"></a>the stick-breaking transform. It returns an $m \times C$ marker-level prior</span>
-<span id="cb5-391"><a href="#cb5-391" aria-hidden="true" tabindex="-1"></a>component probability matrix.</span>
-<span id="cb5-392"><a href="#cb5-392" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-393"><a href="#cb5-393" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_marker_gamma_mean(A, alpha, gamma)`</span> computes the plug-in expected</span>
-<span id="cb5-394"><a href="#cb5-394" aria-hidden="true" tabindex="-1"></a>gamma for each marker:</span>
-<span id="cb5-395"><a href="#cb5-395" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-396"><a href="#cb5-396" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-397"><a href="#cb5-397" aria-hidden="true" tabindex="-1"></a>\overline{\gamma}_i^{\mathrm{marker}}</span>
-<span id="cb5-398"><a href="#cb5-398" aria-hidden="true" tabindex="-1"></a>=</span>
-<span id="cb5-399"><a href="#cb5-399" aria-hidden="true" tabindex="-1"></a>\sum_{c=1}^{C}\pi_{ic}\gamma_c.</span>
-<span id="cb5-400"><a href="#cb5-400" aria-hidden="true" tabindex="-1"></a>$$</span>
-<span id="cb5-401"><a href="#cb5-401" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-402"><a href="#cb5-402" aria-hidden="true" tabindex="-1"></a>These marker-profile helpers include the complete annotation combination in</span>
-<span id="cb5-403"><a href="#cb5-403" aria-hidden="true" tabindex="-1"></a>each row of $A$. They are generally more directly relevant to the fitted</span>
-<span id="cb5-404"><a href="#cb5-404" aria-hidden="true" tabindex="-1"></a>prior architecture than standalone annotation-row summaries.</span>
-<span id="cb5-405"><a href="#cb5-405" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-406"><a href="#cb5-406" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb5-407"><a href="#cb5-407" aria-hidden="true" tabindex="-1"></a>alpha_t <span class="ot">&lt;-</span> fit<span class="sc">$</span>alpha[[<span class="dv">1</span>]]</span>
-<span id="cb5-408"><a href="#cb5-408" aria-hidden="true" tabindex="-1"></a>prior_pi <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_pi</span>(fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma)</span>
-<span id="cb5-409"><a href="#cb5-409" aria-hidden="true" tabindex="-1"></a>expected_gamma <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_gamma_mean</span>(</span>
-<span id="cb5-410"><a href="#cb5-410" aria-hidden="true" tabindex="-1"></a>  fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma</span>
-<span id="cb5-411"><a href="#cb5-411" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-412"><a href="#cb5-412" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb5-413"><a href="#cb5-413" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-414"><a href="#cb5-414" aria-hidden="true" tabindex="-1"></a>Because these diagnostics transform posterior mean alpha coefficients, they do</span>
-<span id="cb5-415"><a href="#cb5-415" aria-hidden="true" tabindex="-1"></a>not propagate the full posterior uncertainty in alpha. Compact reports can</span>
-<span id="cb5-416"><a href="#cb5-416" aria-hidden="true" tabindex="-1"></a>show annotation-row expected gamma, <span class="in">`summary(expected_gamma)`</span>, and the</span>
-<span id="cb5-417"><a href="#cb5-417" aria-hidden="true" tabindex="-1"></a>correlation between marker expected gamma and PIP. That correlation describes</span>
-<span id="cb5-418"><a href="#cb5-418" aria-hidden="true" tabindex="-1"></a>the fitted prior-posterior relationship; it is not a calibration statistic or</span>
-<span id="cb5-419"><a href="#cb5-419" aria-hidden="true" tabindex="-1"></a>causal estimate.</span>
-<span id="cb5-420"><a href="#cb5-420" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-421"><a href="#cb5-421" aria-hidden="true" tabindex="-1"></a><span class="fu">## Interpretation of Annotation Effects</span></span>
-<span id="cb5-422"><a href="#cb5-422" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-423"><a href="#cb5-423" aria-hidden="true" tabindex="-1"></a>An alpha coefficient changes a conditional continuation probability at one</span>
-<span id="cb5-424"><a href="#cb5-424" aria-hidden="true" tabindex="-1"></a>stick-breaking step. Its sign cannot be interpreted independently of component</span>
-<span id="cb5-425"><a href="#cb5-425" aria-hidden="true" tabindex="-1"></a>ordering:</span>
-<span id="cb5-426"><a href="#cb5-426" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-427"><a href="#cb5-427" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>a positive coefficient increases the probability of continuing past that</span>
-<span id="cb5-428"><a href="#cb5-428" aria-hidden="true" tabindex="-1"></a>  step;</span>
-<span id="cb5-429"><a href="#cb5-429" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>a negative coefficient increases the probability of stopping at that step;</span>
-<span id="cb5-430"><a href="#cb5-430" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the consequences for expected gamma depend on all later steps and the gamma</span>
-<span id="cb5-431"><a href="#cb5-431" aria-hidden="true" tabindex="-1"></a>  grid.</span>
-<span id="cb5-432"><a href="#cb5-432" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-433"><a href="#cb5-433" aria-hidden="true" tabindex="-1"></a>Expected gamma is a useful scalar summary of prior mixture allocation, but it</span>
-<span id="cb5-434"><a href="#cb5-434" aria-hidden="true" tabindex="-1"></a>compresses a complete component-probability vector. Two markers can have the</span>
-<span id="cb5-435"><a href="#cb5-435" aria-hidden="true" tabindex="-1"></a>same expected gamma while assigning probability to different components.</span>
-<span id="cb5-436"><a href="#cb5-436" aria-hidden="true" tabindex="-1"></a>Report component probabilities when those distinctions matter.</span>
-<span id="cb5-437"><a href="#cb5-437" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-438"><a href="#cb5-438" aria-hidden="true" tabindex="-1"></a>Annotation effects and expected-gamma differences are prior-architecture</span>
-<span id="cb5-439"><a href="#cb5-439" aria-hidden="true" tabindex="-1"></a>summaries, not proof of biological causality. They can reflect LD, marker</span>
-<span id="cb5-440"><a href="#cb5-440" aria-hidden="true" tabindex="-1"></a>density, annotation overlap, quantitative-annotation scaling, model</span>
-<span id="cb5-441"><a href="#cb5-441" aria-hidden="true" tabindex="-1"></a>misspecification, and finite-chain behavior. Interpretation should compare</span>
-<span id="cb5-442"><a href="#cb5-442" aria-hidden="true" tabindex="-1"></a>annotation-derived prior probabilities with posterior component frequencies</span>
-<span id="cb5-443"><a href="#cb5-443" aria-hidden="true" tabindex="-1"></a>and assess sensitivity to preprocessing, gamma grids, sparse-LD settings, and</span>
-<span id="cb5-444"><a href="#cb5-444" aria-hidden="true" tabindex="-1"></a>hyperparameters.</span>
-<span id="cb5-445"><a href="#cb5-445" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-446"><a href="#cb5-446" aria-hidden="true" tabindex="-1"></a><span class="fu">## Comparison With Published SBayesRC</span></span>
-<span id="cb5-447"><a href="#cb5-447" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-448"><a href="#cb5-448" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Published SBayesRC feature <span class="pp">|</span> <span class="in">`sblr`</span> implementation <span class="pp">|</span> Assessment <span class="pp">|</span></span>
-<span id="cb5-449"><a href="#cb5-449" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
-<span id="cb5-450"><a href="#cb5-450" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BayesR-like multi-normal marker-effect mixture <span class="pp">|</span> $\beta_i\mid z_i=k \sim N(0,\gamma_kv_b)$ <span class="pp">|</span> Same core prior family <span class="pp">|</span></span>
-<span id="cb5-451"><a href="#cb5-451" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Exact null component <span class="pp">|</span> Requires <span class="in">`gamma[1] == 0`</span>; null effects are exactly zero <span class="pp">|</span> Same <span class="pp">|</span></span>
-<span id="cb5-452"><a href="#cb5-452" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Published gamma grid <span class="in">`c(0, 0.001, 0.01, 0.1, 1)`</span> <span class="pp">|</span> User-supplied and supported <span class="pp">|</span> Same when explicitly requested <span class="pp">|</span></span>
-<span id="cb5-453"><a href="#cb5-453" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Default gamma grid <span class="pp">|</span> <span class="in">`c(0, 0.01, 0.1, 1)`</span> <span class="pp">|</span> Different exposed default <span class="pp">|</span></span>
-<span id="cb5-454"><a href="#cb5-454" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Marker-specific mixture probabilities from annotations <span class="pp">|</span> Uses $A\alpha$ for every marker <span class="pp">|</span> Same core structure <span class="pp">|</span></span>
-<span id="cb5-455"><a href="#cb5-455" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Conditional probit stick-breaking <span class="pp">|</span> Uses $p_{ij}=\Phi(A_i\alpha_j)$ and conditional continuation probabilities <span class="pp">|</span> Same core structure <span class="pp">|</span></span>
-<span id="cb5-456"><a href="#cb5-456" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Intercept and functional annotations <span class="pp">|</span> Adds an intercept by default; accepts overlapping binary or quantitative annotations <span class="pp">|</span> Closely aligned, with <span class="in">`sblr`</span> preprocessing defaults <span class="pp">|</span></span>
-<span id="cb5-457"><a href="#cb5-457" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Quantitative annotation handling <span class="pp">|</span> Standardizes nonbinary annotations by default; leaves binary columns unchanged by default <span class="pp">|</span> Qualified implementation choice <span class="pp">|</span></span>
-<span id="cb5-458"><a href="#cb5-458" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Normal alpha priors with step-specific variance <span class="pp">|</span> Non-intercept coefficients use $N(0,\sigma_{\alpha,j}^2)$ <span class="pp">|</span> Same prior family <span class="pp">|</span></span>
-<span id="cb5-459"><a href="#cb5-459" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Scaled inverse-chi-square prior on alpha variance <span class="pp">|</span> Uses a scaled-inverse-chi-square/inverse-gamma-family update controlled by <span class="in">`sigmaSqAlpha_a`</span> and <span class="in">`sigmaSqAlpha_b`</span> <span class="pp">|</span> Same family; exact published hyperparameters not implied <span class="pp">|</span></span>
-<span id="cb5-460"><a href="#cb5-460" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Probit alpha update <span class="pp">|</span> Latent truncated-normal augmentation and conditional normal draws <span class="pp">|</span> Closely aligned Gibbs-style update <span class="pp">|</span></span>
-<span id="cb5-461"><a href="#cb5-461" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Component-probability numerical handling <span class="pp">|</span> Floors probabilities at <span class="in">`pi_floor`</span> and renormalizes rows <span class="pp">|</span> Qualified numerical-stability detail <span class="pp">|</span></span>
-<span id="cb5-462"><a href="#cb5-462" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Summary-statistics likelihood <span class="pp">|</span> CSR sparse-LD likelihood <span class="pp">|</span> Different from GCTB low-rank rotated likelihood <span class="pp">|</span></span>
-<span id="cb5-463"><a href="#cb5-463" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-464"><a href="#cb5-464" aria-hidden="true" tabindex="-1"></a>The most accurate description is therefore:</span>
-<span id="cb5-465"><a href="#cb5-465" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-466"><a href="#cb5-466" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; </span><span class="in">`stblr_csr_sbayesrc_generic()`</span><span class="at"> implements an SBayesRC-style,</span></span>
-<span id="cb5-467"><a href="#cb5-467" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; annotation-dependent BayesR prior that is closely aligned with the published</span></span>
-<span id="cb5-468"><a href="#cb5-468" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; SBayesRC prior structure, fitted with the </span><span class="in">`sblr`</span><span class="at"> CSR sparse-LD likelihood.</span></span>
-<span id="cb5-469"><a href="#cb5-469" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-470"><a href="#cb5-470" aria-hidden="true" tabindex="-1"></a>It should not be described as an exact reproduction of published GCTB</span>
-<span id="cb5-471"><a href="#cb5-471" aria-hidden="true" tabindex="-1"></a>SBayesRC as exposed by default.</span>
-<span id="cb5-472"><a href="#cb5-472" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-473"><a href="#cb5-473" aria-hidden="true" tabindex="-1"></a><span class="fu">## Practical Validation Checklist</span></span>
-<span id="cb5-474"><a href="#cb5-474" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-475"><a href="#cb5-475" aria-hidden="true" tabindex="-1"></a>Before interpreting an SBayesRC-style fit:</span>
-<span id="cb5-476"><a href="#cb5-476" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-477"><a href="#cb5-477" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>verify marker alignment among $A$, sufficient statistics, CSR LD, and</span>
-<span id="cb5-478"><a href="#cb5-478" aria-hidden="true" tabindex="-1"></a>  posterior summaries;</span>
-<span id="cb5-479"><a href="#cb5-479" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>record the gamma grid and distinguish the <span class="in">`sblr`</span> default from the published</span>
-<span id="cb5-480"><a href="#cb5-480" aria-hidden="true" tabindex="-1"></a>  grid;</span>
-<span id="cb5-481"><a href="#cb5-481" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>record intercept, standardization, and binary-centering choices;</span>
-<span id="cb5-482"><a href="#cb5-482" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>inspect annotation prevalence, scaling, overlap, and collinearity;</span>
-<span id="cb5-483"><a href="#cb5-483" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>report <span class="in">`sigmaSqAlpha_a`</span>, <span class="in">`sigmaSqAlpha_b`</span>, <span class="in">`intercept_flat`</span>, <span class="in">`pi_floor`</span>, and</span>
-<span id="cb5-484"><a href="#cb5-484" aria-hidden="true" tabindex="-1"></a>  <span class="in">`alpha_update_every`</span>;</span>
-<span id="cb5-485"><a href="#cb5-485" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>check component counts, PIPs, variance traces, and chain behavior;</span>
-<span id="cb5-486"><a href="#cb5-486" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>distinguish annotation-derived prior probabilities from posterior component</span>
-<span id="cb5-487"><a href="#cb5-487" aria-hidden="true" tabindex="-1"></a>  frequencies in <span class="in">`comp_prob`</span>;</span>
-<span id="cb5-488"><a href="#cb5-488" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>compare annotation-row and full marker-profile diagnostics;</span>
-<span id="cb5-489"><a href="#cb5-489" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>assess sensitivity to gamma, sparse-LD thresholds, annotations, and</span>
-<span id="cb5-490"><a href="#cb5-490" aria-hidden="true" tabindex="-1"></a>  hyperparameters; and</span>
-<span id="cb5-491"><a href="#cb5-491" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>avoid causal claims from alpha coefficients or expected-gamma summaries.</span>
-<span id="cb5-492"><a href="#cb5-492" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-493"><a href="#cb5-493" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
-<span id="cb5-494"><a href="#cb5-494" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-495"><a href="#cb5-495" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span> compares this</span>
-<span id="cb5-496"><a href="#cb5-496" aria-hidden="true" tabindex="-1"></a>  model with fixed, learned, and group annotation priors.</span>
-<span id="cb5-497"><a href="#cb5-497" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.html)</span> develops</span>
-<span id="cb5-498"><a href="#cb5-498" aria-hidden="true" tabindex="-1"></a>  marker-specific inclusion and variance priors outside the BayesR mixture</span>
-<span id="cb5-499"><a href="#cb5-499" aria-hidden="true" tabindex="-1"></a>  construction.</span>
-<span id="cb5-500"><a href="#cb5-500" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.html)</span> explains compact fit and</span>
-<span id="cb5-501"><a href="#cb5-501" aria-hidden="true" tabindex="-1"></a>  expected-gamma reporting.</span>
-<span id="cb5-502"><a href="#cb5-502" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Model overview</span><span class="co">](model_overview.html)</span> places the model within the broader</span>
-<span id="cb5-503"><a href="#cb5-503" aria-hidden="true" tabindex="-1"></a>  <span class="in">`sblr`</span> model and workflow landscape.</span>
-<span id="cb5-504"><a href="#cb5-504" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-505"><a href="#cb5-505" aria-hidden="true" tabindex="-1"></a>The implementation contracts described here are based on the public wrapper,</span>
-<span id="cb5-506"><a href="#cb5-506" aria-hidden="true" tabindex="-1"></a>deterministic diagnostic helpers, helper tests, and native CSR sampler. The</span>
-<span id="cb5-507"><a href="#cb5-507" aria-hidden="true" tabindex="-1"></a>archived annotation draft supplies the broader motivation for direct</span>
-<span id="cb5-508"><a href="#cb5-508" aria-hidden="true" tabindex="-1"></a>annotation-dependent mixture priors.</span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Technical Appendix: SBayesRC-Style Annotation Priors"</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>This appendix describes the SBayesRC-style annotation-dependent BayesR prior</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>available through <span class="in">`stblr_csr_annot(annotation_model = "sbayesrc")`</span> and the</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>compatibility wrapper <span class="in">`stblr_csr_sbayesrc_generic()`</span>. The core prior family is</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>closely aligned with published SBayesRC: marker effects follow a multi-normal</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>mixture, and marker-specific mixture probabilities are determined by</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>conditional probit stick-breaking regressions on annotations. The exposed</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="in">`sblr`</span> model is not an exact reproduction of the published GCTB SBayesRC</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>implementation. Its default gamma grid differs, and it uses a CSR sparse-LD</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>This note focuses on the annotation-dependent prior and its diagnostics. It</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>does not claim computational equivalence between the two likelihood</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>implementations.</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Model Definition</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>For marker $i$, let $z_i \in <span class="sc">\{</span>1,\ldots,C<span class="sc">\}</span>$ identify one of $C$ mixture</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>components. Conditional on $z_i=k$, the marker effect is</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>\beta_i \mid z_i=k, v_b, \gamma</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>N(0,\gamma_k v_b).</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>The vector</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>\gamma=(\gamma_1,\ldots,\gamma_C)</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>contains fixed variance multipliers, while $v_b$ is the sampled global</span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>active-effect variance scale. The implementation requires</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>\gamma_1=0,</span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>\gamma_k&gt;0 \quad \text{for } k&gt;1.</span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>The first component is therefore an exact null component:</span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a>\beta_i=0 \quad \text{when } z_i=1.</span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>The remaining components represent increasingly diffuse active-effect</span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>distributions when their gamma multipliers increase.</span>
+<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a>For multiple traits supplied to the wrapper, this mixture construction and its</span>
+<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a>annotation coefficients are fitted separately by trait. The formatted fit</span>
+<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a>therefore stores one <span class="in">`alpha`</span> matrix and one set of marker component summaries</span>
+<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a>per trait.</span>
+<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a><span class="fu">## Optional BayesS-Style `selection_s`</span></span>
+<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a>The package argument is <span class="in">`selection_s`</span>. It corresponds to the BayesS-style MAF</span>
+<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a>architecture parameter <span class="in">`S`</span>.</span>
+<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a>Current CSR SBayesRC supports both fixed global <span class="in">`selection_s`</span> and sampled</span>
+<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a>trait-specific <span class="in">`selection_s`</span> by Metropolis-Hastings. SBayesRC annotations and</span>
+<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a><span class="in">`selection_s`</span> affect different parts of the prior:</span>
+<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>annotations affect marker-specific component probabilities through</span>
+<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a>  $A\alpha$ and probit stick-breaking;</span>
+<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`selection_s`</span> affects marker-specific effect-size prior variance.</span>
+<span id="cb7-71"><a href="#cb7-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-72"><a href="#cb7-72" aria-hidden="true" tabindex="-1"></a>CSR effects are on the standardized-genotype scale. The MAF-dependent prior</span>
+<span id="cb7-73"><a href="#cb7-73" aria-hidden="true" tabindex="-1"></a>scale is</span>
+<span id="cb7-74"><a href="#cb7-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-75"><a href="#cb7-75" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-76"><a href="#cb7-76" aria-hidden="true" tabindex="-1"></a>q_j(S)=h_j^{S+1},</span>
+<span id="cb7-77"><a href="#cb7-77" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb7-78"><a href="#cb7-78" aria-hidden="true" tabindex="-1"></a>h_j=2p_j(1-p_j),</span>
+<span id="cb7-79"><a href="#cb7-79" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-80"><a href="#cb7-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-81"><a href="#cb7-81" aria-hidden="true" tabindex="-1"></a>where $p_j$ is the minor allele frequency. The <span class="in">`+1`</span> exponent is used because</span>
+<span id="cb7-82"><a href="#cb7-82" aria-hidden="true" tabindex="-1"></a>the CSR sampler effects are standardized-genotype-scale effects rather than</span>
+<span id="cb7-83"><a href="#cb7-83" aria-hidden="true" tabindex="-1"></a>allele-scale effects.</span>
+<span id="cb7-84"><a href="#cb7-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-85"><a href="#cb7-85" aria-hidden="true" tabindex="-1"></a>With fixed <span class="in">`selection_s`</span>, the active SBayesRC component prior is</span>
+<span id="cb7-86"><a href="#cb7-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-87"><a href="#cb7-87" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-88"><a href="#cb7-88" aria-hidden="true" tabindex="-1"></a>b_j \mid \mathrm{component}_j=m,v_b,S</span>
+<span id="cb7-89"><a href="#cb7-89" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb7-90"><a href="#cb7-90" aria-hidden="true" tabindex="-1"></a>N<span class="sc">\{</span>0, v_b\gamma_m q_j(S)<span class="sc">\}</span>.</span>
+<span id="cb7-91"><a href="#cb7-91" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-92"><a href="#cb7-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-93"><a href="#cb7-93" aria-hidden="true" tabindex="-1"></a>With sampled <span class="in">`selection_s`</span>, the current implementation samples one $S_t$ per</span>
+<span id="cb7-94"><a href="#cb7-94" aria-hidden="true" tabindex="-1"></a>trait and chain using the active-component MH log posterior contribution</span>
+<span id="cb7-95"><a href="#cb7-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-96"><a href="#cb7-96" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb7-97"><a href="#cb7-97" aria-hidden="true" tabindex="-1"></a><span class="in">log p(S_t | b_t, gamma_t, vb_t)</span></span>
+<span id="cb7-98"><a href="#cb7-98" aria-hidden="true" tabindex="-1"></a><span class="in">  = log p(S_t)</span></span>
+<span id="cb7-99"><a href="#cb7-99" aria-hidden="true" tabindex="-1"></a><span class="in">    - 0.5 sum_{j: gamma_jt &gt; 0} [</span></span>
+<span id="cb7-100"><a href="#cb7-100" aria-hidden="true" tabindex="-1"></a><span class="in">        log q_j(S_t) + b_jt^2 / (vb_t gamma_jt q_j(S_t))</span></span>
+<span id="cb7-101"><a href="#cb7-101" aria-hidden="true" tabindex="-1"></a><span class="in">      ]</span></span>
+<span id="cb7-102"><a href="#cb7-102" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-103"><a href="#cb7-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-104"><a href="#cb7-104" aria-hidden="true" tabindex="-1"></a>The sampled-S defaults are:</span>
+<span id="cb7-105"><a href="#cb7-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-106"><a href="#cb7-106" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb7-107"><a href="#cb7-107" aria-hidden="true" tabindex="-1"></a>selection_s_init <span class="ot">=</span> <span class="dv">0</span></span>
+<span id="cb7-108"><a href="#cb7-108" aria-hidden="true" tabindex="-1"></a>selection_s_prior <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">2</span>)</span>
+<span id="cb7-109"><a href="#cb7-109" aria-hidden="true" tabindex="-1"></a>selection_s_proposal_sd <span class="ot">=</span> <span class="fl">0.35</span></span>
+<span id="cb7-110"><a href="#cb7-110" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-111"><a href="#cb7-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-112"><a href="#cb7-112" aria-hidden="true" tabindex="-1"></a>The same fixed and sampled <span class="in">`selection_s`</span> support is available for plain CSR</span>
+<span id="cb7-113"><a href="#cb7-113" aria-hidden="true" tabindex="-1"></a>BayesC and plain CSR BayesR. Scheduled CSR BayesC, BayesC-like</span>
+<span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a>annotation-aware CSR backends, and BED backends do not support sampler-level</span>
+<span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a><span class="in">`selection_s`</span>. See <span class="co">[</span><span class="ot">selection_s implementation status</span><span class="co">](selection_s_status.md)</span></span>
+<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a>for the complete backend support matrix and BayesC/BayesR kernels.</span>
+<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a><span class="fu">## Gamma Grids</span></span>
+<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a>The public <span class="in">`sblr`</span> default is:</span>
+<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
+<span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a>Published SBayesRC uses the five-component grid:</span>
+<span id="cb7-127"><a href="#cb7-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-128"><a href="#cb7-128" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb7-129"><a href="#cb7-129" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
+<span id="cb7-130"><a href="#cb7-130" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a>Users can request that published gamma grid explicitly:</span>
+<span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stblr_csr_annot</span>(</span>
+<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotations =</span> A,</span>
+<span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotation_model =</span> <span class="st">"sbayesrc"</span>,</span>
+<span id="cb7-140"><a href="#cb7-140" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="dv">1</span>)</span>
+<span id="cb7-141"><a href="#cb7-141" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-142"><a href="#cb7-142" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-143"><a href="#cb7-143" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-144"><a href="#cb7-144" aria-hidden="true" tabindex="-1"></a>Matching the gamma grid aligns this part of the prior specification. It does</span>
+<span id="cb7-145"><a href="#cb7-145" aria-hidden="true" tabindex="-1"></a>not make the complete <span class="in">`sblr`</span> model identical to GCTB SBayesRC because the</span>
+<span id="cb7-146"><a href="#cb7-146" aria-hidden="true" tabindex="-1"></a>likelihood, sparse-LD representation, exposed defaults, and implementation</span>
+<span id="cb7-147"><a href="#cb7-147" aria-hidden="true" tabindex="-1"></a>details remain distinct.</span>
+<span id="cb7-148"><a href="#cb7-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-149"><a href="#cb7-149" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation-Dependent Component Probabilities</span></span>
+<span id="cb7-150"><a href="#cb7-150" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-151"><a href="#cb7-151" aria-hidden="true" tabindex="-1"></a>Let $A$ be an $m \times K$ marker-by-annotation matrix. For $C$ mixture</span>
+<span id="cb7-152"><a href="#cb7-152" aria-hidden="true" tabindex="-1"></a>components, let $\alpha$ be a $K \times (C-1)$ coefficient matrix. Column</span>
+<span id="cb7-153"><a href="#cb7-153" aria-hidden="true" tabindex="-1"></a>$\alpha_j$ controls conditional stick-breaking step $j$.</span>
+<span id="cb7-154"><a href="#cb7-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-155"><a href="#cb7-155" aria-hidden="true" tabindex="-1"></a>For marker $i$ and step $j$, the linear predictor and conditional</span>
+<span id="cb7-156"><a href="#cb7-156" aria-hidden="true" tabindex="-1"></a>continuation probability are</span>
+<span id="cb7-157"><a href="#cb7-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-158"><a href="#cb7-158" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-159"><a href="#cb7-159" aria-hidden="true" tabindex="-1"></a>\eta_{ij}=A_i\alpha_j,</span>
+<span id="cb7-160"><a href="#cb7-160" aria-hidden="true" tabindex="-1"></a>\qquad</span>
+<span id="cb7-161"><a href="#cb7-161" aria-hidden="true" tabindex="-1"></a>p_{ij}=\Phi(\eta_{ij}),</span>
+<span id="cb7-162"><a href="#cb7-162" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-163"><a href="#cb7-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-164"><a href="#cb7-164" aria-hidden="true" tabindex="-1"></a>where $\Phi$ is the standard normal distribution function. The marker-level</span>
+<span id="cb7-165"><a href="#cb7-165" aria-hidden="true" tabindex="-1"></a>component probabilities are</span>
+<span id="cb7-166"><a href="#cb7-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-167"><a href="#cb7-167" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-168"><a href="#cb7-168" aria-hidden="true" tabindex="-1"></a>\begin{aligned}</span>
+<span id="cb7-169"><a href="#cb7-169" aria-hidden="true" tabindex="-1"></a>\pi_{i1} &amp;= 1-p_{i1},<span class="sc">\\</span></span>
+<span id="cb7-170"><a href="#cb7-170" aria-hidden="true" tabindex="-1"></a>\pi_{i2} &amp;= p_{i1}(1-p_{i2}),<span class="sc">\\</span></span>
+<span id="cb7-171"><a href="#cb7-171" aria-hidden="true" tabindex="-1"></a>\pi_{i3} &amp;= p_{i1}p_{i2}(1-p_{i3}),<span class="sc">\\</span></span>
+<span id="cb7-172"><a href="#cb7-172" aria-hidden="true" tabindex="-1"></a>&amp;\ \vdots<span class="sc">\\</span></span>
+<span id="cb7-173"><a href="#cb7-173" aria-hidden="true" tabindex="-1"></a>\pi_{iC} &amp;= \prod_{j=1}^{C-1}p_{ij}.</span>
+<span id="cb7-174"><a href="#cb7-174" aria-hidden="true" tabindex="-1"></a>\end{aligned}</span>
+<span id="cb7-175"><a href="#cb7-175" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-176"><a href="#cb7-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-177"><a href="#cb7-177" aria-hidden="true" tabindex="-1"></a>Equivalently, component $k&lt;C$ receives the probability of continuing through</span>
+<span id="cb7-178"><a href="#cb7-178" aria-hidden="true" tabindex="-1"></a>all earlier steps and stopping at step $k$; the final component receives the</span>
+<span id="cb7-179"><a href="#cb7-179" aria-hidden="true" tabindex="-1"></a>probability of continuing through every step.</span>
+<span id="cb7-180"><a href="#cb7-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-181"><a href="#cb7-181" aria-hidden="true" tabindex="-1"></a><span class="fu">### Why the probabilities sum to one</span></span>
+<span id="cb7-182"><a href="#cb7-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-183"><a href="#cb7-183" aria-hidden="true" tabindex="-1"></a>For a marker with step probabilities $p_1,\ldots,p_{C-1}$,</span>
+<span id="cb7-184"><a href="#cb7-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-185"><a href="#cb7-185" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-186"><a href="#cb7-186" aria-hidden="true" tabindex="-1"></a>\sum_{k=1}^{C}\pi_k</span>
+<span id="cb7-187"><a href="#cb7-187" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb7-188"><a href="#cb7-188" aria-hidden="true" tabindex="-1"></a>(1-p_1)</span>
+<span id="cb7-189"><a href="#cb7-189" aria-hidden="true" tabindex="-1"></a>+p_1(1-p_2)</span>
+<span id="cb7-190"><a href="#cb7-190" aria-hidden="true" tabindex="-1"></a>+\cdots+</span>
+<span id="cb7-191"><a href="#cb7-191" aria-hidden="true" tabindex="-1"></a>\left(\prod_{j=1}^{C-2}p_j\right)(1-p_{C-1})</span>
+<span id="cb7-192"><a href="#cb7-192" aria-hidden="true" tabindex="-1"></a>+\prod_{j=1}^{C-1}p_j</span>
+<span id="cb7-193"><a href="#cb7-193" aria-hidden="true" tabindex="-1"></a>=1.</span>
+<span id="cb7-194"><a href="#cb7-194" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-195"><a href="#cb7-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-196"><a href="#cb7-196" aria-hidden="true" tabindex="-1"></a>The expression telescopes: probability either stops at one of the first</span>
+<span id="cb7-197"><a href="#cb7-197" aria-hidden="true" tabindex="-1"></a>$C-1$ steps or reaches the final component.</span>
+<span id="cb7-198"><a href="#cb7-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-199"><a href="#cb7-199" aria-hidden="true" tabindex="-1"></a><span class="fu">### Numerical flooring and renormalization</span></span>
+<span id="cb7-200"><a href="#cb7-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-201"><a href="#cb7-201" aria-hidden="true" tabindex="-1"></a>The native sampler computes these probabilities from $A\alpha$, floors each</span>
+<span id="cb7-202"><a href="#cb7-202" aria-hidden="true" tabindex="-1"></a>component probability at <span class="in">`pi_floor`</span>, and renormalizes each marker row to sum to</span>
+<span id="cb7-203"><a href="#cb7-203" aria-hidden="true" tabindex="-1"></a>one. The public default is <span class="in">`pi_floor = 1e-12`</span>.</span>
+<span id="cb7-204"><a href="#cb7-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-205"><a href="#cb7-205" aria-hidden="true" tabindex="-1"></a>Flooring prevents exact numerical zero probabilities when probit predictors are</span>
+<span id="cb7-206"><a href="#cb7-206" aria-hidden="true" tabindex="-1"></a>extreme. Because flooring slightly changes the unnormalized stick-breaking</span>
+<span id="cb7-207"><a href="#cb7-207" aria-hidden="true" tabindex="-1"></a>probabilities, the subsequent row renormalization is required. This is a</span>
+<span id="cb7-208"><a href="#cb7-208" aria-hidden="true" tabindex="-1"></a>numerical-stability adjustment, not a different conceptual link function.</span>
+<span id="cb7-209"><a href="#cb7-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-210"><a href="#cb7-210" aria-hidden="true" tabindex="-1"></a>The deterministic R diagnostic helpers apply the mathematical</span>
+<span id="cb7-211"><a href="#cb7-211" aria-hidden="true" tabindex="-1"></a>stick-breaking transform without the native sampler's floor-and-renormalize</span>
+<span id="cb7-212"><a href="#cb7-212" aria-hidden="true" tabindex="-1"></a>step. For ordinary finite coefficients, their rows sum to one up to numerical</span>
+<span id="cb7-213"><a href="#cb7-213" aria-hidden="true" tabindex="-1"></a>tolerance.</span>
+<span id="cb7-214"><a href="#cb7-214" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-215"><a href="#cb7-215" aria-hidden="true" tabindex="-1"></a><span class="fu">## Annotation Matrix and Preprocessing</span></span>
+<span id="cb7-216"><a href="#cb7-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-217"><a href="#cb7-217" aria-hidden="true" tabindex="-1"></a>Rows of $A$ must be aligned with the markers in the sufficient statistics,</span>
+<span id="cb7-218"><a href="#cb7-218" aria-hidden="true" tabindex="-1"></a>CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or</span>
+<span id="cb7-219"><a href="#cb7-219" aria-hidden="true" tabindex="-1"></a>quantitative annotations, and overlap is allowed.</span>
+<span id="cb7-220"><a href="#cb7-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-221"><a href="#cb7-221" aria-hidden="true" tabindex="-1"></a>Before fitting, <span class="in">`stblr_csr_sbayesrc_generic()`</span> calls the shared annotation</span>
+<span id="cb7-222"><a href="#cb7-222" aria-hidden="true" tabindex="-1"></a>preparation helper using these controls:</span>
+<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`add_intercept = TRUE`</span> adds an all-ones first column when one is not already</span>
+<span id="cb7-225"><a href="#cb7-225" aria-hidden="true" tabindex="-1"></a>  recognized;</span>
+<span id="cb7-226"><a href="#cb7-226" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`standardize_annotations = TRUE`</span> centers and scales nonbinary quantitative</span>
+<span id="cb7-227"><a href="#cb7-227" aria-hidden="true" tabindex="-1"></a>  annotations;</span>
+<span id="cb7-228"><a href="#cb7-228" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`center_binary_annotations = FALSE`</span> leaves binary columns unchanged by</span>
+<span id="cb7-229"><a href="#cb7-229" aria-hidden="true" tabindex="-1"></a>  default;</span>
+<span id="cb7-230"><a href="#cb7-230" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>row names can be used to reorder $A$ to known marker names when all names</span>
+<span id="cb7-231"><a href="#cb7-231" aria-hidden="true" tabindex="-1"></a>  are available.</span>
+<span id="cb7-232"><a href="#cb7-232" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-233"><a href="#cb7-233" aria-hidden="true" tabindex="-1"></a>The preprocessing choices determine the meaning and scale of <span class="in">`alpha`</span>.</span>
+<span id="cb7-234"><a href="#cb7-234" aria-hidden="true" tabindex="-1"></a>Quantitative coefficients are effects per standardized annotation unit under</span>
+<span id="cb7-235"><a href="#cb7-235" aria-hidden="true" tabindex="-1"></a>the defaults. An unchanged binary coefficient is a contrast associated with</span>
+<span id="cb7-236"><a href="#cb7-236" aria-hidden="true" tabindex="-1"></a>membership in that annotation, conditional on the remaining columns.</span>
+<span id="cb7-237"><a href="#cb7-237" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-238"><a href="#cb7-238" aria-hidden="true" tabindex="-1"></a><span class="fu">### Intercept prior</span></span>
+<span id="cb7-239"><a href="#cb7-239" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-240"><a href="#cb7-240" aria-hidden="true" tabindex="-1"></a>With <span class="in">`intercept_flat = TRUE`</span>, the first annotation coefficient at every</span>
+<span id="cb7-241"><a href="#cb7-241" aria-hidden="true" tabindex="-1"></a>stick-breaking step receives a flat prior in the native alpha update. This</span>
+<span id="cb7-242"><a href="#cb7-242" aria-hidden="true" tabindex="-1"></a>assumes the first column is the intercept, which is the arrangement produced</span>
+<span id="cb7-243"><a href="#cb7-243" aria-hidden="true" tabindex="-1"></a>when the wrapper adds it. All other annotation coefficients receive the</span>
+<span id="cb7-244"><a href="#cb7-244" aria-hidden="true" tabindex="-1"></a>normal prior described below.</span>
+<span id="cb7-245"><a href="#cb7-245" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-246"><a href="#cb7-246" aria-hidden="true" tabindex="-1"></a>If a custom matrix already contains an intercept, place it first when relying</span>
+<span id="cb7-247"><a href="#cb7-247" aria-hidden="true" tabindex="-1"></a>on <span class="in">`intercept_flat = TRUE`</span>. An all-ones column elsewhere in the matrix is not</span>
+<span id="cb7-248"><a href="#cb7-248" aria-hidden="true" tabindex="-1"></a>treated as the flat-prior intercept by the native update.</span>
+<span id="cb7-249"><a href="#cb7-249" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-250"><a href="#cb7-250" aria-hidden="true" tabindex="-1"></a><span class="fu">## Alpha and SigmaSqAlpha Priors</span></span>
+<span id="cb7-251"><a href="#cb7-251" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-252"><a href="#cb7-252" aria-hidden="true" tabindex="-1"></a>For non-intercept annotation coefficient $k$ at stick-breaking step $j$,</span>
+<span id="cb7-253"><a href="#cb7-253" aria-hidden="true" tabindex="-1"></a>the implemented prior is</span>
+<span id="cb7-254"><a href="#cb7-254" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-255"><a href="#cb7-255" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-256"><a href="#cb7-256" aria-hidden="true" tabindex="-1"></a>\alpha_{kj}\mid \sigma_{\alpha,j}^2</span>
+<span id="cb7-257"><a href="#cb7-257" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb7-258"><a href="#cb7-258" aria-hidden="true" tabindex="-1"></a>N(0,\sigma_{\alpha,j}^2).</span>
+<span id="cb7-259"><a href="#cb7-259" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-260"><a href="#cb7-260" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-261"><a href="#cb7-261" aria-hidden="true" tabindex="-1"></a>Each step has its own annotation-effect variance</span>
+<span id="cb7-262"><a href="#cb7-262" aria-hidden="true" tabindex="-1"></a>$\sigma_{\alpha,j}^2$, represented by <span class="in">`sigmaSqAlpha[j]`</span>. Under</span>
+<span id="cb7-263"><a href="#cb7-263" aria-hidden="true" tabindex="-1"></a><span class="in">`intercept_flat = TRUE`</span>, the first coefficient is excluded from this normal</span>
+<span id="cb7-264"><a href="#cb7-264" aria-hidden="true" tabindex="-1"></a>shrinkage prior and from the variance update.</span>
+<span id="cb7-265"><a href="#cb7-265" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-266"><a href="#cb7-266" aria-hidden="true" tabindex="-1"></a>The variance update has scaled-inverse-chi-square or inverse-gamma family form:</span>
+<span id="cb7-267"><a href="#cb7-267" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-268"><a href="#cb7-268" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-269"><a href="#cb7-269" aria-hidden="true" tabindex="-1"></a>\sigma_{\alpha,j}^2</span>
+<span id="cb7-270"><a href="#cb7-270" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb7-271"><a href="#cb7-271" aria-hidden="true" tabindex="-1"></a>\frac{</span>
+<span id="cb7-272"><a href="#cb7-272" aria-hidden="true" tabindex="-1"></a>\sum_{k \in \mathcal{R}}\alpha_{kj}^2 + b_\alpha</span>
+<span id="cb7-273"><a href="#cb7-273" aria-hidden="true" tabindex="-1"></a>}{</span>
+<span id="cb7-274"><a href="#cb7-274" aria-hidden="true" tabindex="-1"></a>\chi^2_{|\mathcal{R}|+a_\alpha}</span>
+<span id="cb7-275"><a href="#cb7-275" aria-hidden="true" tabindex="-1"></a>},</span>
+<span id="cb7-276"><a href="#cb7-276" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-277"><a href="#cb7-277" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-278"><a href="#cb7-278" aria-hidden="true" tabindex="-1"></a>where $\mathcal{R}$ contains coefficients subject to shrinkage,</span>
+<span id="cb7-279"><a href="#cb7-279" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha_a`</span> supplies $a_\alpha$, and <span class="in">`sigmaSqAlpha_b`</span> supplies</span>
+<span id="cb7-280"><a href="#cb7-280" aria-hidden="true" tabindex="-1"></a>$b_\alpha$. Both public defaults are 2.</span>
+<span id="cb7-281"><a href="#cb7-281" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-282"><a href="#cb7-282" aria-hidden="true" tabindex="-1"></a>This construction is aligned with the published SBayesRC use of normal</span>
+<span id="cb7-283"><a href="#cb7-283" aria-hidden="true" tabindex="-1"></a>annotation-coefficient priors and a scaled-inverse-chi-square-family variance</span>
+<span id="cb7-284"><a href="#cb7-284" aria-hidden="true" tabindex="-1"></a>prior. The exact published hyperparameter specification should not be inferred</span>
+<span id="cb7-285"><a href="#cb7-285" aria-hidden="true" tabindex="-1"></a>from the <span class="in">`sblr`</span> defaults. Users should report the values supplied to</span>
+<span id="cb7-286"><a href="#cb7-286" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha_a`</span>, <span class="in">`sigmaSqAlpha_b`</span>, <span class="in">`sigmaSqAlpha_init`</span>, and</span>
+<span id="cb7-287"><a href="#cb7-287" aria-hidden="true" tabindex="-1"></a><span class="in">`intercept_flat`</span>.</span>
+<span id="cb7-288"><a href="#cb7-288" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-289"><a href="#cb7-289" aria-hidden="true" tabindex="-1"></a><span class="fu">## Gibbs-Style Alpha Updating</span></span>
+<span id="cb7-290"><a href="#cb7-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-291"><a href="#cb7-291" aria-hidden="true" tabindex="-1"></a>When <span class="in">`updateAlpha = TRUE`</span>, the native sampler updates alpha every</span>
+<span id="cb7-292"><a href="#cb7-292" aria-hidden="true" tabindex="-1"></a><span class="in">`alpha_update_every`</span> iterations. The public default interval is 10.</span>
+<span id="cb7-293"><a href="#cb7-293" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-294"><a href="#cb7-294" aria-hidden="true" tabindex="-1"></a>The update uses conditional probit data augmentation. At stick-breaking step</span>
+<span id="cb7-295"><a href="#cb7-295" aria-hidden="true" tabindex="-1"></a>$j$, only markers that reached that step are included. A latent normal</span>
+<span id="cb7-296"><a href="#cb7-296" aria-hidden="true" tabindex="-1"></a>variable is sampled for each eligible marker:</span>
+<span id="cb7-297"><a href="#cb7-297" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-298"><a href="#cb7-298" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-299"><a href="#cb7-299" aria-hidden="true" tabindex="-1"></a>\ell_{ij}\mid \alpha_j</span>
+<span id="cb7-300"><a href="#cb7-300" aria-hidden="true" tabindex="-1"></a>\sim</span>
+<span id="cb7-301"><a href="#cb7-301" aria-hidden="true" tabindex="-1"></a>N(A_i\alpha_j,1),</span>
+<span id="cb7-302"><a href="#cb7-302" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-303"><a href="#cb7-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-304"><a href="#cb7-304" aria-hidden="true" tabindex="-1"></a>truncated above zero when the marker continues beyond step $j$, and truncated</span>
+<span id="cb7-305"><a href="#cb7-305" aria-hidden="true" tabindex="-1"></a>at or below zero when it stops at that step.</span>
+<span id="cb7-306"><a href="#cb7-306" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-307"><a href="#cb7-307" aria-hidden="true" tabindex="-1"></a>Conditional on the latent variables and the other coefficients, each</span>
+<span id="cb7-308"><a href="#cb7-308" aria-hidden="true" tabindex="-1"></a>annotation coefficient has a normal full conditional. For a non-intercept</span>
+<span id="cb7-309"><a href="#cb7-309" aria-hidden="true" tabindex="-1"></a>coefficient, the prior precision $1/\sigma_{\alpha,j}^2$ is added to the</span>
+<span id="cb7-310"><a href="#cb7-310" aria-hidden="true" tabindex="-1"></a>data precision. With <span class="in">`intercept_flat = TRUE`</span>, the first coefficient omits that</span>
+<span id="cb7-311"><a href="#cb7-311" aria-hidden="true" tabindex="-1"></a>prior precision. After the coefficients for a step are updated,</span>
+<span id="cb7-312"><a href="#cb7-312" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha[j]`</span> is drawn from the scaled-inverse-chi-square-family update.</span>
+<span id="cb7-313"><a href="#cb7-313" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-314"><a href="#cb7-314" aria-hidden="true" tabindex="-1"></a>This is a Gibbs-style conditional update using truncated-normal augmentation</span>
+<span id="cb7-315"><a href="#cb7-315" aria-hidden="true" tabindex="-1"></a>and normal draws. It is not a random-walk Metropolis-Hastings alpha update.</span>
+<span id="cb7-316"><a href="#cb7-316" aria-hidden="true" tabindex="-1"></a>After an alpha update, the native sampler recomputes all marker-specific prior</span>
+<span id="cb7-317"><a href="#cb7-317" aria-hidden="true" tabindex="-1"></a>component probabilities from $A\alpha$.</span>
+<span id="cb7-318"><a href="#cb7-318" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-319"><a href="#cb7-319" aria-hidden="true" tabindex="-1"></a><span class="fu">## Initialization</span></span>
+<span id="cb7-320"><a href="#cb7-320" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-321"><a href="#cb7-321" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sbayesrc_alpha_init()`</span> creates deterministic initial values for the</span>
+<span id="cb7-322"><a href="#cb7-322" aria-hidden="true" tabindex="-1"></a>annotation-dependent mixture architecture.</span>
+<span id="cb7-323"><a href="#cb7-323" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-324"><a href="#cb7-324" aria-hidden="true" tabindex="-1"></a>Given an initial overall active probability <span class="in">`pi_init`</span>, it distributes active</span>
+<span id="cb7-325"><a href="#cb7-325" aria-hidden="true" tabindex="-1"></a>mass across the $C-1$ non-null components using normalized</span>
+<span id="cb7-326"><a href="#cb7-326" aria-hidden="true" tabindex="-1"></a><span class="in">`active_comp_weights`</span>. This produces initial marginal component probabilities</span>
+<span id="cb7-327"><a href="#cb7-327" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-328"><a href="#cb7-328" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-329"><a href="#cb7-329" aria-hidden="true" tabindex="-1"></a>\pi^{(0)}</span>
+<span id="cb7-330"><a href="#cb7-330" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb7-331"><a href="#cb7-331" aria-hidden="true" tabindex="-1"></a>\left(</span>
+<span id="cb7-332"><a href="#cb7-332" aria-hidden="true" tabindex="-1"></a>1-\pi_{\mathrm{init}},</span>
+<span id="cb7-333"><a href="#cb7-333" aria-hidden="true" tabindex="-1"></a>\pi_{\mathrm{init}}w_2,</span>
+<span id="cb7-334"><a href="#cb7-334" aria-hidden="true" tabindex="-1"></a>\ldots,</span>
+<span id="cb7-335"><a href="#cb7-335" aria-hidden="true" tabindex="-1"></a>\pi_{\mathrm{init}}w_C</span>
+<span id="cb7-336"><a href="#cb7-336" aria-hidden="true" tabindex="-1"></a>\right).</span>
+<span id="cb7-337"><a href="#cb7-337" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-338"><a href="#cb7-338" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-339"><a href="#cb7-339" aria-hidden="true" tabindex="-1"></a>The helper then converts these marginal probabilities to conditional</span>
+<span id="cb7-340"><a href="#cb7-340" aria-hidden="true" tabindex="-1"></a>continuation probabilities for the stick-breaking representation. When $A$</span>
+<span id="cb7-341"><a href="#cb7-341" aria-hidden="true" tabindex="-1"></a>contains an all-ones column, the first such column receives intercept</span>
+<span id="cb7-342"><a href="#cb7-342" aria-hidden="true" tabindex="-1"></a>coefficients</span>
+<span id="cb7-343"><a href="#cb7-343" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-344"><a href="#cb7-344" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-345"><a href="#cb7-345" aria-hidden="true" tabindex="-1"></a>\alpha_{0j}^{(0)}</span>
+<span id="cb7-346"><a href="#cb7-346" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb7-347"><a href="#cb7-347" aria-hidden="true" tabindex="-1"></a>\Phi^{-1}<span class="sc">\{</span>p_j^{(0)}<span class="sc">\}</span>,</span>
+<span id="cb7-348"><a href="#cb7-348" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-349"><a href="#cb7-349" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-350"><a href="#cb7-350" aria-hidden="true" tabindex="-1"></a>and all other coefficients begin at zero. If no all-ones column exists, all</span>
+<span id="cb7-351"><a href="#cb7-351" aria-hidden="true" tabindex="-1"></a>default coefficients are zero. Supplied <span class="in">`alpha_init`</span> and</span>
+<span id="cb7-352"><a href="#cb7-352" aria-hidden="true" tabindex="-1"></a><span class="in">`sigmaSqAlpha_init`</span> values are accepted after dimension and finite-value</span>
+<span id="cb7-353"><a href="#cb7-353" aria-hidden="true" tabindex="-1"></a>validation.</span>
+<span id="cb7-354"><a href="#cb7-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-355"><a href="#cb7-355" aria-hidden="true" tabindex="-1"></a>The helper also returns named initial component probabilities, normalized</span>
+<span id="cb7-356"><a href="#cb7-356" aria-hidden="true" tabindex="-1"></a>active-component weights, conditional step probabilities, gamma values, and</span>
+<span id="cb7-357"><a href="#cb7-357" aria-hidden="true" tabindex="-1"></a>component names. These make initialization auditable without running the</span>
+<span id="cb7-358"><a href="#cb7-358" aria-hidden="true" tabindex="-1"></a>sampler.</span>
+<span id="cb7-359"><a href="#cb7-359" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-360"><a href="#cb7-360" aria-hidden="true" tabindex="-1"></a><span class="fu">## Marker-Effect and Component Updates</span></span>
+<span id="cb7-361"><a href="#cb7-361" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-362"><a href="#cb7-362" aria-hidden="true" tabindex="-1"></a>For each marker, the sampler combines the annotation-derived prior component</span>
+<span id="cb7-363"><a href="#cb7-363" aria-hidden="true" tabindex="-1"></a>probabilities with the summary-statistics likelihood. The exact null component</span>
+<span id="cb7-364"><a href="#cb7-364" aria-hidden="true" tabindex="-1"></a>has $\gamma_1=0$ and leaves the marker effect at zero. For active component</span>
+<span id="cb7-365"><a href="#cb7-365" aria-hidden="true" tabindex="-1"></a>$k$, the effect prior variance is</span>
+<span id="cb7-366"><a href="#cb7-366" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-367"><a href="#cb7-367" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-368"><a href="#cb7-368" aria-hidden="true" tabindex="-1"></a>v_{b,k}=\gamma_k v_b.</span>
+<span id="cb7-369"><a href="#cb7-369" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-370"><a href="#cb7-370" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-371"><a href="#cb7-371" aria-hidden="true" tabindex="-1"></a>The sampler forms a component-specific Bayes factor using the current marker</span>
+<span id="cb7-372"><a href="#cb7-372" aria-hidden="true" tabindex="-1"></a>score, residual variance, marker diagonal cross-product, and $v_{b,k}$.</span>
+<span id="cb7-373"><a href="#cb7-373" aria-hidden="true" tabindex="-1"></a>It samples a new component from the resulting posterior component</span>
+<span id="cb7-374"><a href="#cb7-374" aria-hidden="true" tabindex="-1"></a>probabilities, then samples the marker effect from its conditional normal</span>
+<span id="cb7-375"><a href="#cb7-375" aria-hidden="true" tabindex="-1"></a>distribution when the selected gamma is positive.</span>
+<span id="cb7-376"><a href="#cb7-376" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-377"><a href="#cb7-377" aria-hidden="true" tabindex="-1"></a>The global scale $v_b$ may also be updated from currently active marker</span>
+<span id="cb7-378"><a href="#cb7-378" aria-hidden="true" tabindex="-1"></a>effects and their selected gamma values when <span class="in">`updateB = TRUE`</span>. Thus gamma</span>
+<span id="cb7-379"><a href="#cb7-379" aria-hidden="true" tabindex="-1"></a>defines relative component scales, while $v_b$ supplies the shared sampled</span>
+<span id="cb7-380"><a href="#cb7-380" aria-hidden="true" tabindex="-1"></a>scale.</span>
+<span id="cb7-381"><a href="#cb7-381" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-382"><a href="#cb7-382" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit Outputs</span></span>
+<span id="cb7-383"><a href="#cb7-383" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-384"><a href="#cb7-384" aria-hidden="true" tabindex="-1"></a>The formatted fit exposes the standard marker and variance summaries together</span>
+<span id="cb7-385"><a href="#cb7-385" aria-hidden="true" tabindex="-1"></a>with SBayesRC-style architecture summaries.</span>
+<span id="cb7-386"><a href="#cb7-386" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-387"><a href="#cb7-387" aria-hidden="true" tabindex="-1"></a><span class="fu">### `alpha`</span></span>
+<span id="cb7-388"><a href="#cb7-388" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-389"><a href="#cb7-389" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$alpha`</span> is a list with one posterior-mean coefficient matrix per trait.</span>
+<span id="cb7-390"><a href="#cb7-390" aria-hidden="true" tabindex="-1"></a>Each matrix has annotations in rows and stick-breaking steps in columns.</span>
+<span id="cb7-391"><a href="#cb7-391" aria-hidden="true" tabindex="-1"></a>Because it is a posterior mean, applying a nonlinear probability transform to</span>
+<span id="cb7-392"><a href="#cb7-392" aria-hidden="true" tabindex="-1"></a>it gives a plug-in diagnostic, not the posterior mean of that transformed</span>
+<span id="cb7-393"><a href="#cb7-393" aria-hidden="true" tabindex="-1"></a>quantity.</span>
+<span id="cb7-394"><a href="#cb7-394" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-395"><a href="#cb7-395" aria-hidden="true" tabindex="-1"></a><span class="fu">### `sigmaSqAlpha`</span></span>
+<span id="cb7-396"><a href="#cb7-396" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-397"><a href="#cb7-397" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$sigmaSqAlpha`</span> is a trait-by-step matrix of posterior mean annotation-effect</span>
+<span id="cb7-398"><a href="#cb7-398" aria-hidden="true" tabindex="-1"></a>variance parameters. Large values permit more dispersion among non-intercept</span>
+<span id="cb7-399"><a href="#cb7-399" aria-hidden="true" tabindex="-1"></a>annotation coefficients at that stick-breaking step. They should be</span>
+<span id="cb7-400"><a href="#cb7-400" aria-hidden="true" tabindex="-1"></a>interpreted together with alpha coefficients, annotation scaling, and chain</span>
+<span id="cb7-401"><a href="#cb7-401" aria-hidden="true" tabindex="-1"></a>diagnostics.</span>
+<span id="cb7-402"><a href="#cb7-402" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-403"><a href="#cb7-403" aria-hidden="true" tabindex="-1"></a><span class="fu">### `comp_prob`</span></span>
+<span id="cb7-404"><a href="#cb7-404" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-405"><a href="#cb7-405" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$comp_prob`</span> is a list with one marker-by-component matrix per trait. It</span>
+<span id="cb7-406"><a href="#cb7-406" aria-hidden="true" tabindex="-1"></a>contains posterior frequencies of sampled component assignments after burn-in</span>
+<span id="cb7-407"><a href="#cb7-407" aria-hidden="true" tabindex="-1"></a>and thinning. It is not the same object as the annotation-derived prior</span>
+<span id="cb7-408"><a href="#cb7-408" aria-hidden="true" tabindex="-1"></a>probability matrix computed from $A\alpha$.</span>
+<span id="cb7-409"><a href="#cb7-409" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-410"><a href="#cb7-410" aria-hidden="true" tabindex="-1"></a>Component probability columns are named by gamma values. The exact null</span>
+<span id="cb7-411"><a href="#cb7-411" aria-hidden="true" tabindex="-1"></a>component column is <span class="in">`gamma_0.00`</span>, so <span class="in">`dm = 1 - P(gamma_0.00)`</span>. This differs</span>
+<span id="cb7-412"><a href="#cb7-412" aria-hidden="true" tabindex="-1"></a>from CSR BayesR, which uses <span class="in">`component_0`</span> for the null component column.</span>
+<span id="cb7-413"><a href="#cb7-413" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-414"><a href="#cb7-414" aria-hidden="true" tabindex="-1"></a><span class="fu">### `ncomp`</span></span>
+<span id="cb7-415"><a href="#cb7-415" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-416"><a href="#cb7-416" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$ncomp`</span> is a trait-by-component matrix containing posterior mean counts of</span>
+<span id="cb7-417"><a href="#cb7-417" aria-hidden="true" tabindex="-1"></a>markers assigned to each component. Its row sum should equal the number of</span>
+<span id="cb7-418"><a href="#cb7-418" aria-hidden="true" tabindex="-1"></a>markers, subject only to numerical representation.</span>
+<span id="cb7-419"><a href="#cb7-419" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-420"><a href="#cb7-420" aria-hidden="true" tabindex="-1"></a>The usual outputs remain available when returned, including <span class="in">`bm`</span>, <span class="in">`dm`</span>,</span>
+<span id="cb7-421"><a href="#cb7-421" aria-hidden="true" tabindex="-1"></a>variance traces, covariance summaries, current effects, and residual state.</span>
+<span id="cb7-422"><a href="#cb7-422" aria-hidden="true" tabindex="-1"></a>Full marker-scale matrices should be retained for analysis rather than printed</span>
+<span id="cb7-423"><a href="#cb7-423" aria-hidden="true" tabindex="-1"></a>in full.</span>
+<span id="cb7-424"><a href="#cb7-424" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-425"><a href="#cb7-425" aria-hidden="true" tabindex="-1"></a><span class="fu">## Diagnostic Helpers</span></span>
+<span id="cb7-426"><a href="#cb7-426" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-427"><a href="#cb7-427" aria-hidden="true" tabindex="-1"></a>Four deterministic exported helpers translate alpha coefficients into compact</span>
+<span id="cb7-428"><a href="#cb7-428" aria-hidden="true" tabindex="-1"></a>prior-architecture diagnostics.</span>
+<span id="cb7-429"><a href="#cb7-429" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-430"><a href="#cb7-430" aria-hidden="true" tabindex="-1"></a><span class="fu">### Annotation-row diagnostics</span></span>
+<span id="cb7-431"><a href="#cb7-431" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-432"><a href="#cb7-432" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_annotation_pi(alpha, gamma)`</span> applies the probit stick-breaking</span>
+<span id="cb7-433"><a href="#cb7-433" aria-hidden="true" tabindex="-1"></a>transform separately to each row of <span class="in">`alpha`</span>. It returns an</span>
+<span id="cb7-434"><a href="#cb7-434" aria-hidden="true" tabindex="-1"></a>annotation-by-component probability matrix.</span>
+<span id="cb7-435"><a href="#cb7-435" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-436"><a href="#cb7-436" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_annotation_gamma_mean(alpha, gamma)`</span> computes</span>
+<span id="cb7-437"><a href="#cb7-437" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-438"><a href="#cb7-438" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-439"><a href="#cb7-439" aria-hidden="true" tabindex="-1"></a>\overline{\gamma}_k^{\mathrm{annotation}}</span>
+<span id="cb7-440"><a href="#cb7-440" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb7-441"><a href="#cb7-441" aria-hidden="true" tabindex="-1"></a>\sum_{c=1}^{C}\pi_{kc}\gamma_c</span>
+<span id="cb7-442"><a href="#cb7-442" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-443"><a href="#cb7-443" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-444"><a href="#cb7-444" aria-hidden="true" tabindex="-1"></a>for each alpha row.</span>
+<span id="cb7-445"><a href="#cb7-445" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-446"><a href="#cb7-446" aria-hidden="true" tabindex="-1"></a>These are coefficient-row diagnostics. A binary annotation row, for example,</span>
+<span id="cb7-447"><a href="#cb7-447" aria-hidden="true" tabindex="-1"></a>is evaluated as a standalone predictor row. It does not automatically include</span>
+<span id="cb7-448"><a href="#cb7-448" aria-hidden="true" tabindex="-1"></a>the fitted intercept or the effects of correlated annotations. It should not</span>
+<span id="cb7-449"><a href="#cb7-449" aria-hidden="true" tabindex="-1"></a>be described as the literal component probability for every marker carrying</span>
+<span id="cb7-450"><a href="#cb7-450" aria-hidden="true" tabindex="-1"></a>that annotation.</span>
+<span id="cb7-451"><a href="#cb7-451" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-452"><a href="#cb7-452" aria-hidden="true" tabindex="-1"></a><span class="fu">### Marker-profile diagnostics</span></span>
+<span id="cb7-453"><a href="#cb7-453" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-454"><a href="#cb7-454" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_marker_pi(A, alpha, gamma)`</span> first computes $A\alpha$, then applies</span>
+<span id="cb7-455"><a href="#cb7-455" aria-hidden="true" tabindex="-1"></a>the stick-breaking transform. It returns an $m \times C$ marker-level prior</span>
+<span id="cb7-456"><a href="#cb7-456" aria-hidden="true" tabindex="-1"></a>component probability matrix.</span>
+<span id="cb7-457"><a href="#cb7-457" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-458"><a href="#cb7-458" aria-hidden="true" tabindex="-1"></a><span class="in">`sbayesrc_marker_gamma_mean(A, alpha, gamma)`</span> computes the plug-in expected</span>
+<span id="cb7-459"><a href="#cb7-459" aria-hidden="true" tabindex="-1"></a>gamma for each marker:</span>
+<span id="cb7-460"><a href="#cb7-460" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-461"><a href="#cb7-461" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-462"><a href="#cb7-462" aria-hidden="true" tabindex="-1"></a>\overline{\gamma}_i^{\mathrm{marker}}</span>
+<span id="cb7-463"><a href="#cb7-463" aria-hidden="true" tabindex="-1"></a>=</span>
+<span id="cb7-464"><a href="#cb7-464" aria-hidden="true" tabindex="-1"></a>\sum_{c=1}^{C}\pi_{ic}\gamma_c.</span>
+<span id="cb7-465"><a href="#cb7-465" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-466"><a href="#cb7-466" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-467"><a href="#cb7-467" aria-hidden="true" tabindex="-1"></a>These marker-profile helpers include the complete annotation combination in</span>
+<span id="cb7-468"><a href="#cb7-468" aria-hidden="true" tabindex="-1"></a>each row of $A$. They are generally more directly relevant to the fitted</span>
+<span id="cb7-469"><a href="#cb7-469" aria-hidden="true" tabindex="-1"></a>prior architecture than standalone annotation-row summaries.</span>
+<span id="cb7-470"><a href="#cb7-470" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-471"><a href="#cb7-471" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb7-472"><a href="#cb7-472" aria-hidden="true" tabindex="-1"></a>alpha_t <span class="ot">&lt;-</span> fit<span class="sc">$</span>alpha[[<span class="dv">1</span>]]</span>
+<span id="cb7-473"><a href="#cb7-473" aria-hidden="true" tabindex="-1"></a>prior_pi <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_pi</span>(fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma)</span>
+<span id="cb7-474"><a href="#cb7-474" aria-hidden="true" tabindex="-1"></a>expected_gamma <span class="ot">&lt;-</span> <span class="fu">sbayesrc_marker_gamma_mean</span>(</span>
+<span id="cb7-475"><a href="#cb7-475" aria-hidden="true" tabindex="-1"></a>  fit<span class="sc">$</span>input<span class="sc">$</span>A, alpha_t, fit<span class="sc">$</span>input<span class="sc">$</span>gamma</span>
+<span id="cb7-476"><a href="#cb7-476" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-477"><a href="#cb7-477" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-478"><a href="#cb7-478" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-479"><a href="#cb7-479" aria-hidden="true" tabindex="-1"></a>Because these diagnostics transform posterior mean alpha coefficients, they do</span>
+<span id="cb7-480"><a href="#cb7-480" aria-hidden="true" tabindex="-1"></a>not propagate the full posterior uncertainty in alpha. Compact reports can</span>
+<span id="cb7-481"><a href="#cb7-481" aria-hidden="true" tabindex="-1"></a>show annotation-row expected gamma, <span class="in">`summary(expected_gamma)`</span>, and the</span>
+<span id="cb7-482"><a href="#cb7-482" aria-hidden="true" tabindex="-1"></a>correlation between marker expected gamma and PIP. That correlation describes</span>
+<span id="cb7-483"><a href="#cb7-483" aria-hidden="true" tabindex="-1"></a>the fitted prior-posterior relationship; it is not a calibration statistic or</span>
+<span id="cb7-484"><a href="#cb7-484" aria-hidden="true" tabindex="-1"></a>causal estimate.</span>
+<span id="cb7-485"><a href="#cb7-485" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-486"><a href="#cb7-486" aria-hidden="true" tabindex="-1"></a><span class="fu">## Interpretation of Annotation Effects</span></span>
+<span id="cb7-487"><a href="#cb7-487" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-488"><a href="#cb7-488" aria-hidden="true" tabindex="-1"></a>An alpha coefficient changes a conditional continuation probability at one</span>
+<span id="cb7-489"><a href="#cb7-489" aria-hidden="true" tabindex="-1"></a>stick-breaking step. Its sign cannot be interpreted independently of component</span>
+<span id="cb7-490"><a href="#cb7-490" aria-hidden="true" tabindex="-1"></a>ordering:</span>
+<span id="cb7-491"><a href="#cb7-491" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-492"><a href="#cb7-492" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>a positive coefficient increases the probability of continuing past that</span>
+<span id="cb7-493"><a href="#cb7-493" aria-hidden="true" tabindex="-1"></a>  step;</span>
+<span id="cb7-494"><a href="#cb7-494" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>a negative coefficient increases the probability of stopping at that step;</span>
+<span id="cb7-495"><a href="#cb7-495" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>the consequences for expected gamma depend on all later steps and the gamma</span>
+<span id="cb7-496"><a href="#cb7-496" aria-hidden="true" tabindex="-1"></a>  grid.</span>
+<span id="cb7-497"><a href="#cb7-497" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-498"><a href="#cb7-498" aria-hidden="true" tabindex="-1"></a>Expected gamma is a useful scalar summary of prior mixture allocation, but it</span>
+<span id="cb7-499"><a href="#cb7-499" aria-hidden="true" tabindex="-1"></a>compresses a complete component-probability vector. Two markers can have the</span>
+<span id="cb7-500"><a href="#cb7-500" aria-hidden="true" tabindex="-1"></a>same expected gamma while assigning probability to different components.</span>
+<span id="cb7-501"><a href="#cb7-501" aria-hidden="true" tabindex="-1"></a>Report component probabilities when those distinctions matter.</span>
+<span id="cb7-502"><a href="#cb7-502" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-503"><a href="#cb7-503" aria-hidden="true" tabindex="-1"></a>Annotation effects and expected-gamma differences are prior-architecture</span>
+<span id="cb7-504"><a href="#cb7-504" aria-hidden="true" tabindex="-1"></a>summaries, not proof of biological causality. They can reflect LD, marker</span>
+<span id="cb7-505"><a href="#cb7-505" aria-hidden="true" tabindex="-1"></a>density, annotation overlap, quantitative-annotation scaling, model</span>
+<span id="cb7-506"><a href="#cb7-506" aria-hidden="true" tabindex="-1"></a>misspecification, and finite-chain behavior. Interpretation should compare</span>
+<span id="cb7-507"><a href="#cb7-507" aria-hidden="true" tabindex="-1"></a>annotation-derived prior probabilities with posterior component frequencies</span>
+<span id="cb7-508"><a href="#cb7-508" aria-hidden="true" tabindex="-1"></a>and assess sensitivity to preprocessing, gamma grids, sparse-LD settings, and</span>
+<span id="cb7-509"><a href="#cb7-509" aria-hidden="true" tabindex="-1"></a>hyperparameters.</span>
+<span id="cb7-510"><a href="#cb7-510" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-511"><a href="#cb7-511" aria-hidden="true" tabindex="-1"></a><span class="fu">## Comparison With Published SBayesRC</span></span>
+<span id="cb7-512"><a href="#cb7-512" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-513"><a href="#cb7-513" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Published SBayesRC feature <span class="pp">|</span> <span class="in">`sblr`</span> implementation <span class="pp">|</span> Assessment <span class="pp">|</span></span>
+<span id="cb7-514"><a href="#cb7-514" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb7-515"><a href="#cb7-515" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BayesR-like multi-normal marker-effect mixture <span class="pp">|</span> $\beta_i\mid z_i=k \sim N(0,\gamma_kv_b)$ <span class="pp">|</span> Same core prior family <span class="pp">|</span></span>
+<span id="cb7-516"><a href="#cb7-516" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Exact null component <span class="pp">|</span> Requires <span class="in">`gamma[1] == 0`</span>; null effects are exactly zero <span class="pp">|</span> Same <span class="pp">|</span></span>
+<span id="cb7-517"><a href="#cb7-517" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Published gamma grid <span class="in">`c(0, 0.001, 0.01, 0.1, 1)`</span> <span class="pp">|</span> User-supplied and supported <span class="pp">|</span> Same when explicitly requested <span class="pp">|</span></span>
+<span id="cb7-518"><a href="#cb7-518" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Default gamma grid <span class="pp">|</span> <span class="in">`c(0, 0.01, 0.1, 1)`</span> <span class="pp">|</span> Different exposed default <span class="pp">|</span></span>
+<span id="cb7-519"><a href="#cb7-519" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Marker-specific mixture probabilities from annotations <span class="pp">|</span> Uses $A\alpha$ for every marker <span class="pp">|</span> Same core structure <span class="pp">|</span></span>
+<span id="cb7-520"><a href="#cb7-520" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Conditional probit stick-breaking <span class="pp">|</span> Uses $p_{ij}=\Phi(A_i\alpha_j)$ and conditional continuation probabilities <span class="pp">|</span> Same core structure <span class="pp">|</span></span>
+<span id="cb7-521"><a href="#cb7-521" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Intercept and functional annotations <span class="pp">|</span> Adds an intercept by default; accepts overlapping binary or quantitative annotations <span class="pp">|</span> Closely aligned, with <span class="in">`sblr`</span> preprocessing defaults <span class="pp">|</span></span>
+<span id="cb7-522"><a href="#cb7-522" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Quantitative annotation handling <span class="pp">|</span> Standardizes nonbinary annotations by default; leaves binary columns unchanged by default <span class="pp">|</span> Qualified implementation choice <span class="pp">|</span></span>
+<span id="cb7-523"><a href="#cb7-523" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Normal alpha priors with step-specific variance <span class="pp">|</span> Non-intercept coefficients use $N(0,\sigma_{\alpha,j}^2)$ <span class="pp">|</span> Same prior family <span class="pp">|</span></span>
+<span id="cb7-524"><a href="#cb7-524" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Scaled inverse-chi-square prior on alpha variance <span class="pp">|</span> Uses a scaled-inverse-chi-square/inverse-gamma-family update controlled by <span class="in">`sigmaSqAlpha_a`</span> and <span class="in">`sigmaSqAlpha_b`</span> <span class="pp">|</span> Same family; exact published hyperparameters not implied <span class="pp">|</span></span>
+<span id="cb7-525"><a href="#cb7-525" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Probit alpha update <span class="pp">|</span> Latent truncated-normal augmentation and conditional normal draws <span class="pp">|</span> Closely aligned Gibbs-style update <span class="pp">|</span></span>
+<span id="cb7-526"><a href="#cb7-526" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Component-probability numerical handling <span class="pp">|</span> Floors probabilities at <span class="in">`pi_floor`</span> and renormalizes rows <span class="pp">|</span> Qualified numerical-stability detail <span class="pp">|</span></span>
+<span id="cb7-527"><a href="#cb7-527" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Summary-statistics likelihood <span class="pp">|</span> CSR sparse-LD likelihood <span class="pp">|</span> Different from GCTB low-rank rotated likelihood <span class="pp">|</span></span>
+<span id="cb7-528"><a href="#cb7-528" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-529"><a href="#cb7-529" aria-hidden="true" tabindex="-1"></a>The most accurate description is therefore:</span>
+<span id="cb7-530"><a href="#cb7-530" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-531"><a href="#cb7-531" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; </span><span class="in">`stblr_csr_sbayesrc_generic()`</span><span class="at"> implements an SBayesRC-style,</span></span>
+<span id="cb7-532"><a href="#cb7-532" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; annotation-dependent BayesR prior that is closely aligned with the published</span></span>
+<span id="cb7-533"><a href="#cb7-533" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; SBayesRC prior structure, fitted with the </span><span class="in">`sblr`</span><span class="at"> CSR sparse-LD likelihood.</span></span>
+<span id="cb7-534"><a href="#cb7-534" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-535"><a href="#cb7-535" aria-hidden="true" tabindex="-1"></a>It should not be described as an exact reproduction of published GCTB</span>
+<span id="cb7-536"><a href="#cb7-536" aria-hidden="true" tabindex="-1"></a>SBayesRC as exposed by default.</span>
+<span id="cb7-537"><a href="#cb7-537" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-538"><a href="#cb7-538" aria-hidden="true" tabindex="-1"></a><span class="fu">## Practical Validation Checklist</span></span>
+<span id="cb7-539"><a href="#cb7-539" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-540"><a href="#cb7-540" aria-hidden="true" tabindex="-1"></a>Before interpreting an SBayesRC-style fit:</span>
+<span id="cb7-541"><a href="#cb7-541" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-542"><a href="#cb7-542" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>verify marker alignment among $A$, sufficient statistics, CSR LD, and</span>
+<span id="cb7-543"><a href="#cb7-543" aria-hidden="true" tabindex="-1"></a>  posterior summaries;</span>
+<span id="cb7-544"><a href="#cb7-544" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>record the gamma grid and distinguish the <span class="in">`sblr`</span> default from the published</span>
+<span id="cb7-545"><a href="#cb7-545" aria-hidden="true" tabindex="-1"></a>  grid;</span>
+<span id="cb7-546"><a href="#cb7-546" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>record intercept, standardization, and binary-centering choices;</span>
+<span id="cb7-547"><a href="#cb7-547" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>inspect annotation prevalence, scaling, overlap, and collinearity;</span>
+<span id="cb7-548"><a href="#cb7-548" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>report <span class="in">`sigmaSqAlpha_a`</span>, <span class="in">`sigmaSqAlpha_b`</span>, <span class="in">`intercept_flat`</span>, <span class="in">`pi_floor`</span>, and</span>
+<span id="cb7-549"><a href="#cb7-549" aria-hidden="true" tabindex="-1"></a>  <span class="in">`alpha_update_every`</span>;</span>
+<span id="cb7-550"><a href="#cb7-550" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>check component counts, PIPs, variance traces, and chain behavior;</span>
+<span id="cb7-551"><a href="#cb7-551" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>distinguish annotation-derived prior probabilities from posterior component</span>
+<span id="cb7-552"><a href="#cb7-552" aria-hidden="true" tabindex="-1"></a>  frequencies in <span class="in">`comp_prob`</span>;</span>
+<span id="cb7-553"><a href="#cb7-553" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>compare annotation-row and full marker-profile diagnostics;</span>
+<span id="cb7-554"><a href="#cb7-554" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>assess sensitivity to gamma, sparse-LD thresholds, annotations, and</span>
+<span id="cb7-555"><a href="#cb7-555" aria-hidden="true" tabindex="-1"></a>  hyperparameters; and</span>
+<span id="cb7-556"><a href="#cb7-556" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>avoid causal claims from alpha coefficients or expected-gamma summaries.</span>
+<span id="cb7-557"><a href="#cb7-557" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-558"><a href="#cb7-558" aria-hidden="true" tabindex="-1"></a><span class="fu">## Related Notes and Sources</span></span>
+<span id="cb7-559"><a href="#cb7-559" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-560"><a href="#cb7-560" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Annotation-informed models</span><span class="co">](annotation_informed_models.html)</span> compares this</span>
+<span id="cb7-561"><a href="#cb7-561" aria-hidden="true" tabindex="-1"></a>  model with fixed, learned, and group annotation priors.</span>
+<span id="cb7-562"><a href="#cb7-562" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Technical annotation priors</span><span class="co">](technical_annotation_priors.html)</span> develops</span>
+<span id="cb7-563"><a href="#cb7-563" aria-hidden="true" tabindex="-1"></a>  marker-specific inclusion and variance priors outside the BayesR mixture</span>
+<span id="cb7-564"><a href="#cb7-564" aria-hidden="true" tabindex="-1"></a>  construction.</span>
+<span id="cb7-565"><a href="#cb7-565" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Workflows and outputs</span><span class="co">](workflows_and_outputs.html)</span> explains compact fit and</span>
+<span id="cb7-566"><a href="#cb7-566" aria-hidden="true" tabindex="-1"></a>  expected-gamma reporting.</span>
+<span id="cb7-567"><a href="#cb7-567" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Model overview</span><span class="co">](model_overview.html)</span> places the model within the broader</span>
+<span id="cb7-568"><a href="#cb7-568" aria-hidden="true" tabindex="-1"></a>  <span class="in">`sblr`</span> model and workflow landscape.</span>
+<span id="cb7-569"><a href="#cb7-569" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-570"><a href="#cb7-570" aria-hidden="true" tabindex="-1"></a>The implementation contracts described here are based on the public wrapper,</span>
+<span id="cb7-571"><a href="#cb7-571" aria-hidden="true" tabindex="-1"></a>deterministic diagnostic helpers, helper tests, and native CSR sampler. The</span>
+<span id="cb7-572"><a href="#cb7-572" aria-hidden="true" tabindex="-1"></a>archived annotation draft supplies the broader motivation for direct</span>
+<span id="cb7-573"><a href="#cb7-573" aria-hidden="true" tabindex="-1"></a>annotation-dependent mixture priors.</span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 

@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Peter Sørensen">
+
+<title>ST-BLR Interface and Output Map – sblr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-234273d1456647dabc34a594ac50e507.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-3f1ceb0eb11a066e0501c9e2d1de2658.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">sblr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../notes/index.html"> 
+<span class="menu-text">Notes</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="https://github.com/psoerensen/sblr"> 
+<span class="menu-text">GitHub</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#main-modelling-interfaces" id="toc-main-modelling-interfaces" class="nav-link active" data-scroll-target="#main-modelling-interfaces">Main Modelling Interfaces</a></li>
+  <li><a href="#shared-data-object" id="toc-shared-data-object" class="nav-link" data-scroll-target="#shared-data-object">Shared Data Object</a></li>
+  <li><a href="#csr-workflow" id="toc-csr-workflow" class="nav-link" data-scroll-target="#csr-workflow">CSR Workflow</a></li>
+  <li><a href="#bed-workflow" id="toc-bed-workflow" class="nav-link" data-scroll-target="#bed-workflow">BED Workflow</a></li>
+  <li><a href="#model-family-map" id="toc-model-family-map" class="nav-link" data-scroll-target="#model-family-map">Model Family Map</a></li>
+  <li><a href="#selection_s-support" id="toc-selection_s-support" class="nav-link" data-scroll-target="#selection_s-support"><code>selection_s</code> Support</a></li>
+  <li><a href="#standardized-output-fields" id="toc-standardized-output-fields" class="nav-link" data-scroll-target="#standardized-output-fields">Standardized Output Fields</a></li>
+  <li><a href="#helper-function-map" id="toc-helper-function-map" class="nav-link" data-scroll-target="#helper-function-map">Helper Function Map</a></li>
+  <li><a href="#fine-mapping-ld-swap-and-credible-sets" id="toc-fine-mapping-ld-swap-and-credible-sets" class="nav-link" data-scroll-target="#fine-mapping-ld-swap-and-credible-sets">Fine-Mapping, LD-Swap, and Credible Sets</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="stblr_interface_and_output_map.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">ST-BLR Interface and Output Map</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Author</div>
+  <div class="quarto-title-meta-heading">Affiliation</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Peter Sørensen </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Aarhus University
+          </p>
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This note is a compact map of the current ST-BLR user-facing interfaces, shared data object, model families, standardized outputs, and post-processing helpers. It is intentionally not a replacement for function help pages.</p>
+<section id="main-modelling-interfaces" class="level2">
+<h2 class="anchored" data-anchor-id="main-modelling-interfaces">Main Modelling Interfaces</h2>
+<ul>
+<li><code>stblr_csr()</code>: summary-statistics CSR backend using <code>stats</code> and sparse LD from <code>Glist</code> or an explicit <code>ld_prefix</code>.</li>
+<li><code>stblr_bed()</code>: individual-level PLINK/BED backend using genotype information from <code>Glist</code>.</li>
+<li><code>stblr_csr_annot()</code>: unified annotation-aware CSR backend using <code>annotation_model = "prior"</code>, <code>"learned"</code>, <code>"group"</code>, or <code>"sbayesrc"</code>.</li>
+</ul>
+<p><code>stblr_bed_marker()</code> remains available as a lower-level direct BED marker interface, but the high-level BED model entry point is <code>stblr_bed()</code>.</p>
+</section>
+<section id="shared-data-object" class="level2">
+<h2 class="anchored" data-anchor-id="shared-data-object">Shared Data Object</h2>
+<p><code>Glist</code> is the common carrier for genotype and marker metadata used by both CSR and BED workflows. In current code, relevant fields include:</p>
+<ul>
+<li><code>Glist$bedfiles</code>, the PLINK BED file paths used by BED and preparation helpers;</li>
+<li><code>Glist$n</code>, the number of BED individuals;</li>
+<li><code>Glist$ids</code> and optionally <code>Glist$idsLD</code>, used for sample matching;</li>
+<li><code>Glist$rsids</code>, marker IDs in BED-file order by chromosome/file;</li>
+<li><code>Glist$rsidsLD</code>, selected LD/model marker IDs by chromosome/file;</li>
+<li><code>Glist$af</code>, allele frequencies used for marker standardization and MAF dependent calculations;</li>
+<li><code>Glist$sparseLD</code>, added by <code>make_sparseLD()</code>, with <code>prefix</code>, <code>chr</code>, <code>bed_files</code>, <code>cls</code>, <code>af</code>, <code>rows</code>, <code>max_distance_bp</code>, <code>max_distance_variants</code>, <code>r2_threshold</code>, and <code>block_size</code>.</li>
+</ul>
+<p>For sparse-LD CSR models, marker-level information such as MAF must be aligned to the LD marker order. The package preparation helpers use positional alignment equivalent to:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>idx <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Do not use <code>%in%</code> as the recommended alignment operation because it loses the requested LD marker order.</p>
+</section>
+<section id="csr-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="csr-workflow">CSR Workflow</h2>
+<ol type="1">
+<li>Prepare or load a BED-backed <code>Glist</code>.</li>
+<li>Compute summary statistics with <code>make_stats()</code>.</li>
+<li>Compute sparse LD with <code>make_sparseLD()</code>.</li>
+<li>Fit summary-statistics BLR models with <code>stblr_csr()</code> or annotation-aware CSR models with <code>stblr_csr_annot()</code>.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  Glist,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  y,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> nthreads</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(data_dir, <span class="st">"ld_test"</span>),</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">pos_bp =</span> <span class="cn">NULL</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_distance_bp =</span> <span class="dv">0</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_distance_variants =</span> <span class="dv">1000</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">r2_threshold =</span> <span class="fl">0.001</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">block_size =</span> <span class="dv">1024</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"bayesC"</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>make_stats()</code> computes marker-trait summary statistics used by <code>stblr_csr()</code>. <code>make_sparseLD()</code> computes disk-backed sparse LD and stores sparse-LD metadata in <code>Glist$sparseLD</code>. The updated <code>Glist</code> is then passed to <code>stblr_csr()</code> and related CSR functions.</p>
+</section>
+<section id="bed-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="bed-workflow">BED Workflow</h2>
+<ol type="1">
+<li>Prepare or load a BED-backed <code>Glist</code>.</li>
+<li>Fit individual-level BLR models using <code>stblr_bed()</code>.</li>
+<li>Use standardized output fields where available.</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit_bed <span class="ot">&lt;-</span> <span class="fu">stblr_bed</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"bayesC"</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>stblr_bed()</code> supports <code>method = "bayesC"</code> and <code>method = "bayesR"</code>. Its current arguments include phenotype data <code>y</code>, <code>Glist</code>, optional <code>chr</code>, <code>cls</code>, <code>rows</code>, <code>scale</code>, MCMC controls, BayesC prior controls, BayesR mixture controls, and BED scheduled-chain controls. <code>covar</code> is not currently adjusted by this interface; pass pre-adjusted phenotypes. <code>chain_seeds</code> are not currently supported by the BED scheduled-chain backends.</p>
+</section>
+<section id="model-family-map" class="level2">
+<h2 class="anchored" data-anchor-id="model-family-map">Model Family Map</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Family</th>
+<th>Function</th>
+<th>Backend</th>
+<th style="text-align: right;">Requires sparse LD</th>
+<th style="text-align: right;">Uses individual BED genotypes</th>
+<th style="text-align: right;">Uses annotations</th>
+<th style="text-align: right;">Component probabilities</th>
+<th style="text-align: right;"><code>selection_s</code></th>
+<th style="text-align: right;">LD-swap / fine-mapping</th>
+<th>Main outputs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Annotation-unaware CSR BayesC</td>
+<td><code>stblr_csr(..., method = "bayesC")</code></td>
+<td><code>csr_bayesc</code> or scheduled CSR BayesC</td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">fixed and sampled in unscheduled CSR; not scheduled</td>
+<td style="text-align: right;">LD-swap for unscheduled CSR with <code>updateLDswap = TRUE</code>; fine-mapping helpers use <code>fit$dm</code> and LD</td>
+<td><code>dm</code>, <code>bm</code>, <code>vbs</code>, <code>vgs</code>, <code>ves</code>, <code>vle</code>, <code>vld</code>, <code>input</code>, optional <code>chains</code></td>
+</tr>
+<tr class="even">
+<td>Annotation-unaware CSR BayesR</td>
+<td><code>stblr_csr(..., method = "bayesR")</code></td>
+<td><code>csr_bayesr</code></td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">yes, <code>component_0</code> is null</td>
+<td style="text-align: right;">fixed and sampled</td>
+<td style="text-align: right;">LD-swap with <code>updateLDswap = TRUE</code>; fine-mapping helpers use <code>fit$dm</code> and LD</td>
+<td>common outputs plus <code>comp_prob</code>, <code>dm_component_mean</code>, <code>ncomp</code> where available</td>
+</tr>
+<tr class="odd">
+<td>Individual-level BED BayesC</td>
+<td><code>stblr_bed(..., method = "bayesC")</code></td>
+<td>BED scheduled-chain backend</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no LD-swap; compatible with post-processing that only needs <code>fit$dm</code>/<code>fit$bm</code></td>
+<td><code>dm</code>, <code>bm</code>, <code>input</code>, CPO/log-CPO diagnostics, chain-summary matrices</td>
+</tr>
+<tr class="even">
+<td>Individual-level BED BayesR</td>
+<td><code>stblr_bed(..., method = "bayesR")</code></td>
+<td>BED BayesR scheduled-chain backend</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">yes, <code>component_0</code> is null</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no LD-swap; compatible with post-processing that only needs <code>fit$dm</code>/<code>fit$bm</code></td>
+<td>BED common outputs plus <code>comp_prob</code>, <code>dm_component_mean</code></td>
+</tr>
+<tr class="odd">
+<td>Fixed-prior annotation CSR</td>
+<td><code>stblr_csr_annot(..., annotation_model = "prior")</code>; wrapper <code>stblr_csr_prior_annot()</code></td>
+<td><code>csr_prior_bayesc</code></td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">fixed marker priors</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">LD-swap where enabled; no sampler-level <code>selection_s</code></td>
+<td>common outputs plus <code>annotation_prior</code>/<code>annotation_summary</code> where returned</td>
+</tr>
+<tr class="even">
+<td>Learned annotation CSR</td>
+<td><code>stblr_csr_annot(..., annotation_model = "learned")</code>; wrapper <code>stblr_csr_learn_annot()</code></td>
+<td><code>csr_annot_bayesc</code></td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">learned inclusion/variance effects</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">LD-swap where enabled; no sampler-level <code>selection_s</code></td>
+<td>common outputs plus <code>eta_pi</code>, <code>eta_vb</code>, <code>annotation_effects</code>, <code>annotation_summary</code></td>
+</tr>
+<tr class="odd">
+<td>Group annotation CSR</td>
+<td><code>stblr_csr_annot(..., annotation_model = "group")</code>; wrapper <code>stblr_csr_group_annot()</code></td>
+<td><code>csr_group_bayesc</code></td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">mutually exclusive groups</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">LD-swap where enabled; no sampler-level <code>selection_s</code></td>
+<td>common outputs plus <code>group_pi</code>, <code>group_vb_multiplier</code>, <code>group_nincluded</code>, <code>group_size</code>, <code>annotation_summary</code></td>
+</tr>
+<tr class="even">
+<td>SBayesRC-style annotation CSR</td>
+<td><code>stblr_csr_annot(..., annotation_model = "sbayesrc")</code>; wrapper <code>stblr_csr_sbayesrc_generic()</code></td>
+<td><code>csr_sbayesrc</code></td>
+<td style="text-align: right;">yes</td>
+<td style="text-align: right;">no</td>
+<td style="text-align: right;">component probabilities</td>
+<td style="text-align: right;">yes, <code>gamma_0.00</code> is null</td>
+<td style="text-align: right;">fixed and sampled</td>
+<td style="text-align: right;">LD-swap supported</td>
+<td>common outputs plus <code>comp_prob</code>, <code>dm_component_mean</code>, <code>alpha</code>, <code>sigmaSqAlpha</code>, <code>ncomp</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="selection_s-support" class="level2">
+<h2 class="anchored" data-anchor-id="selection_s-support"><code>selection_s</code> Support</h2>
+<p>Fixed global <code>selection_s</code> and sampled trait-specific <code>selection_s</code> are supported for:</p>
+<ul>
+<li><code>csr_bayesc</code>;</li>
+<li><code>csr_bayesr</code>;</li>
+<li><code>csr_sbayesrc</code>.</li>
+</ul>
+<p>They are not supported for:</p>
+<ul>
+<li><code>csr_scheduled_bayesc</code>;</li>
+<li><code>csr_prior_bayesc</code>;</li>
+<li><code>csr_annot_bayesc</code>;</li>
+<li><code>csr_group_bayesc</code>;</li>
+<li>BED backends.</li>
+</ul>
+<p>Sampled-S defaults are:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>selection_s_init <span class="ot">=</span> <span class="dv">0</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>selection_s_prior <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">2</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>selection_s_proposal_sd <span class="ot">=</span> <span class="fl">0.35</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>CSR effects are on the standardized-genotype scale. The MAF-dependent prior scale is:</p>
+<pre class="text"><code>q_j(S) = h_j^(S + 1)
+h_j = 2 p_j (1 - p_j)</code></pre>
+</section>
+<section id="standardized-output-fields" class="level2">
+<h2 class="anchored" data-anchor-id="standardized-output-fields">Standardized Output Fields</h2>
+<p>Model outputs are standardized across backends where possible:</p>
+<ul>
+<li><code>fit$dm</code>: marker-by-trait posterior inclusion probability or non-null probability.</li>
+<li><code>fit$bm</code>: marker-by-trait posterior mean effect.</li>
+<li><code>fit$vbs</code>: posterior trace of marker-effect variance.</li>
+<li><code>fit$vgs</code>: posterior trace of genetic variance.</li>
+<li><code>fit$ves</code>: posterior trace of residual variance.</li>
+<li><code>fit$vle</code>: posterior trace of linkage-equilibrium contribution, where returned.</li>
+<li><code>fit$vld</code>: posterior trace of LD contribution, where returned.</li>
+<li><code>fit$input</code>: backend, model, settings, and metadata.</li>
+<li><code>fit$chains</code>: optional compact chain-level output when supported and <code>keep_chains = TRUE</code>.</li>
+</ul>
+<p>BayesR and SBayesRC outputs:</p>
+<ul>
+<li><code>fit$comp_prob</code>: marker-by-component posterior probabilities by trait.</li>
+<li><code>fit$dm_component_mean</code>: posterior mean component/effect-class summary.</li>
+<li>BayesR null component: <code>component_0</code>.</li>
+<li>SBayesRC null component: <code>gamma_0.00</code>.</li>
+</ul>
+<p>Annotation-aware outputs are model-specific and may include:</p>
+<ul>
+<li><code>fit$annotation_summary</code>;</li>
+<li><code>fit$annotation_pi</code>;</li>
+<li><code>fit$annotation_effects</code>;</li>
+<li><code>fit$annotation_prior</code>;</li>
+<li><code>fit$eta_pi</code>, <code>fit$eta_vb</code> for learned annotation BayesC;</li>
+<li><code>fit$group_pi</code>, <code>fit$group_vb_multiplier</code>, <code>fit$group_nincluded</code>, <code>fit$group_size</code> for group BayesC;</li>
+<li><code>fit$alpha</code>, <code>fit$sigmaSqAlpha</code>, and <code>fit$ncomp</code> for SBayesRC-style fits;</li>
+</ul>
+<p>Sampled-S outputs:</p>
+<ul>
+<li><code>fit$selection_s</code>;</li>
+<li><code>fit$selection_s_sd</code>;</li>
+<li><code>fit$selection_s_min</code>;</li>
+<li><code>fit$selection_s_max</code>;</li>
+<li><code>fit$selection_s_trace</code>;</li>
+<li><code>fit$selection_s_acceptance</code>.</li>
+</ul>
+<p>With <code>keep_chains = TRUE</code>, supported CSR chain objects include:</p>
+<ul>
+<li><code>fit$chains[[trait]][[chain]]$selection_s</code>;</li>
+<li><code>fit$chains[[trait]][[chain]]$selection_s_acceptance</code>.</li>
+</ul>
+</section>
+<section id="helper-function-map" class="level2">
+<h2 class="anchored" data-anchor-id="helper-function-map">Helper Function Map</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Helper</th>
+<th>Consumes</th>
+<th>Returns</th>
+<th>Applies to</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>summarise_stblr_posterior()</code></td>
+<td>A fit with trace matrices such as <code>vbs</code>, <code>vgs</code>, <code>ves</code>, <code>pis</code>, <code>vle</code>, <code>vld</code></td>
+<td>Data frame of posterior means, intervals, diagnostics, and derived quantities</td>
+<td>Fits with compatible traces</td>
+<td>General posterior trace summary helper</td>
+</tr>
+<tr class="even">
+<td><code>plot_stblr_posterior()</code></td>
+<td>Output from <code>summarise_stblr_posterior()</code></td>
+<td>Base R posterior interval plot, invisibly returns plotted data</td>
+<td>Any compatible posterior summary</td>
+<td>Plot helper, not a sampler</td>
+</tr>
+<tr class="odd">
+<td><code>summarise_stblr_bayesr_components()</code></td>
+<td>A BayesR/SBayesRC-style fit with <code>dm</code> and <code>comp_prob</code></td>
+<td>Trait-level component and PIP diagnostics, optionally unstable markers</td>
+<td>BayesR/SBayesRC component fits</td>
+<td>Uses <code>component_0</code> for BayesR and the detected null component such as <code>gamma_0.00</code> for SBayesRC</td>
+</tr>
+<tr class="even">
+<td><code>summarise_stblr_maf_architecture()</code></td>
+<td>A fit with <code>dm</code>/<code>bm</code> plus <code>maf</code> or <code>h</code>, or recoverable MAF/heterozygosity</td>
+<td>Post-hoc MAF architecture regression summary</td>
+<td>Any fit with marker summaries</td>
+<td>Descriptive post-hoc diagnostic, distinct from sampler-level <code>selection_s</code></td>
+</tr>
+<tr class="odd">
+<td><code>make_credible_sets_from_ld()</code></td>
+<td>Named PIP vector and dense regional LD matrix</td>
+<td>Credible-set summary, sets, aligned PIP, parameters</td>
+<td>Any named PIP/LD input</td>
+<td>R-level post-processing</td>
+</tr>
+<tr class="even">
+<td><code>make_multisignal_credible_sets_from_ld()</code></td>
+<td>Named PIP vector and dense regional LD matrix</td>
+<td>Approximate multi-signal credible-set summary and sets</td>
+<td>Any named PIP/LD input</td>
+<td>Uses marginal PIPs, not posterior inclusion configurations</td>
+</tr>
+<tr class="odd">
+<td><code>make_stblr_credible_sets()</code></td>
+<td>Fit with <code>fit$dm</code>, optional <code>Glist</code>, optional dense <code>LD</code>, optional marker sets</td>
+<td>Combined <code>summary</code>, nested <code>sets</code>, <code>loci</code>, <code>parameters</code>, and resolved <code>trait</code></td>
+<td>ST-BLR fits with marker-level PIPs</td>
+<td>Uses <code>fit$dm</code>; can extract regional LD from <code>Glist$sparseLD</code></td>
+</tr>
+<tr class="even">
+<td><code>extract_stblr_finemap_loci()</code></td>
+<td>Genome-wide fit, <code>Glist</code>, and predefined locus sets</td>
+<td><code>stblr_finemap</code> object with <code>summary</code>, <code>markers</code>, optional <code>credible_sets</code>, <code>loci</code>, <code>parameters</code></td>
+<td>Genome-wide fits with named <code>fit$dm</code>/<code>fit$bm</code></td>
+<td>Post-processing only; does not rerun MCMC</td>
+</tr>
+<tr class="odd">
+<td><code>finemap_stblr_csr()</code></td>
+<td>Global CSR fit, <code>Glist</code>, <code>stats</code>, and local marker sets</td>
+<td><code>stblr_finemap</code> object with local run summaries and optional credible sets</td>
+<td>CSR fits</td>
+<td>Runs local CSR fine-mapping using global architecture estimates</td>
+</tr>
+<tr class="even">
+<td><code>check_stblr_backend_consistency()</code></td>
+<td>Formatted ST-BLR fit</td>
+<td>Backend consistency check object</td>
+<td>Standardized fit objects</td>
+<td>Validates expected fields, dimensions, metadata, and optional LD-swap output</td>
+</tr>
+<tr class="odd">
+<td><code>check_stblr_convergence()</code></td>
+<td>Fit with MCMC trace matrices</td>
+<td>Simple convergence diagnostic list</td>
+<td>Fits with compatible traces</td>
+<td>Screening diagnostics, not proof of convergence</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="fine-mapping-ld-swap-and-credible-sets" class="level2">
+<h2 class="anchored" data-anchor-id="fine-mapping-ld-swap-and-credible-sets">Fine-Mapping, LD-Swap, and Credible Sets</h2>
+<p>LD-swap diagnostics are available through <code>fit$ld_swap</code> and chain-level <code>ld_swap</code> / <code>ld_swap_chains</code> output when <code>updateLDswap = TRUE</code> and the backend supports it. LD-swap is a sampler mixing diagnostic and proposal mechanism, not a standalone credible-set object.</p>
+<p>PIP is represented by <code>fit$dm</code>. Credible sets are constructed by helper functions such as <code>make_stblr_credible_sets()</code>, <code>make_credible_sets_from_ld()</code>, and <code>make_multisignal_credible_sets_from_ld()</code> from PIPs and LD. They are workflow/helper-level diagnostics unless a specific fine-mapping helper returns them in its own post-processing object.</p>
+<p><code>make_stblr_credible_sets()</code> requires a fit containing marker PIPs in <code>fit$dm</code>. It can use a supplied dense LD matrix or, for CSR workflows, use <code>Glist$sparseLD$prefix</code> to extract regional dense LD from disk-backed sparse LD. It defines automatic loci around high-PIP markers when explicit <code>sets</code> are not supplied. Credible-set probability is cumulative marginal PIP within the selected LD neighborhood, reported as <code>cs_pip</code>; the helper returns <code>summary</code>, nested <code>sets</code>, <code>locus_sets</code>, <code>loci</code>, <code>parameters</code>, and the resolved <code>trait</code>.</p>
+
+
+<!-- -->
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="sourceCode" id="cb6" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "ST-BLR Interface and Output Map"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>This note is a compact map of the current ST-BLR user-facing interfaces,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>shared data object, model families, standardized outputs, and post-processing</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>helpers. It is intentionally not a replacement for function help pages.</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">## Main Modelling Interfaces</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_csr()`</span>: summary-statistics CSR backend using <span class="in">`stats`</span> and sparse LD</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  from <span class="in">`Glist`</span> or an explicit <span class="in">`ld_prefix`</span>.</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_bed()`</span>: individual-level PLINK/BED backend using genotype information</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  from <span class="in">`Glist`</span>.</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`stblr_csr_annot()`</span>: unified annotation-aware CSR backend using</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="in">`annotation_model = "prior"`</span>, <span class="in">`"learned"`</span>, <span class="in">`"group"`</span>, or <span class="in">`"sbayesrc"`</span>.</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_bed_marker()`</span> remains available as a lower-level direct BED marker</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>interface, but the high-level BED model entry point is <span class="in">`stblr_bed()`</span>.</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="fu">## Shared Data Object</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist`</span> is the common carrier for genotype and marker metadata used by both</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>CSR and BED workflows. In current code, relevant fields include:</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$bedfiles`</span>, the PLINK BED file paths used by BED and preparation</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  helpers;</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$n`</span>, the number of BED individuals;</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$ids`</span> and optionally <span class="in">`Glist$idsLD`</span>, used for sample matching;</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$rsids`</span>, marker IDs in BED-file order by chromosome/file;</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$rsidsLD`</span>, selected LD/model marker IDs by chromosome/file;</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$af`</span>, allele frequencies used for marker standardization and MAF</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>  dependent calculations;</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Glist$sparseLD`</span>, added by <span class="in">`make_sparseLD()`</span>, with <span class="in">`prefix`</span>, <span class="in">`chr`</span>,</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>  <span class="in">`bed_files`</span>, <span class="in">`cls`</span>, <span class="in">`af`</span>, <span class="in">`rows`</span>, <span class="in">`max_distance_bp`</span>,</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>  <span class="in">`max_distance_variants`</span>, <span class="in">`r2_threshold`</span>, and <span class="in">`block_size`</span>.</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>For sparse-LD CSR models, marker-level information such as MAF must be aligned</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>to the LD marker order. The package preparation helpers use positional</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>alignment equivalent to:</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>idx <span class="ot">&lt;-</span> <span class="fu">match</span>(Glist<span class="sc">$</span>rsidsLD[[chr]], Glist<span class="sc">$</span>rsids[[chr]])</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>Do not use <span class="in">`%in%`</span> as the recommended alignment operation because it loses the</span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>requested LD marker order.</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## CSR Workflow</span></span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Prepare or load a BED-backed <span class="in">`Glist`</span>.</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Compute summary statistics with <span class="in">`make_stats()`</span>.</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Compute sparse LD with <span class="in">`make_sparseLD()`</span>.</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Fit summary-statistics BLR models with <span class="in">`stblr_csr()`</span> or annotation-aware CSR</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>   models with <span class="in">`stblr_csr_annot()`</span>.</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>stats <span class="ot">&lt;-</span> <span class="fu">make_stats</span>(</span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>  Glist,</span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>  y,</span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> nthreads</span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>Glist <span class="ot">&lt;-</span> <span class="fu">make_sparseLD</span>(</span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>  <span class="at">out_prefix =</span> <span class="fu">file.path</span>(data_dir, <span class="st">"ld_test"</span>),</span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a>  <span class="at">pos_bp =</span> <span class="cn">NULL</span>,</span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_distance_bp =</span> <span class="dv">0</span>,</span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_distance_variants =</span> <span class="dv">1000</span>,</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>  <span class="at">r2_threshold =</span> <span class="fl">0.001</span>,</span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a>  <span class="at">block_size =</span> <span class="dv">1024</span>,</span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>  <span class="at">nthreads =</span> <span class="dv">4</span></span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a>fit_csr <span class="ot">&lt;-</span> <span class="fu">stblr_csr</span>(</span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a>  <span class="at">stats =</span> stats,</span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"bayesC"</span></span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stats()`</span> computes marker-trait summary statistics used by <span class="in">`stblr_csr()`</span>.</span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a><span class="in">`make_sparseLD()`</span> computes disk-backed sparse LD and stores sparse-LD metadata</span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a>in <span class="in">`Glist$sparseLD`</span>. The updated <span class="in">`Glist`</span> is then passed to <span class="in">`stblr_csr()`</span> and</span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>related CSR functions.</span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a><span class="fu">## BED Workflow</span></span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-89"><a href="#cb6-89" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Prepare or load a BED-backed <span class="in">`Glist`</span>.</span>
+<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Fit individual-level BLR models using <span class="in">`stblr_bed()`</span>.</span>
+<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Use standardized output fields where available.</span>
+<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a>fit_bed <span class="ot">&lt;-</span> <span class="fu">stblr_bed</span>(</span>
+<span id="cb6-95"><a href="#cb6-95" aria-hidden="true" tabindex="-1"></a>  <span class="at">Glist =</span> Glist,</span>
+<span id="cb6-96"><a href="#cb6-96" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> y,</span>
+<span id="cb6-97"><a href="#cb6-97" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"bayesC"</span></span>
+<span id="cb6-98"><a href="#cb6-98" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-99"><a href="#cb6-99" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-100"><a href="#cb6-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a><span class="in">`stblr_bed()`</span> supports <span class="in">`method = "bayesC"`</span> and <span class="in">`method = "bayesR"`</span>. Its current</span>
+<span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a>arguments include phenotype data <span class="in">`y`</span>, <span class="in">`Glist`</span>, optional <span class="in">`chr`</span>, <span class="in">`cls`</span>, <span class="in">`rows`</span>,</span>
+<span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a><span class="in">`scale`</span>, MCMC controls, BayesC prior controls, BayesR mixture controls, and BED</span>
+<span id="cb6-104"><a href="#cb6-104" aria-hidden="true" tabindex="-1"></a>scheduled-chain controls. <span class="in">`covar`</span> is not currently adjusted by this interface;</span>
+<span id="cb6-105"><a href="#cb6-105" aria-hidden="true" tabindex="-1"></a>pass pre-adjusted phenotypes. <span class="in">`chain_seeds`</span> are not currently supported by the</span>
+<span id="cb6-106"><a href="#cb6-106" aria-hidden="true" tabindex="-1"></a>BED scheduled-chain backends.</span>
+<span id="cb6-107"><a href="#cb6-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-108"><a href="#cb6-108" aria-hidden="true" tabindex="-1"></a><span class="fu">## Model Family Map</span></span>
+<span id="cb6-109"><a href="#cb6-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-110"><a href="#cb6-110" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Family <span class="pp">|</span> Function <span class="pp">|</span> Backend <span class="pp">|</span> Requires sparse LD <span class="pp">|</span> Uses individual BED genotypes <span class="pp">|</span> Uses annotations <span class="pp">|</span> Component probabilities <span class="pp">|</span> <span class="in">`selection_s`</span> <span class="pp">|</span> LD-swap / fine-mapping <span class="pp">|</span> Main outputs <span class="pp">|</span></span>
+<span id="cb6-111"><a href="#cb6-111" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---:|---:|---:|---:|---:|---:|---|</span></span>
+<span id="cb6-112"><a href="#cb6-112" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Annotation-unaware CSR BayesC <span class="pp">|</span> <span class="in">`stblr_csr(..., method = "bayesC")`</span> <span class="pp">|</span> <span class="in">`csr_bayesc`</span> or scheduled CSR BayesC <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> fixed and sampled in unscheduled CSR; not scheduled <span class="pp">|</span> LD-swap for unscheduled CSR with <span class="in">`updateLDswap = TRUE`</span>; fine-mapping helpers use <span class="in">`fit$dm`</span> and LD <span class="pp">|</span> <span class="in">`dm`</span>, <span class="in">`bm`</span>, <span class="in">`vbs`</span>, <span class="in">`vgs`</span>, <span class="in">`ves`</span>, <span class="in">`vle`</span>, <span class="in">`vld`</span>, <span class="in">`input`</span>, optional <span class="in">`chains`</span> <span class="pp">|</span></span>
+<span id="cb6-113"><a href="#cb6-113" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Annotation-unaware CSR BayesR <span class="pp">|</span> <span class="in">`stblr_csr(..., method = "bayesR")`</span> <span class="pp">|</span> <span class="in">`csr_bayesr`</span> <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> yes, <span class="in">`component_0`</span> is null <span class="pp">|</span> fixed and sampled <span class="pp">|</span> LD-swap with <span class="in">`updateLDswap = TRUE`</span>; fine-mapping helpers use <span class="in">`fit$dm`</span> and LD <span class="pp">|</span> common outputs plus <span class="in">`comp_prob`</span>, <span class="in">`dm_component_mean`</span>, <span class="in">`ncomp`</span> where available <span class="pp">|</span></span>
+<span id="cb6-114"><a href="#cb6-114" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Individual-level BED BayesC <span class="pp">|</span> <span class="in">`stblr_bed(..., method = "bayesC")`</span> <span class="pp">|</span> BED scheduled-chain backend <span class="pp">|</span> no <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> no LD-swap; compatible with post-processing that only needs <span class="in">`fit$dm`</span>/<span class="in">`fit$bm`</span> <span class="pp">|</span> <span class="in">`dm`</span>, <span class="in">`bm`</span>, <span class="in">`input`</span>, CPO/log-CPO diagnostics, chain-summary matrices <span class="pp">|</span></span>
+<span id="cb6-115"><a href="#cb6-115" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Individual-level BED BayesR <span class="pp">|</span> <span class="in">`stblr_bed(..., method = "bayesR")`</span> <span class="pp">|</span> BED BayesR scheduled-chain backend <span class="pp">|</span> no <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> yes, <span class="in">`component_0`</span> is null <span class="pp">|</span> no <span class="pp">|</span> no LD-swap; compatible with post-processing that only needs <span class="in">`fit$dm`</span>/<span class="in">`fit$bm`</span> <span class="pp">|</span> BED common outputs plus <span class="in">`comp_prob`</span>, <span class="in">`dm_component_mean`</span> <span class="pp">|</span></span>
+<span id="cb6-116"><a href="#cb6-116" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fixed-prior annotation CSR <span class="pp">|</span> <span class="in">`stblr_csr_annot(..., annotation_model = "prior")`</span>; wrapper <span class="in">`stblr_csr_prior_annot()`</span> <span class="pp">|</span> <span class="in">`csr_prior_bayesc`</span> <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> fixed marker priors <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> LD-swap where enabled; no sampler-level <span class="in">`selection_s`</span> <span class="pp">|</span> common outputs plus <span class="in">`annotation_prior`</span>/<span class="in">`annotation_summary`</span> where returned <span class="pp">|</span></span>
+<span id="cb6-117"><a href="#cb6-117" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Learned annotation CSR <span class="pp">|</span> <span class="in">`stblr_csr_annot(..., annotation_model = "learned")`</span>; wrapper <span class="in">`stblr_csr_learn_annot()`</span> <span class="pp">|</span> <span class="in">`csr_annot_bayesc`</span> <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> learned inclusion/variance effects <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> LD-swap where enabled; no sampler-level <span class="in">`selection_s`</span> <span class="pp">|</span> common outputs plus <span class="in">`eta_pi`</span>, <span class="in">`eta_vb`</span>, <span class="in">`annotation_effects`</span>, <span class="in">`annotation_summary`</span> <span class="pp">|</span></span>
+<span id="cb6-118"><a href="#cb6-118" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Group annotation CSR <span class="pp">|</span> <span class="in">`stblr_csr_annot(..., annotation_model = "group")`</span>; wrapper <span class="in">`stblr_csr_group_annot()`</span> <span class="pp">|</span> <span class="in">`csr_group_bayesc`</span> <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> mutually exclusive groups <span class="pp">|</span> no <span class="pp">|</span> no <span class="pp">|</span> LD-swap where enabled; no sampler-level <span class="in">`selection_s`</span> <span class="pp">|</span> common outputs plus <span class="in">`group_pi`</span>, <span class="in">`group_vb_multiplier`</span>, <span class="in">`group_nincluded`</span>, <span class="in">`group_size`</span>, <span class="in">`annotation_summary`</span> <span class="pp">|</span></span>
+<span id="cb6-119"><a href="#cb6-119" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> SBayesRC-style annotation CSR <span class="pp">|</span> <span class="in">`stblr_csr_annot(..., annotation_model = "sbayesrc")`</span>; wrapper <span class="in">`stblr_csr_sbayesrc_generic()`</span> <span class="pp">|</span> <span class="in">`csr_sbayesrc`</span> <span class="pp">|</span> yes <span class="pp">|</span> no <span class="pp">|</span> component probabilities <span class="pp">|</span> yes, <span class="in">`gamma_0.00`</span> is null <span class="pp">|</span> fixed and sampled <span class="pp">|</span> LD-swap supported <span class="pp">|</span> common outputs plus <span class="in">`comp_prob`</span>, <span class="in">`dm_component_mean`</span>, <span class="in">`alpha`</span>, <span class="in">`sigmaSqAlpha`</span>, <span class="in">`ncomp`</span> <span class="pp">|</span></span>
+<span id="cb6-120"><a href="#cb6-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-121"><a href="#cb6-121" aria-hidden="true" tabindex="-1"></a><span class="fu">## `selection_s` Support</span></span>
+<span id="cb6-122"><a href="#cb6-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-123"><a href="#cb6-123" aria-hidden="true" tabindex="-1"></a>Fixed global <span class="in">`selection_s`</span> and sampled trait-specific <span class="in">`selection_s`</span> are</span>
+<span id="cb6-124"><a href="#cb6-124" aria-hidden="true" tabindex="-1"></a>supported for:</span>
+<span id="cb6-125"><a href="#cb6-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-126"><a href="#cb6-126" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_bayesc`</span>;</span>
+<span id="cb6-127"><a href="#cb6-127" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_bayesr`</span>;</span>
+<span id="cb6-128"><a href="#cb6-128" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_sbayesrc`</span>.</span>
+<span id="cb6-129"><a href="#cb6-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-130"><a href="#cb6-130" aria-hidden="true" tabindex="-1"></a>They are not supported for:</span>
+<span id="cb6-131"><a href="#cb6-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-132"><a href="#cb6-132" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_scheduled_bayesc`</span>;</span>
+<span id="cb6-133"><a href="#cb6-133" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_prior_bayesc`</span>;</span>
+<span id="cb6-134"><a href="#cb6-134" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_annot_bayesc`</span>;</span>
+<span id="cb6-135"><a href="#cb6-135" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`csr_group_bayesc`</span>;</span>
+<span id="cb6-136"><a href="#cb6-136" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>BED backends.</span>
+<span id="cb6-137"><a href="#cb6-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-138"><a href="#cb6-138" aria-hidden="true" tabindex="-1"></a>Sampled-S defaults are:</span>
+<span id="cb6-139"><a href="#cb6-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-140"><a href="#cb6-140" aria-hidden="true" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb6-141"><a href="#cb6-141" aria-hidden="true" tabindex="-1"></a>selection_s_init <span class="ot">=</span> <span class="dv">0</span></span>
+<span id="cb6-142"><a href="#cb6-142" aria-hidden="true" tabindex="-1"></a>selection_s_prior <span class="ot">=</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">2</span>)</span>
+<span id="cb6-143"><a href="#cb6-143" aria-hidden="true" tabindex="-1"></a>selection_s_proposal_sd <span class="ot">=</span> <span class="fl">0.35</span></span>
+<span id="cb6-144"><a href="#cb6-144" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-145"><a href="#cb6-145" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-146"><a href="#cb6-146" aria-hidden="true" tabindex="-1"></a>CSR effects are on the standardized-genotype scale. The MAF-dependent prior</span>
+<span id="cb6-147"><a href="#cb6-147" aria-hidden="true" tabindex="-1"></a>scale is:</span>
+<span id="cb6-148"><a href="#cb6-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-149"><a href="#cb6-149" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb6-150"><a href="#cb6-150" aria-hidden="true" tabindex="-1"></a><span class="in">q_j(S) = h_j^(S + 1)</span></span>
+<span id="cb6-151"><a href="#cb6-151" aria-hidden="true" tabindex="-1"></a><span class="in">h_j = 2 p_j (1 - p_j)</span></span>
+<span id="cb6-152"><a href="#cb6-152" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-153"><a href="#cb6-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-154"><a href="#cb6-154" aria-hidden="true" tabindex="-1"></a><span class="fu">## Standardized Output Fields</span></span>
+<span id="cb6-155"><a href="#cb6-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-156"><a href="#cb6-156" aria-hidden="true" tabindex="-1"></a>Model outputs are standardized across backends where possible:</span>
+<span id="cb6-157"><a href="#cb6-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-158"><a href="#cb6-158" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$dm`</span>: marker-by-trait posterior inclusion probability or non-null</span>
+<span id="cb6-159"><a href="#cb6-159" aria-hidden="true" tabindex="-1"></a>  probability.</span>
+<span id="cb6-160"><a href="#cb6-160" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$bm`</span>: marker-by-trait posterior mean effect.</span>
+<span id="cb6-161"><a href="#cb6-161" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$vbs`</span>: posterior trace of marker-effect variance.</span>
+<span id="cb6-162"><a href="#cb6-162" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$vgs`</span>: posterior trace of genetic variance.</span>
+<span id="cb6-163"><a href="#cb6-163" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$ves`</span>: posterior trace of residual variance.</span>
+<span id="cb6-164"><a href="#cb6-164" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$vle`</span>: posterior trace of linkage-equilibrium contribution, where</span>
+<span id="cb6-165"><a href="#cb6-165" aria-hidden="true" tabindex="-1"></a>  returned.</span>
+<span id="cb6-166"><a href="#cb6-166" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$vld`</span>: posterior trace of LD contribution, where returned.</span>
+<span id="cb6-167"><a href="#cb6-167" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$input`</span>: backend, model, settings, and metadata.</span>
+<span id="cb6-168"><a href="#cb6-168" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$chains`</span>: optional compact chain-level output when supported and</span>
+<span id="cb6-169"><a href="#cb6-169" aria-hidden="true" tabindex="-1"></a>  <span class="in">`keep_chains = TRUE`</span>.</span>
+<span id="cb6-170"><a href="#cb6-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-171"><a href="#cb6-171" aria-hidden="true" tabindex="-1"></a>BayesR and SBayesRC outputs:</span>
+<span id="cb6-172"><a href="#cb6-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-173"><a href="#cb6-173" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$comp_prob`</span>: marker-by-component posterior probabilities by trait.</span>
+<span id="cb6-174"><a href="#cb6-174" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$dm_component_mean`</span>: posterior mean component/effect-class summary.</span>
+<span id="cb6-175"><a href="#cb6-175" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>BayesR null component: <span class="in">`component_0`</span>.</span>
+<span id="cb6-176"><a href="#cb6-176" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>SBayesRC null component: <span class="in">`gamma_0.00`</span>.</span>
+<span id="cb6-177"><a href="#cb6-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-178"><a href="#cb6-178" aria-hidden="true" tabindex="-1"></a>Annotation-aware outputs are model-specific and may include:</span>
+<span id="cb6-179"><a href="#cb6-179" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-180"><a href="#cb6-180" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$annotation_summary`</span>;</span>
+<span id="cb6-181"><a href="#cb6-181" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$annotation_pi`</span>;</span>
+<span id="cb6-182"><a href="#cb6-182" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$annotation_effects`</span>;</span>
+<span id="cb6-183"><a href="#cb6-183" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$annotation_prior`</span>;</span>
+<span id="cb6-184"><a href="#cb6-184" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$eta_pi`</span>, <span class="in">`fit$eta_vb`</span> for learned annotation BayesC;</span>
+<span id="cb6-185"><a href="#cb6-185" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$group_pi`</span>, <span class="in">`fit$group_vb_multiplier`</span>, <span class="in">`fit$group_nincluded`</span>,</span>
+<span id="cb6-186"><a href="#cb6-186" aria-hidden="true" tabindex="-1"></a>  <span class="in">`fit$group_size`</span> for group BayesC;</span>
+<span id="cb6-187"><a href="#cb6-187" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$alpha`</span>, <span class="in">`fit$sigmaSqAlpha`</span>, and <span class="in">`fit$ncomp`</span> for SBayesRC-style fits;</span>
+<span id="cb6-188"><a href="#cb6-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-189"><a href="#cb6-189" aria-hidden="true" tabindex="-1"></a>Sampled-S outputs:</span>
+<span id="cb6-190"><a href="#cb6-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-191"><a href="#cb6-191" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$selection_s`</span>;</span>
+<span id="cb6-192"><a href="#cb6-192" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$selection_s_sd`</span>;</span>
+<span id="cb6-193"><a href="#cb6-193" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$selection_s_min`</span>;</span>
+<span id="cb6-194"><a href="#cb6-194" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$selection_s_max`</span>;</span>
+<span id="cb6-195"><a href="#cb6-195" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$selection_s_trace`</span>;</span>
+<span id="cb6-196"><a href="#cb6-196" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$selection_s_acceptance`</span>.</span>
+<span id="cb6-197"><a href="#cb6-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-198"><a href="#cb6-198" aria-hidden="true" tabindex="-1"></a>With <span class="in">`keep_chains = TRUE`</span>, supported CSR chain objects include:</span>
+<span id="cb6-199"><a href="#cb6-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-200"><a href="#cb6-200" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$chains[[trait]][[chain]]$selection_s`</span>;</span>
+<span id="cb6-201"><a href="#cb6-201" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`fit$chains[[trait]][[chain]]$selection_s_acceptance`</span>.</span>
+<span id="cb6-202"><a href="#cb6-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-203"><a href="#cb6-203" aria-hidden="true" tabindex="-1"></a><span class="fu">## Helper Function Map</span></span>
+<span id="cb6-204"><a href="#cb6-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-205"><a href="#cb6-205" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Helper <span class="pp">|</span> Consumes <span class="pp">|</span> Returns <span class="pp">|</span> Applies to <span class="pp">|</span> Notes <span class="pp">|</span></span>
+<span id="cb6-206"><a href="#cb6-206" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|</span></span>
+<span id="cb6-207"><a href="#cb6-207" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_stblr_posterior()`</span> <span class="pp">|</span> A fit with trace matrices such as <span class="in">`vbs`</span>, <span class="in">`vgs`</span>, <span class="in">`ves`</span>, <span class="in">`pis`</span>, <span class="in">`vle`</span>, <span class="in">`vld`</span> <span class="pp">|</span> Data frame of posterior means, intervals, diagnostics, and derived quantities <span class="pp">|</span> Fits with compatible traces <span class="pp">|</span> General posterior trace summary helper <span class="pp">|</span></span>
+<span id="cb6-208"><a href="#cb6-208" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`plot_stblr_posterior()`</span> <span class="pp">|</span> Output from <span class="in">`summarise_stblr_posterior()`</span> <span class="pp">|</span> Base R posterior interval plot, invisibly returns plotted data <span class="pp">|</span> Any compatible posterior summary <span class="pp">|</span> Plot helper, not a sampler <span class="pp">|</span></span>
+<span id="cb6-209"><a href="#cb6-209" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_stblr_bayesr_components()`</span> <span class="pp">|</span> A BayesR/SBayesRC-style fit with <span class="in">`dm`</span> and <span class="in">`comp_prob`</span> <span class="pp">|</span> Trait-level component and PIP diagnostics, optionally unstable markers <span class="pp">|</span> BayesR/SBayesRC component fits <span class="pp">|</span> Uses <span class="in">`component_0`</span> for BayesR and the detected null component such as <span class="in">`gamma_0.00`</span> for SBayesRC <span class="pp">|</span></span>
+<span id="cb6-210"><a href="#cb6-210" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise_stblr_maf_architecture()`</span> <span class="pp">|</span> A fit with <span class="in">`dm`</span>/<span class="in">`bm`</span> plus <span class="in">`maf`</span> or <span class="in">`h`</span>, or recoverable MAF/heterozygosity <span class="pp">|</span> Post-hoc MAF architecture regression summary <span class="pp">|</span> Any fit with marker summaries <span class="pp">|</span> Descriptive post-hoc diagnostic, distinct from sampler-level <span class="in">`selection_s`</span> <span class="pp">|</span></span>
+<span id="cb6-211"><a href="#cb6-211" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_credible_sets_from_ld()`</span> <span class="pp">|</span> Named PIP vector and dense regional LD matrix <span class="pp">|</span> Credible-set summary, sets, aligned PIP, parameters <span class="pp">|</span> Any named PIP/LD input <span class="pp">|</span> R-level post-processing <span class="pp">|</span></span>
+<span id="cb6-212"><a href="#cb6-212" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_multisignal_credible_sets_from_ld()`</span> <span class="pp">|</span> Named PIP vector and dense regional LD matrix <span class="pp">|</span> Approximate multi-signal credible-set summary and sets <span class="pp">|</span> Any named PIP/LD input <span class="pp">|</span> Uses marginal PIPs, not posterior inclusion configurations <span class="pp">|</span></span>
+<span id="cb6-213"><a href="#cb6-213" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`make_stblr_credible_sets()`</span> <span class="pp">|</span> Fit with <span class="in">`fit$dm`</span>, optional <span class="in">`Glist`</span>, optional dense <span class="in">`LD`</span>, optional marker sets <span class="pp">|</span> Combined <span class="in">`summary`</span>, nested <span class="in">`sets`</span>, <span class="in">`loci`</span>, <span class="in">`parameters`</span>, and resolved <span class="in">`trait`</span> <span class="pp">|</span> ST-BLR fits with marker-level PIPs <span class="pp">|</span> Uses <span class="in">`fit$dm`</span>; can extract regional LD from <span class="in">`Glist$sparseLD`</span> <span class="pp">|</span></span>
+<span id="cb6-214"><a href="#cb6-214" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`extract_stblr_finemap_loci()`</span> <span class="pp">|</span> Genome-wide fit, <span class="in">`Glist`</span>, and predefined locus sets <span class="pp">|</span> <span class="in">`stblr_finemap`</span> object with <span class="in">`summary`</span>, <span class="in">`markers`</span>, optional <span class="in">`credible_sets`</span>, <span class="in">`loci`</span>, <span class="in">`parameters`</span> <span class="pp">|</span> Genome-wide fits with named <span class="in">`fit$dm`</span>/<span class="in">`fit$bm`</span> <span class="pp">|</span> Post-processing only; does not rerun MCMC <span class="pp">|</span></span>
+<span id="cb6-215"><a href="#cb6-215" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`finemap_stblr_csr()`</span> <span class="pp">|</span> Global CSR fit, <span class="in">`Glist`</span>, <span class="in">`stats`</span>, and local marker sets <span class="pp">|</span> <span class="in">`stblr_finemap`</span> object with local run summaries and optional credible sets <span class="pp">|</span> CSR fits <span class="pp">|</span> Runs local CSR fine-mapping using global architecture estimates <span class="pp">|</span></span>
+<span id="cb6-216"><a href="#cb6-216" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`check_stblr_backend_consistency()`</span> <span class="pp">|</span> Formatted ST-BLR fit <span class="pp">|</span> Backend consistency check object <span class="pp">|</span> Standardized fit objects <span class="pp">|</span> Validates expected fields, dimensions, metadata, and optional LD-swap output <span class="pp">|</span></span>
+<span id="cb6-217"><a href="#cb6-217" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`check_stblr_convergence()`</span> <span class="pp">|</span> Fit with MCMC trace matrices <span class="pp">|</span> Simple convergence diagnostic list <span class="pp">|</span> Fits with compatible traces <span class="pp">|</span> Screening diagnostics, not proof of convergence <span class="pp">|</span></span>
+<span id="cb6-218"><a href="#cb6-218" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-219"><a href="#cb6-219" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fine-Mapping, LD-Swap, and Credible Sets</span></span>
+<span id="cb6-220"><a href="#cb6-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-221"><a href="#cb6-221" aria-hidden="true" tabindex="-1"></a>LD-swap diagnostics are available through <span class="in">`fit$ld_swap`</span> and chain-level</span>
+<span id="cb6-222"><a href="#cb6-222" aria-hidden="true" tabindex="-1"></a><span class="in">`ld_swap`</span> / <span class="in">`ld_swap_chains`</span> output when <span class="in">`updateLDswap = TRUE`</span> and the backend</span>
+<span id="cb6-223"><a href="#cb6-223" aria-hidden="true" tabindex="-1"></a>supports it. LD-swap is a sampler mixing diagnostic and proposal mechanism,</span>
+<span id="cb6-224"><a href="#cb6-224" aria-hidden="true" tabindex="-1"></a>not a standalone credible-set object.</span>
+<span id="cb6-225"><a href="#cb6-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-226"><a href="#cb6-226" aria-hidden="true" tabindex="-1"></a>PIP is represented by <span class="in">`fit$dm`</span>. Credible sets are constructed by helper</span>
+<span id="cb6-227"><a href="#cb6-227" aria-hidden="true" tabindex="-1"></a>functions such as <span class="in">`make_stblr_credible_sets()`</span>, <span class="in">`make_credible_sets_from_ld()`</span>,</span>
+<span id="cb6-228"><a href="#cb6-228" aria-hidden="true" tabindex="-1"></a>and <span class="in">`make_multisignal_credible_sets_from_ld()`</span> from PIPs and LD. They are</span>
+<span id="cb6-229"><a href="#cb6-229" aria-hidden="true" tabindex="-1"></a>workflow/helper-level diagnostics unless a specific fine-mapping helper returns</span>
+<span id="cb6-230"><a href="#cb6-230" aria-hidden="true" tabindex="-1"></a>them in its own post-processing object.</span>
+<span id="cb6-231"><a href="#cb6-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-232"><a href="#cb6-232" aria-hidden="true" tabindex="-1"></a><span class="in">`make_stblr_credible_sets()`</span> requires a fit containing marker PIPs in</span>
+<span id="cb6-233"><a href="#cb6-233" aria-hidden="true" tabindex="-1"></a><span class="in">`fit$dm`</span>. It can use a supplied dense LD matrix or, for CSR workflows, use</span>
+<span id="cb6-234"><a href="#cb6-234" aria-hidden="true" tabindex="-1"></a><span class="in">`Glist$sparseLD$prefix`</span> to extract regional dense LD from disk-backed sparse</span>
+<span id="cb6-235"><a href="#cb6-235" aria-hidden="true" tabindex="-1"></a>LD. It defines automatic loci around high-PIP markers when explicit <span class="in">`sets`</span> are</span>
+<span id="cb6-236"><a href="#cb6-236" aria-hidden="true" tabindex="-1"></a>not supplied. Credible-set probability is cumulative marginal PIP within the</span>
+<span id="cb6-237"><a href="#cb6-237" aria-hidden="true" tabindex="-1"></a>selected LD neighborhood, reported as <span class="in">`cs_pip`</span>; the helper returns <span class="in">`summary`</span>,</span>
+<span id="cb6-238"><a href="#cb6-238" aria-hidden="true" tabindex="-1"></a>nested <span class="in">`sets`</span>, <span class="in">`locus_sets`</span>, <span class="in">`loci`</span>, <span class="in">`parameters`</span>, and the resolved <span class="in">`trait`</span>.</span></code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
