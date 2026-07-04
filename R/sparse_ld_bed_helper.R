@@ -558,20 +558,94 @@ NULL
   pis = trace_mat(raw$trace$pis),
   covb = variance_mat(raw$variance$covb),
   covg = variance_mat(raw$variance$covg),
-  cove = variance_mat(raw$variance$cove)
+  cove = variance_mat(raw$variance$cove),
+  vb = variance_mat(raw$variance$vb),
+  vg = variance_mat(raw$variance$vg),
+  ve = variance_mat(raw$variance$ve)
  )
+ if (identical(meta$model, "bayesr")) {
+  out$component <- out$d
+ }
 
  pi_final <- as.matrix(raw$pi$final)
  pi_mean <- as.matrix(raw$pi$mean)
- colnames(pi_final) <- colnames(pi_mean) <- raw$pi$names %||% c("pi0", "pi1")
+ pi_names <- raw$pi$names %||% paste0("component_", seq_len(ncol(pi_final)) - 1L)
+ colnames(pi_final) <- colnames(pi_mean) <- pi_names
  rownames(pi_final) <- rownames(pi_mean) <- trait_names
- out$pi <- if (nt == 1L) as.numeric(pi_final[1L, ]) else pi_final
- out$pim <- if (nt == 1L) as.numeric(pi_mean[1L, ]) else pi_mean
+ if (identical(meta$model, "bayesr")) {
+  out$pi <- pi_final
+  out$pim <- pi_mean
+  out$final_pi <- pi_final
+  out$mean_pi <- pi_mean
+ } else {
+  out$pi <- if (nt == 1L) as.numeric(pi_final[1L, ]) else pi_final
+  out$pim <- if (nt == 1L) as.numeric(pi_mean[1L, ]) else pi_mean
+ }
 
  for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
   if (!is.null(raw$marker[[nm]])) {
    out[[nm]] <- marker_mat(raw$marker[[nm]])
   }
+ }
+
+ if (identical(meta$model, "bayesr")) {
+  component_names <- raw$component$names %||% pi_names
+  comp_prob <- raw$component$prob
+  if (is.list(comp_prob) && length(comp_prob) == nt) {
+   comp_prob <- lapply(seq_len(nt), function(tt) {
+    x <- as.matrix(comp_prob[[tt]])
+    rownames(x) <- variable_names
+    colnames(x) <- component_names
+    x
+   })
+   names(comp_prob) <- trait_names
+   out$comp_prob <- comp_prob
+   dm_from_components <- vapply(
+    comp_prob,
+    function(x) 1 - x[, "component_0"],
+    numeric(m)
+   )
+   if (nt == 1L) dm_from_components <- matrix(dm_from_components, ncol = 1L)
+   rownames(dm_from_components) <- variable_names
+   colnames(dm_from_components) <- trait_names
+   out$dm <- dm_from_components
+  }
+  if (!is.null(raw$component$dm_component_mean)) {
+   out$dm_component_mean <- marker_mat(raw$component$dm_component_mean)
+  }
+  if (!is.null(raw$component$ncomp)) {
+   ncomp <- as.matrix(raw$component$ncomp)
+   rownames(ncomp) <- trait_names
+   colnames(ncomp) <- component_names
+   out$ncomp <- ncomp
+  }
+  if (!is.null(raw$component$mixture_var)) {
+   out$mixture_var <- stats::setNames(
+    as.numeric(raw$component$mixture_var),
+    component_names
+   )
+  }
+ }
+
+ set_updateE_diagnostics <- function(x) {
+  x <- as.matrix(x)
+  if (ncol(x) == 8L) {
+   colnames(x) <- c(
+    "trait_index", "chain_index", "n_updateE", "min_sse",
+    "min_residual_scale", "max_nonzero_components",
+    "max_abs_effect", "max_fitted_quadratic"
+   )
+  } else if (ncol(x) == 9L) {
+   colnames(x) <- c(
+    "trait_index", "chain_index", "n_updateE", "min_sse",
+    "min_sse_iter", "min_residual_scale", "max_nonzero_components",
+    "max_abs_effect", "max_fitted_quadratic"
+   )
+  }
+  x
+ }
+ if (!is.null(raw$diagnostics$updateE)) {
+  out$updateE_diagnostics <- set_updateE_diagnostics(raw$diagnostics$updateE)
  }
 
  ld_swap <- raw$diagnostics$ld_swap
@@ -582,18 +656,32 @@ NULL
   out$ld_swap <- as.data.frame(ld_swap)
  }
 
- if (!is.null(raw$chains)) {
+ has_chains <- !is.null(raw$chains) &&
+  length(raw$chains) > 0L &&
+  !isTRUE(identical(raw$chains, list())) &&
+  any(!vapply(raw$chains, is.null, logical(1)))
+
+ if (has_chains) {
   chains <- setNames(vector("list", nt), trait_names)
   ld_swap_chains <- list()
   for (tt in seq_len(nt)) {
+   if (tt > length(raw$chains) || is.null(raw$chains[[tt]])) {
+    next
+   }
    trait_raw <- raw$chains[[tt]]
    nch <- length(trait_raw)
+   if (nch < 1L) {
+    next
+   }
    trait_chains <- setNames(vector("list", nch), paste0("chain", seq_len(nch)))
    trait_ld <- matrix(NA_real_, nrow = nch, ncol = 3)
    rownames(trait_ld) <- names(trait_chains)
    colnames(trait_ld) <- c("attempted", "accepted", "acceptance_rate")
    for (cc in seq_len(nch)) {
     ch <- trait_raw[[cc]]
+    if (is.null(ch)) {
+     next
+    }
     trait_chains[[cc]] <- list(
      dm = stats::setNames(as.numeric(ch$marker$dm), variable_names),
      bm = stats::setNames(as.numeric(ch$marker$bm), variable_names)
@@ -602,6 +690,48 @@ NULL
      trait_chains[[cc]]$state <- stats::setNames(
       as.numeric(ch$marker$state), variable_names
      )
+    }
+    if (identical(meta$model, "bayesr")) {
+     trait_chains[[cc]]$component <- trait_chains[[cc]]$state
+     if (!is.null(ch$component$prob)) {
+      cp <- as.matrix(ch$component$prob)
+      rownames(cp) <- variable_names
+      colnames(cp) <- raw$component$names %||% pi_names
+      trait_chains[[cc]]$comp_prob <- cp
+     }
+     if (!is.null(ch$component$dm_component_mean)) {
+      trait_chains[[cc]]$dm_component_mean <- stats::setNames(
+       as.numeric(ch$component$dm_component_mean), variable_names
+      )
+     }
+     if (!is.null(ch$pi$final)) {
+      trait_chains[[cc]]$final_pi <- stats::setNames(
+       as.numeric(ch$pi$final), raw$component$names %||% pi_names
+      )
+     }
+     if (!is.null(ch$pi$mean)) {
+      trait_chains[[cc]]$mean_pi <- stats::setNames(
+       as.numeric(ch$pi$mean), raw$component$names %||% pi_names
+      )
+     }
+     if (!is.null(ch$component$ncomp)) {
+      trait_chains[[cc]]$ncomp <- stats::setNames(
+       as.numeric(ch$component$ncomp), raw$component$names %||% pi_names
+      )
+     }
+     for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+      if (!is.null(ch$trace[[nm]])) {
+       trait_chains[[cc]][[nm]] <- as.numeric(ch$trace[[nm]])
+       names(trait_chains[[cc]][[nm]]) <- paste0(
+        "Iter", seq_along(trait_chains[[cc]][[nm]])
+       )
+      }
+     }
+     if (!is.null(ch$diagnostics$updateE)) {
+      trait_chains[[cc]]$updateE_diagnostics <- set_updateE_diagnostics(
+       matrix(as.numeric(ch$diagnostics$updateE), nrow = 1L)
+      )
+     }
     }
     if (!is.null(ch$diagnostics$ld_swap)) {
      ld <- as.numeric(ch$diagnostics$ld_swap[1L, seq_len(3L)])
@@ -623,6 +753,9 @@ NULL
   }
   out$chains <- chains
   if (length(ld_swap_chains)) out$ld_swap_chains <- ld_swap_chains
+ } else {
+  out$chains <- NULL
+  out$ld_swap_chains <- NULL
  }
 
  if (!is.null(raw$selection$trace)) {
@@ -895,6 +1028,9 @@ NULL
 
 .format_stblr_csr_bayesr_fit <- function(fit, nt, m, trait_names,
                                          variable_names, n_components) {
+ if (.is_stblr_raw_v1(fit)) {
+  return(.format_stblr_raw_v1(fit, trait_names, variable_names))
+ }
  if (!is.list(fit) || is.null(names(fit))) {
   stop(".format_stblr_csr_bayesr_fit() expects a named CSR BayesR return list.")
  }
@@ -1450,14 +1586,21 @@ stblr_csr_bayesr <- function(
   selection_s_log_h = selection_s_info$log_h
  )
 
- fit <- .format_stblr_csr_bayesr_fit(
-  raw,
-  nt = nt,
-  m = m,
-  trait_names = trait_names,
-  variable_names = variable_names,
-  n_components = length(mixture_var)
- )
+ if (.is_stblr_raw_v1(raw)) {
+  if (isTRUE(selection_s_info$fixed)) {
+   raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  }
+  fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
+ } else {
+  fit <- .format_stblr_csr_bayesr_fit(
+   raw,
+   nt = nt,
+   m = m,
+   trait_names = trait_names,
+   variable_names = variable_names,
+   n_components = length(mixture_var)
+  )
+ }
  if (isTRUE(estimate_selection_s)) {
   keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
   s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]

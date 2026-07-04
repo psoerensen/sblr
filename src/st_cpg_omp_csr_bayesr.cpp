@@ -1380,6 +1380,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ves_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat vles_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat vlds_task(ntasks, trace_len, arma::fill::zeros);
+ arma::mat pis_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat selection_s_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat final_pi_task(ntasks, K, arma::fill::zeros);
  arma::mat mean_pi_task(ntasks, K, arma::fill::zeros);
@@ -1397,6 +1398,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
  arma::vec selection_s_attempted_task(ntasks, arma::fill::zeros);
  arma::vec selection_s_accepted_task(ntasks, arma::fill::zeros);
+ arma::vec nsamples_task(ntasks, arma::fill::zeros);
  std::vector<arma::mat> comp_prob_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::vec> ncomp_task(static_cast<std::size_t>(ntasks));
  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
@@ -1701,6 +1703,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     ves_task(task_u, static_cast<arma::uword>(it)) = ve_t;
     vles_task(task_u, static_cast<arma::uword>(it)) = vle_t;
     vlds_task(task_u, static_cast<arma::uword>(it)) = vld_t;
+    pis_task(task_u, static_cast<arma::uword>(it)) = 1.0 - pi_t[0];
     selection_s_task(task_u, static_cast<arma::uword>(it)) = selection_s_current;
 
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
@@ -1753,6 +1756,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
    selection_s_attempted_task(task_u) = selection_s_attempted_t;
    selection_s_accepted_task(task_u) = selection_s_accepted_t;
+   nsamples_task(task_u) = nsamples_t;
    comp_prob_task[static_cast<std::size_t>(task)] = comp_prob_t;
    ncomp_task[static_cast<std::size_t>(task)] = arma::sum(comp_prob_t, 0).t();
   } catch (const std::exception& e) {
@@ -1793,6 +1797,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ves(nt, trace_len, arma::fill::zeros);
  arma::mat vle(nt, trace_len, arma::fill::zeros);
  arma::mat vld(nt, trace_len, arma::fill::zeros);
+ arma::mat pis(nt, trace_len, arma::fill::zeros);
  arma::mat selection_s(nt, trace_len, arma::fill::zeros);
  arma::mat final_pi(nt, K, arma::fill::zeros);
  arma::mat mean_pi(nt, K, arma::fill::zeros);
@@ -1804,6 +1809,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  arma::mat ld_swap_chain_diagnostics(ntasks, 5, arma::fill::zeros);
  arma::vec selection_s_attempted(nt, arma::fill::zeros);
  arma::vec selection_s_accepted(nt, arma::fill::zeros);
+ arma::vec nsamples(nt, arma::fill::zeros);
  std::vector<arma::mat> comp_prob(static_cast<std::size_t>(nt));
  arma::mat ncomp(nt, K, arma::fill::zeros);
 
@@ -1867,12 +1873,14 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    ves.row(tu) += ves_task.row(task_u);
    vle.row(tu) += vles_task.row(task_u);
    vld.row(tu) += vlds_task.row(task_u);
+   pis.row(tu) += pis_task.row(task_u);
    selection_s.row(tu) += selection_s_task.row(task_u);
    final_pi.row(tu) += final_pi_task.row(task_u);
    mean_pi.row(tu) += mean_pi_task.row(task_u);
    final_vb(tu) += final_vb_task(task_u);
    final_vg(tu) += final_vg_task(task_u);
    final_ve(tu) += final_ve_task(task_u);
+   nsamples(tu) += nsamples_task(task_u);
    comp_prob[static_cast<std::size_t>(t)] += comp_prob_task[static_cast<std::size_t>(task)];
    ncomp.row(tu) += ncomp_task[static_cast<std::size_t>(task)].t();
 
@@ -1896,12 +1904,14 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   ves.row(tu) *= inv_chains;
   vle.row(tu) *= inv_chains;
   vld.row(tu) *= inv_chains;
+  pis.row(tu) *= inv_chains;
   selection_s.row(tu) *= inv_chains;
   final_pi.row(tu) *= inv_chains;
   mean_pi.row(tu) *= inv_chains;
   final_vb(tu) *= inv_chains;
   final_vg(tu) *= inv_chains;
   final_ve(tu) *= inv_chains;
+  nsamples(tu) *= inv_chains;
   comp_prob[static_cast<std::size_t>(t)] *= inv_chains;
   ncomp.row(tu) *= inv_chains;
 
@@ -1916,53 +1926,6 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    }
    bm_sd.row(tu) = arma::sqrt(bm_sd.row(tu) / static_cast<double>(nchains - 1));
    dm_sd.row(tu) = arma::sqrt(dm_sd.row(tu) / static_cast<double>(nchains - 1));
-  }
- }
-
- Rcpp::List comp_prob_out(nt);
- for (int t = 0; t < nt; ++t) comp_prob_out[t] = comp_prob[static_cast<std::size_t>(t)];
-
- Rcpp::List chains_out;
- if (keep_chains) {
-  chains_out = Rcpp::List(nt);
-  for (int t = 0; t < nt; ++t) {
-   Rcpp::List trait_chains(nchains);
-   for (int chain = 0; chain < nchains; ++chain) {
-    const int task = t * nchains + chain;
-    const arma::uword task_u = static_cast<arma::uword>(task);
-    Rcpp::NumericVector updateE_diag(9);
-    for (int j = 0; j < 9; ++j) {
-     updateE_diag[j] = updateE_diagnostics(task_u, static_cast<arma::uword>(j));
-    }
-    Rcpp::NumericVector ld_swap_diag(3);
-    ld_swap_diag[0] = ld_swap_chain_diagnostics(task_u, 2);
-    ld_swap_diag[1] = ld_swap_chain_diagnostics(task_u, 3);
-    ld_swap_diag[2] = ld_swap_chain_diagnostics(task_u, 4);
-    Rcpp::List chain_out = Rcpp::List::create(
-     Rcpp::Named("dm") = dm_task.row(task_u).t(),
-     Rcpp::Named("bm") = bm_task.row(task_u).t(),
-     Rcpp::Named("comp_prob") = comp_prob_task[static_cast<std::size_t>(task)],
-     Rcpp::Named("dm_component_mean") = component_mean_task.row(task_u).t(),
-     Rcpp::Named("final_pi") = final_pi_task.row(task_u).t(),
-     Rcpp::Named("mean_pi") = mean_pi_task.row(task_u).t(),
-     Rcpp::Named("vbs") = vbs_task.row(task_u).t(),
-     Rcpp::Named("vgs") = vgs_task.row(task_u).t(),
-     Rcpp::Named("ves") = ves_task.row(task_u).t(),
-     Rcpp::Named("vle") = vles_task.row(task_u).t(),
-     Rcpp::Named("vld") = vlds_task.row(task_u).t(),
-     Rcpp::Named("updateE_diagnostics") = updateE_diag,
-     Rcpp::Named("ld_swap") = ld_swap_diag
-    );
-    if (estimate_selection_s) {
-     const double attempted = selection_s_attempted_task(task_u);
-     const double accepted = selection_s_accepted_task(task_u);
-     chain_out["selection_s"] = selection_s_task.row(task_u).t();
-     chain_out["selection_s_acceptance"] =
-      attempted > 0.0 ? accepted / attempted : 0.0;
-    }
-    trait_chains[chain] = chain_out;
-   }
-   chains_out[t] = trait_chains;
   }
  }
 
@@ -1982,53 +1945,278 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   ve(tu, tu) = final_ve(tu);
  }
 
- Rcpp::List out = Rcpp::List::create(
-  Rcpp::Named("bm") = bm.t(),
-  Rcpp::Named("dm") = dm.t(),
-  Rcpp::Named("wy") = wy_mat.t(),
-  Rcpp::Named("r") = r_out.t(),
-  Rcpp::Named("b") = b_out.t(),
-  Rcpp::Named("component") = component_out.t(),
-  Rcpp::Named("marker_index") = arma::regspace<arma::vec>(0, m - 1),
-  Rcpp::Named("vbs") = vbs.t(),
-  Rcpp::Named("vgs") = vgs.t(),
-  Rcpp::Named("ves") = ves.t(),
+ // --------------------------------------------------------------------------
+ // Build named raw schema v1
+ // --------------------------------------------------------------------------
+
+ const int n_trace = nit + nburn;
+ const bool return_chain_summaries = (nchains > 1) || keep_chains;
+
+ auto marker_matrix = [&](const arma::mat& x) {
+  Rcpp::NumericMatrix out(m, nt);
+  for (int t = 0; t < nt; ++t) {
+   for (int i = 0; i < m; ++i) {
+    out(i, t) = x(static_cast<arma::uword>(t), static_cast<arma::uword>(i));
+   }
+  }
+  return out;
+ };
+
+ auto trace_matrix = [&](const arma::mat& x) {
+  Rcpp::NumericMatrix out(n_trace, nt);
+  for (int t = 0; t < nt; ++t) {
+   for (int it = 0; it < n_trace; ++it) {
+    out(it, t) = x(static_cast<arma::uword>(t), static_cast<arma::uword>(it));
+   }
+  }
+  return out;
+ };
+
+ Rcpp::CharacterVector component_names(K);
+ for (int k = 0; k < K; ++k) {
+  component_names[k] = "component_" + std::to_string(k);
+ }
+
+ Rcpp::List comp_prob_out(nt);
+ for (int t = 0; t < nt; ++t) {
+  comp_prob_out[t] = comp_prob[static_cast<std::size_t>(t)];
+ }
+
+ Rcpp::NumericVector selection_mean(nt);
+ Rcpp::NumericVector selection_sd(nt);
+ Rcpp::NumericVector selection_min(nt);
+ Rcpp::NumericVector selection_max(nt);
+ Rcpp::NumericVector selection_acceptance(nt);
+ for (int t = 0; t < nt; ++t) {
+  const arma::uword tu = static_cast<arma::uword>(t);
+  selection_acceptance[t] =
+   selection_s_attempted(tu) > 0.0
+   ? selection_s_accepted(tu) / selection_s_attempted(tu)
+   : 0.0;
+
+  if (estimate_selection_s) {
+   double mean_s = 0.0;
+   double min_s = std::numeric_limits<double>::infinity();
+   double max_s = -std::numeric_limits<double>::infinity();
+   int ns = 0;
+   for (int it = nburn; it < n_trace; ++it) {
+    const double val = selection_s(tu, static_cast<arma::uword>(it));
+    mean_s += val;
+    min_s = std::min(min_s, val);
+    max_s = std::max(max_s, val);
+    ++ns;
+   }
+   if (ns > 0) mean_s /= static_cast<double>(ns);
+   double ss = 0.0;
+   if (ns > 1) {
+    for (int it = nburn; it < n_trace; ++it) {
+     const double diff = selection_s(tu, static_cast<arma::uword>(it)) - mean_s;
+     ss += diff * diff;
+    }
+    selection_sd[t] = std::sqrt(ss / static_cast<double>(ns - 1));
+   } else {
+    selection_sd[t] = NA_REAL;
+   }
+   selection_mean[t] = mean_s;
+   selection_min[t] = ns > 0 ? min_s : NA_REAL;
+   selection_max[t] = ns > 0 ? max_s : NA_REAL;
+  } else {
+   selection_mean[t] = NA_REAL;
+   selection_sd[t] = NA_REAL;
+   selection_min[t] = NA_REAL;
+   selection_max[t] = NA_REAL;
+  }
+ }
+
+ Rcpp::IntegerVector n_used(nt);
+ Rcpp::NumericVector nsamples_vec(nt);
+ for (int t = 0; t < nt; ++t) {
+  n_used[t] = n[static_cast<std::size_t>(t)];
+  nsamples_vec[t] = nsamples(static_cast<arma::uword>(t));
+ }
+
+ Rcpp::List marker = Rcpp::List::create(
+  Rcpp::Named("bm") = marker_matrix(bm),
+  Rcpp::Named("dm") = marker_matrix(dm),
+  Rcpp::Named("wy") = marker_matrix(wy_mat),
+  Rcpp::Named("r") = marker_matrix(r_out),
+  Rcpp::Named("b") = marker_matrix(b_out),
+  Rcpp::Named("state") = marker_matrix(component_out)
+ );
+ if (return_chain_summaries) {
+  marker["bm_sd"] = marker_matrix(bm_sd);
+  marker["bm_min"] = marker_matrix(bm_min);
+  marker["bm_max"] = marker_matrix(bm_max);
+  marker["dm_sd"] = marker_matrix(dm_sd);
+  marker["dm_min"] = marker_matrix(dm_min);
+  marker["dm_max"] = marker_matrix(dm_max);
+ }
+
+ Rcpp::List trace = Rcpp::List::create(
+  Rcpp::Named("vbs") = trace_matrix(vbs),
+  Rcpp::Named("vgs") = trace_matrix(vgs),
+  Rcpp::Named("ves") = trace_matrix(ves),
+  Rcpp::Named("vle") = trace_matrix(vle),
+  Rcpp::Named("vld") = trace_matrix(vld),
+  Rcpp::Named("pis") = trace_matrix(pis)
+ );
+
+ Rcpp::List variance = Rcpp::List::create(
   Rcpp::Named("covb") = covb,
   Rcpp::Named("covg") = covg,
   Rcpp::Named("cove") = cove,
   Rcpp::Named("vb") = vb,
   Rcpp::Named("vg") = vg,
-  Rcpp::Named("ve") = ve,
-  Rcpp::Named("pi") = final_pi,
-  Rcpp::Named("pim") = mean_pi,
-  Rcpp::Named("vle") = vle.t(),
-  Rcpp::Named("vld") = vld.t(),
-  Rcpp::Named("bm_sd") = bm_sd.t(),
-  Rcpp::Named("bm_min") = bm_min.t(),
-  Rcpp::Named("bm_max") = bm_max.t(),
-  Rcpp::Named("dm_sd") = dm_sd.t(),
-  Rcpp::Named("dm_min") = dm_min.t(),
-  Rcpp::Named("dm_max") = dm_max.t(),
-  Rcpp::Named("comp_prob") = comp_prob_out,
-  Rcpp::Named("dm_component_mean") = component_mean.t(),
-  Rcpp::Named("ncomp") = ncomp,
-  Rcpp::Named("mixture_var") = mixture_var_vec,
-  Rcpp::Named("updateE_diagnostics") = updateE_diagnostics,
-  Rcpp::Named("ld_swap") = ld_swap_diagnostics,
-  Rcpp::Named("ld_swap_chains") = ld_swap_chain_diagnostics
+  Rcpp::Named("ve") = ve
  );
- if (estimate_selection_s) {
-  Rcpp::NumericVector selection_s_acceptance(nt);
+
+ Rcpp::List diagnostics = Rcpp::List::create(
+  Rcpp::Named("nsamples") = nsamples_vec,
+  Rcpp::Named("n_used") = n_used,
+  Rcpp::Named("log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("mean_log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("seconds_mean") = Rcpp::NumericVector(nt),
+  Rcpp::Named("seconds_max") = Rcpp::NumericVector(nt),
+  Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap_diagnostics) : R_NilValue,
+  Rcpp::Named("updateE") = updateE_diagnostics
+ );
+
+ Rcpp::List chains = R_NilValue;
+ if (keep_chains) {
+  chains = Rcpp::List(nt);
+  Rcpp::CharacterVector trait_names(nt);
   for (int t = 0; t < nt; ++t) {
-   const arma::uword tu = static_cast<arma::uword>(t);
-   selection_s_acceptance[t] =
-    selection_s_attempted(tu) > 0.0
-    ? selection_s_accepted(tu) / selection_s_attempted(tu)
-    : 0.0;
+   trait_names[t] = "trait" + std::to_string(t + 1);
+   Rcpp::List trait_chains(nchains);
+   Rcpp::CharacterVector chain_names(nchains);
+   for (int chain = 0; chain < nchains; ++chain) {
+    chain_names[chain] = "chain" + std::to_string(chain + 1);
+    const int task = t * nchains + chain;
+    const arma::uword task_u = static_cast<arma::uword>(task);
+    Rcpp::NumericVector chain_bm(m);
+    Rcpp::NumericVector chain_dm(m);
+    Rcpp::NumericVector chain_state(m);
+    Rcpp::NumericVector chain_component_mean(m);
+    for (int i = 0; i < m; ++i) {
+     const arma::uword iu = static_cast<arma::uword>(i);
+     chain_bm[i] = bm_task(task_u, iu);
+     chain_dm[i] = dm_task(task_u, iu);
+     chain_state[i] = component_task(task_u, iu);
+     chain_component_mean[i] = component_mean_task(task_u, iu);
+    }
+    Rcpp::NumericVector updateE_diag(9);
+    for (int j = 0; j < 9; ++j) {
+     updateE_diag[j] = updateE_diagnostics(task_u, static_cast<arma::uword>(j));
+    }
+    Rcpp::NumericMatrix chain_ld(1, 3);
+    chain_ld(0, 0) = ld_swap_chain_diagnostics(task_u, 2);
+    chain_ld(0, 1) = ld_swap_chain_diagnostics(task_u, 3);
+    chain_ld(0, 2) = ld_swap_chain_diagnostics(task_u, 4);
+
+    Rcpp::List chain_selection = Rcpp::List::create(
+     Rcpp::Named("trace") = R_NilValue,
+     Rcpp::Named("acceptance") = R_NilValue
+    );
+    if (estimate_selection_s) {
+     const double attempted = selection_s_attempted_task(task_u);
+     const double accepted = selection_s_accepted_task(task_u);
+     chain_selection["trace"] = selection_s_task.row(task_u).t();
+     chain_selection["acceptance"] =
+      attempted > 0.0 ? accepted / attempted : 0.0;
+    }
+
+    trait_chains[chain] = Rcpp::List::create(
+     Rcpp::Named("marker") = Rcpp::List::create(
+      Rcpp::Named("bm") = chain_bm,
+      Rcpp::Named("dm") = chain_dm,
+      Rcpp::Named("state") = chain_state
+     ),
+     Rcpp::Named("trace") = Rcpp::List::create(
+      Rcpp::Named("vbs") = vbs_task.row(task_u).t(),
+      Rcpp::Named("vgs") = vgs_task.row(task_u).t(),
+      Rcpp::Named("ves") = ves_task.row(task_u).t(),
+      Rcpp::Named("vle") = vles_task.row(task_u).t(),
+      Rcpp::Named("vld") = vlds_task.row(task_u).t(),
+      Rcpp::Named("pis") = pis_task.row(task_u).t()
+     ),
+     Rcpp::Named("pi") = Rcpp::List::create(
+      Rcpp::Named("final") = final_pi_task.row(task_u).t(),
+      Rcpp::Named("mean") = mean_pi_task.row(task_u).t()
+     ),
+     Rcpp::Named("component") = Rcpp::List::create(
+      Rcpp::Named("prob") = comp_prob_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("ncomp") = ncomp_task[static_cast<std::size_t>(task)].t(),
+      Rcpp::Named("dm_component_mean") = chain_component_mean
+     ),
+     Rcpp::Named("selection") = chain_selection,
+     Rcpp::Named("diagnostics") = Rcpp::List::create(
+      Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue,
+      Rcpp::Named("updateE") = updateE_diag
+     )
+    );
+   }
+   trait_chains.attr("names") = chain_names;
+   chains[t] = trait_chains;
   }
-  out["selection_s_trace"] = selection_s.t();
-  out["selection_s_acceptance"] = selection_s_acceptance;
+  chains.attr("names") = trait_names;
  }
- if (keep_chains) out["chains"] = chains_out;
- return out;
+
+ Rcpp::List selection = Rcpp::List::create(
+  Rcpp::Named("enabled") = estimate_selection_s || use_selection_s_prior_scale,
+  Rcpp::Named("fixed") = use_selection_s_prior_scale,
+  Rcpp::Named("scale") = "standardized_genotype_effect",
+  Rcpp::Named("trace") = estimate_selection_s ? Rcpp::wrap(trace_matrix(selection_s)) : R_NilValue,
+  Rcpp::Named("mean") = estimate_selection_s ? Rcpp::wrap(selection_mean) : R_NilValue,
+  Rcpp::Named("sd") = estimate_selection_s ? Rcpp::wrap(selection_sd) : R_NilValue,
+  Rcpp::Named("min") = estimate_selection_s ? Rcpp::wrap(selection_min) : R_NilValue,
+  Rcpp::Named("max") = estimate_selection_s ? Rcpp::wrap(selection_max) : R_NilValue,
+  Rcpp::Named("acceptance") = estimate_selection_s ? Rcpp::wrap(selection_acceptance) : R_NilValue
+ );
+
+ Rcpp::List raw = Rcpp::List::create(
+  Rcpp::Named("schema") = Rcpp::List::create(
+   Rcpp::Named("class") = "stblr_raw",
+   Rcpp::Named("version") = 1
+  ),
+  Rcpp::Named("meta") = Rcpp::List::create(
+   Rcpp::Named("model") = "bayesr",
+   Rcpp::Named("backend") = "csr_bayesr",
+   Rcpp::Named("data_level") = "summary",
+   Rcpp::Named("prior_type") = "component",
+   Rcpp::Named("m") = m,
+   Rcpp::Named("nt") = nt,
+   Rcpp::Named("n_trace") = n_trace,
+   Rcpp::Named("nit") = nit,
+   Rcpp::Named("nburn") = nburn,
+   Rcpp::Named("nthin") = nthin,
+   Rcpp::Named("nchains") = nchains,
+   Rcpp::Named("keep_chains") = keep_chains,
+   Rcpp::Named("n_components") = K,
+   Rcpp::Named("n_annotations") = 0,
+   Rcpp::Named("n_groups") = 0
+  ),
+  Rcpp::Named("marker") = marker,
+  Rcpp::Named("trace") = trace,
+  Rcpp::Named("variance") = variance,
+  Rcpp::Named("pi") = Rcpp::List::create(
+   Rcpp::Named("final") = final_pi,
+   Rcpp::Named("mean") = mean_pi,
+   Rcpp::Named("names") = component_names
+  ),
+  Rcpp::Named("diagnostics") = diagnostics,
+  Rcpp::Named("chains") = chains,
+  Rcpp::Named("prior") = Rcpp::List::create(),
+  Rcpp::Named("group") = Rcpp::List::create(),
+  Rcpp::Named("annotation") = Rcpp::List::create(),
+  Rcpp::Named("component") = Rcpp::List::create(
+   Rcpp::Named("names") = component_names,
+   Rcpp::Named("mixture_var") = mixture_var_vec,
+   Rcpp::Named("prob") = comp_prob_out,
+   Rcpp::Named("ncomp") = ncomp,
+   Rcpp::Named("dm_component_mean") = marker_matrix(component_mean)
+  ),
+  Rcpp::Named("selection") = selection
+ );
+ raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
+ return raw;
 }

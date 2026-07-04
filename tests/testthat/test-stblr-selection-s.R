@@ -688,6 +688,8 @@ test_that("sampled selection_s works with CSR BayesC LD-swap", {
   expect_s3_class(fit$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$ld_swap)))
+  expect_null(fit$chains)
+  expect_null(fit$ld_swap_chains)
 })
 
 test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {

@@ -50,9 +50,9 @@ n_trace x nt
 For ordinary CSR BayesC, `marker$dm` is `P(d = 1)` and `trace$pis` is the
 sampled active-marker probability `pi1` for every saved iteration.
 
-## First Migrated Backend
+## Migrated Backends
 
-Phase 1 migrates only ordinary summary-statistic CSR BayesC:
+Phase 1 migrated ordinary summary-statistic CSR BayesC:
 
 ```text
 src/st_cpg_omp_csr.cpp
@@ -62,16 +62,34 @@ This backend returns `schema`, `meta`, `marker`, `trace`, `variance`, `pi`,
 `diagnostics`, `chains`, and `selection`. The `prior`, `group`, `annotation`,
 and `component` namespaces are present as empty lists.
 
+Phase 2 migrates summary-statistic CSR BayesR:
+
+```text
+src/st_cpg_omp_csr_bayesr.cpp
+```
+
+CSR BayesR uses the `component` namespace. `raw$component$prob` is a list of
+length `nt`, with one `m x K` marker-by-component posterior probability matrix
+per trait. The null component is always named `component_0`, and the formatted
+`fit$dm` is derived as `1 - P(component_0)`.
+
+For BayesR, `raw$trace$pis` and formatted `fit$pis` are the total active-marker
+probability trace, `1 - pi_component_0`. Final and posterior mean mixture
+probabilities are stored in `raw$pi$final` and `raw$pi$mean` as `nt x K`
+matrices with component names.
+
 The R formatter `.format_stblr_raw_v1()` consumes only this named schema and
 maps it back to the existing user-facing fit fields such as `bm`, `dm`, `vbs`,
 `vgs`, `ves`, `vle`, `vld`, `pi`, `pim`, `pis`, `chains`, `ld_swap`, and
-sampled `selection_s` summaries.
+sampled `selection_s` summaries. For BayesR it also maps `component$prob` to
+`fit$comp_prob` and `component$dm_component_mean` to
+`fit$dm_component_mean`.
 
 ## Non-Migrated Backends
 
 The old positional formatter remains active for non-migrated backends,
-including scheduled CSR BayesC, CSR BayesR, CSR SBayesRC, prior/group/learned
-annotation CSR BayesC, BED backends, and individual-level scheduled backends.
+including scheduled CSR BayesC, CSR SBayesRC, prior/group/learned annotation
+CSR BayesC, BED backends, and individual-level scheduled backends.
 
 Wrappers should explicitly detect:
 
@@ -89,7 +107,6 @@ The intended follow-up order is:
 1. Marker-prior CSR BayesC.
 2. Group CSR BayesC.
 3. Learned annotation CSR BayesC.
-4. CSR BayesR.
-5. CSR SBayesRC.
-6. Scheduled and BED backends after the summary-statistic CSR schemas have
+4. CSR SBayesRC.
+5. Scheduled and BED backends after the summary-statistic CSR schemas have
    stabilized.
