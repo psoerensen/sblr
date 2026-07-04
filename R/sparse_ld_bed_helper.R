@@ -311,6 +311,12 @@ NULL
  )
 }
 
+.stblr_ensure_ld_swap_fields <- function(fit) {
+ if (!("ld_swap" %in% names(fit))) fit["ld_swap"] <- list(NULL)
+ if (!("ld_swap_chains" %in% names(fit))) fit["ld_swap_chains"] <- list(NULL)
+ fit
+}
+
 .format_stblr_fit <- function(fit, nt, m, trait_names, variable_names,
                               keep_diagnostics = FALSE) {
  nms <- c(
@@ -497,7 +503,7 @@ NULL
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
  if (sum(diag(out$cove)) > 0) out$re <- cov2cor(out$cove)
- out
+ .stblr_ensure_ld_swap_fields(out)
 }
 
 .format_stblr_csr_bayesc_fit <- .format_stblr_fit
@@ -948,7 +954,7 @@ NULL
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
  if (sum(diag(out$cove)) > 0) out$re <- cov2cor(out$cove)
- out
+ .stblr_ensure_ld_swap_fields(out)
 }
 
 .format_stblr_bayesr_fit <- function(fit, nt, m, trait_names, variable_names,
@@ -1470,7 +1476,7 @@ NULL
   stop("CSR BayesR component probabilities must be finite, within [0, 1], and sum to 1 by marker.")
  }
 
- out
+ .stblr_ensure_ld_swap_fields(out)
 }
 
 #' Fit an Exact CSR Summary-Statistics BayesR Model

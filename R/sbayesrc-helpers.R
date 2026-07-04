@@ -727,5 +727,5 @@ format_sbayesrc_csr_fit <- function(
  if (valid_covariance(out$covg)) out$rg <- stats::cov2cor(out$covg)
  if (valid_covariance(out$cove)) out$re <- stats::cov2cor(out$cove)
 
- out
+ .stblr_ensure_ld_swap_fields(out)
 }

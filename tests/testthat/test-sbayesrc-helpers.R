@@ -213,9 +213,12 @@ test_that("format_sbayesrc_csr_fit formats a synthetic sampler result", {
    "bm", "dm", "wy", "r", "b", "component", "marker_index",
    "vbs", "vgs", "ves", "covb", "covg", "cove", "vb", "vg", "ve",
    "pi", "pim", "alpha_flat", "alpha", "sigmaSqAlpha", "vle", "vld",
-   "comp_prob", "dm_component_mean", "ncomp", "rb", "rg", "re"
+   "comp_prob", "dm_component_mean", "ncomp", "rb", "rg", "re",
+   "ld_swap", "ld_swap_chains"
   )
  )
+ expect_null(out$ld_swap)
+ expect_null(out$ld_swap_chains)
  expect_equal(dim(out$bm), c(m, nt))
  expect_equal(dim(out$dm), c(m, nt))
  expect_equal(dim(out$vbs), c(3, nt))

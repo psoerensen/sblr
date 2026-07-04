@@ -155,7 +155,7 @@
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
  if (sum(diag(out$cove)) > 0) out$re <- cov2cor(out$cove)
 
- out
+ .stblr_ensure_ld_swap_fields(out)
 }
 
 #' Fit ST-BLR with Learned Annotation Effects
