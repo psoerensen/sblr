@@ -503,6 +503,143 @@ NULL
 .format_stblr_csr_bayesc_fit <- .format_stblr_fit
 .format_stblr_bed_bayesc_fit <- .format_stblr_fit
 
+.is_stblr_raw_v1 <- function(raw) {
+ is.list(raw) &&
+  is.list(raw$schema) &&
+  identical(raw$schema$class, "stblr_raw") &&
+  identical(as.integer(raw$schema$version), 1L)
+}
+
+.format_stblr_raw_v1 <- function(raw, trait_names = NULL, variable_names = NULL) {
+ if (!.is_stblr_raw_v1(raw)) {
+  stop(".format_stblr_raw_v1() expects an stblr_raw schema version 1 object.")
+ }
+
+ meta <- raw$meta
+ nt <- as.integer(meta$nt)
+ m <- as.integer(meta$m)
+ n_trace <- as.integer(meta$n_trace)
+ if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
+ if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
+
+ marker_mat <- function(x) {
+  x <- as.matrix(x)
+  rownames(x) <- variable_names
+  colnames(x) <- trait_names
+  x
+ }
+ trace_mat <- function(x) {
+  x <- as.matrix(x)
+  rownames(x) <- paste0("Iter", seq_len(nrow(x)))
+  colnames(x) <- trait_names
+  x
+ }
+ variance_mat <- function(x) {
+  x <- as.matrix(x)
+  rownames(x) <- colnames(x) <- trait_names
+  x
+ }
+ named_trait_vec <- function(x) {
+  stats::setNames(as.numeric(x), trait_names)
+ }
+
+ out <- list(
+  bm = marker_mat(raw$marker$bm),
+  dm = marker_mat(raw$marker$dm),
+  wy = marker_mat(raw$marker$wy),
+  r = marker_mat(raw$marker$r),
+  b = marker_mat(raw$marker$b),
+  d = marker_mat(raw$marker$state),
+  vbs = trace_mat(raw$trace$vbs),
+  vgs = trace_mat(raw$trace$vgs),
+  ves = trace_mat(raw$trace$ves),
+  vle = trace_mat(raw$trace$vle),
+  vld = trace_mat(raw$trace$vld),
+  pis = trace_mat(raw$trace$pis),
+  covb = variance_mat(raw$variance$covb),
+  covg = variance_mat(raw$variance$covg),
+  cove = variance_mat(raw$variance$cove)
+ )
+
+ pi_final <- as.matrix(raw$pi$final)
+ pi_mean <- as.matrix(raw$pi$mean)
+ colnames(pi_final) <- colnames(pi_mean) <- raw$pi$names %||% c("pi0", "pi1")
+ rownames(pi_final) <- rownames(pi_mean) <- trait_names
+ out$pi <- if (nt == 1L) as.numeric(pi_final[1L, ]) else pi_final
+ out$pim <- if (nt == 1L) as.numeric(pi_mean[1L, ]) else pi_mean
+
+ for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
+  if (!is.null(raw$marker[[nm]])) {
+   out[[nm]] <- marker_mat(raw$marker[[nm]])
+  }
+ }
+
+ ld_swap <- raw$diagnostics$ld_swap
+ if (!is.null(ld_swap)) {
+  ld_swap <- as.matrix(ld_swap)
+  rownames(ld_swap) <- trait_names
+  colnames(ld_swap) <- c("attempted", "accepted", "acceptance_rate")
+  out$ld_swap <- as.data.frame(ld_swap)
+ }
+
+ if (!is.null(raw$chains)) {
+  chains <- setNames(vector("list", nt), trait_names)
+  ld_swap_chains <- list()
+  for (tt in seq_len(nt)) {
+   trait_raw <- raw$chains[[tt]]
+   nch <- length(trait_raw)
+   trait_chains <- setNames(vector("list", nch), paste0("chain", seq_len(nch)))
+   trait_ld <- matrix(NA_real_, nrow = nch, ncol = 3)
+   rownames(trait_ld) <- names(trait_chains)
+   colnames(trait_ld) <- c("attempted", "accepted", "acceptance_rate")
+   for (cc in seq_len(nch)) {
+    ch <- trait_raw[[cc]]
+    trait_chains[[cc]] <- list(
+     dm = stats::setNames(as.numeric(ch$marker$dm), variable_names),
+     bm = stats::setNames(as.numeric(ch$marker$bm), variable_names)
+    )
+    if (!is.null(ch$marker$state)) {
+     trait_chains[[cc]]$state <- stats::setNames(
+      as.numeric(ch$marker$state), variable_names
+     )
+    }
+    if (!is.null(ch$diagnostics$ld_swap)) {
+     ld <- as.numeric(ch$diagnostics$ld_swap[1L, seq_len(3L)])
+     trait_chains[[cc]]$ld_swap <- stats::setNames(
+      ld, c("attempted", "accepted", "acceptance_rate")
+     )
+     trait_ld[cc, ] <- ld
+    }
+    if (!is.null(ch$selection$trace)) {
+     trait_chains[[cc]]$selection_s <- as.numeric(ch$selection$trace)
+     trait_chains[[cc]]$selection_s_acceptance <-
+      as.numeric(ch$selection$acceptance)
+    }
+   }
+   chains[[tt]] <- trait_chains
+   if (any(!is.na(trait_ld))) {
+    ld_swap_chains[[trait_names[tt]]] <- as.data.frame(trait_ld)
+   }
+  }
+  out$chains <- chains
+  if (length(ld_swap_chains)) out$ld_swap_chains <- ld_swap_chains
+ }
+
+ if (!is.null(raw$selection$trace)) {
+  out$selection_s_trace <- trace_mat(raw$selection$trace)
+  out$selection_s <- named_trait_vec(raw$selection$mean)
+  out$selection_s_sd <- named_trait_vec(raw$selection$sd)
+  out$selection_s_min <- named_trait_vec(raw$selection$min)
+  out$selection_s_max <- named_trait_vec(raw$selection$max)
+  out$selection_s_acceptance <- named_trait_vec(raw$selection$acceptance)
+ }
+
+ if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
+ if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
+ if (sum(diag(out$cove)) > 0) out$re <- cov2cor(out$cove)
+ out
+}
+
 .format_stblr_bayesr_fit <- function(fit, nt, m, trait_names, variable_names,
                                      n_components,
                                      keep_diagnostics = FALSE) {
@@ -1979,7 +2116,14 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    selection_s_log_h = selection_s_info$log_h
   )))
  }
- fit <- .format_stblr_fit(raw, nt, m, trait_names, variable_names)
+ if (.is_stblr_raw_v1(raw)) {
+  if (isTRUE(selection_s_info$fixed)) {
+   raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  }
+  fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
+ } else {
+  fit <- .format_stblr_fit(raw, nt, m, trait_names, variable_names)
+ }
  if (isTRUE(estimate_selection_s)) {
   keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
   s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]

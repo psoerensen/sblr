@@ -799,7 +799,7 @@ inline bool attempt_ld_swap_st_csr_unscaled(
 // -----------------------------------------------------------------------------
 
 // [[Rcpp::export]]
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
+Rcpp::List stblr_cpg_omp_csr(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -1796,234 +1796,294 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr(
  }
 
  // --------------------------------------------------------------------------
- // Build result with same style as MT output
+ // Build named raw schema v1
  // --------------------------------------------------------------------------
 
+ const int n_trace = nit + nburn;
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
- const int base_result_size = return_chain_summaries ? (keep_chains ? 32 : 29) : 23;
- const int selection_s_trace_slot = base_result_size;
- const int selection_s_acceptance_slot = selection_s_trace_slot + 1;
- const int chain_selection_s_slot = selection_s_trace_slot + 2;
- const int chain_selection_s_acceptance_slot = selection_s_trace_slot + 3;
- const int result_size = estimate_selection_s ?
-  (keep_chains ? base_result_size + 4 : base_result_size + 2) :
-  base_result_size;
- std::vector<std::vector<std::vector<double>>> result(static_cast<std::size_t>(result_size));
 
- for (int k = 0; k < result_size; ++k) {
-  result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
- }
+ auto marker_matrix = [&](const arma::mat& x) {
+  Rcpp::NumericMatrix out(m, nt);
+  for (int t = 0; t < nt; ++t) {
+   for (int i = 0; i < m; ++i) {
+    out(i, t) = x(static_cast<arma::uword>(t), static_cast<arma::uword>(i));
+   }
+  }
+  return out;
+ };
+
+ auto trace_matrix = [&](const arma::mat& x) {
+  Rcpp::NumericMatrix out(n_trace, nt);
+  for (int t = 0; t < nt; ++t) {
+   for (int it = 0; it < n_trace; ++it) {
+    out(it, t) = x(static_cast<arma::uword>(t), static_cast<arma::uword>(it));
+   }
+  }
+  return out;
+ };
+
+ auto diagonal_matrix = [&](const arma::vec& x) {
+  Rcpp::NumericMatrix out(nt, nt);
+  for (int t = 0; t < nt; ++t) {
+   out(t, t) = x(static_cast<arma::uword>(t));
+  }
+  return out;
+ };
+
+ Rcpp::NumericMatrix pi_final(nt, 2);
+ Rcpp::NumericMatrix pi_mean(nt, 2);
+ Rcpp::NumericVector selection_mean(nt);
+ Rcpp::NumericVector selection_sd(nt);
+ Rcpp::NumericVector selection_min(nt);
+ Rcpp::NumericVector selection_max(nt);
+ Rcpp::NumericVector selection_acceptance(nt);
 
  for (int t = 0; t < nt; ++t) {
-  result[0][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // bm
-  result[1][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // dm
-  result[2][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // wy
-  result[3][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // r
-  result[4][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // b
-  result[5][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // d
-  result[6][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // marker index
+  const arma::uword tu = static_cast<arma::uword>(t);
+  pi_final(t, 0) = 1.0 - final_pi(tu);
+  pi_final(t, 1) = final_pi(tu);
 
-  result[7][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));   // vbs
-  result[8][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));   // vgs
-  result[9][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));   // ves
-
-  result[10][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));           // covb
-  result[11][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));           // covg
-  result[12][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));           // cove
-  result[13][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));           // final B
-  result[14][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));           // final G
-  result[15][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));           // final E
-
-  result[16][static_cast<std::size_t>(t)].resize(2);                                     // final pi
-  result[17][static_cast<std::size_t>(t)].resize(2);                                     // posterior mean pi approx
-
-  result[18][static_cast<std::size_t>(t)].resize(4);
-  result[19][static_cast<std::size_t>(t)].resize(2);
-  result[20][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));   // vle
-  result[21][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));   // vld = vg - vle
-  result[22][static_cast<std::size_t>(t)].resize(4);                                       // LD-swap diagnostics
-  if (return_chain_summaries) {
-   result[23][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // bm_sd
-   result[24][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // bm_min
-   result[25][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // bm_max
-   result[26][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // dm_sd
-   result[27][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // dm_min
-   result[28][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));             // dm_max
-  }
-  if (keep_chains) {
-   result[29][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));   // chain dm, chain-major
-   result[30][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * m));   // chain bm, chain-major
-   result[31][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nchains * 4));   // chain LD-swap diagnostics
-  }
-  if (estimate_selection_s) {
-   result[selection_s_trace_slot][static_cast<std::size_t>(t)].resize(
-    static_cast<std::size_t>(nit + nburn)
-   );
-   result[selection_s_acceptance_slot][static_cast<std::size_t>(t)].resize(1);
-   if (keep_chains) {
-    result[chain_selection_s_slot][static_cast<std::size_t>(t)].resize(
-     static_cast<std::size_t>(nchains * (nit + nburn))
-    );
-    result[chain_selection_s_acceptance_slot][static_cast<std::size_t>(t)].resize(
-     static_cast<std::size_t>(nchains)
-    );
-   }
-  }
- }
-
- for (int t = 0; t < nt; ++t) {
-  const std::size_t ts = static_cast<std::size_t>(t);
-
-  for (int i = 0; i < m; ++i) {
-   const arma::uword tu = static_cast<arma::uword>(t);
-   const arma::uword iu = static_cast<arma::uword>(i);
-   const std::size_t is = static_cast<std::size_t>(i);
-
-   result[0][ts][is] = bm_mat(tu, iu);
-   result[1][ts][is] = dm_mat(tu, iu);
-   result[2][ts][is] = wy_mat(tu, iu);
-   result[3][ts][is] = r_mat(tu, iu);
-   result[4][ts][is] = b_mat(tu, iu);
-   result[5][ts][is] = d_mat_double(tu, iu);
-   result[6][ts][is] = static_cast<double>(i);
-   if (return_chain_summaries) {
-    result[23][ts][is] = bm_sd_mat(tu, iu);
-    result[24][ts][is] = bm_min_mat(tu, iu);
-    result[25][ts][is] = bm_max_mat(tu, iu);
-    result[26][ts][is] = dm_sd_mat(tu, iu);
-    result[27][ts][is] = dm_min_mat(tu, iu);
-    result[28][ts][is] = dm_max_mat(tu, iu);
-   }
-  }
-
-  if (keep_chains) {
-   for (int chain = 0; chain < nchains; ++chain) {
-    const int task = t * nchains + chain;
-    const arma::uword task_u = static_cast<arma::uword>(task);
-    for (int i = 0; i < m; ++i) {
-     const std::size_t offset =
-      static_cast<std::size_t>(chain * m + i);
-     const arma::uword iu = static_cast<arma::uword>(i);
-     result[29][ts][offset] = dm_task(task_u, iu);
-     result[30][ts][offset] = bm_task(task_u, iu);
-    }
-
-    const std::size_t diag_offset = static_cast<std::size_t>(chain * 4);
-    const double attempted = ld_swap_attempted_task(task_u);
-    const double accepted = ld_swap_accepted_task(task_u);
-    result[31][ts][diag_offset] = attempted;
-    result[31][ts][diag_offset + 1] = accepted;
-    result[31][ts][diag_offset + 2] =
-     attempted > 0.0 ? accepted / attempted : 0.0;
-    result[31][ts][diag_offset + 3] = 1.0;
-   }
-  }
-  if (estimate_selection_s && keep_chains) {
-   for (int chain = 0; chain < nchains; ++chain) {
-    const int task = t * nchains + chain;
-    const arma::uword task_u = static_cast<arma::uword>(task);
-    for (int it = 0; it < nit + nburn; ++it) {
-     const std::size_t offset =
-      static_cast<std::size_t>(chain * (nit + nburn) + it);
-     result[chain_selection_s_slot][ts][offset] =
-      selection_s_task(task_u, static_cast<arma::uword>(it));
-    }
-    const double attempted = selection_s_attempted_task(task_u);
-    const double accepted = selection_s_accepted_task(task_u);
-    result[chain_selection_s_acceptance_slot][ts][static_cast<std::size_t>(chain)] =
-     attempted > 0.0 ? accepted / attempted : 0.0;
-   }
-  }
- }
-
- for (int t = 0; t < nt; ++t) {
-  const std::size_t ts = static_cast<std::size_t>(t);
-
-  for (int it = 0; it < nit + nburn; ++it) {
-   const arma::uword tu = static_cast<arma::uword>(t);
-   const arma::uword itu = static_cast<arma::uword>(it);
-   const std::size_t its = static_cast<std::size_t>(it);
-
-   result[7][ts][its] = vbs_mat(tu, itu);
-   result[8][ts][its] = vgs_mat(tu, itu);
-   result[9][ts][its] = ves_mat(tu, itu);
-   result[20][ts][its] = vles_mat(tu, itu);
-   result[21][ts][its] = vlds_mat(tu, itu);
-   if (estimate_selection_s) {
-    result[selection_s_trace_slot][ts][its] = selection_s_mat(tu, itu);
-   }
-  }
- }
-
- for (int t1 = 0; t1 < nt; ++t1) {
-  const std::size_t t1s = static_cast<std::size_t>(t1);
-
-  for (int t2 = 0; t2 < nt; ++t2) {
-   const std::size_t t2s = static_cast<std::size_t>(t2);
-
-   result[10][t1s][t2s] = 0.0;
-   result[11][t1s][t2s] = 0.0;
-   result[12][t1s][t2s] = 0.0;
-
-   result[13][t1s][t2s] = 0.0;
-   result[14][t1s][t2s] = 0.0;
-   result[15][t1s][t2s] = 0.0;
-  }
-
-  result[10][t1s][t1s] = final_vb(static_cast<arma::uword>(t1));
-  result[11][t1s][t1s] = final_vg(static_cast<arma::uword>(t1));
-  result[12][t1s][t1s] = final_ve(static_cast<arma::uword>(t1));
-
-  result[13][t1s][t1s] = final_vb(static_cast<arma::uword>(t1));
-  result[14][t1s][t1s] = final_vg(static_cast<arma::uword>(t1));
-  result[15][t1s][t1s] = final_ve(static_cast<arma::uword>(t1));
- }
-
- for (int t = 0; t < nt; ++t) {
-  const std::size_t ts = static_cast<std::size_t>(t);
-
-  result[16][ts][0] = 1.0 - final_pi(static_cast<arma::uword>(t));
-  result[16][ts][1] = final_pi(static_cast<arma::uword>(t));
-
-  // Approximate posterior mean inclusion pi from saved trace.
   double mean_pi = 0.0;
   int npi = 0;
-
-  for (int it = nburn; it < nit + nburn; ++it) {
-   mean_pi += pis_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(it));
+  for (int it = nburn; it < n_trace; ++it) {
+   mean_pi += pis_mat(tu, static_cast<arma::uword>(it));
    ++npi;
   }
-
   if (npi > 0) mean_pi /= static_cast<double>(npi);
-  else mean_pi = final_pi(static_cast<arma::uword>(t));
+  else mean_pi = final_pi(tu);
+  pi_mean(t, 0) = 1.0 - mean_pi;
+  pi_mean(t, 1) = mean_pi;
 
-  result[17][ts][0] = 1.0 - mean_pi;
-  result[17][ts][1] = mean_pi;
-
-  for (int i = 0; i < 4; ++i) {
-   result[18][ts][static_cast<std::size_t>(i)] = 0.0;
-  }
-
-  for (int i = 0; i < 2; ++i) {
-   result[19][ts][static_cast<std::size_t>(i)] = 0.0;
-  }
-
-  result[22][ts][0] = ld_swap_attempted_vec(static_cast<arma::uword>(t));
-  result[22][ts][1] = ld_swap_accepted_vec(static_cast<arma::uword>(t));
-  result[22][ts][2] =
-   (ld_swap_attempted_vec(static_cast<arma::uword>(t)) > 0.0)
-   ? ld_swap_accepted_vec(static_cast<arma::uword>(t)) /
-     ld_swap_attempted_vec(static_cast<arma::uword>(t))
+  selection_acceptance[t] =
+   selection_s_attempted_vec(tu) > 0.0
+   ? selection_s_accepted_vec(tu) / selection_s_attempted_vec(tu)
    : 0.0;
-  result[22][ts][3] = 1.0;
+
   if (estimate_selection_s) {
-   result[selection_s_acceptance_slot][ts][0] =
-    selection_s_attempted_vec(static_cast<arma::uword>(t)) > 0.0
-    ? selection_s_accepted_vec(static_cast<arma::uword>(t)) /
-      selection_s_attempted_vec(static_cast<arma::uword>(t))
-    : 0.0;
+   double mean_s = 0.0;
+   double min_s = std::numeric_limits<double>::infinity();
+   double max_s = -std::numeric_limits<double>::infinity();
+   int ns = 0;
+   for (int it = nburn; it < n_trace; ++it) {
+    const double val = selection_s_mat(tu, static_cast<arma::uword>(it));
+    mean_s += val;
+    min_s = std::min(min_s, val);
+    max_s = std::max(max_s, val);
+    ++ns;
+   }
+   if (ns > 0) mean_s /= static_cast<double>(ns);
+   double ss = 0.0;
+   if (ns > 1) {
+    for (int it = nburn; it < n_trace; ++it) {
+     const double diff = selection_s_mat(tu, static_cast<arma::uword>(it)) - mean_s;
+     ss += diff * diff;
+    }
+    selection_sd[t] = std::sqrt(ss / static_cast<double>(ns - 1));
+   } else {
+    selection_sd[t] = NA_REAL;
+   }
+   selection_mean[t] = mean_s;
+   selection_min[t] = ns > 0 ? min_s : NA_REAL;
+   selection_max[t] = ns > 0 ? max_s : NA_REAL;
+  } else {
+   selection_mean[t] = NA_REAL;
+   selection_sd[t] = NA_REAL;
+   selection_min[t] = NA_REAL;
+   selection_max[t] = NA_REAL;
   }
  }
 
- return result;
+ Rcpp::NumericMatrix ld_swap(nt, 3);
+ for (int t = 0; t < nt; ++t) {
+  const arma::uword tu = static_cast<arma::uword>(t);
+  const double attempted = ld_swap_attempted_vec(tu);
+  const double accepted = ld_swap_accepted_vec(tu);
+  ld_swap(t, 0) = attempted;
+  ld_swap(t, 1) = accepted;
+  ld_swap(t, 2) = attempted > 0.0 ? accepted / attempted : 0.0;
+ }
+
+ Rcpp::NumericVector nsamples(nt);
+ Rcpp::IntegerVector n_used(nt);
+ Rcpp::NumericVector seconds_mean(nt);
+ Rcpp::NumericVector seconds_max(nt);
+ for (int t = 0; t < nt; ++t) {
+  nsamples[t] = nsamples_vec(static_cast<arma::uword>(t));
+  n_used[t] = n[static_cast<std::size_t>(t)];
+  double sec_sum = 0.0;
+  double sec_max = 0.0;
+  for (int chain = 0; chain < nchains; ++chain) {
+   const int task = t * nchains + chain;
+   const double sec = task_seconds[static_cast<std::size_t>(task)];
+   sec_sum += sec;
+   sec_max = std::max(sec_max, sec);
+  }
+  seconds_mean[t] = sec_sum / static_cast<double>(nchains);
+  seconds_max[t] = sec_max;
+ }
+
+ Rcpp::List marker = Rcpp::List::create(
+  Rcpp::Named("bm") = marker_matrix(bm_mat),
+  Rcpp::Named("dm") = marker_matrix(dm_mat),
+  Rcpp::Named("wy") = marker_matrix(wy_mat),
+  Rcpp::Named("r") = marker_matrix(r_mat),
+  Rcpp::Named("b") = marker_matrix(b_mat),
+  Rcpp::Named("state") = marker_matrix(d_mat_double)
+ );
+ if (return_chain_summaries) {
+  marker["bm_sd"] = marker_matrix(bm_sd_mat);
+  marker["bm_min"] = marker_matrix(bm_min_mat);
+  marker["bm_max"] = marker_matrix(bm_max_mat);
+  marker["dm_sd"] = marker_matrix(dm_sd_mat);
+  marker["dm_min"] = marker_matrix(dm_min_mat);
+  marker["dm_max"] = marker_matrix(dm_max_mat);
+ }
+
+ Rcpp::List trace = Rcpp::List::create(
+  Rcpp::Named("vbs") = trace_matrix(vbs_mat),
+  Rcpp::Named("vgs") = trace_matrix(vgs_mat),
+  Rcpp::Named("ves") = trace_matrix(ves_mat),
+  Rcpp::Named("vle") = trace_matrix(vles_mat),
+  Rcpp::Named("vld") = trace_matrix(vlds_mat),
+  Rcpp::Named("pis") = trace_matrix(pis_mat)
+ );
+
+ Rcpp::List variance = Rcpp::List::create(
+  Rcpp::Named("covb") = diagonal_matrix(final_vb),
+  Rcpp::Named("covg") = diagonal_matrix(final_vg),
+  Rcpp::Named("cove") = diagonal_matrix(final_ve),
+  Rcpp::Named("vb") = diagonal_matrix(final_vb),
+  Rcpp::Named("vg") = diagonal_matrix(final_vg),
+  Rcpp::Named("ve") = diagonal_matrix(final_ve)
+ );
+
+ Rcpp::List diagnostics = Rcpp::List::create(
+  Rcpp::Named("nsamples") = nsamples,
+  Rcpp::Named("n_used") = n_used,
+  Rcpp::Named("log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("mean_log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("seconds_mean") = seconds_mean,
+  Rcpp::Named("seconds_max") = seconds_max,
+  Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap) : R_NilValue
+ );
+
+ Rcpp::List chains = R_NilValue;
+ if (keep_chains) {
+  chains = Rcpp::List(nt);
+  Rcpp::CharacterVector trait_names(nt);
+  for (int t = 0; t < nt; ++t) {
+   trait_names[t] = "trait" + std::to_string(t + 1);
+   Rcpp::List trait_chains(nchains);
+   Rcpp::CharacterVector chain_names(nchains);
+   for (int chain = 0; chain < nchains; ++chain) {
+    chain_names[chain] = "chain" + std::to_string(chain + 1);
+    const int task = t * nchains + chain;
+    const arma::uword task_u = static_cast<arma::uword>(task);
+    Rcpp::NumericVector chain_bm(m);
+    Rcpp::NumericVector chain_dm(m);
+    Rcpp::NumericVector chain_state(m);
+    for (int i = 0; i < m; ++i) {
+     const arma::uword iu = static_cast<arma::uword>(i);
+     chain_bm[i] = bm_task(task_u, iu);
+     chain_dm[i] = dm_task(task_u, iu);
+     chain_state[i] = d_task_double(task_u, iu);
+    }
+    Rcpp::NumericMatrix chain_ld(1, 3);
+    const double attempted = ld_swap_attempted_task(task_u);
+    const double accepted = ld_swap_accepted_task(task_u);
+    chain_ld(0, 0) = attempted;
+    chain_ld(0, 1) = accepted;
+    chain_ld(0, 2) = attempted > 0.0 ? accepted / attempted : 0.0;
+    Rcpp::List chain_selection = Rcpp::List::create(
+     Rcpp::Named("trace") = R_NilValue,
+     Rcpp::Named("acceptance") = R_NilValue
+    );
+    if (estimate_selection_s) {
+     Rcpp::NumericVector chain_s_trace(n_trace);
+     for (int it = 0; it < n_trace; ++it) {
+      chain_s_trace[it] = selection_s_task(task_u, static_cast<arma::uword>(it));
+     }
+     const double s_attempted = selection_s_attempted_task(task_u);
+     const double s_accepted = selection_s_accepted_task(task_u);
+     chain_selection["trace"] = chain_s_trace;
+     chain_selection["acceptance"] =
+      s_attempted > 0.0 ? s_accepted / s_attempted : 0.0;
+    }
+    trait_chains[chain] = Rcpp::List::create(
+     Rcpp::Named("marker") = Rcpp::List::create(
+      Rcpp::Named("bm") = chain_bm,
+      Rcpp::Named("dm") = chain_dm,
+      Rcpp::Named("state") = chain_state
+     ),
+     Rcpp::Named("trace") = Rcpp::List::create(),
+     Rcpp::Named("pi") = Rcpp::List::create(
+      Rcpp::Named("final") = Rcpp::NumericVector::create(
+       1.0 - final_pi_task(task_u), final_pi_task(task_u)
+      ),
+      Rcpp::Named("mean") = R_NilValue
+     ),
+     Rcpp::Named("selection") = chain_selection,
+     Rcpp::Named("diagnostics") = Rcpp::List::create(
+      Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue
+     )
+    );
+   }
+   trait_chains.attr("names") = chain_names;
+   chains[t] = trait_chains;
+  }
+  chains.attr("names") = trait_names;
+ }
+
+ Rcpp::List selection = Rcpp::List::create(
+  Rcpp::Named("enabled") = estimate_selection_s || use_selection_s_prior_scale,
+  Rcpp::Named("fixed") = use_selection_s_prior_scale,
+  Rcpp::Named("scale") = "standardized_genotype_effect",
+  Rcpp::Named("trace") = estimate_selection_s ? Rcpp::wrap(trace_matrix(selection_s_mat)) : R_NilValue,
+  Rcpp::Named("mean") = estimate_selection_s ? Rcpp::wrap(selection_mean) : R_NilValue,
+  Rcpp::Named("sd") = estimate_selection_s ? Rcpp::wrap(selection_sd) : R_NilValue,
+  Rcpp::Named("min") = estimate_selection_s ? Rcpp::wrap(selection_min) : R_NilValue,
+  Rcpp::Named("max") = estimate_selection_s ? Rcpp::wrap(selection_max) : R_NilValue,
+  Rcpp::Named("acceptance") = estimate_selection_s ? Rcpp::wrap(selection_acceptance) : R_NilValue
+ );
+
+ Rcpp::List raw = Rcpp::List::create(
+  Rcpp::Named("schema") = Rcpp::List::create(
+   Rcpp::Named("class") = "stblr_raw",
+   Rcpp::Named("version") = 1
+  ),
+  Rcpp::Named("meta") = Rcpp::List::create(
+   Rcpp::Named("model") = "bayesc",
+   Rcpp::Named("backend") = "csr_bayesc",
+   Rcpp::Named("data_level") = "summary",
+   Rcpp::Named("prior_type") = "global",
+   Rcpp::Named("m") = m,
+   Rcpp::Named("nt") = nt,
+   Rcpp::Named("n_trace") = n_trace,
+   Rcpp::Named("nit") = nit,
+   Rcpp::Named("nburn") = nburn,
+   Rcpp::Named("nthin") = nthin,
+   Rcpp::Named("nchains") = nchains,
+   Rcpp::Named("keep_chains") = keep_chains,
+   Rcpp::Named("n_components") = 2,
+   Rcpp::Named("n_annotations") = 0,
+   Rcpp::Named("n_groups") = 0
+  ),
+  Rcpp::Named("marker") = marker,
+  Rcpp::Named("trace") = trace,
+  Rcpp::Named("variance") = variance,
+  Rcpp::Named("pi") = Rcpp::List::create(
+   Rcpp::Named("final") = pi_final,
+   Rcpp::Named("mean") = pi_mean,
+   Rcpp::Named("names") = Rcpp::CharacterVector::create("pi0", "pi1")
+  ),
+  Rcpp::Named("diagnostics") = diagnostics,
+  Rcpp::Named("chains") = chains,
+  Rcpp::Named("prior") = Rcpp::List::create(),
+  Rcpp::Named("group") = Rcpp::List::create(),
+  Rcpp::Named("annotation") = Rcpp::List::create(),
+  Rcpp::Named("component") = Rcpp::List::create(),
+  Rcpp::Named("selection") = selection
+ );
+ raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
+ return raw;
 }

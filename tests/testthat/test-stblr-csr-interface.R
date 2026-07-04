@@ -45,6 +45,79 @@ make_stblr_csr_interface_stats <- function() {
   )
 }
 
+make_stblr_csr_interface_raw <- function(nit = 3L, nburn = 1L,
+                                         nchains = 1L,
+                                         keep_chains = FALSE,
+                                         updateLDswap = FALSE) {
+  stats <- make_stblr_csr_interface_stats()
+  nt <- length(stats$yy)
+  m <- stats$m
+  n <- stats$n
+  h2 <- 0.3
+  pi_init <- 0.5
+  vy <- as.numeric(stats$yy) / (n - 1)
+  B <- diag((vy * h2) / (m * pi_init), nt, nt)
+  E <- diag(vy * (1 - h2), nt, nt)
+  ssb_prior <- diag(((4 - 2) / 4) * (vy * h2) / (m * pi_init), nt, nt)
+  sse_prior <- diag(((4 - 2) / 4) * (vy * (1 - h2)), nt, nt)
+
+  stblr_cpg_omp_csr(
+    wy = stats$wy,
+    ww = stats$ww,
+    yy = stats$yy,
+    b_init = list(rep(0, m)),
+    d_init = list(rep(0, m)),
+    use_d_init = FALSE,
+    r_init = stats$wy,
+    use_r_init = FALSE,
+    rebuild_r_before_updateE = FALSE,
+    ld_prefix = make_stblr_csr_interface_prefix(),
+    B = B,
+    E = E,
+    ssb_prior = split(ssb_prior, rep(seq_len(nt), each = nt)),
+    sse_prior = split(sse_prior, rep(seq_len(nt), each = nt)),
+    pi = c(1 - pi_init, pi_init),
+    nub = 4,
+    nue = 4,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    adjE = 0.9,
+    n = rep(as.integer(n), nt),
+    nit = as.integer(nit),
+    nburn = as.integer(nburn),
+    nthin = 1L,
+    pi_prior_a = 1,
+    pi_prior_b = 1,
+    ncores = 1L,
+    seed = 101L,
+    nchains = as.integer(nchains),
+    keep_chains = keep_chains,
+    chain_seeds = integer(),
+    updateLDswap = updateLDswap,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.01,
+    ld_swap_max_friends = 10L,
+    ld_swap_moves = 1L
+  )
+}
+
+test_that("ordinary CSR BayesC native return uses raw schema v1", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr", mode = "function"),
+    "native BayesC CSR symbol is not loaded"
+  )
+
+  raw <- make_stblr_csr_interface_raw()
+  expect_equal(raw$schema$class, "stblr_raw")
+  expect_equal(as.integer(raw$schema$version), 1L)
+  expect_true(inherits(raw, "stblr_raw_v1"))
+  expect_true(all(c(
+    "schema", "meta", "marker", "trace", "variance", "pi", "diagnostics",
+    "chains", "prior", "group", "annotation", "component", "selection"
+  ) %in% names(raw)))
+})
+
 test_that("stblr_csr fits BayesC through public method interface", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
@@ -68,7 +141,15 @@ test_that("stblr_csr fits BayesC through public method interface", {
     seed = 101L
   )
 
-  expect_true(all(c("dm", "bm", "input") %in% names(fit)))
+  expect_true(all(c(
+    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pi", "pim",
+    "pis", "input"
+  ) %in% names(fit)))
+  expect_equal(dim(fit$bm), c(3L, 1L))
+  expect_equal(dim(fit$dm), c(3L, 1L))
+  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+    expect_equal(dim(fit[[nm]]), c(2L, 1L))
+  }
   expect_equal(fit$input$method, "bayesc")
   expect_equal(fit$input$model, "bayesc")
   expect_equal(fit$input$backend, "csr_bayesc")
