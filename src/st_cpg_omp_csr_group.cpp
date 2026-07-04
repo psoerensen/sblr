@@ -1530,12 +1530,12 @@ static Rcpp::List cpg_group_raw_v1(
    Rcpp::_["r"] = cpg_raw_marker_matrix(raw, 3, m, nt),
    Rcpp::_["b"] = cpg_raw_marker_matrix(raw, 4, m, nt),
    Rcpp::_["state"] = cpg_raw_marker_matrix(raw, 5, m, nt),
-   Rcpp::_["bm_sd"] = raw.size() > 28 ? cpg_raw_marker_matrix(raw, 28, m, nt) : R_NilValue,
-   Rcpp::_["bm_min"] = raw.size() > 29 ? cpg_raw_marker_matrix(raw, 29, m, nt) : R_NilValue,
-   Rcpp::_["bm_max"] = raw.size() > 30 ? cpg_raw_marker_matrix(raw, 30, m, nt) : R_NilValue,
-   Rcpp::_["dm_sd"] = raw.size() > 31 ? cpg_raw_marker_matrix(raw, 31, m, nt) : R_NilValue,
-   Rcpp::_["dm_min"] = raw.size() > 32 ? cpg_raw_marker_matrix(raw, 32, m, nt) : R_NilValue,
-   Rcpp::_["dm_max"] = raw.size() > 33 ? cpg_raw_marker_matrix(raw, 33, m, nt) : R_NilValue
+   Rcpp::_["bm_sd"] = raw.size() > 28 ? Rcpp::RObject(cpg_raw_marker_matrix(raw, 28, m, nt)) : Rcpp::RObject(R_NilValue),
+   Rcpp::_["bm_min"] = raw.size() > 29 ? Rcpp::RObject(cpg_raw_marker_matrix(raw, 29, m, nt)) : Rcpp::RObject(R_NilValue),
+   Rcpp::_["bm_max"] = raw.size() > 30 ? Rcpp::RObject(cpg_raw_marker_matrix(raw, 30, m, nt)) : Rcpp::RObject(R_NilValue),
+   Rcpp::_["dm_sd"] = raw.size() > 31 ? Rcpp::RObject(cpg_raw_marker_matrix(raw, 31, m, nt)) : Rcpp::RObject(R_NilValue),
+   Rcpp::_["dm_min"] = raw.size() > 32 ? Rcpp::RObject(cpg_raw_marker_matrix(raw, 32, m, nt)) : Rcpp::RObject(R_NilValue),
+   Rcpp::_["dm_max"] = raw.size() > 33 ? Rcpp::RObject(cpg_raw_marker_matrix(raw, 33, m, nt)) : Rcpp::RObject(R_NilValue)
   ),
   Rcpp::_["trace"] = Rcpp::List::create(
    Rcpp::_["vbs"] = cpg_raw_trace_matrix(raw, 7, n_trace, nt),
