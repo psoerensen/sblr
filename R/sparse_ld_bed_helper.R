@@ -317,6 +317,35 @@ NULL
  fit
 }
 
+.stblr_ensure_chain_summary_fields <- function(out, raw, meta, marker_mat) {
+ fields <- list(
+  bm_sd = list(base = "bm", is_sd = TRUE),
+  bm_min = list(base = "bm", is_sd = FALSE),
+  bm_max = list(base = "bm", is_sd = FALSE),
+  dm_sd = list(base = "dm", is_sd = TRUE),
+  dm_min = list(base = "dm", is_sd = FALSE),
+  dm_max = list(base = "dm", is_sd = FALSE)
+ )
+ nchains_meta <- suppressWarnings(as.integer(meta$nchains))
+ single_chain <- length(nchains_meta) == 1L && !is.na(nchains_meta) &&
+  nchains_meta == 1L
+
+ for (nm in names(fields)) {
+  raw_val <- raw$marker[[nm]]
+  if (!is.null(raw_val)) {
+   out[[nm]] <- marker_mat(raw_val)
+   next
+  }
+  base <- out[[fields[[nm]]$base]]
+  if (single_chain && !is.null(base)) {
+   out[[nm]] <- if (fields[[nm]]$is_sd) base * 0 else base
+  } else {
+   out[nm] <- list(NULL)
+  }
+ }
+ out
+}
+
 .format_stblr_fit <- function(fit, nt, m, trait_names, variable_names,
                               keep_diagnostics = FALSE) {
  nms <- c(
@@ -593,11 +622,7 @@ NULL
   out$pim <- if (nt == 1L) as.numeric(pi_mean[1L, ]) else pi_mean
  }
 
- for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
-  if (!is.null(raw$marker[[nm]])) {
-   out[[nm]] <- marker_mat(raw$marker[[nm]])
-  }
- }
+ out <- .stblr_ensure_chain_summary_fields(out, raw, meta, marker_mat)
 
  if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
   component_names <- raw$component$names %||% pi_names
