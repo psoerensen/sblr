@@ -1671,9 +1671,9 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
  // Build result with same style as MT output
  // --------------------------------------------------------------------------
 
- std::vector<std::vector<std::vector<double>>> result(23);
+ std::vector<std::vector<std::vector<double>>> result(24);
 
- for (int k = 0; k < 23; ++k) {
+ for (int k = 0; k < 24; ++k) {
   result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
  }
 
@@ -1706,6 +1706,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
   result[20][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn)); // VLE
   result[21][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn)); // VLD
   result[22][static_cast<std::size_t>(t)].resize(4);                                     // LD-swap diagnostics
+  result[23][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn)); // PI trace
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -1739,6 +1740,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
    result[9][ts][its] = ves_mat(tu, itu);
    result[20][ts][its] = vles_mat(tu, itu);
    result[21][ts][its] = vlds_mat(tu, itu);
+   result[23][ts][its] = pis_mat(tu, itu);
   }
  }
 
@@ -1810,8 +1812,239 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
  return result;
 }
 
+static Rcpp::NumericMatrix cpg_raw_marker_matrix(
+ const std::vector<std::vector<std::vector<double>>>& raw,
+ std::size_t slot,
+ int m,
+ int nt
+) {
+ Rcpp::NumericMatrix out(m, nt);
+ if (slot >= raw.size()) return out;
+ for (int t = 0; t < nt; ++t) {
+  const std::vector<double>& x = raw[slot][static_cast<std::size_t>(t)];
+  for (int i = 0; i < m && static_cast<std::size_t>(i) < x.size(); ++i) {
+   out(i, t) = x[static_cast<std::size_t>(i)];
+  }
+ }
+ return out;
+}
+
+static Rcpp::NumericMatrix cpg_raw_trace_matrix(
+ const std::vector<std::vector<std::vector<double>>>& raw,
+ std::size_t slot,
+ int n_trace,
+ int nt
+) {
+ Rcpp::NumericMatrix out(n_trace, nt);
+ if (slot >= raw.size()) return out;
+ for (int t = 0; t < nt; ++t) {
+  const std::vector<double>& x = raw[slot][static_cast<std::size_t>(t)];
+  for (int it = 0; it < n_trace && static_cast<std::size_t>(it) < x.size(); ++it) {
+   out(it, t) = x[static_cast<std::size_t>(it)];
+  }
+ }
+ return out;
+}
+
+static Rcpp::NumericMatrix cpg_raw_trait_matrix(
+ const std::vector<std::vector<std::vector<double>>>& raw,
+ std::size_t slot,
+ int nt,
+ int ncol
+) {
+ Rcpp::NumericMatrix out(nt, ncol);
+ if (slot >= raw.size()) return out;
+ for (int t = 0; t < nt; ++t) {
+  const std::vector<double>& x = raw[slot][static_cast<std::size_t>(t)];
+  for (int j = 0; j < ncol && static_cast<std::size_t>(j) < x.size(); ++j) {
+   out(t, j) = x[static_cast<std::size_t>(j)];
+  }
+ }
+ return out;
+}
+
+static Rcpp::List cpg_disabled_selection() {
+ return Rcpp::List::create(
+  Rcpp::_["enabled"] = false,
+  Rcpp::_["fixed"] = false,
+  Rcpp::_["scale"] = "standardized_genotype_effect",
+  Rcpp::_["trace"] = R_NilValue,
+  Rcpp::_["mean"] = R_NilValue,
+  Rcpp::_["sd"] = R_NilValue,
+  Rcpp::_["min"] = R_NilValue,
+  Rcpp::_["max"] = R_NilValue,
+  Rcpp::_["acceptance"] = R_NilValue
+ );
+}
+
+static Rcpp::List cpg_prior_chains_raw_v1(
+ const std::vector<std::vector<std::vector<double>>>& raw,
+ int m,
+ int nt,
+ int nchains
+) {
+ if (raw.size() <= 32) return Rcpp::List::create();
+ Rcpp::List traits(nt);
+ for (int t = 0; t < nt; ++t) {
+  Rcpp::List chains(nchains);
+  for (int cc = 0; cc < nchains; ++cc) {
+   Rcpp::NumericVector dm(m), bm(m);
+   for (int i = 0; i < m; ++i) {
+    const std::size_t idx = static_cast<std::size_t>(cc * m + i);
+    if (idx < raw[30][t].size()) dm[i] = raw[30][t][idx];
+    if (idx < raw[31][t].size()) bm[i] = raw[31][t][idx];
+   }
+   Rcpp::NumericMatrix ld(1, 3);
+   const std::size_t didx = static_cast<std::size_t>(cc * 4);
+   if (didx + 2 < raw[32][t].size()) {
+    ld(0, 0) = raw[32][t][didx];
+    ld(0, 1) = raw[32][t][didx + 1];
+    ld(0, 2) = raw[32][t][didx + 2];
+   }
+   chains[cc] = Rcpp::List::create(
+    Rcpp::_["marker"] = Rcpp::List::create(Rcpp::_["bm"] = bm, Rcpp::_["dm"] = dm),
+    Rcpp::_["diagnostics"] = Rcpp::List::create(Rcpp::_["ld_swap"] = ld)
+   );
+  }
+  traits[t] = chains;
+ }
+ return traits;
+}
+
+static Rcpp::List cpg_prior_raw_v1(
+ const std::vector<std::vector<std::vector<double>>>& raw,
+ const std::vector<std::vector<double>>& pi_marker,
+ const std::vector<std::vector<double>>& vb_multiplier,
+ bool updateLDswap,
+ int m,
+ int nt,
+ int nit,
+ int nburn,
+ int nthin,
+ int nchains,
+ bool keep_chains
+) {
+ const int n_trace = nit + nburn;
+ Rcpp::NumericMatrix nsamples(nt, 2);
+ Rcpp::NumericVector log_cpo(nt), mean_log_cpo(nt), seconds_mean(nt), seconds_max(nt);
+ if (raw.size() > 19) {
+  for (int t = 0; t < nt; ++t) {
+   if (raw[19][static_cast<std::size_t>(t)].size() > 0) {
+    nsamples(t, 0) = raw[19][static_cast<std::size_t>(t)][0];
+   }
+   if (raw[19][static_cast<std::size_t>(t)].size() > 1) {
+    nsamples(t, 1) = raw[19][static_cast<std::size_t>(t)][1];
+   }
+  }
+ }
+ if (raw.size() > 18) {
+  for (int t = 0; t < nt; ++t) {
+   const std::vector<double>& x = raw[18][static_cast<std::size_t>(t)];
+   if (x.size() > 0) log_cpo[t] = x[0];
+   if (x.size() > 1) mean_log_cpo[t] = x[1];
+   if (x.size() > 2) seconds_mean[t] = x[2];
+   if (x.size() > 3) seconds_max[t] = x[3];
+  }
+ }
+ Rcpp::RObject chains = keep_chains ? Rcpp::RObject(cpg_prior_chains_raw_v1(raw, m, nt, nchains)) : Rcpp::RObject(R_NilValue);
+ Rcpp::RObject ld_swap = R_NilValue;
+ if (updateLDswap && raw.size() > 22) {
+  Rcpp::NumericMatrix ld(nt, 3);
+  for (int t = 0; t < nt; ++t) {
+   const std::vector<double>& x = raw[22][static_cast<std::size_t>(t)];
+   for (int j = 0; j < 3 && static_cast<std::size_t>(j) < x.size(); ++j) ld(t, j) = x[j];
+  }
+  ld_swap = ld;
+ }
+ Rcpp::NumericMatrix pi_marker_mat(m, nt), vb_multiplier_mat(m, nt);
+ for (int t = 0; t < nt; ++t) {
+  for (int i = 0; i < m; ++i) {
+   pi_marker_mat(i, t) = pi_marker[static_cast<std::size_t>(t)][static_cast<std::size_t>(i)];
+   vb_multiplier_mat(i, t) = vb_multiplier[static_cast<std::size_t>(t)][static_cast<std::size_t>(i)];
+  }
+ }
+ Rcpp::List raw_out = Rcpp::List::create(
+  Rcpp::_["schema"] = Rcpp::List::create(Rcpp::_["class"] = "stblr_raw", Rcpp::_["version"] = 1),
+  Rcpp::_["meta"] = Rcpp::List::create(
+   Rcpp::_["model"] = "bayesc",
+   Rcpp::_["backend"] = "csr_prior_bayesc",
+   Rcpp::_["data_level"] = "summary",
+   Rcpp::_["prior_type"] = "marker",
+   Rcpp::_["m"] = m,
+   Rcpp::_["nt"] = nt,
+   Rcpp::_["n_trace"] = n_trace,
+   Rcpp::_["nit"] = nit,
+   Rcpp::_["nburn"] = nburn,
+   Rcpp::_["nthin"] = nthin,
+   Rcpp::_["nchains"] = nchains,
+   Rcpp::_["keep_chains"] = keep_chains,
+   Rcpp::_["n_components"] = 2,
+   Rcpp::_["n_annotations"] = 0,
+   Rcpp::_["n_groups"] = 0
+  ),
+  Rcpp::_["marker"] = Rcpp::List::create(
+   Rcpp::_["bm"] = cpg_raw_marker_matrix(raw, 0, m, nt),
+   Rcpp::_["dm"] = cpg_raw_marker_matrix(raw, 1, m, nt),
+   Rcpp::_["wy"] = cpg_raw_marker_matrix(raw, 2, m, nt),
+   Rcpp::_["r"] = cpg_raw_marker_matrix(raw, 3, m, nt),
+   Rcpp::_["b"] = cpg_raw_marker_matrix(raw, 4, m, nt),
+   Rcpp::_["state"] = cpg_raw_marker_matrix(raw, 5, m, nt),
+   Rcpp::_["bm_sd"] = raw.size() > 24 ? cpg_raw_marker_matrix(raw, 24, m, nt) : R_NilValue,
+   Rcpp::_["bm_min"] = raw.size() > 25 ? cpg_raw_marker_matrix(raw, 25, m, nt) : R_NilValue,
+   Rcpp::_["bm_max"] = raw.size() > 26 ? cpg_raw_marker_matrix(raw, 26, m, nt) : R_NilValue,
+   Rcpp::_["dm_sd"] = raw.size() > 27 ? cpg_raw_marker_matrix(raw, 27, m, nt) : R_NilValue,
+   Rcpp::_["dm_min"] = raw.size() > 28 ? cpg_raw_marker_matrix(raw, 28, m, nt) : R_NilValue,
+   Rcpp::_["dm_max"] = raw.size() > 29 ? cpg_raw_marker_matrix(raw, 29, m, nt) : R_NilValue
+  ),
+  Rcpp::_["trace"] = Rcpp::List::create(
+   Rcpp::_["vbs"] = cpg_raw_trace_matrix(raw, 7, n_trace, nt),
+   Rcpp::_["vgs"] = cpg_raw_trace_matrix(raw, 8, n_trace, nt),
+   Rcpp::_["ves"] = cpg_raw_trace_matrix(raw, 9, n_trace, nt),
+   Rcpp::_["vle"] = cpg_raw_trace_matrix(raw, 20, n_trace, nt),
+   Rcpp::_["vld"] = cpg_raw_trace_matrix(raw, 21, n_trace, nt),
+   Rcpp::_["pis"] = cpg_raw_trace_matrix(raw, 23, n_trace, nt)
+  ),
+  Rcpp::_["variance"] = Rcpp::List::create(
+   Rcpp::_["covb"] = cpg_raw_trait_matrix(raw, 10, nt, nt),
+   Rcpp::_["covg"] = cpg_raw_trait_matrix(raw, 11, nt, nt),
+   Rcpp::_["cove"] = cpg_raw_trait_matrix(raw, 12, nt, nt),
+   Rcpp::_["vb"] = cpg_raw_trait_matrix(raw, 13, nt, nt),
+   Rcpp::_["vg"] = cpg_raw_trait_matrix(raw, 14, nt, nt),
+   Rcpp::_["ve"] = cpg_raw_trait_matrix(raw, 15, nt, nt)
+  ),
+  Rcpp::_["pi"] = Rcpp::List::create(
+   Rcpp::_["final"] = cpg_raw_trait_matrix(raw, 16, nt, 2),
+   Rcpp::_["mean"] = cpg_raw_trait_matrix(raw, 17, nt, 2),
+   Rcpp::_["names"] = Rcpp::CharacterVector::create("pi0", "pi1")
+  ),
+  Rcpp::_["diagnostics"] = Rcpp::List::create(
+   Rcpp::_["nsamples"] = nsamples(_, 0),
+   Rcpp::_["n_used"] = nsamples(_, 1),
+   Rcpp::_["log_cpo"] = log_cpo,
+   Rcpp::_["mean_log_cpo"] = mean_log_cpo,
+   Rcpp::_["seconds_mean"] = seconds_mean,
+   Rcpp::_["seconds_max"] = seconds_max,
+   Rcpp::_["ld_swap"] = ld_swap
+  ),
+  Rcpp::_["chains"] = chains,
+  Rcpp::_["prior"] = Rcpp::List::create(
+   Rcpp::_["type"] = "marker",
+   Rcpp::_["marker_pi_mean"] = pi_marker_mat,
+   Rcpp::_["marker_vb_multiplier_mean"] = vb_multiplier_mat,
+   Rcpp::_["marker_pi_final"] = pi_marker_mat,
+   Rcpp::_["marker_vb_multiplier_final"] = vb_multiplier_mat
+  ),
+  Rcpp::_["group"] = Rcpp::List::create(),
+  Rcpp::_["annotation"] = Rcpp::List::create(),
+  Rcpp::_["component"] = Rcpp::List::create(),
+  Rcpp::_["selection"] = cpg_disabled_selection()
+ );
+ raw_out.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
+ return raw_out;
+}
+
 // [[Rcpp::export]]
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
+Rcpp::List stblr_cpg_omp_csr_prior(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -1983,12 +2216,12 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
 
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
  if (return_chain_summaries) {
-  std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 32 : 29);
+  std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 33 : 30);
   for (std::size_t k = 0; k < out.size(); ++k) extended[k] = out[k];
-  for (int slot = 23; slot <= 28; ++slot) extended[static_cast<std::size_t>(slot)].resize(out[0].size());
+  for (int slot = 24; slot <= 29; ++slot) extended[static_cast<std::size_t>(slot)].resize(out[0].size());
   for (std::size_t t = 0; t < out[0].size(); ++t) {
    const std::size_t m_t = out[0][t].size();
-   for (int slot = 23; slot <= 28; ++slot) extended[static_cast<std::size_t>(slot)][t].resize(m_t);
+   for (int slot = 24; slot <= 29; ++slot) extended[static_cast<std::size_t>(slot)][t].resize(m_t);
    for (std::size_t i = 0; i < m_t; ++i) {
     const double bm_mean = out[0][t][i];
     const double dm_mean = out[1][t][i];
@@ -1998,23 +2231,29 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior(
      bm_sd = std::sqrt(std::max(0.0, (sumsq[0][t][i] - nchains * bm_mean * bm_mean) / static_cast<double>(nchains - 1)));
      dm_sd = std::sqrt(std::max(0.0, (sumsq[1][t][i] - nchains * dm_mean * dm_mean) / static_cast<double>(nchains - 1)));
     }
-    extended[23][t][i] = bm_sd;
-    extended[24][t][i] = minv[0][t][i];
-    extended[25][t][i] = maxv[0][t][i];
-    extended[26][t][i] = dm_sd;
-    extended[27][t][i] = minv[1][t][i];
-    extended[28][t][i] = maxv[1][t][i];
+    extended[24][t][i] = bm_sd;
+    extended[25][t][i] = minv[0][t][i];
+    extended[26][t][i] = maxv[0][t][i];
+    extended[27][t][i] = dm_sd;
+    extended[28][t][i] = minv[1][t][i];
+    extended[29][t][i] = maxv[1][t][i];
    }
   }
   if (keep_chains) {
-   extended[29] = chain_dm_flat;
-   extended[30] = chain_bm_flat;
-   extended[31] = chain_diag_flat;
+   extended[30] = chain_dm_flat;
+   extended[31] = chain_bm_flat;
+   extended[32] = chain_diag_flat;
   }
-  return extended;
+  return cpg_prior_raw_v1(
+   extended, pi_marker, vb_multiplier, updateLDswap, static_cast<int>(wy[0].size()),
+   static_cast<int>(wy.size()), nit, nburn, nthin, nchains, keep_chains
+  );
  }
 
- return out;
+ return cpg_prior_raw_v1(
+  out, pi_marker, vb_multiplier, updateLDswap, static_cast<int>(wy[0].size()),
+  static_cast<int>(wy.size()), nit, nburn, nthin, nchains, keep_chains
+ );
 }
 
 // // [[Rcpp::depends(RcppArmadillo)]]

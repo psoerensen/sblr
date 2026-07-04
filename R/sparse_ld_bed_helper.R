@@ -684,6 +684,61 @@ NULL
   }
  }
 
+ if (identical(meta$backend, "csr_prior_bayesc")) {
+  out$prior <- raw$prior
+ }
+
+ if (identical(meta$backend, "csr_group_bayesc")) {
+  group_names <- raw$group$group_names %||%
+   paste0("G", seq_len(as.integer(meta$n_groups)))
+  group_mat <- function(x) {
+   x <- as.matrix(x)
+   if (identical(dim(x), c(length(group_names), nt))) x <- t(x)
+   rownames(x) <- trait_names
+   colnames(x) <- group_names
+   x
+  }
+  out$group <- raw$group
+  if (!is.null(raw$group$pi_mean)) {
+   out$group_pi <- group_mat(raw$group$pi_mean)
+  }
+  if (!is.null(raw$group$vb_multiplier_mean)) {
+   out$group_vb_multiplier <- group_mat(raw$group$vb_multiplier_mean)
+  }
+  if (!is.null(raw$group$n_included_mean)) {
+   out$group_nincluded <- group_mat(raw$group$n_included_mean)
+  }
+  if (!is.null(raw$group$size)) {
+   out$group_size <- matrix(
+    rep(as.numeric(raw$group$size), each = nt),
+    nrow = nt,
+    ncol = length(group_names),
+    byrow = FALSE
+   )
+   rownames(out$group_size) <- trait_names
+   colnames(out$group_size) <- group_names
+  }
+ }
+
+ if (identical(meta$backend, "csr_annot_bayesc")) {
+  annotation_names <- raw$annotation$annotation_names %||%
+   paste0("A", seq_len(as.integer(meta$n_annotations)))
+  annotation_mat <- function(x) {
+   x <- as.matrix(x)
+   if (identical(dim(x), c(length(annotation_names), nt))) x <- t(x)
+   rownames(x) <- trait_names
+   colnames(x) <- annotation_names
+   x
+  }
+  out$annotation <- raw$annotation
+  if (!is.null(raw$annotation$eta_pi_mean)) {
+   out$eta_pi <- annotation_mat(raw$annotation$eta_pi_mean)
+  }
+  if (!is.null(raw$annotation$eta_vb_mean)) {
+   out$eta_vb <- annotation_mat(raw$annotation$eta_vb_mean)
+  }
+ }
+
  set_updateE_diagnostics <- function(x) {
   x <- as.matrix(x)
   if (ncol(x) == 8L) {
@@ -704,6 +759,7 @@ NULL
  if (!is.null(raw$diagnostics$updateE)) {
   out$updateE_diagnostics <- set_updateE_diagnostics(raw$diagnostics$updateE)
  }
+ out$diagnostics <- raw$diagnostics
 
  ld_swap <- raw$diagnostics$ld_swap
  if (!is.null(ld_swap)) {
@@ -802,6 +858,39 @@ NULL
      if (!is.null(ch$diagnostics$updateE)) {
       trait_chains[[cc]]$updateE_diagnostics <- set_updateE_diagnostics(
        matrix(as.numeric(ch$diagnostics$updateE), nrow = 1L)
+      )
+     }
+    }
+    if (identical(meta$backend, "csr_group_bayesc") && !is.null(ch$group)) {
+     group_names <- raw$group$group_names %||%
+      paste0("G", seq_len(as.integer(meta$n_groups)))
+     if (!is.null(ch$group$pi_mean)) {
+      trait_chains[[cc]]$group_pi <- stats::setNames(
+       as.numeric(ch$group$pi_mean), group_names
+      )
+     }
+     if (!is.null(ch$group$vb_multiplier_mean)) {
+      trait_chains[[cc]]$group_vb_multiplier <- stats::setNames(
+       as.numeric(ch$group$vb_multiplier_mean), group_names
+      )
+     }
+     if (!is.null(ch$group$n_included_mean)) {
+      trait_chains[[cc]]$group_nincluded <- stats::setNames(
+       as.numeric(ch$group$n_included_mean), group_names
+      )
+     }
+    }
+    if (identical(meta$backend, "csr_annot_bayesc") && !is.null(ch$annotation)) {
+     annotation_names <- raw$annotation$annotation_names %||%
+      paste0("A", seq_len(as.integer(meta$n_annotations)))
+     if (!is.null(ch$annotation$eta_pi_mean)) {
+      trait_chains[[cc]]$eta_pi <- stats::setNames(
+       as.numeric(ch$annotation$eta_pi_mean), annotation_names
+      )
+     }
+     if (!is.null(ch$annotation$eta_vb_mean)) {
+      trait_chains[[cc]]$eta_vb <- stats::setNames(
+       as.numeric(ch$annotation$eta_vb_mean), annotation_names
       )
      }
     }

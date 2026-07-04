@@ -108,11 +108,42 @@ trait list of `nAnno x (K - 1)` matrices and `sigmaSqAlpha` as
 SBayesRC fit fields such as `alpha`, `sigmaSqAlpha`, `annotation_summary`,
 `annotation_pi`, and `annotation_effects`.
 
+Phase 4 migrates the BayesC-like annotation/prior summary-statistic CSR
+backends:
+
+```text
+src/st_cpg_omp_csr_prior.cpp  -> csr_prior_bayesc
+src/st_cpg_omp_csr_group.cpp  -> csr_group_bayesc
+src/st_cpg_omp_csr_annot.cpp  -> csr_annot_bayesc
+```
+
+All three use BayesC-style state semantics: `raw$marker$dm` is `P(d = 1)`,
+and `raw$pi$final` / `raw$pi$mean` are `nt x 2` matrices named `pi0` and
+`pi1`.
+
+Marker-prior BayesC uses `raw$prior`. It stores the resolved marker-specific
+prior probabilities and marker-effect variance multipliers as `m x nt`
+matrices, including fixed inputs when the priors are not sampled.
+
+Group-prior BayesC uses `raw$group`. `raw$group$pi_mean`,
+`raw$group$vb_multiplier_mean`, and `raw$group$n_included_mean` use
+`ngroup x nt` layout, with `raw$group$group_index` retaining the native
+0-based marker group index.
+
+Learned-annotation BayesC uses `raw$annotation`. It stores learned `eta_pi`
+and `eta_vb` summaries as `nAnno x nt` matrices. SBayesRC-specific
+`alpha`/`sigmaSqAlpha` fields are not invented for this backend.
+
+For these three backends, `raw$trace$pis` is the existing tracked
+active-marker probability trace. It is the sampled global `pi1` for
+marker-prior and learned-annotation BayesC, and the marker-weighted current
+group probability for group-prior BayesC. Unused namespaces remain empty.
+
 ## Non-Migrated Backends
 
 The old positional formatter remains active for non-migrated backends,
-including scheduled CSR BayesC, prior/group/learned annotation CSR BayesC, BED
-backends, and individual-level scheduled backends.
+including scheduled CSR BayesC, BED backends, finemap paths, and
+individual-level scheduled backends.
 
 Wrappers should explicitly detect:
 
@@ -125,10 +156,5 @@ before routing through `.format_stblr_raw_v1()`.
 
 ## Planned Migration Order
 
-The intended follow-up order is:
-
-1. Marker-prior CSR BayesC.
-2. Group CSR BayesC.
-3. Learned annotation CSR BayesC.
-4. Scheduled and BED backends after the summary-statistic CSR schemas have
-   stabilized.
+The remaining follow-up order is scheduled and BED backends after the
+summary-statistic CSR schemas have stabilized.

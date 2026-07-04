@@ -411,15 +411,24 @@ stblr_csr_group_annot <- function(
   ld_swap_moves = as.integer(ld_swap_moves)
  )
 
- fit <- .format_csr_group_annot_fit(
-  fit = raw_fit,
-  nt = nt,
-  m = m,
-  ngroup = group_info$ngroup,
-  group_names = group_info$group_names,
-  trait_names = trait_names,
-  variable_names = variable_names
- )
+ if (.is_stblr_raw_v1(raw_fit)) {
+  raw_fit$group$group_names <- group_info$group_names
+  fit <- .format_stblr_raw_v1(
+   raw_fit,
+   trait_names = trait_names,
+   variable_names = variable_names
+  )
+ } else {
+  fit <- .format_csr_group_annot_fit(
+   fit = raw_fit,
+   nt = nt,
+   m = m,
+   ngroup = group_info$ngroup,
+   group_names = group_info$group_names,
+   trait_names = trait_names,
+   variable_names = variable_names
+  )
+ }
 
  fit$input <- c(
   list(

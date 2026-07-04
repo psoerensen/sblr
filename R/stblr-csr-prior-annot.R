@@ -274,13 +274,21 @@ stblr_csr_prior_annot <- function(
   ld_swap_moves = as.integer(ld_swap_moves)
  )
 
- fit <- .format_stblr_fit(
-  raw_fit,
-  nt = nt,
-  m = m,
-  trait_names = trait_names,
-  variable_names = variable_names
- )
+ if (.is_stblr_raw_v1(raw_fit)) {
+  fit <- .format_stblr_raw_v1(
+   raw_fit,
+   trait_names = trait_names,
+   variable_names = variable_names
+  )
+ } else {
+  fit <- .format_stblr_fit(
+   raw_fit,
+   nt = nt,
+   m = m,
+   trait_names = trait_names,
+   variable_names = variable_names
+  )
+ }
 
  fit$input <- c(
   list(
