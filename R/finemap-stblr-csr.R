@@ -888,7 +888,11 @@ finemap_stblr_csr <- function(
     ld_swap_moves = as.integer(ld_swap_moves),
     selection_s_prior_scale = numeric()
   )
-  fit <- .format_stblr_fit(raw, 1L, m, trait_name, stats$marker_names)
+  if (.is_stblr_raw_v1(raw)) {
+    fit <- .format_stblr_raw_v1(raw, trait_names = trait_name, variable_names = stats$marker_names)
+  } else {
+    fit <- .format_stblr_fit(raw, 1L, m, trait_name, stats$marker_names)
+  }
   fit$input <- list(
     n = stats$n, m = m, nt = 1L, B = B, E = E,
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,

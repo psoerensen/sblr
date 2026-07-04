@@ -523,18 +523,21 @@ NULL
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
 
  marker_mat <- function(x) {
+  if (is.null(x)) return(NULL)
   x <- as.matrix(x)
   rownames(x) <- variable_names
   colnames(x) <- trait_names
   x
  }
  trace_mat <- function(x) {
+  if (is.null(x)) return(NULL)
   x <- as.matrix(x)
   rownames(x) <- paste0("Iter", seq_len(nrow(x)))
   colnames(x) <- trait_names
   x
  }
  variance_mat <- function(x) {
+  if (is.null(x)) return(NULL)
   x <- as.matrix(x)
   rownames(x) <- colnames(x) <- trait_names
   x
@@ -758,6 +761,18 @@ NULL
  }
  if (!is.null(raw$diagnostics$updateE)) {
   out$updateE_diagnostics <- set_updateE_diagnostics(raw$diagnostics$updateE)
+ }
+ if (!is.null(raw$diagnostics$log_cpo)) {
+  out$log_cpo <- named_trait_vec(raw$diagnostics$log_cpo)
+ }
+ if (!is.null(raw$diagnostics$mean_log_cpo)) {
+  out$mean_log_cpo <- named_trait_vec(raw$diagnostics$mean_log_cpo)
+ }
+ if (!is.null(raw$diagnostics$nsamples)) {
+  out$nsamples <- named_trait_vec(raw$diagnostics$nsamples)
+ }
+ if (!is.null(raw$diagnostics$n_used)) {
+  out$n_used <- named_trait_vec(raw$diagnostics$n_used)
  }
  out$diagnostics <- raw$diagnostics
 

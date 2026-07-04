@@ -113,16 +113,8 @@ stblr_cpg_omp_bed_marker_scheduled_chains <- function(bed_files, n, cls, y, b_in
     .Call(`_sblr_stblr_cpg_omp_bed_marker_scheduled_chains`, bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, pi_prior_a, pi_prior_b, nchains, ncores, seed)
 }
 
-debug_stldcsr_xij_pairs <- function(ld_prefix, xx, pairs) {
-    .Call(`_sblr_debug_stldcsr_xij_pairs`, ld_prefix, xx, pairs)
-}
-
 stblr_cpg_omp_csr_sbayesrc <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains = 1L, keep_chains = FALSE, chain_seeds = NULL, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L, selection_s_prior_scale = NULL, estimate_selection_s = FALSE, selection_s_init = 0.0, selection_s_prior = as.numeric( c(-3.0, 2.0)), selection_s_proposal_sd = 0.35, selection_s_log_h = NULL) {
     .Call(`_sblr_stblr_cpg_omp_csr_sbayesrc`, wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale, estimate_selection_s, selection_s_init, selection_s_prior, selection_s_proposal_sd, selection_s_log_h)
-}
-
-stblr_cpg_omp_csr_sbayesrc_annot <- function(wy, ww, yy, b_init, gamma_init, use_gamma_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, annotation_class, n_classes, mixture_var, pi_class_init, alpha_class, updatePiClass, nub, nue, updateB, updateE, adjE, n, nit, nburn, nthin, ncores, seed) {
-    .Call(`_sblr_stblr_cpg_omp_csr_sbayesrc_annot`, wy, ww, yy, b_init, gamma_init, use_gamma_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, annotation_class, n_classes, mixture_var, pi_class_init, alpha_class, updatePiClass, nub, nue, updateB, updateE, adjE, n, nit, nburn, nthin, ncores, seed)
 }
 
 stblr_cpg_omp_bed_marker_scheduled_chains_bayesr <- function(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, c, alpha, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, nchains, ncores, seed) {

@@ -116,6 +116,12 @@ check_stblr_consistency <- function(
     dm = dm,
     add_check = add_check
   )
+  .stblr_backend_check_optional_trace(
+    fit = fit,
+    name = "pis",
+    dm = dm,
+    add_check = add_check
+  )
 
   nchains_missing <- !is.list(input) || is.null(input$nchains)
   nchains <- if (nchains_missing) {
@@ -166,6 +172,24 @@ check_stblr_consistency <- function(
   .stblr_backend_check_ld_swap(
     fit = fit,
     require_ld_swap = require_ld_swap,
+    add_check = add_check
+  )
+
+  .stblr_backend_check_comp_prob(
+    fit = fit,
+    dm = dm,
+    add_check = add_check
+  )
+
+  .stblr_backend_check_selection_s(
+    fit = fit,
+    dm = dm,
+    add_check = add_check
+  )
+
+  .stblr_backend_check_backend_specific(
+    fit = fit,
+    input = input,
     add_check = add_check
   )
 
@@ -551,6 +575,106 @@ print.stblr_backend_check <- function(x, ...) {
               isTRUE(all.equal(rate[positive], accepted[positive] / attempted[positive],
                                tolerance = 1e-8, check.attributes = FALSE)),
               paste0(label, " acceptance_rate matches accepted / attempted"))
+  }
+  invisible(NULL)
+}
+
+.stblr_backend_check_comp_prob <- function(fit, dm, add_check) {
+  cp <- fit$comp_prob
+  if (is.null(cp)) return(invisible(NULL))
+
+  if (!is.list(cp) || is.null(names(cp)) || any(!nzchar(names(cp)))) {
+    add_check(
+      "comp_prob.named_list", FALSE,
+      "fit$comp_prob is a named list of marker-by-component matrices by trait"
+    )
+    return(invisible(NULL))
+  }
+  add_check(
+    "comp_prob.named_list", TRUE,
+    "fit$comp_prob is a named list of marker-by-component matrices by trait"
+  )
+
+  tol <- 1e-6
+  for (trait in names(cp)) {
+    x <- .stblr_backend_as_matrix(cp[[trait]])
+    label <- paste0("comp_prob.", trait)
+    add_check(
+      paste0(label, ".matrix"), !is.null(x),
+      paste0("fit$comp_prob[['", trait, "']] is matrix-like")
+    )
+    if (is.null(x)) next
+
+    if (!is.null(dm)) {
+      add_check(
+        paste0(label, ".nrow"), nrow(x) == nrow(dm),
+        paste0("fit$comp_prob[['", trait, "']] has nrow(fit$dm) rows")
+      )
+    }
+    add_check(
+      paste0(label, ".range"),
+      all(is.na(x) | (x >= -tol & x <= 1 + tol)),
+      paste0("fit$comp_prob[['", trait, "']] values are within [0, 1]")
+    )
+    row_sums <- rowSums(x)
+    add_check(
+      paste0(label, ".rowsums"),
+      all(is.na(row_sums) | abs(row_sums - 1) <= 1e-4),
+      paste0("fit$comp_prob[['", trait, "']] rows sum to 1")
+    )
+  }
+  invisible(NULL)
+}
+
+.stblr_backend_check_selection_s <- function(fit, dm, add_check) {
+  has_any <- !is.null(fit$selection_s) || !is.null(fit$selection_s_trace)
+  if (!has_any) return(invisible(NULL))
+
+  if (!is.null(fit$selection_s_trace)) {
+    .stblr_backend_check_optional_trace(
+      fit = fit, name = "selection_s_trace", dm = dm, add_check = add_check
+    )
+  }
+  if (!is.null(fit$selection_s)) {
+    x <- fit$selection_s
+    add_check(
+      "selection_s.finite", all(is.finite(x)),
+      "fit$selection_s contains only finite values"
+    )
+    if (!is.null(dm)) {
+      add_check(
+        "selection_s.length", length(x) == ncol(dm),
+        "length(fit$selection_s) matches number of traits"
+      )
+    }
+  }
+  invisible(NULL)
+}
+
+.stblr_backend_check_backend_specific <- function(fit, input, add_check) {
+  backend <- if (is.list(input) && !is.null(input$backend)) {
+    input$backend
+  } else {
+    NA_character_
+  }
+  if (length(backend) != 1L || is.na(backend)) return(invisible(NULL))
+
+  expect_fields <- switch(
+    backend,
+    csr_prior_bayesc = "prior",
+    csr_group_bayesc = c("group", "group_pi", "group_vb_multiplier"),
+    csr_annot_bayesc = c("eta_pi", "eta_vb"),
+    csr_sbayesrc = c("alpha", "sigmaSqAlpha", "comp_prob"),
+    csr_bayesr = "comp_prob",
+    bed_bayesr = "comp_prob",
+    character()
+  )
+  for (nm in expect_fields) {
+    add_check(
+      paste0("backend.", backend, ".", nm),
+      !is.null(fit[[nm]]),
+      paste0("fit$", nm, " is present for backend '", backend, "'")
+    )
   }
   invisible(NULL)
 }
