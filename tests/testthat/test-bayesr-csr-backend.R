@@ -477,9 +477,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   )
   expect_bayesr_csr_conventions(fit_noE)
   expect_true("ld_swap" %in% names(fit_noE))
-  expect_equal(fit_noE$ld_swap$attempted, 0)
-  expect_equal(fit_noE$ld_swap$accepted, 0)
-  expect_equal(fit_noE$ld_swap$acceptance_rate, 0)
+  expect_null(fit_noE$ld_swap)
   expect_equal(sum(fit_noE$input$pi[-1L]), 0.001, tolerance = 1e-12)
   expect_equal(
     unname(fit_noE$input$alpha / sum(fit_noE$input$alpha)),

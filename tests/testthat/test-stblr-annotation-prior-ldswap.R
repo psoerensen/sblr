@@ -100,6 +100,10 @@ fit_tiny_annotation_prior_ldswap <- function(updateLDswap = TRUE,
 
 expect_annotation_prior_ldswap_diagnostics <- function(fit, expected_attempted) {
   expect_true("ld_swap" %in% names(fit))
+  if (is.null(expected_attempted)) {
+    expect_null(fit$ld_swap)
+    return(invisible())
+  }
   expect_identical(colnames(fit$ld_swap),
                    c("attempted", "accepted", "acceptance_rate"))
   expect_equal(fit$ld_swap$attempted, expected_attempted)
@@ -115,7 +119,7 @@ test_that("fixed-prior annotation CSR BayesC is backward compatible without LD-s
   expect_false(isTRUE(fit$input$updateLDswap))
   expect_equal(dim(fit$dm), c(3L, 1L))
   expect_equal(dim(fit$bm), c(3L, 1L))
-  expect_annotation_prior_ldswap_diagnostics(fit, expected_attempted = 0)
+  expect_annotation_prior_ldswap_diagnostics(fit, expected_attempted = NULL)
 })
 
 test_that("fixed-prior annotation CSR BayesC supports LD-swap diagnostics", {

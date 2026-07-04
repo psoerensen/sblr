@@ -122,7 +122,7 @@ tiny_csr_glist <- function() {
   )
 }
 
-test_that("CSR sampler returns zero LD-swap diagnostics by default", {
+test_that("CSR sampler exposes ld_swap as present-but-NULL when LD-swap is disabled", {
   fit <- stblr_csr(
     stats = tiny_csr_stats(),
     ld_prefix = make_tiny_csr_prefix(),
@@ -138,9 +138,7 @@ test_that("CSR sampler returns zero LD-swap diagnostics by default", {
   )
 
   expect_true("ld_swap" %in% names(fit))
-  expect_equal(fit$ld_swap$attempted, 0)
-  expect_equal(fit$ld_swap$accepted, 0)
-  expect_equal(fit$ld_swap$acceptance_rate, 0)
+  expect_null(fit$ld_swap)
   expect_equal(fit$input$method, "bayesc")
   expect_equal(fit$input$model, "bayesc")
   expect_equal(fit$input$backend, "csr_bayesc")

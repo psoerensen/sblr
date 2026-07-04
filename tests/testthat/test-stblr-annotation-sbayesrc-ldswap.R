@@ -107,8 +107,12 @@ fit_tiny_annotation_sbayesrc_ldswap <- function(updateLDswap = TRUE,
   )
 }
 
-expect_sbayesrc_ldswap_diagnostics <- function(fit) {
+expect_sbayesrc_ldswap_diagnostics <- function(fit, available = TRUE) {
   expect_true("ld_swap" %in% names(fit))
+  if (!available) {
+    expect_null(fit$ld_swap)
+    return(invisible())
+  }
   expect_identical(colnames(fit$ld_swap),
                    c("attempted", "accepted", "acceptance_rate"))
   expect_true(all(fit$ld_swap$attempted >= fit$ld_swap$accepted))
@@ -129,8 +133,7 @@ test_that("SBayesRC annotation fit is backward compatible without LD-swap", {
   expect_false(isTRUE(fit$input$updateLDswap))
   expect_equal(dim(fit$dm), c(3L, 1L))
   expect_equal(dim(fit$bm), c(3L, 1L))
-  expect_sbayesrc_ldswap_diagnostics(fit)
-  expect_equal(fit$ld_swap$attempted, 0)
+  expect_sbayesrc_ldswap_diagnostics(fit, available = FALSE)
   expect_true("comp_prob" %in% names(fit))
 })
 
