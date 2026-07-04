@@ -565,6 +565,8 @@ NULL
  )
  if (identical(meta$model, "bayesr")) {
   out$component <- out$d
+ } else if (identical(meta$model, "sbayesrc")) {
+  out$component <- out$d
  }
 
  pi_final <- as.matrix(raw$pi$final)
@@ -572,7 +574,7 @@ NULL
  pi_names <- raw$pi$names %||% paste0("component_", seq_len(ncol(pi_final)) - 1L)
  colnames(pi_final) <- colnames(pi_mean) <- pi_names
  rownames(pi_final) <- rownames(pi_mean) <- trait_names
- if (identical(meta$model, "bayesr")) {
+ if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
   out$pi <- pi_final
   out$pim <- pi_mean
   out$final_pi <- pi_final
@@ -588,7 +590,7 @@ NULL
   }
  }
 
- if (identical(meta$model, "bayesr")) {
+ if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
   component_names <- raw$component$names %||% pi_names
   comp_prob <- raw$component$prob
   if (is.list(comp_prob) && length(comp_prob) == nt) {
@@ -600,9 +602,17 @@ NULL
    })
    names(comp_prob) <- trait_names
    out$comp_prob <- comp_prob
+   null_component <- if (identical(meta$model, "sbayesrc")) {
+    "gamma_0.00"
+   } else {
+    "component_0"
+   }
+   if (!null_component %in% colnames(comp_prob[[1L]])) {
+    stop("Raw ", meta$model, " component probabilities are missing null component ", null_component, ".")
+   }
    dm_from_components <- vapply(
     comp_prob,
-    function(x) 1 - x[, "component_0"],
+    function(x) 1 - x[, null_component],
     numeric(m)
    )
    if (nt == 1L) dm_from_components <- matrix(dm_from_components, ncol = 1L)
@@ -612,6 +622,17 @@ NULL
   }
   if (!is.null(raw$component$dm_component_mean)) {
    out$dm_component_mean <- marker_mat(raw$component$dm_component_mean)
+  } else if (!is.null(out$comp_prob)) {
+   component_index <- seq_along(component_names) - 1L
+   dm_component_mean <- vapply(
+    out$comp_prob,
+    function(x) as.numeric(x %*% component_index),
+    numeric(m)
+   )
+   if (nt == 1L) dm_component_mean <- matrix(dm_component_mean, ncol = 1L)
+   rownames(dm_component_mean) <- variable_names
+   colnames(dm_component_mean) <- trait_names
+   out$dm_component_mean <- dm_component_mean
   }
   if (!is.null(raw$component$ncomp)) {
    ncomp <- as.matrix(raw$component$ncomp)
@@ -624,6 +645,42 @@ NULL
     as.numeric(raw$component$mixture_var),
     component_names
    )
+  }
+  if (identical(meta$model, "sbayesrc")) {
+   out$gamma <- out$mixture_var
+  }
+ }
+
+ if (identical(meta$model, "sbayesrc")) {
+  annotation_names <- raw$annotation$annotation_names
+  if (is.null(annotation_names)) {
+   annotation_names <- paste0("A", seq_len(as.integer(meta$n_annotations)))
+  }
+  step_names <- paste0("step_", seq_len(max(0L, as.integer(meta$n_components) - 1L)))
+  alpha_raw <- raw$annotation$alpha_mean %||% raw$annotation$alpha
+  if (is.list(alpha_raw) && length(alpha_raw) == nt) {
+   alpha <- lapply(seq_len(nt), function(tt) {
+    x <- as.matrix(alpha_raw[[tt]])
+    rownames(x) <- annotation_names
+    colnames(x) <- step_names
+    x
+   })
+   names(alpha) <- trait_names
+   out$alpha <- alpha
+   alpha_flat <- do.call(rbind, lapply(alpha, function(x) as.numeric(x)))
+   rownames(alpha_flat) <- trait_names
+   colnames(alpha_flat) <- as.vector(outer(annotation_names, step_names, paste, sep = ":"))
+   out$alpha_flat <- alpha_flat
+  }
+  sigma_raw <- raw$annotation$sigmaSqAlpha_mean %||% raw$annotation$sigmaSqAlpha
+  if (!is.null(sigma_raw)) {
+   sigma <- as.matrix(sigma_raw)
+   if (identical(dim(sigma), c(length(step_names), nt))) {
+    sigma <- t(sigma)
+   }
+   rownames(sigma) <- trait_names
+   colnames(sigma) <- step_names
+   out$sigmaSqAlpha <- sigma
   }
  }
 
@@ -691,7 +748,7 @@ NULL
       as.numeric(ch$marker$state), variable_names
      )
     }
-    if (identical(meta$model, "bayesr")) {
+    if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
      trait_chains[[cc]]$component <- trait_chains[[cc]]$state
      if (!is.null(ch$component$prob)) {
       cp <- as.matrix(ch$component$prob)
@@ -717,6 +774,21 @@ NULL
      if (!is.null(ch$component$ncomp)) {
       trait_chains[[cc]]$ncomp <- stats::setNames(
        as.numeric(ch$component$ncomp), raw$component$names %||% pi_names
+      )
+     }
+     if (identical(meta$model, "sbayesrc") && !is.null(ch$annotation$alpha)) {
+      alpha <- as.matrix(ch$annotation$alpha)
+      annotation_names <- raw$annotation$annotation_names %||%
+       paste0("A", seq_len(as.integer(meta$n_annotations)))
+      step_names <- paste0("step_", seq_len(max(0L, as.integer(meta$n_components) - 1L)))
+      rownames(alpha) <- annotation_names
+      colnames(alpha) <- step_names
+      trait_chains[[cc]]$alpha <- alpha
+     }
+     if (identical(meta$model, "sbayesrc") && !is.null(ch$annotation$sigmaSqAlpha)) {
+      step_names <- paste0("step_", seq_len(max(0L, as.integer(meta$n_components) - 1L)))
+      trait_chains[[cc]]$sigmaSqAlpha <- stats::setNames(
+       as.numeric(ch$annotation$sigmaSqAlpha), step_names
       )
      }
      for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
@@ -765,6 +837,8 @@ NULL
   out$selection_s_min <- named_trait_vec(raw$selection$min)
   out$selection_s_max <- named_trait_vec(raw$selection$max)
   out$selection_s_acceptance <- named_trait_vec(raw$selection$acceptance)
+ } else if (!is.null(raw$selection$mean)) {
+  out$selection_s <- named_trait_vec(raw$selection$mean)
  }
 
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)

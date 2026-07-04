@@ -85,11 +85,34 @@ sampled `selection_s` summaries. For BayesR it also maps `component$prob` to
 `fit$comp_prob` and `component$dm_component_mean` to
 `fit$dm_component_mean`.
 
+Phase 3 migrates summary-statistic CSR SBayesRC:
+
+```text
+src/st_sbayesrc_omp_csr.cpp
+```
+
+CSR SBayesRC uses both the `component` and `annotation` namespaces.
+`raw$component$prob` is a list of length `nt`, with one `m x K`
+marker-by-component posterior probability matrix per trait. The null component
+is always named `gamma_0.00`, and formatted `fit$dm` is derived as
+`1 - P(gamma_0.00)`.
+
+For SBayesRC, `raw$trace$pis` and formatted `fit$pis` are the total
+active-marker probability trace: marker-averaged `1 - P(gamma_0.00)`.
+Final and posterior mean component probabilities are stored in `raw$pi$final`
+and `raw$pi$mean` as `nt x K` matrices with gamma component names.
+
+`raw$annotation` stores SBayesRC annotation parameters, including `alpha` as a
+trait list of `nAnno x (K - 1)` matrices and `sigmaSqAlpha` as
+`(K - 1) x nt` matrices. The R formatter maps these back to existing
+SBayesRC fit fields such as `alpha`, `sigmaSqAlpha`, `annotation_summary`,
+`annotation_pi`, and `annotation_effects`.
+
 ## Non-Migrated Backends
 
 The old positional formatter remains active for non-migrated backends,
-including scheduled CSR BayesC, CSR SBayesRC, prior/group/learned annotation
-CSR BayesC, BED backends, and individual-level scheduled backends.
+including scheduled CSR BayesC, prior/group/learned annotation CSR BayesC, BED
+backends, and individual-level scheduled backends.
 
 Wrappers should explicitly detect:
 
@@ -107,6 +130,5 @@ The intended follow-up order is:
 1. Marker-prior CSR BayesC.
 2. Group CSR BayesC.
 3. Learned annotation CSR BayesC.
-4. CSR SBayesRC.
-5. Scheduled and BED backends after the summary-statistic CSR schemas have
+4. Scheduled and BED backends after the summary-statistic CSR schemas have
    stabilized.

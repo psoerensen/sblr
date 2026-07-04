@@ -411,18 +411,26 @@ stblr_csr_sbayesrc_generic <- function(
   selection_s_log_h = selection_s_info$log_h
  )
 
- fit <- format_sbayesrc_csr_fit(
-  fit = raw_fit,
-  nt = nt,
-  m = m,
-  gamma = gamma,
-  n_anno = ncol(A),
-  trait_names = trait_names,
-  variable_names = variable_names,
-  annotation_names = colnames(A),
-  nchains = nchains,
-  keep_chains = keep_chains
- )
+ if (.is_stblr_raw_v1(raw_fit)) {
+  raw_fit$annotation$annotation_names <- colnames(A)
+  if (isTRUE(selection_s_info$fixed)) {
+   raw_fit$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  }
+  fit <- .format_stblr_raw_v1(raw_fit, trait_names, variable_names)
+ } else {
+  fit <- format_sbayesrc_csr_fit(
+   fit = raw_fit,
+   nt = nt,
+   m = m,
+   gamma = gamma,
+   n_anno = ncol(A),
+   trait_names = trait_names,
+   variable_names = variable_names,
+   annotation_names = colnames(A),
+   nchains = nchains,
+   keep_chains = keep_chains
+  )
+ }
 
  if (isTRUE(estimate_selection_s)) {
   keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))

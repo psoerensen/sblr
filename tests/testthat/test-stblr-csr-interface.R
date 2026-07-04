@@ -162,6 +162,84 @@ make_stblr_csr_interface_bayesr_raw <- function(nit = 3L, nburn = 1L,
   )
 }
 
+make_stblr_csr_interface_sbayesrc_raw <- function(nit = 3L, nburn = 1L,
+                                                  nchains = 1L,
+                                                  keep_chains = FALSE,
+                                                  updateLDswap = FALSE,
+                                                  estimate_selection_s = FALSE) {
+  stats <- make_stblr_csr_interface_stats()
+  nt <- length(stats$yy)
+  m <- stats$m
+  n <- stats$n
+  h2 <- 0.3
+  gamma <- c(0, 0.1, 1)
+  pi_init <- 0.5
+  A <- matrix(
+    c(1, 0, 1, 1, 1, 0),
+    nrow = m,
+    ncol = 2,
+    dimnames = list(stats$marker_names, c("intercept", "annot1"))
+  )
+  alpha <- sblr::make_sbayesrc_alpha_init(A, gamma = gamma, pi_init = pi_init)
+  vy <- as.numeric(stats$yy) / (n - 1)
+  B <- diag((vy * h2) / (m * pi_init), nt, nt)
+  E <- diag(vy * (1 - h2), nt, nt)
+  ssb_prior <- diag(((4 - 2) / 4) * (vy * h2) / (m * pi_init), nt, nt)
+  sse_prior <- diag(((4 - 2) / 4) * (vy * (1 - h2)), nt, nt)
+
+  stblr_cpg_omp_csr_sbayesrc(
+    wy = stats$wy,
+    ww = stats$ww,
+    yy = stats$yy,
+    b_init = list(rep(0, m)),
+    comp_init = list(rep(0, m)),
+    use_comp_init = FALSE,
+    r_init = stats$wy,
+    use_r_init = FALSE,
+    rebuild_r_before_updateE = FALSE,
+    ld_prefix = make_stblr_csr_interface_prefix(),
+    B = B,
+    E = E,
+    ssb_prior = split(ssb_prior, rep(seq_len(nt), each = nt)),
+    sse_prior = split(sse_prior, rep(seq_len(nt), each = nt)),
+    A = A,
+    gamma = gamma,
+    alpha_init = alpha$alpha_init,
+    sigmaSqAlpha_init = alpha$sigmaSqAlpha_init,
+    intercept_flat = TRUE,
+    sigmaSqAlpha_a = 2,
+    sigmaSqAlpha_b = 2,
+    pi_floor = 1e-12,
+    nub = 4,
+    nue = 4,
+    updateAlpha = FALSE,
+    updateB = FALSE,
+    updateE = FALSE,
+    alpha_update_every = 10L,
+    adjE = 0.9,
+    n = rep(as.integer(n), nt),
+    nit = as.integer(nit),
+    nburn = as.integer(nburn),
+    nthin = 1L,
+    ncores = 1L,
+    seed = 103L,
+    nchains = as.integer(nchains),
+    keep_chains = keep_chains,
+    chain_seeds = integer(),
+    updateLDswap = updateLDswap,
+    ld_swap_prob = 1,
+    ld_swap_r2 = 0.01,
+    ld_swap_max_friends = 10L,
+    ld_swap_moves = 1L,
+    selection_s_prior_scale = numeric(),
+    estimate_selection_s = estimate_selection_s,
+    selection_s_init = 0,
+    selection_s_prior = c(-3, 2),
+    selection_s_proposal_sd = 0.25,
+    selection_s_log_h = if (estimate_selection_s) rep(log(0.3), m) else numeric()
+  )
+}
+
 test_that("ordinary CSR BayesC native return uses raw schema v1", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
@@ -205,6 +283,70 @@ test_that("CSR BayesR native return uses raw schema v1 component namespaces", {
     tolerance = 1e-8
   )
   expect_equal(dim(raw$trace$pis), c(raw$meta$n_trace, raw$meta$nt))
+})
+
+test_that("CSR SBayesRC native return uses raw schema v1 component and annotation namespaces", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  raw <- make_stblr_csr_interface_sbayesrc_raw()
+  expect_equal(raw$schema$class, "stblr_raw")
+  expect_equal(as.integer(raw$schema$version), 1L)
+  expect_true(inherits(raw, "stblr_raw_v1"))
+  expect_named(raw, c(
+    "schema", "meta", "marker", "trace", "variance", "pi", "diagnostics",
+    "chains", "prior", "group", "annotation", "component", "selection"
+  ))
+  expect_equal(raw$meta$model, "sbayesrc")
+  expect_true(all(c("names", "gamma", "mixture_var", "prob", "ncomp", "dm_component_mean") %in%
+                    names(raw$component)))
+  expect_true(all(c("alpha_mean", "alpha_final", "sigmaSqAlpha_mean", "sigmaSqAlpha_final") %in%
+                    names(raw$annotation)))
+  expect_equal(raw$component$names[1L], "gamma_0.00")
+  expect_equal(dim(raw$component$prob[[1L]]), c(raw$meta$m, raw$meta$n_components))
+  expect_equal(rowSums(raw$component$prob[[1L]]), rep(1, raw$meta$m), tolerance = 1e-8)
+  expect_equal(
+    as.numeric(raw$marker$dm[, 1L]),
+    1 - raw$component$prob[[1L]][, "gamma_0.00"],
+    tolerance = 1e-8
+  )
+  expect_equal(dim(raw$trace$pis), c(raw$meta$n_trace, raw$meta$nt))
+})
+
+test_that("CSR SBayesRC raw formatter preserves formatted fields and no-chain behavior", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  raw <- make_stblr_csr_interface_sbayesrc_raw(keep_chains = FALSE)
+  raw$annotation$annotation_names <- c("intercept", "annot1")
+  fit <- sblr:::.format_stblr_raw_v1(
+    raw,
+    trait_names = make_stblr_csr_interface_stats()$trait_names,
+    variable_names = make_stblr_csr_interface_stats()$marker_names
+  )
+
+  expect_true(all(c(
+    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pi", "pim", "pis",
+    "comp_prob", "dm_component_mean", "alpha", "sigmaSqAlpha"
+  ) %in% names(fit)))
+  expect_equal(dim(fit$bm), c(3L, 1L))
+  expect_equal(dim(fit$dm), c(3L, 1L))
+  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+    expect_equal(dim(fit[[nm]]), c(raw$meta$n_trace, raw$meta$nt))
+  }
+  expect_equal(names(fit$comp_prob), "trait1")
+  expect_equal(rowSums(fit$comp_prob$trait1), rep(1, 3), tolerance = 1e-8)
+  expect_equal(
+    unname(as.numeric(fit$dm[, "trait1"])),
+    unname(1 - fit$comp_prob$trait1[, "gamma_0.00"]),
+    tolerance = 1e-8
+  )
+  expect_null(fit$chains)
+  expect_null(fit$ld_swap_chains)
 })
 
 test_that("ordinary CSR BayesC raw formatting tolerates no-chain schema objects", {
@@ -366,4 +508,93 @@ test_that("stblr_csr fits BayesR through public method interface", {
   expect_equal(rowSums(fit$comp_prob$trait1), rep(1, 3), tolerance = 1e-8)
   expect_null(fit$chains)
   expect_null(fit$ld_swap_chains)
+})
+
+test_that("stblr_csr_annot routes SBayesRC through raw v1 formatter", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  stats <- make_stblr_csr_interface_stats()
+  annotations <- matrix(
+    c(1, 0, 1, 1, 1, 0),
+    nrow = stats$m,
+    ncol = 2,
+    dimnames = list(stats$marker_names, c("intercept", "annot1"))
+  )
+  glist <- list(
+    sparseLD = list(prefix = make_stblr_csr_interface_prefix()),
+    rsidsLD = list(stats$marker_names),
+    rsids = list(stats$marker_names),
+    maf = list(c(0.1, 0.2, 0.3))
+  )
+
+  fit <- stblr_csr_annot(
+    Glist = glist,
+    stats = stats,
+    annotations = annotations,
+    annotation_model = "sbayesrc",
+    gamma = c(0, 0.1, 1),
+    pi_init = 0.5,
+    updateAlpha = FALSE,
+    updateB = FALSE,
+    updateE = FALSE,
+    nit = 3,
+    nburn = 1,
+    nthin = 1,
+    ncores = 1,
+    seed = 104,
+    nchains = 1L,
+    keep_chains = FALSE
+  )
+
+  expect_true(all(c(
+    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pi", "pim", "pis",
+    "input", "comp_prob", "dm_component_mean", "alpha", "sigmaSqAlpha",
+    "annotation_summary", "annotation_pi", "annotation_effects"
+  ) %in% names(fit)))
+  expect_equal(fit$input$model, "sbayesrc")
+  expect_equal(fit$input$backend, "csr_sbayesrc")
+  expect_equal(dim(fit$bm), c(3L, 1L))
+  expect_equal(dim(fit$dm), c(3L, 1L))
+  expect_equal(rowSums(fit$comp_prob$trait1), rep(1, 3), tolerance = 1e-8)
+  expect_equal(
+    unname(as.numeric(fit$dm[, "trait1"])),
+    unname(1 - fit$comp_prob$trait1[, "gamma_0.00"]),
+    tolerance = 1e-8
+  )
+  expect_null(fit$chains)
+  expect_null(fit$ld_swap_chains)
+})
+
+test_that("CSR SBayesRC raw v1 keep_chains exposes compact chain summaries", {
+  skip_if_not(
+    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
+    "native SBayesRC CSR symbol is not loaded"
+  )
+
+  raw <- make_stblr_csr_interface_sbayesrc_raw(
+    nchains = 2L,
+    keep_chains = TRUE,
+    updateLDswap = TRUE
+  )
+  raw$annotation$annotation_names <- c("intercept", "annot1")
+  fit <- sblr:::.format_stblr_raw_v1(
+    raw,
+    trait_names = make_stblr_csr_interface_stats()$trait_names,
+    variable_names = make_stblr_csr_interface_stats()$marker_names
+  )
+
+  expect_equal(length(fit$chains), 1L)
+  expect_equal(length(fit$chains[[1L]]), 2L)
+  expect_s3_class(fit$ld_swap_chains[[1L]], "data.frame")
+  expect_true(all(vapply(fit$chains[[1L]], function(ch) {
+    is.numeric(ch$bm) &&
+      is.numeric(ch$dm) &&
+      is.matrix(ch$comp_prob) &&
+      is.matrix(ch$alpha) &&
+      is.numeric(ch$sigmaSqAlpha) &&
+      all(abs(rowSums(ch$comp_prob) - 1) < 1e-8)
+  }, logical(1))))
 })
