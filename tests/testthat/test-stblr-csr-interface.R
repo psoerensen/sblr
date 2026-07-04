@@ -339,7 +339,7 @@ test_that("CSR SBayesRC raw formatter preserves formatted fields and no-chain be
     expect_equal(dim(fit[[nm]]), c(raw$meta$n_trace, raw$meta$nt))
   }
   expect_equal(names(fit$comp_prob), "trait1")
-  expect_equal(rowSums(fit$comp_prob$trait1), rep(1, 3), tolerance = 1e-8)
+  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, 3), tolerance = 1e-8)
   expect_equal(
     unname(as.numeric(fit$dm[, "trait1"])),
     unname(1 - fit$comp_prob$trait1[, "gamma_0.00"]),
@@ -505,7 +505,7 @@ test_that("stblr_csr fits BayesR through public method interface", {
     unname(1 - fit$comp_prob$trait1[, "component_0"]),
     tolerance = 1e-8
   )
-  expect_equal(rowSums(fit$comp_prob$trait1), rep(1, 3), tolerance = 1e-8)
+  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, 3), tolerance = 1e-8)
   expect_null(fit$chains)
   expect_null(fit$ld_swap_chains)
 })
@@ -558,7 +558,7 @@ test_that("stblr_csr_annot routes SBayesRC through raw v1 formatter", {
   expect_equal(fit$input$backend, "csr_sbayesrc")
   expect_equal(dim(fit$bm), c(3L, 1L))
   expect_equal(dim(fit$dm), c(3L, 1L))
-  expect_equal(rowSums(fit$comp_prob$trait1), rep(1, 3), tolerance = 1e-8)
+  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, 3), tolerance = 1e-8)
   expect_equal(
     unname(as.numeric(fit$dm[, "trait1"])),
     unname(1 - fit$comp_prob$trait1[, "gamma_0.00"]),
