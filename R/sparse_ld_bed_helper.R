@@ -1151,15 +1151,19 @@ NULL
   seed = as.integer(seed)
  )
 
- fit <- .format_stblr_bed_bayesr_fit(
-  raw,
-  nt = nt,
-  m = m,
-  trait_names = trait_names,
-  variable_names = variable_names,
-  n_components = length(mixture_var),
-  keep_diagnostics = keep_diagnostics
- )
+ if (.is_stblr_raw_v1(raw)) {
+  fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
+ } else {
+  fit <- .format_stblr_bed_bayesr_fit(
+   raw,
+   nt = nt,
+   m = m,
+   trait_names = trait_names,
+   variable_names = variable_names,
+   n_components = length(mixture_var),
+   keep_diagnostics = keep_diagnostics
+  )
+ }
  fit$input <- list(
   method = "bayesr",
   model = "bayesr",
@@ -2944,9 +2948,13 @@ stblr_bed_marker <- function(
      seed = seed
    )))
  }
- fit <- .format_stblr_fit(
-  raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
- )
+ if (.is_stblr_raw_v1(raw)) {
+  fit <- .format_stblr_raw_v1(raw, dat$trait_names, dat$variable_names)
+ } else {
+  fit <- .format_stblr_fit(
+   raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
+  )
+ }
  fit$input <- c(list(
   chr = dat$chr, cls = dat$cls, n = dat$n, n_total = dat$n_total,
   n_used = dat$n_used, m = dat$m,
@@ -3388,9 +3396,13 @@ stblr_bed <- function(
   seed = seed
  )
  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, common)
- fit <- .format_stblr_fit(
- raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
- )
+ if (.is_stblr_raw_v1(raw)) {
+  fit <- .format_stblr_raw_v1(raw, dat$trait_names, dat$variable_names)
+ } else {
+  fit <- .format_stblr_fit(
+   raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
+  )
+ }
  if (is.null(fit$final_pi)) fit$final_pi <- fit$pi
  if (is.null(fit$mean_pi)) fit$mean_pi <- fit$pim
  fit$input <- c(list(

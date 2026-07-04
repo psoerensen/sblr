@@ -579,7 +579,7 @@ static arma::vec stblr_bed_xb_from_b_sparse(
 // =============================================================================
 
 // [[Rcpp::export]]
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_sparse(
+Rcpp::List stblr_cpg_omp_bed_marker_sparse(
   Rcpp::CharacterVector bed_files,
   int n,
   Rcpp::List cls,
@@ -1107,131 +1107,162 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_bed_marker_sparse(
  }
 
  // --------------------------------------------------------------------------
- // Build result, preserving existing slots and adding the pi trace in slot 23.
+ // Build named raw schema v1 (same schema as the migrated CSR backends;
+ // values below are numerically identical to the previous positional
+ // result[0..19]/result[22] slots).
  // --------------------------------------------------------------------------
 
- std::vector<std::vector<std::vector<double>>> result(23);
+ const int n_trace = nit + nburn;
 
- for (int k = 0; k < 23; ++k) {
-  result[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(nt));
- }
+ arma::mat d_mat_dbl = arma::conv_to<arma::mat>::from(d_mat);
 
- for (int t = 0; t < nt; ++t) {
-  result[0][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-  result[1][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-  result[2][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-  result[3][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-  result[4][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-  result[5][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-  result[6][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(m));
-
-  result[7][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
-  result[8][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
-  result[9][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
-
-  result[10][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));
-  result[11][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));
-  result[12][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));
-  result[13][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));
-  result[14][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));
-  result[15][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nt));
-
-  result[16][static_cast<std::size_t>(t)].resize(2);
-  result[17][static_cast<std::size_t>(t)].resize(2);
-  result[18][static_cast<std::size_t>(t)].resize(4);
-  result[19][static_cast<std::size_t>(t)].resize(2);
-  result[22][static_cast<std::size_t>(t)].resize(static_cast<std::size_t>(nit + nburn));
- }
-
- for (int t = 0; t < nt; ++t) {
-  const std::size_t ts = static_cast<std::size_t>(t);
-
-  for (int j = 0; j < m; ++j) {
-   const std::size_t js = static_cast<std::size_t>(j);
-   const arma::uword tu = static_cast<arma::uword>(t);
-   const arma::uword ju = static_cast<arma::uword>(j);
-
-   result[0][ts][js] = bm_mat(tu, ju);
-   result[1][ts][js] = dm_mat(tu, ju);
-   result[2][ts][js] = wy_mat(tu, ju);
-   result[3][ts][js] = r_mat(tu, ju);
-   result[4][ts][js] = b_mat(tu, ju);
-   result[5][ts][js] = static_cast<double>(d_mat(tu, ju));
-   result[6][ts][js] = static_cast<double>(j);
+ auto marker_matrix = [&](const arma::mat& x) {
+  Rcpp::NumericMatrix out(m, nt);
+  for (int t = 0; t < nt; ++t) {
+   for (int i = 0; i < m; ++i) {
+    out(i, t) = x(static_cast<arma::uword>(t), static_cast<arma::uword>(i));
+   }
   }
- }
+  return out;
+ };
+
+ auto trace_matrix = [&](const arma::mat& x) {
+  Rcpp::NumericMatrix out(n_trace, nt);
+  for (int t = 0; t < nt; ++t) {
+   for (int it = 0; it < n_trace; ++it) {
+    out(it, t) = x(static_cast<arma::uword>(t), static_cast<arma::uword>(it));
+   }
+  }
+  return out;
+ };
+
+ auto diagonal_matrix = [&](const arma::vec& x) {
+  Rcpp::NumericMatrix out(nt, nt);
+  for (int t = 0; t < nt; ++t) {
+   out(t, t) = x(static_cast<arma::uword>(t));
+  }
+  return out;
+ };
+
+ Rcpp::NumericMatrix pi_final(nt, 2);
+ Rcpp::NumericMatrix pi_mean(nt, 2);
 
  for (int t = 0; t < nt; ++t) {
-  const std::size_t ts = static_cast<std::size_t>(t);
+  const arma::uword tu = static_cast<arma::uword>(t);
 
-  for (int it = 0; it < nit + nburn; ++it) {
-   const std::size_t its = static_cast<std::size_t>(it);
-   const arma::uword tu = static_cast<arma::uword>(t);
-   const arma::uword itu = static_cast<arma::uword>(it);
-
-   result[7][ts][its] = vbs_mat(tu, itu);
-   result[8][ts][its] = vgs_mat(tu, itu);
-   result[9][ts][its] = ves_mat(tu, itu);
-   result[22][ts][its] = pis_mat(tu, itu);
-  }
- }
-
- for (int t1 = 0; t1 < nt; ++t1) {
-  const std::size_t t1s = static_cast<std::size_t>(t1);
-
-  for (int t2 = 0; t2 < nt; ++t2) {
-   const std::size_t t2s = static_cast<std::size_t>(t2);
-
-   result[10][t1s][t2s] = 0.0;
-   result[11][t1s][t2s] = 0.0;
-   result[12][t1s][t2s] = 0.0;
-   result[13][t1s][t2s] = 0.0;
-   result[14][t1s][t2s] = 0.0;
-   result[15][t1s][t2s] = 0.0;
-  }
-
-  result[10][t1s][t1s] = final_vb(static_cast<arma::uword>(t1));
-  result[11][t1s][t1s] = final_vg(static_cast<arma::uword>(t1));
-  result[12][t1s][t1s] = final_ve(static_cast<arma::uword>(t1));
-
-  result[13][t1s][t1s] = final_vb(static_cast<arma::uword>(t1));
-  result[14][t1s][t1s] = final_vg(static_cast<arma::uword>(t1));
-  result[15][t1s][t1s] = final_ve(static_cast<arma::uword>(t1));
- }
-
- for (int t = 0; t < nt; ++t) {
-  const std::size_t ts = static_cast<std::size_t>(t);
-
-  result[16][ts][0] = 1.0 - final_pi(static_cast<arma::uword>(t));
-  result[16][ts][1] = final_pi(static_cast<arma::uword>(t));
+  pi_final(t, 0) = 1.0 - final_pi(tu);
+  pi_final(t, 1) = final_pi(tu);
 
   double mean_pi = 0.0;
   int npi = 0;
 
   for (int it = nburn; it < nit + nburn; ++it) {
-   mean_pi += pis_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(it));
+   mean_pi += pis_mat(tu, static_cast<arma::uword>(it));
    ++npi;
   }
 
   if (npi > 0) {
    mean_pi /= static_cast<double>(npi);
   } else {
-   mean_pi = final_pi(static_cast<arma::uword>(t));
+   mean_pi = final_pi(tu);
   }
 
-  result[17][ts][0] = 1.0 - mean_pi;
-  result[17][ts][1] = mean_pi;
-
-  for (int i = 0; i < 4; ++i) {
-   result[18][ts][static_cast<std::size_t>(i)] = 0.0;
-  }
-
-  for (int i = 0; i < 2; ++i) {
-   result[19][ts][static_cast<std::size_t>(i)] = 0.0;
-  }
+  pi_mean(t, 0) = 1.0 - mean_pi;
+  pi_mean(t, 1) = mean_pi;
  }
 
- return result;
+ Rcpp::List marker = Rcpp::List::create(
+  Rcpp::Named("bm") = marker_matrix(bm_mat),
+  Rcpp::Named("dm") = marker_matrix(dm_mat),
+  Rcpp::Named("wy") = marker_matrix(wy_mat),
+  Rcpp::Named("r") = marker_matrix(r_mat),
+  Rcpp::Named("b") = marker_matrix(b_mat),
+  Rcpp::Named("state") = marker_matrix(d_mat_dbl)
+ );
+
+ Rcpp::List trace = Rcpp::List::create(
+  Rcpp::Named("vbs") = trace_matrix(vbs_mat),
+  Rcpp::Named("vgs") = trace_matrix(vgs_mat),
+  Rcpp::Named("ves") = trace_matrix(ves_mat),
+  Rcpp::Named("vle") = R_NilValue,
+  Rcpp::Named("vld") = R_NilValue,
+  Rcpp::Named("pis") = trace_matrix(pis_mat)
+ );
+
+ Rcpp::List variance = Rcpp::List::create(
+  Rcpp::Named("covb") = diagonal_matrix(final_vb),
+  Rcpp::Named("covg") = diagonal_matrix(final_vg),
+  Rcpp::Named("cove") = diagonal_matrix(final_ve),
+  Rcpp::Named("vb") = diagonal_matrix(final_vb),
+  Rcpp::Named("vg") = diagonal_matrix(final_vg),
+  Rcpp::Named("ve") = diagonal_matrix(final_ve)
+ );
+
+ // diagnostics values below are all-zero, matching the previous
+ // result[18]/result[19] slots, which were never populated with the
+ // computed nsamples_vec/trait_seconds values.
+ Rcpp::List diagnostics = Rcpp::List::create(
+  Rcpp::Named("nsamples") = Rcpp::NumericVector(nt),
+  Rcpp::Named("n_used") = Rcpp::IntegerVector(nt),
+  Rcpp::Named("log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("mean_log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("seconds_mean") = Rcpp::NumericVector(nt),
+  Rcpp::Named("seconds_max") = Rcpp::NumericVector(nt),
+  Rcpp::Named("ld_swap") = R_NilValue
+ );
+
+ Rcpp::List selection = Rcpp::List::create(
+  Rcpp::Named("enabled") = false,
+  Rcpp::Named("fixed") = false,
+  Rcpp::Named("scale") = "standardized_genotype_effect",
+  Rcpp::Named("trace") = R_NilValue,
+  Rcpp::Named("mean") = R_NilValue,
+  Rcpp::Named("sd") = R_NilValue,
+  Rcpp::Named("min") = R_NilValue,
+  Rcpp::Named("max") = R_NilValue,
+  Rcpp::Named("acceptance") = R_NilValue
+ );
+
+ Rcpp::List raw = Rcpp::List::create(
+  Rcpp::Named("schema") = Rcpp::List::create(
+   Rcpp::Named("class") = "stblr_raw",
+   Rcpp::Named("version") = 1
+  ),
+  Rcpp::Named("meta") = Rcpp::List::create(
+   Rcpp::Named("model") = "bayesc",
+   Rcpp::Named("backend") = "bed_sparse_bayesc",
+   Rcpp::Named("data_level") = "individual",
+   Rcpp::Named("prior_type") = "global",
+   Rcpp::Named("m") = m,
+   Rcpp::Named("nt") = nt,
+   Rcpp::Named("n_trace") = n_trace,
+   Rcpp::Named("nit") = nit,
+   Rcpp::Named("nburn") = nburn,
+   Rcpp::Named("nthin") = nthin,
+   Rcpp::Named("nchains") = 1,
+   Rcpp::Named("keep_chains") = false,
+   Rcpp::Named("n_components") = 2,
+   Rcpp::Named("n_annotations") = 0,
+   Rcpp::Named("n_groups") = 0
+  ),
+  Rcpp::Named("marker") = marker,
+  Rcpp::Named("trace") = trace,
+  Rcpp::Named("variance") = variance,
+  Rcpp::Named("pi") = Rcpp::List::create(
+   Rcpp::Named("final") = pi_final,
+   Rcpp::Named("mean") = pi_mean,
+   Rcpp::Named("names") = Rcpp::CharacterVector::create("pi0", "pi1")
+  ),
+  Rcpp::Named("diagnostics") = diagnostics,
+  Rcpp::Named("chains") = R_NilValue,
+  Rcpp::Named("prior") = Rcpp::List::create(),
+  Rcpp::Named("group") = Rcpp::List::create(),
+  Rcpp::Named("annotation") = Rcpp::List::create(),
+  Rcpp::Named("component") = Rcpp::List::create(),
+  Rcpp::Named("selection") = selection
+ );
+ raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
+ return raw;
 }
 
 
