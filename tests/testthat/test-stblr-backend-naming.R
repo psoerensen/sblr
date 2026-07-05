@@ -33,7 +33,7 @@ test_that("supported public CSR and BED docs do not label BayesR experimental", 
     "man/stblr_csr_bayesr.Rd",
     "man/stblr_bed.Rd",
     "docs/dev/stblr_csr_bayesr_design.md",
-    "docs/dev/stblr_bayesr_backend_design.md",
+    "docs/dev/archive/stblr_bayesr_backend_design.md",
     "docs/dev/stblr_bayesr_ldswap_design.md",
     "docs/dev/stblr_backend_naming.md"
   )
