@@ -558,19 +558,215 @@ NULL
  )
 }
 
-# Thin validation wrapper around .is_stblr_raw(): stops with
-# .stblr_stop_unsupported_raw_output() instead of returning FALSE.
+# Deep structural checks for a schema-tagged stblr_raw object (i.e. one that
+# already passes .is_stblr_raw()). Returns a character vector of problems
+# (empty if none). Only checks presence, type, and dimensions implied by
+# raw$meta against the stblr_raw_schema contract (docs/dev/stblr_raw_schema.md)
+# -- it never inspects or reinterprets numerical content.
+.stblr_raw_structure_problems <- function(raw) {
+ problems <- character(0)
+ add <- function(...) problems <<- c(problems, paste0(...))
+
+ meta <- raw$meta
+ if (!is.list(meta)) {
+  add("raw$meta must be a list.")
+  return(problems)
+ }
+
+ scalar_pos_int <- function(x, allow_zero = FALSE) {
+  xi <- suppressWarnings(as.integer(x))
+  length(xi) == 1L && !is.na(xi) && (xi > 0L || (allow_zero && xi == 0L))
+ }
+
+ if (!scalar_pos_int(meta$nt)) add("raw$meta$nt must be a single positive integer.")
+ if (!scalar_pos_int(meta$m)) add("raw$meta$m must be a single positive integer.")
+ if (!scalar_pos_int(meta$n_trace, allow_zero = TRUE)) {
+  add("raw$meta$n_trace must be a single non-negative integer.")
+ }
+ # Dimension checks below are meaningless without valid nt/m/n_trace.
+ if (length(problems) > 0L) return(problems)
+
+ nt <- as.integer(meta$nt)
+ m <- as.integer(meta$m)
+ n_trace <- as.integer(meta$n_trace)
+ model <- meta$model
+ backend <- meta$backend
+
+ check_dim <- function(x, field, nrow_expected, ncol_expected) {
+  if (is.null(x)) return(invisible())
+  xm <- try(as.matrix(x), silent = TRUE)
+  if (inherits(xm, "try-error")) {
+   add(field, " could not be coerced to a matrix.")
+   return(invisible())
+  }
+  if (nrow(xm) != nrow_expected || ncol(xm) != ncol_expected) {
+   add(
+    field, " has dimensions ", nrow(xm), "x", ncol(xm),
+    " but raw$meta implies ", nrow_expected, "x", ncol_expected, "."
+   )
+  }
+ }
+
+ marker <- raw$marker
+ if (!is.null(marker) && !is.list(marker)) {
+  add("raw$marker must be a list.")
+ } else {
+  for (nm in c("bm", "dm", "wy", "r", "b", "state")) {
+   check_dim(marker[[nm]], paste0("raw$marker$", nm), m, nt)
+  }
+ }
+
+ trace <- raw$trace
+ if (!is.null(trace) && !is.list(trace)) {
+  add("raw$trace must be a list.")
+ } else {
+  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+   check_dim(trace[[nm]], paste0("raw$trace$", nm), n_trace, nt)
+  }
+ }
+
+ variance <- raw$variance
+ if (!is.null(variance) && !is.list(variance)) {
+  add("raw$variance must be a list.")
+ } else {
+  for (nm in c("covb", "covg", "cove", "vb", "vg", "ve")) {
+   check_dim(variance[[nm]], paste0("raw$variance$", nm), nt, nt)
+  }
+ }
+
+ pi_block <- raw$pi
+ if (!is.list(pi_block) || is.null(pi_block$final) || is.null(pi_block$mean)) {
+  add("raw$pi$final and raw$pi$mean are required.")
+ } else {
+  pf <- try(as.matrix(pi_block$final), silent = TRUE)
+  pm <- try(as.matrix(pi_block$mean), silent = TRUE)
+  if (inherits(pf, "try-error") || inherits(pm, "try-error")) {
+   add("raw$pi$final and raw$pi$mean must be coercible to matrices.")
+  } else {
+   if (nrow(pf) != nt) {
+    add("raw$pi$final must have ", nt, " row(s) (one per trait), got ", nrow(pf), ".")
+   }
+   if (nrow(pm) != nt) {
+    add("raw$pi$mean must have ", nt, " row(s) (one per trait), got ", nrow(pm), ".")
+   }
+   if (ncol(pf) != ncol(pm)) {
+    add("raw$pi$final and raw$pi$mean must have the same number of columns.")
+   }
+   if (!is.null(pi_block$names) && length(pi_block$names) != ncol(pf)) {
+    add(
+     "raw$pi$names must have length ", ncol(pf),
+     " (ncol of raw$pi$final), got ", length(pi_block$names), "."
+    )
+   }
+  }
+ }
+
+ if (identical(model, "bayesr") || identical(model, "sbayesrc")) {
+  prob <- raw$component$prob
+  if (is.null(prob)) {
+   add("raw$component$prob is required for model '", model, "'.")
+  } else if (!is.list(prob) || length(prob) != nt) {
+   add(
+    "raw$component$prob must be a list of length nt (", nt,
+    "), got length ", length(prob), "."
+   )
+  } else {
+   ncomp <- NA_integer_
+   for (tt in seq_along(prob)) {
+    xm <- try(as.matrix(prob[[tt]]), silent = TRUE)
+    if (inherits(xm, "try-error")) {
+     add("raw$component$prob[[", tt, "]] could not be coerced to a matrix.")
+     next
+    }
+    if (nrow(xm) != m) {
+     add("raw$component$prob[[", tt, "]] must have m (", m, ") rows, got ", nrow(xm), ".")
+    }
+    if (is.na(ncomp)) {
+     ncomp <- ncol(xm)
+    } else if (ncol(xm) != ncomp) {
+     add("raw$component$prob entries must all have the same number of columns.")
+    }
+   }
+   comp_names <- raw$component$names
+   if (!is.null(comp_names) && !is.na(ncomp) && length(comp_names) != ncomp) {
+    add(
+     "raw$component$names must have length ", ncomp,
+     " (component columns), got ", length(comp_names), "."
+    )
+   }
+   null_component <- if (identical(model, "sbayesrc")) "gamma_0.00" else "component_0"
+   if (!is.null(comp_names) && !(null_component %in% comp_names)) {
+    add(
+     "raw$component$names is missing the required null component '",
+     null_component, "' for model '", model, "'."
+    )
+   }
+  }
+ }
+
+ if (identical(model, "sbayesrc")) {
+  alpha <- raw$annotation$alpha_mean %||% raw$annotation$alpha
+  if (!is.null(alpha) && (!is.list(alpha) || length(alpha) != nt)) {
+   add(
+    "raw$annotation$alpha(_mean) must be a list of length nt (", nt,
+    "), got length ", length(alpha), "."
+   )
+  }
+ }
+
+ if (identical(backend, "csr_group_bayesc")) {
+  group_index <- raw$group$group_index
+  if (!is.null(group_index) && length(group_index) != m) {
+   add(
+    "raw$group$group_index must have length m (", m,
+    "), got length ", length(group_index), "."
+   )
+  }
+ }
+
+ chains <- raw$chains
+ if (!is.null(chains) && length(chains) > 0L) {
+  if (!is.list(chains)) {
+   add("raw$chains must be a list when present.")
+  } else if (length(chains) != nt) {
+   add(
+    "raw$chains must have length nt (", nt,
+    ") when present, got length ", length(chains), "."
+   )
+  }
+ }
+
+ problems
+}
+
+.stblr_stop_raw_structure <- function(problems, backend = NULL) {
+ stop(
+  "Malformed stblr_raw object",
+  if (!is.null(backend)) paste0(" from backend '", backend, "'"),
+  ":\n- ", paste(problems, collapse = "\n- "),
+  call. = FALSE
+ )
+}
+
+# Validation wrapper around .is_stblr_raw(): stops with
+# .stblr_stop_unsupported_raw_output() when the schema/version tag itself is
+# missing or wrong, then runs the deeper .stblr_raw_structure_problems()
+# checks and stops with an informative, itemised error if the tagged object
+# is nonetheless structurally malformed (missing/mis-shaped fields). Valid
+# stblr_raw objects from every migrated backend pass through unchanged.
 .validate_stblr_raw <- function(raw, backend = NULL) {
  if (!.is_stblr_raw(raw)) {
   .stblr_stop_unsupported_raw_output(backend)
+ }
+ problems <- .stblr_raw_structure_problems(raw)
+ if (length(problems) > 0L) {
+  .stblr_stop_raw_structure(problems, backend %||% raw$meta$backend)
  }
  invisible(TRUE)
 }
 
 .as_stblr_fit <- function(raw, trait_names = NULL, variable_names = NULL) {
- if (!.is_stblr_raw(raw)) {
-  stop(".as_stblr_fit() expects an stblr_raw schema version 1 object.")
- }
+ .validate_stblr_raw(raw)
 
  meta <- raw$meta
  nt <- as.integer(meta$nt)
