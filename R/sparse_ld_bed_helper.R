@@ -545,6 +545,18 @@ NULL
   identical(as.integer(raw$schema$version), 1L)
 }
 
+# All active native backends return stblr_raw_v1 output. Legacy positional
+# backend-output support has been removed at the wrapper level; this stops
+# clearly instead of silently falling back to a positional formatter.
+.stblr_stop_unsupported_raw_output <- function(backend = NULL) {
+ stop(
+  "Unsupported backend output: expected an stblr_raw schema version 1 ",
+  "object", if (!is.null(backend)) paste0(" from backend '", backend, "'"),
+  ". Legacy positional backend output is no longer supported.",
+  call. = FALSE
+ )
+}
+
 .format_stblr_raw_v1 <- function(raw, trait_names = NULL, variable_names = NULL) {
  if (!.is_stblr_raw_v1(raw)) {
   stop(".format_stblr_raw_v1() expects an stblr_raw schema version 1 object.")
@@ -1200,15 +1212,7 @@ NULL
  if (.is_stblr_raw_v1(raw)) {
   fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
  } else {
-  fit <- .format_stblr_bed_bayesr_fit(
-   raw,
-   nt = nt,
-   m = m,
-   trait_names = trait_names,
-   variable_names = variable_names,
-   n_components = length(mixture_var),
-   keep_diagnostics = keep_diagnostics
-  )
+  .stblr_stop_unsupported_raw_output("bed_bayesr")
  }
  fit$input <- list(
   method = "bayesr",
@@ -1805,14 +1809,7 @@ stblr_csr_bayesr <- function(
   }
   fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
  } else {
-  fit <- .format_stblr_csr_bayesr_fit(
-   raw,
-   nt = nt,
-   m = m,
-   trait_names = trait_names,
-   variable_names = variable_names,
-   n_components = length(mixture_var)
-  )
+  .stblr_stop_unsupported_raw_output("csr_bayesr")
  }
  if (isTRUE(estimate_selection_s)) {
   keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
@@ -2478,7 +2475,7 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   }
   fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
  } else {
-  fit <- .format_stblr_fit(raw, nt, m, trait_names, variable_names)
+  .stblr_stop_unsupported_raw_output("csr_bayesc")
  }
  if (isTRUE(estimate_selection_s)) {
   keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
@@ -2997,9 +2994,7 @@ stblr_bed_marker <- function(
  if (.is_stblr_raw_v1(raw)) {
   fit <- .format_stblr_raw_v1(raw, dat$trait_names, dat$variable_names)
  } else {
-  fit <- .format_stblr_fit(
-   raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
-  )
+  .stblr_stop_unsupported_raw_output("bed_bayesc")
  }
  fit$input <- c(list(
   chr = dat$chr, cls = dat$cls, n = dat$n, n_total = dat$n_total,
@@ -3445,9 +3440,7 @@ stblr_bed <- function(
  if (.is_stblr_raw_v1(raw)) {
   fit <- .format_stblr_raw_v1(raw, dat$trait_names, dat$variable_names)
  } else {
-  fit <- .format_stblr_fit(
-   raw, dat$nt, dat$m, dat$trait_names, dat$variable_names, TRUE
-  )
+  .stblr_stop_unsupported_raw_output("bed_bayesc")
  }
  if (is.null(fit$final_pi)) fit$final_pi <- fit$pi
  if (is.null(fit$mean_pi)) fit$mean_pi <- fit$pim

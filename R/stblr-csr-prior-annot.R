@@ -281,13 +281,7 @@ stblr_csr_prior_annot <- function(
    variable_names = variable_names
   )
  } else {
-  fit <- .format_stblr_fit(
-   raw_fit,
-   nt = nt,
-   m = m,
-   trait_names = trait_names,
-   variable_names = variable_names
-  )
+  .stblr_stop_unsupported_raw_output("csr_prior_bayesc")
  }
 
  fit$input <- c(

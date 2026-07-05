@@ -139,22 +139,97 @@ active-marker probability trace. It is the sampled global `pi1` for
 marker-prior and learned-annotation BayesC, and the marker-weighted current
 group probability for group-prior BayesC. Unused namespaces remain empty.
 
-## Non-Migrated Backends
+Phase 5 completes the migration for the remaining backends: scheduled CSR
+BayesC, BED BayesC/BayesR, and the individual-level (non-CSR) backends:
 
-The old positional formatter remains active for non-migrated backends,
-including scheduled CSR BayesC, BED backends, finemap paths, and
-individual-level scheduled backends.
+```text
+src/st_cpg_omp_csr_scheduled.cpp
+src/st_cpg_omp_individual.cpp
+src/st_cpg_omp_individual_scheduled.cpp
+src/st_cpg_omp_individual_scheduled_chains.cpp
+src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp
+```
 
-Wrappers should explicitly detect:
+These backends reuse the same BayesC/BayesR namespace conventions described
+above for their respective model family (CSR BayesC or BayesR semantics for
+`raw$marker`, `raw$pi`, and, for BayesR, `raw$component`).
+
+## All Active Backends Are Migrated
+
+Every active, R-reachable native backend now returns `stblr_raw_v1` output
+(schema `class = "stblr_raw"`, `version = 1L`). There are no remaining
+non-migrated active backends.
+
+R-side wrappers detect the schema explicitly:
 
 ```r
 raw$schema$class == "stblr_raw"
 as.integer(raw$schema$version) == 1L
 ```
 
-before routing through `.format_stblr_raw_v1()`.
+(via the internal helper `.is_stblr_raw_v1()`) before routing through
+`.format_stblr_raw_v1()`.
 
-## Planned Migration Order
+## Legacy Positional Backend Output Is Unsupported
 
-The remaining follow-up order is scheduled and BED backends after the
-summary-statistic CSR schemas have stabilized.
+Because every active backend now emits `stblr_raw_v1`, the positional
+backend-output path is no longer a supported fallback at the wrapper level.
+Every R-facing model-fitting wrapper (`stblr_csr()`, `stblr_csr_annot()`,
+`stblr_bed()`, `stblr_csr_bayesr()`, the BED marker helpers, and the finemap
+local re-fit helper) stops with a clear error via
+`.stblr_stop_unsupported_raw_output()` if a backend ever returns something
+that is not a valid `stblr_raw_v1` object, instead of silently reformatting
+positional output.
+
+The underlying positional formatters (`.format_stblr_fit()`,
+`.format_stblr_bayesr_fit()`, `.format_stblr_csr_bayesr_fit()`,
+`.format_csr_annot_fit()`, `.format_csr_group_annot_fit()`,
+`format_sbayesrc_csr_fit()`) are intentionally retained as internal
+compatibility code. They are exercised directly by unit tests that construct
+legacy-shaped positional lists (see `test-bayesr-csr-backend.R` and
+`test-sbayesrc-helpers.R`), but no production code path calls them anymore.
+
+## Stable Formatted Fit Contract
+
+`stblr_raw_v1` is an internal development interface and may change between
+backend phases. The formatted `fit` object returned to users is the stable
+contract: public field names (`bm`, `dm`, `comp_prob`, `chains`, `ld_swap`,
+`dm_sd`/`dm_min`/`dm_max`, `bm_sd`/`bm_min`/`bm_max`, `selection_s*`, etc.),
+their dimensions, and `fit$input` metadata do not change when the raw schema
+changes underneath them. [`check_stblr_consistency()`](../../R/check-stblr-backend-consistency.R)
+is the executable description of this contract and should keep passing for
+every backend regardless of raw-schema revisions.
+
+## Present-but-`NULL` Diagnostic Fields
+
+Optional diagnostic fields are always present as named elements on the
+formatted `fit` object, set to `NULL` rather than omitted, when a backend or
+configuration does not produce them. This lets callers use `fit$field` rather
+than `"field" %in% names(fit)` to test for availability. Examples:
+
+- `fit$ld_swap` and `fit$ld_swap_chains` (`.stblr_ensure_ld_swap_fields()`) are
+  always present, `NULL` unless `updateLDswap = TRUE` (or chain-level swap
+  diagnostics were kept).
+- `fit$dm_sd`/`fit$dm_min`/`fit$dm_max`/`fit$bm_sd`/`fit$bm_min`/`fit$bm_max`
+  (`.stblr_ensure_chain_summary_fields()`) are always present. They are
+  `NULL` when the backend has no chain-summary data for them (e.g.
+  `nchains > 1` but the native backend did not return per-chain summaries),
+  except for the single-chain convention below.
+
+## Single-Chain Degenerate Chain-Summary Convention
+
+When a fit uses exactly one chain (`meta$nchains == 1`) and the native raw
+object does not itself supply `dm_sd`/`dm_min`/`dm_max`/`bm_sd`/`bm_min`/
+`bm_max`, `.stblr_ensure_chain_summary_fields()` synthesizes them from `dm`/`bm`
+instead of leaving them `NULL`:
+
+- `dm_sd` and `bm_sd` are set to zero (same dimensions as `dm`/`bm`).
+- `dm_min`/`dm_max` and `bm_min`/`bm_max` are set equal to `dm`/`bm`.
+
+This is intentional: with a single chain there is no cross-chain variation,
+so the degenerate summary (zero spread, min == max == the point estimate) is
+the mathematically correct value rather than a missing one. It also means
+`check_stblr_consistency()`'s single-chain checks
+(`chain_summary.single.dm_sd_zero`, `chain_summary.single.dm_equal`, etc.)
+can assert on these fields whenever a backend chooses to populate them for a
+single chain.

@@ -430,14 +430,7 @@ stblr_csr_learn_annot <- function(
    variable_names = variable_names
   )
  } else {
-  fit <- .format_csr_annot_fit(
-   fit = raw_fit,
-   nt = nt,
-   m = m,
-   annotation_names = colnames(A),
-   trait_names = trait_names,
-   variable_names = variable_names
-  )
+  .stblr_stop_unsupported_raw_output("csr_annot_bayesc")
  }
 
  fit$input <- c(

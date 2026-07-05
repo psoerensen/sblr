@@ -418,18 +418,7 @@ stblr_csr_sbayesrc_generic <- function(
   }
   fit <- .format_stblr_raw_v1(raw_fit, trait_names, variable_names)
  } else {
-  fit <- format_sbayesrc_csr_fit(
-   fit = raw_fit,
-   nt = nt,
-   m = m,
-   gamma = gamma,
-   n_anno = ncol(A),
-   trait_names = trait_names,
-   variable_names = variable_names,
-   annotation_names = colnames(A),
-   nchains = nchains,
-   keep_chains = keep_chains
-  )
+  .stblr_stop_unsupported_raw_output("csr_sbayesrc")
  }
 
  if (isTRUE(estimate_selection_s)) {

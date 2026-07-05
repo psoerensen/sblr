@@ -419,15 +419,7 @@ stblr_csr_group_annot <- function(
    variable_names = variable_names
   )
  } else {
-  fit <- .format_csr_group_annot_fit(
-   fit = raw_fit,
-   nt = nt,
-   m = m,
-   ngroup = group_info$ngroup,
-   group_names = group_info$group_names,
-   trait_names = trait_names,
-   variable_names = variable_names
-  )
+  .stblr_stop_unsupported_raw_output("csr_group_bayesc")
  }
 
  fit$input <- c(

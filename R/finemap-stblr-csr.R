@@ -891,7 +891,7 @@ finemap_stblr_csr <- function(
   if (.is_stblr_raw_v1(raw)) {
     fit <- .format_stblr_raw_v1(raw, trait_names = trait_name, variable_names = stats$marker_names)
   } else {
-    fit <- .format_stblr_fit(raw, 1L, m, trait_name, stats$marker_names)
+    .stblr_stop_unsupported_raw_output("csr_bayesc")
   }
   fit$input <- list(
     n = stats$n, m = m, nt = 1L, B = B, E = E,
