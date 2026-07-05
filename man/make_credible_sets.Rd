@@ -35,7 +35,10 @@ regions to analyze.}
 \item{trait}{Trait column name or index when `fit$dm` is a matrix/data frame.}
 
 \item{coverage, min_r2, pip_cutoff}{Credible-set construction parameters
-passed to [make_credible_sets_from_ld()].}
+passed to [make_credible_sets_from_ld()]. `coverage` is the cumulative-PIP
+target for each set; `min_r2` is the minimum squared correlation to the
+lead marker required for candidate membership; `pip_cutoff` zeroes PIPs
+below this value before set construction.}
 
 \item{locus_pip_cutoff}{Minimum PIP for automatic lead-locus selection.}
 
@@ -45,20 +48,31 @@ locus definition.}
 \item{max_loci}{Maximum number of automatic loci.}
 
 \item{method}{Lead-marker selection method passed to
-[make_credible_sets_from_ld()].}
+[make_credible_sets_from_ld()]. `"pip"` (default) selects the
+not-yet-assigned marker with the highest PIP as the lead. `"ld_pip"`
+instead selects the not-yet-assigned marker with the highest LD-smoothed
+score (`LD^2 %*% pip`, restricted to not-yet-assigned markers).}
 
 \item{allow_incomplete}{Logical; if `TRUE`, return credible-set candidates
-whose cumulative PIP does not reach `coverage`. The default `FALSE`
-reports only valid credible sets with `cs_pip >= coverage`.}
+whose cumulative PIP does not reach `coverage` (with all qualifying
+candidates included) rather than discarding them. The default `FALSE`
+does not return an under-coverage attempt as an incomplete set; instead
+its whole candidate set is dropped from future lead consideration and
+construction moves on to a new lead, so only completed sets with
+`cs_pip >= coverage` ever appear in the output.}
 
-\item{remove}{Marker removal rule passed to [make_credible_sets_from_ld()].
-The default `"ld_neighborhood"` removes the whole lead LD neighborhood from
-future credible-set selection; `"credible_set"` removes only selected
-credible-set markers.}
+\item{remove}{Marker removal rule passed to [make_credible_sets_from_ld()],
+applied after each set is accepted (or, when `allow_incomplete = FALSE`,
+after an under-coverage attempt is dropped). The default
+`"ld_neighborhood"` removes every candidate considered for that lead
+(not just the ones selected into the set) from future lead selection;
+`"credible_set"` removes only the markers actually selected into the set,
+leaving other same-neighborhood markers eligible to become a later lead.}
 }
 \value{
 A list with combined `summary`, nested credible `sets`, `loci`,
-  `parameters`, and resolved `trait`.
+  `parameters`, and resolved `trait`. Multiple rows/entries per locus (for
+  `CS1`, `CS2`, ...) are possible; see Details.
 }
 \description{
 Constructs credible sets from marker-level PIPs in `fit$dm` for fitted
@@ -76,4 +90,20 @@ When using sparse LD from `Glist$sparseLD`, the sparse LD should have been
 computed with a sufficiently permissive `r2_threshold` and local window to
 support the requested `min_r2`; otherwise, LD pairs needed for set
 construction may be absent.
+
+Within each locus, marker credible sets are built by delegating to
+[make_credible_sets_from_ld()] on that locus's regional PIPs and regional
+LD. That delegate repeatedly: (1) selects a lead marker among markers not
+yet assigned, using `method`; (2) forms a candidate set of not-yet-assigned
+markers with squared correlation to the lead at least `min_r2` (falling
+back to the lead alone if none qualify); (3) ranks candidates by decreasing
+PIP and accumulates them until cumulative PIP first reaches `coverage`; and
+(4) removes markers from future lead consideration according to `remove`.
+This repeats until no assignable markers remain in the locus. Because nothing
+stops that loop after the first credible set, **a single locus can yield more
+than one credible set (`CS1`, `CS2`, ...)** whenever it contains multiple
+LD-separated high-PIP peaks that each independently reach `coverage`; the
+number of sets per locus is not capped by any argument exposed here (the
+delegate's own `max_sets` argument is always left at its default of `Inf`).
+These are marginal-PIP-based sets, not SuSiE-style per-effect credible sets.
 }
