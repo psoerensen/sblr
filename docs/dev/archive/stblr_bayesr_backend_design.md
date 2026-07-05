@@ -1,5 +1,12 @@
 # ST-BLR BayesR Backend Design
 
+> **Archived design note.** The exact CSR BayesR design/status here is now
+> superseded by the implemented, current description in
+> `docs/dev/stblr_csr_bayesr_design.md`. BED BayesR feature/slot status is
+> also summarized in `docs/dev/stblr_backend_computation_inventory.md`.
+> Kept for historical design rationale and BED BayesR CPO/log-CPO
+> diagnostics detail not duplicated elsewhere.
+
 ## Executive Summary
 
 BayesR support exists in two different forms:

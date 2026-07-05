@@ -21,7 +21,12 @@ standard output aggregation. Existing SBayesRC-style CSR files were used only
 as references for categorical mixture math and component probability
 accumulation. The BED BayesR backend defines the BayesR output contract:
 standard `dm = P(component > 0)`, marker-by-component `comp_prob`, and
-`dm_component_mean` for posterior mean component index.
+`dm_component_mean` for posterior mean component index. Full BED BayesR
+slot layout, CPO/log-CPO diagnostics detail, and the original harmonization
+design steps are archived in
+`docs/dev/archive/stblr_bayesr_backend_design.md`; the current feature/slot
+summary for `bed_bayesr` lives in
+`docs/dev/stblr_backend_computation_inventory.md`.
 
 The supported public R interfaces are `stblr_csr_bayesr()` and
 `stblr_csr(method = "bayesr")`. Exact CSR BayesR now supports optional

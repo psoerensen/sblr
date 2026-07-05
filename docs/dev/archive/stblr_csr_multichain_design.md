@@ -1,5 +1,10 @@
 # ST-BLR CSR Multi-Chain Design
 
+> **Archived design note.** The multi-chain support and API described here
+> as recommended/in-progress is now implemented and documented as current
+> state in `docs/dev/stblr_backend_computation_inventory.md`. Kept for
+> historical design rationale only; not a current reference.
+
 ## Executive Summary
 
 `stblr_csr()` now supports multiple independent MCMC chains per trait in the

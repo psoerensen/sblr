@@ -23,7 +23,7 @@ summaries, plots, architecture summaries, credible sets, consistency checks
 The full testthat suite passes:
 
 ```text
-2582 tests, 0 failures, 0 errors
+2626 tests, 0 failures, 0 errors
 ```
 
 The test suite verifies field presence, formatter consistency, schema routing, LD-swap diagnostics, annotation/group/prior/component fields, single-chain and multi-chain marker summaries, and consistency checks on small fixtures.

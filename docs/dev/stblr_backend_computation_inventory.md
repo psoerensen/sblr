@@ -521,3 +521,14 @@ The lightweight consistency checker validates common marker matrices, optional
 `vle`/`vld` traces, chain summaries, compact chain marker names, chain
 component probabilities, and LD-swap diagnostics when present. It remains
 optional for compatibility objects that lack newer fields.
+
+## Design History
+
+Chain-summary harmonization across CSR and BED backends (shared
+`src/st_chain_utils.h` seed/task helpers, canonical exact-CSR and BED
+scheduled-chains backends, standard `bm_sd/bm_min/bm_max/dm_sd/dm_min/dm_max`
+fields) followed the design work in
+`docs/dev/archive/stblr_backend_harmonization_design.md` and
+`docs/dev/archive/stblr_csr_multichain_design.md`. Those recommendations are
+now implemented; the archived documents are kept for historical rationale
+only, not as a current reference.

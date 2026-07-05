@@ -1,5 +1,11 @@
 # ST-BLR Backend Harmonization Design
 
+> **Archived design note.** The recommendations here (shared chain
+> seed/task helpers, regular CSR and BED scheduled chains as canonical
+> chain backends) have been implemented — see `src/st_chain_utils.h` and
+> the current state in `docs/dev/stblr_backend_computation_inventory.md`.
+> Kept for historical design rationale only; not a current reference.
+
 ## Executive Summary
 
 The regular summary-statistic CSR backend in `src/st_cpg_omp_csr.cpp` is now
