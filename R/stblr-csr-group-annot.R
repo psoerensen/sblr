@@ -411,9 +411,9 @@ stblr_csr_group_annot <- function(
   ld_swap_moves = as.integer(ld_swap_moves)
  )
 
- if (.is_stblr_raw_v1(raw_fit)) {
+ if (.is_stblr_raw(raw_fit)) {
   raw_fit$group$group_names <- group_info$group_names
-  fit <- .format_stblr_raw_v1(
+  fit <- .as_stblr_fit(
    raw_fit,
    trait_names = trait_names,
    variable_names = variable_names

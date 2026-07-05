@@ -249,7 +249,7 @@ test_that("ordinary CSR BayesC native return uses raw schema v1", {
   raw <- make_stblr_csr_interface_raw()
   expect_equal(raw$schema$class, "stblr_raw")
   expect_equal(as.integer(raw$schema$version), 1L)
-  expect_true(inherits(raw, "stblr_raw_v1"))
+  expect_true(inherits(raw, "stblr_raw"))
   expect_true(all(c(
     "schema", "meta", "marker", "trace", "variance", "pi", "diagnostics",
     "chains", "prior", "group", "annotation", "component", "selection"
@@ -265,7 +265,7 @@ test_that("CSR BayesR native return uses raw schema v1 component namespaces", {
   raw <- make_stblr_csr_interface_bayesr_raw()
   expect_equal(raw$schema$class, "stblr_raw")
   expect_equal(as.integer(raw$schema$version), 1L)
-  expect_true(inherits(raw, "stblr_raw_v1"))
+  expect_true(inherits(raw, "stblr_raw"))
   expect_named(raw, c(
     "schema", "meta", "marker", "trace", "variance", "pi", "diagnostics",
     "chains", "prior", "group", "annotation", "component", "selection"
@@ -294,7 +294,7 @@ test_that("CSR SBayesRC native return uses raw schema v1 component and annotatio
   raw <- make_stblr_csr_interface_sbayesrc_raw()
   expect_equal(raw$schema$class, "stblr_raw")
   expect_equal(as.integer(raw$schema$version), 1L)
-  expect_true(inherits(raw, "stblr_raw_v1"))
+  expect_true(inherits(raw, "stblr_raw"))
   expect_named(raw, c(
     "schema", "meta", "marker", "trace", "variance", "pi", "diagnostics",
     "chains", "prior", "group", "annotation", "component", "selection"
@@ -323,7 +323,7 @@ test_that("CSR SBayesRC raw formatter preserves formatted fields and no-chain be
 
   raw <- make_stblr_csr_interface_sbayesrc_raw(keep_chains = FALSE)
   raw$annotation$annotation_names <- c("intercept", "annot1")
-  fit <- sblr:::.format_stblr_raw_v1(
+  fit <- sblr:::.as_stblr_fit(
     raw,
     trait_names = make_stblr_csr_interface_stats()$trait_names,
     variable_names = make_stblr_csr_interface_stats()$marker_names
@@ -358,7 +358,7 @@ test_that("ordinary CSR BayesC raw formatting tolerates no-chain schema objects"
   raw <- make_stblr_csr_interface_raw(keep_chains = FALSE)
   expect_false(isTRUE(raw$meta$keep_chains))
 
-  fit_null <- sblr:::.format_stblr_raw_v1(
+  fit_null <- sblr:::.as_stblr_fit(
     raw,
     trait_names = make_stblr_csr_interface_stats()$trait_names,
     variable_names = make_stblr_csr_interface_stats()$marker_names
@@ -368,7 +368,7 @@ test_that("ordinary CSR BayesC raw formatting tolerates no-chain schema objects"
 
   raw_empty <- raw
   raw_empty$chains <- list()
-  fit_empty <- sblr:::.format_stblr_raw_v1(
+  fit_empty <- sblr:::.as_stblr_fit(
     raw_empty,
     trait_names = make_stblr_csr_interface_stats()$trait_names,
     variable_names = make_stblr_csr_interface_stats()$marker_names
@@ -378,7 +378,7 @@ test_that("ordinary CSR BayesC raw formatting tolerates no-chain schema objects"
 
   raw_null_trait <- raw
   raw_null_trait$chains <- list(NULL)
-  fit_null_trait <- sblr:::.format_stblr_raw_v1(
+  fit_null_trait <- sblr:::.as_stblr_fit(
     raw_null_trait,
     trait_names = make_stblr_csr_interface_stats()$trait_names,
     variable_names = make_stblr_csr_interface_stats()$marker_names
@@ -580,7 +580,7 @@ test_that("CSR SBayesRC raw v1 keep_chains exposes compact chain summaries", {
     updateLDswap = TRUE
   )
   raw$annotation$annotation_names <- c("intercept", "annot1")
-  fit <- sblr:::.format_stblr_raw_v1(
+  fit <- sblr:::.as_stblr_fit(
     raw,
     trait_names = make_stblr_csr_interface_stats()$trait_names,
     variable_names = make_stblr_csr_interface_stats()$marker_names

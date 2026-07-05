@@ -1,4 +1,4 @@
-# ST-BLR Raw Schema v1
+# ST-BLR Raw Schema
 
 ## Purpose
 
@@ -7,12 +7,25 @@ stable internal list contract. Different ST-BLR CSR models currently reuse the
 same slot positions for different concepts, which makes formatter changes risky
 as new diagnostics and model families are added.
 
-Raw schema v1 is an internal development interface. Public `fit` object field
-names remain unchanged.
+The architecture is:
+
+```text
+C++ BLR backend
+    ↓
+stblr_raw object
+    ↓
+validated against stblr_raw_schema
+    ↓
+.as_stblr_fit() / canonical formatter
+```
+
+The `stblr_raw_schema` is an internal development interface. Internal schema
+versioning is retained in `raw$schema$version` metadata. Public `fit` object
+field names remain unchanged.
 
 ## Top-Level Namespaces
 
-Version 1 uses these top-level names:
+The stblr_raw_schema uses these top-level names:
 
 ```r
 schema
@@ -78,7 +91,7 @@ probability trace, `1 - pi_component_0`. Final and posterior mean mixture
 probabilities are stored in `raw$pi$final` and `raw$pi$mean` as `nt x K`
 matrices with component names.
 
-The R formatter `.format_stblr_raw_v1()` consumes only this named schema and
+The R formatter `.as_stblr_fit()` consumes only this named schema and
 maps it back to the existing user-facing fit fields such as `bm`, `dm`, `vbs`,
 `vgs`, `ves`, `vle`, `vld`, `pi`, `pim`, `pis`, `chains`, `ld_swap`, and
 sampled `selection_s` summaries. For BayesR it also maps `component$prob` to
@@ -156,7 +169,7 @@ above for their respective model family (CSR BayesC or BayesR semantics for
 
 ## All Active Backends Are Migrated
 
-Every active, R-reachable native backend now returns `stblr_raw_v1` output
+Every active, R-reachable native backend now returns `stblr_raw` output
 (schema `class = "stblr_raw"`, `version = 1L`). There are no remaining
 non-migrated active backends.
 
@@ -167,18 +180,18 @@ raw$schema$class == "stblr_raw"
 as.integer(raw$schema$version) == 1L
 ```
 
-(via the internal helper `.is_stblr_raw_v1()`) before routing through
-`.format_stblr_raw_v1()`.
+(via the internal helper `.is_stblr_raw()`, or `.validate_stblr_raw()` for the
+stop-on-failure form) before routing through `.as_stblr_fit()`.
 
 ## Legacy Positional Backend Output Is Unsupported
 
-Because every active backend now emits `stblr_raw_v1`, the positional
-backend-output path is no longer a supported fallback at the wrapper level.
-Every R-facing model-fitting wrapper (`stblr_csr()`, `stblr_csr_annot()`,
-`stblr_bed()`, `stblr_csr_bayesr()`, the BED marker helpers, and the finemap
-local re-fit helper) stops with a clear error via
+Because every active backend now emits a valid `stblr_raw` object, the
+positional backend-output path is no longer a supported fallback at the
+wrapper level. Every R-facing model-fitting wrapper (`stblr_csr()`,
+`stblr_csr_annot()`, `stblr_bed()`, `stblr_csr_bayesr()`, the BED marker
+helpers, and the finemap local re-fit helper) stops with a clear error via
 `.stblr_stop_unsupported_raw_output()` if a backend ever returns something
-that is not a valid `stblr_raw_v1` object, instead of silently reformatting
+that is not a valid `stblr_raw` object, instead of silently reformatting
 positional output.
 
 The underlying positional formatters (`.format_stblr_fit()`,
@@ -191,7 +204,8 @@ legacy-shaped positional lists (see `test-bayesr-csr-backend.R` and
 
 ## Stable Formatted Fit Contract
 
-`stblr_raw_v1` is an internal development interface and may change between
+`stblr_raw` (the stblr_raw_schema contract) is an internal development
+interface and may change between
 backend phases. The formatted `fit` object returned to users is the stable
 contract: public field names (`bm`, `dm`, `comp_prob`, `chains`, `ld_swap`,
 `dm_sd`/`dm_min`/`dm_max`, `bm_sd`/`bm_min`/`bm_max`, `selection_s*`, etc.),

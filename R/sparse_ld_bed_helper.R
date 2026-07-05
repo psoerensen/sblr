@@ -538,16 +538,17 @@ NULL
 .format_stblr_csr_bayesc_fit <- .format_stblr_fit
 .format_stblr_bed_bayesc_fit <- .format_stblr_fit
 
-.is_stblr_raw_v1 <- function(raw) {
+.is_stblr_raw <- function(raw) {
  is.list(raw) &&
   is.list(raw$schema) &&
   identical(raw$schema$class, "stblr_raw") &&
   identical(as.integer(raw$schema$version), 1L)
 }
 
-# All active native backends return stblr_raw_v1 output. Legacy positional
-# backend-output support has been removed at the wrapper level; this stops
-# clearly instead of silently falling back to a positional formatter.
+# All active native backends return stblr_raw (schema version 1) output.
+# Legacy positional backend-output support has been removed at the wrapper
+# level; this stops clearly instead of silently falling back to a positional
+# formatter.
 .stblr_stop_unsupported_raw_output <- function(backend = NULL) {
  stop(
   "Unsupported backend output: expected an stblr_raw schema version 1 ",
@@ -557,9 +558,18 @@ NULL
  )
 }
 
-.format_stblr_raw_v1 <- function(raw, trait_names = NULL, variable_names = NULL) {
- if (!.is_stblr_raw_v1(raw)) {
-  stop(".format_stblr_raw_v1() expects an stblr_raw schema version 1 object.")
+# Thin validation wrapper around .is_stblr_raw(): stops with
+# .stblr_stop_unsupported_raw_output() instead of returning FALSE.
+.validate_stblr_raw <- function(raw, backend = NULL) {
+ if (!.is_stblr_raw(raw)) {
+  .stblr_stop_unsupported_raw_output(backend)
+ }
+ invisible(TRUE)
+}
+
+.as_stblr_fit <- function(raw, trait_names = NULL, variable_names = NULL) {
+ if (!.is_stblr_raw(raw)) {
+  stop(".as_stblr_fit() expects an stblr_raw schema version 1 object.")
  }
 
  meta <- raw$meta
@@ -1209,8 +1219,8 @@ NULL
   seed = as.integer(seed)
  )
 
- if (.is_stblr_raw_v1(raw)) {
-  fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
+ if (.is_stblr_raw(raw)) {
+  fit <- .as_stblr_fit(raw, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("bed_bayesr")
  }
@@ -1245,8 +1255,8 @@ NULL
 
 .format_stblr_csr_bayesr_fit <- function(fit, nt, m, trait_names,
                                          variable_names, n_components) {
- if (.is_stblr_raw_v1(fit)) {
-  return(.format_stblr_raw_v1(fit, trait_names, variable_names))
+ if (.is_stblr_raw(fit)) {
+  return(.as_stblr_fit(fit, trait_names, variable_names))
  }
  if (!is.list(fit) || is.null(names(fit))) {
   stop(".format_stblr_csr_bayesr_fit() expects a named CSR BayesR return list.")
@@ -1803,11 +1813,11 @@ stblr_csr_bayesr <- function(
   selection_s_log_h = selection_s_info$log_h
  )
 
- if (.is_stblr_raw_v1(raw)) {
+ if (.is_stblr_raw(raw)) {
   if (isTRUE(selection_s_info$fixed)) {
    raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
   }
-  fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
+  fit <- .as_stblr_fit(raw, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("csr_bayesr")
  }
@@ -2469,11 +2479,11 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
    selection_s_log_h = selection_s_info$log_h
   )))
  }
- if (.is_stblr_raw_v1(raw)) {
+ if (.is_stblr_raw(raw)) {
   if (isTRUE(selection_s_info$fixed)) {
    raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
   }
-  fit <- .format_stblr_raw_v1(raw, trait_names, variable_names)
+  fit <- .as_stblr_fit(raw, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("csr_bayesc")
  }
@@ -2991,8 +3001,8 @@ stblr_bed_marker <- function(
      seed = seed
    )))
  }
- if (.is_stblr_raw_v1(raw)) {
-  fit <- .format_stblr_raw_v1(raw, dat$trait_names, dat$variable_names)
+ if (.is_stblr_raw(raw)) {
+  fit <- .as_stblr_fit(raw, dat$trait_names, dat$variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("bed_bayesc")
  }
@@ -3437,8 +3447,8 @@ stblr_bed <- function(
   seed = seed
  )
  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, common)
- if (.is_stblr_raw_v1(raw)) {
-  fit <- .format_stblr_raw_v1(raw, dat$trait_names, dat$variable_names)
+ if (.is_stblr_raw(raw)) {
+  fit <- .as_stblr_fit(raw, dat$trait_names, dat$variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("bed_bayesc")
  }

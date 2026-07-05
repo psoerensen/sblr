@@ -5,14 +5,14 @@ source_sblr_test_file <- function(path) {
   source(path)
 }
 
-if (!exists(".is_stblr_raw_v1", mode = "function")) {
+if (!exists(".is_stblr_raw", mode = "function")) {
   source_sblr_test_file("R/sparse_ld_bed_helper.R")
 }
 if (!exists("check_stblr_consistency", mode = "function")) {
   source_sblr_test_file("R/check-stblr-backend-consistency.R")
 }
 
-make_fake_stblr_raw_v1 <- function(
+make_fake_stblr_raw <- function(
     nt = 1L,
     m = 4L,
     niter = 6L,
@@ -78,28 +78,38 @@ make_fake_stblr_raw_v1 <- function(
   raw
 }
 
-test_that(".is_stblr_raw_v1() recognizes a well-formed schema and rejects others", {
-  raw <- make_fake_stblr_raw_v1()
-  expect_true(.is_stblr_raw_v1(raw))
+test_that(".is_stblr_raw() recognizes a well-formed schema and rejects others", {
+  raw <- make_fake_stblr_raw()
+  expect_true(.is_stblr_raw(raw))
 
-  expect_false(.is_stblr_raw_v1(list(a = 1, b = 2)))
-  expect_false(.is_stblr_raw_v1(unname(list(1, 2, 3))))
+  expect_false(.is_stblr_raw(list(a = 1, b = 2)))
+  expect_false(.is_stblr_raw(unname(list(1, 2, 3))))
 
   bad_version <- raw
   bad_version$schema$version <- 2L
-  expect_false(.is_stblr_raw_v1(bad_version))
+  expect_false(.is_stblr_raw(bad_version))
 
   bad_class <- raw
   bad_class$schema$class <- "something_else"
-  expect_false(.is_stblr_raw_v1(bad_class))
+  expect_false(.is_stblr_raw(bad_class))
 })
 
-test_that(".format_stblr_raw_v1() maps a BayesC-shaped raw object to the canonical fit fields", {
-  raw <- make_fake_stblr_raw_v1(nt = 2L, m = 5L, niter = 8L)
+test_that(".validate_stblr_raw() passes through valid objects and stops on invalid ones", {
+  raw <- make_fake_stblr_raw()
+  expect_true(.validate_stblr_raw(raw))
+
+  bad_class <- raw
+  bad_class$schema$class <- "something_else"
+  expect_error(.validate_stblr_raw(bad_class), "Unsupported backend output")
+  expect_error(.validate_stblr_raw(bad_class, backend = "csr_bayesc"), "csr_bayesc")
+})
+
+test_that(".as_stblr_fit() maps a BayesC-shaped raw object to the canonical fit fields", {
+  raw <- make_fake_stblr_raw(nt = 2L, m = 5L, niter = 8L)
   trait_names <- c("trait1", "trait2")
   variable_names <- paste0("m", seq_len(5L))
 
-  fit <- .format_stblr_raw_v1(raw, trait_names = trait_names, variable_names = variable_names)
+  fit <- .as_stblr_fit(raw, trait_names = trait_names, variable_names = variable_names)
 
   for (nm in c("bm", "dm", "wy", "r", "b", "d")) {
     expect_true(is.matrix(fit[[nm]]), info = nm)
@@ -127,11 +137,11 @@ test_that(".format_stblr_raw_v1() maps a BayesC-shaped raw object to the canonic
   expect_true(chk$ok)
 })
 
-test_that(".format_stblr_raw_v1() maps a BayesR-shaped raw object with components and pis", {
-  raw <- make_fake_stblr_raw_v1(nt = 1L, m = 6L, model = "bayesr", backend = "csr_bayesr")
+test_that(".as_stblr_fit() maps a BayesR-shaped raw object with components and pis", {
+  raw <- make_fake_stblr_raw(nt = 1L, m = 6L, model = "bayesr", backend = "csr_bayesr")
   variable_names <- paste0("m", seq_len(6L))
 
-  fit <- .format_stblr_raw_v1(raw, trait_names = "trait1", variable_names = variable_names)
+  fit <- .as_stblr_fit(raw, trait_names = "trait1", variable_names = variable_names)
 
   expect_true(!is.null(fit$pis))
   expect_true(!is.null(fit$comp_prob))
@@ -146,8 +156,8 @@ test_that(".format_stblr_raw_v1() maps a BayesR-shaped raw object with component
 })
 
 test_that("check_stblr_consistency() flags malformed comp_prob rows", {
-  raw <- make_fake_stblr_raw_v1(nt = 1L, m = 4L, model = "bayesr", backend = "csr_bayesr")
-  fit <- .format_stblr_raw_v1(raw, trait_names = "trait1", variable_names = paste0("m", 1:4))
+  raw <- make_fake_stblr_raw(nt = 1L, m = 4L, model = "bayesr", backend = "csr_bayesr")
+  fit <- .as_stblr_fit(raw, trait_names = "trait1", variable_names = paste0("m", 1:4))
 
   fit$comp_prob$trait1[1L, ] <- c(0.5, 0.5, 0.5)
   fit$input <- list(nchains = 1L)
@@ -158,8 +168,8 @@ test_that("check_stblr_consistency() flags malformed comp_prob rows", {
 })
 
 test_that("check_stblr_consistency() validates fit$selection_s against trait count", {
-  raw <- make_fake_stblr_raw_v1(nt = 2L, m = 3L)
-  fit <- .format_stblr_raw_v1(
+  raw <- make_fake_stblr_raw(nt = 2L, m = 3L)
+  fit <- .as_stblr_fit(
     raw, trait_names = c("trait1", "trait2"), variable_names = paste0("m", 1:3)
   )
   fit$selection_s <- stats::setNames(c(0.1, 0.2), c("trait1", "trait2"))
@@ -176,8 +186,8 @@ test_that("check_stblr_consistency() validates fit$selection_s against trait cou
 })
 
 test_that("check_stblr_consistency() checks backend-specific fields when fit$input$backend is known", {
-  raw <- make_fake_stblr_raw_v1(nt = 1L, m = 3L)
-  fit <- .format_stblr_raw_v1(raw, trait_names = "trait1", variable_names = paste0("m", 1:3))
+  raw <- make_fake_stblr_raw(nt = 1L, m = 3L)
+  fit <- .as_stblr_fit(raw, trait_names = "trait1", variable_names = paste0("m", 1:3))
   fit$input <- list(backend = "csr_group_bayesc")
 
   chk_missing <- check_stblr_consistency(fit, verbose = FALSE)

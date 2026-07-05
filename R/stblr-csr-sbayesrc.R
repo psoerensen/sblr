@@ -411,12 +411,12 @@ stblr_csr_sbayesrc_generic <- function(
   selection_s_log_h = selection_s_info$log_h
  )
 
- if (.is_stblr_raw_v1(raw_fit)) {
+ if (.is_stblr_raw(raw_fit)) {
   raw_fit$annotation$annotation_names <- colnames(A)
   if (isTRUE(selection_s_info$fixed)) {
    raw_fit$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
   }
-  fit <- .format_stblr_raw_v1(raw_fit, trait_names, variable_names)
+  fit <- .as_stblr_fit(raw_fit, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("csr_sbayesrc")
  }

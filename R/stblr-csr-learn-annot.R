@@ -422,9 +422,9 @@ stblr_csr_learn_annot <- function(
   ld_swap_moves = as.integer(ld_swap_moves)
  )
 
- if (.is_stblr_raw_v1(raw_fit)) {
+ if (.is_stblr_raw(raw_fit)) {
   raw_fit$annotation$annotation_names <- colnames(A)
-  fit <- .format_stblr_raw_v1(
+  fit <- .as_stblr_fit(
    raw_fit,
    trait_names = trait_names,
    variable_names = variable_names

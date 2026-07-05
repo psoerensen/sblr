@@ -81,8 +81,8 @@ expect_annotation_interface_core <- function(fit, stats, backend, method, annota
   expect_false(fit$input$keep_chains)
 }
 
-expect_annotation_raw_v1_top_level <- function(raw, backend) {
-  expect_true(sblr:::.is_stblr_raw_v1(raw))
+expect_annotation_raw_top_level <- function(raw, backend) {
+  expect_true(sblr:::.is_stblr_raw(raw))
   expect_equal(raw$schema$class, "stblr_raw")
   expect_equal(as.integer(raw$schema$version), 1L)
   expect_equal(raw$meta$model, "bayesc")
@@ -93,7 +93,7 @@ expect_annotation_raw_v1_top_level <- function(raw, backend) {
   ) %in% names(raw)))
 }
 
-make_annotation_raw_v1_common_args <- function() {
+make_annotation_raw_common_args <- function() {
   stats <- tiny_annotation_interface_stats()
   list(
     stats = stats,
@@ -156,7 +156,7 @@ test_that("marker-prior BayesC CSR backend returns raw v1 schema", {
     "native fixed-prior annotation CSR symbol is not loaded"
   )
 
-  args <- make_annotation_raw_v1_common_args()
+  args <- make_annotation_raw_common_args()
   raw <- do.call(stblr_cpg_omp_csr_prior, c(args[names(args) != "stats"], list(
     use_pi_marker = TRUE,
     pi_marker = list(rep(0.35, args$stats$m)),
@@ -166,12 +166,12 @@ test_that("marker-prior BayesC CSR backend returns raw v1 schema", {
     pi_prior_b = 1
   )))
 
-  expect_annotation_raw_v1_top_level(raw, "csr_prior_bayesc")
+  expect_annotation_raw_top_level(raw, "csr_prior_bayesc")
   expect_true(all(c("marker_pi_mean", "marker_vb_multiplier_mean") %in% names(raw$prior)))
   expect_equal(dim(raw$prior$marker_pi_mean), c(args$stats$m, 1L))
   expect_null(raw$chains)
 
-  fit <- sblr:::.format_stblr_raw_v1(
+  fit <- sblr:::.as_stblr_fit(
     raw,
     trait_names = args$stats$trait_names,
     variable_names = args$stats$marker_names
@@ -187,7 +187,7 @@ test_that("group-prior BayesC CSR backend returns raw v1 schema", {
     "native group annotation CSR symbol is not loaded"
   )
 
-  args <- make_annotation_raw_v1_common_args()
+  args <- make_annotation_raw_common_args()
   raw <- do.call(stblr_cpg_omp_csr_group_annot, c(args[names(args) != "stats"], list(
     group_index = c(0L, 1L, 0L, 1L),
     ngroup = 2L,
@@ -202,12 +202,12 @@ test_that("group-prior BayesC CSR backend returns raw v1 schema", {
   )))
   raw$group$group_names <- c("coding", "background")
 
-  expect_annotation_raw_v1_top_level(raw, "csr_group_bayesc")
+  expect_annotation_raw_top_level(raw, "csr_group_bayesc")
   expect_true(all(c("pi_mean", "vb_multiplier_mean", "n_included_mean", "size") %in% names(raw$group)))
   expect_equal(dim(raw$group$pi_mean), c(2L, 1L))
   expect_null(raw$chains)
 
-  fit <- sblr:::.format_stblr_raw_v1(
+  fit <- sblr:::.as_stblr_fit(
     raw,
     trait_names = args$stats$trait_names,
     variable_names = args$stats$marker_names
@@ -222,7 +222,7 @@ test_that("learned-annotation BayesC CSR backend returns raw v1 schema", {
     "native learned-annotation CSR symbol is not loaded"
   )
 
-  args <- make_annotation_raw_v1_common_args()
+  args <- make_annotation_raw_common_args()
   A <- tiny_annotation_interface_matrix()
   raw <- do.call(stblr_cpg_omp_csr_annot, c(args[names(args) != "stats"], list(
     A = A,
@@ -244,12 +244,12 @@ test_that("learned-annotation BayesC CSR backend returns raw v1 schema", {
   )))
   raw$annotation$annotation_names <- colnames(A)
 
-  expect_annotation_raw_v1_top_level(raw, "csr_annot_bayesc")
+  expect_annotation_raw_top_level(raw, "csr_annot_bayesc")
   expect_true(all(c("eta_pi_mean", "eta_vb_mean") %in% names(raw$annotation)))
   expect_equal(dim(raw$annotation$eta_pi_mean), c(ncol(A), 1L))
   expect_null(raw$chains)
 
-  fit <- sblr:::.format_stblr_raw_v1(
+  fit <- sblr:::.as_stblr_fit(
     raw,
     trait_names = args$stats$trait_names,
     variable_names = args$stats$marker_names
