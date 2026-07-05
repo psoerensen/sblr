@@ -93,6 +93,33 @@ make_field_inventory_bed_fixture <- function() {
   )
 }
 
+# Captures the raw stblr_raw object a backend call actually hands to
+# .as_stblr_fit(), by tracing that internal formatter for the duration of
+# `expr`. This lets the inventory test assert on the real native raw output
+# (schema validity + .validate_stblr_raw() structural checks) in addition to
+# the formatted fit, without altering any backend or formatter behaviour.
+capture_stblr_raw <- function(expr) {
+  ns <- asNamespace("sblr")
+  assign(".stblr_last_raw_capture", NULL, envir = .GlobalEnv)
+  suppressMessages(trace(
+    ".as_stblr_fit",
+    tracer = quote(assign(".stblr_last_raw_capture", raw, envir = .GlobalEnv)),
+    where = ns, print = FALSE
+  ))
+  on.exit({
+    suppressMessages(try(untrace(".as_stblr_fit", where = ns), silent = TRUE))
+  }, add = TRUE)
+  fit <- eval.parent(substitute(expr))
+  list(fit = fit, raw = get(".stblr_last_raw_capture", envir = .GlobalEnv))
+}
+
+expect_field_inventory_raw <- function(raw, backend) {
+  expect_true(sblr:::.is_stblr_raw(raw), info = backend)
+  expect_true(sblr:::.validate_stblr_raw(raw, backend = backend), info = backend)
+  expect_identical(raw$schema$class, "stblr_raw", info = backend)
+  expect_identical(as.integer(raw$schema$version), 1L, info = backend)
+}
+
 expect_field_inventory_core <- function(fit, backend, data_level, annotations) {
   expect_true(all(c("dm", "bm", "input") %in% names(fit)))
   expect_true(is.matrix(fit$dm))
@@ -146,7 +173,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   stats <- make_field_inventory_stats()
 
   skip_if_not(exists("stblr_cpg_omp_csr", mode = "function"))
-  fit_c <- sblr::stblr_csr(
+  res_c <- capture_stblr_raw(sblr::stblr_csr(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     method = "bayesC",
@@ -166,7 +193,9 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
     updateLDswap = TRUE,
     ld_swap_prob = 1,
     ld_swap_r2 = 0
-  )
+  ))
+  fit_c <- res_c$fit
+  expect_field_inventory_raw(res_c$raw, "csr_bayesc")
   expect_field_inventory_core(fit_c, "csr_bayesc", "summary", FALSE)
   expect_field_inventory_csr_variance(fit_c)
   expect_field_inventory_chain_summaries(fit_c)
@@ -174,7 +203,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   expect_true("ld_swap" %in% names(fit_c))
 
   skip_if_not(exists("stblr_cpg_omp_csr_bayesr", mode = "function"))
-  fit_r <- sblr::stblr_csr(
+  res_r <- capture_stblr_raw(sblr::stblr_csr(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     method = "bayesR",
@@ -186,7 +215,9 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
     nchains = 1L,
     ncores = 1L,
     seed = 102L
-  )
+  ))
+  fit_r <- res_r$fit
+  expect_field_inventory_raw(res_r$raw, "csr_bayesr")
   expect_field_inventory_core(fit_r, "csr_bayesr", "summary", FALSE)
   expect_field_inventory_csr_variance(fit_r)
   expect_field_inventory_bayesr(fit_r)
@@ -197,7 +228,7 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   A <- make_field_inventory_annotations()
 
   skip_if_not(exists("stblr_cpg_omp_csr_prior", mode = "function"))
-  fit_prior <- sblr::stblr_csr_annot(
+  res_prior <- capture_stblr_raw(sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     annotations = list(
@@ -219,7 +250,9 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
     chain_seeds = c(201L, 202L),
     ncores = 1L,
     seed = 201L
-  )
+  ))
+  fit_prior <- res_prior$fit
+  expect_field_inventory_raw(res_prior$raw, "csr_prior_bayesc")
   expect_field_inventory_core(fit_prior, "csr_prior_bayesc", "summary", TRUE)
   expect_field_inventory_csr_variance(fit_prior)
   expect_field_inventory_chain_summaries(fit_prior)
@@ -227,7 +260,7 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   expect_true("annotation_prior" %in% names(fit_prior))
 
   skip_if_not(exists("stblr_cpg_omp_csr_annot", mode = "function"))
-  fit_learned <- sblr::stblr_csr_annot(
+  res_learned <- capture_stblr_raw(sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     annotations = A,
@@ -247,13 +280,15 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
     nburn = 0,
     ncores = 1L,
     seed = 202L
-  )
+  ))
+  fit_learned <- res_learned$fit
+  expect_field_inventory_raw(res_learned$raw, "csr_annot_bayesc")
   expect_field_inventory_core(fit_learned, "csr_annot_bayesc", "summary", TRUE)
   expect_field_inventory_csr_variance(fit_learned)
   expect_true(all(c("annotation_effects", "eta_pi", "eta_vb") %in% names(fit_learned)))
 
   skip_if_not(exists("stblr_cpg_omp_csr_group_annot", mode = "function"))
-  fit_group <- sblr::stblr_csr_annot(
+  res_group <- capture_stblr_raw(sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     annotations = stats::setNames(
@@ -278,7 +313,9 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
     updateLDswap = TRUE,
     ld_swap_prob = 1,
     ld_swap_r2 = 0
-  )
+  ))
+  fit_group <- res_group$fit
+  expect_field_inventory_raw(res_group$raw, "csr_group_bayesc")
   expect_field_inventory_core(fit_group, "csr_group_bayesc", "summary", TRUE)
   expect_field_inventory_csr_variance(fit_group)
   expect_true("ld_swap" %in% names(fit_group))
@@ -288,7 +325,7 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   ) %in% names(fit_group)))
 
   skip_if_not(exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"))
-  fit_sbayesrc <- sblr::stblr_csr_annot(
+  res_sbayesrc <- capture_stblr_raw(sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     annotations = A,
@@ -305,7 +342,9 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
     nburn = 0,
     ncores = 1L,
     seed = 204L
-  )
+  ))
+  fit_sbayesrc <- res_sbayesrc$fit
+  expect_field_inventory_raw(res_sbayesrc$raw, "csr_sbayesrc")
   expect_field_inventory_core(fit_sbayesrc, "csr_sbayesrc", "summary", TRUE)
   expect_field_inventory_csr_variance(fit_sbayesrc)
   expect_field_inventory_bayesr(fit_sbayesrc)
@@ -322,7 +361,7 @@ test_that("BED BayesC and BayesR expose supported field inventory", {
   skip_if_not(
     exists("stblr_cpg_omp_bed_marker_scheduled_chains", mode = "function")
   )
-  fit_c <- sblr::stblr_bed(
+  res_c <- capture_stblr_raw(sblr::stblr_bed(
     y = fixture$y,
     Glist = fixture$Glist,
     method = "bayesC",
@@ -332,7 +371,9 @@ test_that("BED BayesC and BayesR expose supported field inventory", {
     seed = 301L,
     nchains = 1L,
     ncores = 1L
-  )
+  ))
+  fit_c <- res_c$fit
+  expect_field_inventory_raw(res_c$raw, "bed_bayesc")
   expect_field_inventory_core(fit_c, "bed_bayesc", "individual", FALSE)
   expect_field_inventory_csr_variance(fit_c)
   expect_field_inventory_chain_summaries(fit_c)
@@ -340,7 +381,7 @@ test_that("BED BayesC and BayesR expose supported field inventory", {
   skip_if_not(
     exists("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", mode = "function")
   )
-  fit_r <- sblr::stblr_bed(
+  res_r <- capture_stblr_raw(sblr::stblr_bed(
     y = fixture$y,
     Glist = fixture$Glist,
     method = "bayesR",
@@ -351,9 +392,28 @@ test_that("BED BayesC and BayesR expose supported field inventory", {
     nchains = 1L,
     ncores = 1L,
     updateE = FALSE
-  )
+  ))
+  fit_r <- res_r$fit
+  expect_field_inventory_raw(res_r$raw, "bed_bayesr")
   expect_field_inventory_core(fit_r, "bed_bayesr", "individual", FALSE)
   expect_field_inventory_csr_variance(fit_r)
   expect_field_inventory_bayesr(fit_r)
   expect_field_inventory_chain_summaries(fit_r)
+})
+
+test_that("every inventoried backend rejects non-stblr_raw output instead of a silent legacy fallback", {
+  inventoried_backends <- c(
+    "csr_bayesc", "csr_bayesr", "csr_prior_bayesc", "csr_annot_bayesc",
+    "csr_group_bayesc", "csr_sbayesrc", "bed_bayesc", "bed_bayesr"
+  )
+  legacy_positional_raw <- unname(list(1, 2, 3))
+  expect_false(sblr:::.is_stblr_raw(legacy_positional_raw))
+
+  for (backend in inventoried_backends) {
+    expect_error(
+      sblr:::.validate_stblr_raw(legacy_positional_raw, backend = backend),
+      paste0("Unsupported backend output.*", backend),
+      info = backend
+    )
+  }
 })
