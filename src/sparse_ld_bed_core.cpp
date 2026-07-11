@@ -34,6 +34,7 @@
 #include <R_ext/BLAS.h>
 
 #include "packed_bed.h"
+#include "st_bed_decode.h"
 
 // extern "C" {
 // #include <cblas.h>
@@ -88,16 +89,6 @@ return Rcpp::List::create(
 // -----------------------------------------------------------------------------
 // Small helpers
 // -----------------------------------------------------------------------------
-
-static inline int effective_nthreads(int nthreads) {
-#ifdef _OPENMP
- if (nthreads > 0) return nthreads;
- return omp_get_max_threads();
-#else
- (void)nthreads;
- return 1;
-#endif
-}
 
 static inline void checked_fwrite(
   const void* data,
@@ -154,115 +145,6 @@ static inline void validate_af_and_pos(
  if (!pos_cpp.empty() && static_cast<int>(pos_cpp.size()) != m) {
   throw std::runtime_error("pos_bp must have one value per selected marker.");
  }
-}
-
-static inline void standardized_lut(
-  double p,
-  float lut[4]
-) {
- const double denom = std::sqrt(2.0 * p * (1.0 - p));
-
- if (denom <= 0.0 || !std::isfinite(denom)) {
-  lut[0] = lut[1] = lut[2] = lut[3] = 0.0f;
- } else {
-  lut[0] = static_cast<float>((2.0 - 2.0 * p) / denom);
-  lut[1] = 0.0f;
-  lut[2] = static_cast<float>((1.0 - 2.0 * p) / denom);
-  lut[3] = static_cast<float>((0.0 - 2.0 * p) / denom);
- }
-}
-
-// -----------------------------------------------------------------------------
-// Decode packed block to standardized float matrix and compute x'x
-// -----------------------------------------------------------------------------
-
-static void decode_packed_block_float(
-  const PackedBedMatrix& G,
-  int marker_start,
-  int marker_len,
-  const double* af,
-  float* Z,
-  int nthreads
-) {
- const int n = G.n;
- const std::size_t nbytes = G.nbytes;
- const int nth = effective_nthreads(nthreads);
-
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(nth)
-#endif
- for (int ii = 0; ii < marker_len; ++ii) {
-  const int global_i = marker_start + ii;
-  const uint8_t* packed = G.row(global_i);
-  float* z = Z + static_cast<std::size_t>(ii) * n;
-
-  float lut[4];
-  standardized_lut(af[global_i], lut);
-
-  for (std::size_t kb = 0; kb < nbytes; ++kb) {
-   const uint8_t x = packed[kb];
-   const int jbase = static_cast<int>(kb << 2);
-
-   if (jbase + 0 < n) z[jbase + 0] = lut[(x >> 0) & 3u];
-   if (jbase + 1 < n) z[jbase + 1] = lut[(x >> 2) & 3u];
-   if (jbase + 2 < n) z[jbase + 2] = lut[(x >> 4) & 3u];
-   if (jbase + 3 < n) z[jbase + 3] = lut[(x >> 6) & 3u];
-  }
- }
-}
-
-static std::vector<double> compute_xx_from_packed_standardized(
-  const PackedBedMatrix& G,
-  const double* af,
-  int nthreads
-) {
- const int n = G.n;
- const int m = G.m;
- const std::size_t nbytes = G.nbytes;
- const int nth = effective_nthreads(nthreads);
-
- std::vector<double> xx(static_cast<std::size_t>(m), 0.0);
-
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(nth)
-#endif
- for (int marker = 0; marker < m; ++marker) {
-  const uint8_t* packed = G.row(marker);
-
-  float lut[4];
-  standardized_lut(af[marker], lut);
-
-  double s = 0.0;
-
-  for (std::size_t kb = 0; kb < nbytes; ++kb) {
-   const uint8_t x = packed[kb];
-   const int jbase = static_cast<int>(kb << 2);
-
-   if (jbase + 0 < n) {
-    const double z = static_cast<double>(lut[(x >> 0) & 3u]);
-    s += z * z;
-   }
-
-   if (jbase + 1 < n) {
-    const double z = static_cast<double>(lut[(x >> 2) & 3u]);
-    s += z * z;
-   }
-
-   if (jbase + 2 < n) {
-    const double z = static_cast<double>(lut[(x >> 4) & 3u]);
-    s += z * z;
-   }
-
-   if (jbase + 3 < n) {
-    const double z = static_cast<double>(lut[(x >> 6) & 3u]);
-    s += z * z;
-   }
-  }
-
-  xx[static_cast<std::size_t>(marker)] = s;
- }
-
- return xx;
 }
 
 static inline double xtx_to_corr(
