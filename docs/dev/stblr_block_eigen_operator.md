@@ -90,3 +90,9 @@ The intended integration order is:
 2. CSR BayesR
 3. CSR SBayesRC
 4. CSR prior/group/learned annotation BayesC
+
+## Phase 2A Status
+
+- ordinary CSR BayesC now uses `CsrOperator` for the existing sparse-CSR path
+- block-eigen is still infrastructure only and not yet exposed
+- no public R API changes

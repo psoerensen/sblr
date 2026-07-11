@@ -5,6 +5,7 @@
 #include "distributions.h"
 #include "st_chain_utils.h"
 #include "st_csr_common.h"
+#include "st_ld_operator.h"
 
 
 #include <algorithm>
@@ -40,6 +41,7 @@ using namespace arma;
 // Single-trait BayesC marker update
 // -----------------------------------------------------------------------------
 
+template <class OpT>
 inline void sampleBetaC_ST_csr(
   int i,
   const std::vector<double>& pi,
@@ -50,7 +52,7 @@ inline void sampleBetaC_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& d,
-  const STLDCSR& ld,
+  const OpT& op,
   std::mt19937& gen
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
@@ -109,20 +111,14 @@ inline void sampleBetaC_ST_csr(
  if (diff != 0.0) {
   r(iu) -= wi * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
  d(iu) = di;
 }
 
+template <class OpT>
 inline void sampleBetaC_ST_csr_unscaled(
   int i,
   const std::vector<double>& pi,
@@ -132,7 +128,7 @@ inline void sampleBetaC_ST_csr_unscaled(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& d,
-  const STLDCSR& ld,
+  const OpT& op,
   std::mt19937& gen
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
@@ -190,15 +186,7 @@ inline void sampleBetaC_ST_csr_unscaled(
 
  if (diff != 0.0) {
   r(iu) -= wi * diff;
-
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -482,6 +470,7 @@ inline LDLDFriends build_ld_swap_friends_st_csr(
  return friends;
 }
 
+template <class OpT>
 inline void set_marker_effect_st_csr(
   int i,
   double b_new,
@@ -490,7 +479,7 @@ inline void set_marker_effect_st_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& d,
-  const STLDCSR& ld
+  const OpT& op
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
  const double diff = b_new - b(iu);
@@ -498,14 +487,7 @@ inline void set_marker_effect_st_csr(
  if (diff != 0.0) {
   r(iu) -= ww(iu) * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -569,6 +551,7 @@ inline int collect_ld_swap_candidates(
  return static_cast<int>(candidates.size());
 }
 
+template <class OpT>
 inline bool attempt_ld_swap_st_csr(
   int m,
   double vei,
@@ -580,7 +563,7 @@ inline bool attempt_ld_swap_st_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& d,
-  const STLDCSR& ld,
+  const OpT& op,
   const LDLDFriends& friends,
   std::mt19937& gen
 ) {
@@ -633,8 +616,8 @@ inline bool attempt_ld_swap_st_csr(
 
  const arma::rowvec r_old = r;
 
- set_marker_effect_st_csr(j, 0.0, 0, ww, r, b, d, ld);
- set_marker_effect_st_csr(k, b_j_old, 1, ww, r, b, d, ld);
+ set_marker_effect_st_csr(j, 0.0, 0, ww, r, b, d, op);
+ set_marker_effect_st_csr(k, b_j_old, 1, ww, r, b, d, op);
 
  const double sse_new = residual_sse_st_csr(m, b, wy, r, yy);
  bool accept = false;
@@ -687,6 +670,7 @@ inline bool attempt_ld_swap_st_csr(
  return accept;
 }
 
+template <class OpT>
 inline bool attempt_ld_swap_st_csr_unscaled(
   int m,
   double vei,
@@ -696,7 +680,7 @@ inline bool attempt_ld_swap_st_csr_unscaled(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& d,
-  const STLDCSR& ld,
+  const OpT& op,
   const LDLDFriends& friends,
   std::mt19937& gen
 ) {
@@ -747,8 +731,8 @@ inline bool attempt_ld_swap_st_csr_unscaled(
 
  const arma::rowvec r_old = r;
 
- set_marker_effect_st_csr(j, 0.0, 0, ww, r, b, d, ld);
- set_marker_effect_st_csr(k, b_j_old, 1, ww, r, b, d, ld);
+ set_marker_effect_st_csr(j, 0.0, 0, ww, r, b, d, op);
+ set_marker_effect_st_csr(k, b_j_old, 1, ww, r, b, d, op);
 
  const double sse_new = residual_sse_st_csr(m, b, wy, r, yy);
  bool accept = false;
@@ -1102,6 +1086,11 @@ Rcpp::List stblr_cpg_omp_csr(
   m,
   xx
  );
+ arma::rowvec xx_row(static_cast<arma::uword>(m));
+ for (int i = 0; i < m; ++i) {
+  xx_row(static_cast<arma::uword>(i)) = xx[static_cast<std::size_t>(i)];
+ }
+ const CsrOperator op(ld, xx_row);
 
  LDLDFriends ld_swap_friends;
  if (updateLDswap) {
@@ -1281,7 +1270,7 @@ Rcpp::List stblr_cpg_omp_csr(
    std::mt19937 gen_t(task_seed);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
-   arma::rowvec ww_t = ww_mat.row(static_cast<arma::uword>(t));
+   const arma::rowvec& ww_t = op.diag();
 
    arma::rowvec b_t(m, arma::fill::zeros);
    for (int i = 0; i < m; ++i) {
@@ -1311,14 +1300,7 @@ Rcpp::List stblr_cpg_omp_csr(
      throw std::runtime_error("stblr_cpg_omp_csr_state: r_init contains NaN/Inf.");
     }
    } else {
-    rebuild_residual_st_csr(
-     m,
-     wy_t,
-     ww_t,
-     b_t,
-     r_t,
-     ld
-    );
+    op.rebuild(wy_t, b_t, r_t);
    }
 
    double vb_t = B(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
@@ -1396,7 +1378,7 @@ Rcpp::List stblr_cpg_omp_csr(
        r_t,
        b_t,
        d_t,
-       ld,
+       op,
        gen_t
       );
      }
@@ -1413,7 +1395,7 @@ Rcpp::List stblr_cpg_omp_csr(
        r_t,
        b_t,
        d_t,
-       ld,
+       op,
        gen_t
       );
      }
@@ -1437,7 +1419,7 @@ Rcpp::List stblr_cpg_omp_csr(
             r_t,
             b_t,
             d_t,
-            ld,
+            op,
             ld_swap_friends,
             gen_t
            ) :
@@ -1450,7 +1432,7 @@ Rcpp::List stblr_cpg_omp_csr(
             r_t,
             b_t,
             d_t,
-            ld,
+            op,
             ld_swap_friends,
             gen_t
            );
@@ -1515,14 +1497,7 @@ Rcpp::List stblr_cpg_omp_csr(
 
     if (updateE) {
      if (rebuild_r_before_updateE) {
-      rebuild_residual_st_csr(
-       m,
-       wy_t,
-       ww_t,
-       b_t,
-       r_t,
-       ld
-      );
+      op.rebuild(wy_t, b_t, r_t);
      }
 
      sampleE_ST_csr(

@@ -410,10 +410,16 @@ test_that("stblr_csr fits BayesC through public method interface", {
     seed = 101L
   )
 
-  expect_true(all(c(
-    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pi", "pim",
-    "pis", "input"
-  ) %in% names(fit)))
+  required_fields <- c(
+    "bm", "dm", "wy", "r", "b", "d",
+    "vbs", "vgs", "ves", "vle", "vld", "pis",
+    "covb", "covg", "cove",
+    "pi", "pim",
+    "rb", "rg", "re",
+    "input"
+  )
+  missing_fields <- setdiff(required_fields, names(fit))
+  expect_equal(missing_fields, character())
   expect_equal(dim(fit$bm), c(3L, 1L))
   expect_equal(dim(fit$dm), c(3L, 1L))
   for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
