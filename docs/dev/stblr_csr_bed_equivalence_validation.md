@@ -118,21 +118,96 @@ score, diagonal, or operator wiring. The two backends' sufficient
 statistics are exactly equal under in-sample, full-LD conditions
 (Diagnostic 0), and their posterior-mean marker effects agree within Monte
 Carlo error across independent seeds (Diagnostic B). The apparent
-matched-seed divergence (Diagnostic A) is fully explained by the two
-backends' RNG seed derivation formulas, not by the update math.
+matched-seed divergence (Diagnostic A) is not caused by the update math
+(Diagnostic 0 rules that out). At the time this note was first written, the
+divergence was attributed entirely to the two backends' RNG seed derivation
+formulas differing by a constant offset. That attribution turned out to be
+incomplete: see "Seed-formula alignment (2026-07-11)" below — equalizing the
+seed formulas did not make the two backends' single-chain output match, so
+some of the divergence has a different, unidentified cause (most likely the
+scheduled-chains vs. plain-sweep architecture difference between the two
+backends' single-chain code paths).
 
-## Known related asymmetry (not fixed here)
+## Seed-formula alignment (2026-07-11) — does not achieve reproducibility
 
 The BED scheduled-chain seed formula includes a `9176 * (chain + 1)` term
-that has no counterpart in CSR's single-chain seed formula
+that had no counterpart in CSR's single-chain seed formula
 (`stblr_trait_seed()`, used when CSR runs with `nchains == 1`; CSR's
-multi-chain path, `stblr_chain_seed()`, does include an analogous
-`9176 * (chain + 1)` term). This means CSR and BED never produce comparable
-RNG streams for the "same" `seed`, even in the single-chain case. This may
-be intentional (to decorrelate chains across backends), but it is worth a
-deliberate decision rather than an implicit side effect. No change was made
-as part of this validation; see the native-code rules in `AGENTS.md`
-(no sampler/RNG changes without an explicit request and explanation).
+multi-chain path, `stblr_chain_seed()`, did include an analogous
+`9176 * (chain + 1)` term). This was originally flagged above as
+intentionally left alone pending "a deliberate decision rather than an
+implicit side effect."
+
+That decision was made explicitly (per an out-of-band request to change RNG
+behaviour, with the change and reason recorded here as required by the
+native-code rules in `AGENTS.md`): CSR's single-chain formula in
+`src/st_chain_utils.h` now adds the same `9176` term (i.e.
+`stblr_chain_seed(seed, trait, 0)`'s value), so `stblr_trait_seed(seed,
+trait)` is now
+
+```text
+seed + 1000003 * (trait + 1) + 9176
+```
+
+**Why this was attempted:** it makes CSR's single-chain RNG derivation
+consistent with (a) CSR's own multi-chain formula evaluated at `chain = 0`,
+and (b) the BED backend, which always includes the `9176 * (chain + 1)`
+term, even for a single chain. For `seed = 10`, `trait = 0`, `chain = 0`,
+both formulas now evaluate to the identical integer `1009189` — the two
+backends' `mt19937` generators are now constructed with the same seed
+value, which they were not before.
+
+**Verified outcome: the two backends' single-chain output still does not
+match.** A re-run of this note's own "Reproducing this check" method (n=60,
+m=10, in-sample full LD, `method = "bayesc"`, `full_sweep_every = 1`,
+`nchains = 1`, matched `seed`) after this change gave:
+
+```text
+iter=1              max|bm_csr - bm_bed| = 1.311e-01
+iter=50             max|bm_csr - bm_bed| = 2.435e-02
+iter=1, seed=999    max|bm_csr - bm_bed| = 5.854e-01
+```
+
+This is the same order of magnitude as the ~0.13 divergence originally
+reported under Diagnostic A, *before* this change. Equalizing the seed
+*value* did not make the sampled *output* match. This falsifies the
+original Diagnostic A conclusion that the matched-seed divergence was
+"fully explained by" the seed-formula mismatch — it was not, or at least
+not solely.
+
+**Most likely actual cause (not yet confirmed):** CSR's single-chain path
+(`nchains == 1`) runs through the plain, non-scheduled sweep
+(`st_cpg_omp_csr.cpp`, `stblr_cpg_omp_csr()`), while `stblr_bed()` always
+runs through the scheduled-chains architecture
+(`stblr_cpg_omp_bed_marker_scheduled_chains()` /
+`st_cpg_omp_individual_scheduled_chains.cpp`), even at
+`full_sweep_every = 1`. These are structurally different implementations,
+not just differently-seeded instances of the same code path, so an
+equal-valued `mt19937` seed does not imply the two draw the same sequence
+of random numbers in the same order. Confirming this would require tracing
+the exact sequence and count of RNG draws per marker/iteration in both code
+paths — not done as part of this change.
+
+**Disposition:** the formula edit is kept as a narrow, defensible
+consistency fix — CSR's single-chain and multi-chain seed formulas now
+agree with each other at `chain = 0`, and both now agree with BED's
+formula. It should **not** be read as making CSR and BED reproducible
+against each other for a shared `seed`; they still are not. Diagnostic B's
+conclusion is unaffected (the two backends still agree within Monte Carlo
+error across independent seeds; that finding never depended on the seed
+formula matching).
+
+**Consequence:** a given `seed` now produces a different `mt19937` stream
+(and therefore different sampled values) for single-chain CSR runs than it
+did before this change, for `stblr_csr()`,
+`stblr_csr(..., method = "bayesr")` (`st_cpg_omp_csr_bayesr.cpp`),
+`st_cpg_omp_csr_scheduled.cpp`, and `st_sbayesrc_omp_csr.cpp`'s single-chain
+paths (the four call sites of `stblr_trait_seed()`). This does not affect
+CSR's multi-chain path, the annot/group/prior CSR variants (which use a
+separate, unrelated seed scheme not going through `stblr_trait_seed()`), or
+any BED backend path. No previously-saved single-chain CSR results are
+reproducible bit-for-bit against a re-run with the same `seed` after this
+change.
 
 ## Reproducing this check
 
