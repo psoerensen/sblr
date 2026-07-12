@@ -41,6 +41,12 @@ ordinary BED BayesR and internal BED BayesRC are defined inline in
 runners, and raw-output aggregation remain in their respective translation
 units.
 
+The internal BED BayesRC checkpoint has focused regression coverage for fixed
+BayesR-prior reduction, learned annotation priors, component/prior identities,
+traits and chains, deterministic seeds and thread counts, variance/CPO
+diagnostics, native validation, and schema structure. Public readiness still
+depends on successful compiled-platform execution of those native tests.
+
 ## Backend Feature Matrix
 
 Values are `yes`, `no`, `partial`, or `n/a`.

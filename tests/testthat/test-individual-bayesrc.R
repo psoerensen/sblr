@@ -32,6 +32,36 @@ test_that("intercept conversion reproduces BayesR component probabilities", {
   expect_equal(got, target, tolerance = 1e-12)
 })
 
+test_that("probit stick conversion handles multiple priors and rejects invalid input", {
+  priors <- list(
+    c(0.95, 0.03, 0.015, 0.005),
+    c(0.70, 0.20, 0.08, 0.02),
+    rep(0.25, 4)
+  )
+  for (target in priors) {
+    stick <- stats::pnorm(sblr:::.bayesr_pi_to_probit_stick_intercepts(target))
+    got <- numeric(length(target))
+    remaining <- 1
+    for (k in seq_along(stick)) {
+      got[k] <- remaining * (1 - stick[k])
+      remaining <- remaining * stick[k]
+    }
+    got[length(got)] <- remaining
+    expect_true(all(is.finite(got) & got >= 0 & got <= 1))
+    expect_equal(sum(got), 1, tolerance = 1e-12)
+    expect_equal(got, target / sum(target), tolerance = 1e-12)
+  }
+  for (bad in list(1, c(-1, 2), c(0, 1), c(NA, 1), c(Inf, 1))) {
+    expect_error(sblr:::.bayesr_pi_to_probit_stick_intercepts(bad), "pi")
+  }
+  for (bad_floor in c(0, -1, 0.5, 1, NA, Inf)) {
+    expect_error(
+      sblr:::.bayesr_pi_to_probit_stick_intercepts(c(0.5, 0.5), bad_floor),
+      "pi_floor"
+    )
+  }
+})
+
 test_that("individual BayesRC native symbol is registered when compiled", {
   ok <- tryCatch({
     getNativeSymbolInfo(
@@ -62,6 +92,101 @@ make_individual_bayesrc_fixture <- function() {
     gamma = c(0, 0.01, 0.1, 1),
     pi = c(0.95, 0.03, 0.015, 0.005)
   )
+}
+
+skip_if_no_individual_bayesrc <- function() {
+  ok <- tryCatch({
+    getNativeSymbolInfo(
+      "_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc",
+      PACKAGE = "sblr"
+    )
+    TRUE
+  }, error = function(e) FALSE)
+  skip_if_not(ok, "native individual BayesRC symbol is not loaded")
+}
+
+make_individual_bayesrc_args <- function(
+    fixture = make_individual_bayesrc_fixture(), y = fixture$y,
+    updateAlpha = FALSE, nchains = 1L, keep_chains = FALSE,
+    ncores = 1L, seed = 17L, nit = 6L, nburn = 2L, nthin = 1L,
+    A = matrix(1, 2L, 1L)) {
+  nt <- ncol(y)
+  list(
+    bed_files = fixture$bed, n = 6L, cls = list(1:2), y = y,
+    b_init = replicate(nt, c(0, 0), simplify = FALSE),
+    sets = c(1L, 1L), rows = NULL, af = list(c(0.5, 0.5)), scale = TRUE,
+    B = diag(0.1, nt), E = diag(1, nt),
+    ssb_prior = replicate(nt, rep(0.05, nt), simplify = FALSE),
+    sse_prior = replicate(nt, rep(0.5, nt), simplify = FALSE),
+    A = A, gamma = fixture$gamma,
+    annot_alpha_init = rbind(
+      sblr:::.bayesr_pi_to_probit_stick_intercepts(fixture$pi),
+      matrix(0, max(0, ncol(A) - 1L), length(fixture$gamma) - 1L)
+    ),
+    annot_sigma_sq_alpha_init = rep(1, length(fixture$gamma) - 1L),
+    updateAlpha = updateAlpha, annot_alpha_update_every = 1L,
+    updateB = TRUE, updateE = TRUE, adjE = 0.9,
+    nit = nit, nburn = nburn, nthin = nthin, rebuild_every = 1L,
+    return_wy = TRUE, return_r = TRUE, read_block_size = 2L,
+    nchains = nchains, keep_chains = keep_chains,
+    ncores = ncores, seed = seed
+  )
+}
+
+run_individual_bayesrc <- function(...) {
+  do.call(sblr:::.stblr_bed_bayesrc_native, make_individual_bayesrc_args(...))
+}
+
+expect_individual_bayesrc_raw <- function(raw, m, K, nt, ntrace) {
+  expect_s3_class(raw, "stblr_raw_v1")
+  expect_identical(raw$schema$class, "stblr_raw")
+  expect_identical(as.integer(raw$schema$version), 1L)
+  expect_identical(raw$meta$model, "bayesrc")
+  expect_identical(raw$meta$backend, "bed_bayesrc")
+  expect_identical(raw$meta$data_level, "individual")
+  expect_identical(raw$meta$prior_type, "annotation_component")
+  expect_true(isTRUE(raw$meta$annotations))
+  expect_false(isTRUE(raw$meta$scheduled))
+  expect_equal(
+    setdiff(
+      c("schema", "meta", "marker", "trace", "variance", "pi",
+        "diagnostics", "chains", "prior", "group", "annotation",
+        "component", "selection"),
+      names(raw)
+    ),
+    character()
+  )
+  for (field in c("bm", "dm", "b", "state")) expect_equal(dim(raw$marker[[field]]), c(m, nt))
+  for (field in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+    expect_equal(dim(raw$trace[[field]]), c(ntrace, nt))
+    expect_true(all(is.finite(raw$trace[[field]])))
+  }
+  expect_equal(raw$trace$vld, raw$trace$vgs - raw$trace$vle, tolerance = 1e-12)
+  expect_true(all(raw$trace$vbs > 0 & raw$trace$ves > 0))
+  expect_identical(raw$component$names[1L], "gamma_0.00")
+  expect_equal(length(raw$component$names), K)
+  expect_equal(as.numeric(raw$component$mixture_var), c(0, 0.01, 0.1, 1))
+  for (t in seq_len(nt)) {
+    cp <- raw$component$prob[[t]]
+    expect_equal(dim(cp), c(m, K))
+    expect_true(all(is.finite(cp) & cp >= 0 & cp <= 1))
+    expect_equal(rowSums(cp), rep(1, m), tolerance = 1e-12)
+    expect_equal(raw$marker$dm[, t], 1 - cp[, 1L], tolerance = 1e-12)
+    expect_equal(
+      raw$component$dm_component_mean[, t],
+      drop(cp %*% seq.int(0, K - 1L)),
+      tolerance = 1e-12
+    )
+    expect_equal(raw$component$ncomp[t, ], colSums(cp), tolerance = 1e-12)
+    expect_equal(sum(raw$component$ncomp[t, ]), m, tolerance = 1e-12)
+    prior <- raw$annotation$marker_prior_final[[t]]
+    expect_equal(dim(prior), c(m, K))
+    expect_true(all(is.finite(prior) & prior >= 0 & prior <= 1))
+    expect_equal(rowSums(prior), rep(1, m), tolerance = 1e-12)
+    expect_equal(raw$pi$final[t, ], colMeans(prior), tolerance = 1e-12)
+  }
+  expect_true(isTRUE(raw$diagnostics$full_sweeps))
+  expect_false(isTRUE(raw$diagnostics$adaptive_skipping))
 }
 
 test_that("individual BayesRC native backend runs and reduces to fixed-pi BayesR", {
@@ -121,4 +246,198 @@ test_that("individual BayesRC native backend runs and reduces to fixed-pi BayesR
   expect_equal(raw_rc$marker$bm, raw_r$marker$bm, tolerance = 1e-12)
   expect_equal(raw_rc$marker$dm, raw_r$marker$dm, tolerance = 1e-12)
   expect_equal(raw_rc$component$prob[[1L]], raw_r$component$prob[[1L]], tolerance = 1e-12)
+  for (field in c("b", "state")) {
+    expect_equal(raw_rc$marker[[field]], raw_r$marker[[field]], tolerance = 1e-12)
+  }
+  for (field in c("vbs", "vgs", "ves", "vle", "vld")) {
+    expect_equal(raw_rc$trace[[field]], raw_r$trace[[field]], tolerance = 1e-12)
+  }
+  expect_equal(raw_rc$diagnostics$log_cpo, raw_r$diagnostics$log_cpo, tolerance = 1e-12)
+  expect_equal(
+    raw_rc$diagnostics$mean_log_cpo,
+    raw_r$diagnostics$mean_log_cpo,
+    tolerance = 1e-12
+  )
+})
+
+test_that("BED BayesRC component, annotation, variance, CPO, and schema outputs are coherent", {
+  skip_if_no_individual_bayesrc()
+  raw <- run_individual_bayesrc(updateAlpha = TRUE, nit = 6L, nburn = 2L)
+  expect_individual_bayesrc_raw(raw, m = 2L, K = 4L, nt = 1L, ntrace = 8L)
+  expect_length(raw$annotation$alpha_mean, 1L)
+  expect_length(raw$annotation$alpha_final, 1L)
+  expect_equal(dim(raw$annotation$alpha_mean[[1L]]), c(1L, 3L))
+  expect_equal(dim(raw$annotation$alpha_final[[1L]]), c(1L, 3L))
+  expect_true(all(is.finite(raw$annotation$alpha_mean[[1L]])))
+  expect_true(all(is.finite(raw$annotation$alpha_final[[1L]])))
+  expect_equal(dim(raw$annotation$sigmaSqAlpha_mean), c(3L, 1L))
+  expect_equal(dim(raw$annotation$sigmaSqAlpha_final), c(3L, 1L))
+  expect_true(all(is.finite(raw$annotation$sigmaSqAlpha_mean) &
+                  raw$annotation$sigmaSqAlpha_mean > 0))
+  expect_true(all(is.finite(raw$annotation$sigmaSqAlpha_final) &
+                  raw$annotation$sigmaSqAlpha_final > 0))
+  expect_identical(raw$diagnostics$annotation_updates_per_chain, 8L)
+  expect_true(all(is.finite(raw$trace$pis) & raw$trace$pis >= 0 & raw$trace$pis <= 1))
+  expect_length(raw$diagnostics$log_cpo, 1L)
+  expect_length(raw$diagnostics$mean_log_cpo, 1L)
+  expect_length(raw$diagnostics$nsamples, 1L)
+  expect_true(all(is.finite(raw$diagnostics$log_cpo)))
+  expect_equal(
+    raw$diagnostics$mean_log_cpo,
+    raw$diagnostics$log_cpo / raw$diagnostics$n_used,
+    tolerance = 1e-12
+  )
+  expect_equal(raw$diagnostics$nsamples, 6)
+
+  fixed <- run_individual_bayesrc(updateAlpha = FALSE, nit = 6L, nburn = 2L, nthin = 2L)
+  prior_nonnull <- mean(1 - fixed$annotation$marker_prior_final[[1L]][, 1L])
+  expect_equal(fixed$trace$pis[, 1L], rep(prior_nonnull, 8L), tolerance = 1e-12)
+  expect_equal(fixed$diagnostics$nsamples, 3)
+  expect_false(isTRUE(all.equal(
+    mean(fixed$trace$pis[, 1L]),
+    sum(fixed$component$ncomp[1L, -1L]) / 2
+  )))
+})
+
+test_that("BED BayesRC learns directional annotation enrichment", {
+  skip_if_no_individual_bayesrc()
+  fixture <- make_individual_bayesrc_fixture()
+  # Marker 1 alone generates a strong deterministic phenotype; marker 1 is
+  # annotated and marker 2 is not, so its learned final prior should be more
+  # non-null on this deliberately high-signal smoke fixture.
+  fixture$y <- matrix(3 * (c(0, 1, 2, 0, 1, 2) - 1) / sqrt(0.5), ncol = 1L)
+  annotation <- cbind(intercept = 1, enriched = c(1, 0))
+  raw <- run_individual_bayesrc(
+    fixture = fixture, y = fixture$y, A = annotation,
+    updateAlpha = TRUE, nit = 30L, nburn = 10L, seed = 331L
+  )
+  prior <- raw$annotation$marker_prior_final[[1L]]
+  nonnull <- 1 - prior[, 1L]
+  expect_gt(nonnull[1L], nonnull[2L])
+  expect_true(all(is.finite(raw$annotation$alpha_mean[[1L]])))
+})
+
+test_that("BED BayesRC supports separate traits and retained chains", {
+  skip_if_no_individual_bayesrc()
+  fixture <- make_individual_bayesrc_fixture()
+  y2 <- cbind(fixture$y[, 1L], -0.5 * fixture$y[, 1L] + c(0, 0.1, 0, -0.1, 0, 0.2))
+  raw <- run_individual_bayesrc(
+    fixture = fixture, y = y2, updateAlpha = TRUE,
+    nchains = 2L, keep_chains = TRUE, nit = 4L, nburn = 2L
+  )
+  expect_individual_bayesrc_raw(raw, m = 2L, K = 4L, nt = 2L, ntrace = 6L)
+  expect_identical(raw$meta$nt, 2L)
+  expect_identical(raw$meta$nchains, 2L)
+  expect_length(raw$component$prob, 2L)
+  expect_length(raw$annotation$alpha_mean, 2L)
+  expect_length(raw$diagnostics$log_cpo, 2L)
+  expect_length(raw$chains, 2L)
+  for (t in 1:2) {
+    expect_length(raw$chains[[t]], 2L)
+    for (chain in raw$chains[[t]]) {
+      expect_equal(
+        setdiff(c("bm", "dm", "b", "state", "comp_prob", "alpha",
+                  "sigmaSqAlpha", "pis"), names(chain)),
+        character()
+      )
+    }
+    expect_equal(
+      raw$marker$bm[, t],
+      Reduce(`+`, lapply(raw$chains[[t]], `[[`, "bm")) / 2,
+      tolerance = 1e-12
+    )
+    expect_equal(
+      raw$marker$dm[, t],
+      Reduce(`+`, lapply(raw$chains[[t]], `[[`, "dm")) / 2,
+      tolerance = 1e-12
+    )
+    expect_equal(
+      raw$component$prob[[t]],
+      Reduce(`+`, lapply(raw$chains[[t]], `[[`, "comp_prob")) / 2,
+      tolerance = 1e-12
+    )
+    expect_equal(
+      raw$annotation$alpha_mean[[t]],
+      Reduce(`+`, lapply(raw$chains[[t]], `[[`, "alpha")) / 2,
+      tolerance = 1e-12
+    )
+  }
+  expect_false(isTRUE(all.equal(raw$marker$bm[, 1L], raw$marker$bm[, 2L])))
+  expect_null(run_individual_bayesrc(nchains = 2L, keep_chains = FALSE)$chains)
+})
+
+test_that("BED BayesRC is reproducible by seed and OpenMP thread count", {
+  skip_if_no_individual_bayesrc()
+  one <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 91L)
+  repeat_one <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 91L)
+  two <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 2L, seed = 91L)
+  different <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 92L)
+  fields <- c("bm", "dm", "b")
+  for (field in fields) {
+    expect_identical(one$marker[[field]], repeat_one$marker[[field]])
+    expect_identical(one$marker[[field]], two$marker[[field]])
+  }
+  for (field in c("vbs", "ves", "pis")) {
+    expect_identical(one$trace[[field]], repeat_one$trace[[field]])
+    expect_identical(one$trace[[field]], two$trace[[field]])
+  }
+  expect_identical(one$component$prob, repeat_one$component$prob)
+  expect_identical(one$component$prob, two$component$prob)
+  expect_identical(one$annotation$alpha_mean, repeat_one$annotation$alpha_mean)
+  expect_identical(one$annotation$alpha_mean, two$annotation$alpha_mean)
+  expect_identical(one$annotation$sigmaSqAlpha_mean, two$annotation$sigmaSqAlpha_mean)
+  expect_false(isTRUE(all.equal(one$marker$bm, different$marker$bm)))
+})
+
+test_that("BED BayesRC follows optional wy and residual conventions", {
+  skip_if_no_individual_bayesrc()
+  raw <- run_individual_bayesrc()
+  expect_equal(dim(raw$marker$wy), c(2L, 1L))
+  expect_equal(dim(raw$marker$r), c(2L, 1L))
+  expect_true(all(is.finite(raw$marker$wy)))
+  expect_true(all(is.finite(raw$marker$r)))
+  args <- make_individual_bayesrc_args()
+  args$return_wy <- args$return_r <- FALSE
+  absent <- do.call(sblr:::.stblr_bed_bayesrc_native, args)
+  expect_null(absent$marker$wy)
+  expect_null(absent$marker$r)
+})
+
+test_that("BED BayesRC validates native inputs clearly", {
+  skip_if_no_individual_bayesrc()
+  base <- make_individual_bayesrc_args()
+  check_bad <- function(name, value, pattern) {
+    args <- base
+    args[[name]] <- value
+    expect_error(do.call(sblr:::.stblr_bed_bayesrc_native, args), pattern)
+  }
+  check_bad("A", matrix(1, 1L, 1L), "A")
+  check_bad("A", matrix(numeric(), 2L, 0L), "A")
+  check_bad("A", matrix(c(1, NA), 2L), "A")
+  check_bad("A", matrix(c(1, Inf), 2L), "A")
+  check_bad("annot_alpha_init", matrix(0, 2L, 3L), "annot_alpha_init")
+  check_bad("annot_alpha_init", matrix(0, 1L, 2L), "annot_alpha_init")
+  check_bad("annot_alpha_init", matrix(c(NA, 0, 0), 1L), "annotation initial")
+  check_bad("annot_sigma_sq_alpha_init", c(1, 1), "annot_sigma")
+  check_bad("annot_sigma_sq_alpha_init", c(1, 0, 1), "variances positive")
+  check_bad("gamma", 0, "gamma")
+  check_bad("gamma", c(0.1, 1), "exact zero")
+  check_bad("gamma", c(0, 0), "positive")
+  check_bad("gamma", c(0, -1), "positive")
+  check_bad("gamma", c(0, Inf), "positive")
+  for (bad in c(0, -1, 1, NA, Inf)) check_bad("pi_floor", bad, "pi_floor")
+  check_bad("annot_alpha_update_every", 0L, "annot_alpha_update_every")
+  check_bad("nit", 0L, "MCMC")
+  check_bad("nburn", -1L, "MCMC")
+  check_bad("nthin", 0L, "MCMC")
+  check_bad("nchains", 0L, "MCMC")
+  check_bad("ncores", 0L, "MCMC")
+  check_bad("y", matrix(1, 5L, 1L), "phenotype")
+  check_bad("b_init", list(c(0, 0), c(0, 0)), "sets or b_init")
+  check_bad("b_init", list(0), "each b_init")
+  check_bad("sets", 1L, "sets or b_init")
+  check_bad("B", diag(2), "B and E")
+  check_bad("E", diag(2), "B and E")
+  check_bad("bed_files", tempfile(fileext = ".bed"), "Could not open BED")
+  check_bad("cls", list(integer()), "no markers selected")
 })

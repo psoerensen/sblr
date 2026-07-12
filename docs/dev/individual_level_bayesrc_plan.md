@@ -39,3 +39,22 @@ individual-level BayesRC backend. It does not define or expose a public model.
 - ordinary BayesR adaptive scheduling remains unchanged
 - internal BayesRC remains structurally full-sweep with adaptive skipping off
 - raw schemas and formatted outputs remain unchanged
+
+## Sequence 2B Status
+
+- added fixed-prior reduction coverage against ordinary fixed-pi BED BayesR
+- added learned annotation-prior and directional enrichment smoke coverage
+- added multiple-trait, multiple-chain, retained-chain, repeated-seed, and
+  OpenMP thread-count reproducibility checks
+- added component probability, `dm`, `dm_component_mean`, `ncomp`, and `pis`
+  identity checks
+- added annotation output dimension and final marker-prior checks
+- added variance trace, CPO, thinning, optional `wy`/residual, native input,
+  full-sweep diagnostic, and raw schema validation
+- retained regression coverage for ordinary BED BayesR and CSR SBayesRC through
+  their existing focused test groups
+- annotation rows remain an internal caller responsibility: `A` must already
+  follow the final selected BED marker order represented by `cls`; a future
+  public wrapper must perform marker-ID alignment before calling native code
+- the backend remains internal; public `stblr_bed(method = "bayesrc")` routing
+  is not implemented
