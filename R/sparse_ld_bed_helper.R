@@ -2989,6 +2989,231 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  fit
 }
 
+.stblr_csr_bayesr_block_eigen <- function(
+  stats,
+  Glist,
+  block_start,
+  eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
+  eigen_tau = 0.01,
+  eigen_eta = 0,
+  pi = NULL,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  alpha = NULL,
+  h2 = 0.3,
+  adjE = 0.9,
+  nit = 1000,
+  nburn = 100,
+  nthin = 1,
+  ncores = 1,
+  seed = 1,
+  nchains = 1L,
+  keep_chains = FALSE,
+  chain_seeds = NULL,
+  updateB = TRUE,
+  updateE = TRUE,
+  updatePi = TRUE,
+  updateE_start = NULL,
+  updateE_every = 1L,
+  updateLDswap = FALSE,
+  ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8,
+  ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L,
+  selection_s = NULL,
+  estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
+  nub = 4,
+  nue = 4,
+  use_comp_init = FALSE,
+  comp_init = NULL,
+  use_r_init = FALSE,
+  r_init = NULL,
+  rebuild_r_before_updateE = FALSE
+) {
+ if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
+  eigen_filter <- eigen_filter[1L]
+ }
+ if (!is.character(eigen_filter) || length(eigen_filter) != 1L ||
+     is.na(eigen_filter) ||
+     !eigen_filter %in% c("hard_truncate", "ridge_fixed", "ridge_lw")) {
+  stop("eigen_filter must be one of 'hard_truncate', 'ridge_fixed', or 'ridge_lw'.")
+ }
+ if (!is.numeric(eigen_tau) || length(eigen_tau) != 1L ||
+     !is.finite(eigen_tau) || eigen_tau < 0) {
+  stop("eigen_tau must be a finite non-negative numeric scalar.")
+ }
+ if (!is.numeric(eigen_eta) || length(eigen_eta) != 1L ||
+     !is.finite(eigen_eta) || eigen_eta < 0) {
+  stop("eigen_eta must be a finite non-negative numeric scalar.")
+ }
+ if (isTRUE(updateLDswap)) {
+  stop("LD-swap is not yet supported with the experimental block-eigen operator.")
+ }
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ .stblr_validate_sampled_selection_s(
+  estimate_selection_s, selection_s, selection_s_init,
+  selection_s_prior, selection_s_proposal_sd
+ )
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.numeric(ncores) || length(ncores) != 1L ||
+     !is.finite(ncores) || ncores < 1 || ncores != floor(ncores)) {
+  stop("ncores must be a positive integer scalar.")
+ }
+ ncores <- as.integer(ncores)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L || is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+ if (is.null(chain_seeds)) {
+  chain_seeds <- integer()
+ } else {
+  if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds))) {
+   stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.")
+  }
+  chain_seeds <- as.integer(chain_seeds)
+ }
+ if (is.null(updateE_start)) updateE_start <- 0L
+ if (!is.numeric(updateE_start) || length(updateE_start) != 1L ||
+     !is.finite(updateE_start) || updateE_start < 0 ||
+     updateE_start != floor(updateE_start)) {
+  stop("updateE_start must be NULL or a non-negative integer scalar.")
+ }
+ if (!is.numeric(updateE_every) || length(updateE_every) != 1L ||
+     !is.finite(updateE_every) || updateE_every < 1 ||
+     updateE_every != floor(updateE_every)) {
+  stop("updateE_every must be a positive integer scalar.")
+ }
+ updateE_start <- as.integer(updateE_start)
+ updateE_every <- as.integer(updateE_every)
+ if (!is.numeric(mixture_var) || length(mixture_var) < 2L ||
+     any(!is.finite(mixture_var)) || mixture_var[1L] != 0 ||
+     any(mixture_var[-1L] <= 0)) {
+  stop("mixture_var must start with 0 and have positive non-null components.")
+ }
+ if (is.null(pi)) {
+  active <- 0.001
+  pi <- c(1 - active, rep(active / (length(mixture_var) - 1L),
+                          length(mixture_var) - 1L))
+ }
+ if (!is.numeric(pi) || length(pi) != length(mixture_var) ||
+     any(!is.finite(pi)) || any(pi < 0) || sum(pi) <= 0) {
+  stop("pi must be a non-negative finite vector matching mixture_var with positive sum.")
+ }
+ pi <- pi / sum(pi)
+ if (is.null(alpha)) alpha <- pmax(pi * 5e5, .Machine$double.eps)
+ if (!is.numeric(alpha) || length(alpha) != length(mixture_var) ||
+     any(!is.finite(alpha)) || any(alpha <= 0)) {
+  stop("alpha must be a positive finite vector matching mixture_var.")
+ }
+
+ nt <- length(stats$yy)
+ n <- stats$n
+ if (is.null(n)) stop("stats$n is required for the experimental block-eigen path.")
+ if (length(n) == 1L) n <- rep(n, nt)
+ m <- stats$m %||% length(stats$ww[[1L]])
+ bed <- .stblr_csr_block_eigen_inputs(stats, Glist, block_start)
+ selection_s_info <- .stblr_prepare_csr_selection_s(
+  selection_s = selection_s, Glist = Glist, m = m, scheduled = FALSE,
+  backend = "bayesr", return_log_h = estimate_selection_s
+ )
+ trait_names <- names(stats$yy) %||% paste0("T", seq_len(nt))
+ variable_names <- names(stats$ww[[1L]]) %||% stats$marker_names
+ if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
+ vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
+ pi_active <- sum(pi[-1L])
+ if (!is.finite(pi_active) || pi_active <= 0) {
+  stop("pi must allocate positive probability to non-null components.")
+ }
+ pri <- list(
+  vy = vy,
+  B = diag((vy * h2) / (m * pi_active), nt, nt),
+  E = diag(vy * (1 - h2), nt, nt),
+  ssb_prior = diag(((nub - 2) / nub) * (vy * h2) / (m * pi_active), nt, nt),
+  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ )
+ for (x in c("B", "E", "ssb_prior", "sse_prior")) {
+  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
+ }
+ pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
+ pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
+ if (is.null(comp_init)) comp_init <- lapply(seq_len(nt), function(i) rep(0, m))
+ if (is.null(r_init)) r_init <- stats$wy
+
+ raw <- stblr_cpg_omp_csr_bayesr_block_eigen(
+  wy = stats$wy, ww = stats$ww, yy = stats$yy,
+  b_init = lapply(seq_len(nt), function(i) rep(0, m)),
+  comp_init = comp_init, use_comp_init = use_comp_init,
+  r_init = r_init, use_r_init = use_r_init,
+  rebuild_r_before_updateE = rebuild_r_before_updateE, ld_prefix = "",
+  B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior_list,
+  sse_prior = pri$sse_prior_list, pi = as.numeric(pi),
+  mixture_var = as.numeric(mixture_var), alpha = as.numeric(alpha),
+  nub = nub, nue = nue, updateB = updateB, updateE = updateE,
+  updatePi = updatePi, adjE = adjE, n = as.integer(n),
+  nit = as.integer(nit), nburn = as.integer(nburn), nthin = as.integer(nthin),
+  ncores = ncores, seed = as.integer(seed), nchains = nchains,
+  keep_chains = keep_chains, chain_seeds = chain_seeds,
+  updateE_start = updateE_start, updateE_every = updateE_every,
+  updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2, ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves),
+  selection_s_prior_scale = selection_s_info$prior_scale,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = selection_s_init, selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd,
+  selection_s_log_h = selection_s_info$log_h,
+  bed_files = bed$bed_files, n_bed = bed$n_bed, cls = bed$cls,
+  rows = bed$rows, af = bed$af, block_start = bed$block_start,
+  eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta
+ )
+ if (!.is_stblr_raw(raw)) {
+  .stblr_stop_unsupported_raw_output("csr_bayesr_block_eigen")
+ }
+ if (isTRUE(selection_s_info$fixed)) {
+  raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+ }
+ fit <- .as_stblr_fit(raw, trait_names, variable_names)
+ if (isTRUE(estimate_selection_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
+  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
+  fit$selection_s <- colMeans(s_trace_keep)
+  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
+  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ }
+ fit$input <- list(
+  method = "bayesr", model = "bayesr", backend = "csr_bayesr",
+  data_level = "summary", annotations = FALSE, scheduled = FALSE,
+  ld_backend = "block_eigen", eigen_filter = eigen_filter,
+  eigen_tau = eigen_tau, eigen_eta = eigen_eta,
+  eigen_blocks = bed$block_start,
+  eigen_diagnostics = raw$diagnostics$block_eigen,
+  nchains = nchains, keep_chains = keep_chains,
+  updateLDswap = updateLDswap, n = as.integer(n), m = m, nt = nt,
+  h2 = h2, nub = nub, nue = nue, adjE = adjE,
+  nit = as.integer(nit), nburn = as.integer(nburn), nthin = as.integer(nthin),
+  mixture_var = as.numeric(mixture_var), pi = as.numeric(pi), alpha = as.numeric(alpha),
+  updateE = updateE, updateE_start = updateE_start,
+  updateE_every = updateE_every,
+  selection_s = selection_s_info$selection_s,
+  selection_s_fixed = selection_s_info$fixed,
+  selection_s_exponent = selection_s_info$exponent,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_scale = "standardized_genotype_effect",
+  chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
+ )
+ fit
+}
+
 .make_bed_marker_data <- function(Glist, y, chr, cls, block_size,
                                   rows = NULL) {
   chr <- as.integer(chr)

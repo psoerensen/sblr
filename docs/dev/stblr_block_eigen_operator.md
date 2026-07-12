@@ -127,3 +127,11 @@ block-eigen path:
 - BayesR LD-swap residual coupling is operatorized
 - BayesR LD-swap candidate/friend construction remains CSR-specific because it
   still reads `STLDCSR` directly
+
+## Phase 3B Status
+
+- ordinary CSR BayesR now has an internal experimental block-eigen path
+- public `stblr_csr()` remains unchanged
+- block-eigen remains disabled for SBayesRC and annotation-aware models
+- LD-swap remains disabled for block-eigen
+- BayesR component outputs are preserved

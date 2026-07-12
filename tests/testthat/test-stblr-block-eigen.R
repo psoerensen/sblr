@@ -94,6 +94,25 @@ skip_if_no_csr_native <- function() {
   skip_if_not(ok, "native CSR BayesC symbol is not loaded")
 }
 
+skip_if_no_block_eigen_bayesr_native <- function() {
+  ok <- tryCatch({
+    getNativeSymbolInfo(
+      "_sblr_stblr_cpg_omp_csr_bayesr_block_eigen",
+      PACKAGE = "sblr"
+    )
+    TRUE
+  }, error = function(e) FALSE)
+  skip_if_not(ok, "native block-eigen BayesR symbol is not loaded")
+}
+
+skip_if_no_csr_bayesr_native <- function() {
+  ok <- tryCatch({
+    getNativeSymbolInfo("_sblr_stblr_cpg_omp_csr_bayesr", PACKAGE = "sblr")
+    TRUE
+  }, error = function(e) FALSE)
+  skip_if_not(ok, "native CSR BayesR symbol is not loaded")
+}
+
 expect_stblr_block_eigen_diagnostics <- function(fit, ridge = FALSE) {
   diagnostics <- fit$input$eigen_diagnostics
   if (is.null(diagnostics)) return(invisible(NULL))
@@ -275,5 +294,105 @@ test_that("default stblr_csr BayesC remains on sparse CSR path", {
     seed = 102L
   )
   expect_equal(fit$input$backend, "csr_bayesc")
+  expect_null(fit$input$ld_backend)
+})
+
+test_that("internal block-eigen BayesR helper exists but is not exported", {
+  expect_true(is.function(sblr:::.stblr_csr_bayesr_block_eigen))
+  expect_false(".stblr_csr_bayesr_block_eigen" %in% getNamespaceExports("sblr"))
+  expect_false(
+    "stblr_cpg_omp_csr_bayesr_block_eigen" %in% getNamespaceExports("sblr")
+  )
+})
+
+expect_stblr_block_eigen_bayesr_fit <- function(fit, eigen_filter) {
+  required_fields <- c(
+    "bm", "dm", "wy", "r", "b", "d",
+    "vbs", "vgs", "ves", "vle", "vld", "pis",
+    "covb", "covg", "cove", "pi", "pim", "input",
+    "comp_prob", "dm_component_mean"
+  )
+  missing_fields <- setdiff(required_fields, names(fit))
+  expect_equal(missing_fields, character())
+  expect_null(fit$chains)
+  expect_null(fit$ld_swap_chains)
+  expect_identical(fit$input$ld_backend, "block_eigen")
+  expect_identical(fit$input$eigen_filter, eigen_filter)
+  for (trait in names(fit$comp_prob)) {
+    cp <- fit$comp_prob[[trait]]
+    expect_equal(rowSums(cp), rep(1, nrow(cp)), tolerance = 1e-8)
+    expect_true("component_0" %in% colnames(cp))
+    expect_equal(
+      unname(fit$dm[, trait]),
+      unname(1 - cp[, "component_0"]),
+      tolerance = 1e-8
+    )
+  }
+  expect_stblr_block_eigen_diagnostics(
+    fit,
+    ridge = eigen_filter != "hard_truncate"
+  )
+}
+
+test_that("internal block-eigen BayesR filter modes run on the tiny fixture", {
+  skip_if_no_block_eigen_bayesr_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  common <- list(
+    stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
+    nit = 5, nburn = 2, nchains = 1L, keep_chains = FALSE,
+    ncores = 1L, seed = 1L
+  )
+  fits <- list(
+    hard_truncate = do.call(
+      sblr:::.stblr_csr_bayesr_block_eigen,
+      c(common, list(eigen_filter = "hard_truncate", eigen_tau = 0.01))
+    ),
+    ridge_fixed = do.call(
+      sblr:::.stblr_csr_bayesr_block_eigen,
+      c(common, list(eigen_filter = "ridge_fixed", eigen_eta = 0))
+    ),
+    ridge_lw = do.call(
+      sblr:::.stblr_csr_bayesr_block_eigen,
+      c(common, list(eigen_filter = "ridge_lw"))
+    )
+  )
+  for (filter in names(fits)) {
+    expect_stblr_block_eigen_bayesr_fit(fits[[filter]], filter)
+  }
+})
+
+test_that("block-eigen BayesR rejects LD-swap clearly", {
+  fixture <- make_stblr_block_eigen_fixture()
+  expect_error(
+    sblr:::.stblr_csr_bayesr_block_eigen(
+      stats = fixture$stats,
+      Glist = fixture$Glist,
+      block_start = 1L,
+      updateLDswap = TRUE,
+      nit = 2,
+      nburn = 0
+    ),
+    "LD-swap is not yet supported with the experimental block-eigen operator"
+  )
+})
+
+test_that("default stblr_csr BayesR remains on sparse CSR path", {
+  skip_if_no_csr_bayesr_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  fit <- stblr_csr(
+    stats = fixture$stats,
+    ld_prefix = make_stblr_block_eigen_csr_prefix(m = fixture$stats$m),
+    method = "bayesR",
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 2,
+    nburn = 0,
+    nchains = 1L,
+    ncores = 1L,
+    seed = 103L
+  )
+  expect_identical(fit$input$backend, "csr_bayesr")
   expect_null(fit$input$ld_backend)
 })
