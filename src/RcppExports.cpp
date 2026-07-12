@@ -1099,6 +1099,74 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// stblr_cpg_omp_csr_sbayesrc_block_eigen
+Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma, arma::mat alpha_init, arma::vec sigmaSqAlpha_init, bool intercept_flat, double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub, double nue, bool updateAlpha, bool updateB, bool updateE, int alpha_update_every, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale, bool estimate_selection_s, double selection_s_init, Rcpp::NumericVector selection_s_prior, double selection_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP alpha_initSEXP, SEXP sigmaSqAlpha_initSEXP, SEXP intercept_flatSEXP, SEXP sigmaSqAlpha_aSEXP, SEXP sigmaSqAlpha_bSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateAlphaSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP alpha_update_everySEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP selection_s_prior_scaleSEXP, SEXP estimate_selection_sSEXP, SEXP selection_s_initSEXP, SEXP selection_s_priorSEXP, SEXP selection_s_proposal_sdSEXP, SEXP selection_s_log_hSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type comp_init(comp_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_comp_init(use_comp_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type rebuild_r_before_updateE(rebuild_r_before_updateESEXP);
+    Rcpp::traits::input_parameter< std::string >::type ld_prefix(ld_prefixSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type A(ASEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha_init(alpha_initSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigmaSqAlpha_init(sigmaSqAlpha_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type intercept_flat(intercept_flatSEXP);
+    Rcpp::traits::input_parameter< double >::type sigmaSqAlpha_a(sigmaSqAlpha_aSEXP);
+    Rcpp::traits::input_parameter< double >::type sigmaSqAlpha_b(sigmaSqAlpha_bSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_floor(pi_floorSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateAlpha(updateAlphaSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< int >::type alpha_update_every(alpha_update_everySEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateLDswap(updateLDswapSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_prob(ld_swap_probSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_r2(ld_swap_r2SEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_max_friends(ld_swap_max_friendsSEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_moves(ld_swap_movesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type selection_s_prior_scale(selection_s_prior_scaleSEXP);
+    Rcpp::traits::input_parameter< bool >::type estimate_selection_s(estimate_selection_sSEXP);
+    Rcpp::traits::input_parameter< double >::type selection_s_init(selection_s_initSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type selection_s_prior(selection_s_priorSEXP);
+    Rcpp::traits::input_parameter< double >::type selection_s_proposal_sd(selection_s_proposal_sdSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type selection_s_log_h(selection_s_log_hSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type bed_files(bed_filesSEXP);
+    Rcpp::traits::input_parameter< int >::type n_bed(n_bedSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type cls(clsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type rows(rowsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type af(afSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type block_start(block_startSEXP);
+    Rcpp::traits::input_parameter< std::string >::type eigen_filter(eigen_filterSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_tau(eigen_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_eta(eigen_etaSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_sbayesrc_block_eigen(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale, estimate_selection_s, selection_s_init, selection_s_prior, selection_s_proposal_sd, selection_s_log_h, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_bed_marker_scheduled_chains_bayesr
 Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> c, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, int nit, int nburn, int nthin, int rebuild_every, int full_sweep_every, int null_skip_base, int null_skip_max, double candidate_threshold, int candidate_lifetime, bool skip_nulls_burnin_only, bool return_wy, bool return_r, int read_block_size, int progress_every, int nchains, int ncores, int seed);
 RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP cSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP full_sweep_everySEXP, SEXP null_skip_baseSEXP, SEXP null_skip_maxSEXP, SEXP candidate_thresholdSEXP, SEXP candidate_lifetimeSEXP, SEXP skip_nulls_burnin_onlySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP progress_everySEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP) {
@@ -1181,6 +1249,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled, 36},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains, 39},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 49},
+    {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 58},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, 39},
     {NULL, NULL, 0}
 };

@@ -113,6 +113,25 @@ skip_if_no_csr_bayesr_native <- function() {
   skip_if_not(ok, "native CSR BayesR symbol is not loaded")
 }
 
+skip_if_no_block_eigen_sbayesrc_native <- function() {
+  ok <- tryCatch({
+    getNativeSymbolInfo(
+      "_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen",
+      PACKAGE = "sblr"
+    )
+    TRUE
+  }, error = function(e) FALSE)
+  skip_if_not(ok, "native block-eigen SBayesRC symbol is not loaded")
+}
+
+skip_if_no_csr_sbayesrc_native <- function() {
+  ok <- tryCatch({
+    getNativeSymbolInfo("_sblr_stblr_cpg_omp_csr_sbayesrc", PACKAGE = "sblr")
+    TRUE
+  }, error = function(e) FALSE)
+  skip_if_not(ok, "native CSR SBayesRC symbol is not loaded")
+}
+
 expect_stblr_block_eigen_diagnostics <- function(fit, ridge = FALSE) {
   diagnostics <- fit$input$eigen_diagnostics
   if (is.null(diagnostics)) return(invisible(NULL))
@@ -439,4 +458,122 @@ test_that("default stblr_csr BayesR remains on sparse CSR path", {
   expect_identical(fit$input$backend, "csr_bayesr")
   expect_false(identical(fit$input$ld_backend, "block_eigen"))
   expect_null(fit$input$ld_backend)
+})
+
+make_stblr_block_eigen_annotation <- function(fixture) {
+  matrix(
+    c(1, 1, 0, 1),
+    nrow = fixture$stats$m,
+    dimnames = list(fixture$stats$marker_names, c("intercept", "annot1"))
+  )
+}
+
+test_that("internal block-eigen SBayesRC helper exists but is not exported", {
+  expect_true(is.function(sblr:::.stblr_csr_sbayesrc_block_eigen))
+  expect_false(".stblr_csr_sbayesrc_block_eigen" %in% getNamespaceExports("sblr"))
+  expect_false(
+    "stblr_cpg_omp_csr_sbayesrc_block_eigen" %in% getNamespaceExports("sblr")
+  )
+})
+
+expect_stblr_block_eigen_sbayesrc_fit <- function(fit, eigen_filter, n_anno) {
+  required_fields <- c(
+    "bm", "dm", "wy", "r", "b", "d",
+    "vbs", "vgs", "ves", "vle", "vld", "pis",
+    "covb", "covg", "cove", "pi", "pim", "input",
+    "comp_prob", "dm_component_mean", "alpha", "sigmaSqAlpha",
+    "annotation_summary", "annotation_pi", "annotation_effects"
+  )
+  expect_equal(setdiff(required_fields, names(fit)), character())
+  expect_null(fit$chains)
+  expect_null(fit$ld_swap_chains)
+  expect_identical(fit$input$ld_backend, "block_eigen")
+  expect_identical(fit$input$eigen_filter, eigen_filter)
+  for (trait in names(fit$comp_prob)) {
+    cp <- fit$comp_prob[[trait]]
+    expect_identical(colnames(cp)[1L], "gamma_0.00")
+    expect_equal(rowSums(cp), rep(1, nrow(cp)), tolerance = 1e-8)
+    expect_equal(
+      unname(fit$dm[, trait]),
+      unname(1 - cp[, "gamma_0.00"]),
+      tolerance = 1e-8
+    )
+    expect_equal(nrow(fit$alpha[[trait]]), n_anno)
+    expect_equal(ncol(fit$alpha[[trait]]), ncol(cp) - 1L)
+  }
+  expect_equal(dim(fit$sigmaSqAlpha), c(length(fit$comp_prob), 3L))
+  expect_stblr_block_eigen_diagnostics(
+    fit,
+    ridge = eigen_filter != "hard_truncate"
+  )
+}
+
+test_that("internal block-eigen SBayesRC filter modes run on the tiny fixture", {
+  skip_if_no_block_eigen_sbayesrc_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  annotation <- make_stblr_block_eigen_annotation(fixture)
+  common <- list(
+    stats = fixture$stats, Glist = fixture$Glist,
+    annotation = annotation, block_start = 1L,
+    updateAlpha = FALSE, updateB = FALSE, updateE = FALSE,
+    nit = 5, nburn = 2, ncores = 1L, seed = 1L,
+    keep_chains = FALSE
+  )
+  fits <- list(
+    hard_truncate = do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(eigen_filter = "hard_truncate", eigen_tau = 0.01))
+    ),
+    ridge_fixed = do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(eigen_filter = "ridge_fixed", eigen_eta = 0))
+    ),
+    ridge_lw = do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(eigen_filter = "ridge_lw"))
+    )
+  )
+  for (filter in names(fits)) {
+    expect_stblr_block_eigen_sbayesrc_fit(fits[[filter]], filter, ncol(annotation))
+  }
+  expect_equal(fits$ridge_fixed$input$eigen_eta, 0)
+})
+
+test_that("block-eigen SBayesRC rejects LD-swap clearly", {
+  fixture <- make_stblr_block_eigen_fixture()
+  expect_error(
+    sblr:::.stblr_csr_sbayesrc_block_eigen(
+      stats = fixture$stats,
+      Glist = fixture$Glist,
+      annotation = make_stblr_block_eigen_annotation(fixture),
+      block_start = 1L,
+      updateLDswap = TRUE,
+      nit = 2,
+      nburn = 0
+    ),
+    "LD-swap is not yet supported with the experimental block-eigen operator"
+  )
+})
+
+test_that("public SBayesRC remains on the sparse CSR path", {
+  skip_if_no_csr_sbayesrc_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  fixture$Glist$sparseLD <- list(
+    prefix = make_stblr_block_eigen_csr_prefix(fixture$stats$m)
+  )
+  fit <- stblr_csr_annot(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    annotations = make_stblr_block_eigen_annotation(fixture),
+    annotation_model = "sbayesrc",
+    updateAlpha = FALSE,
+    updateB = FALSE,
+    updateE = FALSE,
+    nit = 2,
+    nburn = 0,
+    ncores = 1L,
+    seed = 104L
+  )
+  expect_identical(fit$input$backend, "csr_sbayesrc")
+  expect_false(identical(fit$input$ld_backend, "block_eigen"))
 })

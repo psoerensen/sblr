@@ -154,3 +154,11 @@ block-eigen path:
 - SBayesRC residual coupling is operatorized
 - SBayesRC LD-swap candidate/friend construction remains CSR-specific because
   it still reads `STLDCSR` directly
+
+## Phase 4B Status
+
+- CSR SBayesRC now has an internal experimental block-eigen path
+- public `stblr_csr_annot()` remains unchanged
+- block-eigen remains disabled for prior/group/learned annotation BayesC and BED
+- LD-swap remains disabled for block-eigen
+- SBayesRC component and annotation outputs are preserved

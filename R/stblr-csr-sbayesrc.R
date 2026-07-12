@@ -155,6 +155,33 @@
 #' }
 #' @export
 stblr_csr_sbayesrc_generic <- function(
+  stats, ld_prefix, A, n = NULL, m = NULL,
+  gamma = c(0, 0.01, 0.1, 1), pi_marker = 0.001,
+  pi_init = NULL, pi_vb_init = NULL, pi_prior_mean = NULL,
+  pi_prior_strength = NULL, pi_prior_a = NULL, pi_prior_b = NULL,
+  h2 = 0.5, nub = 4, nue = 4, B = NULL, E = NULL,
+  ssb_prior = NULL, sse_prior = NULL, updateAlpha = TRUE,
+  updateB = TRUE, updateE = TRUE, adjE = 0.9, nit = 1000,
+  nburn = 100, nthin = 1, ncores = 3, seed = 10, nchains = 1L,
+  chain_seeds = NULL, keep_chains = FALSE, updateLDswap = FALSE,
+  ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L,
+  ld_swap_moves = 1L, b_init = NULL, comp_init = NULL,
+  use_comp_init = FALSE, r_init = NULL, use_r_init = FALSE,
+  rebuild_r_before_updateE = FALSE, add_intercept = TRUE,
+  standardize_annotations = TRUE, center_binary_annotations = FALSE,
+  active_comp_weights = NULL, alpha_init = NULL,
+  sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
+  alpha_update_every = 10, selection_s = NULL,
+  estimate_selection_s = FALSE, selection_s_init = 0,
+  selection_s_prior = c(-3, 2), selection_s_proposal_sd = 0.35,
+  Glist = NULL
+) {
+ args <- as.list(environment())
+ do.call(.stblr_csr_sbayesrc_generic_impl, args)
+}
+
+.stblr_csr_sbayesrc_generic_impl <- function(
   stats,
   ld_prefix,
   A,
@@ -214,7 +241,10 @@ stblr_csr_sbayesrc_generic <- function(
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.35,
-  Glist = NULL
+  Glist = NULL,
+  .native_fun = stblr_cpg_omp_csr_sbayesrc,
+  .native_args = list(),
+  .input_extra = list()
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
@@ -359,7 +389,7 @@ stblr_csr_sbayesrc_generic <- function(
   stop("alpha_update_every must be a positive integer.")
  }
 
- raw_fit <- stblr_cpg_omp_csr_sbayesrc(
+ raw_fit <- do.call(.native_fun, c(list(
   wy = stats$wy,
   ww = stats$ww,
   yy = stats$yy,
@@ -409,7 +439,11 @@ stblr_csr_sbayesrc_generic <- function(
   selection_s_prior = selection_s_prior,
   selection_s_proposal_sd = selection_s_proposal_sd,
   selection_s_log_h = selection_s_info$log_h
- )
+ ), .native_args))
+
+ if (!is.null(raw_fit$diagnostics$block_eigen)) {
+  .input_extra$eigen_diagnostics <- raw_fit$diagnostics$block_eigen
+ }
 
  if (.is_stblr_raw(raw_fit)) {
   raw_fit$annotation$annotation_names <- colnames(A)
@@ -499,8 +533,88 @@ stblr_csr_sbayesrc_generic <- function(
    rebuild_r_before_updateE = rebuild_r_before_updateE,
    ld_prefix = ld_prefix
   ),
-  arch
+ arch
  )
 
+ if (length(.input_extra)) {
+  fit$input <- c(.input_extra, fit$input[setdiff(names(fit$input), names(.input_extra))])
+ }
+
  .standardize_stblr_annotation_fit(fit, "sbayesrc")
+}
+
+.stblr_csr_sbayesrc_block_eigen <- function(
+  stats,
+  Glist,
+  annotation,
+  block_start,
+  eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
+  eigen_tau = 0.01,
+  eigen_eta = 0,
+  updateLDswap = FALSE,
+  ...
+) {
+ if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
+  eigen_filter <- eigen_filter[1L]
+ }
+ if (!is.character(eigen_filter) || length(eigen_filter) != 1L ||
+     is.na(eigen_filter) ||
+     !eigen_filter %in% c("hard_truncate", "ridge_fixed", "ridge_lw")) {
+  stop("eigen_filter must be one of 'hard_truncate', 'ridge_fixed', or 'ridge_lw'.")
+ }
+ if (!is.numeric(eigen_tau) || length(eigen_tau) != 1L ||
+     !is.finite(eigen_tau) || eigen_tau < 0) {
+  stop("eigen_tau must be a finite non-negative numeric scalar.")
+ }
+ if (!is.numeric(eigen_eta) || length(eigen_eta) != 1L ||
+     !is.finite(eigen_eta) || eigen_eta < 0) {
+  stop("eigen_eta must be a finite non-negative numeric scalar.")
+ }
+ if (isTRUE(updateLDswap)) {
+  stop("LD-swap is not yet supported with the experimental block-eigen operator.")
+ }
+ dots <- list(...)
+ reserved <- intersect(
+  names(dots),
+  c("ld_prefix", ".native_fun", ".native_args", ".input_extra")
+ )
+ if (length(reserved)) {
+  stop("Internal block-eigen arguments cannot be overridden: ",
+       paste(reserved, collapse = ", "))
+ }
+ bed <- .stblr_csr_block_eigen_inputs(stats, Glist, block_start)
+ native_args <- list(
+  bed_files = bed$bed_files,
+  n_bed = bed$n_bed,
+  cls = bed$cls,
+  rows = bed$rows,
+  af = bed$af,
+  block_start = bed$block_start,
+  eigen_filter = eigen_filter,
+  eigen_tau = eigen_tau,
+  eigen_eta = eigen_eta
+ )
+ input_extra <- list(
+  ld_backend = "block_eigen",
+  eigen_filter = eigen_filter,
+  eigen_tau = eigen_tau,
+  eigen_eta = eigen_eta,
+  eigen_blocks = bed$block_start
+ )
+ args <- c(
+  list(
+   stats = stats,
+   ld_prefix = "",
+   A = annotation,
+   Glist = Glist,
+   updateLDswap = FALSE
+  ),
+  dots,
+  list(
+   .native_fun = stblr_cpg_omp_csr_sbayesrc_block_eigen,
+   .native_args = native_args,
+   .input_extra = input_extra
+  )
+ )
+ do.call(.stblr_csr_sbayesrc_generic_impl, args)
 }
