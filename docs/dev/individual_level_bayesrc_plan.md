@@ -28,3 +28,14 @@ individual-level BayesRC backend. It does not define or expose a public model.
 - `selection_s`, LD-swap, annotation-dependent effect variances, and
   multivariate covariance sampling remain deferred
 
+## Sequence 2A Status
+
+- extracted shared packed-BED BayesR-family utilities into
+  `src/st_bed_bayesr_common.h`
+- ordinary BED BayesR and internal BED BayesRC now include the shared header
+- removed the macro-renamed inclusion of the complete BayesR `.cpp` file from
+  the BayesRC translation unit
+- no public API changes were made
+- ordinary BayesR adaptive scheduling remains unchanged
+- internal BayesRC remains structurally full-sweep with adaptive skipping off
+- raw schemas and formatted outputs remain unchanged

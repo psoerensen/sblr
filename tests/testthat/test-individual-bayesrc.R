@@ -5,6 +5,19 @@ test_that("individual BayesRC helpers are internal", {
   expect_false(".bayesr_pi_to_probit_stick_intercepts" %in% getNamespaceExports("sblr"))
 })
 
+test_that("individual BayesRC uses the shared BED utility header", {
+  source_path <- testthat::test_path(
+    "..", "..", "src", "stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"
+  )
+  source <- paste(readLines(source_path, warn = FALSE), collapse = "\n")
+  expect_match(source, '#include "st_bed_bayesr_common.h"', fixed = TRUE)
+  expect_false(grepl(
+    'include "stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"',
+    source,
+    fixed = TRUE
+  ))
+})
+
 test_that("intercept conversion reproduces BayesR component probabilities", {
   target <- c(0.95, 0.03, 0.015, 0.005)
   intercept <- sblr:::.bayesr_pi_to_probit_stick_intercepts(target)

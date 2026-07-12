@@ -35,6 +35,12 @@ stick-breaking annotation prior and uses structurally explicit full marker
 sweeps. It is not routed from public `stblr_bed()` yet. Adaptive scheduling,
 `selection_s`, LD-swap, and annotation-dependent effect variances are disabled.
 
+Shared packed-BED storage, decoding, residual, variance, and CPO utilities for
+ordinary BED BayesR and internal BED BayesRC are defined inline in
+`src/st_bed_bayesr_common.h`. Model-specific marker priors, scheduling, chain
+runners, and raw-output aggregation remain in their respective translation
+units.
+
 ## Backend Feature Matrix
 
 Values are `yes`, `no`, `partial`, or `n/a`.

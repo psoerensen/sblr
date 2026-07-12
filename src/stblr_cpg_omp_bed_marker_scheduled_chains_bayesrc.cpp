@@ -1,9 +1,6 @@
 // [[Rcpp::depends(RcppArmadillo)]]
-#define stblr_cpg_omp_bed_marker_scheduled_chains_bayesr \
- stblr_cpg_omp_bed_marker_scheduled_chains_bayesr_embedded_for_bayesrc
-#include "stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"
-#undef stblr_cpg_omp_bed_marker_scheduled_chains_bayesr
-
+#include <RcppArmadillo.h>
+#include "st_bed_bayesr_common.h"
 #include "st_bayesrc_annotation_prior.h"
 
 struct ChainResultBayesRC {
