@@ -3,6 +3,7 @@
 
 #include "st_chain_utils.h"
 #include "st_csr_common.h"
+#include "st_ld_operator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -213,6 +214,7 @@ inline arma::mat compute_snp_pi_from_alpha(
  return snpPi;
 }
 
+template <class OpT>
 inline void sampleBeta_SBayesRC_ST_csr(
   int i,
   const arma::rowvec& pi_i,
@@ -223,7 +225,7 @@ inline void sampleBeta_SBayesRC_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   std::mt19937& gen
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
@@ -288,20 +290,14 @@ inline void sampleBeta_SBayesRC_ST_csr(
  if (diff != 0.0) {
   r(iu) -= wi * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
  comp(iu) = k_new;
 }
 
+template <class OpT>
 inline void sampleBeta_SBayesRC_ST_csr_scaled(
   int i,
   const arma::rowvec& pi_i,
@@ -313,7 +309,7 @@ inline void sampleBeta_SBayesRC_ST_csr_scaled(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   std::mt19937& gen
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
@@ -383,14 +379,7 @@ inline void sampleBeta_SBayesRC_ST_csr_scaled(
  if (diff != 0.0) {
   r(iu) -= wi * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end   = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -479,6 +468,7 @@ inline SBayesRCLDLDFriends build_ld_swap_friends_sbayesrc_ST_csr(
  return friends;
 }
 
+template <class OpT>
 inline void set_marker_state_sbayesrc_ST_csr(
   int i,
   double b_new,
@@ -487,7 +477,7 @@ inline void set_marker_state_sbayesrc_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld
+  const OpT& op
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
  const double diff = b_new - b(iu);
@@ -495,14 +485,7 @@ inline void set_marker_state_sbayesrc_ST_csr(
  if (diff != 0.0) {
   r(iu) -= ww(iu) * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -629,6 +612,7 @@ inline void throw_ld_swap_error_sbayesrc_ST_csr(
  );
 }
 
+template <class OpT>
 inline bool attempt_ld_swap_sbayesrc_ST_csr(
   int m,
   int trait,
@@ -642,7 +626,7 @@ inline bool attempt_ld_swap_sbayesrc_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   const SBayesRCLDLDFriends& friends,
   std::mt19937& gen,
   bool& attempted
@@ -705,8 +689,8 @@ inline bool attempt_ld_swap_sbayesrc_ST_csr(
  }
 
  const arma::rowvec r_old = r;
- set_marker_state_sbayesrc_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
- set_marker_state_sbayesrc_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+ set_marker_state_sbayesrc_ST_csr(j, 0.0, 0, ww, r, b, comp, op);
+ set_marker_state_sbayesrc_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, op);
 
  const double sse_new = residual_sse_sbayesrc_ST_csr(m, b, wy, r, yy);
 
@@ -775,6 +759,7 @@ inline bool attempt_ld_swap_sbayesrc_ST_csr(
  return accept;
 }
 
+template <class OpT>
 inline bool attempt_ld_swap_sbayesrc_ST_csr_scaled(
   int m,
   int trait,
@@ -791,7 +776,7 @@ inline bool attempt_ld_swap_sbayesrc_ST_csr_scaled(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   const SBayesRCLDLDFriends& friends,
   std::mt19937& gen,
   bool& attempted
@@ -863,8 +848,8 @@ inline bool attempt_ld_swap_sbayesrc_ST_csr_scaled(
  }
 
  const arma::rowvec r_old = r;
- set_marker_state_sbayesrc_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
- set_marker_state_sbayesrc_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+ set_marker_state_sbayesrc_ST_csr(j, 0.0, 0, ww, r, b, comp, op);
+ set_marker_state_sbayesrc_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, op);
 
  const double sse_new = residual_sse_sbayesrc_ST_csr(m, b, wy, r, yy);
 
@@ -1626,6 +1611,11 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
  }
 
  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
+ arma::rowvec xx_row(static_cast<arma::uword>(m));
+ for (int i = 0; i < m; ++i) {
+  xx_row(static_cast<arma::uword>(i)) = xx[static_cast<std::size_t>(i)];
+ }
+ CsrOperator op(ld, xx_row);
 
  SBayesRCLDLDFriends ld_swap_friends;
  if (updateLDswap) {
@@ -1806,7 +1796,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
    std::mt19937 gen_t(task_seed);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
-   arma::rowvec ww_t = ww_mat.row(static_cast<arma::uword>(t));
+   const arma::rowvec& ww_t = op.diag();
 
    arma::rowvec b_t(m, arma::fill::zeros);
    for (int i = 0; i < m; ++i) {
@@ -1840,7 +1830,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
      throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: r_init contains NaN/Inf.");
     }
    } else {
-    rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+    op.rebuild(wy_t, b_t, r_t);
    }
 
    double vb_t = B(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
@@ -1912,7 +1902,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
        r_t,
        b_t,
        comp_t,
-       ld,
+       op,
        gen_t
       );
      }
@@ -1930,7 +1920,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
        r_t,
        b_t,
        comp_t,
-       ld,
+       op,
        gen_t
       );
      }
@@ -1958,7 +1948,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
          r_t,
          b_t,
          comp_t,
-         ld,
+         op,
          ld_swap_friends,
         gen_t,
         attempted
@@ -1976,7 +1966,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
          r_t,
          b_t,
          comp_t,
-         ld,
+         op,
          ld_swap_friends,
          gen_t,
          attempted
@@ -2058,7 +2048,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
 
     if (updateE) {
      if (rebuild_r_before_updateE) {
-      rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+      op.rebuild(wy_t, b_t, r_t);
      }
 
      sampleE_ST_csr(

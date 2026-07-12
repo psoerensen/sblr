@@ -145,3 +145,12 @@ block-eigen path:
 - checked BayesR component probabilities and `dm = 1 - P(component_0)`
 - confirmed LD-swap remains blocked for block-eigen
 - checked block-eigen diagnostics sanity
+
+## Phase 4A Status
+
+- CSR SBayesRC now uses `CsrOperator` for the existing sparse-CSR path
+- block-eigen remains disabled for SBayesRC
+- there are no public R API changes
+- SBayesRC residual coupling is operatorized
+- SBayesRC LD-swap candidate/friend construction remains CSR-specific because
+  it still reads `STLDCSR` directly
