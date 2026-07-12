@@ -2,6 +2,7 @@
 #include <RcppArmadillo.h>
 
 #include "st_chain_utils.h"
+#include "st_bayesrc_annotation_prior.h"
 #include "st_block_eigen.h"
 #include "st_csr_common.h"
 #include "st_ld_operator.h"
@@ -220,86 +221,6 @@ inline int sample_categorical_logprob(
  }
 
  return static_cast<int>(logp.size() - 1);
-}
-
-inline double safe_pnorm(double x) {
- double p = R::pnorm(x, 0.0, 1.0, 1, 0);
- if (!std::isfinite(p)) p = (x > 0.0) ? 1.0 : 0.0;
- return std::min(std::max(p, 1e-12), 1.0 - 1e-12);
-}
-
-inline double safe_qnorm(double p) {
- p = std::min(std::max(p, 1e-12), 1.0 - 1e-12);
- return R::qnorm(p, 0.0, 1.0, 1, 0);
-}
-
-inline double rtruncnorm_std(
-  double mu,
-  bool positive,
-  std::mt19937& gen
-) {
- std::uniform_real_distribution<double> runif(0.0, 1.0);
- const double u = runif(gen);
-
- if (positive) {
-  // X ~ N(mu,1), truncated X > 0.
-  const double a = safe_pnorm(-mu);
-  const double p = a + u * (1.0 - a);
-  return mu + safe_qnorm(p);
- }
-
- // X ~ N(mu,1), truncated X <= 0.
- const double b = safe_pnorm(-mu);
- const double p = u * b;
- return mu + safe_qnorm(p);
-}
-
-inline arma::mat compute_snp_pi_from_alpha(
-  const arma::mat& A,
-  const arma::mat& alpha,
-  double pi_floor
-) {
- const int m = static_cast<int>(A.n_rows);
- const int nstep = static_cast<int>(alpha.n_cols);
- const int Kgamma = nstep + 1;
-
- arma::mat p(m, nstep, arma::fill::zeros);
- arma::mat snpPi(m, Kgamma, arma::fill::zeros);
-
- for (int j = 0; j < nstep; ++j) {
-  arma::vec eta = A * alpha.col(static_cast<arma::uword>(j));
-  for (int i = 0; i < m; ++i) {
-   p(static_cast<arma::uword>(i), static_cast<arma::uword>(j)) =
-    safe_pnorm(eta(static_cast<arma::uword>(i)));
-  }
- }
-
- for (int i = 0; i < m; ++i) {
-  double prod_prev = 1.0;
-
-  for (int k = 0; k < Kgamma; ++k) {
-   double val;
-
-   if (k < nstep) {
-    const double pk = p(static_cast<arma::uword>(i), static_cast<arma::uword>(k));
-    val = prod_prev * (1.0 - pk);
-    prod_prev *= pk;
-   } else {
-    val = prod_prev;
-   }
-
-   snpPi(static_cast<arma::uword>(i), static_cast<arma::uword>(k)) =
-    std::max(val, pi_floor);
-  }
-
-  const double s = arma::accu(snpPi.row(static_cast<arma::uword>(i)));
-  if (!std::isfinite(s) || s <= 0.0) {
-   throw std::runtime_error("compute_snp_pi_from_alpha: invalid row probability sum.");
-  }
-  snpPi.row(static_cast<arma::uword>(i)) /= s;
- }
-
- return snpPi;
 }
 
 template <class OpT>
@@ -1250,141 +1171,6 @@ inline double computeLE_SBayesRC_ST_csr(
  return vle / static_cast<double>(n);
 }
 
-inline void build_step_indicators(
-  const arma::Row<int>& comp,
-  arma::Mat<int>& zstep
-) {
- const int m = static_cast<int>(comp.n_elem);
- const int nstep = static_cast<int>(zstep.n_cols);
-
- for (int i = 0; i < m; ++i) {
-  const int ci = comp(static_cast<arma::uword>(i));
-  for (int j = 0; j < nstep; ++j) {
-   zstep(static_cast<arma::uword>(i), static_cast<arma::uword>(j)) = (ci > j) ? 1 : 0;
-  }
- }
-}
-
-inline void update_alpha_sbayesrc(
-  const arma::mat& A,
-  const arma::Row<int>& comp,
-  arma::mat& alpha,
-  arma::vec& sigmaSqAlpha,
-  bool intercept_flat,
-  double sigmaSqAlpha_a,
-  double sigmaSqAlpha_b,
-  std::mt19937& gen
-) {
- const int m = static_cast<int>(A.n_rows);
- const int nAnno = static_cast<int>(A.n_cols);
- const int nstep = static_cast<int>(alpha.n_cols);
-
- arma::Mat<int> zstep(m, nstep, arma::fill::zeros);
- build_step_indicators(comp, zstep);
-
- for (int j = 0; j < nstep; ++j) {
-  std::vector<int> idx;
-  idx.reserve(static_cast<std::size_t>(m));
-
-  for (int i = 0; i < m; ++i) {
-   if (j == 0 || zstep(static_cast<arma::uword>(i), static_cast<arma::uword>(j - 1)) > 0) {
-    idx.push_back(i);
-   }
-  }
-
-  if (idx.empty()) continue;
-
-  const int nj = static_cast<int>(idx.size());
-  arma::vec mu(nj, arma::fill::zeros);
-
-  for (int ii = 0; ii < nj; ++ii) {
-   const int i = idx[static_cast<std::size_t>(ii)];
-   double s = 0.0;
-   for (int k = 0; k < nAnno; ++k) {
-    s += A(static_cast<arma::uword>(i), static_cast<arma::uword>(k)) *
-     alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j));
-   }
-   mu(static_cast<arma::uword>(ii)) = s;
-  }
-
-  arma::vec latent(nj, arma::fill::zeros);
-
-  for (int ii = 0; ii < nj; ++ii) {
-   const int i = idx[static_cast<std::size_t>(ii)];
-   const bool positive = zstep(static_cast<arma::uword>(i), static_cast<arma::uword>(j)) > 0;
-   latent(static_cast<arma::uword>(ii)) = rtruncnorm_std(mu(static_cast<arma::uword>(ii)), positive, gen);
-  }
-
-  // Residualized latent variable, analogous to lj <- lj - mu in the R code.
-  arma::vec resid = latent - mu;
-
-  for (int k = 0; k < nAnno; ++k) {
-   const bool flat_prior = intercept_flat && (k == 0);
-
-   double diag_k = 0.0;
-   double rhs = 0.0;
-
-   const double old = alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j));
-
-   for (int ii = 0; ii < nj; ++ii) {
-    const int i = idx[static_cast<std::size_t>(ii)];
-    const double x = A(static_cast<arma::uword>(i), static_cast<arma::uword>(k));
-    diag_k += x * x;
-    rhs += x * resid(static_cast<arma::uword>(ii));
-   }
-
-   rhs += diag_k * old;
-
-   if (diag_k <= 0.0) continue;
-
-   double invLhs;
-   if (flat_prior) {
-    invLhs = 1.0 / diag_k;
-   } else {
-    const double sig = std::max(sigmaSqAlpha(static_cast<arma::uword>(j)), 1e-12);
-    invLhs = 1.0 / (diag_k + 1.0 / sig);
-   }
-
-   const double mean = invLhs * rhs;
-   const double sd = std::sqrt(invLhs);
-
-   std::normal_distribution<double> norm(mean, sd);
-   const double anew = norm(gen);
-
-   alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) = anew;
-
-   const double diff_old_new = old - anew;
-   if (diff_old_new != 0.0) {
-    for (int ii = 0; ii < nj; ++ii) {
-     const int i = idx[static_cast<std::size_t>(ii)];
-     const double x = A(static_cast<arma::uword>(i), static_cast<arma::uword>(k));
-     resid(static_cast<arma::uword>(ii)) += x * diff_old_new;
-    }
-   }
-  }
-
-  // Scaled inverse-chi-square / inverse-gamma style update.
-  // R code: sigmaSqAlpha[j] = (sum(alpha[-1,j]^2) + 2) / rchisq(nAnno-1+2)
-  // Here sigmaSqAlpha_a and sigmaSqAlpha_b generalize that default.
-  double ss = 0.0;
-  int ncoef = 0;
-  for (int k = 0; k < nAnno; ++k) {
-   if (intercept_flat && k == 0) continue;
-   const double ak = alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j));
-   ss += ak * ak;
-   ++ncoef;
-  }
-
-  if (ncoef > 0) {
-   const double df = static_cast<double>(ncoef) + sigmaSqAlpha_a;
-   const double scale = ss + sigmaSqAlpha_b;
-   std::chi_squared_distribution<double> rchisq(df);
-   const double chi2 = std::max(rchisq(gen), 1e-300);
-   sigmaSqAlpha(static_cast<arma::uword>(j)) = std::max(scale / chi2, 1e-12);
-  }
- }
-}
-
 template <class MakeOperator>
 Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   std::vector<std::vector<double>> wy,
@@ -1945,7 +1731,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
     }
    }
 
-   arma::mat snpPi_t = compute_snp_pi_from_alpha(A, alpha_t, pi_floor);
+   arma::mat snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
 
    arma::rowvec bm_t(m, arma::fill::zeros);
    arma::rowvec dm_t(m, arma::fill::zeros);
@@ -2075,7 +1861,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
     }
 
     if (updateAlpha && ((it + 1) % alpha_update_every == 0)) {
-     update_alpha_sbayesrc(
+     st_bayesrc_update_annotation_prior(
       A,
       comp_t,
       alpha_t,
@@ -2086,7 +1872,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
       gen_t
      );
 
-     snpPi_t = compute_snp_pi_from_alpha(A, alpha_t, pi_floor);
+     snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
     }
 
     if (updateB) {

@@ -23,6 +23,12 @@ Audited public backends:
 `src/st_sbayesrc_omp_csr_annot.cpp` exists in the source tree but is not the
 current audited public SBayesRC path.
 
+The likelihood-independent SBayesRC probit stick-breaking probability and
+annotation-coefficient update utilities live in
+`src/st_bayesrc_annotation_prior.h`. The CSR SBayesRC sampler is their only
+consumer; this shared internal header does not add an individual-level backend
+or change the public model inventory.
+
 ## Backend Feature Matrix
 
 Values are `yes`, `no`, `partial`, or `n/a`.
