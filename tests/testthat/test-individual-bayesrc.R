@@ -74,9 +74,10 @@ test_that("individual BayesRC native symbol is registered when compiled", {
   expect_true(is.function(sblr:::.stblr_bed_bayesrc_native))
 })
 
-make_individual_bayesrc_fixture <- function() {
+make_individual_bayesrc_fixture <- function(
+    dosage = rbind(c(0, 1, 2, 0, 1, 2), c(2, 0, 1, 2, 0, 1)),
+    y = matrix(c(-1, 0, 1, -0.5, 0.5, 1.5), ncol = 1L)) {
   bed <- tempfile(fileext = ".bed")
-  dosage <- rbind(c(0, 1, 2, 0, 1, 2), c(2, 0, 1, 2, 0, 1))
   code <- c(`0` = 3L, `1` = 2L, `2` = 0L)
   packed <- unlist(lapply(seq_len(nrow(dosage)), function(j) {
     z <- unname(code[as.character(dosage[j, ])])
@@ -88,7 +89,11 @@ make_individual_bayesrc_fixture <- function() {
   writeBin(as.raw(c(0x6c, 0x1b, 0x01, packed)), bed)
   list(
     bed = bed,
-    y = matrix(c(-1, 0, 1, -0.5, 0.5, 1.5), ncol = 1L),
+    dosage = dosage,
+    n = ncol(dosage),
+    m = nrow(dosage),
+    af = rowMeans(dosage) / 2,
+    y = y,
     gamma = c(0, 0.01, 0.1, 1),
     pi = c(0.95, 0.03, 0.015, 0.005)
   )
@@ -109,12 +114,12 @@ make_individual_bayesrc_args <- function(
     fixture = make_individual_bayesrc_fixture(), y = fixture$y,
     updateAlpha = FALSE, nchains = 1L, keep_chains = FALSE,
     ncores = 1L, seed = 17L, nit = 6L, nburn = 2L, nthin = 1L,
-    A = matrix(1, 2L, 1L)) {
+    A = matrix(1, fixture$m, 1L)) {
   nt <- ncol(y)
   list(
-    bed_files = fixture$bed, n = 6L, cls = list(1:2), y = y,
-    b_init = replicate(nt, c(0, 0), simplify = FALSE),
-    sets = c(1L, 1L), rows = NULL, af = list(c(0.5, 0.5)), scale = TRUE,
+    bed_files = fixture$bed, n = fixture$n, cls = list(seq_len(fixture$m)), y = y,
+    b_init = replicate(nt, numeric(fixture$m), simplify = FALSE),
+    sets = rep(1L, fixture$m), rows = NULL, af = list(fixture$af), scale = TRUE,
     B = diag(0.1, nt), E = diag(1, nt),
     ssb_prior = replicate(nt, rep(0.05, nt), simplify = FALSE),
     sse_prior = replicate(nt, rep(0.5, nt), simplify = FALSE),
@@ -233,7 +238,7 @@ test_that("individual BayesRC native backend runs and reduces to fixed-pi BayesR
   expect_equal(raw_rc$marker$dm[, 1L], 1 - cp[, 1L], tolerance = 1e-12)
   expect_identical(raw_rc$component$names[1L], "gamma_0.00")
   expect_equal(raw_rc$pi$final[1L, ], x$pi, tolerance = 1e-12)
-  expect_equal(raw_rc$annotation$alpha_mean[[1L]], intercept, tolerance = 1e-12)
+  expect_equal(unname(raw_rc$annotation$alpha_mean[[1L]]), unname(intercept), tolerance = 1e-12)
   expect_equal(dim(raw_rc$annotation$sigmaSqAlpha_mean), c(3L, 1L))
 
   raw_r <- do.call(sblr:::stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, c(common, list(
@@ -301,19 +306,43 @@ test_that("BED BayesRC component, annotation, variance, CPO, and schema outputs 
 
 test_that("BED BayesRC learns directional annotation enrichment", {
   skip_if_no_individual_bayesrc()
-  fixture <- make_individual_bayesrc_fixture()
-  # Marker 1 alone generates a strong deterministic phenotype; marker 1 is
-  # annotated and marker 2 is not, so its learned final prior should be more
-  # non-null on this deliberately high-signal smoke fixture.
-  fixture$y <- matrix(3 * (c(0, 1, 2, 0, 1, 2) - 1) / sqrt(0.5), ncol = 1L)
-  annotation <- cbind(intercept = 1, enriched = c(1, 0))
-  raw <- run_individual_bayesrc(
+  set.seed(7041)
+  n <- 80L
+  m <- 16L
+  dosage <- do.call(rbind, lapply(seq_len(m), function(j) {
+    stats::rbinom(n, 2L, stats::runif(1L, 0.2, 0.45))
+  }))
+  expect_true(all(apply(dosage, 1L, stats::var) > 0))
+  expect_identical(anyDuplicated(lapply(seq_len(m), function(j) dosage[j, ])), 0L)
+  annotated <- seq_len(6L)
+  causal <- seq_len(4L)
+  x <- t(scale(t(dosage), center = 2 * rowMeans(dosage) / 2,
+               scale = sqrt(2 * (rowMeans(dosage) / 2) * (1 - rowMeans(dosage) / 2))))
+  set.seed(7042)
+  y <- drop(crossprod(x[causal, , drop = FALSE], c(1.8, -1.5, 1.3, -1.1))) +
+    stats::rnorm(n, sd = 0.45)
+  fixture <- make_individual_bayesrc_fixture(dosage, matrix(y, ncol = 1L))
+  annotation <- cbind(intercept = 1, enriched = as.integer(seq_len(m) %in% annotated))
+  fit_enrichment <- function(ncores) run_individual_bayesrc(
     fixture = fixture, y = fixture$y, A = annotation,
-    updateAlpha = TRUE, nit = 30L, nburn = 10L, seed = 331L
+    updateAlpha = TRUE, nchains = 2L, ncores = ncores,
+    nit = 160L, nburn = 40L, seed = 331L
   )
+  raw <- fit_enrichment(1L)
+  repeat_raw <- fit_enrichment(1L)
+  two_core_raw <- fit_enrichment(2L)
+  enrichment_output <- function(x) list(
+    marker = x$marker[c("bm", "dm")],
+    component_prob = x$component$prob,
+    alpha_mean = x$annotation$alpha_mean,
+    marker_prior_final = x$annotation$marker_prior_final
+  )
+  expect_identical(enrichment_output(raw), enrichment_output(repeat_raw))
+  expect_identical(enrichment_output(raw), enrichment_output(two_core_raw))
   prior <- raw$annotation$marker_prior_final[[1L]]
   nonnull <- 1 - prior[, 1L]
-  expect_gt(nonnull[1L], nonnull[2L])
+  expect_gt(mean(nonnull[annotated]), mean(nonnull[-annotated]))
+  expect_gt(raw$annotation$alpha_mean[[1L]][2L, 1L], 0)
   expect_true(all(is.finite(raw$annotation$alpha_mean[[1L]])))
 })
 
@@ -340,15 +369,19 @@ test_that("BED BayesRC supports separate traits and retained chains", {
                   "sigmaSqAlpha", "pis"), names(chain)),
         character()
       )
+      expect_equal(dim(chain$bm), c(1L, 2L))
+      expect_equal(dim(chain$dm), c(1L, 2L))
+      expect_equal(dim(chain$comp_prob), c(2L, 4L))
+      expect_equal(dim(chain$alpha), c(1L, 3L))
     }
     expect_equal(
       raw$marker$bm[, t],
-      Reduce(`+`, lapply(raw$chains[[t]], `[[`, "bm")) / 2,
+      drop(Reduce(`+`, lapply(raw$chains[[t]], `[[`, "bm")) / 2),
       tolerance = 1e-12
     )
     expect_equal(
       raw$marker$dm[, t],
-      Reduce(`+`, lapply(raw$chains[[t]], `[[`, "dm")) / 2,
+      drop(Reduce(`+`, lapply(raw$chains[[t]], `[[`, "dm")) / 2),
       tolerance = 1e-12
     )
     expect_equal(
@@ -359,6 +392,11 @@ test_that("BED BayesRC supports separate traits and retained chains", {
     expect_equal(
       raw$annotation$alpha_mean[[t]],
       Reduce(`+`, lapply(raw$chains[[t]], `[[`, "alpha")) / 2,
+      tolerance = 1e-12
+    )
+    expect_equal(
+      raw$annotation$sigmaSqAlpha_mean[, t],
+      drop(Reduce(`+`, lapply(raw$chains[[t]], `[[`, "sigmaSqAlpha")) / 2),
       tolerance = 1e-12
     )
   }
@@ -372,20 +410,28 @@ test_that("BED BayesRC is reproducible by seed and OpenMP thread count", {
   repeat_one <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 91L)
   two <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 2L, seed = 91L)
   different <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 92L)
-  fields <- c("bm", "dm", "b")
-  for (field in fields) {
-    expect_identical(one$marker[[field]], repeat_one$marker[[field]])
-    expect_identical(one$marker[[field]], two$marker[[field]])
-  }
-  for (field in c("vbs", "ves", "pis")) {
-    expect_identical(one$trace[[field]], repeat_one$trace[[field]])
-    expect_identical(one$trace[[field]], two$trace[[field]])
-  }
-  expect_identical(one$component$prob, repeat_one$component$prob)
-  expect_identical(one$component$prob, two$component$prob)
-  expect_identical(one$annotation$alpha_mean, repeat_one$annotation$alpha_mean)
-  expect_identical(one$annotation$alpha_mean, two$annotation$alpha_mean)
-  expect_identical(one$annotation$sigmaSqAlpha_mean, two$annotation$sigmaSqAlpha_mean)
+  stochastic_output <- function(x) list(
+    marker = x$marker[c("bm", "dm", "b", "state")],
+    trace = x$trace[c("vbs", "vgs", "ves", "vle", "vld", "pis")],
+    component_prob = x$component$prob,
+    alpha_mean = x$annotation$alpha_mean,
+    alpha_final = x$annotation$alpha_final,
+    sigma_mean = x$annotation$sigmaSqAlpha_mean,
+    sigma_final = x$annotation$sigmaSqAlpha_final,
+    log_cpo = x$diagnostics$log_cpo,
+    mean_log_cpo = x$diagnostics$mean_log_cpo
+  )
+  expect_identical(stochastic_output(one), stochastic_output(repeat_one))
+  expect_identical(stochastic_output(one), stochastic_output(two))
+
+  two_first <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 2L, seed = 91L)
+  one_after_two <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 91L)
+  expect_identical(stochastic_output(one), stochastic_output(two_first))
+  expect_identical(stochastic_output(one), stochastic_output(one_after_two))
+
+  invisible(run_individual_bayesrc(updateAlpha = FALSE, nchains = 1L, ncores = 1L, seed = 812L))
+  after_unrelated <- run_individual_bayesrc(updateAlpha = TRUE, nchains = 2L, ncores = 1L, seed = 91L)
+  expect_identical(stochastic_output(one), stochastic_output(after_unrelated))
   expect_false(isTRUE(all.equal(one$marker$bm, different$marker$bm)))
 })
 

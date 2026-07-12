@@ -85,11 +85,10 @@ static inline double sample_marker_bayesr(
   arma::vec& e,
   double& b_j,
   int& d_j,
-  std::mt19937& gen
+  std::mt19937& gen,
+  std::uniform_real_distribution<double>& runif,
+  std::normal_distribution<double>& norm01
 ) {
- static thread_local std::uniform_real_distribution<double> runif(0.0, 1.0);
- static thread_local std::normal_distribution<double> norm01(0.0, 1.0);
-
  const int K = static_cast<int>(c.size());
  const double xx = map.xx;
  const double vei_safe = std::max(vei, 1e-300);
@@ -258,6 +257,8 @@ static ChainResultBayesR run_one_bayesr_chain(
   );
 
   std::mt19937 gen_t(chain_seed);
+  std::uniform_real_distribution<double> runif(0.0, 1.0);
+  std::normal_distribution<double> norm01(0.0, 1.0);
   std::uniform_int_distribution<int> jitter_dist(0, std::max(0, null_skip_base - 1));
 
   arma::vec y_t = y_mat.col(static_cast<arma::uword>(t));
@@ -376,7 +377,9 @@ static ChainResultBayesR run_one_bayesr_chain(
     e_t,
     bj,
     dj,
-    gen_t
+    gen_t,
+    runif,
+    norm01
    );
 
    b_t(ju) = bj;

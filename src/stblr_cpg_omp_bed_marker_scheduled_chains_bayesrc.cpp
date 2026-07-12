@@ -21,10 +21,10 @@ static inline void sample_marker_bayesrc(
   const FastPackedBedMatrixBR& G, int marker, const MarkerMapBayesR& map,
   const arma::rowvec& marker_prior, const std::vector<double>& gamma,
   double vb, double vei, arma::vec& residual, double& marker_effect,
-  int& component, std::mt19937& gen
+  int& component, std::mt19937& gen,
+  std::uniform_real_distribution<double>& runif,
+  std::normal_distribution<double>& norm01
 ) {
- static thread_local std::uniform_real_distribution<double> runif(0.0, 1.0);
- static thread_local std::normal_distribution<double> norm01(0.0, 1.0);
  const int ncomponent = static_cast<int>(gamma.size());
  const double vei_safe = std::max(vei, 1e-300);
  const double score = br_dot_residual(G, marker, map, residual.memptr()) +
@@ -91,6 +91,8 @@ static ChainResultBayesRC run_one_bayesrc_chain(
   std::mt19937 gen(static_cast<unsigned int>(
    seed + 1000003 * (trait + 1) + 9176 * (chain + 1)
   ));
+  std::uniform_real_distribution<double> runif(0.0, 1.0);
+  std::normal_distribution<double> norm01(0.0, 1.0);
   arma::vec y_t = y.col(static_cast<arma::uword>(trait));
   arma::rowvec b_t(m, arma::fill::zeros);
   arma::Row<int> component_t(m, arma::fill::zeros);
@@ -118,7 +120,7 @@ static ChainResultBayesRC run_one_bayesrc_chain(
     int component = component_t(ju);
     sample_marker_bayesrc(
      G, marker, maps[static_cast<std::size_t>(marker)], snp_pi.row(ju), gamma,
-     vb, vei, residual, effect, component, gen
+     vb, vei, residual, effect, component, gen, runif, norm01
     );
     b_t(ju) = effect;
     component_t(ju) = component;
@@ -324,9 +326,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  component_names[0] = "gamma_0.00";
  arma::mat ncomp(nt, K, arma::fill::zeros);
  for (int t = 0; t < nt; ++t) ncomp.row(t) = arma::sum(comp_prob[t], 0) * inv;
- Rcpp::List chains_out = R_NilValue;
+ Rcpp::RObject chains_out = R_NilValue;
  if (keep_chains) {
-  chains_out = Rcpp::List(nt);
+  Rcpp::List retained_chains(nt);
   for (int t = 0; t < nt; ++t) {
    Rcpp::List trait_chains(nchains);
    for (int ch = 0; ch < nchains; ++ch) {
@@ -340,8 +342,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
      Rcpp::Named("pis")=z.pis
     );
    }
-   chains_out[t] = trait_chains;
+   retained_chains[t] = trait_chains;
   }
+  chains_out = retained_chains;
  }
  Rcpp::List raw = Rcpp::List::create(
   Rcpp::Named("schema") = Rcpp::List::create(Rcpp::Named("class")="stblr_raw", Rcpp::Named("version")=1),

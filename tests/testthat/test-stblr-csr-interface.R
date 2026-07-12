@@ -575,7 +575,7 @@ test_that("stblr_csr_annot routes SBayesRC through raw v1 formatter", {
     unname(1 - fit$comp_prob$trait1[, "gamma_0.00"]),
     tolerance = 1e-8
   )
-  expect_equal(dim(fit$alpha$trait1), c(ncol(annotations), 2L))
+  expect_equal(dim(fit$alpha$trait1), c(ncol(fit$input$A), 2L))
   expect_equal(dim(fit$sigmaSqAlpha), c(1L, 2L))
   expect_null(fit$chains)
   expect_null(fit$ld_swap_chains)

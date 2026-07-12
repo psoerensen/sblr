@@ -58,3 +58,46 @@ individual-level BayesRC backend. It does not define or expose a public model.
   public wrapper must perform marker-ID alignment before calling native code
 - the backend remains internal; public `stblr_bed(method = "bayesrc")` routing
   is not implemented
+
+### Compiled Sequence 2B correction results
+
+- compiled execution confirmed that an `Rcpp::List` initialized from
+  `R_NilValue` materialized as an empty list; the optional holder is now an
+  `Rcpp::RObject`, so `chains` is actual R `NULL` when retention is disabled
+  and remains a trait-by-chain nested list when enabled
+- compiled repeated-call testing confirmed the persistent `thread_local`
+  `std::normal_distribution` cache as the cause of both repeated-seed and
+  thread-count differences; ordinary BED BayesR and BED BayesRC now construct
+  uniform and normal distribution state beside each chain-local `mt19937` and
+  pass it by reference to marker updates
+- chain seeds, marker order, RNG engine, random-update sites, and within-chain
+  draw order are unchanged; identical-seed calls, one-core/two-core calls in
+  both orders, and reference calls separated by an unrelated fit are identical,
+  while a different seed changes stochastic output
+- the fixed-prior intercept-only BayesRC run still reduces to fixed-pi,
+  full-sweep BayesR at the existing `1e-12` tolerance for marker means,
+  inclusion/component probabilities, terminal effects/states, variance traces,
+  and CPO diagnostics
+- retained-chain reconstruction passes for `bm`, `dm`, component probabilities,
+  annotation coefficient means, and `sigmaSqAlpha` means; retained Armadillo row
+  vectors remain `1 x m`, while matrix-valued component and annotation fields
+  retain their dimensions
+- component identities, marker-prior column means, marker-average non-null
+  prior probability, `vld = vgs - vle`, CPO normalization, and retained-sample
+  counts all pass compiled tests; learned annotation coefficients and variances
+  are finite and annotation variances are positive
+- the directional fixture now uses 80 individuals and 16 independently
+  generated polymorphic markers, with six binary-annotated markers, four
+  annotated causal markers, ten unannotated null markers, fixed genotype and
+  phenotype seeds, and residual noise SD 0.45; both mean annotated non-null
+  prior probability and the posterior mean first-stick enrichment coefficient
+  are directionally positive
+- the compiled focused file passes 267 expectations with no failures, warnings,
+  or skips; the unlimited full package suite passes 3,091 expectations with no
+  failures, warnings, or skips, including ordinary BED BayesR and CSR SBayesRC
+  regression groups
+- `R CMD build .` succeeds; `R CMD check --no-manual` installs, loads, compiles,
+  and runs examples successfully but is not clean at this research checkpoint:
+  tarball tests that read repository-only `src/` and `docs/dev/` paths fail
+  because those paths are absent from the installed test layout, and existing
+  `make_credible_sets.Rd` syntax plus namespace/global-function notes remain

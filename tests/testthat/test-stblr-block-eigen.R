@@ -349,7 +349,7 @@ expect_stblr_block_eigen_bayesr_fit <- function(fit, eigen_filter) {
   expect_true(all(is.finite(fit$ves)))
   for (trait in names(fit$comp_prob)) {
     cp <- fit$comp_prob[[trait]]
-    expect_equal(rowSums(cp), rep(1, nrow(cp)), tolerance = 1e-8)
+    expect_equal(unname(rowSums(cp)), rep(1, nrow(cp)), tolerance = 1e-8)
     expect_true("component_0" %in% colnames(cp))
     expect_equal(
       unname(fit$dm[, trait]),
@@ -497,7 +497,7 @@ expect_stblr_block_eigen_sbayesrc_fit <- function(fit, eigen_filter, n_anno) {
   for (trait in names(fit$comp_prob)) {
     cp <- fit$comp_prob[[trait]]
     expect_identical(colnames(cp)[1L], "gamma_0.00")
-    expect_equal(rowSums(cp), rep(1, nrow(cp)), tolerance = 1e-8)
+    expect_equal(unname(rowSums(cp)), rep(1, nrow(cp)), tolerance = 1e-8)
     expect_equal(
       unname(fit$dm[, trait]),
       unname(1 - cp[, "gamma_0.00"]),
