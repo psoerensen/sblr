@@ -29,6 +29,12 @@ annotation-coefficient update utilities live in
 consumer; this shared internal header does not add an individual-level backend
 or change the public model inventory.
 
+Sequence 2 adds the internal-only `bed_bayesrc` native backend. It combines the
+existing packed-BED BayesR likelihood calculations with the shared probit
+stick-breaking annotation prior and uses structurally explicit full marker
+sweeps. It is not routed from public `stblr_bed()` yet. Adaptive scheduling,
+`selection_s`, LD-swap, and annotation-dependent effect variances are disabled.
+
 ## Backend Feature Matrix
 
 Values are `yes`, `no`, `partial`, or `n/a`.
