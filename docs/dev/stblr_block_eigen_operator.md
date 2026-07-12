@@ -135,3 +135,13 @@ block-eigen path:
 - block-eigen remains disabled for SBayesRC and annotation-aware models
 - LD-swap remains disabled for block-eigen
 - BayesR component outputs are preserved
+
+## Phase 3C Status
+
+- added validation hardening for the internal BayesR block-eigen path
+- confirmed the helper remains non-exported
+- confirmed the public BayesR path remains sparse CSR
+- smoke-tested `hard_truncate`, `ridge_fixed`, and `ridge_lw`
+- checked BayesR component probabilities and `dm = 1 - P(component_0)`
+- confirmed LD-swap remains blocked for block-eigen
+- checked block-eigen diagnostics sanity

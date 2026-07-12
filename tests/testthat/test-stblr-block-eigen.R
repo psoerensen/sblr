@@ -298,6 +298,11 @@ test_that("default stblr_csr BayesC remains on sparse CSR path", {
 })
 
 test_that("internal block-eigen BayesR helper exists but is not exported", {
+  expect_true(exists(
+    ".stblr_csr_bayesr_block_eigen",
+    envir = asNamespace("sblr"),
+    inherits = FALSE
+  ))
   expect_true(is.function(sblr:::.stblr_csr_bayesr_block_eigen))
   expect_false(".stblr_csr_bayesr_block_eigen" %in% getNamespaceExports("sblr"))
   expect_false(
@@ -318,6 +323,10 @@ expect_stblr_block_eigen_bayesr_fit <- function(fit, eigen_filter) {
   expect_null(fit$ld_swap_chains)
   expect_identical(fit$input$ld_backend, "block_eigen")
   expect_identical(fit$input$eigen_filter, eigen_filter)
+  expect_true(all(is.finite(fit$bm)))
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(is.finite(fit$vbs)))
+  expect_true(all(is.finite(fit$ves)))
   for (trait in names(fit$comp_prob)) {
     cp <- fit$comp_prob[[trait]]
     expect_equal(rowSums(cp), rep(1, nrow(cp)), tolerance = 1e-8)
@@ -360,6 +369,40 @@ test_that("internal block-eigen BayesR filter modes run on the tiny fixture", {
   for (filter in names(fits)) {
     expect_stblr_block_eigen_bayesr_fit(fits[[filter]], filter)
   }
+  expect_equal(fits$ridge_fixed$input$eigen_eta, 0)
+})
+
+test_that("block-eigen BayesR validates filter arguments on the R side", {
+  fixture <- make_stblr_block_eigen_fixture()
+  common <- list(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    block_start = 1L,
+    nit = 5,
+    nburn = 2,
+    seed = 1L
+  )
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_bayesr_block_eigen,
+      c(common, list(eigen_filter = "bad_filter"))
+    ),
+    "eigen_filter"
+  )
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_bayesr_block_eigen,
+      c(common, list(eigen_tau = -1))
+    ),
+    "eigen_tau"
+  )
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_bayesr_block_eigen,
+      c(common, list(eigen_eta = -1))
+    ),
+    "eigen_eta"
+  )
 })
 
 test_that("block-eigen BayesR rejects LD-swap clearly", {
@@ -394,5 +437,6 @@ test_that("default stblr_csr BayesR remains on sparse CSR path", {
     seed = 103L
   )
   expect_identical(fit$input$backend, "csr_bayesr")
+  expect_false(identical(fit$input$ld_backend, "block_eigen"))
   expect_null(fit$input$ld_backend)
 })
