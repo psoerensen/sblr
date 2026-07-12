@@ -96,3 +96,25 @@ The intended integration order is:
 - ordinary CSR BayesC now uses `CsrOperator` for the existing sparse-CSR path
 - block-eigen is still infrastructure only and not yet exposed
 - no public R API changes
+
+## Phase 2B Status
+
+- ordinary CSR BayesC has an internal experimental block-eigen path
+- public `stblr_csr()` API remains unchanged
+- block-eigen is not yet enabled for BayesR, SBayesRC, annotation-informed
+  BayesC, BED backends, or finemap paths
+- LD-swap is intentionally disabled for block-eigen in this phase because
+  candidate construction still reads `STLDCSR` directly
+- default CSR BayesC remains on the sparse CSR operator path
+
+## Phase 2C Status
+
+Phase 2C added validation hardening for the internal ordinary CSR BayesC
+block-eigen path:
+
+- the internal helper remains non-exported
+- default public `stblr_csr()` remains sparse CSR
+- `block_start` accepts 0-based or 1-based starts and validates them
+- `hard_truncate`, `ridge_fixed`, and `ridge_lw` smoke tests run on tiny fixtures
+- LD-swap remains disabled for block-eigen
+- diagnostics are checked for basic sanity

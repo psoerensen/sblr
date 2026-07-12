@@ -10,8 +10,8 @@
 #include "st_csr_common.h"
 
 struct CsrOperator {
-  const STLDCSR& ld;
-  const arma::rowvec& xx;
+  STLDCSR ld;
+  arma::rowvec xx;
 
   CsrOperator(const STLDCSR& ld_, const arma::rowvec& xx_) :
     ld(ld_), xx(xx_) {}

@@ -2733,6 +2733,262 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  do.call(stblr_csr, args)
 }
 
+.stblr_csr_block_eigen_inputs <- function(stats, Glist, block_start) {
+ if (is.null(Glist)) {
+  stop("Glist is required for the experimental block-eigen BayesC path.")
+ }
+ if (is.null(Glist$n) || !is.numeric(Glist$n) || length(Glist$n) != 1L ||
+     !is.finite(Glist$n) || Glist$n < 1L) {
+  stop("Glist$n must be a finite positive scalar.")
+ }
+
+ bed_files <- stats$bed_files %||% Glist$sparseLD$bed_files
+ cls <- stats$cls %||% Glist$sparseLD$cls
+ af <- stats$af %||% Glist$sparseLD$af
+ rows <- stats$rows %||% Glist$sparseLD$rows
+
+ if (is.null(bed_files) || length(bed_files) < 1L ||
+     anyNA(bed_files) || any(!nzchar(as.character(bed_files)))) {
+  stop("BED file metadata is required in stats$bed_files or Glist$sparseLD$bed_files.")
+ }
+ if (is.null(cls)) {
+  stop("Marker index metadata is required in stats$cls or Glist$sparseLD$cls.")
+ }
+ if (!is.list(cls)) cls <- list(cls)
+ if (length(cls) != length(bed_files)) {
+  stop("cls must have one element per BED file.")
+ }
+ cls <- lapply(cls, as.integer)
+ if (any(vapply(cls, function(x) length(x) < 1L || anyNA(x) || any(x < 1L), logical(1)))) {
+  stop("cls must contain positive 1-based marker indices.")
+ }
+
+ if (is.null(af)) {
+  stop("Allele frequencies are required in stats$af or Glist$sparseLD$af.")
+ }
+ if (!is.list(af)) af <- list(af)
+ af_flat <- as.numeric(unlist(af, use.names = FALSE))
+ m <- stats$m %||% length(stats$ww[[1L]])
+ if (length(af_flat) != m) {
+  stop("Allele-frequency length must equal m for block-eigen BayesC.")
+ }
+ if (anyNA(af_flat) || any(!is.finite(af_flat))) {
+  stop("Allele frequencies must be finite.")
+ }
+
+ block_start <- as.integer(block_start)
+ if (length(block_start) < 1L || anyNA(block_start)) {
+  stop("block_start must contain at least one non-missing block start.")
+ }
+ if (block_start[1L] == 1L) {
+  block_start <- block_start - 1L
+ } else if (block_start[1L] != 0L) {
+  stop("block_start must start at 0, or at 1 for R-side 1-based input.")
+ }
+ if (any(block_start < 0L) || any(block_start >= m) || is.unsorted(block_start, strictly = TRUE)) {
+  stop("block_start must be strictly ascending and identify starts within [0, m - 1].")
+ }
+
+ list(
+  bed_files = as.character(bed_files),
+  n_bed = as.integer(Glist$n),
+  cls = cls,
+  rows = if (is.null(rows) || length(rows) < 1L) NULL else as.integer(rows),
+  af = af_flat,
+  block_start = block_start
+ )
+}
+
+.stblr_csr_bayesc_block_eigen <- function(
+  stats,
+  Glist,
+  block_start,
+  eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
+  eigen_tau = 0.01,
+  eigen_eta = 0.0,
+  pi_init = 0.001, pi_vb_init = NULL,
+  pi_prior_mean = 0.001, pi_prior_strength = 5e5,
+  pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
+  selection_s = NULL, estimate_selection_s = FALSE,
+  selection_s_init = 0,
+  selection_s_prior = c(-3, 2),
+  selection_s_proposal_sd = 0.35,
+  nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
+  updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
+  nthin = 1, ncores = 1, seed = 10, nchains = 1L,
+  keep_chains = FALSE, chain_seeds = NULL,
+  use_d_init = FALSE, use_r_init = FALSE,
+  rebuild_r_before_updateE = FALSE,
+  updateLDswap = FALSE, ld_swap_prob = 0.05,
+  ld_swap_r2 = 0.8, ld_swap_max_friends = 50,
+  ld_swap_moves = 1
+) {
+ if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
+  eigen_filter <- eigen_filter[1L]
+ }
+ if (!is.character(eigen_filter) || length(eigen_filter) != 1L ||
+     is.na(eigen_filter) ||
+     !eigen_filter %in% c("hard_truncate", "ridge_fixed", "ridge_lw")) {
+  stop(
+   "eigen_filter must be one of 'hard_truncate', 'ridge_fixed', or 'ridge_lw'."
+  )
+ }
+ if (!is.numeric(eigen_tau) || length(eigen_tau) != 1L ||
+     !is.finite(eigen_tau) || eigen_tau < 0) {
+  stop("eigen_tau must be a finite non-negative numeric scalar.")
+ }
+ if (!is.numeric(eigen_eta) || length(eigen_eta) != 1L ||
+     !is.finite(eigen_eta) || eigen_eta < 0) {
+  stop("eigen_eta must be a finite non-negative numeric scalar.")
+ }
+ if (isTRUE(updateLDswap)) {
+  stop("LD-swap is not yet supported with the experimental block-eigen operator.")
+ }
+ .stblr_validate_sampled_selection_s(
+  estimate_selection_s = estimate_selection_s,
+  selection_s = selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd
+ )
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+ )
+ if (!is.numeric(nchains) || length(nchains) != 1L ||
+     !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
+  stop("nchains must be a positive integer scalar.")
+ }
+ nchains <- as.integer(nchains)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
+     is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+ if (!is.null(chain_seeds)) {
+  if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+      anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
+      any(chain_seeds != floor(chain_seeds))) {
+   stop("chain_seeds must be NULL or an integer/numeric vector of length nchains.")
+  }
+  chain_seeds <- as.integer(chain_seeds)
+ } else {
+  chain_seeds <- integer()
+ }
+
+ nt <- length(stats$yy)
+ n <- stats$n
+ if (is.null(n)) stop("stats$n is required for the experimental block-eigen path.")
+ m <- stats$m %||% length(stats$ww[[1L]])
+ bed <- .stblr_csr_block_eigen_inputs(stats, Glist, block_start)
+ selection_s_info <- .stblr_prepare_csr_bayesc_selection_s(
+  selection_s = selection_s,
+  Glist = Glist,
+  m = m,
+  scheduled = FALSE,
+  return_log_h = estimate_selection_s
+ )
+ arch <- .resolve_pi_prior(
+  pi_init = pi_init,
+  pi_vb_init = pi_vb_init,
+  pi_prior_mean = pi_prior_mean,
+  pi_prior_strength = pi_prior_strength,
+  pi_prior_a = pi_prior_a,
+  pi_prior_b = pi_prior_b
+ )
+
+ trait_names <- names(stats$yy)
+ if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
+ variable_names <- names(stats$ww[[1L]]) %||% stats$marker_names
+ if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
+ vy <- as.numeric(stats$yy) / (n - 1)
+ pri <- list(
+  vy = vy,
+  B = diag((vy * h2) / (m * arch$pi_vb_init), nt, nt),
+  E = diag(vy * (1 - h2), nt, nt),
+  ssb_prior = diag(
+   ((nub - 2) / nub) * (vy * h2) / (m * arch$pi_prior_mean), nt, nt
+  ),
+  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ )
+ for (x in c("B", "E", "ssb_prior", "sse_prior")) {
+  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
+ }
+ pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
+ pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
+
+ raw <- stblr_cpg_omp_csr_block_eigen(
+  wy = stats$wy, ww = stats$ww, yy = stats$yy,
+  b_init = lapply(seq_len(nt), function(i) rep(0, m)),
+  d_init = lapply(seq_len(nt), function(i) rep(0, m)),
+  use_d_init = use_d_init, r_init = stats$wy, use_r_init = use_r_init,
+  rebuild_r_before_updateE = rebuild_r_before_updateE, ld_prefix = "",
+  B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior_list,
+  sse_prior = pri$sse_prior_list, pi = arch$pi, nub = nub, nue = nue,
+  updateB = updateB, updateE = updateE, updatePi = updatePi, adjE = adjE,
+  n = rep(as.integer(n), nt), nit = nit, nburn = nburn, nthin = nthin,
+  pi_prior_a = arch$pi_prior_a, pi_prior_b = arch$pi_prior_b,
+  ncores = ncores, seed = seed, nchains = nchains,
+  keep_chains = keep_chains, chain_seeds = chain_seeds,
+  updateLDswap = updateLDswap,
+  ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves),
+  selection_s_prior_scale = selection_s_info$prior_scale,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = selection_s_init,
+  selection_s_prior = selection_s_prior,
+  selection_s_proposal_sd = selection_s_proposal_sd,
+  selection_s_log_h = selection_s_info$log_h,
+  bed_files = bed$bed_files,
+  n_bed = bed$n_bed,
+  cls = bed$cls,
+  rows = bed$rows,
+  af = bed$af,
+  block_start = bed$block_start,
+  eigen_filter = eigen_filter,
+  eigen_tau = eigen_tau,
+  eigen_eta = eigen_eta
+ )
+ if (.is_stblr_raw(raw)) {
+  if (isTRUE(selection_s_info$fixed)) {
+   raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  }
+  fit <- .as_stblr_fit(raw, trait_names, variable_names)
+ } else {
+  .stblr_stop_unsupported_raw_output("csr_bayesc_block_eigen")
+ }
+ fit$input <- c(list(
+  n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue, vy = vy,
+  B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior,
+  sse_prior = pri$sse_prior, updateB = updateB, updateE = updateE,
+  updatePi = updatePi, adjE = adjE, nit = nit, nburn = nburn, nthin = nthin,
+  ncores = ncores, seed = seed, nchains = nchains,
+  keep_chains = keep_chains,
+  chain_seeds = if (length(chain_seeds)) chain_seeds else NULL,
+  scheduled = FALSE, ld_backend = "block_eigen",
+  method = "bayesc", model = "bayesc",
+  backend = "csr_bayesc", data_level = "summary",
+  annotations = FALSE,
+  selection_s = selection_s_info$selection_s,
+  selection_s_fixed = selection_s_info$fixed,
+  selection_s_exponent = selection_s_info$exponent,
+  estimate_selection_s = estimate_selection_s,
+  selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
+  selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
+  selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
+  selection_s_scale = "standardized_genotype_effect",
+  updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
+  ld_swap_r2 = ld_swap_r2,
+  ld_swap_max_friends = as.integer(ld_swap_max_friends),
+  ld_swap_moves = as.integer(ld_swap_moves),
+  eigen_filter = eigen_filter,
+  eigen_tau = eigen_tau,
+  eigen_eta = eigen_eta,
+  eigen_blocks = bed$block_start,
+  eigen_diagnostics = raw$diagnostics$block_eigen
+ ), arch)
+ fit
+}
+
 .make_bed_marker_data <- function(Glist, y, chr, cls, block_size,
                                   rows = NULL) {
   chr <- as.integer(chr)

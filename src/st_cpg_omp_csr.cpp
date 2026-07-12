@@ -5,6 +5,7 @@
 #include "distributions.h"
 #include "st_chain_utils.h"
 #include "st_csr_common.h"
+#include "st_block_eigen.h"
 #include "st_ld_operator.h"
 
 
@@ -28,6 +29,134 @@
 #endif
 
 using namespace arma;
+
+static std::vector<std::string> stblr_copy_character_vector(
+  Rcpp::CharacterVector x,
+  const char* label
+) {
+ std::vector<std::string> out(static_cast<std::size_t>(x.size()));
+ for (int i = 0; i < x.size(); ++i) {
+  if (x[i] == NA_STRING) {
+   throw std::runtime_error(std::string(label) + " contains NA.");
+  }
+  out[static_cast<std::size_t>(i)] = Rcpp::as<std::string>(x[i]);
+  if (out[static_cast<std::size_t>(i)].empty()) {
+   throw std::runtime_error(std::string(label) + " contains an empty string.");
+  }
+ }
+ return out;
+}
+
+static std::vector<std::vector<int>> stblr_copy_int_list(
+  Rcpp::List x,
+  const char* label
+) {
+ std::vector<std::vector<int>> out(static_cast<std::size_t>(x.size()));
+ for (int k = 0; k < x.size(); ++k) {
+  Rcpp::IntegerVector v = x[k];
+  out[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(v.size()));
+  for (int i = 0; i < v.size(); ++i) {
+   if (v[i] == NA_INTEGER) {
+    throw std::runtime_error(std::string(label) + " contains NA.");
+   }
+   if (v[i] <= 0) {
+    throw std::runtime_error(std::string(label) + " must contain positive 1-based marker indices.");
+   }
+   out[static_cast<std::size_t>(k)][static_cast<std::size_t>(i)] = v[i];
+  }
+ }
+ return out;
+}
+
+static std::vector<int> stblr_copy_rows0_or_empty(
+  Rcpp::Nullable<Rcpp::IntegerVector> rows,
+  int n_bed
+) {
+ std::vector<int> out;
+ if (rows.isNull()) return out;
+
+ Rcpp::IntegerVector r(rows);
+ out.resize(static_cast<std::size_t>(r.size()));
+ bool identity_rows = (r.size() == n_bed);
+ for (int i = 0; i < r.size(); ++i) {
+  if (r[i] == NA_INTEGER) {
+   throw std::runtime_error("rows contains NA.");
+  }
+  if (r[i] < 1 || r[i] > n_bed) {
+   throw std::runtime_error("rows contains an index outside [1, n].");
+  }
+  if (r[i] != i + 1) identity_rows = false;
+  out[static_cast<std::size_t>(i)] = r[i] - 1;
+ }
+ if (identity_rows) out.clear();
+ return out;
+}
+
+static std::vector<double> stblr_copy_numeric_vector(
+  Rcpp::NumericVector x,
+  const char* label
+) {
+ std::vector<double> out(static_cast<std::size_t>(x.size()));
+ for (int i = 0; i < x.size(); ++i) {
+  const double val = x[i];
+  if (!std::isfinite(val)) {
+   throw std::runtime_error(std::string(label) + " must contain finite values.");
+  }
+  out[static_cast<std::size_t>(i)] = val;
+ }
+ return out;
+}
+
+static std::vector<int> stblr_copy_integer_vector(
+  Rcpp::IntegerVector x,
+  const char* label
+) {
+ std::vector<int> out(static_cast<std::size_t>(x.size()));
+ for (int i = 0; i < x.size(); ++i) {
+  if (x[i] == NA_INTEGER) {
+   throw std::runtime_error(std::string(label) + " contains NA.");
+  }
+  out[static_cast<std::size_t>(i)] = x[i];
+ }
+ return out;
+}
+
+static EigenFilterMode stblr_eigen_filter_mode(const std::string& mode) {
+ if (mode == "hard_truncate") return EigenFilterMode::hard_truncate;
+ if (mode == "ridge_fixed") return EigenFilterMode::ridge_fixed;
+ if (mode == "ridge_lw") return EigenFilterMode::ridge_lw;
+ throw std::runtime_error(
+  "eigen_filter must be one of 'hard_truncate', 'ridge_fixed', or 'ridge_lw'."
+ );
+}
+
+static Rcpp::DataFrame stblr_block_eigen_diag_frame(
+  const std::vector<BlockEigenDiag>& diag
+) {
+ const int nb = static_cast<int>(diag.size());
+ Rcpp::IntegerVector start(nb);
+ Rcpp::IntegerVector size(nb);
+ Rcpp::IntegerVector n_kept(nb);
+ Rcpp::NumericVector mu_min(nb);
+ Rcpp::NumericVector shrink(nb);
+
+ for (int i = 0; i < nb; ++i) {
+  const BlockEigenDiag& d = diag[static_cast<std::size_t>(i)];
+  start[i] = d.start;
+  size[i] = d.size;
+  n_kept[i] = d.n_kept;
+  mu_min[i] = d.mu_min;
+  shrink[i] = d.shrink;
+ }
+
+ return Rcpp::DataFrame::create(
+  Rcpp::Named("start") = start,
+  Rcpp::Named("size") = size,
+  Rcpp::Named("n_kept") = n_kept,
+  Rcpp::Named("mu_min") = mu_min,
+  Rcpp::Named("shrink") = shrink
+ );
+}
 
 // -----------------------------------------------------------------------------
 // ST-specific LD structure: flat symmetric CSR
@@ -392,6 +521,31 @@ struct LDLDFriends {
  std::vector<uint64_t> ptr;
  std::vector<int> idx;
  std::vector<double> r2;
+};
+
+template <class OpT>
+struct BayescOperatorContext {
+ OpT op;
+ LDLDFriends ld_swap_friends;
+ Rcpp::List diagnostics;
+
+ BayescOperatorContext(
+   const OpT& op_,
+   const LDLDFriends& ld_swap_friends_,
+   const Rcpp::List& diagnostics_
+ ) :
+  op(op_),
+  ld_swap_friends(ld_swap_friends_),
+  diagnostics(diagnostics_) {}
+
+ BayescOperatorContext(
+   OpT&& op_,
+   LDLDFriends&& ld_swap_friends_,
+   const Rcpp::List& diagnostics_
+ ) :
+  op(std::move(op_)),
+  ld_swap_friends(std::move(ld_swap_friends_)),
+  diagnostics(diagnostics_) {}
 };
 
 inline LDLDFriends build_ld_swap_friends_st_csr(
@@ -779,11 +933,11 @@ inline bool attempt_ld_swap_st_csr_unscaled(
 }
 
 // -----------------------------------------------------------------------------
-// Main exported function: parallel single-trait BayesC over traits
+// Main implementation: parallel single-trait BayesC over traits
 // -----------------------------------------------------------------------------
 
-// [[Rcpp::export]]
-Rcpp::List stblr_cpg_omp_csr(
+template <class OperatorFactory>
+Rcpp::List stblr_cpg_omp_csr_impl(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -816,17 +970,18 @@ Rcpp::List stblr_cpg_omp_csr(
   int nchains,
   bool keep_chains,
   std::vector<int> chain_seeds,
-  bool updateLDswap = false,
-  double ld_swap_prob = 0.05,
-  double ld_swap_r2 = 0.8,
-  int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
-  bool estimate_selection_s = false,
-  double selection_s_init = 0.0,
-  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
-  double selection_s_proposal_sd = 0.35,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
+  bool updateLDswap,
+  double ld_swap_prob,
+  double ld_swap_r2,
+  int ld_swap_max_friends,
+  int ld_swap_moves,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale,
+  bool estimate_selection_s,
+  double selection_s_init,
+  Rcpp::NumericVector selection_s_prior,
+  double selection_s_proposal_sd,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h,
+  OperatorFactory make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -1081,29 +1236,21 @@ Rcpp::List stblr_cpg_omp_csr(
   xx[static_cast<std::size_t>(i)] = wi;
  }
 
- STLDCSR ld = read_and_build_st_ld_csr(
-  ld_prefix,
-  m,
-  xx
- );
  arma::rowvec xx_row(static_cast<arma::uword>(m));
  for (int i = 0; i < m; ++i) {
   xx_row(static_cast<arma::uword>(i)) = xx[static_cast<std::size_t>(i)];
  }
- const CsrOperator op(ld, xx_row);
-
- LDLDFriends ld_swap_friends;
- if (updateLDswap) {
-  ld_swap_friends = build_ld_swap_friends_st_csr(
-   m,
-   ld,
-   xx,
-   ld_swap_r2,
-   ld_swap_max_friends
-  );
- } else {
-  ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
- }
+ auto operator_context = make_operator(
+  m,
+  xx,
+  xx_row,
+  wy_mat,
+  updateLDswap,
+  ld_swap_r2,
+  ld_swap_max_friends
+ );
+ const auto& op = operator_context.op;
+ const LDLDFriends& ld_swap_friends = operator_context.ld_swap_friends;
 
  // --------------------------------------------------------------------------
  // Marker update order based on max single-trait marginal effect
@@ -1941,6 +2088,9 @@ Rcpp::List stblr_cpg_omp_csr(
   Rcpp::Named("seconds_max") = seconds_max,
   Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap) : R_NilValue
  );
+ if (operator_context.diagnostics.size() > 0) {
+  diagnostics["block_eigen"] = operator_context.diagnostics;
+ }
 
  Rcpp::List chains = R_NilValue;
  if (keep_chains) {
@@ -2061,4 +2211,239 @@ Rcpp::List stblr_cpg_omp_csr(
  );
  raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
  return raw;
+}
+
+// [[Rcpp::export]]
+Rcpp::List stblr_cpg_omp_csr(
+  std::vector<std::vector<double>> wy,
+  std::vector<std::vector<double>> ww,
+  std::vector<double> yy,
+  std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> d_init,
+  bool use_d_init,
+  std::vector<std::vector<double>> r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  std::string ld_prefix,
+  arma::mat B,
+  arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior,
+  std::vector<double> pi,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  std::vector<int> n,
+  int nit,
+  int nburn,
+  int nthin,
+  double pi_prior_a,
+  double pi_prior_b,
+  int ncores,
+  int seed,
+  int nchains,
+  bool keep_chains,
+  std::vector<int> chain_seeds,
+  bool updateLDswap = false,
+  double ld_swap_prob = 0.05,
+  double ld_swap_r2 = 0.8,
+  int ld_swap_max_friends = 50,
+  int ld_swap_moves = 1,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
+  bool estimate_selection_s = false,
+  double selection_s_init = 0.0,
+  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
+  double selection_s_proposal_sd = 0.35,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
+) {
+ auto make_csr_operator = [&](int m,
+                              const std::vector<double>& xx,
+                              const arma::rowvec& xx_row,
+                              arma::mat& wy_mat,
+                              bool update_ld_swap,
+                              double ld_swap_r2_value,
+                              int ld_swap_max_friends_value) {
+  (void)wy_mat;
+  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
+  CsrOperator op(ld, xx_row);
+  LDLDFriends ld_swap_friends;
+  if (update_ld_swap) {
+   ld_swap_friends = build_ld_swap_friends_st_csr(
+    m,
+    ld,
+    xx,
+    ld_swap_r2_value,
+    ld_swap_max_friends_value
+   );
+  } else {
+   ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+  }
+  return BayescOperatorContext<CsrOperator>(
+   op,
+   ld_swap_friends,
+   Rcpp::List::create()
+  );
+ };
+
+ return stblr_cpg_omp_csr_impl(
+  wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
+  rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
+  nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin,
+  pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds,
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
+  selection_s_prior_scale, estimate_selection_s, selection_s_init,
+  selection_s_prior, selection_s_proposal_sd, selection_s_log_h,
+  make_csr_operator
+ );
+}
+
+// [[Rcpp::export]]
+Rcpp::List stblr_cpg_omp_csr_block_eigen(
+  std::vector<std::vector<double>> wy,
+  std::vector<std::vector<double>> ww,
+  std::vector<double> yy,
+  std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> d_init,
+  bool use_d_init,
+  std::vector<std::vector<double>> r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  std::string ld_prefix,
+  arma::mat B,
+  arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior,
+  std::vector<double> pi,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  std::vector<int> n,
+  int nit,
+  int nburn,
+  int nthin,
+  double pi_prior_a,
+  double pi_prior_b,
+  int ncores,
+  int seed,
+  int nchains,
+  bool keep_chains,
+  std::vector<int> chain_seeds,
+  bool updateLDswap = false,
+  double ld_swap_prob = 0.05,
+  double ld_swap_r2 = 0.8,
+  int ld_swap_max_friends = 50,
+  int ld_swap_moves = 1,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
+  bool estimate_selection_s = false,
+  double selection_s_init = 0.0,
+  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
+  double selection_s_proposal_sd = 0.35,
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::CharacterVector bed_files = Rcpp::CharacterVector::create(),
+  int n_bed = 0,
+  Rcpp::List cls = R_NilValue,
+  Rcpp::Nullable<Rcpp::IntegerVector> rows = R_NilValue,
+  Rcpp::NumericVector af = Rcpp::NumericVector::create(),
+  Rcpp::IntegerVector block_start = Rcpp::IntegerVector::create(),
+  std::string eigen_filter = "hard_truncate",
+  double eigen_tau = 0.01,
+  double eigen_eta = 0.0
+) {
+ if (updateLDswap) {
+  throw std::runtime_error(
+   "LD-swap is not yet supported with the experimental block-eigen operator."
+  );
+ }
+
+ if (bed_files.size() <= 0) {
+  throw std::runtime_error("bed_files must contain at least one BED file.");
+ }
+ if (n_bed <= 0) {
+  throw std::runtime_error("n_bed must be positive.");
+ }
+ if (cls.size() != bed_files.size()) {
+  throw std::runtime_error("cls must have one element per BED file.");
+ }
+
+ const std::vector<std::string> bed_files_cpp =
+  stblr_copy_character_vector(bed_files, "bed_files");
+ const std::vector<std::vector<int>> cls_cpp =
+  stblr_copy_int_list(cls, "cls");
+ const std::vector<int> rows0 = stblr_copy_rows0_or_empty(rows, n_bed);
+ const std::vector<double> af_cpp = stblr_copy_numeric_vector(af, "af");
+ const std::vector<int> block_start_cpp =
+  stblr_copy_integer_vector(block_start, "block_start");
+ const EigenFilterMode mode = stblr_eigen_filter_mode(eigen_filter);
+
+ auto make_block_eigen_operator = [&](int m,
+                                      const std::vector<double>& xx,
+                                      const arma::rowvec& xx_row,
+                                      arma::mat& wy_mat,
+                                      bool update_ld_swap,
+                                      double ld_swap_r2_value,
+                                      int ld_swap_max_friends_value) {
+  (void)xx;
+  (void)xx_row;
+  (void)ld_swap_r2_value;
+  (void)ld_swap_max_friends_value;
+  if (update_ld_swap) {
+   throw std::runtime_error(
+    "LD-swap is not yet supported with the experimental block-eigen operator."
+   );
+  }
+  if (static_cast<int>(af_cpp.size()) != m) {
+   throw std::runtime_error("af length must equal m for block-eigen BayesC.");
+  }
+
+  PackedBedMatrix G = read_bedfiles_to_packed_matrix(
+   bed_files_cpp,
+   n_bed,
+   rows0.empty() ? nullptr : rows0.data(),
+   static_cast<int>(rows0.size()),
+   cls_cpp
+  );
+  if (G.m != m) {
+   throw std::runtime_error("BED marker count does not match m.");
+  }
+
+  std::vector<BlockEigenDiag> block_diag;
+  BlockEigenOperator op = build_block_eigen(
+   G,
+   af_cpp,
+   block_start_cpp,
+   mode,
+   eigen_tau,
+   eigen_eta,
+   wy_mat,
+   ncores,
+   &block_diag
+  );
+  LDLDFriends ld_swap_friends;
+  ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+  Rcpp::List diagnostics = Rcpp::List::create(
+   Rcpp::Named("blocks") = stblr_block_eigen_diag_frame(block_diag)
+  );
+  return BayescOperatorContext<BlockEigenOperator>(
+   std::move(op),
+   std::move(ld_swap_friends),
+   diagnostics
+  );
+ };
+
+ return stblr_cpg_omp_csr_impl(
+  wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
+  rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
+  nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin,
+  pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds,
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
+  selection_s_prior_scale, estimate_selection_s, selection_s_init,
+  selection_s_prior, selection_s_proposal_sd, selection_s_log_h,
+  make_block_eigen_operator
+ );
 }
