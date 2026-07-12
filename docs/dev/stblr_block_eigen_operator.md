@@ -118,3 +118,12 @@ block-eigen path:
 - `hard_truncate`, `ridge_fixed`, and `ridge_lw` smoke tests run on tiny fixtures
 - LD-swap remains disabled for block-eigen
 - diagnostics are checked for basic sanity
+
+## Phase 3A Status
+
+- ordinary CSR BayesR now uses `CsrOperator` for the existing sparse-CSR path
+- block-eigen remains disabled for BayesR
+- there are no public R API changes
+- BayesR LD-swap residual coupling is operatorized
+- BayesR LD-swap candidate/friend construction remains CSR-specific because it
+  still reads `STLDCSR` directly

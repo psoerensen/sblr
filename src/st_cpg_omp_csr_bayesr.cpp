@@ -3,6 +3,7 @@
 
 #include "st_chain_utils.h"
 #include "st_csr_common.h"
+#include "st_ld_operator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -216,6 +217,7 @@ inline int sample_categorical_logprob_bayesr(
  return static_cast<int>(logp.size() - 1L);
 }
 
+template <class OpT>
 inline void sampleBetaR_ST_csr(
   int i,
   const std::vector<double>& pi,
@@ -227,7 +229,7 @@ inline void sampleBetaR_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   std::mt19937& gen
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
@@ -292,20 +294,14 @@ inline void sampleBetaR_ST_csr(
  if (diff != 0.0) {
   r(iu) -= wi * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
  comp(iu) = k_new;
 }
 
+template <class OpT>
 inline void sampleBetaR_ST_csr_unscaled(
   int i,
   const std::vector<double>& pi,
@@ -316,7 +312,7 @@ inline void sampleBetaR_ST_csr_unscaled(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   std::mt19937& gen
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
@@ -377,14 +373,7 @@ inline void sampleBetaR_ST_csr_unscaled(
  if (diff != 0.0) {
   r(iu) -= wi * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -494,6 +483,7 @@ inline BayesRLDLDFriends build_ld_swap_friends_bayesr_ST_csr(
  return friends;
 }
 
+template <class OpT>
 inline void set_marker_state_bayesr_ST_csr(
   int i,
   double b_new,
@@ -502,7 +492,7 @@ inline void set_marker_state_bayesr_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld
+  const OpT& op
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
  const double diff = b_new - b(iu);
@@ -510,14 +500,7 @@ inline void set_marker_state_bayesr_ST_csr(
  if (diff != 0.0) {
   r(iu) -= ww(iu) * diff;
 
-  const uint64_t start = ld.ptr[static_cast<std::size_t>(i)];
-  const uint64_t end = ld.ptr[static_cast<std::size_t>(i + 1)];
-
-  for (uint64_t p = start; p < end; ++p) {
-   const int j = ld.idx[static_cast<std::size_t>(p)];
-   r(static_cast<arma::uword>(j)) -=
-    static_cast<double>(ld.xij[static_cast<std::size_t>(p)]) * diff;
-  }
+  op.apply_offdiag(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -601,6 +584,7 @@ inline void throw_ld_swap_error_bayesr_ST_csr(
  );
 }
 
+template <class OpT>
 inline bool attempt_ld_swap_bayesr_ST_csr(
   int m,
   int trait,
@@ -616,7 +600,7 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   const BayesRLDLDFriends& friends,
   std::mt19937& gen,
   bool& attempted
@@ -689,8 +673,8 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
  }
 
  const arma::rowvec r_old = r;
- set_marker_state_bayesr_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
- set_marker_state_bayesr_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+ set_marker_state_bayesr_ST_csr(j, 0.0, 0, ww, r, b, comp, op);
+ set_marker_state_bayesr_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, op);
 
  const double sse_new = residual_diagnostics_bayesr_ST_csr(
   m, 0.0, b, r, comp, wy, 0.0, yy
@@ -763,6 +747,7 @@ inline bool attempt_ld_swap_bayesr_ST_csr(
  return accept;
 }
 
+template <class OpT>
 inline bool attempt_ld_swap_bayesr_ST_csr_unscaled(
   int m,
   int trait,
@@ -775,7 +760,7 @@ inline bool attempt_ld_swap_bayesr_ST_csr_unscaled(
   arma::rowvec& r,
   arma::rowvec& b,
   arma::Row<int>& comp,
-  const STLDCSR& ld,
+  const OpT& op,
   const BayesRLDLDFriends& friends,
   std::mt19937& gen,
   bool& attempted
@@ -839,8 +824,8 @@ inline bool attempt_ld_swap_bayesr_ST_csr_unscaled(
  }
 
  const arma::rowvec r_old = r;
- set_marker_state_bayesr_ST_csr(j, 0.0, 0, ww, r, b, comp, ld);
- set_marker_state_bayesr_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, ld);
+ set_marker_state_bayesr_ST_csr(j, 0.0, 0, ww, r, b, comp, op);
+ set_marker_state_bayesr_ST_csr(k, b_j_old, comp_j_old, ww, r, b, comp, op);
 
  const double sse_new = residual_diagnostics_bayesr_ST_csr(
   m, 0.0, b, r, comp, wy, 0.0, yy
@@ -1346,6 +1331,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
  }
 
  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
+ arma::rowvec xx_row(static_cast<arma::uword>(m));
+ for (int i = 0; i < m; ++i) {
+  xx_row(static_cast<arma::uword>(i)) = xx[static_cast<std::size_t>(i)];
+ }
+ CsrOperator op(ld, xx_row);
  BayesRLDLDFriends ld_swap_friends;
  if (updateLDswap) {
   ld_swap_friends = build_ld_swap_friends_bayesr_ST_csr(
@@ -1427,7 +1417,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
    std::shuffle(order_t.begin(), order_t.end(), gen_t);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
-   arma::rowvec ww_t = ww_mat.row(static_cast<arma::uword>(t));
+   const arma::rowvec& ww_t = op.diag();
    arma::rowvec b_t = b_init_mat.row(static_cast<arma::uword>(t));
    arma::rowvec r_t(m, arma::fill::zeros);
    arma::Row<int> comp_t(m, arma::fill::zeros);
@@ -1452,7 +1442,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
     }
     if (!r_t.is_finite()) throw std::runtime_error("r_init contains NaN/Inf.");
    } else {
-    rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+    op.rebuild(wy_t, b_t, r_t);
    }
 
    double vb_t = B(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
@@ -1511,7 +1501,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
        r_t,
        b_t,
        comp_t,
-       ld,
+       op,
        gen_t
       );
      }
@@ -1527,7 +1517,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
        r_t,
        b_t,
        comp_t,
-       ld,
+       op,
        gen_t
       );
      }
@@ -1555,7 +1545,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
          r_t,
          b_t,
          comp_t,
-         ld,
+         op,
          ld_swap_friends,
          gen_t,
          attempted
@@ -1572,7 +1562,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
          r_t,
          b_t,
          comp_t,
-         ld,
+         op,
          ld_swap_friends,
          gen_t,
          attempted
@@ -1636,7 +1626,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
 
     if (do_updateE) {
      ensure_null_effects_bayesr_ST_csr(m, t, chain, it, b_t, comp_t);
-     rebuild_residual_st_csr(m, wy_t, ww_t, b_t, r_t, ld);
+     op.rebuild(wy_t, b_t, r_t);
      const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
       m,
       nue,

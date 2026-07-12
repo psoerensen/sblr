@@ -375,7 +375,14 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
   expect_equal(dim(fit_bridge$dm), dim(fit_direct$dm))
   expect_equal(dim(fit_bridge$bm), dim(fit_direct$bm))
   expect_equal(names(fit_bridge$comp_prob), names(fit_direct$comp_prob))
-  expect_true(all(c("dm", "bm", "comp_prob", "dm_component_mean") %in% names(fit_bridge)))
+  required_fields <- c(
+    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pis",
+    "comp_prob", "dm_component_mean"
+  )
+  missing_fields <- setdiff(required_fields, names(fit_bridge))
+  expect_equal(missing_fields, character())
+  expect_null(fit_bridge$chains)
+  expect_null(fit_bridge$ld_swap_chains)
 
   keep_args <- common
   keep_args$nchains <- 2

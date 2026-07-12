@@ -86,6 +86,9 @@ length `nt`, with one `m x K` marker-by-component posterior probability matrix
 per trait. The null component is always named `component_0`, and the formatted
 `fit$dm` is derived as `1 - P(component_0)`.
 
+Phase 3A internally routes ordinary CSR BayesR residual operations through
+`CsrOperator`; this operatorization does not change the raw schema.
+
 For BayesR, `raw$trace$pis` and formatted `fit$pis` are the total active-marker
 probability trace, `1 - pi_component_0`. Final and posterior mean mixture
 probabilities are stored in `raw$pi$final` and `raw$pi$mean` as `nt x K`
