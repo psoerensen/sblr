@@ -162,3 +162,14 @@ block-eigen path:
 - block-eigen remains disabled for prior/group/learned annotation BayesC and BED
 - LD-swap remains disabled for block-eigen
 - SBayesRC component and annotation outputs are preserved
+
+## Phase 4C Status
+
+- added validation hardening for the internal SBayesRC block-eigen path
+- confirmed the helper remains non-exported
+- confirmed the public SBayesRC path remains sparse CSR
+- smoke-tested `hard_truncate`, `ridge_fixed`, and `ridge_lw`
+- checked SBayesRC component probabilities and `dm = 1 - P(gamma_0.00)`
+- checked `alpha`, `sigmaSqAlpha`, and annotation outputs
+- confirmed LD-swap remains blocked for block-eigen
+- checked block-eigen diagnostics sanity

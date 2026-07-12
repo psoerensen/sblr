@@ -24,7 +24,8 @@ make_stblr_block_eigen_fixture <- function() {
     rsidsLD = list(c("rs1", "rs2")),
     chr = list(c(1L, 1L)),
     pos = list(c(100, 200)),
-    af = list(c(0.2, 0.3))
+    af = list(c(0.2, 0.3)),
+    maf = list(c(0.2, 0.3))
   )
   y <- matrix(
     c(-1, 0, 1, -0.5, 0.5, 1.5),
@@ -489,6 +490,10 @@ expect_stblr_block_eigen_sbayesrc_fit <- function(fit, eigen_filter, n_anno) {
   expect_null(fit$ld_swap_chains)
   expect_identical(fit$input$ld_backend, "block_eigen")
   expect_identical(fit$input$eigen_filter, eigen_filter)
+  expect_true(all(is.finite(fit$bm)))
+  expect_true(all(is.finite(fit$dm)))
+  expect_true(all(is.finite(fit$vbs)))
+  expect_true(all(is.finite(fit$ves)))
   for (trait in names(fit$comp_prob)) {
     cp <- fit$comp_prob[[trait]]
     expect_identical(colnames(cp)[1L], "gamma_0.00")
@@ -537,6 +542,79 @@ test_that("internal block-eigen SBayesRC filter modes run on the tiny fixture", 
     expect_stblr_block_eigen_sbayesrc_fit(fits[[filter]], filter, ncol(annotation))
   }
   expect_equal(fits$ridge_fixed$input$eigen_eta, 0)
+
+  fit_zero <- do.call(
+    sblr:::.stblr_csr_sbayesrc_block_eigen,
+    c(
+      common[names(common) != "block_start"],
+      list(block_start = 0L, eigen_filter = "hard_truncate")
+    )
+  )
+  expect_identical(fit_zero$input$eigen_blocks, 0L)
+})
+
+test_that("block-eigen SBayesRC validates block and filter arguments", {
+  fixture <- make_stblr_block_eigen_fixture()
+  common <- list(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    annotation = make_stblr_block_eigen_annotation(fixture),
+    block_start = 1L
+  )
+  for (bad_start in list(integer(), 2L, c(1L, 1L))) {
+    args <- common
+    args$block_start <- bad_start
+    expect_error(
+      do.call(sblr:::.stblr_csr_sbayesrc_block_eigen, args),
+      "block_start"
+    )
+  }
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(eigen_filter = "bad_filter"))
+    ),
+    "eigen_filter"
+  )
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(eigen_tau = -1))
+    ),
+    "eigen_tau"
+  )
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(eigen_eta = -1))
+    ),
+    "eigen_eta"
+  )
+})
+
+test_that("sampled selection_s works with block-eigen SBayesRC", {
+  skip_if_no_block_eigen_sbayesrc_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  fit <- sblr:::.stblr_csr_sbayesrc_block_eigen(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    annotation = make_stblr_block_eigen_annotation(fixture),
+    block_start = 1L,
+    estimate_selection_s = TRUE,
+    selection_s_init = 0,
+    selection_s_proposal_sd = 0.25,
+    updateAlpha = FALSE,
+    updateB = FALSE,
+    updateE = FALSE,
+    nit = 5,
+    nburn = 2,
+    ncores = 1L,
+    seed = 105L
+  )
+  expect_true("selection_s" %in% names(fit))
+  expect_true("selection_s_trace" %in% names(fit))
+  expect_true(all(is.finite(fit$selection_s)))
+  expect_true(all(is.finite(fit$selection_s_trace)))
 })
 
 test_that("block-eigen SBayesRC rejects LD-swap clearly", {
