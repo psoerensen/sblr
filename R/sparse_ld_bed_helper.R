@@ -2897,12 +2897,6 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   stop("nchains must be a positive integer scalar.")
  }
  nchains <- as.integer(nchains)
- if (!is.logical(keep_chains) || length(keep_chains) != 1L || is.na(keep_chains)) {
-  stop("keep_chains must be TRUE or FALSE.")
- }
- if (method != "bayesrc" && isTRUE(keep_chains)) {
-  stop("keep_chains = TRUE is currently supported by stblr_bed() only for method = 'bayesrc'.")
- }
  if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
      is.na(keep_chains)) {
   stop("keep_chains must be TRUE or FALSE.")
@@ -3990,6 +3984,12 @@ stblr_bed <- function(
   stop("nchains must be a positive integer scalar.")
  }
  nchains <- as.integer(nchains)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L || is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+ if (method != "bayesrc" && isTRUE(keep_chains)) {
+  stop("keep_chains = TRUE is currently supported by stblr_bed() only for method = 'bayesrc'.")
+ }
  if (!is.numeric(ncores) || length(ncores) != 1L ||
      !is.finite(ncores) || ncores < 1 || ncores != floor(ncores)) {
   stop("ncores must be a positive integer scalar.")
