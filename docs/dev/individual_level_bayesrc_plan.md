@@ -119,6 +119,17 @@ individual-level BayesRC backend. It does not define or expose a public model.
   shared raw-schema formatter and existing SBayesRC annotation aliases
 - public component, annotation, chain, variance, and CPO outputs are exposed;
   BayesRC remains unscheduled and full-sweep
+- the public fixed-alpha, intercept-only reduction matches fixed-pi BED BayesR
+  to `1e-12` for `bm`, `dm`, and component probabilities; shuffled annotation
+  rows, chromosome/column subsets, public-to-native equivalence, multiple traits,
+  retained chains, variance identities, and CPO outputs pass their compiled tests
+- the unlimited Sequence 3 package suite passes 3,181 expectations with no
+  failures, warnings, or skips; the focused public BED interface file passes
+  183 expectations and the BED block-eigen regression file passes 193
+- `R CMD build .` succeeds; `R CMD check --no-manual` installs, compiles, loads,
+  checks examples, and checks compiled code successfully, but remains non-clean
+  because installed-tarball tests read repository-only `src/` and `docs/dev/`
+  paths, alongside the pre-existing `make_credible_sets.Rd` and namespace notes
 - selection-S, LD-swap, adaptive scheduling, BED block-eigen fitting,
   annotation-dependent effect-size variances, and covariance adjustment remain
   disabled
