@@ -7,6 +7,7 @@
 #include "st_csr_common.h"
 #include "st_block_eigen.h"
 #include "st_ld_operator.h"
+#include "blr_csr_bayesc_core.h"
 
 
 #include <algorithm>
@@ -19,6 +20,7 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <unordered_map>
@@ -932,6 +934,456 @@ inline bool attempt_ld_swap_st_csr_unscaled(
  return accept;
 }
 
+static Rcpp::List stblr_cpg_omp_csr_typed_adapter(
+  int m,
+  int nt,
+  const std::string& ld_prefix,
+  const CsrOperator& op,
+  const LDLDFriends& ld_swap_friends,
+  const arma::mat& wy_mat,
+  const arma::mat& b_mat,
+  const std::vector<std::vector<double>>& d_init,
+  bool use_d_init,
+  const std::vector<std::vector<double>>& r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  const arma::vec& yy_vec,
+  const arma::mat& B,
+  const arma::mat& E,
+  const arma::mat& ssb_prior_mat,
+  const arma::mat& sse_prior_mat,
+  const std::vector<double>& pi,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  const std::vector<int>& n,
+  int nit,
+  int nburn,
+  int nthin,
+  double pi_prior_a,
+  double pi_prior_b,
+  int ncores,
+  int seed,
+  int nchains,
+  bool keep_chains,
+  const std::vector<int>& chain_seeds,
+  bool updateLDswap,
+  double ld_swap_prob,
+  int ld_swap_moves,
+  bool use_selection_s_prior_scale,
+  const arma::rowvec& prior_scale,
+  bool estimate_selection_s,
+  double selection_s_init,
+  const Rcpp::NumericVector& selection_s_prior,
+  double selection_s_proposal_sd,
+  const arma::rowvec& selection_s_log_h_row,
+  const std::vector<int>& order
+) {
+ sblr::core::ResolvedSpec specification;
+ specification.data.marker_count = static_cast<std::size_t>(m);
+ specification.data.trait_count = static_cast<std::size_t>(nt);
+ specification.data.marker_ids.reserve(static_cast<std::size_t>(m));
+ specification.data.trait_ids.reserve(static_cast<std::size_t>(nt));
+ for (int marker = 0; marker < m; ++marker) {
+  specification.data.marker_ids.push_back(
+   "marker_" + std::to_string(marker + 1)
+  );
+ }
+ for (int trait = 0; trait < nt; ++trait) {
+  specification.data.trait_ids.push_back(
+   "trait_" + std::to_string(trait + 1)
+  );
+ }
+ specification.data.sample_size = n;
+ specification.data.csr.resource_id = ld_prefix;
+ specification.data.csr.marker_count = static_cast<std::size_t>(m);
+ specification.mcmc.nit = nit;
+ specification.mcmc.nburn = nburn;
+ specification.mcmc.nthin = nthin;
+ specification.mcmc.nchains = nchains;
+ specification.mcmc.ncores = ncores;
+ specification.mcmc.seed = seed;
+ specification.mcmc.has_explicit_chain_seeds = !chain_seeds.empty();
+ specification.mcmc.chain_seeds = chain_seeds;
+ specification.output.keep_chain_summaries = keep_chains;
+
+ sblr::core::CsrBayesCExecutionInput input;
+ input.specification = std::move(specification);
+ input.data.marker_count = static_cast<std::size_t>(m);
+ input.data.trait_count = static_cast<std::size_t>(nt);
+ input.data.row_ptr = op.ld.ptr.data();
+ input.data.row_ptr_size = op.ld.ptr.size();
+ input.data.column_index = op.ld.idx.empty() ? nullptr : op.ld.idx.data();
+ input.data.values = op.ld.xij.empty() ? nullptr : op.ld.xij.data();
+ input.data.nonzero_count = op.ld.idx.size();
+ input.data.diagonal = &op.xx;
+ input.data.wy = &wy_mat;
+ input.data.yy = &yy_vec;
+ input.data.sample_size = &n;
+ input.priors.marker_variance = &B;
+ input.priors.residual_variance = &E;
+ input.priors.marker_scale_prior = &ssb_prior_mat;
+ input.priors.residual_scale_prior = &sse_prior_mat;
+ input.priors.inclusion_probability = pi;
+ input.priors.marker_degrees_freedom = nub;
+ input.priors.residual_degrees_freedom = nue;
+ input.priors.inclusion_prior_active = pi_prior_a;
+ input.priors.inclusion_prior_null = pi_prior_b;
+ input.initial.effects = &b_mat;
+ input.initial.inclusion = &d_init;
+ input.initial.residual = &r_init;
+ input.initial.use_inclusion = use_d_init;
+ input.initial.use_residual = use_r_init;
+ input.controls.nit = nit;
+ input.controls.nburn = nburn;
+ input.controls.nthin = nthin;
+ input.controls.nchains = nchains;
+ input.controls.ncores = ncores;
+ input.controls.seed = seed;
+ input.controls.chain_seeds = chain_seeds;
+ input.controls.keep_chains = keep_chains;
+ input.controls.update_marker_variance = updateB;
+ input.controls.update_residual_variance = updateE;
+ input.controls.update_inclusion_probability = updatePi;
+ input.controls.rebuild_residual_before_update = rebuild_r_before_updateE;
+ input.controls.residual_adjustment = adjE;
+ input.controls.update_ld_swap = updateLDswap;
+ input.controls.ld_swap_probability = ld_swap_prob;
+ input.controls.ld_swap_moves = ld_swap_moves;
+ input.controls.use_fixed_selection_scale = use_selection_s_prior_scale;
+ input.controls.fixed_selection_scale =
+  use_selection_s_prior_scale ? &prior_scale : nullptr;
+ input.controls.estimate_selection_s = estimate_selection_s;
+ input.controls.selection_s_initial = selection_s_init;
+ input.controls.selection_s_prior_lower = selection_s_prior[0];
+ input.controls.selection_s_prior_upper = selection_s_prior[1];
+ input.controls.selection_s_proposal_sd = selection_s_proposal_sd;
+ input.controls.selection_s_log_h =
+  estimate_selection_s ? &selection_s_log_h_row : nullptr;
+ input.output.keep_chains = keep_chains;
+ input.ld_friends.row_ptr = ld_swap_friends.ptr.empty()
+  ? nullptr : ld_swap_friends.ptr.data();
+ input.ld_friends.row_ptr_size = ld_swap_friends.ptr.size();
+ input.ld_friends.index = ld_swap_friends.idx.empty()
+  ? nullptr : ld_swap_friends.idx.data();
+ input.ld_friends.friend_count = ld_swap_friends.idx.size();
+ input.marker_order = &order;
+
+ sblr::core::CsrBayesCResult result = sblr::core::run_csr_bayesc(input);
+
+#ifdef _OPENMP
+ const int nthreads = stblr_num_threads_for_tasks(
+  ncores, stblr_num_chain_tasks(nt, nchains)
+ );
+ Rcpp::Rcout
+ << "STBLR OpenMP requested threads = "
+ << nthreads
+ << ", omp_get_max_threads = "
+ << omp_get_max_threads()
+ << ", num procs = "
+ << omp_get_num_procs()
+ << ", pi_prior_a = "
+ << pi_prior_a
+ << ", pi_prior_b = "
+ << pi_prior_b
+ << "\n";
+ for (int task = 0; task < stblr_num_chain_tasks(nt, nchains); ++task) {
+  const sblr::core::CsrBayesCChainResult& chain_result =
+   result.chains[static_cast<std::size_t>(task)];
+  Rcpp::Rcout
+  << "trait " << stblr_task_trait(task, nchains)
+  << ", chain " << stblr_task_chain(task, nchains)
+  << " used thread " << chain_result.thread_used
+  << ", seconds = " << chain_result.seconds
+  << "\n";
+ }
+#endif
+
+ const int n_trace = nit + nburn;
+ const bool return_chain_summaries = (nchains > 1) || keep_chains;
+ auto marker_matrix = [&](const arma::mat& values) {
+  Rcpp::NumericMatrix output(m, nt);
+  for (int trait = 0; trait < nt; ++trait) {
+   for (int marker = 0; marker < m; ++marker) {
+    output(marker, trait) = values(trait, marker);
+   }
+  }
+  return output;
+ };
+ auto trace_matrix = [&](const arma::mat& values) {
+  Rcpp::NumericMatrix output(n_trace, nt);
+  for (int trait = 0; trait < nt; ++trait) {
+   for (int iteration = 0; iteration < n_trace; ++iteration) {
+    output(iteration, trait) = values(trait, iteration);
+   }
+  }
+  return output;
+ };
+ auto diagonal_matrix = [&](const arma::vec& values) {
+  Rcpp::NumericMatrix output(nt, nt);
+  for (int trait = 0; trait < nt; ++trait) output(trait, trait) = values(trait);
+  return output;
+ };
+
+ Rcpp::NumericMatrix pi_final(nt, 2);
+ Rcpp::NumericMatrix pi_mean(nt, 2);
+ Rcpp::NumericVector selection_mean(nt);
+ Rcpp::NumericVector selection_sd(nt);
+ Rcpp::NumericVector selection_min(nt);
+ Rcpp::NumericVector selection_max(nt);
+ Rcpp::NumericVector selection_acceptance(nt);
+ for (int trait = 0; trait < nt; ++trait) {
+  const arma::uword trait_u = static_cast<arma::uword>(trait);
+  pi_final(trait, 0) = 1.0 - result.final_inclusion_probability(trait_u);
+  pi_final(trait, 1) = result.final_inclusion_probability(trait_u);
+  double mean_pi = 0.0;
+  int pi_samples = 0;
+  for (int iteration = nburn; iteration < n_trace; ++iteration) {
+   mean_pi += result.inclusion_trace(trait_u, iteration);
+   ++pi_samples;
+  }
+  if (pi_samples > 0) mean_pi /= static_cast<double>(pi_samples);
+  else mean_pi = result.final_inclusion_probability(trait_u);
+  pi_mean(trait, 0) = 1.0 - mean_pi;
+  pi_mean(trait, 1) = mean_pi;
+  selection_acceptance[trait] = result.selection_s_attempted(trait_u) > 0.0
+   ? result.selection_s_accepted(trait_u) /
+     result.selection_s_attempted(trait_u) : 0.0;
+  if (estimate_selection_s) {
+   double mean = 0.0;
+   double minimum = std::numeric_limits<double>::infinity();
+   double maximum = -std::numeric_limits<double>::infinity();
+   int count = 0;
+   for (int iteration = nburn; iteration < n_trace; ++iteration) {
+    const double value = result.selection_s_trace(trait_u, iteration);
+    mean += value;
+    minimum = std::min(minimum, value);
+    maximum = std::max(maximum, value);
+    ++count;
+   }
+   if (count > 0) mean /= static_cast<double>(count);
+   double sum_squares = 0.0;
+   if (count > 1) {
+    for (int iteration = nburn; iteration < n_trace; ++iteration) {
+     const double difference =
+      result.selection_s_trace(trait_u, iteration) - mean;
+     sum_squares += difference * difference;
+    }
+    selection_sd[trait] = std::sqrt(
+     sum_squares / static_cast<double>(count - 1)
+    );
+   } else selection_sd[trait] = NA_REAL;
+   selection_mean[trait] = mean;
+   selection_min[trait] = count > 0 ? minimum : NA_REAL;
+   selection_max[trait] = count > 0 ? maximum : NA_REAL;
+  } else {
+   selection_mean[trait] = NA_REAL;
+   selection_sd[trait] = NA_REAL;
+   selection_min[trait] = NA_REAL;
+   selection_max[trait] = NA_REAL;
+  }
+ }
+
+ Rcpp::NumericMatrix ld_swap(nt, 3);
+ Rcpp::NumericVector nsamples(nt);
+ Rcpp::IntegerVector n_used(nt);
+ Rcpp::NumericVector seconds_mean(nt);
+ Rcpp::NumericVector seconds_max(nt);
+ for (int trait = 0; trait < nt; ++trait) {
+  const arma::uword trait_u = static_cast<arma::uword>(trait);
+  const double attempted = result.ld_swap_attempted(trait_u);
+  const double accepted = result.ld_swap_accepted(trait_u);
+  ld_swap(trait, 0) = attempted;
+  ld_swap(trait, 1) = accepted;
+  ld_swap(trait, 2) = attempted > 0.0 ? accepted / attempted : 0.0;
+  nsamples[trait] = result.retained_samples(trait_u);
+  n_used[trait] = n[static_cast<std::size_t>(trait)];
+  double seconds_sum = 0.0;
+  double maximum = 0.0;
+  for (int chain = 0; chain < nchains; ++chain) {
+   const double seconds = result.chains[
+    static_cast<std::size_t>(trait * nchains + chain)
+   ].seconds;
+   seconds_sum += seconds;
+   maximum = std::max(maximum, seconds);
+  }
+  seconds_mean[trait] = seconds_sum / static_cast<double>(nchains);
+  seconds_max[trait] = maximum;
+ }
+
+ Rcpp::List marker = Rcpp::List::create(
+  Rcpp::Named("bm") = marker_matrix(result.marker_mean),
+  Rcpp::Named("dm") = marker_matrix(result.marker_pip),
+  Rcpp::Named("wy") = marker_matrix(result.marker_score),
+  Rcpp::Named("r") = marker_matrix(result.final_residual),
+  Rcpp::Named("b") = marker_matrix(result.final_effect),
+  Rcpp::Named("state") = marker_matrix(result.final_state)
+ );
+ if (return_chain_summaries) {
+  marker["bm_sd"] = marker_matrix(result.marker_mean_sd);
+  marker["bm_min"] = marker_matrix(result.marker_mean_min);
+  marker["bm_max"] = marker_matrix(result.marker_mean_max);
+  marker["dm_sd"] = marker_matrix(result.marker_pip_sd);
+  marker["dm_min"] = marker_matrix(result.marker_pip_min);
+  marker["dm_max"] = marker_matrix(result.marker_pip_max);
+ }
+ Rcpp::List trace = Rcpp::List::create(
+  Rcpp::Named("vbs") = trace_matrix(result.marker_variance_trace),
+  Rcpp::Named("vgs") = trace_matrix(result.genetic_variance_trace),
+  Rcpp::Named("ves") = trace_matrix(result.residual_variance_trace),
+  Rcpp::Named("vle") = trace_matrix(result.le_variance_trace),
+  Rcpp::Named("vld") = trace_matrix(result.ld_variance_trace),
+  Rcpp::Named("pis") = trace_matrix(result.inclusion_trace)
+ );
+ Rcpp::List variance = Rcpp::List::create(
+  Rcpp::Named("covb") = diagonal_matrix(result.final_marker_variance),
+  Rcpp::Named("covg") = diagonal_matrix(result.final_genetic_variance),
+  Rcpp::Named("cove") = diagonal_matrix(result.final_residual_variance),
+  Rcpp::Named("vb") = diagonal_matrix(result.final_marker_variance),
+  Rcpp::Named("vg") = diagonal_matrix(result.final_genetic_variance),
+  Rcpp::Named("ve") = diagonal_matrix(result.final_residual_variance)
+ );
+ Rcpp::List diagnostics = Rcpp::List::create(
+  Rcpp::Named("nsamples") = nsamples,
+  Rcpp::Named("n_used") = n_used,
+  Rcpp::Named("log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("mean_log_cpo") = Rcpp::NumericVector(nt),
+  Rcpp::Named("seconds_mean") = seconds_mean,
+  Rcpp::Named("seconds_max") = seconds_max,
+  Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap) : R_NilValue
+ );
+
+ Rcpp::List chains = R_NilValue;
+ if (keep_chains) {
+  chains = Rcpp::List(nt);
+  Rcpp::CharacterVector trait_names(nt);
+  for (int trait = 0; trait < nt; ++trait) {
+   trait_names[trait] = "trait" + std::to_string(trait + 1);
+   Rcpp::List trait_chains(nchains);
+   Rcpp::CharacterVector chain_names(nchains);
+   for (int chain = 0; chain < nchains; ++chain) {
+    chain_names[chain] = "chain" + std::to_string(chain + 1);
+    const sblr::core::CsrBayesCChainResult& current = result.chains[
+     static_cast<std::size_t>(trait * nchains + chain)
+    ];
+    Rcpp::NumericVector chain_bm(m);
+    Rcpp::NumericVector chain_dm(m);
+    Rcpp::NumericVector chain_state(m);
+    for (int marker_index = 0; marker_index < m; ++marker_index) {
+     chain_bm[marker_index] = current.marker_mean(marker_index);
+     chain_dm[marker_index] = current.marker_pip(marker_index);
+     chain_state[marker_index] = current.final_state(marker_index);
+    }
+    Rcpp::NumericMatrix chain_ld(1, 3);
+    chain_ld(0, 0) = current.ld_swap_attempted;
+    chain_ld(0, 1) = current.ld_swap_accepted;
+    chain_ld(0, 2) = current.ld_swap_attempted > 0.0
+     ? current.ld_swap_accepted / current.ld_swap_attempted : 0.0;
+    Rcpp::List chain_selection = Rcpp::List::create(
+     Rcpp::Named("trace") = R_NilValue,
+     Rcpp::Named("acceptance") = R_NilValue
+    );
+    if (estimate_selection_s) {
+     Rcpp::NumericVector chain_selection_trace(n_trace);
+     for (int iteration = 0; iteration < n_trace; ++iteration) {
+      chain_selection_trace[iteration] = current.selection_s_trace(iteration);
+     }
+     chain_selection["trace"] = chain_selection_trace;
+     chain_selection["acceptance"] = current.selection_s_attempted > 0.0
+      ? current.selection_s_accepted / current.selection_s_attempted : 0.0;
+    }
+    trait_chains[chain] = Rcpp::List::create(
+     Rcpp::Named("marker") = Rcpp::List::create(
+      Rcpp::Named("bm") = chain_bm,
+      Rcpp::Named("dm") = chain_dm,
+      Rcpp::Named("state") = chain_state
+     ),
+     Rcpp::Named("trace") = Rcpp::List::create(),
+     Rcpp::Named("pi") = Rcpp::List::create(
+      Rcpp::Named("final") = Rcpp::NumericVector::create(
+       1.0 - current.final_inclusion_probability,
+       current.final_inclusion_probability
+      ),
+      Rcpp::Named("mean") = R_NilValue
+     ),
+     Rcpp::Named("selection") = chain_selection,
+     Rcpp::Named("diagnostics") = Rcpp::List::create(
+      Rcpp::Named("ld_swap") = updateLDswap
+       ? Rcpp::wrap(chain_ld) : R_NilValue
+     )
+    );
+   }
+   trait_chains.attr("names") = chain_names;
+   chains[trait] = trait_chains;
+  }
+  chains.attr("names") = trait_names;
+ }
+
+ Rcpp::List selection = Rcpp::List::create(
+  Rcpp::Named("enabled") = estimate_selection_s || use_selection_s_prior_scale,
+  Rcpp::Named("fixed") = use_selection_s_prior_scale,
+  Rcpp::Named("scale") = "standardized_genotype_effect",
+  Rcpp::Named("trace") = estimate_selection_s
+   ? Rcpp::wrap(trace_matrix(result.selection_s_trace)) : R_NilValue,
+  Rcpp::Named("mean") = estimate_selection_s
+   ? Rcpp::wrap(selection_mean) : R_NilValue,
+  Rcpp::Named("sd") = estimate_selection_s
+   ? Rcpp::wrap(selection_sd) : R_NilValue,
+  Rcpp::Named("min") = estimate_selection_s
+   ? Rcpp::wrap(selection_min) : R_NilValue,
+  Rcpp::Named("max") = estimate_selection_s
+   ? Rcpp::wrap(selection_max) : R_NilValue,
+  Rcpp::Named("acceptance") = estimate_selection_s
+   ? Rcpp::wrap(selection_acceptance) : R_NilValue
+ );
+
+ Rcpp::List raw = Rcpp::List::create(
+  Rcpp::Named("schema") = Rcpp::List::create(
+   Rcpp::Named("class") = "stblr_raw",
+   Rcpp::Named("version") = 1
+  ),
+  Rcpp::Named("meta") = Rcpp::List::create(
+   Rcpp::Named("model") = "bayesc",
+   Rcpp::Named("backend") = "csr_bayesc",
+   Rcpp::Named("data_level") = "summary",
+   Rcpp::Named("prior_type") = "global",
+   Rcpp::Named("m") = m,
+   Rcpp::Named("nt") = nt,
+   Rcpp::Named("n_trace") = n_trace,
+   Rcpp::Named("nit") = nit,
+   Rcpp::Named("nburn") = nburn,
+   Rcpp::Named("nthin") = nthin,
+   Rcpp::Named("nchains") = nchains,
+   Rcpp::Named("keep_chains") = keep_chains,
+   Rcpp::Named("n_components") = 2,
+   Rcpp::Named("n_annotations") = 0,
+   Rcpp::Named("n_groups") = 0
+  ),
+  Rcpp::Named("marker") = marker,
+  Rcpp::Named("trace") = trace,
+  Rcpp::Named("variance") = variance,
+  Rcpp::Named("pi") = Rcpp::List::create(
+   Rcpp::Named("final") = pi_final,
+   Rcpp::Named("mean") = pi_mean,
+   Rcpp::Named("names") = Rcpp::CharacterVector::create("pi0", "pi1")
+  ),
+  Rcpp::Named("diagnostics") = diagnostics,
+  Rcpp::Named("chains") = chains,
+  Rcpp::Named("prior") = Rcpp::List::create(),
+  Rcpp::Named("group") = Rcpp::List::create(),
+  Rcpp::Named("annotation") = Rcpp::List::create(),
+  Rcpp::Named("component") = Rcpp::List::create(),
+  Rcpp::Named("selection") = selection
+ );
+ raw.attr("class") = Rcpp::CharacterVector::create(
+  "stblr_raw_v1", "stblr_raw", "list"
+ );
+ return raw;
+}
+
 // -----------------------------------------------------------------------------
 // Main implementation: parallel single-trait BayesC over traits
 // -----------------------------------------------------------------------------
@@ -1276,6 +1728,24 @@ Rcpp::List stblr_cpg_omp_csr_impl(
 
  std::sort(order.begin(), order.end(),
            [&](int a, int b) { return x2[static_cast<std::size_t>(a)] > x2[static_cast<std::size_t>(b)]; });
+
+ // The ordinary CSR backend crosses the Phase 2 typed boundary here. The
+ // block-eigen instantiation deliberately retains the existing generic path.
+ if constexpr (std::is_same<
+                 typename std::decay<decltype(op)>::type,
+                 CsrOperator
+               >::value) {
+  return stblr_cpg_omp_csr_typed_adapter(
+   m, nt, ld_prefix, op, ld_swap_friends, wy_mat, b_mat, d_init,
+   use_d_init, r_init, use_r_init, rebuild_r_before_updateE, yy_vec,
+   B, E, ssb_prior_mat, sse_prior_mat, pi, nub, nue, updateB, updateE,
+   updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b,
+   ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap,
+   ld_swap_prob, ld_swap_moves, use_selection_s_prior_scale, prior_scale,
+   estimate_selection_s, selection_s_init, selection_s_prior,
+   selection_s_proposal_sd, selection_s_log_h_row, order
+  );
+ } else {
 
  // --------------------------------------------------------------------------
  // Output storage
@@ -2211,6 +2681,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  );
  raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
  return raw;
+ }
 }
 
 // [[Rcpp::export]]
