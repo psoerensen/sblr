@@ -11,6 +11,28 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// blr_phase1_validate_spec_cpp
+Rcpp::List blr_phase1_validate_spec_cpp(Rcpp::List spec);
+RcppExport SEXP _sblr_blr_phase1_validate_spec_cpp(SEXP specSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase1_validate_spec_cpp(spec));
+    return rcpp_result_gen;
+END_RCPP
+}
+// blr_phase1_validate_result_dimensions_cpp
+Rcpp::List blr_phase1_validate_result_dimensions_cpp(Rcpp::List dimensions);
+RcppExport SEXP _sblr_blr_phase1_validate_result_dimensions_cpp(SEXP dimensionsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type dimensions(dimensionsSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase1_validate_result_dimensions_cpp(dimensions));
+    return rcpp_result_gen;
+END_RCPP
+}
 // readLD_to_CSR_R
 SEXP readLD_to_CSR_R(SEXP filenameSEXP, SEXP mchrSEXP, SEXP msizeSEXP, SEXP thresholdSEXP, SEXP onebasedSEXP);
 RcppExport SEXP _sblr_readLD_to_CSR_R(SEXP filenameSEXPSEXP, SEXP mchrSEXPSEXP, SEXP msizeSEXPSEXP, SEXP thresholdSEXPSEXP, SEXP onebasedSEXPSEXP) {
@@ -1267,6 +1289,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_sblr_blr_phase1_validate_spec_cpp", (DL_FUNC) &_sblr_blr_phase1_validate_spec_cpp, 1},
+    {"_sblr_blr_phase1_validate_result_dimensions_cpp", (DL_FUNC) &_sblr_blr_phase1_validate_result_dimensions_cpp, 1},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_mtblr_cpg", (DL_FUNC) &_sblr_mtblr_cpg, 24},
     {"_sblr_mtblr_cpg_arma", (DL_FUNC) &_sblr_mtblr_cpg_arma, 24},
