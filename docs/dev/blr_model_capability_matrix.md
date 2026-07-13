@@ -1,319 +1,238 @@
-# Unified BLR Framework: Model Capability Matrix
+# Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Draft working matrix  
+**Status:** Revised working matrix  
 **Date:** 2026-07-13  
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
 ## 1. Purpose
 
-This matrix defines how current and planned models decompose into reusable framework components.
+This matrix tracks:
 
-It is intended to answer:
-
-- which model capabilities currently exist;
-- which components are reusable;
-- which combinations are planned;
-- which combinations are invalid or intentionally deferred;
-- which reductions should hold.
+- current model capabilities;
+- target kernel family;
+- probability and scale policies;
+- likelihood operators;
+- migration treatment;
+- current reference implementation;
+- extension readiness;
+- performance and memory requirements.
 
 Status labels:
 
-- **Current** — implemented and validated in the current package.
-- **Partial** — some required components exist, but not through the proposed unified framework.
-- **Planned** — accepted target for staged implementation.
-- **Deferred** — technically possible but not an initial priority.
-- **Unsupported** — mathematically invalid under the stated data contract or outside package scope.
+- **Current** — active working implementation.
+- **Preserve** — retain kernel and refactor boundaries.
+- **Extract** — move reusable infrastructure into shared core.
+- **Correct** — localized fix required.
+- **Rewrite** — new canonical implementation required.
+- **Planned** — accepted future capability.
+- **Deferred** — intentionally later.
+- **Removed** — legacy implementation deleted after stabilization.
 
 ---
 
-## 2. Component vocabulary
+## 2. Kernel families
 
-### State spaces
+| Kernel family | Scope | Migration strategy |
+|---|---|---|
+| `scalar` | ST BayesC/R/RC, annotation, hierarchy | Preserve efficient kernels and extract shared infrastructure incrementally |
+| `small_mt` | explicit multivariate patterns/components | New coherent implementation |
+| `factor` | factor-analytic BLR and evidence models | New implementation with shared factor utilities |
+
+---
+
+## 3. Policy vocabulary
+
+### State policies
 
 | ID | Meaning |
 |---|---|
-| `binary` | Null versus active marker |
-| `trait_pattern` | One binary activity mask across traits |
-| `mixture` | One BayesR/RC effect-size component |
-| `pattern_mixture` | Trait pattern × effect-size component |
-| `factor` | Sparse marker/gene membership in one or more latent factors |
+| `binary` | Null versus active |
+| `mixture` | BayesR/BayesRC component |
+| `trait_pattern` | Explicit multivariate activity pattern |
+| `pattern_mixture` | Trait pattern × mixture component |
+| `sparse_factor` | Sparse row-factor membership |
 
 ### Probability policies
 
 | ID | Meaning |
 |---|---|
-| `global_binary` | Global BayesC inclusion probability |
-| `global_dirichlet` | Global multinomial mixture probabilities |
+| `global_binary` | Global BayesC inclusion |
+| `fixed_marker` | Fixed marker inclusion probabilities |
+| `global_dirichlet` | Global mixture probabilities |
 | `group` | Group-specific probabilities |
-| `annot_logit` | Annotation-dependent Bernoulli/logit probabilities |
-| `annot_probit_stick` | Annotation-dependent mutually exclusive component probabilities |
-| `factor_annot` | Independent annotation-informed factor membership probabilities |
+| `annot_logit` | Annotation-dependent binary probability |
+| `annot_probit_stick` | Annotation-dependent mixture probability |
+| `factor_membership` | Annotation-informed factor membership |
 
 ### Scale policies
 
 | ID | Meaning |
 |---|---|
-| `unit` | No marker-specific scaling |
-| `fixed_marker` | User-supplied marker multiplier |
-| `maf_s` | MAF-dependent `selection_s` multiplier |
+| `unit` | No marker-specific scale |
+| `fixed_marker` | Fixed marker multiplier |
+| `maf_s` | `selection_s` MAF scaling |
+| `component` | BayesR/BayesRC component multiplier |
 | `group` | One categorical group layer |
-| `hierarchy` | Multiple multiplicative categorical layers |
-| `log_additive` | Overlapping annotation incidence on log scale |
-| `component` | BayesR/RC fixed component multipliers \(\gamma_k\) |
-| `composite` | Product of two or more scale policies |
+| `hierarchy` | Multiple categorical layers |
+| `log_additive` | Overlapping annotation log-scale model |
+| `composite` | Product of compatible scales |
 
-### Trait covariance policies
-
-| ID | Meaning |
-|---|---|
-| `scalar` | Single trait |
-| `diagonal` | Independent trait-specific variances |
-| `full` | Full trait covariance |
-| `factor_analytic` | Low-rank plus diagonal covariance |
-
-### Data operators
+### Covariance policies
 
 | ID | Meaning |
 |---|---|
-| `dense_individual` | Dense individual-level \(X,y\) |
-| `bed` | Packed PLINK BED |
-| `dense_summary` | Dense sufficient statistics |
-| `csr` | Sparse-CSR LD sufficient statistics |
-| `block_eigen` | Block-eigen LD approximation |
-| `evidence` | Gene/SNP-by-trait evidence matrix |
+| `scalar` | Single-trait variance |
+| `diagonal` | Independent trait variances |
+| `full` | Full small-\(T\) covariance |
+| `factor_analytic` | Low-rank plus diagonal |
 
 ---
 
-## 3. Regression model matrix
+## 4. Regression model matrix
 
-| Model | State | Probability | Scale | Trait covariance | Data | Status | Primary output |
-|---|---|---|---|---|---|---|---|
-| ST BayesC | binary | global_binary | unit | scalar | CSR, BED | Current | `bm`, `dm`, variance traces |
-| ST BayesC + fixed marker priors | binary | fixed/global | fixed_marker | scalar | CSR | Current | effects and resolved marker priors |
-| ST learned annotation BayesC | binary | annot_logit/global | optional learned scale | scalar | CSR | Current | annotation effects and PIPs |
-| ST group BayesC | binary | group | group | scalar | CSR | Current | group probabilities and multipliers |
-| ST BayesC + `selection_s` | binary | global_binary | maf_s | scalar | CSR | Current | effects and sampled/fixed \(S\) |
-| ST BayesR | mixture | global_dirichlet | component | scalar | CSR, BED | Current | component probabilities |
-| ST SBayesRC | mixture | annot_probit_stick | component | scalar | CSR | Current | component probabilities and annotation effects |
-| ST BED BayesRC | mixture | annot_probit_stick | component | scalar | BED | Current | individual-level BayesRC outputs |
-| ST hierarchical BayesC | binary | global_binary | hierarchy | scalar | CSR first | Planned | layer multipliers and effective scale |
-| ST hierarchical BayesR | mixture | global_dirichlet | component × hierarchy | scalar | CSR first | Planned | components plus hierarchy |
-| ST hierarchical BayesRC | mixture | annot_probit_stick | component × hierarchy | scalar | CSR first | Planned | annotation membership plus hierarchy |
-| ST overlapping hierarchy | binary/mixture | compatible | log_additive | scalar | CSR | Deferred | log-scale annotation coefficients |
-| MT BayesC | trait_pattern | global_dirichlet | unit | full/diagonal | legacy dense/summary | Partial | pattern probabilities and covariance |
-| Canonical MT BayesC | trait_pattern | global_dirichlet | unit | selected canonical policy | dense then CSR | Planned | named multivariate raw output |
-| MT independent BayesC | trait_pattern or separate binary | global_binary | unit | diagonal | dense/CSR | Planned | trait-specific effects |
-| MT shared BayesC | shared/null pattern | global_binary | unit | full | shared design | Planned | shared PIP and correlated effects |
-| MT hierarchical BayesC | trait_pattern | global_dirichlet | hierarchy | full/diagonal | dense/CSR | Planned | patterns, covariance, hierarchy |
-| MT BayesR | pattern_mixture | global_dirichlet | component | full/diagonal | dense/CSR | Planned | pattern-component probabilities |
-| MT BayesRC | pattern_mixture | annotation-informed | component | full/diagonal | dense/CSR | Deferred | marker pattern-component probabilities |
-| MT hierarchical BayesRC | pattern_mixture | annotation-informed | component × hierarchy | full/diagonal | dense/CSR | Deferred | full composed prior |
-| Factor-analytic MT-BLR | factor | factor prior | factor/composite | factor_analytic | dense/CSR | Planned later | marker-factor and trait loadings |
+| Model | Kernel | State | Probability | Scale | Covariance | Operator | Current implementation | Migration treatment | Extension readiness |
+|---|---|---|---|---|---|---|---|---|---|
+| ST BayesC CSR | scalar | binary | global_binary | unit | scalar | CSR | Current unscheduled CSR | Preserve and wrap | First architecture reference |
+| ST BayesC scheduled CSR | scalar | binary | global_binary | unit | scalar | CSR | Current scheduled CSR | Correct RNG, then migrate | After RNG remediation |
+| ST BayesC BED | scalar | binary | global_binary | unit | scalar | BED | Current BED kernels | Preserve decoder/kernel, refactor boundary | After CSR architecture proven |
+| ST BayesC fixed marker prior | scalar | binary | fixed_marker/global | fixed_marker | scalar | CSR | Current prior backend | Preserve and migrate | Good scale/probability test |
+| ST BayesC + `selection_s` | scalar | binary | global_binary | maf_s | scalar | CSR | Current | Preserve and migrate | Good composite-scale test |
+| ST group BayesC | scalar | binary | group | group | scalar | CSR | Current | Preserve behavior; hierarchy design separate | One-layer reference |
+| ST learned annotation BayesC | scalar | binary | annot_logit | learned annotation scale | scalar | CSR | Current | Preserve kernel; extract reusable utilities cautiously | Later scalar policy migration |
+| ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Current | Preserve and migrate | Second core model |
+| ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | BED | Current | Preserve and migrate after CSR | Operator reuse test |
+| ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Current | Preserve kernel; extract stick utilities | Probability-policy reference |
+| ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Current | Preserve and migrate | Cross-operator policy test |
+| ST hierarchical BayesC | scalar | binary | global_binary | hierarchy | scalar | CSR first | Not implemented | New policy on migrated scalar core | Planned |
+| ST hierarchical BayesR | scalar | mixture | global_dirichlet | component × hierarchy | scalar | CSR first | Not implemented | Compose after hierarchy | Planned |
+| ST hierarchical BayesRC | scalar | mixture | annot_probit_stick | component × hierarchy | scalar | CSR first | Not implemented | Compose after BayesRC migration | Planned |
+| MT BayesC legacy | small_mt | trait_pattern | global pattern | unclear/inconsistent | full/diagonal | dense/CSR variants | Legacy experimental | Retain only as reference; rewrite canonical model | Not extension base |
+| Canonical MT BayesC | small_mt | trait_pattern | global pattern | unit/hierarchy later | fixed/diagonal/full | dense exact first | Not implemented | New implementation | Planned |
+| MT BayesR | small_mt | pattern_mixture | global_dirichlet | component | diagonal/full | dense then CSR | Not implemented | New implementation | Planned later |
+| MT BayesRC | small_mt | pattern_mixture | annotation-informed | component | diagonal/full | dense then CSR | Not implemented | New implementation | Deferred |
+| Factor-analytic MT-BLR | factor | sparse_factor | factor policy | factor scale | factor_analytic | dense/summary | Not implemented | New implementation | Planned later |
 
 ---
 
-## 4. Evidence-factor model matrix
+## 5. Evidence-factor matrix
 
-| Model | Row unit | Observation model | Membership | Annotation role | Mapping | Status |
-|---|---|---|---|---|---|---|
-| Gene-level Gaussian factor model | gene | Gaussian with trait residual variance | dense Gaussian | none | none | First planned factor model |
-| Sparse gene factor model | gene | Gaussian | spike-and-slab | none | none | Planned |
-| Annotation-informed gene factor model | gene | Gaussian | Bernoulli/probit or logit | gene-factor membership | none | Planned |
-| Multi-view gene factor model | gene | view-specific Gaussian | shared factors | gene annotations | molecular anchors | Planned later |
-| SNP-level factor model | SNP/fine-mapped unit | Gaussian or transformed evidence | sparse | SNP-factor membership | fixed \(S\) post hoc | Deferred until gene model validated |
-| LD-aware SNP factor model | SNP | correlated residual/LD-aware | sparse | SNP-factor membership | fixed/uncertain \(S\) | Deferred research extension |
-| Joint uncertain SNP-to-gene model | SNP and gene | joint hierarchical | sparse | SNP and gene priors | sampled \(S\) | Deferred |
-| Pathway factor model | pathway | derived/posterior mapping | inherited | pathway annotations | \(C^\top Z\) | Post-processing first |
+| Model | Row unit | Likelihood | Membership | Annotation role | Migration status |
+|---|---|---|---|---|---|
+| Gene Gaussian factor model | gene | Gaussian with uncertainty | dense or sparse | none initially | Planned |
+| Annotation-informed gene factor | gene | Gaussian | sparse factor membership | gene-factor probability | Planned later |
+| Multi-view gene factor | gene | view-specific Gaussian | shared factors | annotations and anchors | Deferred |
+| SNP evidence factor | SNP | transformed/uncertainty-aware | sparse | SNP-factor probability | Deferred until gene model validated |
+| LD-aware SNP factor | SNP | correlated residual | sparse | SNP-factor probability | Research extension |
+| Pathway propagation | pathway | posterior mapping | inherited | pathway annotations | Post-processing first |
 
 ---
 
-## 5. Data-operator compatibility
+## 6. Operator capability matrix
 
-Legend:
-
-- **Yes** — intended supported combination.
-- **Reference** — current/legacy path used for validation.
-- **Later** — planned after a reference implementation.
-- **No** — invalid or intentionally out of scope.
-
-| Model family | dense individual | BED | dense summary | CSR | block-eigen | evidence |
-|---|---:|---:|---:|---:|---:|---:|
-| ST BayesC | Later/reference | Yes | Reference | Yes | Yes/internal | No |
-| ST BayesR | Later/reference | Yes | Reference | Yes | Yes/internal | No |
-| ST BayesRC | Later | Yes | Later | Yes | Internal/partial | No |
-| ST hierarchy | Later | Later | Later | First target | Later | No |
-| Canonical MT BayesC | First/reference | Later | First/reference | Later | Later | No |
-| MT mixture models | Later | Later | Later | Later | Later | No |
-| Factor-analytic MT-BLR | First | Later | Later | Later | Later | No |
-| Gene evidence factor | No | No | No | No | No | Yes |
-| SNP evidence factor | No | No | No | optional LD metadata | optional | Yes |
-
----
-
-## 6. Trait-design contracts
-
-| Data/design case | Full effect covariance | Full residual covariance | Notes |
-|---|---:|---:|---|
-| Same individuals and same genotype matrix | Yes | Yes | Cross-trait phenotype products are identifiable |
-| Same genotype matrix, different phenotypes with missingness | Conditional | Conditional | Requires explicit missingness/sufficient-statistic contract |
-| Partially overlapping GWAS samples | Yes for prior | Only with overlap information | Must not infer residual covariance from marginal summaries alone |
-| Independent GWAS samples | Yes for prior | Usually diagonal | Genetic covariance and residual covariance are distinct |
-| Gene/SNP evidence matrix | Factor covariance | Trait residual covariance by observation model | Separate factor likelihood |
-
----
-
-## 7. Hierarchy capability levels
-
-| Capability | Version 1 | Later |
-|---|---:|---:|
-| Multiple categorical layers | Yes | Yes |
-| One membership per marker per layer | Yes | Yes |
-| Fixed layer multipliers | Yes | Yes |
-| Learned conjugate layer multipliers | Yes | Yes |
-| Weighted geometric normalization | Yes | Yes |
-| Trait-specific multipliers | Optional after ST | Yes |
-| Component-independent BayesRC hierarchy | Yes after BayesC | Yes |
-| Component-specific hierarchy | No | Deferred |
-| Overlapping incidence matrices | No | Yes through log-additive policy |
-| Nonlinear annotation encoder | No | Research extension |
-| Combination with `selection_s` | Planned | Yes |
-
----
-
-## 8. Multivariate sharing modes
-
-| Mode | State representation | Intended trait count | Comments |
-|---|---|---:|---|
-| `independent` | independent binary states or restricted patterns | small to moderate | Diagonal prior covariance or separate fits |
-| `shared` | null versus all-traits-active | small to moderate | One shared marker inclusion |
-| `patterns` | explicit user patterns | small | Avoid automatic \(2^T\) explosion |
-| `factor` | sparse latent factors | moderate to large | Preferred scalable multivariate strategy |
-
-The framework should never silently enumerate an impractical number of states.
-
----
-
-## 9. Covariance policy matrix
-
-| Policy | Prior/update | Small \(T\) | Large \(T\) | Initial status |
-|---|---|---:|---:|---|
-| Scalar | inverse-chi-square | Yes | N/A | Current |
-| Diagonal | independent inverse-chi-square | Yes | Yes | Planned canonical option |
-| Full inverse-Wishart | inverse-Wishart | Yes | No | Candidate after audit |
-| Separation strategy | variance + correlation priors | Yes | Limited | Deferred until formally specified |
-| Factor analytic | loading/shrinkage priors | Yes | Yes | Planned later |
-| Fixed covariance | user supplied | Yes | Yes | Planned validation mode |
-
-No covariance policy should be called simply `sampleB()` in the new core.
-
----
-
-## 10. Public interface mapping
-
-Existing public wrappers should map to resolved specifications.
-
-| Public call | Resolved state | Probability | Scale | Operator |
+| Operator | Current status | Strengths | Migration treatment | First supported kernels |
 |---|---|---|---|---|
-| `stblr_csr(method="bayesc")` | binary | global_binary | unit/MAF | CSR |
-| `stblr_bed(method="bayesc")` | binary | global_binary | unit | BED |
-| `stblr_csr(method="bayesr")` | mixture | global_dirichlet | component/MAF | CSR |
-| `stblr_bed(method="bayesr")` | mixture | global_dirichlet | component | BED |
-| `stblr_csr_annot(annotation_model="sbayesrc")` | mixture | annot_probit_stick | component/MAF | CSR |
-| `stblr_bed(method="bayesrc")` | mixture | annot_probit_stick | component | BED |
-| future hierarchical wrapper | binary/mixture | compatible | hierarchy/composite | CSR first |
-| future canonical MT wrapper | trait_pattern | global/annotation | compatible | dense/CSR |
-| future factor wrapper | factor | factor_annot | factor | evidence or regression |
+| CSR | Current and validated | scalable summary-statistics residual updates | Preserve and formalize ownership/interface | scalar BayesC/R/RC |
+| Block eigen | Current internal/experimental | shared operator concept | Preserve implementation; migrate after CSR | scalar models |
+| Packed BED | Current and efficient | direct genotype access and low memory | Preserve decoder and score/update logic; separate binding | scalar BayesC/R/RC |
+| Dense individual | Partial/reference | exact shared-design likelihood | New clean operator | canonical MT reference |
+| Dense summary | Legacy/partial | exact sufficient statistics when complete | New clean operator based on explicit contract | canonical MT reference |
+| Evidence matrix | Not implemented | direct factor input | New frontend | factor models |
 
 ---
 
-## 11. Output capability matrix
+## 7. Migration treatment matrix
 
-| Output namespace | BayesC | BayesR/RC | Hierarchy | MT patterns | Factor model |
-|---|---:|---:|---:|---:|---:|
-| `marker` | Yes | Yes | Yes | Yes | row loadings |
-| `trace` | Yes | Yes | Yes | Yes | Yes |
-| `state` | binary | component | binary/component | pattern | factor membership |
-| `component` | No | Yes | optional | optional | No |
-| `pattern` | No | No | No | Yes | No |
-| `annotation` | optional | BayesRC | optional | optional | membership effects |
-| `hierarchy` | No | No | Yes | Yes | optional |
-| `trait` | variance | variance | variance | covariance | trait loadings |
-| `residual` | variance | variance | variance | covariance | observation residual |
-| `factor` | No | No | No | factor-analytic only | Yes |
-| `chains` | optional | optional | optional | optional | required for alignment |
-
-Common formatted aliases may remain at the top level, but namespaced output is authoritative.
-
----
-
-## 12. Explicitly deferred combinations
-
-The following should not be implemented during the initial framework migration:
-
-- arbitrary overlapping hierarchy layers;
-- component-specific hierarchy parameters for every BayesRC component;
-- automatic \(K^T\) trait-component combinations;
-- genome-wide LD-aware SNP factorization;
-- joint sampling of uncertain SNP-to-gene links;
-- nonlinear/deep annotation encoders;
-- simultaneous migration of all legacy multivariate algorithms;
-- performance optimization before a validated reference implementation.
+| Component | Treatment | Reason |
+|---|---|---|
+| Unscheduled CSR BayesC hot loop | Preserve | coherent, fast, tested |
+| CSR operator logic | Preserve/extract | strongest current operator abstraction |
+| BayesR/BayesRC scalar kernels | Preserve/migrate | efficient and validated |
+| BED decoder and residual updates | Preserve/extract | optimized and memory efficient |
+| Block-eigen operator | Preserve/migrate | already separated conceptually |
+| Chain seed helpers | Extract | reusable and validated |
+| Recent chain-local RNG patterns | Extract | canonical reproducibility model |
+| Persistent thread-local distributions | Correct | localized reproducibility risk |
+| Raw `stblr_raw_v1` formatter | Preserve during migration | stable current public contract |
+| Rcpp result construction in kernels | Move to binding boundary | prevents language-neutral core |
+| Annotation stick-breaking math | Extract carefully | shared across operators |
+| Group normalization | Preserve as legacy behavior | not identical to future hierarchy normalization |
+| Legacy multivariate sampler | Rewrite | unresolved statistical contract |
+| Positional MT output | Replace | unsuitable for extension |
+| Obsolete duplicate MT covariance helpers | Remove after replacement | maintenance burden |
 
 ---
 
-## 13. Framework readiness checklist
+## 8. Shared infrastructure readiness
 
-A new model/data combination is supported only when:
-
-- the state, probability, scale, covariance, and operator policies are identified;
-- the data-design contract is valid;
-- a reduction path exists;
-- deterministic RNG tests pass;
-- output namespaces are defined;
-- simulation recovery tests pass;
-- unaffected model regressions pass;
-- documentation states current limitations.
+| Infrastructure | Current readiness | Phase |
+|---|---|---|
+| Typed specifications | Not implemented | Phase 1 |
+| Typed result vocabulary | Not implemented | Phase 1 |
+| Language-neutral error boundary | Partial | Phase 1–2 |
+| Chain/RNG contract | Strong examples, duplicated | Phase 1–3 |
+| Posterior accumulation | Exists in several kernels | Phase 2–3 |
+| Probability utility layer | Partial/duplicated | Phase 3–4 |
+| Scale-policy interface | Conceptual/current variants | Phase 3–5 |
+| Covariance-policy interface | Scalar strong, MT unresolved | Phase 3 and Phase 7 |
+| CSR operator ownership | Strong partial abstraction | Phase 1–2 |
+| BED operator ownership | Mixed core/binding | Phase 6 |
+| Factor core | Not implemented | Phase 9–10 |
 
 ---
 
-## 14. Language-binding capability matrix
+## 9. Performance and memory expectations
 
-The statistical engine should support a current R binding and preserve the option of a future Python binding.
+| Migration type | Runtime expectation | Memory expectation |
+|---|---|---|
+| Boundary-only refactor | Approximately unchanged | Unchanged |
+| Shared utility extraction | No material regression | No material regression |
+| RNG correction | Small acceptable variation only if justified | Unchanged |
+| Operator migration | No material regression | No material regression |
+| New MT implementation | Establish reference first; optimize before production | Explicit memory target |
+| New factor implementation | Benchmark against scientific alternatives | Output-dependent and documented |
 
-| Layer | R now | Python now | Python later | Core requirement |
-|---|---:|---:|---:|---|
-| Public package interface | Yes | No | Yes | Binding-specific |
-| Input validation and friendly errors | Yes | No | Yes | Mostly binding-specific |
-| Marker/trait name alignment | Yes | No | Yes | Shared semantics, separate adapters |
-| Typed model specification | Internal | No | Shared | Ordinary C++ |
-| Statistical sampler | Yes through R | No | Same sampler | Ordinary C++ only |
-| Chain RNG | Yes | No | Same behavior | Standard C++ chain-owned RNG |
-| Likelihood operators | Yes | No | Shared | Ordinary C++ |
-| Typed result object | Internal target | No | Shared | Ordinary C++ |
-| R raw-list conversion | Yes | N/A | N/A | Rcpp adapter |
-| NumPy/dict conversion | No | No | Yes | Future pybind11 adapter |
-| Progress display | R adapter | No | Python adapter | Generic callback or diagnostics |
-| Exception translation | R error | No | Python exception | Standard C++ exceptions in core |
-| Disk-backed LD/BED access | Yes | No | Shared | Language-neutral file formats |
+A working backend should not be replaced if the migrated implementation has an unexplained runtime or peak-memory regression.
 
-### Required current-stage constraints
+---
 
-- Core model and sampler headers must not require Rcpp.
-- Core stochastic code must not use `R::rnorm`, `R::rchisq`, `arma::randn`, or equivalent runtime-global RNG.
-- Core results must not be created as `Rcpp::List`.
-- Core errors must use standard C++ exceptions.
-- Core dimensions must follow the canonical conventions in the implementation plan.
-- No Python dependency is added at this stage.
-- No stable public C++ ABI is promised at this stage.
+## 10. Optional memory-heavy outputs
 
-### Future Python scope
+| Output | Default recommendation |
+|---|---|
+| Marker posterior mean | On |
+| Marker PIP | On |
+| Global parameter traces | On with thinning |
+| Full marker samples | Off |
+| Per-chain marker summaries | Off unless requested |
+| Marker × component probability | Model-dependent; configurable |
+| Final residual vector | Off unless diagnostic |
+| Full CPO diagnostics | Off unless requested |
+| Factor chain loadings | Retain only as needed for alignment/summary |
 
-A future Python interface may provide:
+---
 
-- NumPy input/output conversion;
-- Python model-specification classes or dataclasses;
-- pybind11 exception translation;
-- Python-native progress and diagnostics;
-- access to the same language-neutral CSR and BED resources.
+## 11. Trait-design contracts
 
-It must not contain a second implementation of the statistical methods.
+| Design | Effect covariance | Residual covariance | Support |
+|---|---:|---:|---|
+| Same individuals and design | Full allowed | Full allowed | Planned canonical MT |
+| Same design with structured missingness | Conditional | Conditional | Requires explicit sufficient statistics |
+| Partially overlapping studies | Prior covariance possible | Only with overlap information | Future |
+| Independent studies | Prior covariance possible | Usually diagonal | Planned restricted mode |
+| Evidence matrix | Factor covariance | Observation-model residual | Separate factor frontend |
+
+---
+
+## 12. Replacement readiness checklist
+
+A model/operator route may become canonical when:
+
+- typed specification exists;
+- core/binding boundary is clear;
+- statistical reduction tests pass;
+- reproducibility tests pass;
+- runtime has no unexplained material regression;
+- peak memory has no meaningful regression;
+- output semantics are documented;
+- legacy implementation has a removal plan;
+- the extension path is clearer than before.
