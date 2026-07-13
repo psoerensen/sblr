@@ -661,7 +661,7 @@ NULL
   }
  }
 
- if (identical(model, "bayesr") || identical(model, "sbayesrc")) {
+ if (model %in% c("bayesr", "sbayesrc", "bayesrc")) {
   prob <- raw$component$prob
   if (is.null(prob)) {
    add("raw$component$prob is required for model '", model, "'.")
@@ -694,7 +694,7 @@ NULL
      " (component columns), got ", length(comp_names), "."
     )
    }
-   null_component <- if (identical(model, "sbayesrc")) "gamma_0.00" else "component_0"
+   null_component <- if (model %in% c("sbayesrc", "bayesrc")) "gamma_0.00" else "component_0"
    if (!is.null(comp_names) && !(null_component %in% comp_names)) {
     add(
      "raw$component$names is missing the required null component '",
@@ -704,7 +704,7 @@ NULL
   }
  }
 
- if (identical(model, "sbayesrc")) {
+ if (model %in% c("sbayesrc", "bayesrc")) {
   alpha <- raw$annotation$alpha_mean %||% raw$annotation$alpha
   if (!is.null(alpha) && (!is.list(alpha) || length(alpha) != nt)) {
    add(
@@ -821,7 +821,7 @@ NULL
  )
  if (identical(meta$model, "bayesr")) {
   out$component <- out$d
- } else if (identical(meta$model, "sbayesrc")) {
+ } else if (meta$model %in% c("sbayesrc", "bayesrc")) {
   out$component <- out$d
  }
 
@@ -830,7 +830,7 @@ NULL
  pi_names <- raw$pi$names %||% paste0("component_", seq_len(ncol(pi_final)) - 1L)
  colnames(pi_final) <- colnames(pi_mean) <- pi_names
  rownames(pi_final) <- rownames(pi_mean) <- trait_names
- if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
+ if (meta$model %in% c("bayesr", "sbayesrc", "bayesrc")) {
   out$pi <- pi_final
   out$pim <- pi_mean
   out$final_pi <- pi_final
@@ -842,7 +842,7 @@ NULL
 
  out <- .stblr_ensure_chain_summary_fields(out, raw, meta, marker_mat)
 
- if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
+ if (meta$model %in% c("bayesr", "sbayesrc", "bayesrc")) {
   component_names <- raw$component$names %||% pi_names
   comp_prob <- raw$component$prob
   if (is.list(comp_prob) && length(comp_prob) == nt) {
@@ -854,7 +854,7 @@ NULL
    })
    names(comp_prob) <- trait_names
    out$comp_prob <- comp_prob
-   null_component <- if (identical(meta$model, "sbayesrc")) {
+   null_component <- if (meta$model %in% c("sbayesrc", "bayesrc")) {
     "gamma_0.00"
    } else {
     "component_0"
@@ -898,12 +898,12 @@ NULL
     component_names
    )
   }
-  if (identical(meta$model, "sbayesrc")) {
+  if (meta$model %in% c("sbayesrc", "bayesrc")) {
    out$gamma <- out$mixture_var
   }
  }
 
- if (identical(meta$model, "sbayesrc")) {
+ if (meta$model %in% c("sbayesrc", "bayesrc")) {
   annotation_names <- raw$annotation$annotation_names
   if (is.null(annotation_names)) {
    annotation_names <- paste0("A", seq_len(as.integer(meta$n_annotations)))
@@ -933,6 +933,36 @@ NULL
    rownames(sigma) <- trait_names
    colnames(sigma) <- step_names
    out$sigmaSqAlpha <- sigma
+  }
+  if (is.list(raw$annotation$alpha_final) &&
+      length(raw$annotation$alpha_final) == nt) {
+   out$alpha_final <- lapply(seq_len(nt), function(tt) {
+    x <- as.matrix(raw$annotation$alpha_final[[tt]])
+    rownames(x) <- annotation_names
+    colnames(x) <- step_names
+    x
+   })
+   names(out$alpha_final) <- trait_names
+  }
+  if (!is.null(raw$annotation$sigmaSqAlpha_final)) {
+   sigma_final <- as.matrix(raw$annotation$sigmaSqAlpha_final)
+   if (identical(dim(sigma_final), c(length(step_names), nt))) {
+    sigma_final <- t(sigma_final)
+   }
+   rownames(sigma_final) <- trait_names
+   colnames(sigma_final) <- step_names
+   out$sigmaSqAlpha_final <- sigma_final
+  }
+  if (is.list(raw$annotation$marker_prior_final) &&
+      length(raw$annotation$marker_prior_final) == nt) {
+   annotation_prior <- lapply(seq_len(nt), function(tt) {
+    x <- as.matrix(raw$annotation$marker_prior_final[[tt]])
+    rownames(x) <- variable_names
+    colnames(x) <- raw$component$names %||% pi_names
+    x
+   })
+   names(annotation_prior) <- trait_names
+   out$annotation_prior <- annotation_prior
   }
  }
 
@@ -1021,7 +1051,7 @@ NULL
   out$nsamples <- named_trait_vec(raw$diagnostics$nsamples)
  }
  if (!is.null(raw$diagnostics$n_used)) {
-  out$n_used <- named_trait_vec(raw$diagnostics$n_used)
+  out$n_used <- named_trait_vec(rep(as.numeric(raw$diagnostics$n_used), length.out = nt))
  }
  out$diagnostics <- raw$diagnostics
 
@@ -1056,8 +1086,16 @@ NULL
    colnames(trait_ld) <- c("attempted", "accepted", "acceptance_rate")
    for (cc in seq_len(nch)) {
     ch <- trait_raw[[cc]]
-    if (is.null(ch)) {
-     next
+   if (is.null(ch)) {
+    next
+   }
+    if (identical(meta$model, "bayesrc") && is.null(ch$marker)) {
+     ch <- list(
+      marker = list(bm = ch$bm, dm = ch$dm, state = ch$state),
+      component = list(prob = ch$comp_prob),
+      annotation = list(alpha = ch$alpha, sigmaSqAlpha = ch$sigmaSqAlpha),
+      trace = list(pis = ch$pis)
+     )
     }
     trait_chains[[cc]] <- list(
      dm = stats::setNames(as.numeric(ch$marker$dm), variable_names),
@@ -1068,7 +1106,7 @@ NULL
       as.numeric(ch$marker$state), variable_names
      )
     }
-    if (identical(meta$model, "bayesr") || identical(meta$model, "sbayesrc")) {
+    if (meta$model %in% c("bayesr", "sbayesrc", "bayesrc")) {
      trait_chains[[cc]]$component <- trait_chains[[cc]]$state
      if (!is.null(ch$component$prob)) {
       cp <- as.matrix(ch$component$prob)
@@ -1096,7 +1134,7 @@ NULL
        as.numeric(ch$component$ncomp), raw$component$names %||% pi_names
       )
      }
-     if (identical(meta$model, "sbayesrc") && !is.null(ch$annotation$alpha)) {
+     if (meta$model %in% c("sbayesrc", "bayesrc") && !is.null(ch$annotation$alpha)) {
       alpha <- as.matrix(ch$annotation$alpha)
       annotation_names <- raw$annotation$annotation_names %||%
        paste0("A", seq_len(as.integer(meta$n_annotations)))
@@ -1105,7 +1143,7 @@ NULL
       colnames(alpha) <- step_names
       trait_chains[[cc]]$alpha <- alpha
      }
-     if (identical(meta$model, "sbayesrc") && !is.null(ch$annotation$sigmaSqAlpha)) {
+     if (meta$model %in% c("sbayesrc", "bayesrc") && !is.null(ch$annotation$sigmaSqAlpha)) {
       step_names <- paste0("step_", seq_len(max(0L, as.integer(meta$n_components) - 1L)))
       trait_chains[[cc]]$sigmaSqAlpha <- stats::setNames(
        as.numeric(ch$annotation$sigmaSqAlpha), step_names
@@ -1179,8 +1217,8 @@ NULL
   out$chains <- chains
   if (length(ld_swap_chains)) out$ld_swap_chains <- ld_swap_chains
  } else {
-  out$chains <- NULL
-  out$ld_swap_chains <- NULL
+  out["chains"] <- list(NULL)
+  out["ld_swap_chains"] <- list(NULL)
  }
 
  if (!is.null(raw$selection$trace)) {
@@ -2859,6 +2897,12 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   stop("nchains must be a positive integer scalar.")
  }
  nchains <- as.integer(nchains)
+ if (!is.logical(keep_chains) || length(keep_chains) != 1L || is.na(keep_chains)) {
+  stop("keep_chains must be TRUE or FALSE.")
+ }
+ if (method != "bayesrc" && isTRUE(keep_chains)) {
+  stop("keep_chains = TRUE is currently supported by stblr_bed() only for method = 'bayesrc'.")
+ }
  if (!is.logical(keep_chains) || length(keep_chains) != 1L ||
      is.na(keep_chains)) {
   stop("keep_chains must be TRUE or FALSE.")
@@ -3710,8 +3754,8 @@ stblr_bed_marker <- function(
  method <- tolower(method)
  if (length(method) > 1L) method <- method[1L]
  if (length(method) < 1L || is.na(method) ||
-     !method %in% c("bayesc", "bayesr")) {
-  stop("method must be one of 'bayesc' or 'bayesr'.")
+     !method %in% c("bayesc", "bayesr", "bayesrc")) {
+  stop("method must be one of 'bayesc', 'bayesr', or 'bayesrc'.")
  }
  method
 }
@@ -3720,13 +3764,19 @@ stblr_bed_marker <- function(
 #'
 #' Fits individual-level ST-BLR models directly from PLINK BED files referenced
 #' by a BED-backed `Glist`. This is the individual-level analogue of
-#' [stblr_csr()] for the plain BayesC and BayesR model families.
+#' [stblr_csr()] for BayesC and BayesR, and also exposes individual-level
+#' BayesRC with annotation-dependent probit stick-breaking component
+#' probabilities.
 #'
 #' `method = "bayesc"` fits the BayesC BED scheduled-chain backend.
 #' `method = "bayesr"` fits the BayesR BED scheduled-chain backend. For BayesR,
 #' `dm` is `P(component > 0)`, `comp_prob` contains marker-by-component
 #' posterior probabilities, and `dm_component_mean` contains posterior mean
 #' component indices. BED scheduled-chain fits expose CPO/log-CPO diagnostics.
+#' `method = "bayesrc"` fits the unscheduled full-sweep BED BayesRC backend.
+#' Annotation rows are matched to the final marker order selected by `chr` and
+#' `cls`; matrices without marker row names are accepted only when already
+#' aligned and their row count exactly matches the selected marker count.
 #'
 #' @param y Phenotype vector or matrix. If `y` is a vector, `names(y)` must
 #'   contain individual IDs matching `Glist$ids`. If `y` is a matrix,
@@ -3749,7 +3799,9 @@ stblr_bed_marker <- function(
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
-#' @param nchains Number of scheduled MCMC chains.
+#' @param nchains Number of MCMC chains.
+#' @param keep_chains Logical; retain compact trait-by-chain summaries for
+#'   BayesRC. Other BED methods do not currently retain compact chains.
 #' @param chain_seeds Optional explicit chain seeds. Not currently supported by
 #'   the BED scheduled-chain backends.
 #' @param pi_init Initial BayesC marker inclusion probability.
@@ -3766,9 +3818,34 @@ stblr_bed_marker <- function(
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param mixture_var BayesR mixture variance multipliers. The first value must
 #'   be zero and non-null values must be positive.
-#' @param pi Initial BayesR mixture probabilities. Defaults to total non-null
-#'   probability 0.001 split equally across non-null components.
+#' @param pi Initial BayesR mixture probabilities. For BayesRC these are the
+#'   baseline component probabilities converted to probit stick-breaking
+#'   intercepts. Defaults to total non-null probability 0.001 split equally
+#'   across non-null components.
 #' @param alpha BayesR Dirichlet prior shape vector for mixture probabilities.
+#' @param annotation Required for BayesRC. A marker-by-annotation numeric
+#'   matrix or data frame. Marker IDs may be row names or a `marker_id`,
+#'   `marker`, `rsid`, or `rsids` column. Extra rows are dropped after matching;
+#'   missing or duplicate selected marker IDs are errors.
+#' @param annot_alpha_init Optional BayesRC annotation coefficient matrix with
+#'   one row per processed annotation and `length(mixture_var) - 1` columns.
+#' @param annot_sigma_sq_alpha_init Optional positive BayesRC annotation-effect
+#'   variances, one per stick-breaking step.
+#' @param updateAlpha Logical; update BayesRC annotation coefficients.
+#' @param annot_alpha_update_every Positive number of iterations between
+#'   BayesRC annotation-prior updates.
+#' @param intercept_flat Logical; use a flat prior for the first, intercept
+#'   annotation coefficient in each stick.
+#' @param sigmaSqAlpha_a,sigmaSqAlpha_b Positive BayesRC annotation-variance
+#'   prior controls.
+#' @param pi_floor Finite probability floor in `(0, 0.5)` for BayesRC
+#'   stick-breaking initialization and marker probabilities.
+#' @param add_intercept Add an intercept as the first BayesRC annotation column
+#'   when an all-ones column is absent.
+#' @param standardize_annotations Standardize non-binary, non-intercept BayesRC
+#'   annotations using the CSR SBayesRC convention.
+#' @param center_binary_annotations Center and standardize binary BayesRC
+#'   annotations. By default binary columns remain on the 0/1 scale.
 #' @param nub,nue Prior degrees of freedom.
 #' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime
 #'   Sampler scheduling and residual-rebuild controls.
@@ -3781,7 +3858,20 @@ stblr_bed_marker <- function(
 #' @return A formatted ST-BLR fit with standard `dm`, `bm`, and `input` fields.
 #'   BayesC fits include `log_cpo`, `mean_log_cpo`, `final_pi`, `mean_pi`, and
 #'   chain-summary matrices. BayesR fits additionally include `comp_prob` and
-#'   `dm_component_mean`.
+#'   `dm_component_mean`. BayesRC fits additionally expose `ncomp`, `alpha`,
+#'   `sigmaSqAlpha`, `annotation_summary`, `annotation_pi`,
+#'   `annotation_effects`, and marker-specific `annotation_prior`. For BayesRC,
+#'   `pi` is the final marker-average component prior, `pim` is its posterior
+#'   mean, and `pis` is the iteration-by-trait mean non-null prior probability.
+#'
+#' @details
+#' BED BayesRC uses the individual-level packed-BED likelihood with
+#' annotation-dependent probit stick-breaking component probabilities. It
+#' always visits every marker on every iteration: adaptive null-marker
+#' scheduling is disabled. `selection_s`, LD-swap, annotation-dependent
+#' effect-size variance multipliers, BED block-eigen fitting, and covariate
+#' adjustment are not supported. Multiple traits are fitted as separate
+#' trait-specific models.
 #'
 #' @examples
 #' \dontrun{
@@ -3800,12 +3890,29 @@ stblr_bed_marker <- function(
 #'   nit = 1000,
 #'   nburn = 100
 #' )
+#'
+#' marker_id <- unlist(Glist$rsids, use.names = FALSE)
+#' annotation <- data.frame(
+#'   coding = rep(c(FALSE, TRUE), length.out = length(marker_id)),
+#'   conserved = seq_along(marker_id) / length(marker_id),
+#'   row.names = marker_id
+#' )
+#' fitRC_bed <- stblr_bed(
+#'   y = y,
+#'   Glist = Glist,
+#'   method = "bayesrc",
+#'   annotation = annotation,
+#'   mixture_var = c(0, 0.01, 0.1, 1),
+#'   nit = 1000,
+#'   nburn = 100,
+#'   nchains = 2
+#' )
 #' }
 #' @export
 stblr_bed <- function(
   y,
   Glist,
-  method = c("bayesc", "bayesr"),
+  method = c("bayesc", "bayesr", "bayesrc"),
   covar = NULL,
   chr = NULL,
   cls = NULL,
@@ -3818,6 +3925,7 @@ stblr_bed <- function(
   ncores = 1,
   seed = 1,
   nchains = 1L,
+  keep_chains = FALSE,
   chain_seeds = NULL,
   pi_init = 0.001,
   pi_vb_init = NULL,
@@ -3833,6 +3941,18 @@ stblr_bed <- function(
   mixture_var = c(0, 0.01, 0.1, 1),
   pi = NULL,
   alpha = NULL,
+  annotation = NULL,
+  annot_alpha_init = NULL,
+  annot_sigma_sq_alpha_init = NULL,
+  updateAlpha = TRUE,
+  annot_alpha_update_every = 10L,
+  intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2,
+  sigmaSqAlpha_b = 2,
+  pi_floor = 1e-12,
+  add_intercept = TRUE,
+  standardize_annotations = TRUE,
+  center_binary_annotations = FALSE,
   nub = 4,
   nue = 4,
   rebuild_every = 25,
@@ -3897,7 +4017,7 @@ stblr_bed <- function(
  }
 
  bayesc_only <- character()
- if (method == "bayesr") {
+ if (method %in% c("bayesr", "bayesrc")) {
   if (!missing(pi_init) && !identical(pi_init, 0.001)) {
    bayesc_only <- c(bayesc_only, "pi_init")
   }
@@ -3919,10 +4039,11 @@ stblr_bed <- function(
   if (length(bayesc_only)) {
    stop(
     "`", paste(bayesc_only, collapse = "`, `"),
-    "` are BayesC-specific. Use `pi` and `alpha` for method = 'bayesr'."
+    "` are BayesC-specific and are unavailable for method = '", method, "'."
    )
   }
- } else {
+ }
+ if (method == "bayesc") {
   bayesr_only <- character()
   if (!missing(mixture_var)) bayesr_only <- c(bayesr_only, "mixture_var")
   if (!missing(pi) && !is.null(pi)) bayesr_only <- c(bayesr_only, "pi")
@@ -3930,7 +4051,43 @@ stblr_bed <- function(
   if (length(bayesr_only)) {
    stop(
     "`", paste(bayesr_only, collapse = "`, `"),
-    "` are BayesR-specific and are only supported with method = 'bayesr'."
+    "` are BayesR-specific or BayesRC-specific and are unavailable for method = 'bayesc'."
+   )
+  }
+  if (!missing(annotation) && !is.null(annotation)) {
+   stop("annotation is only supported with method = 'bayesrc'.")
+  }
+ }
+ if (method == "bayesr") {
+  annotation_only <- character()
+  if (!missing(annotation) && !is.null(annotation)) annotation_only <- c(annotation_only, "annotation")
+  if (!missing(annot_alpha_init) && !is.null(annot_alpha_init)) annotation_only <- c(annotation_only, "annot_alpha_init")
+  if (!missing(annot_sigma_sq_alpha_init) && !is.null(annot_sigma_sq_alpha_init)) {
+   annotation_only <- c(annotation_only, "annot_sigma_sq_alpha_init")
+  }
+  if (length(annotation_only)) {
+   stop("`", paste(annotation_only, collapse = "`, `"),
+        "` are BayesRC-specific and unavailable for method = 'bayesr'.")
+  }
+ }
+ if (method == "bayesrc") {
+  if (is.null(annotation)) stop("annotation is required for method = 'bayesrc'.")
+  if (!missing(alpha) && !is.null(alpha)) {
+   stop("alpha is the BayesR Dirichlet prior and is not used by method = 'bayesrc'; use annot_alpha_init.")
+  }
+  ignored <- character()
+  if (!missing(updatePi)) ignored <- c(ignored, "updatePi")
+  if (!missing(full_sweep_every)) ignored <- c(ignored, "full_sweep_every")
+  if (!missing(null_skip_base)) ignored <- c(ignored, "null_skip_base")
+  if (!missing(null_skip_max)) ignored <- c(ignored, "null_skip_max")
+  if (!missing(candidate_threshold)) ignored <- c(ignored, "candidate_threshold")
+  if (!missing(candidate_lifetime)) ignored <- c(ignored, "candidate_lifetime")
+  if (!missing(skip_nulls_burnin_only)) ignored <- c(ignored, "skip_nulls_burnin_only")
+  if (!missing(progress_every)) ignored <- c(ignored, "progress_every")
+  if (length(ignored)) {
+   warning(
+    "Ignored for method = 'bayesrc' because this backend always uses unscheduled full sweeps: ",
+    paste(ignored, collapse = ", "), call. = FALSE
    )
   }
  }
@@ -3941,8 +4098,162 @@ stblr_bed <- function(
   chr = chr,
   cls = cls,
   block_size = block_size,
-  rows = rows
+ rows = rows
  )
+
+ if (method == "bayesrc") {
+  if (is.null(pi)) {
+   active <- 0.001
+   pi <- c(1 - active, rep(active / (length(mixture_var) - 1L),
+                          length(mixture_var) - 1L))
+  }
+  annotation_info <- .stblr_align_bed_bayesrc_annotations(
+   annotation = annotation,
+   selected_marker_ids = dat$variable_names,
+   add_intercept = add_intercept,
+   standardize_annotations = standardize_annotations,
+   center_binary_annotations = center_binary_annotations
+  )
+  prior_init <- .stblr_initialize_bed_bayesrc_prior(
+   A = annotation_info$A,
+   mixture_var = mixture_var,
+   pi = pi,
+   annot_alpha_init = annot_alpha_init,
+   annot_sigma_sq_alpha_init = annot_sigma_sq_alpha_init,
+   pi_floor = pi_floor
+  )
+  for (nm in c("sigmaSqAlpha_a", "sigmaSqAlpha_b")) {
+   value <- get(nm)
+   if (!is.numeric(value) || length(value) != 1L || !is.finite(value) || value <= 0) {
+    stop(nm, " must be a positive finite scalar.")
+   }
+  }
+  if (!is.numeric(pi_floor) || length(pi_floor) != 1L ||
+      !is.finite(pi_floor) || pi_floor <= 0 || pi_floor >= 0.5) {
+   stop("pi_floor must be a finite scalar in (0, 0.5).")
+  }
+  if (!is.numeric(annot_alpha_update_every) ||
+      length(annot_alpha_update_every) != 1L ||
+      !is.finite(annot_alpha_update_every) || annot_alpha_update_every <= 0 ||
+      annot_alpha_update_every != floor(annot_alpha_update_every)) {
+   stop("annot_alpha_update_every must be a positive integer.")
+  }
+  if (!is.logical(updateAlpha) || length(updateAlpha) != 1L || is.na(updateAlpha)) {
+   stop("updateAlpha must be TRUE or FALSE.")
+  }
+  if (!is.logical(intercept_flat) || length(intercept_flat) != 1L || is.na(intercept_flat)) {
+   stop("intercept_flat must be TRUE or FALSE.")
+  }
+  pi_active <- sum(prior_init$pi[-1L])
+  pri <- .make_stblr_priors(
+   dat$y, dat$m, h2, nub, nue, pi_active, pi_active, dat$trait_names
+  )
+  raw <- .stblr_bed_bayesrc_native(
+   bed_files = dat$bed_files,
+   n = dat$n_total,
+   cls = dat$cls,
+   y = dat$y,
+   b_init = dat$b_init,
+   sets = dat$sets,
+   rows = dat$rows,
+   af = dat$af,
+   scale = scale,
+   B = pri$B,
+   E = pri$E,
+   ssb_prior = pri$ssb_prior_list,
+   sse_prior = pri$sse_prior_list,
+   A = annotation_info$A,
+   gamma = as.numeric(mixture_var),
+   annot_alpha_init = prior_init$annot_alpha_init,
+   annot_sigma_sq_alpha_init = prior_init$annot_sigma_sq_alpha_init,
+   intercept_flat = intercept_flat,
+   sigmaSqAlpha_a = sigmaSqAlpha_a,
+   sigmaSqAlpha_b = sigmaSqAlpha_b,
+   pi_floor = pi_floor,
+   nub = nub,
+   nue = nue,
+   updateAlpha = updateAlpha,
+   updateB = updateB,
+   updateE = updateE,
+   annot_alpha_update_every = as.integer(annot_alpha_update_every),
+   adjE = adjE,
+   nit = as.integer(nit),
+   nburn = as.integer(nburn),
+   nthin = as.integer(nthin),
+   rebuild_every = as.integer(rebuild_every),
+   return_wy = return_wy,
+   return_r = return_r,
+   read_block_size = as.integer(read_block_size),
+   nchains = nchains,
+   keep_chains = keep_chains,
+   ncores = ncores,
+   seed = as.integer(seed)
+  )
+  fit <- .as_stblr_fit(raw, dat$trait_names, dat$variable_names)
+  fit$input <- list(
+   method = "bayesrc",
+   model = "bayesrc",
+   backend = "bed_bayesrc",
+   data_level = "individual",
+   prior_type = "annotation_component",
+   annotations = TRUE,
+   scheduled = FALSE,
+   full_sweeps = TRUE,
+   adaptive_skipping = FALSE,
+   keep_chains = keep_chains,
+   chr = dat$chr,
+   cls = dat$cls,
+   n = dat$n,
+   n_total = dat$n_total,
+   n_used = dat$n_used,
+   m = dat$m,
+   nt = dat$nt,
+   block_size = block_size,
+   sets = dat$sets,
+   h2 = h2,
+   nub = nub,
+   nue = nue,
+   vy = pri$vy,
+   B = pri$B,
+   E = pri$E,
+   ssb_prior = pri$ssb_prior,
+   sse_prior = pri$sse_prior,
+   updateB = updateB,
+   updateE = updateE,
+   updateAlpha = updateAlpha,
+   adjE = adjE,
+   nit = as.integer(nit),
+   nburn = as.integer(nburn),
+   nthin = as.integer(nthin),
+   rebuild_every = as.integer(rebuild_every),
+   ncores = ncores,
+   seed = as.integer(seed),
+   nchains = nchains,
+   read_block_size = as.integer(read_block_size),
+   scale = scale,
+   rows = dat$rows,
+   mixture_var = as.numeric(mixture_var),
+   gamma = as.numeric(mixture_var),
+   baseline_pi = prior_init$pi,
+   pi = prior_init$pi,
+   A = annotation_info$A,
+   annotation_names = colnames(annotation_info$A),
+   n_annotations = ncol(annotation_info$A),
+   selected_marker_ids = dat$variable_names,
+   annotation_intercept = annotation_info$preprocessing$intercept_name,
+   annotation_preprocessing = annotation_info$preprocessing,
+   annotation_alignment = annotation_info$alignment,
+   annot_alpha_init = prior_init$annot_alpha_init,
+   annot_sigma_sq_alpha_init = prior_init$annot_sigma_sq_alpha_init,
+   annot_alpha_update_every = as.integer(annot_alpha_update_every),
+   intercept_flat = intercept_flat,
+   sigmaSqAlpha_a = sigmaSqAlpha_a,
+   sigmaSqAlpha_b = sigmaSqAlpha_b,
+   pi_floor = pi_floor
+  )
+  fit <- .stblr_add_sbayesrc_annotation_aliases(fit)
+  return(fit)
+ }
 
  if (method == "bayesr") {
   if (!is.numeric(mixture_var) || length(mixture_var) < 2L ||

@@ -173,6 +173,25 @@ This path is appropriate when:
 `Glist$rsids`; supplying `cls` explicitly makes the comparison contract
 visible.
 
+For annotation-dependent component probabilities, use selected marker IDs as
+row names and request BED BayesRC:
+
+```r
+annotation <- data.frame(
+  coding = coding[marker_id],
+  conserved = conserved[marker_id],
+  row.names = marker_id
+)
+fit_bed_rc <- stblr_bed(
+  Glist = Glist, y = y, method = "bayesrc",
+  chr = chr, cls = cls, annotation = annotation
+)
+```
+
+The wrapper reorders named annotation rows to the final `chr`/`cls` order.
+See [Annotation-informed models](annotation_informed_models.qmd) for output
+interpretation and current limitations.
+
 ## Path B, Step 1: Deriving `wy`, `ww`, and `yy` With `make_summary_stats()`
 
 `make_summary_stats()` converts the selected BED genotypes and phenotype matrix into

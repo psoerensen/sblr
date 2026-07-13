@@ -130,6 +130,32 @@ stopifnot(
   identical(rownames(A), marker_id)
 )
 
+# Individual-level BED BayesRC --------------------------------------------
+
+# Named annotation rows are aligned to the final Glist$rsids[[chr]][cls]
+# order. Extra annotation rows are allowed; missing selected rows are errors.
+fit_bed_bayesrc <- stblr_bed(
+  y = y,
+  Glist = Glist,
+  chr = chr,
+  method = "bayesrc",
+  annotation = A,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  nit = nit,
+  nburn = nburn,
+  nthin = nthin,
+  ncores = nthreads,
+  seed = seed,
+  nchains = 2L
+)
+
+fit_bed_bayesrc$dm
+fit_bed_bayesrc$comp_prob
+fit_bed_bayesrc$alpha
+fit_bed_bayesrc$sigmaSqAlpha
+fit_bed_bayesrc$pis
+fit_bed_bayesrc$annotation_summary
+
 # Prepare group annotation -------------------------------------------------
 
 group <- ifelse(A[, 1] != 0, "annotated", "background")

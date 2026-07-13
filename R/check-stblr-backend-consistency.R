@@ -667,6 +667,7 @@ print.stblr_backend_check <- function(x, ...) {
     csr_sbayesrc = c("alpha", "sigmaSqAlpha", "comp_prob"),
     csr_bayesr = "comp_prob",
     bed_bayesr = "comp_prob",
+    bed_bayesrc = c("alpha", "sigmaSqAlpha", "comp_prob"),
     character()
   )
   for (nm in expect_fields) {

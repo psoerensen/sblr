@@ -101,3 +101,24 @@ individual-level BayesRC backend. It does not define or expose a public model.
   tarball tests that read repository-only `src/` and `docs/dev/` paths fail
   because those paths are absent from the installed test layout, and existing
   `make_credible_sets.Rd` syntax plus namespace/global-function notes remain
+
+## Sequence 3 Status
+
+- added the public `stblr_bed(method = "bayesrc", annotation = ...)` route
+- annotation rows are matched by marker ID to the exact final BED order formed
+  by concatenating `Glist$rsids[[chr]][cls]`; extra annotation rows are recorded
+  and dropped, while missing or duplicated IDs fail clearly
+- numeric, logical, integer, and factor data-frame annotations are converted to
+  a numeric design, with factors expanded to indicators; intercept addition,
+  continuous-column standardization, and optional binary centering follow the
+  established CSR SBayesRC preparation controls
+- baseline `pi` initializes the probit stick-breaking intercept coefficients;
+  non-intercept coefficients default to zero and `sigmaSqAlpha` defaults to one
+  per stick
+- the validated `bed_bayesrc` `stblr_raw_v1` output is formatted through the
+  shared raw-schema formatter and existing SBayesRC annotation aliases
+- public component, annotation, chain, variance, and CPO outputs are exposed;
+  BayesRC remains unscheduled and full-sweep
+- selection-S, LD-swap, adaptive scheduling, BED block-eigen fitting,
+  annotation-dependent effect-size variances, and covariance adjustment remain
+  disabled

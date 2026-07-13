@@ -117,6 +117,46 @@ stopifnot(nrow(A) == length(marker_id),
 Preparation of `stats`, sparse LD, and marker order is described in
 [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd).
 
+## Individual-Level BED BayesRC
+
+`stblr_bed(method = "bayesrc")` combines the packed-BED individual-level
+likelihood with the probit stick-breaking annotation-prior convention used by
+CSR SBayesRC. The public BED wrapper aligns annotation rows to the final
+concatenated `Glist$rsids[[chr]][cls]` order before native sampling. Named rows
+or a `marker_id`/`rsid` column are recommended; extra rows are ignored after
+matching, but every selected BED marker must match exactly one annotation row.
+
+```r
+marker_id <- unlist(Glist$rsidsLD[chr], use.names = FALSE)
+annotation_bed <- as.data.frame(A)
+rownames(annotation_bed) <- marker_id
+
+fit_bed_bayesrc <- stblr_bed(
+  y = y,
+  Glist = Glist,
+  chr = chr,
+  method = "bayesrc",
+  annotation = annotation_bed,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  nit = 1000,
+  nburn = 100,
+  nchains = 2
+)
+
+fit_bed_bayesrc$dm
+fit_bed_bayesrc$comp_prob
+fit_bed_bayesrc$alpha
+fit_bed_bayesrc$sigmaSqAlpha
+fit_bed_bayesrc$pis
+fit_bed_bayesrc$annotation_summary
+```
+
+Continuous annotations are standardized, binary 0/1 annotations are preserved
+by default, factors are expanded to indicators, and an intercept is prepended
+when absent. BED BayesRC always performs complete marker sweeps. It does not
+support selection-S, LD-swap, annotation-dependent effect-size variance
+multipliers, or BED block-eigen fitting.
+
 Centering has a statistical role beyond numerical convenience. If
 $z_{it}=A_i\eta_t$, a centered predictor is
 

@@ -170,11 +170,13 @@ These backends reuse the same BayesC/BayesR namespace conventions described
 above for their respective model family (CSR BayesC or BayesR semantics for
 `raw$marker`, `raw$pi`, and, for BayesR, `raw$component`).
 
-The internal Sequence 2 individual-level BayesRC backend also returns schema
+The individual-level BayesRC backend also returns schema
 version 1. It identifies itself as model `bayesrc`, backend `bed_bayesrc`, data
 level `individual`, and prior type `annotation_component`. It uses the
-SBayesRC `annotation` and `component` namespaces but is not yet routed through
-the public BED interface.
+SBayesRC `annotation` and `component` namespaces and is routed publicly through
+`stblr_bed(method = "bayesrc")`. The public wrapper supplies marker-aligned
+annotation names before the common raw-to-fit formatter maps annotation and
+component fields into the stable public fit.
 
 ## All Active Backends Are Migrated
 

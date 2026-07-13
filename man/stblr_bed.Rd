@@ -7,7 +7,7 @@
 stblr_bed(
   y,
   Glist,
-  method = c("bayesc", "bayesr"),
+  method = c("bayesc", "bayesr", "bayesrc"),
   covar = NULL,
   chr = NULL,
   cls = NULL,
@@ -20,6 +20,7 @@ stblr_bed(
   ncores = 1,
   seed = 1,
   nchains = 1L,
+  keep_chains = FALSE,
   chain_seeds = NULL,
   pi_init = 0.001,
   pi_vb_init = NULL,
@@ -35,6 +36,18 @@ stblr_bed(
   mixture_var = c(0, 0.01, 0.1, 1),
   pi = NULL,
   alpha = NULL,
+  annotation = NULL,
+  annot_alpha_init = NULL,
+  annot_sigma_sq_alpha_init = NULL,
+  updateAlpha = TRUE,
+  annot_alpha_update_every = 10L,
+  intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2,
+  sigmaSqAlpha_b = 2,
+  pi_floor = 1e-12,
+  add_intercept = TRUE,
+  standardize_annotations = TRUE,
+  center_binary_annotations = FALSE,
   nub = 4,
   nue = 4,
   rebuild_every = 25,
@@ -85,7 +98,10 @@ omitted, subset phenotypes can instead be matched using `rownames(y)` and
 
 \item{seed}{Sampler seed.}
 
-\item{nchains}{Number of scheduled MCMC chains.}
+\item{nchains}{Number of MCMC chains.}
+
+\item{keep_chains}{Logical; retain compact trait-by-chain summaries for
+BayesRC. Other BED methods do not currently retain compact chains.}
 
 \item{chain_seeds}{Optional explicit chain seeds. Not currently supported by
 the BED scheduled-chain backends.}
@@ -113,10 +129,46 @@ parameters. When supplied, these override `pi_prior_mean` and
 \item{mixture_var}{BayesR mixture variance multipliers. The first value must
 be zero and non-null values must be positive.}
 
-\item{pi}{Initial BayesR mixture probabilities. Defaults to total non-null
-probability 0.001 split equally across non-null components.}
+\item{pi}{Initial BayesR mixture probabilities. For BayesRC these are the
+baseline component probabilities converted to probit stick-breaking
+intercepts. Defaults to total non-null probability 0.001 split equally
+across non-null components.}
 
 \item{alpha}{BayesR Dirichlet prior shape vector for mixture probabilities.}
+
+\item{annotation}{Required for BayesRC. A marker-by-annotation numeric
+matrix or data frame. Marker IDs may be row names or a `marker_id`,
+`marker`, `rsid`, or `rsids` column. Extra rows are dropped after matching;
+missing or duplicate selected marker IDs are errors.}
+
+\item{annot_alpha_init}{Optional BayesRC annotation coefficient matrix with
+one row per processed annotation and `length(mixture_var) - 1` columns.}
+
+\item{annot_sigma_sq_alpha_init}{Optional positive BayesRC annotation-effect
+variances, one per stick-breaking step.}
+
+\item{updateAlpha}{Logical; update BayesRC annotation coefficients.}
+
+\item{annot_alpha_update_every}{Positive number of iterations between
+BayesRC annotation-prior updates.}
+
+\item{intercept_flat}{Logical; use a flat prior for the first, intercept
+annotation coefficient in each stick.}
+
+\item{sigmaSqAlpha_a, sigmaSqAlpha_b}{Positive BayesRC annotation-variance
+prior controls.}
+
+\item{pi_floor}{Finite probability floor in `(0, 0.5)` for BayesRC
+stick-breaking initialization and marker probabilities.}
+
+\item{add_intercept}{Add an intercept as the first BayesRC annotation column
+when an all-ones column is absent.}
+
+\item{standardize_annotations}{Standardize non-binary, non-intercept BayesRC
+annotations using the CSR SBayesRC convention.}
+
+\item{center_binary_annotations}{Center and standardize binary BayesRC
+annotations. By default binary columns remain on the 0/1 scale.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 
@@ -137,12 +189,18 @@ progress controls.}
 A formatted ST-BLR fit with standard `dm`, `bm`, and `input` fields.
   BayesC fits include `log_cpo`, `mean_log_cpo`, `final_pi`, `mean_pi`, and
   chain-summary matrices. BayesR fits additionally include `comp_prob` and
-  `dm_component_mean`.
+  `dm_component_mean`. BayesRC fits additionally expose `ncomp`, `alpha`,
+  `sigmaSqAlpha`, `annotation_summary`, `annotation_pi`,
+  `annotation_effects`, and marker-specific `annotation_prior`. For BayesRC,
+  `pi` is the final marker-average component prior, `pim` is its posterior
+  mean, and `pis` is the iteration-by-trait mean non-null prior probability.
 }
 \description{
 Fits individual-level ST-BLR models directly from PLINK BED files referenced
 by a BED-backed `Glist`. This is the individual-level analogue of
-[stblr_csr()] for the plain BayesC and BayesR model families.
+[stblr_csr()] for BayesC and BayesR, and also exposes individual-level
+BayesRC with annotation-dependent probit stick-breaking component
+probabilities.
 }
 \details{
 `method = "bayesc"` fits the BayesC BED scheduled-chain backend.
@@ -150,6 +208,19 @@ by a BED-backed `Glist`. This is the individual-level analogue of
 `dm` is `P(component > 0)`, `comp_prob` contains marker-by-component
 posterior probabilities, and `dm_component_mean` contains posterior mean
 component indices. BED scheduled-chain fits expose CPO/log-CPO diagnostics.
+`method = "bayesrc"` fits the unscheduled full-sweep BED BayesRC backend.
+Annotation rows are matched to the final marker order selected by `chr` and
+`cls`; matrices without marker row names are accepted only when already
+aligned and their row count exactly matches the selected marker count.
+
+
+BED BayesRC uses the individual-level packed-BED likelihood with
+annotation-dependent probit stick-breaking component probabilities. It
+always visits every marker on every iteration: adaptive null-marker
+scheduling is disabled. `selection_s`, LD-swap, annotation-dependent
+effect-size variance multipliers, BED block-eigen fitting, and covariate
+adjustment are not supported. Multiple traits are fitted as separate
+trait-specific models.
 }
 \examples{
 \dontrun{
@@ -167,6 +238,23 @@ fitR_bed <- stblr_bed(
   method = "bayesR",
   nit = 1000,
   nburn = 100
+)
+
+marker_id <- unlist(Glist$rsids, use.names = FALSE)
+annotation <- data.frame(
+  coding = rep(c(FALSE, TRUE), length.out = length(marker_id)),
+  conserved = seq_along(marker_id) / length(marker_id),
+  row.names = marker_id
+)
+fitRC_bed <- stblr_bed(
+  y = y,
+  Glist = Glist,
+  method = "bayesrc",
+  annotation = annotation,
+  mixture_var = c(0, 0.01, 0.1, 1),
+  nit = 1000,
+  nburn = 100,
+  nchains = 2
 )
 }
 }

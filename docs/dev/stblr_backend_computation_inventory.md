@@ -25,14 +25,14 @@ current audited public SBayesRC path.
 
 The likelihood-independent SBayesRC probit stick-breaking probability and
 annotation-coefficient update utilities live in
-`src/st_bayesrc_annotation_prior.h`. The CSR SBayesRC sampler is their only
-consumer; this shared internal header does not add an individual-level backend
-or change the public model inventory.
+`src/st_bayesrc_annotation_prior.h`. CSR SBayesRC and individual-level BED
+BayesRC share these utilities.
 
-Sequence 2 adds the internal-only `bed_bayesrc` native backend. It combines the
+Sequence 2 added the `bed_bayesrc` native backend. Sequence 3 routes it through
+public `stblr_bed(method = "bayesrc")`. It combines the
 existing packed-BED BayesR likelihood calculations with the shared probit
 stick-breaking annotation prior and uses structurally explicit full marker
-sweeps. It is not routed from public `stblr_bed()` yet. Adaptive scheduling,
+sweeps. Adaptive scheduling,
 `selection_s`, LD-swap, and annotation-dependent effect variances are disabled.
 
 Shared packed-BED storage, decoding, residual, variance, and CPO utilities for
@@ -481,9 +481,9 @@ LD-swap/MH-capable CSR backends expose aggregate diagnostics in `fit$ld_swap`;
 with compact chains they also expose `fit$ld_swap_chains` and chain-level
 `$ld_swap`.
 
-BayesR-like fits expose `fit$comp_prob`; CSR BayesR, BED BayesR, and
-CSR SBayesRC expose `fit$dm_component_mean`. CSR BayesR and CSR SBayesRC also
-expose `fit$ncomp` where native code returns component counts.
+BayesR-like fits expose `fit$comp_prob`; CSR BayesR, BED BayesR, CSR SBayesRC,
+and BED BayesRC expose `fit$dm_component_mean`. CSR BayesR, CSR SBayesRC, and
+BED BayesRC also expose `fit$ncomp` where native code returns component counts.
 
 Annotation-aware fits expose standardized metadata:
 
@@ -495,7 +495,7 @@ Annotation-aware fits expose standardized metadata:
 - group priors: `fit$annotation_pi`, `fit$annotation_variance`,
   `fit$annotation_summary`, `fit$group_pi`, `fit$group_vb_multiplier`,
   `fit$group_nincluded`, `fit$group_size`
-- SBayesRC: `fit$annotation_pi`, `fit$annotation_summary`,
+- SBayesRC and BED BayesRC: `fit$annotation_pi`, `fit$annotation_summary`,
   `fit$annotation_effects`, `fit$annotation_variance`, `fit$alpha`,
   `fit$sigmaSqAlpha`
 
