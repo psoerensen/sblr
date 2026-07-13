@@ -1217,8 +1217,8 @@ NULL
   out$chains <- chains
   if (length(ld_swap_chains)) out$ld_swap_chains <- ld_swap_chains
  } else {
-  out["chains"] <- list(NULL)
-  out["ld_swap_chains"] <- list(NULL)
+  out$chains <- NULL
+  out$ld_swap_chains <- NULL
  }
 
  if (!is.null(raw$selection$trace)) {
@@ -4190,6 +4190,7 @@ stblr_bed <- function(
    seed = as.integer(seed)
   )
   fit <- .as_stblr_fit(raw, dat$trait_names, dat$variable_names)
+  if (!("chains" %in% names(fit))) fit["chains"] <- list(NULL)
   fit$input <- list(
    method = "bayesrc",
    model = "bayesrc",
