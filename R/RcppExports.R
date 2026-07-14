@@ -9,6 +9,18 @@ blr_phase1_validate_result_dimensions_cpp <- function(dimensions) {
     .Call(`_sblr_blr_phase1_validate_result_dimensions_cpp`, dimensions)
 }
 
+blr_phase4_scalar_tasks_cpp <- function(ntraits, nchains) {
+    .Call(`_sblr_blr_phase4_scalar_tasks_cpp`, ntraits, nchains)
+}
+
+blr_phase4_scalar_seeds_cpp <- function(seed, ntraits, nchains, chain_seeds) {
+    .Call(`_sblr_blr_phase4_scalar_seeds_cpp`, seed, ntraits, nchains, chain_seeds)
+}
+
+blr_phase4_retained_iterations_cpp <- function(trace_length, burnin, thinning) {
+    .Call(`_sblr_blr_phase4_retained_iterations_cpp`, trace_length, burnin, thinning)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }

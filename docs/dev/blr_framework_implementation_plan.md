@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 3 canonicalization complete; revised implementation plan
+**Status:** Phase 4 shared scalar infrastructure complete; revised implementation plan
 **Date:** 2026-07-13  
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -859,6 +859,12 @@ Readiness gate:
 
 ## Phase 4 — extract proven shared scalar infrastructure
 
+**Status: complete.** Trait-major scalar chain tasks, exact seed resolution,
+chain execution status/RNG ownership vocabulary, and retained-iteration timing
+are binding-neutral and active in canonical CSR BayesC. The matching current
+CSR BayesR uses and the future migration seam are documented, but BayesR
+production execution remains unchanged and is not migrated.
+
 Extract only utilities proven to be shared by at least two migrated models:
 
 - chain execution;
@@ -874,11 +880,14 @@ Do not generalize speculative future behavior.
 Use this infrastructure to prepare migration of unscheduled CSR BayesR without
 altering the canonical CSR BayesC hot loop.
 
-## Phase 5 — migrate BayesR and BayesRC
+## Phase 5 — migrate unscheduled CSR BayesR
 
-Move existing efficient CSR BayesR and SBayesRC/BayesRC implementations onto shared infrastructure.
+Move the existing efficient unscheduled CSR BayesR implementation behind typed
+execution and result boundaries, adopting only the shared scalar
+infrastructure validated in Phase 4.
 
-Preserve specialized marker kernels where appropriate.
+Preserve the specialized marker kernel, component mathematics, RNG ordering,
+public schema, speed, and memory use. BayesRC/SBayesRC remains a later task.
 
 ## Phase 6 — migrate annotation and scale models
 
@@ -1048,6 +1057,7 @@ Do not combine in one task:
 
 ## 26. Immediate next step
 
-Extract proven shared scalar execution infrastructure from the canonical CSR
-BayesC implementation, without altering its hot loop, and use that
-infrastructure to prepare migration of unscheduled CSR BayesR.
+Migrate the existing unscheduled CSR BayesR implementation behind typed
+execution and result boundaries, adopting only the shared scalar
+infrastructure validated in Phase 4 while preserving BayesR mathematics, RNG
+ordering, speed, memory use, public API, and output schema.

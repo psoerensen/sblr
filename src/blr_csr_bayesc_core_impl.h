@@ -8,6 +8,7 @@
 #endif
 
 #include "blr_csr_bayesc_types.h"
+#include "blr_scalar_execution.h"
 
 #include "st_chain_utils.h"
 
@@ -503,10 +504,15 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
   const int m = static_cast<int>(input.data.marker_count);
   const int nt = static_cast<int>(input.data.trait_count);
   const int n_trace = input.controls.nit + input.controls.nburn;
-  const int ntasks = stblr_num_chain_tasks(nt, input.controls.nchains);
+  const std::vector<ScalarChainTask> tasks = make_scalar_chain_tasks(
+    input.data.trait_count,
+    static_cast<std::size_t>(input.controls.nchains)
+  );
+  const int ntasks = static_cast<int>(tasks.size());
   std::vector<CsrBayesCChainResult> chains(static_cast<std::size_t>(ntasks));
-  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
-  std::vector<std::string> errors(static_cast<std::size_t>(ntasks));
+  std::vector<ScalarChainExecutionStatus> statuses(
+    static_cast<std::size_t>(ntasks)
+  );
   int nthreads = 1;
 #ifdef _OPENMP
   omp_set_dynamic(0);
@@ -518,8 +524,12 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
 #pragma omp parallel for num_threads(nthreads) schedule(static)
 #endif
   for (int task = 0; task < ntasks; ++task) {
-    const int trait = stblr_task_trait(task, input.controls.nchains);
-    const int chain = stblr_task_chain(task, input.controls.nchains);
+    const ScalarChainTask& identity = tasks[static_cast<std::size_t>(task)];
+    const int trait = static_cast<int>(identity.trait_index);
+    const int chain = static_cast<int>(identity.chain_index);
+    ScalarChainExecutionStatus& status =
+      statuses[static_cast<std::size_t>(task)];
+    status.task = identity;
 #ifdef _OPENMP
     const double wall_start = omp_get_wtime();
 #else
@@ -530,16 +540,13 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
     output.thread_used = omp_get_thread_num();
 #endif
     try {
-      unsigned int task_seed = 0u;
-      if (!input.controls.chain_seeds.empty()) {
-        task_seed = stblr_seed_with_chain_base(
-          input.controls.chain_seeds[static_cast<std::size_t>(chain)], trait
-        );
-      } else if (input.controls.nchains == 1) {
-        task_seed = stblr_trait_seed(input.controls.seed, trait);
-      } else {
-        task_seed = stblr_chain_seed(input.controls.seed, trait, chain);
-      }
+      const unsigned int task_seed = resolve_scalar_chain_seed(
+        input.controls.seed,
+        static_cast<std::size_t>(input.controls.nchains),
+        input.controls.chain_seeds,
+        identity
+      );
+      status.seed = task_seed;
       std::mt19937 gen(task_seed);
       arma::rowvec wy = input.data.wy->row(static_cast<arma::uword>(trait));
       const arma::rowvec& diagonal = input.data.diag();
@@ -775,8 +782,8 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         output.le_variance_trace(iteration_u) = le_variance;
         output.ld_variance_trace(iteration_u) = ld_variance;
         output.selection_s_trace(iteration_u) = selection_s;
-        if (iteration >= input.controls.nburn &&
-            (iteration - input.controls.nburn) % input.controls.nthin == 0) {
+        if (scalar_iteration_is_retained(
+              iteration, input.controls.nburn, input.controls.nthin)) {
           output.retained_samples += 1.0;
           for (int marker = 0; marker < m; ++marker) {
             const arma::uword marker_u = static_cast<arma::uword>(marker);
@@ -803,32 +810,38 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       output.final_le_variance = le_variance;
       output.final_ld_variance = ld_variance;
       output.final_inclusion_probability = pi[1];
+      status.retained_samples = output.retained_samples;
 #ifdef _OPENMP
       output.seconds = omp_get_wtime() - wall_start;
+      status.elapsed_seconds = output.seconds;
 #endif
     } catch (const std::exception& error) {
-      failed[static_cast<std::size_t>(task)] = 1;
-      errors[static_cast<std::size_t>(task)] = error.what();
+      status.failed = true;
+      status.failure_message = error.what();
 #ifdef _OPENMP
       output.seconds = omp_get_wtime() - wall_start;
+      status.elapsed_seconds = output.seconds;
 #endif
     } catch (...) {
-      failed[static_cast<std::size_t>(task)] = 1;
-      errors[static_cast<std::size_t>(task)] = "unknown error";
+      status.failed = true;
+      status.failure_message = "unknown error";
 #ifdef _OPENMP
       output.seconds = omp_get_wtime() - wall_start;
+      status.elapsed_seconds = output.seconds;
 #endif
     }
   }
 
   for (int task = 0; task < ntasks; ++task) {
-    if (failed[static_cast<std::size_t>(task)]) {
+    const ScalarChainExecutionStatus& status =
+      statuses[static_cast<std::size_t>(task)];
+    if (status.failed) {
       throw std::runtime_error(
         "stblr_cpg_omp_csr failed for trait " +
-        std::to_string(stblr_task_trait(task, input.controls.nchains)) +
+        std::to_string(status.task.trait_index) +
         ", chain " +
-        std::to_string(stblr_task_chain(task, input.controls.nchains)) +
-        ": " + errors[static_cast<std::size_t>(task)]
+        std::to_string(status.task.chain_index) +
+        ": " + status.failure_message
       );
     }
   }

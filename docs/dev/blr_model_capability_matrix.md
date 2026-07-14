@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 3 canonical path recorded
+**Status:** Phase 4 shared scalar infrastructure recorded
 **Date:** 2026-07-13  
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -92,14 +92,14 @@ Status labels:
 
 | Model | Kernel | State | Probability | Scale | Covariance | Operator | Current implementation | Migration treatment | Extension readiness |
 |---|---|---|---|---|---|---|---|---|---|
-| ST BayesC CSR | scalar | binary | global_binary | unit | scalar | CSR | Canonical typed unscheduled CSR | Migrated; canonical; legacy path removed | Active architecture reference; public schema unchanged; performance and memory validated |
+| ST BayesC CSR | scalar | binary | global_binary | unit | scalar | CSR | Canonical typed unscheduled CSR using proven shared scalar execution utilities | Migrated; canonical; legacy path removed | Active architecture reference; public schema unchanged; performance and memory validated |
 | ST BayesC scheduled CSR | scalar | binary | global_binary | unit | scalar | CSR | Current scheduled CSR | Correct RNG, then migrate | After RNG remediation |
 | ST BayesC BED | scalar | binary | global_binary | unit | scalar | BED | Current BED kernels | Preserve decoder/kernel, refactor boundary | After CSR architecture proven |
 | ST BayesC fixed marker prior | scalar | binary | fixed_marker/global | fixed_marker | scalar | CSR | Current prior backend | Preserve and migrate | Good scale/probability test |
 | ST BayesC + `selection_s` | scalar | binary | global_binary | maf_s | scalar | CSR | Current | Preserve and migrate | Good composite-scale test |
 | ST group BayesC | scalar | binary | group | group | scalar | CSR | Current | Preserve behavior; hierarchy design separate | One-layer reference |
 | ST learned annotation BayesC | scalar | binary | annot_logit | learned annotation scale | scalar | CSR | Current | Preserve kernel; extract reusable utilities cautiously | Later scalar policy migration |
-| ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Current | Preserve and migrate | Second core model |
+| ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Current production implementation unchanged | Migration seam documented; shared candidates identified; not migrated | Prepared Phase 5 target |
 | ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | BED | Current | Preserve and migrate after CSR | Operator reuse test |
 | ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Current | Preserve kernel; extract stick utilities | Probability-policy reference |
 | ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Current | Preserve and migrate | Cross-operator policy test |
@@ -149,7 +149,7 @@ Status labels:
 | BayesR/BayesRC scalar kernels | Preserve/migrate | efficient and validated |
 | BED decoder and residual updates | Preserve/extract | optimized and memory efficient |
 | Block-eigen operator | Preserve/migrate | already separated conceptually |
-| Chain seed helpers | Extract | reusable and validated |
+| Scalar task/seed/status helpers | Extracted for canonical BayesC; matched in current BayesR | reusable and validated without rerouting BayesR |
 | Recent chain-local RNG patterns | Extract | canonical reproducibility model |
 | Persistent thread-local distributions | Correct | localized reproducibility risk |
 | Raw `stblr_raw_v1` formatter | Preserve during migration | stable current public contract |
@@ -169,9 +169,9 @@ Status labels:
 | Typed specifications | Implemented and validated | Phase 1 |
 | Typed result vocabulary | Implemented; CSR BayesC active | Phase 1–2 |
 | Language-neutral error boundary | Active for canonical CSR BayesC | Phase 1–3 |
-| Chain/RNG contract | Canonical for unscheduled CSR BayesC; other models not migrated | Phase 2–3 |
-| Posterior accumulation | Canonical CSR BayesC implementation active | Phase 2–3 |
-| Probability utility layer | Model-local in canonical CSR BayesC; extraction deferred | Phase 4 |
+| Chain/RNG contract | Shared task/seed/status vocabulary active for CSR BayesC; BayesR seam documented but not migrated | Phase 2–4 |
+| Posterior accumulation | Retained-iteration predicate shared; model-specific containers/finalization deferred | Phase 2–4 |
+| Probability utility layer | BayesC binary and BayesR categorical semantics deliberately remain model-specific | Deferred until a second exact use exists |
 | Scale-policy interface | Typed CSR BayesC controls active; broader extraction deferred | Phase 4–6 |
 | Covariance-policy interface | Scalar CSR BayesC active, MT unresolved | Phase 3 and Phase 8 |
 | CSR operator ownership | Shared borrowed immutable contract active | Phase 1–3 |

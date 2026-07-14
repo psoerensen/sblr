@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "blr_result.h"
+#include "blr_scalar_execution.h"
 #include "blr_spec.h"
 
 namespace {
@@ -340,4 +341,76 @@ Rcpp::List blr_phase1_validate_result_dimensions_cpp(Rcpp::List dimensions) {
     Rcpp::_["component_probability"] = component_dimensions,
     Rcpp::_["pattern_probability"] = pattern_dimensions
   );
+}
+
+// Test-only binding for the binding-neutral Phase 4 task contract.
+// [[Rcpp::export]]
+Rcpp::DataFrame blr_phase4_scalar_tasks_cpp(int ntraits, int nchains) {
+  using namespace sblr::core;
+  if (ntraits < 0 || nchains < 0) {
+    throw std::invalid_argument("task dimensions must be non-negative");
+  }
+  const std::vector<ScalarChainTask> tasks = make_scalar_chain_tasks(
+    static_cast<std::size_t>(ntraits), static_cast<std::size_t>(nchains)
+  );
+  Rcpp::IntegerVector trait(tasks.size());
+  Rcpp::IntegerVector chain(tasks.size());
+  Rcpp::IntegerVector task(tasks.size());
+  for (std::size_t index = 0; index < tasks.size(); ++index) {
+    trait[index] = static_cast<int>(tasks[index].trait_index);
+    chain[index] = static_cast<int>(tasks[index].chain_index);
+    task[index] = static_cast<int>(tasks[index].task_index);
+  }
+  return Rcpp::DataFrame::create(
+    Rcpp::_["trait"] = trait,
+    Rcpp::_["chain"] = chain,
+    Rcpp::_["task"] = task
+  );
+}
+
+// Test-only binding for exact Phase 4 seed resolution.
+// [[Rcpp::export]]
+Rcpp::IntegerVector blr_phase4_scalar_seeds_cpp(
+  int seed,
+  int ntraits,
+  int nchains,
+  Rcpp::IntegerVector chain_seeds
+) {
+  using namespace sblr::core;
+  if (ntraits < 0 || nchains < 0) {
+    throw std::invalid_argument("seed dimensions must be non-negative");
+  }
+  const std::vector<int> explicit_seeds =
+    Rcpp::as<std::vector<int>>(chain_seeds);
+  const std::vector<ScalarChainTask> tasks = make_scalar_chain_tasks(
+    static_cast<std::size_t>(ntraits), static_cast<std::size_t>(nchains)
+  );
+  validate_scalar_chain_seeds(static_cast<std::size_t>(nchains), explicit_seeds);
+  Rcpp::IntegerVector resolved(tasks.size());
+  for (std::size_t index = 0; index < tasks.size(); ++index) {
+    resolved[index] = static_cast<int>(resolve_scalar_chain_seed(
+      seed, static_cast<std::size_t>(nchains), explicit_seeds, tasks[index]
+    ));
+  }
+  return resolved;
+}
+
+// Test-only binding for the common retained-iteration predicate.
+// [[Rcpp::export]]
+Rcpp::LogicalVector blr_phase4_retained_iterations_cpp(
+  int trace_length,
+  int burnin,
+  int thinning
+) {
+  using namespace sblr::core;
+  if (trace_length < 0 || burnin < 0 || thinning <= 0) {
+    throw std::invalid_argument("retained-iteration controls are invalid");
+  }
+  Rcpp::LogicalVector retained(trace_length);
+  for (int iteration = 0; iteration < trace_length; ++iteration) {
+    retained[iteration] = scalar_iteration_is_retained(
+      iteration, burnin, thinning
+    );
+  }
+  return retained;
 }

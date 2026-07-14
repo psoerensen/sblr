@@ -33,6 +33,45 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// blr_phase4_scalar_tasks_cpp
+Rcpp::DataFrame blr_phase4_scalar_tasks_cpp(int ntraits, int nchains);
+RcppExport SEXP _sblr_blr_phase4_scalar_tasks_cpp(SEXP ntraitsSEXP, SEXP nchainsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type ntraits(ntraitsSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase4_scalar_tasks_cpp(ntraits, nchains));
+    return rcpp_result_gen;
+END_RCPP
+}
+// blr_phase4_scalar_seeds_cpp
+Rcpp::IntegerVector blr_phase4_scalar_seeds_cpp(int seed, int ntraits, int nchains, Rcpp::IntegerVector chain_seeds);
+RcppExport SEXP _sblr_blr_phase4_scalar_seeds_cpp(SEXP seedSEXP, SEXP ntraitsSEXP, SEXP nchainsSEXP, SEXP chain_seedsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type ntraits(ntraitsSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase4_scalar_seeds_cpp(seed, ntraits, nchains, chain_seeds));
+    return rcpp_result_gen;
+END_RCPP
+}
+// blr_phase4_retained_iterations_cpp
+Rcpp::LogicalVector blr_phase4_retained_iterations_cpp(int trace_length, int burnin, int thinning);
+RcppExport SEXP _sblr_blr_phase4_retained_iterations_cpp(SEXP trace_lengthSEXP, SEXP burninSEXP, SEXP thinningSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type trace_length(trace_lengthSEXP);
+    Rcpp::traits::input_parameter< int >::type burnin(burninSEXP);
+    Rcpp::traits::input_parameter< int >::type thinning(thinningSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase4_retained_iterations_cpp(trace_length, burnin, thinning));
+    return rcpp_result_gen;
+END_RCPP
+}
 // readLD_to_CSR_R
 SEXP readLD_to_CSR_R(SEXP filenameSEXP, SEXP mchrSEXP, SEXP msizeSEXP, SEXP thresholdSEXP, SEXP onebasedSEXP);
 RcppExport SEXP _sblr_readLD_to_CSR_R(SEXP filenameSEXPSEXP, SEXP mchrSEXPSEXP, SEXP msizeSEXPSEXP, SEXP thresholdSEXPSEXP, SEXP onebasedSEXPSEXP) {
@@ -1291,6 +1330,9 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_sblr_blr_phase1_validate_spec_cpp", (DL_FUNC) &_sblr_blr_phase1_validate_spec_cpp, 1},
     {"_sblr_blr_phase1_validate_result_dimensions_cpp", (DL_FUNC) &_sblr_blr_phase1_validate_result_dimensions_cpp, 1},
+    {"_sblr_blr_phase4_scalar_tasks_cpp", (DL_FUNC) &_sblr_blr_phase4_scalar_tasks_cpp, 2},
+    {"_sblr_blr_phase4_scalar_seeds_cpp", (DL_FUNC) &_sblr_blr_phase4_scalar_seeds_cpp, 4},
+    {"_sblr_blr_phase4_retained_iterations_cpp", (DL_FUNC) &_sblr_blr_phase4_retained_iterations_cpp, 3},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_mtblr_cpg", (DL_FUNC) &_sblr_mtblr_cpg, 24},
     {"_sblr_mtblr_cpg_arma", (DL_FUNC) &_sblr_mtblr_cpg_arma, 24},
