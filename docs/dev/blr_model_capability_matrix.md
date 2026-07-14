@@ -99,7 +99,7 @@ Status labels:
 | ST BayesC + `selection_s` | scalar | binary | global_binary | maf_s | scalar | CSR | Current | Preserve and migrate | Good composite-scale test |
 | ST group BayesC | scalar | binary | group | group | scalar | CSR | Current | Preserve behavior; hierarchy design separate | One-layer reference |
 | ST learned annotation BayesC | scalar | binary | annot_logit | learned annotation scale | scalar | CSR | Current | Preserve kernel; extract reusable utilities cautiously | Later scalar policy migration |
-| ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Current production implementation unchanged | Migration seam documented; shared candidates identified; not migrated | Prepared Phase 5 target |
+| ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Migrated behind typed execution boundaries | Borrowed input, operator-aware templated core, typed result, centralized converter; exact references validated | Ready for Phase 6 canonicalization |
 | ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | BED | Current | Preserve and migrate after CSR | Operator reuse test |
 | ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Current | Preserve kernel; extract stick utilities | Probability-policy reference |
 | ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Current | Preserve and migrate | Cross-operator policy test |
@@ -169,7 +169,7 @@ Status labels:
 | Typed specifications | Implemented and validated | Phase 1 |
 | Typed result vocabulary | Implemented; CSR BayesC active | Phase 1–2 |
 | Language-neutral error boundary | Active for canonical CSR BayesC | Phase 1–3 |
-| Chain/RNG contract | Shared task/seed/status vocabulary active for CSR BayesC; BayesR seam documented but not migrated | Phase 2–4 |
+| Chain/RNG contract | Shared vocabulary active for CSR BayesC; migrated CSR BayesR preserves the proven task/seed semantics in its operator-aware core | Phase 2–5 |
 | Posterior accumulation | Retained-iteration predicate shared; model-specific containers/finalization deferred | Phase 2–4 |
 | Probability utility layer | BayesC binary and BayesR categorical semantics deliberately remain model-specific | Deferred until a second exact use exists |
 | Scale-policy interface | Typed CSR BayesC controls active; broader extraction deferred | Phase 4–6 |

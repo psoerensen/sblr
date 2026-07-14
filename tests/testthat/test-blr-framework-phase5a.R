@@ -70,16 +70,21 @@ test_that("Phase 5A frozen production BayesR raw and fit references remain exact
 })
 
 test_that("Phase 5A protects BayesC, block-eigen, and namespace sources", {
-  paths <- c("src/st_cpg_omp_csr_bayesr.cpp","R/sparse_ld_bed_helper.R",
-    "docs/dev/stblr_raw_schema.md","src/st_cpg_omp_csr.cpp","src/blr_csr_bayesc_types.h",
+  paths <- c("R/sparse_ld_bed_helper.R","docs/dev/stblr_raw_schema.md",
+    "src/st_cpg_omp_csr.cpp","src/blr_csr_bayesc_types.h",
     "src/blr_csr_bayesc_core_impl.h","src/st_block_eigen.cpp","src/st_block_eigen.h","NAMESPACE")
-  expected <- c("99650ce47ff4633c62c4bbc280d595ce","26c5c894058434deea25e3242dd56d4a",
-    "82ac9ba4b7d8edc6f3e16ee3a26d8466","92dafc0266d5a0e72aea000224154cef","e5975c311c69fe536db57dd21f01334f",
+  expected <- c("26c5c894058434deea25e3242dd56d4a","82ac9ba4b7d8edc6f3e16ee3a26d8466",
+    "92dafc0266d5a0e72aea000224154cef","e5975c311c69fe536db57dd21f01334f",
     "f7c617cbfc172639c1f8aea1bd8b1876","49f0a62c9fe235967a264b0f8de144a7",
     "bec3bc1e41841ab77747e34dc9818574","f5b6ee37a3972aa436357bdc8f602f4e")
   expect_identical(unname(tools::md5sum(vapply(paths,phase5a_path,character(1)))),expected)
   src <- paste(readLines(phase5a_path("src","st_cpg_omp_csr_bayesr.cpp"),warn=FALSE),collapse="\n")
+  core <- paste(readLines(phase5a_path("src","blr_csr_bayesr_core_impl.h"),warn=FALSE),collapse="\n")
   report <- paste(readLines(phase5a_path("docs","dev","blr_framework_phase5a_report.md"),warn=FALSE),collapse="\n")
   expect_match(report,"Approved Phase 5B seam",fixed=TRUE)
   expect_false(grepl("blr_phase5a_validate_bayesr_contract_cpp",src,fixed=TRUE))
+  expect_equal(length(gregexpr("for (int it = 0; it < trace_len",paste(src,core),fixed=TRUE)[[1L]]),1L)
+  expect_match(src,"run_bayesr_execution(execution_context)",fixed=TRUE)
+  expect_match(src,"csr_bayesr_result_to_raw",fixed=TRUE)
+  expect_false(grepl("getenv",paste(src,core),fixed=TRUE))
 })

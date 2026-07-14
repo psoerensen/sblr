@@ -880,7 +880,7 @@ Do not generalize speculative future behavior.
 Use this infrastructure to prepare migration of unscheduled CSR BayesR without
 altering the canonical CSR BayesC hot loop.
 
-## Phase 5 — migrate unscheduled CSR BayesR
+## Phase 5 — migrate unscheduled CSR BayesR (complete)
 
 Move the existing efficient unscheduled CSR BayesR implementation behind typed
 execution and result boundaries, adopting only the shared scalar
@@ -888,6 +888,13 @@ infrastructure validated in Phase 4.
 
 Preserve the specialized marker kernel, component mathematics, RNG ordering,
 public schema, speed, and memory use. BayesRC/SBayesRC remains a later task.
+
+Ordinary CSR BayesR now uses a borrowed typed input, one operator-aware
+templated execution core, a typed execution result, and one binding-layer raw
+converter. The public route and schema are unchanged; six raw and six formatted
+references are exact. Block-eigen BayesR remains externally unchanged and is
+not itself marked migrated. Phase 6 may canonicalize and remove migration-only
+aliases after performance stabilization.
 
 ## Phase 6 — migrate annotation and scale models
 

@@ -100,7 +100,9 @@ test_that("comparative boundaries remain shared only where proven", {
     warn = FALSE
   ), collapse = "\n")
   bayesr_path <- test_path("..", "..", "src", "st_cpg_omp_csr_bayesr.cpp")
-  bayesr <- paste(readLines(bayesr_path, warn = FALSE), collapse = "\n")
+  bayesr_core_path <- test_path("..", "..", "src", "blr_csr_bayesr_core_impl.h")
+  bayesr <- paste(c(readLines(bayesr_path, warn = FALSE),
+    readLines(bayesr_core_path, warn = FALSE)), collapse = "\n")
 
   expect_match(bayesc, "make_scalar_chain_tasks", fixed = TRUE)
   expect_match(bayesc, "resolve_scalar_chain_seed", fixed = TRUE)
@@ -111,10 +113,8 @@ test_that("comparative boundaries remain shared only where proven", {
   expect_false(grepl("blr_scalar_execution", bayesr, fixed = TRUE))
   expect_match(bayesc, "delta_log", fixed = TRUE)
   expect_match(bayesr, "sample_categorical_logprob_bayesr", fixed = TRUE)
-  expect_identical(
-    unname(tools::md5sum(bayesr_path)),
-    "99650ce47ff4633c62c4bbc280d595ce"
-  )
+  expect_equal(length(gregexpr("for (int it = 0; it < trace_len", bayesr, fixed = TRUE)[[1L]]), 1L)
+  expect_match(bayesr, "run_bayesr_execution", fixed = TRUE)
 })
 
 test_that("all frozen BayesC raw and formatted references remain exact", {
