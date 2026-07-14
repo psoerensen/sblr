@@ -33,7 +33,9 @@ namespace sblr {
 namespace core {
 
 // Borrowed immutable view of the one shared, pre-scaled symmetric CSR object.
-// The owner remains in the binding and must outlive run_csr_bayesc().
+// The binding owns every referenced buffer and must keep it alive until
+// run_csr_bayesc() and all trait-chain tasks have returned. No member exposes
+// mutable CSR access, and no chain result or chain state owns a CSR payload.
 struct CsrBayesCDataView {
   std::size_t marker_count = 0;
   std::size_t trait_count = 0;
@@ -144,6 +146,9 @@ struct CsrBayesCExecutionInput {
   const std::vector<int>* marker_order = nullptr;
 };
 
+// Chain-owned mutable output/state vocabulary. Effects, residuals, inclusion
+// state, parameter traces, accumulators, RNG state, and workspace are local to
+// one task in the core. Deliberately contains no CSR values or indices.
 struct CsrBayesCChainResult {
   arma::rowvec marker_mean;
   arma::rowvec marker_pip;

@@ -77,7 +77,7 @@ test_that("multiple traits, selection_s, and disabled LD swap retain schemas", {
 })
 
 test_that("the migrated reusable files remain binding-neutral", {
-  files <- c("blr_csr_bayesc_types.h", "blr_csr_bayesc_core.h")
+  files <- c("blr_csr_bayesc_types.h", "blr_csr_bayesc_core_impl.h")
   text <- paste(vapply(files, function(file) {
     paste(readLines(test_path("..", "..", "src", file), warn = FALSE),
           collapse = "\n")
@@ -98,7 +98,7 @@ test_that("CSR ownership and marker-loop allocation contracts are explicit", {
     test_path("..", "..", "src", "blr_csr_bayesc_types.h"), warn = FALSE
   ), collapse = "\n")
   core <- readLines(
-    test_path("..", "..", "src", "blr_csr_bayesc_core.h"), warn = FALSE
+    test_path("..", "..", "src", "blr_csr_bayesc_core_impl.h"), warn = FALSE
   )
 
   expect_match(types, "Borrowed immutable view", fixed = TRUE)

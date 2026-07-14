@@ -1,5 +1,11 @@
-#ifndef SBLR_CORE_BLR_CSR_BAYESC_CORE_H
-#define SBLR_CORE_BLR_CSR_BAYESC_CORE_H
+#ifndef SBLR_CORE_BLR_CSR_BAYESC_CORE_IMPL_H
+#define SBLR_CORE_BLR_CSR_BAYESC_CORE_IMPL_H
+
+// Implementation header: include only from st_cpg_omp_csr.cpp after the
+// package's established Armadillo configuration has been selected.
+#ifndef SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT
+#error "blr_csr_bayesc_core_impl.h may only be included by st_cpg_omp_csr.cpp"
+#endif
 
 #include "blr_csr_bayesc_types.h"
 

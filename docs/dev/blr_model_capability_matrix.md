@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Revised working matrix  
+**Status:** Phase 3 canonical path recorded
 **Date:** 2026-07-13  
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -92,7 +92,7 @@ Status labels:
 
 | Model | Kernel | State | Probability | Scale | Covariance | Operator | Current implementation | Migration treatment | Extension readiness |
 |---|---|---|---|---|---|---|---|---|---|
-| ST BayesC CSR | scalar | binary | global_binary | unit | scalar | CSR | Current unscheduled CSR | Preserve and wrap | First architecture reference |
+| ST BayesC CSR | scalar | binary | global_binary | unit | scalar | CSR | Canonical typed unscheduled CSR | Migrated; canonical; legacy path removed | Active architecture reference; public schema unchanged; performance and memory validated |
 | ST BayesC scheduled CSR | scalar | binary | global_binary | unit | scalar | CSR | Current scheduled CSR | Correct RNG, then migrate | After RNG remediation |
 | ST BayesC BED | scalar | binary | global_binary | unit | scalar | BED | Current BED kernels | Preserve decoder/kernel, refactor boundary | After CSR architecture proven |
 | ST BayesC fixed marker prior | scalar | binary | fixed_marker/global | fixed_marker | scalar | CSR | Current prior backend | Preserve and migrate | Good scale/probability test |
@@ -144,7 +144,7 @@ Status labels:
 
 | Component | Treatment | Reason |
 |---|---|---|
-| Unscheduled CSR BayesC hot loop | Preserve | coherent, fast, tested |
+| Unscheduled CSR BayesC hot loop | Migrated and canonical | typed boundary active; one preserved production implementation; legacy path removed |
 | CSR operator logic | Preserve/extract | strongest current operator abstraction |
 | BayesR/BayesRC scalar kernels | Preserve/migrate | efficient and validated |
 | BED decoder and residual updates | Preserve/extract | optimized and memory efficient |
@@ -166,17 +166,17 @@ Status labels:
 
 | Infrastructure | Current readiness | Phase |
 |---|---|---|
-| Typed specifications | Not implemented | Phase 1 |
-| Typed result vocabulary | Not implemented | Phase 1 |
-| Language-neutral error boundary | Partial | Phase 1–2 |
-| Chain/RNG contract | Strong examples, duplicated | Phase 1–3 |
-| Posterior accumulation | Exists in several kernels | Phase 2–3 |
-| Probability utility layer | Partial/duplicated | Phase 3–4 |
-| Scale-policy interface | Conceptual/current variants | Phase 3–5 |
-| Covariance-policy interface | Scalar strong, MT unresolved | Phase 3 and Phase 7 |
-| CSR operator ownership | Strong partial abstraction | Phase 1–2 |
-| BED operator ownership | Mixed core/binding | Phase 6 |
-| Factor core | Not implemented | Phase 9–10 |
+| Typed specifications | Implemented and validated | Phase 1 |
+| Typed result vocabulary | Implemented; CSR BayesC active | Phase 1–2 |
+| Language-neutral error boundary | Active for canonical CSR BayesC | Phase 1–3 |
+| Chain/RNG contract | Canonical for unscheduled CSR BayesC; other models not migrated | Phase 2–3 |
+| Posterior accumulation | Canonical CSR BayesC implementation active | Phase 2–3 |
+| Probability utility layer | Model-local in canonical CSR BayesC; extraction deferred | Phase 4 |
+| Scale-policy interface | Typed CSR BayesC controls active; broader extraction deferred | Phase 4–6 |
+| Covariance-policy interface | Scalar CSR BayesC active, MT unresolved | Phase 3 and Phase 8 |
+| CSR operator ownership | Shared borrowed immutable contract active | Phase 1–3 |
+| BED operator ownership | Mixed core/binding | Phase 7 |
+| Factor core | Not implemented | Phase 10–11 |
 
 ---
 

@@ -7,7 +7,9 @@
 #include "st_csr_common.h"
 #include "st_block_eigen.h"
 #include "st_ld_operator.h"
-#include "blr_csr_bayesc_core.h"
+#define SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
+#include "blr_csr_bayesc_core_impl.h"
+#undef SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT
 
 
 #include <algorithm>
@@ -934,145 +936,49 @@ inline bool attempt_ld_swap_st_csr_unscaled(
  return accept;
 }
 
-static Rcpp::List stblr_cpg_omp_csr_typed_adapter(
-  int m,
-  int nt,
-  const std::string& ld_prefix,
-  const CsrOperator& op,
-  const LDLDFriends& ld_swap_friends,
-  const arma::mat& wy_mat,
-  const arma::mat& b_mat,
-  const std::vector<std::vector<double>>& d_init,
-  bool use_d_init,
-  const std::vector<std::vector<double>>& r_init,
-  bool use_r_init,
-  bool rebuild_r_before_updateE,
-  const arma::vec& yy_vec,
-  const arma::mat& B,
-  const arma::mat& E,
-  const arma::mat& ssb_prior_mat,
-  const arma::mat& sse_prior_mat,
-  const std::vector<double>& pi,
-  double nub,
-  double nue,
-  bool updateB,
-  bool updateE,
-  bool updatePi,
-  double adjE,
-  const std::vector<int>& n,
-  int nit,
-  int nburn,
-  int nthin,
-  double pi_prior_a,
-  double pi_prior_b,
-  int ncores,
-  int seed,
-  int nchains,
-  bool keep_chains,
-  const std::vector<int>& chain_seeds,
-  bool updateLDswap,
-  double ld_swap_prob,
-  int ld_swap_moves,
-  bool use_selection_s_prior_scale,
-  const arma::rowvec& prior_scale,
-  bool estimate_selection_s,
-  double selection_s_init,
-  const Rcpp::NumericVector& selection_s_prior,
-  double selection_s_proposal_sd,
-  const arma::rowvec& selection_s_log_h_row,
-  const std::vector<int>& order
+struct CsrBayesCRawConversionContext {
+ int marker_count;
+ int trait_count;
+ int nit;
+ int nburn;
+ int nthin;
+ int ncores;
+ int nchains;
+ bool keep_chains;
+ double pi_prior_a;
+ double pi_prior_b;
+ bool update_ld_swap;
+ bool use_fixed_selection_scale;
+ bool estimate_selection_s;
+ const std::vector<int>* sample_size;
+};
+
+// This is the sole typed-result-to-stblr_raw_v1 conversion for ordinary CSR
+// BayesC. It is binding-specific and executes only after the core returns.
+static Rcpp::List stblr_csr_bayesc_result_to_raw(
+  const sblr::core::CsrBayesCResult& result,
+  const CsrBayesCRawConversionContext& context
 ) {
- sblr::core::ResolvedSpec specification;
- specification.data.marker_count = static_cast<std::size_t>(m);
- specification.data.trait_count = static_cast<std::size_t>(nt);
- specification.data.marker_ids.reserve(static_cast<std::size_t>(m));
- specification.data.trait_ids.reserve(static_cast<std::size_t>(nt));
- for (int marker = 0; marker < m; ++marker) {
-  specification.data.marker_ids.push_back(
-   "marker_" + std::to_string(marker + 1)
+ const int m = context.marker_count;
+ const int nt = context.trait_count;
+ const int nit = context.nit;
+ const int nburn = context.nburn;
+ const int nthin = context.nthin;
+ const int ncores = context.ncores;
+ const int nchains = context.nchains;
+ const bool keep_chains = context.keep_chains;
+ const double pi_prior_a = context.pi_prior_a;
+ const double pi_prior_b = context.pi_prior_b;
+ const bool updateLDswap = context.update_ld_swap;
+ const bool use_selection_s_prior_scale =
+  context.use_fixed_selection_scale;
+ const bool estimate_selection_s = context.estimate_selection_s;
+ if (context.sample_size == nullptr) {
+  throw std::runtime_error(
+   "stblr_csr_bayesc_result_to_raw: sample-size metadata is missing."
   );
  }
- for (int trait = 0; trait < nt; ++trait) {
-  specification.data.trait_ids.push_back(
-   "trait_" + std::to_string(trait + 1)
-  );
- }
- specification.data.sample_size = n;
- specification.data.csr.resource_id = ld_prefix;
- specification.data.csr.marker_count = static_cast<std::size_t>(m);
- specification.mcmc.nit = nit;
- specification.mcmc.nburn = nburn;
- specification.mcmc.nthin = nthin;
- specification.mcmc.nchains = nchains;
- specification.mcmc.ncores = ncores;
- specification.mcmc.seed = seed;
- specification.mcmc.has_explicit_chain_seeds = !chain_seeds.empty();
- specification.mcmc.chain_seeds = chain_seeds;
- specification.output.keep_chain_summaries = keep_chains;
-
- sblr::core::CsrBayesCExecutionInput input;
- input.specification = std::move(specification);
- input.data.marker_count = static_cast<std::size_t>(m);
- input.data.trait_count = static_cast<std::size_t>(nt);
- input.data.row_ptr = op.ld.ptr.data();
- input.data.row_ptr_size = op.ld.ptr.size();
- input.data.column_index = op.ld.idx.empty() ? nullptr : op.ld.idx.data();
- input.data.values = op.ld.xij.empty() ? nullptr : op.ld.xij.data();
- input.data.nonzero_count = op.ld.idx.size();
- input.data.diagonal = &op.xx;
- input.data.wy = &wy_mat;
- input.data.yy = &yy_vec;
- input.data.sample_size = &n;
- input.priors.marker_variance = &B;
- input.priors.residual_variance = &E;
- input.priors.marker_scale_prior = &ssb_prior_mat;
- input.priors.residual_scale_prior = &sse_prior_mat;
- input.priors.inclusion_probability = pi;
- input.priors.marker_degrees_freedom = nub;
- input.priors.residual_degrees_freedom = nue;
- input.priors.inclusion_prior_active = pi_prior_a;
- input.priors.inclusion_prior_null = pi_prior_b;
- input.initial.effects = &b_mat;
- input.initial.inclusion = &d_init;
- input.initial.residual = &r_init;
- input.initial.use_inclusion = use_d_init;
- input.initial.use_residual = use_r_init;
- input.controls.nit = nit;
- input.controls.nburn = nburn;
- input.controls.nthin = nthin;
- input.controls.nchains = nchains;
- input.controls.ncores = ncores;
- input.controls.seed = seed;
- input.controls.chain_seeds = chain_seeds;
- input.controls.keep_chains = keep_chains;
- input.controls.update_marker_variance = updateB;
- input.controls.update_residual_variance = updateE;
- input.controls.update_inclusion_probability = updatePi;
- input.controls.rebuild_residual_before_update = rebuild_r_before_updateE;
- input.controls.residual_adjustment = adjE;
- input.controls.update_ld_swap = updateLDswap;
- input.controls.ld_swap_probability = ld_swap_prob;
- input.controls.ld_swap_moves = ld_swap_moves;
- input.controls.use_fixed_selection_scale = use_selection_s_prior_scale;
- input.controls.fixed_selection_scale =
-  use_selection_s_prior_scale ? &prior_scale : nullptr;
- input.controls.estimate_selection_s = estimate_selection_s;
- input.controls.selection_s_initial = selection_s_init;
- input.controls.selection_s_prior_lower = selection_s_prior[0];
- input.controls.selection_s_prior_upper = selection_s_prior[1];
- input.controls.selection_s_proposal_sd = selection_s_proposal_sd;
- input.controls.selection_s_log_h =
-  estimate_selection_s ? &selection_s_log_h_row : nullptr;
- input.output.keep_chains = keep_chains;
- input.ld_friends.row_ptr = ld_swap_friends.ptr.empty()
-  ? nullptr : ld_swap_friends.ptr.data();
- input.ld_friends.row_ptr_size = ld_swap_friends.ptr.size();
- input.ld_friends.index = ld_swap_friends.idx.empty()
-  ? nullptr : ld_swap_friends.idx.data();
- input.ld_friends.friend_count = ld_swap_friends.idx.size();
- input.marker_order = &order;
-
- sblr::core::CsrBayesCResult result = sblr::core::run_csr_bayesc(input);
+ const std::vector<int>& n = *context.sample_size;
 
 #ifdef _OPENMP
  const int nthreads = stblr_num_threads_for_tasks(
@@ -1382,6 +1288,156 @@ static Rcpp::List stblr_cpg_omp_csr_typed_adapter(
   "stblr_raw_v1", "stblr_raw", "list"
  );
  return raw;
+}
+
+// The ordinary CSR native adapter constructs borrowed typed views, invokes
+// the one canonical core, and delegates all R object construction above.
+static Rcpp::List stblr_csr_bayesc_run_canonical(
+  int m,
+  int nt,
+  const std::string& ld_prefix,
+  const CsrOperator& op,
+  const LDLDFriends& ld_swap_friends,
+  const arma::mat& wy_mat,
+  const arma::mat& b_mat,
+  const std::vector<std::vector<double>>& d_init,
+  bool use_d_init,
+  const std::vector<std::vector<double>>& r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  const arma::vec& yy_vec,
+  const arma::mat& B,
+  const arma::mat& E,
+  const arma::mat& ssb_prior_mat,
+  const arma::mat& sse_prior_mat,
+  const std::vector<double>& pi,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  const std::vector<int>& n,
+  int nit,
+  int nburn,
+  int nthin,
+  double pi_prior_a,
+  double pi_prior_b,
+  int ncores,
+  int seed,
+  int nchains,
+  bool keep_chains,
+  const std::vector<int>& chain_seeds,
+  bool updateLDswap,
+  double ld_swap_prob,
+  int ld_swap_moves,
+  bool use_selection_s_prior_scale,
+  const arma::rowvec& prior_scale,
+  bool estimate_selection_s,
+  double selection_s_init,
+  const Rcpp::NumericVector& selection_s_prior,
+  double selection_s_proposal_sd,
+  const arma::rowvec& selection_s_log_h_row,
+  const std::vector<int>& order
+) {
+ sblr::core::ResolvedSpec specification;
+ specification.data.marker_count = static_cast<std::size_t>(m);
+ specification.data.trait_count = static_cast<std::size_t>(nt);
+ specification.data.marker_ids.reserve(static_cast<std::size_t>(m));
+ specification.data.trait_ids.reserve(static_cast<std::size_t>(nt));
+ for (int marker = 0; marker < m; ++marker) {
+  specification.data.marker_ids.push_back(
+   "marker_" + std::to_string(marker + 1)
+  );
+ }
+ for (int trait = 0; trait < nt; ++trait) {
+  specification.data.trait_ids.push_back(
+   "trait_" + std::to_string(trait + 1)
+  );
+ }
+ specification.data.sample_size = n;
+ specification.data.csr.resource_id = ld_prefix;
+ specification.data.csr.marker_count = static_cast<std::size_t>(m);
+ specification.mcmc.nit = nit;
+ specification.mcmc.nburn = nburn;
+ specification.mcmc.nthin = nthin;
+ specification.mcmc.nchains = nchains;
+ specification.mcmc.ncores = ncores;
+ specification.mcmc.seed = seed;
+ specification.mcmc.has_explicit_chain_seeds = !chain_seeds.empty();
+ specification.mcmc.chain_seeds = chain_seeds;
+ specification.output.keep_chain_summaries = keep_chains;
+
+ sblr::core::CsrBayesCExecutionInput input;
+ input.specification = std::move(specification);
+ input.data.marker_count = static_cast<std::size_t>(m);
+ input.data.trait_count = static_cast<std::size_t>(nt);
+ input.data.row_ptr = op.ld.ptr.data();
+ input.data.row_ptr_size = op.ld.ptr.size();
+ input.data.column_index = op.ld.idx.empty() ? nullptr : op.ld.idx.data();
+ input.data.values = op.ld.xij.empty() ? nullptr : op.ld.xij.data();
+ input.data.nonzero_count = op.ld.idx.size();
+ input.data.diagonal = &op.xx;
+ input.data.wy = &wy_mat;
+ input.data.yy = &yy_vec;
+ input.data.sample_size = &n;
+ input.priors.marker_variance = &B;
+ input.priors.residual_variance = &E;
+ input.priors.marker_scale_prior = &ssb_prior_mat;
+ input.priors.residual_scale_prior = &sse_prior_mat;
+ input.priors.inclusion_probability = pi;
+ input.priors.marker_degrees_freedom = nub;
+ input.priors.residual_degrees_freedom = nue;
+ input.priors.inclusion_prior_active = pi_prior_a;
+ input.priors.inclusion_prior_null = pi_prior_b;
+ input.initial.effects = &b_mat;
+ input.initial.inclusion = &d_init;
+ input.initial.residual = &r_init;
+ input.initial.use_inclusion = use_d_init;
+ input.initial.use_residual = use_r_init;
+ input.controls.nit = nit;
+ input.controls.nburn = nburn;
+ input.controls.nthin = nthin;
+ input.controls.nchains = nchains;
+ input.controls.ncores = ncores;
+ input.controls.seed = seed;
+ input.controls.chain_seeds = chain_seeds;
+ input.controls.keep_chains = keep_chains;
+ input.controls.update_marker_variance = updateB;
+ input.controls.update_residual_variance = updateE;
+ input.controls.update_inclusion_probability = updatePi;
+ input.controls.rebuild_residual_before_update = rebuild_r_before_updateE;
+ input.controls.residual_adjustment = adjE;
+ input.controls.update_ld_swap = updateLDswap;
+ input.controls.ld_swap_probability = ld_swap_prob;
+ input.controls.ld_swap_moves = ld_swap_moves;
+ input.controls.use_fixed_selection_scale = use_selection_s_prior_scale;
+ input.controls.fixed_selection_scale =
+  use_selection_s_prior_scale ? &prior_scale : nullptr;
+ input.controls.estimate_selection_s = estimate_selection_s;
+ input.controls.selection_s_initial = selection_s_init;
+ input.controls.selection_s_prior_lower = selection_s_prior[0];
+ input.controls.selection_s_prior_upper = selection_s_prior[1];
+ input.controls.selection_s_proposal_sd = selection_s_proposal_sd;
+ input.controls.selection_s_log_h =
+  estimate_selection_s ? &selection_s_log_h_row : nullptr;
+ input.output.keep_chains = keep_chains;
+ input.ld_friends.row_ptr = ld_swap_friends.ptr.empty()
+  ? nullptr : ld_swap_friends.ptr.data();
+ input.ld_friends.row_ptr_size = ld_swap_friends.ptr.size();
+ input.ld_friends.index = ld_swap_friends.idx.empty()
+  ? nullptr : ld_swap_friends.idx.data();
+ input.ld_friends.friend_count = ld_swap_friends.idx.size();
+ input.marker_order = &order;
+
+ const sblr::core::CsrBayesCResult result =
+  sblr::core::run_csr_bayesc(input);
+ const CsrBayesCRawConversionContext conversion = {
+  m, nt, nit, nburn, nthin, ncores, nchains, keep_chains,
+  pi_prior_a, pi_prior_b, updateLDswap, use_selection_s_prior_scale,
+  estimate_selection_s, &n
+ };
+ return stblr_csr_bayesc_result_to_raw(result, conversion);
 }
 
 // -----------------------------------------------------------------------------
@@ -1729,13 +1785,14 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  std::sort(order.begin(), order.end(),
            [&](int a, int b) { return x2[static_cast<std::size_t>(a)] > x2[static_cast<std::size_t>(b)]; });
 
- // The ordinary CSR backend crosses the Phase 2 typed boundary here. The
- // block-eigen instantiation deliberately retains the existing generic path.
+ // Ordinary CSR has one compile-time route: the canonical typed core. The
+ // other instantiation is the separate protected block-eigen backend; this is
+ // not an old/new runtime selector or an ordinary-CSR fallback.
  if constexpr (std::is_same<
                  typename std::decay<decltype(op)>::type,
                  CsrOperator
                >::value) {
-  return stblr_cpg_omp_csr_typed_adapter(
+  return stblr_csr_bayesc_run_canonical(
    m, nt, ld_prefix, op, ld_swap_friends, wy_mat, b_mat, d_init,
    use_d_init, r_init, use_r_init, rebuild_r_before_updateE, yy_vec,
    B, E, ssb_prior_mat, sse_prior_mat, pi, nub, nue, updateB, updateE,

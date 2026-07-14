@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Revised implementation plan  
+**Status:** Phase 3 canonicalization complete; revised implementation plan
 **Date:** 2026-07-13  
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -790,6 +790,9 @@ The audit remains a factual record and should not be rewritten.
 
 ## Phase 1 — contracts, boundaries, and regression baselines
 
+**Status: complete.** Typed specifications, typed results, CSR ownership, and
+the binding round trip are implemented and validated.
+
 Implement:
 
 - typed `DataSpec`;
@@ -815,6 +818,10 @@ Readiness gate:
 
 ## Phase 2 — migrate unscheduled CSR BayesC
 
+**Status: complete.** Ordinary unscheduled CSR BayesC executes behind the
+typed binding-neutral boundary with exact reference, runtime, and memory
+validation.
+
 Refactor the existing efficient kernel into the new boundaries while preserving:
 
 - mathematics;
@@ -834,7 +841,23 @@ Readiness gate:
 - no Rcpp in migrated reusable core;
 - full tests pass.
 
-## Phase 3 — extract proven shared scalar infrastructure
+## Phase 3 — canonicalize and stabilize unscheduled CSR BayesC
+
+**Status: complete.** The migrated implementation is the sole ordinary CSR
+BayesC production implementation. The public route always reaches the typed
+core, raw-result conversion is centralized, the implementation header is
+single-translation-unit guarded, deterministic references remain permanent,
+and the legacy ordinary-CSR path is absent. The public schema is unchanged.
+
+Readiness gate:
+
+- one canonical ordinary CSR marker loop;
+- no old/new runtime selector or fallback;
+- exact reference and reproducibility tests pass;
+- shared CSR ownership remains borrowed and immutable;
+- runtime and memory validation is recorded.
+
+## Phase 4 — extract proven shared scalar infrastructure
 
 Extract only utilities proven to be shared by at least two migrated models:
 
@@ -848,13 +871,16 @@ Extract only utilities proven to be shared by at least two migrated models:
 
 Do not generalize speculative future behavior.
 
-## Phase 4 — migrate BayesR and BayesRC
+Use this infrastructure to prepare migration of unscheduled CSR BayesR without
+altering the canonical CSR BayesC hot loop.
+
+## Phase 5 — migrate BayesR and BayesRC
 
 Move existing efficient CSR BayesR and SBayesRC/BayesRC implementations onto shared infrastructure.
 
 Preserve specialized marker kernels where appropriate.
 
-## Phase 5 — migrate annotation and scale models
+## Phase 6 — migrate annotation and scale models
 
 Migrate:
 
@@ -865,7 +891,7 @@ Migrate:
 - categorical hierarchy;
 - hierarchy × mixture/annotation composition.
 
-## Phase 6 — migrate operators
+## Phase 7 — migrate operators
 
 Migrate or adapt:
 
@@ -876,21 +902,21 @@ Migrate or adapt:
 
 Preserve efficient operator-specific implementations.
 
-## Phase 7 — new multivariate BayesC
+## Phase 8 — new multivariate BayesC
 
 Implement a coherent new small-\(T\) model.
 
 Do not port the legacy MT sampler.
 
-## Phase 8 — multivariate mixtures and hierarchy
+## Phase 9 — multivariate mixtures and hierarchy
 
 Add restricted pattern × mixture models and hierarchy.
 
-## Phase 9 — factor-analytic BLR
+## Phase 10 — factor-analytic BLR
 
 Implement low-rank covariance and alignment.
 
-## Phase 10 — evidence-factor model
+## Phase 11 — evidence-factor model
 
 Implement gene-level evidence factors and later biological propagation.
 
@@ -1022,13 +1048,6 @@ Do not combine in one task:
 
 ## 26. Immediate next step
 
-Prepare a revised Phase 1 Codex task for:
-
-- typed specifications;
-- typed result vocabulary;
-- binding-neutral boundaries;
-- CSR ownership contract;
-- regression fixtures;
-- performance and memory baselines;
-
-without rewriting or rerouting the working CSR BayesC sampler.
+Extract proven shared scalar execution infrastructure from the canonical CSR
+BayesC implementation, without altering its hot loop, and use that
+infrastructure to prepare migration of unscheduled CSR BayesR.
