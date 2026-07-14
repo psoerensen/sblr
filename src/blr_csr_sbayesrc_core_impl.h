@@ -1,8 +1,175 @@
 #ifndef SBLR_BLR_CSR_SBAYESRC_CORE_IMPL_H
 #define SBLR_BLR_CSR_SBAYESRC_CORE_IMPL_H
 
-// Implementation block only. This file is included at the post-operator seam
-// inside stblr_cpg_omp_csr_sbayesrc_impl(); it is not a standalone header.
+// Implementation detail only. This header is included by
+// st_sbayesrc_omp_csr.cpp after the package's Armadillo configuration and the
+// concrete operator types have been established. All borrowed objects in the
+// context must outlive run_csr_sbayesrc(); this is the native realization of
+// the Phase 7A storage_outlives_execution ownership contract.
+
+namespace sblr { namespace core {
+
+template <class Operator>
+struct CsrSBayesRCExecutionContext {
+ const Operator& op;
+ const SBayesRCLDLDFriends& ld_swap_friends;
+ const arma::mat& wy_mat;
+ const arma::mat& ww_mat;
+ arma::mat& b_mat;
+ arma::mat& r_mat;
+ arma::mat& comp_mat;
+ const arma::vec& yy_vec;
+ const arma::mat& ssb_prior_mat;
+ const arma::mat& sse_prior_mat;
+ const arma::mat& B;
+ const arma::mat& E;
+ const arma::mat& A;
+ const arma::vec& gamma;
+ const arma::mat& alpha_init;
+ const arma::vec& sigmaSqAlpha_init;
+ const std::vector<std::vector<double>>& comp_init;
+ const std::vector<std::vector<double>>& r_init;
+ const std::vector<int>& sample_size;
+ const std::vector<int>& chain_seeds;
+ const std::vector<int>& marker_order;
+ const arma::rowvec& prior_scale;
+ const arma::rowvec& selection_s_log_h;
+
+ // Phase 7A contract views describe the same borrowed prepared inputs. The
+ // numerical body continues to use the native Armadillo/operator references.
+ const SBayesRCAnnotationDesignView& annotation_contract;
+ const SBayesRCComponentSpec& component_contract;
+ const SBayesRCAlphaSpec& alpha_contract;
+ const SBayesRCProbabilityPolicy& probability_contract;
+ const SBayesRCPriors& prior_contract;
+ const SBayesRCControls& control_contract;
+ const SBayesRCOutputControl& output_contract;
+
+ int marker_count;
+ int trait_count;
+ int annotation_count;
+ int component_count;
+ int step_count;
+ int iterations;
+ int burnin;
+ int thinning;
+ int cores;
+ int seed;
+ int chains;
+ bool use_component_initialization;
+ bool use_residual_initialization;
+ bool rebuild_residual_before_update;
+ bool intercept_flat;
+ double alpha_variance_prior_a;
+ double alpha_variance_prior_b;
+ double probability_floor;
+ double marker_variance_df;
+ double residual_variance_df;
+ bool update_alpha;
+ bool update_marker_variance;
+ bool update_residual_variance;
+ int alpha_update_every;
+ double residual_adjustment;
+ bool update_ld_swap;
+ double ld_swap_probability;
+ int ld_swap_moves;
+ bool use_selection_prior_scale;
+ bool estimate_selection_s;
+ double selection_s_initial;
+ double selection_s_prior_lower;
+ double selection_s_prior_upper;
+ double selection_s_proposal_sd;
+};
+
+struct CsrSBayesRCExecutionResult {
+ arma::mat bm_task, dm_task, b_task, r_task, comp_task_double;
+ arma::mat vbs_task, vgs_task, ves_task, pis_task, vles_task, vlds_task;
+ arma::mat selection_s_task;
+ arma::vec final_vb_task, final_vg_task, final_ve_task;
+ arma::vec final_pi_active_task, final_vle_task, final_vld_task;
+ arma::mat final_pi_component_task;
+ arma::vec nsamples_task, ld_swap_attempted_task, ld_swap_accepted_task;
+ arma::vec selection_s_attempted_task, selection_s_accepted_task;
+ std::vector<arma::mat> alpha_mean_task, comp_prob_mean_task;
+ std::vector<arma::vec> sigmaSqAlpha_mean_task, ncomp_mean_task;
+
+ arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
+ arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
+ arma::mat b_mat, r_mat, comp_mat;
+ arma::mat vbs_mat, vgs_mat, ves_mat, pis_mat, vles_mat, vlds_mat;
+ arma::mat selection_s_mat;
+ arma::vec final_vb, final_vg, final_ve, final_pi_active;
+ arma::mat final_pi_component;
+ arma::vec final_vle, final_vld, nsamples_vec;
+ arma::vec selection_s_attempted_vec, selection_s_accepted_vec;
+ std::vector<arma::mat> alpha_mean, comp_prob_mean;
+ std::vector<arma::vec> sigmaSqAlpha_mean, ncomp_mean;
+ std::vector<int> failed, thread_used;
+ std::vector<std::string> errors;
+ std::vector<double> task_seconds;
+ arma::mat ld_swap_diagnostics, ld_swap_chain_diagnostics;
+};
+
+template <class Operator>
+CsrSBayesRCExecutionResult run_csr_sbayesrc(
+ CsrSBayesRCExecutionContext<Operator>& context
+) {
+ const Operator& op = context.op;
+ const SBayesRCLDLDFriends& ld_swap_friends = context.ld_swap_friends;
+ const arma::mat& wy_mat = context.wy_mat;
+ arma::mat& b_mat = context.b_mat;
+ arma::mat& r_mat = context.r_mat;
+ arma::mat& comp_mat = context.comp_mat;
+ const arma::vec& yy_vec = context.yy_vec;
+ const arma::mat& ssb_prior_mat = context.ssb_prior_mat;
+ const arma::mat& sse_prior_mat = context.sse_prior_mat;
+ const arma::mat& B = context.B;
+ const arma::mat& E = context.E;
+ const arma::mat& A = context.A;
+ const arma::vec& gamma = context.gamma;
+ const arma::mat& alpha_init = context.alpha_init;
+ const arma::vec& sigmaSqAlpha_init = context.sigmaSqAlpha_init;
+ const std::vector<std::vector<double>>& comp_init = context.comp_init;
+ const std::vector<std::vector<double>>& r_init = context.r_init;
+ const std::vector<int>& n = context.sample_size;
+ const std::vector<int>& chain_seeds_vec = context.chain_seeds;
+ const std::vector<int>& order = context.marker_order;
+ const arma::rowvec& prior_scale = context.prior_scale;
+ const arma::rowvec& selection_s_log_h_row = context.selection_s_log_h;
+ const int m = context.marker_count;
+ const int nt = context.trait_count;
+ const int nAnno = context.annotation_count;
+ const int Kgamma = context.component_count;
+ const int nstep = context.step_count;
+ const int nit = context.iterations;
+ const int nburn = context.burnin;
+ const int nthin = context.thinning;
+ const int ncores = context.cores;
+ const int seed = context.seed;
+ const int nchains = context.chains;
+ const bool use_comp_init = context.use_component_initialization;
+ const bool use_r_init = context.use_residual_initialization;
+ const bool rebuild_r_before_updateE = context.rebuild_residual_before_update;
+ const bool intercept_flat = context.intercept_flat;
+ const double sigmaSqAlpha_a = context.alpha_variance_prior_a;
+ const double sigmaSqAlpha_b = context.alpha_variance_prior_b;
+ const double pi_floor = context.probability_floor;
+ const double nub = context.marker_variance_df;
+ const double nue = context.residual_variance_df;
+ const bool updateAlpha = context.update_alpha;
+ const bool updateB = context.update_marker_variance;
+ const bool updateE = context.update_residual_variance;
+ const int alpha_update_every = context.alpha_update_every;
+ const double adjE = context.residual_adjustment;
+ const bool updateLDswap = context.update_ld_swap;
+ const double ld_swap_prob = context.ld_swap_probability;
+ const int ld_swap_moves = context.ld_swap_moves;
+ const bool use_selection_s_prior_scale = context.use_selection_prior_scale;
+ const bool estimate_selection_s = context.estimate_selection_s;
+ const double selection_s_init = context.selection_s_initial;
+ const double selection_s_prior_lower = context.selection_s_prior_lower;
+ const double selection_s_prior_upper = context.selection_s_prior_upper;
+ const double selection_s_proposal_sd = context.selection_s_proposal_sd;
  const int ntasks = stblr_num_chain_tasks(nt, nchains);
 
  arma::mat bm_task(ntasks, m, arma::fill::zeros);
@@ -96,7 +263,7 @@
  nthreads = stblr_num_threads_for_tasks(ncores, ntasks);
  omp_set_num_threads(nthreads);
 
- Rcpp::Rcout
+ std::cout
  << "STBLR SBayesRC CSR OpenMP requested threads = "
  << nthreads
  << ", omp_get_max_threads = "
@@ -106,7 +273,7 @@
  << "\n";
 #endif
 
- Rcpp::Rcout
+ std::cout
  << "STBLR real-SBayesRC CSR: m=" << m
  << ", nt=" << nt
  << ", nchains=" << nchains
@@ -388,8 +555,8 @@
       vb_t,
       gamma,
       selection_s_log_h_row,
-      selection_s_prior[0],
-      selection_s_prior[1],
+      selection_s_prior_lower,
+      selection_s_prior_upper,
       selection_s_proposal_sd,
       gen_t
      );
@@ -560,7 +727,7 @@
  for (int task = 0; task < ntasks; ++task) {
   const int t = stblr_task_trait(task, nchains);
   const int chain = stblr_task_chain(task, nchains);
-  Rcpp::Rcout
+  std::cout
   << "trait " << t
   << ", chain " << chain
   << " used thread " << thread_used[static_cast<std::size_t>(task)]
@@ -707,5 +874,76 @@
   }
  }
 
-#endif
+ CsrSBayesRCExecutionResult result;
+ result.bm_task = std::move(bm_task);
+ result.dm_task = std::move(dm_task);
+ result.b_task = std::move(b_task);
+ result.r_task = std::move(r_task);
+ result.comp_task_double = std::move(comp_task_double);
+ result.vbs_task = std::move(vbs_task);
+ result.vgs_task = std::move(vgs_task);
+ result.ves_task = std::move(ves_task);
+ result.pis_task = std::move(pis_task);
+ result.vles_task = std::move(vles_task);
+ result.vlds_task = std::move(vlds_task);
+ result.selection_s_task = std::move(selection_s_task);
+ result.final_vb_task = std::move(final_vb_task);
+ result.final_vg_task = std::move(final_vg_task);
+ result.final_ve_task = std::move(final_ve_task);
+ result.final_pi_active_task = std::move(final_pi_active_task);
+ result.final_pi_component_task = std::move(final_pi_component_task);
+ result.final_vle_task = std::move(final_vle_task);
+ result.final_vld_task = std::move(final_vld_task);
+ result.nsamples_task = std::move(nsamples_task);
+ result.ld_swap_attempted_task = std::move(ld_swap_attempted_task);
+ result.ld_swap_accepted_task = std::move(ld_swap_accepted_task);
+ result.selection_s_attempted_task = std::move(selection_s_attempted_task);
+ result.selection_s_accepted_task = std::move(selection_s_accepted_task);
+ result.alpha_mean_task = std::move(alpha_mean_task);
+ result.sigmaSqAlpha_mean_task = std::move(sigmaSqAlpha_mean_task);
+ result.comp_prob_mean_task = std::move(comp_prob_mean_task);
+ result.ncomp_mean_task = std::move(ncomp_mean_task);
+ result.bm_mat = std::move(bm_mat);
+ result.dm_mat = std::move(dm_mat);
+ result.bm_sd_mat = std::move(bm_sd_mat);
+ result.dm_sd_mat = std::move(dm_sd_mat);
+ result.bm_min_mat = std::move(bm_min_mat);
+ result.dm_min_mat = std::move(dm_min_mat);
+ result.bm_max_mat = std::move(bm_max_mat);
+ result.dm_max_mat = std::move(dm_max_mat);
+ result.b_mat = std::move(b_mat);
+ result.r_mat = std::move(r_mat);
+ result.comp_mat = std::move(comp_mat);
+ result.vbs_mat = std::move(vbs_mat);
+ result.vgs_mat = std::move(vgs_mat);
+ result.ves_mat = std::move(ves_mat);
+ result.pis_mat = std::move(pis_mat);
+ result.vles_mat = std::move(vles_mat);
+ result.vlds_mat = std::move(vlds_mat);
+ result.selection_s_mat = std::move(selection_s_mat);
+ result.final_vb = std::move(final_vb);
+ result.final_vg = std::move(final_vg);
+ result.final_ve = std::move(final_ve);
+ result.final_pi_active = std::move(final_pi_active);
+ result.final_pi_component = std::move(final_pi_component);
+ result.final_vle = std::move(final_vle);
+ result.final_vld = std::move(final_vld);
+ result.nsamples_vec = std::move(nsamples_vec);
+ result.selection_s_attempted_vec = std::move(selection_s_attempted_vec);
+ result.selection_s_accepted_vec = std::move(selection_s_accepted_vec);
+ result.alpha_mean = std::move(alpha_mean);
+ result.sigmaSqAlpha_mean = std::move(sigmaSqAlpha_mean);
+ result.comp_prob_mean = std::move(comp_prob_mean);
+ result.ncomp_mean = std::move(ncomp_mean);
+ result.failed = std::move(failed);
+ result.errors = std::move(errors);
+ result.thread_used = std::move(thread_used);
+ result.task_seconds = std::move(task_seconds);
+ result.ld_swap_diagnostics = std::move(ld_swap_diagnostics);
+ result.ld_swap_chain_diagnostics = std::move(ld_swap_chain_diagnostics);
+ return result;
+}
 
+} }
+
+#endif

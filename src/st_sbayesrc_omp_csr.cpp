@@ -6,6 +6,7 @@
 #include "st_block_eigen.h"
 #include "st_csr_common.h"
 #include "st_ld_operator.h"
+#include "blr_csr_sbayesrc_types.h"
 
 #include <algorithm>
 #include <cmath>
@@ -13,6 +14,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <limits>
 #include <numeric>
 #include <random>
@@ -1171,6 +1173,8 @@ inline double computeLE_SBayesRC_ST_csr(
  return vle / static_cast<double>(n);
 }
 
+#include "blr_csr_sbayesrc_core_impl.h"
+
 template <class MakeOperator>
 Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   std::vector<std::vector<double>> wy,
@@ -1534,7 +1538,188 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
             return x2[static_cast<std::size_t>(a)] > x2[static_cast<std::size_t>(b)];
            });
 
-#include "blr_csr_sbayesrc_core_impl.h"
+ sblr::core::SBayesRCAnnotationDesignView annotation_contract;
+ annotation_contract.marker_count = static_cast<std::size_t>(m);
+ annotation_contract.annotation_count = static_cast<std::size_t>(nAnno);
+ annotation_contract.values = A.memptr();
+ annotation_contract.value_count = A.n_elem;
+ annotation_contract.includes_intercept = true;
+
+ sblr::core::SBayesRCComponentSpec component_contract;
+ component_contract.scales.assign(gamma.begin(), gamma.end());
+
+ sblr::core::SBayesRCAlphaSpec alpha_contract;
+ alpha_contract.annotation_count = static_cast<std::size_t>(nAnno);
+ alpha_contract.step_count = static_cast<std::size_t>(nstep);
+ alpha_contract.intercept_flat = intercept_flat;
+ alpha_contract.update = updateAlpha;
+ alpha_contract.variance_prior_a = sigmaSqAlpha_a;
+ alpha_contract.variance_prior_b = sigmaSqAlpha_b;
+ alpha_contract.update_every = alpha_update_every;
+
+ sblr::core::SBayesRCProbabilityPolicy probability_contract;
+ probability_contract.probability_floor = pi_floor;
+ probability_contract.stick_order.resize(static_cast<std::size_t>(nstep));
+ for (int j = 0; j < nstep; ++j) {
+  probability_contract.stick_order[static_cast<std::size_t>(j)] =
+   static_cast<std::size_t>(j + 1);
+ }
+
+ sblr::core::SBayesRCPriors prior_contract;
+ prior_contract.marker_df = nub;
+ prior_contract.residual_df = nue;
+
+ sblr::core::SBayesRCControls control_contract;
+ control_contract.iterations = nit;
+ control_contract.burnin = nburn;
+ control_contract.thinning = nthin;
+ control_contract.chains = nchains;
+ control_contract.cores = ncores;
+ control_contract.seed = seed;
+ control_contract.chain_seeds = chain_seeds_vec;
+ control_contract.keep_chains = keep_chains;
+ control_contract.update_marker_variance = updateB;
+ control_contract.update_residual_variance = updateE;
+ control_contract.rebuild_residual_before_update = rebuild_r_before_updateE;
+ control_contract.update_ld_swap = updateLDswap;
+ control_contract.ld_swap_probability = ld_swap_prob;
+ control_contract.ld_swap_r2 = ld_swap_r2;
+ control_contract.ld_swap_max_friends = ld_swap_max_friends;
+ control_contract.ld_swap_moves = ld_swap_moves;
+
+ sblr::core::SBayesRCOutputControl output_contract;
+ output_contract.keep_chains = keep_chains;
+
+ using Operator = typename std::remove_reference<decltype(op)>::type;
+ sblr::core::CsrSBayesRCExecutionContext<Operator> execution_context{
+  op,
+  ld_swap_friends,
+  wy_mat,
+  ww_mat,
+  b_mat,
+  r_mat,
+  comp_mat,
+  yy_vec,
+  ssb_prior_mat,
+  sse_prior_mat,
+  B,
+  E,
+  A,
+  gamma,
+  alpha_init,
+  sigmaSqAlpha_init,
+  comp_init,
+  r_init,
+  n,
+  chain_seeds_vec,
+  order,
+  prior_scale,
+  selection_s_log_h_row,
+  annotation_contract,
+  component_contract,
+  alpha_contract,
+  probability_contract,
+  prior_contract,
+  control_contract,
+  output_contract,
+  m,
+  nt,
+  nAnno,
+  Kgamma,
+  nstep,
+  nit,
+  nburn,
+  nthin,
+  ncores,
+  seed,
+  nchains,
+  use_comp_init,
+  use_r_init,
+  rebuild_r_before_updateE,
+  intercept_flat,
+  sigmaSqAlpha_a,
+  sigmaSqAlpha_b,
+  pi_floor,
+  nub,
+  nue,
+  updateAlpha,
+  updateB,
+  updateE,
+  alpha_update_every,
+  adjE,
+  updateLDswap,
+  ld_swap_prob,
+  ld_swap_moves,
+  use_selection_s_prior_scale,
+  estimate_selection_s,
+  selection_s_init,
+  selection_s_prior[0],
+  selection_s_prior[1],
+  selection_s_proposal_sd
+ };
+ auto execution_result = sblr::core::run_csr_sbayesrc(execution_context);
+
+ auto& bm_task = execution_result.bm_task;
+ auto& dm_task = execution_result.dm_task;
+ auto& b_task = execution_result.b_task;
+ auto& r_task = execution_result.r_task;
+ auto& comp_task_double = execution_result.comp_task_double;
+ auto& vbs_task = execution_result.vbs_task;
+ auto& vgs_task = execution_result.vgs_task;
+ auto& ves_task = execution_result.ves_task;
+ auto& pis_task = execution_result.pis_task;
+ auto& vles_task = execution_result.vles_task;
+ auto& vlds_task = execution_result.vlds_task;
+ auto& selection_s_task = execution_result.selection_s_task;
+ auto& final_vb_task = execution_result.final_vb_task;
+ auto& final_vg_task = execution_result.final_vg_task;
+ auto& final_ve_task = execution_result.final_ve_task;
+ auto& final_pi_active_task = execution_result.final_pi_active_task;
+ auto& final_pi_component_task = execution_result.final_pi_component_task;
+ auto& final_vle_task = execution_result.final_vle_task;
+ auto& final_vld_task = execution_result.final_vld_task;
+ auto& nsamples_task = execution_result.nsamples_task;
+ auto& selection_s_attempted_task = execution_result.selection_s_attempted_task;
+ auto& selection_s_accepted_task = execution_result.selection_s_accepted_task;
+ auto& alpha_mean_task = execution_result.alpha_mean_task;
+ auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
+ auto& comp_prob_mean_task = execution_result.comp_prob_mean_task;
+ auto& ncomp_mean_task = execution_result.ncomp_mean_task;
+ auto& bm_mat = execution_result.bm_mat;
+ auto& dm_mat = execution_result.dm_mat;
+ auto& bm_sd_mat = execution_result.bm_sd_mat;
+ auto& dm_sd_mat = execution_result.dm_sd_mat;
+ auto& bm_min_mat = execution_result.bm_min_mat;
+ auto& dm_min_mat = execution_result.dm_min_mat;
+ auto& bm_max_mat = execution_result.bm_max_mat;
+ auto& dm_max_mat = execution_result.dm_max_mat;
+ auto& b_result_mat = execution_result.b_mat;
+ auto& r_result_mat = execution_result.r_mat;
+ auto& comp_result_mat = execution_result.comp_mat;
+ auto& vbs_mat = execution_result.vbs_mat;
+ auto& vgs_mat = execution_result.vgs_mat;
+ auto& ves_mat = execution_result.ves_mat;
+ auto& pis_mat = execution_result.pis_mat;
+ auto& vles_mat = execution_result.vles_mat;
+ auto& vlds_mat = execution_result.vlds_mat;
+ auto& selection_s_mat = execution_result.selection_s_mat;
+ auto& final_vb = execution_result.final_vb;
+ auto& final_vg = execution_result.final_vg;
+ auto& final_ve = execution_result.final_ve;
+ auto& final_pi_active = execution_result.final_pi_active;
+ auto& final_pi_component = execution_result.final_pi_component;
+ auto& final_vle = execution_result.final_vle;
+ auto& final_vld = execution_result.final_vld;
+ auto& nsamples_vec = execution_result.nsamples_vec;
+ auto& selection_s_attempted_vec = execution_result.selection_s_attempted_vec;
+ auto& selection_s_accepted_vec = execution_result.selection_s_accepted_vec;
+ auto& alpha_mean = execution_result.alpha_mean;
+ auto& sigmaSqAlpha_mean = execution_result.sigmaSqAlpha_mean;
+ auto& comp_prob_mean = execution_result.comp_prob_mean;
+ auto& ncomp_mean = execution_result.ncomp_mean;
+ auto& task_seconds = execution_result.task_seconds;
+ auto& ld_swap_diagnostics = execution_result.ld_swap_diagnostics;
+ auto& ld_swap_chain_diagnostics = execution_result.ld_swap_chain_diagnostics;
 
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
  const int n_trace = nit + nburn;
@@ -1683,9 +1868,9 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   Rcpp::Named("bm") = marker_matrix(bm_mat),
   Rcpp::Named("dm") = marker_matrix(dm_mat),
   Rcpp::Named("wy") = marker_matrix(wy_mat),
-  Rcpp::Named("r") = marker_matrix(r_mat),
-  Rcpp::Named("b") = marker_matrix(b_mat),
-  Rcpp::Named("state") = marker_matrix(comp_mat)
+  Rcpp::Named("r") = marker_matrix(r_result_mat),
+  Rcpp::Named("b") = marker_matrix(b_result_mat),
+  Rcpp::Named("state") = marker_matrix(comp_result_mat)
  );
  if (return_chain_summaries) {
   marker["bm_sd"] = marker_matrix(bm_sd_mat);
