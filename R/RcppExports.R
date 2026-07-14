@@ -21,6 +21,10 @@ blr_phase4_retained_iterations_cpp <- function(trace_length, burnin, thinning) {
     .Call(`_sblr_blr_phase4_retained_iterations_cpp`, trace_length, burnin, thinning)
 }
 
+blr_phase5a_validate_bayesr_contract_cpp <- function(spec) {
+    .Call(`_sblr_blr_phase5a_validate_bayesr_contract_cpp`, spec)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }
