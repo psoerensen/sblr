@@ -71,8 +71,10 @@ test_that("Phase 7B2 reproducibility and alpha modes remain exact", {
                   readRDS(phase7b2_path("tests", "testthat", "fixtures", "blr_phase7a_sbayesrc", "learned_explicit_keep.rds"))$fit)
 })
 
-test_that("Phase 7B2 keeps inline conversion and protected source files", {
+test_that("Phase 7B2 keeps one named converter and protected source files", {
  src <- paste(readLines(phase7b2_path("src", "st_sbayesrc_omp_csr.cpp"), warn = FALSE), collapse = "\n")
+ expect_equal(length(gregexpr("static Rcpp::List stblr_csr_sbayesrc_result_to_raw(", src, fixed = TRUE)[[1L]]), 2L)
+ expect_equal(length(gregexpr("return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);", src, fixed = TRUE)[[1L]]), 1L)
  expect_match(src, "Rcpp::List comp_prob_out", fixed = TRUE)
  expect_match(src, "Rcpp::List marker = Rcpp::List::create", fixed = TRUE)
  paths <- c("src/st_cpg_omp_csr.cpp", "src/blr_csr_bayesc_types.h", "src/blr_csr_bayesc_core_impl.h",

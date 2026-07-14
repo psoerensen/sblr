@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 4 shared scalar infrastructure complete; revised implementation plan
+**Status:** Phase 7B complete; ordinary-CSR BayesC/BayesR canonical and SBayesRC migrated behind typed boundaries
 **Date:** 2026-07-13  
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -1068,14 +1068,16 @@ Do not combine in one task:
 
 ---
 
-## 26. Immediate next step
+## 26. Current migration boundary
 
-Phase 7A establishes binding-neutral ordinary-CSR SBayesRC contracts for
-borrowed CSR and annotation data, ordered probit stick-breaking components,
-alpha state and priors, execution controls, and result vocabulary. Six compact
-pre-migration configurations permanently protect raw and formatted output, and
-the approved Phase 7B seam begins after current decoding, alignment, Armadillo
-preparation, and operator construction. Production SBayesRC remains unchanged
-and is not yet migrated. CSR BayesC and BayesR remain canonical; block-eigen,
-BED BayesRC, scheduled, fixed-prior, group, learned-annotation, and
-multivariate backends remain unchanged.
+Ordinary-CSR SBayesRC is migrated behind typed execution boundaries. Its typed
+borrowed CSR/annotation context, operator-aware templated core, typed result,
+and single ordinary-CSR Rcpp converter are active. Ordered-probit
+stick-breaking and alpha behavior are unchanged; all six permanent raw and
+formatted references are exact, and runtime/memory have been checked. The
+public route and schema are unchanged. The route is ready for Phase 8
+canonicalization. CSR BayesC and BayesR remain canonical. The existing
+block-eigen SBayesRC compile-time instantiation is preserved but is not an
+independently migrated typed public adapter. BED BayesRC, scheduled,
+fixed-prior, group, learned-annotation, and multivariate backends remain
+unchanged.

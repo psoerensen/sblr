@@ -1175,6 +1175,31 @@ inline double computeLE_SBayesRC_ST_csr(
 
 #include "blr_csr_sbayesrc_core_impl.h"
 
+struct CsrSBayesRCBindingMetadata {
+ const arma::mat& wy_mat;
+ const arma::vec& gamma;
+ const std::vector<int>& sample_size;
+ const Rcpp::List& operator_diagnostics;
+ int marker_count;
+ int trait_count;
+ int annotation_count;
+ int component_count;
+ int step_count;
+ int iterations;
+ int burnin;
+ int thinning;
+ int chains;
+ bool keep_chains;
+ bool update_ld_swap;
+ bool estimate_selection_s;
+ bool use_selection_s_prior_scale;
+};
+
+static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
+ const sblr::core::CsrSBayesRCExecutionResult& execution_result,
+ const CsrSBayesRCBindingMetadata& metadata
+);
+
 template <class MakeOperator>
 Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   std::vector<std::vector<double>> wy,
@@ -1659,67 +1684,98 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
  };
  auto execution_result = sblr::core::run_csr_sbayesrc(execution_context);
 
- auto& bm_task = execution_result.bm_task;
- auto& dm_task = execution_result.dm_task;
- auto& b_task = execution_result.b_task;
- auto& r_task = execution_result.r_task;
- auto& comp_task_double = execution_result.comp_task_double;
- auto& vbs_task = execution_result.vbs_task;
- auto& vgs_task = execution_result.vgs_task;
- auto& ves_task = execution_result.ves_task;
- auto& pis_task = execution_result.pis_task;
- auto& vles_task = execution_result.vles_task;
- auto& vlds_task = execution_result.vlds_task;
- auto& selection_s_task = execution_result.selection_s_task;
- auto& final_vb_task = execution_result.final_vb_task;
- auto& final_vg_task = execution_result.final_vg_task;
- auto& final_ve_task = execution_result.final_ve_task;
- auto& final_pi_active_task = execution_result.final_pi_active_task;
- auto& final_pi_component_task = execution_result.final_pi_component_task;
- auto& final_vle_task = execution_result.final_vle_task;
- auto& final_vld_task = execution_result.final_vld_task;
- auto& nsamples_task = execution_result.nsamples_task;
- auto& selection_s_attempted_task = execution_result.selection_s_attempted_task;
- auto& selection_s_accepted_task = execution_result.selection_s_accepted_task;
- auto& alpha_mean_task = execution_result.alpha_mean_task;
- auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
- auto& comp_prob_mean_task = execution_result.comp_prob_mean_task;
- auto& ncomp_mean_task = execution_result.ncomp_mean_task;
- auto& bm_mat = execution_result.bm_mat;
- auto& dm_mat = execution_result.dm_mat;
- auto& bm_sd_mat = execution_result.bm_sd_mat;
- auto& dm_sd_mat = execution_result.dm_sd_mat;
- auto& bm_min_mat = execution_result.bm_min_mat;
- auto& dm_min_mat = execution_result.dm_min_mat;
- auto& bm_max_mat = execution_result.bm_max_mat;
- auto& dm_max_mat = execution_result.dm_max_mat;
- auto& b_result_mat = execution_result.b_mat;
- auto& r_result_mat = execution_result.r_mat;
- auto& comp_result_mat = execution_result.comp_mat;
- auto& vbs_mat = execution_result.vbs_mat;
- auto& vgs_mat = execution_result.vgs_mat;
- auto& ves_mat = execution_result.ves_mat;
- auto& pis_mat = execution_result.pis_mat;
- auto& vles_mat = execution_result.vles_mat;
- auto& vlds_mat = execution_result.vlds_mat;
- auto& selection_s_mat = execution_result.selection_s_mat;
- auto& final_vb = execution_result.final_vb;
- auto& final_vg = execution_result.final_vg;
- auto& final_ve = execution_result.final_ve;
- auto& final_pi_active = execution_result.final_pi_active;
- auto& final_pi_component = execution_result.final_pi_component;
- auto& final_vle = execution_result.final_vle;
- auto& final_vld = execution_result.final_vld;
- auto& nsamples_vec = execution_result.nsamples_vec;
- auto& selection_s_attempted_vec = execution_result.selection_s_attempted_vec;
- auto& selection_s_accepted_vec = execution_result.selection_s_accepted_vec;
- auto& alpha_mean = execution_result.alpha_mean;
- auto& sigmaSqAlpha_mean = execution_result.sigmaSqAlpha_mean;
- auto& comp_prob_mean = execution_result.comp_prob_mean;
- auto& ncomp_mean = execution_result.ncomp_mean;
- auto& task_seconds = execution_result.task_seconds;
- auto& ld_swap_diagnostics = execution_result.ld_swap_diagnostics;
- auto& ld_swap_chain_diagnostics = execution_result.ld_swap_chain_diagnostics;
+ CsrSBayesRCBindingMetadata binding_metadata{
+  wy_mat,
+  gamma,
+  n,
+  operator_context.diagnostics,
+  m,
+  nt,
+  nAnno,
+  Kgamma,
+  nstep,
+  nit,
+  nburn,
+  nthin,
+  nchains,
+  keep_chains,
+  updateLDswap,
+  estimate_selection_s,
+  use_selection_s_prior_scale
+ };
+ return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);
+}
+
+static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
+ const sblr::core::CsrSBayesRCExecutionResult& execution_result,
+ const CsrSBayesRCBindingMetadata& metadata
+) {
+ const arma::mat& wy_mat = metadata.wy_mat;
+ const arma::vec& gamma = metadata.gamma;
+ const std::vector<int>& n = metadata.sample_size;
+ const int m = metadata.marker_count;
+ const int nt = metadata.trait_count;
+ const int nAnno = metadata.annotation_count;
+ const int Kgamma = metadata.component_count;
+ const int nstep = metadata.step_count;
+ const int nit = metadata.iterations;
+ const int nburn = metadata.burnin;
+ const int nthin = metadata.thinning;
+ const int nchains = metadata.chains;
+ const bool keep_chains = metadata.keep_chains;
+ const bool updateLDswap = metadata.update_ld_swap;
+ const bool estimate_selection_s = metadata.estimate_selection_s;
+ const bool use_selection_s_prior_scale = metadata.use_selection_s_prior_scale;
+
+ const auto& bm_task = execution_result.bm_task;
+ const auto& dm_task = execution_result.dm_task;
+ const auto& comp_task_double = execution_result.comp_task_double;
+ const auto& vbs_task = execution_result.vbs_task;
+ const auto& vgs_task = execution_result.vgs_task;
+ const auto& ves_task = execution_result.ves_task;
+ const auto& pis_task = execution_result.pis_task;
+ const auto& vles_task = execution_result.vles_task;
+ const auto& vlds_task = execution_result.vlds_task;
+ const auto& selection_s_task = execution_result.selection_s_task;
+ const auto& final_pi_component_task = execution_result.final_pi_component_task;
+ const auto& selection_s_attempted_task = execution_result.selection_s_attempted_task;
+ const auto& selection_s_accepted_task = execution_result.selection_s_accepted_task;
+ const auto& alpha_mean_task = execution_result.alpha_mean_task;
+ const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
+ const auto& comp_prob_mean_task = execution_result.comp_prob_mean_task;
+ const auto& ncomp_mean_task = execution_result.ncomp_mean_task;
+ const auto& bm_mat = execution_result.bm_mat;
+ const auto& dm_mat = execution_result.dm_mat;
+ const auto& bm_sd_mat = execution_result.bm_sd_mat;
+ const auto& dm_sd_mat = execution_result.dm_sd_mat;
+ const auto& bm_min_mat = execution_result.bm_min_mat;
+ const auto& dm_min_mat = execution_result.dm_min_mat;
+ const auto& bm_max_mat = execution_result.bm_max_mat;
+ const auto& dm_max_mat = execution_result.dm_max_mat;
+ const auto& b_result_mat = execution_result.b_mat;
+ const auto& r_result_mat = execution_result.r_mat;
+ const auto& comp_result_mat = execution_result.comp_mat;
+ const auto& vbs_mat = execution_result.vbs_mat;
+ const auto& vgs_mat = execution_result.vgs_mat;
+ const auto& ves_mat = execution_result.ves_mat;
+ const auto& pis_mat = execution_result.pis_mat;
+ const auto& vles_mat = execution_result.vles_mat;
+ const auto& vlds_mat = execution_result.vlds_mat;
+ const auto& selection_s_mat = execution_result.selection_s_mat;
+ const auto& final_vb = execution_result.final_vb;
+ const auto& final_vg = execution_result.final_vg;
+ const auto& final_ve = execution_result.final_ve;
+ const auto& final_pi_component = execution_result.final_pi_component;
+ const auto& nsamples_vec = execution_result.nsamples_vec;
+ const auto& selection_s_attempted_vec = execution_result.selection_s_attempted_vec;
+ const auto& selection_s_accepted_vec = execution_result.selection_s_accepted_vec;
+ const auto& alpha_mean = execution_result.alpha_mean;
+ const auto& sigmaSqAlpha_mean = execution_result.sigmaSqAlpha_mean;
+ const auto& comp_prob_mean = execution_result.comp_prob_mean;
+ const auto& ncomp_mean = execution_result.ncomp_mean;
+ const auto& task_seconds = execution_result.task_seconds;
+ const auto& ld_swap_diagnostics = execution_result.ld_swap_diagnostics;
+ const auto& ld_swap_chain_diagnostics = execution_result.ld_swap_chain_diagnostics;
 
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
  const int n_trace = nit + nburn;
@@ -1908,8 +1964,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   Rcpp::Named("seconds_max") = seconds_max,
  Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap_diagnostics) : R_NilValue
  );
- if (operator_context.diagnostics.size() > 0) {
-  diagnostics["block_eigen"] = operator_context.diagnostics;
+ if (metadata.operator_diagnostics.size() > 0) {
+  diagnostics["block_eigen"] = metadata.operator_diagnostics;
  }
 
  Rcpp::List chains = R_NilValue;
