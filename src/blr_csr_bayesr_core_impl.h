@@ -19,7 +19,7 @@ struct CsrBayesRExecutionContext {
  const arma::vec* yy_vec = nullptr;
  const arma::rowvec* prior_scale = nullptr; const arma::rowvec* selection_s_log_h_row = nullptr;
  int K=0,m=0,nt=0,nchains=1,ncores=1,nit=0,nburn=0,nthin=1,seed=1;
- int updateE_start=0,updateE_every=1,ld_swap_max_friends=50,ld_swap_moves=1;
+ int updateE_start=0,updateE_every=1,ld_swap_moves=1;
  bool use_comp_init=false,use_r_init=false,estimate_selection_s=false;
  bool use_selection_s_prior_scale=false,updateLDswap=false,updateB=true,updateE=true,updatePi=true;
  double ld_swap_prob=0.0,selection_s_init=0.0,selection_s_prior_lower=-3.0;
@@ -43,10 +43,11 @@ struct CsrBayesRExecutionResult {
  arma::mat ncomp,covb,covg,cove,vb,vg,ve;
 };
 
-// Mechanical Phase 5B1 extraction at the existing post-operator seam.
-// Local aliases retain the original numerical statement spelling and order.
+// Canonical operator-aware implementation. Include only from the BayesR
+// binding translation unit so both operator instantiations share one body and
+// the package's established Armadillo configuration.
 template <class Operator>
-CsrBayesRExecutionResult run_bayesr_execution(CsrBayesRExecutionContext<Operator>& context) {
+CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& context) {
  Operator& op=*context.op; const BayesRLDLDFriends& ld_swap_friends=*context.ld_swap_friends;
  const std::vector<double>& mixture_var=*context.mixture_var; const std::vector<double>& pi=*context.pi;
  const std::vector<double>& alpha=*context.alpha; const std::vector<int>& n=*context.n;

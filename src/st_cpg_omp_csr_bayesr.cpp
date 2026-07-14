@@ -1469,8 +1469,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  execution_context.ld_swap_prob=ld_swap_prob; execution_context.selection_s_init=selection_s_init;
  execution_context.selection_s_prior_lower=selection_s_prior[0]; execution_context.selection_s_prior_upper=selection_s_prior[1];
  execution_context.selection_s_proposal_sd=selection_s_proposal_sd; execution_context.nub=nub; execution_context.nue=nue; execution_context.adjE=adjE;
- CsrBayesRExecutionResult execution_result=run_bayesr_execution(execution_context);
- auto csr_bayesr_result_to_raw = [&](const CsrBayesRExecutionResult& execution_result) -> Rcpp::List {
+ CsrBayesRExecutionResult execution_result=run_csr_bayesr(execution_context);
+ auto stblr_csr_bayesr_result_to_raw = [&](const CsrBayesRExecutionResult& execution_result) -> Rcpp::List {
  const arma::vec& mixture_var_vec=execution_result.mixture_var_vec;
  const arma::mat &bm_task=execution_result.bm_task,&dm_task=execution_result.dm_task,&component_mean_task=execution_result.component_mean_task;
  const arma::mat &component_task=execution_result.component_task,&vbs_task=execution_result.vbs_task,&vgs_task=execution_result.vgs_task;
@@ -1765,7 +1765,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
  return raw;
  };
- return csr_bayesr_result_to_raw(execution_result);
+ return stblr_csr_bayesr_result_to_raw(execution_result);
 }
 
 // [[Rcpp::export]]

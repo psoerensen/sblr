@@ -95,7 +95,7 @@ struct CsrBayesRChainResult {
   double retained_samples = 0.0;
 };
 
-// Phase 5A vocabulary only: the production sampler does not return this yet.
+// Stable binding-neutral result vocabulary for CSR BayesR contracts.
 struct CsrBayesRResult {
   std::size_t marker_count = 0, trait_count = 0, component_dimension = 0;
   CsrBayesRArray marker_mean, marker_pip, component_probability;
