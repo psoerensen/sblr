@@ -101,7 +101,7 @@ Status labels:
 | ST learned annotation BayesC | scalar | binary | annot_logit | learned annotation scale | scalar | CSR | Current | Preserve kernel; extract reusable utilities cautiously | Later scalar policy migration |
 | ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Canonical | Typed borrowed context, operator-aware templated core, typed result, one converter; permanent exact references and runtime/memory baseline | Stable canonical scalar mixture reference |
 | ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | BED | Current | Preserve and migrate after CSR | Operator reuse test |
-| ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Current | Preserve kernel; extract stick utilities | Probability-policy reference |
+| ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Production unchanged; Phase 7A typed CSR/annotation/component/alpha/result contracts and deterministic references established | Approved post-operator Phase 7B seam; pre-migration benchmark established | Not migrated; probability-policy reference |
 | ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Current | Preserve and migrate | Cross-operator policy test |
 | ST hierarchical BayesC | scalar | binary | global_binary | hierarchy | scalar | CSR first | Not implemented | New policy on migrated scalar core | Planned |
 | ST hierarchical BayesR | scalar | mixture | global_dirichlet | component × hierarchy | scalar | CSR first | Not implemented | Compose after hierarchy | Planned |

@@ -9,6 +9,7 @@
 #include "blr_result.h"
 #include "blr_scalar_execution.h"
 #include "blr_csr_bayesr_types.h"
+#include "blr_csr_sbayesrc_types.h"
 #include "blr_spec.h"
 
 namespace {
@@ -464,4 +465,36 @@ Rcpp::List blr_phase5a_validate_bayesr_contract_cpp(Rcpp::List spec) {
   return Rcpp::List::create(Rcpp::Named("data")=data,Rcpp::Named("component")=component,
     Rcpp::Named("controls")=controls,Rcpp::Named("output")=output,
     Rcpp::Named("validated")=true,Rcpp::Named("invokes_sampler")=false);
+}
+
+// Internal Phase 7A validation-only bridge. It owns small test buffers while
+// validating borrowed views and never calls the SBayesRC sampler.
+// [[Rcpp::export]]
+Rcpp::List blr_phase7a_validate_sbayesrc_contract_cpp(Rcpp::List spec) {
+  using namespace sblr::core;
+  Rcpp::List data=spec["data"], annotation=spec["annotation"], component=spec["component"];
+  Rcpp::List alpha=spec["alpha"], probability=spec["probability"], controls=spec["controls"], output=spec["output"];
+  const std::size_t m=Rcpp::as<std::size_t>(data["marker_count"]), nt=Rcpp::as<std::size_t>(data["trait_count"]);
+  std::vector<std::uint64_t> row_ptr(m+1,0); std::vector<double> diagonal(m,1.0);
+  std::vector<int> sample_size=Rcpp::as<std::vector<int>>(data["sample_size"]);
+  Rcpp::NumericMatrix A=annotation["values"];
+  CsrSBayesRCExecutionInput x;
+  x.data.marker_count=m; x.data.trait_count=nt; x.data.row_ptr=row_ptr.data(); x.data.row_ptr_count=row_ptr.size();
+  x.data.diagonal=diagonal.data(); x.data.diagonal_count=diagonal.size(); x.data.sample_size=sample_size.data(); x.data.sample_size_count=sample_size.size();
+  x.data.shared_read_only=Rcpp::as<bool>(data["shared_read_only"]); x.data.per_chain_payload=Rcpp::as<bool>(data["per_chain_payload"]); x.data.storage_outlives_execution=Rcpp::as<bool>(data["storage_outlives_execution"]);
+  x.marker_order=Rcpp::as<std::vector<std::string>>(data["marker_order"]); x.trait_order=Rcpp::as<std::vector<std::string>>(data["trait_order"]);
+  x.annotation.marker_count=Rcpp::as<std::size_t>(annotation["marker_count"]); x.annotation.annotation_count=Rcpp::as<std::size_t>(annotation["annotation_count"]);
+  x.annotation.values=A.begin(); x.annotation.value_count=static_cast<std::size_t>(A.size()); x.annotation.annotation_order=Rcpp::as<std::vector<std::string>>(annotation["annotation_order"]);
+  x.annotation.layout=Rcpp::as<std::string>(annotation["layout"]); x.annotation.includes_intercept=Rcpp::as<bool>(annotation["includes_intercept"]);
+  x.annotation.standardized=Rcpp::as<bool>(annotation["standardized"]); x.annotation.centered_binary=Rcpp::as<bool>(annotation["centered_binary"]);
+  x.annotation.shared_read_only=Rcpp::as<bool>(annotation["shared_read_only"]); x.annotation.per_chain_payload=Rcpp::as<bool>(annotation["per_chain_payload"]); x.annotation.storage_outlives_execution=Rcpp::as<bool>(annotation["storage_outlives_execution"]);
+  x.components.scales=Rcpp::as<std::vector<double>>(component["scales"]); x.components.null_component=Rcpp::as<std::size_t>(component["null_component"]); x.components.scale_interpretation=Rcpp::as<std::string>(component["scale_interpretation"]);
+  x.alpha.annotation_count=Rcpp::as<std::size_t>(alpha["annotation_count"]); x.alpha.step_count=Rcpp::as<std::size_t>(alpha["step_count"]);
+  x.alpha.initial_values=Rcpp::as<std::vector<double>>(alpha["initial_values"]); x.alpha.initial_variance=Rcpp::as<std::vector<double>>(alpha["initial_variance"]);
+  x.alpha.intercept_flat=Rcpp::as<bool>(alpha["intercept_flat"]); x.alpha.update=Rcpp::as<bool>(alpha["update"]); x.alpha.variance_prior_a=Rcpp::as<double>(alpha["variance_prior_a"]); x.alpha.variance_prior_b=Rcpp::as<double>(alpha["variance_prior_b"]); x.alpha.update_every=Rcpp::as<int>(alpha["update_every"]);
+  x.probability.transformation=Rcpp::as<std::string>(probability["transformation"]); x.probability.reference_component=Rcpp::as<std::size_t>(probability["reference_component"]); x.probability.stick_order=Rcpp::as<std::vector<std::size_t>>(probability["stick_order"]); x.probability.probability_floor=Rcpp::as<double>(probability["probability_floor"]); x.probability.floor_then_normalize=Rcpp::as<bool>(probability["floor_then_normalize"]);
+  x.controls.iterations=Rcpp::as<int>(controls["iterations"]); x.controls.burnin=Rcpp::as<int>(controls["burnin"]); x.controls.thinning=Rcpp::as<int>(controls["thinning"]); x.controls.chains=Rcpp::as<int>(controls["chains"]); x.controls.cores=Rcpp::as<int>(controls["cores"]); x.controls.seed=Rcpp::as<int>(controls["seed"]); x.controls.chain_seeds=Rcpp::as<std::vector<int>>(controls["chain_seeds"]); x.controls.keep_chains=Rcpp::as<bool>(controls["keep_chains"]); x.controls.update_ld_swap=Rcpp::as<bool>(controls["update_ld_swap"]); x.controls.ld_swap_probability=Rcpp::as<double>(controls["ld_swap_probability"]); x.controls.ld_swap_r2=Rcpp::as<double>(controls["ld_swap_r2"]); x.controls.ld_swap_max_friends=Rcpp::as<int>(controls["ld_swap_max_friends"]); x.controls.ld_swap_moves=Rcpp::as<int>(controls["ld_swap_moves"]);
+  x.output.keep_chains=Rcpp::as<bool>(output["keep_chains"]); x.output.diagnostics=Rcpp::as<bool>(output["diagnostics"]);
+  validate_csr_sbayesrc_execution_input(x);
+  return Rcpp::List::create(Rcpp::Named("data")=data,Rcpp::Named("annotation")=annotation,Rcpp::Named("component")=component,Rcpp::Named("alpha")=alpha,Rcpp::Named("probability")=probability,Rcpp::Named("controls")=controls,Rcpp::Named("output")=output,Rcpp::Named("validated")=true,Rcpp::Named("invokes_sampler")=false);
 }

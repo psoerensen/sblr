@@ -1070,7 +1070,12 @@ Do not combine in one task:
 
 ## 26. Immediate next step
 
-Migrate the existing unscheduled CSR BayesR implementation behind typed
-execution and result boundaries, adopting only the shared scalar
-infrastructure validated in Phase 4 while preserving BayesR mathematics, RNG
-ordering, speed, memory use, public API, and output schema.
+Phase 7A establishes binding-neutral ordinary-CSR SBayesRC contracts for
+borrowed CSR and annotation data, ordered probit stick-breaking components,
+alpha state and priors, execution controls, and result vocabulary. Six compact
+pre-migration configurations permanently protect raw and formatted output, and
+the approved Phase 7B seam begins after current decoding, alignment, Armadillo
+preparation, and operator construction. Production SBayesRC remains unchanged
+and is not yet migrated. CSR BayesC and BayesR remain canonical; block-eigen,
+BED BayesRC, scheduled, fixed-prior, group, learned-annotation, and
+multivariate backends remain unchanged.

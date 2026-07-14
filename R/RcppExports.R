@@ -25,6 +25,10 @@ blr_phase5a_validate_bayesr_contract_cpp <- function(spec) {
     .Call(`_sblr_blr_phase5a_validate_bayesr_contract_cpp`, spec)
 }
 
+blr_phase7a_validate_sbayesrc_contract_cpp <- function(spec) {
+    .Call(`_sblr_blr_phase7a_validate_sbayesrc_contract_cpp`, spec)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }
