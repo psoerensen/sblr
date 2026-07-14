@@ -10,6 +10,7 @@
 #include "blr_scalar_execution.h"
 #include "blr_csr_bayesr_types.h"
 #include "blr_csr_sbayesrc_types.h"
+#include "blr_csr_annotation_bayesc_types.h"
 #include "blr_spec.h"
 
 namespace {
@@ -497,4 +498,44 @@ Rcpp::List blr_phase7a_validate_sbayesrc_contract_cpp(Rcpp::List spec) {
   x.output.keep_chains=Rcpp::as<bool>(output["keep_chains"]); x.output.diagnostics=Rcpp::as<bool>(output["diagnostics"]);
   validate_csr_sbayesrc_execution_input(x);
   return Rcpp::List::create(Rcpp::Named("data")=data,Rcpp::Named("annotation")=annotation,Rcpp::Named("component")=component,Rcpp::Named("alpha")=alpha,Rcpp::Named("probability")=probability,Rcpp::Named("controls")=controls,Rcpp::Named("output")=output,Rcpp::Named("validated")=true,Rcpp::Named("invokes_sampler")=false);
+}
+
+namespace {
+struct Phase9ACommonBuffers {
+ std::vector<std::uint64_t> row_ptr; std::vector<double> diagonal; std::vector<int> sample_size;
+ sblr::core::AnnotationBayesCDataView data; sblr::core::AnnotationBayesCControls controls;
+};
+Phase9ACommonBuffers phase9a_common(Rcpp::List data, Rcpp::List controls) {
+ Phase9ACommonBuffers b; const std::size_t m=Rcpp::as<std::size_t>(data["marker_count"]), nt=Rcpp::as<std::size_t>(data["trait_count"]);
+ b.row_ptr.assign(m+1,0); b.diagonal.assign(m,1.0); b.sample_size=Rcpp::as<std::vector<int>>(data["sample_size"]);
+ b.data.marker_count=m; b.data.trait_count=nt; b.data.row_ptr=b.row_ptr.data(); b.data.row_ptr_count=b.row_ptr.size(); b.data.diagonal=b.diagonal.data(); b.data.diagonal_count=b.diagonal.size(); b.data.sample_size=b.sample_size.data(); b.data.sample_size_count=b.sample_size.size();
+ b.data.shared_read_only=Rcpp::as<bool>(data["shared_read_only"]); b.data.per_chain_payload=Rcpp::as<bool>(data["per_chain_payload"]); b.data.storage_outlives_execution=Rcpp::as<bool>(data["storage_outlives_execution"]);
+ b.controls.iterations=Rcpp::as<int>(controls["iterations"]); b.controls.burnin=Rcpp::as<int>(controls["burnin"]); b.controls.thinning=Rcpp::as<int>(controls["thinning"]); b.controls.chains=Rcpp::as<int>(controls["chains"]); b.controls.cores=Rcpp::as<int>(controls["cores"]); b.controls.seed=Rcpp::as<int>(controls["seed"]); b.controls.chain_seeds=Rcpp::as<std::vector<int>>(controls["chain_seeds"]); b.controls.keep_chains=Rcpp::as<bool>(controls["keep_chains"]); b.controls.update_marker_variance=Rcpp::as<bool>(controls["update_marker_variance"]); b.controls.update_residual_variance=Rcpp::as<bool>(controls["update_residual_variance"]); b.controls.update_global_probability=Rcpp::as<bool>(controls["update_global_probability"]); b.controls.update_ld_swap=Rcpp::as<bool>(controls["update_ld_swap"]); b.controls.ld_swap_probability=Rcpp::as<double>(controls["ld_swap_probability"]); b.controls.ld_swap_r2=Rcpp::as<double>(controls["ld_swap_r2"]); b.controls.ld_swap_max_friends=Rcpp::as<int>(controls["ld_swap_max_friends"]); b.controls.ld_swap_moves=Rcpp::as<int>(controls["ld_swap_moves"]);
+ return b;
+}
+Rcpp::List phase9a_result(Rcpp::List spec, const char* policy) { return Rcpp::List::create(Rcpp::Named("schema")="blr_annotation_bayesc_contract_v1",Rcpp::Named("policy")=policy,Rcpp::Named("spec")=spec,Rcpp::Named("validated")=true,Rcpp::Named("invokes_sampler")=false); }
+}
+
+// [[Rcpp::export]]
+Rcpp::List blr_phase9a_validate_fixed_prior_bayesc_cpp(Rcpp::List spec) {
+ using namespace sblr::core; Rcpp::List data=spec["data"], controls=spec["controls"], p=spec["policy"];
+ Phase9ACommonBuffers b=phase9a_common(data,controls); std::vector<double> pi=Rcpp::as<std::vector<double>>(p["marker_probability"]), mult=Rcpp::as<std::vector<double>>(p["marker_multiplier"]);
+ FixedPriorBayesCPolicyView v; v.marker_probability=pi.data(); v.probability_count=pi.size(); v.marker_multiplier=mult.data(); v.multiplier_count=mult.size(); v.use_marker_probability=Rcpp::as<bool>(p["use_marker_probability"]); v.use_marker_multiplier=Rcpp::as<bool>(p["use_marker_multiplier"]); v.shared_read_only=Rcpp::as<bool>(p["shared_read_only"]); v.per_chain_payload=Rcpp::as<bool>(p["per_chain_payload"]); v.storage_outlives_execution=Rcpp::as<bool>(p["storage_outlives_execution"]);
+ validate_annotation_bayesc_common(b.data,b.controls); validate_fixed_prior_policy(v,b.data.marker_count,b.data.trait_count); return phase9a_result(spec,"fixed_marker_prior");
+}
+
+// [[Rcpp::export]]
+Rcpp::List blr_phase9a_validate_group_bayesc_cpp(Rcpp::List spec) {
+ using namespace sblr::core; Rcpp::List data=spec["data"], controls=spec["controls"], p=spec["policy"];
+ Phase9ACommonBuffers b=phase9a_common(data,controls); std::vector<int> map=Rcpp::as<std::vector<int>>(p["marker_group"]); std::vector<double> pi=Rcpp::as<std::vector<double>>(p["initial_probability"]), mult=Rcpp::as<std::vector<double>>(p["initial_multiplier"]), pa=Rcpp::as<std::vector<double>>(p["prior_a"]), pb=Rcpp::as<std::vector<double>>(p["prior_b"]);
+ GroupBayesCPolicyView v; v.marker_group=map.data(); v.marker_group_count=map.size(); v.group_count=Rcpp::as<std::size_t>(p["group_count"]); v.group_order=Rcpp::as<std::vector<std::string>>(p["group_order"]); v.initial_probability=pi.data(); v.probability_count=pi.size(); v.initial_multiplier=mult.data(); v.multiplier_count=mult.size(); v.probability_prior_a=pa.data(); v.probability_prior_b=pb.data(); v.probability_prior_count=pa.size(); v.update_probability=Rcpp::as<bool>(p["update_probability"]); v.update_multiplier=Rcpp::as<bool>(p["update_multiplier"]); v.normalize_multiplier=Rcpp::as<bool>(p["normalize_multiplier"]); v.zero_based_index=Rcpp::as<bool>(p["zero_based_index"]); v.shared_read_only=Rcpp::as<bool>(p["shared_read_only"]); v.per_chain_payload=Rcpp::as<bool>(p["per_chain_payload"]); v.storage_outlives_execution=Rcpp::as<bool>(p["storage_outlives_execution"]);
+ validate_annotation_bayesc_common(b.data,b.controls); validate_group_policy(v,b.data.marker_count,b.data.trait_count); return phase9a_result(spec,"group");
+}
+
+// [[Rcpp::export]]
+Rcpp::List blr_phase9a_validate_learned_annotation_bayesc_cpp(Rcpp::List spec) {
+ using namespace sblr::core; Rcpp::List data=spec["data"], controls=spec["controls"], p=spec["policy"]; Phase9ACommonBuffers b=phase9a_common(data,controls);
+ Rcpp::NumericMatrix A=p["annotation"]; std::vector<double> ep=Rcpp::as<std::vector<double>>(p["eta_probability_init"]), ev=Rcpp::as<std::vector<double>>(p["eta_multiplier_init"]);
+ LearnedAnnotationBayesCPolicyView v; v.marker_count=Rcpp::as<std::size_t>(p["marker_count"]); v.annotation_count=Rcpp::as<std::size_t>(p["annotation_count"]); v.trait_count=Rcpp::as<std::size_t>(p["trait_count"]); v.annotation=A.begin(); v.annotation_value_count=A.size(); v.annotation_order=Rcpp::as<std::vector<std::string>>(p["annotation_order"]); v.layout=Rcpp::as<std::string>(p["layout"]); v.includes_intercept=Rcpp::as<bool>(p["includes_intercept"]); v.eta_probability_init=ep.data(); v.eta_probability_count=ep.size(); v.eta_multiplier_init=ev.data(); v.eta_multiplier_count=ev.size(); v.learn_probability=Rcpp::as<bool>(p["learn_probability"]); v.learn_multiplier=Rcpp::as<bool>(p["learn_multiplier"]); v.probability_prior_sd=Rcpp::as<double>(p["probability_prior_sd"]); v.multiplier_prior_sd=Rcpp::as<double>(p["multiplier_prior_sd"]); v.probability_proposal_sd=Rcpp::as<double>(p["probability_proposal_sd"]); v.multiplier_proposal_sd=Rcpp::as<double>(p["multiplier_proposal_sd"]); v.update_every=Rcpp::as<int>(p["update_every"]); v.probability_min=Rcpp::as<double>(p["probability_min"]); v.probability_max=Rcpp::as<double>(p["probability_max"]); v.multiplier_min=Rcpp::as<double>(p["multiplier_min"]); v.multiplier_max=Rcpp::as<double>(p["multiplier_max"]); v.probability_link=Rcpp::as<std::string>(p["probability_link"]); v.multiplier_link=Rcpp::as<std::string>(p["multiplier_link"]); v.shared_read_only=Rcpp::as<bool>(p["shared_read_only"]); v.per_chain_payload=Rcpp::as<bool>(p["per_chain_payload"]); v.storage_outlives_execution=Rcpp::as<bool>(p["storage_outlives_execution"]);
+ validate_annotation_bayesc_common(b.data,b.controls); validate_learned_annotation_policy(v,b.data.marker_count,b.data.trait_count); return phase9a_result(spec,"learned_annotation");
 }

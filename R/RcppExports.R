@@ -29,6 +29,18 @@ blr_phase7a_validate_sbayesrc_contract_cpp <- function(spec) {
     .Call(`_sblr_blr_phase7a_validate_sbayesrc_contract_cpp`, spec)
 }
 
+blr_phase9a_validate_fixed_prior_bayesc_cpp <- function(spec) {
+    .Call(`_sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp`, spec)
+}
+
+blr_phase9a_validate_group_bayesc_cpp <- function(spec) {
+    .Call(`_sblr_blr_phase9a_validate_group_bayesc_cpp`, spec)
+}
+
+blr_phase9a_validate_learned_annotation_bayesc_cpp <- function(spec) {
+    .Call(`_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp`, spec)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }

@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 8 complete; ordinary-CSR BayesC, BayesR, and SBayesRC canonical
+**Status:** Phase 9A complete; adjacent annotation-aware BayesC contracts and references established
 **Date:** 2026-07-14
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -1083,3 +1083,14 @@ typed public adapter. BED BayesRC, scheduled, fixed-prior, group,
 learned-annotation, and multivariate backends remain unchanged. The next
 bounded phase should compare contracts and references across the fixed-prior,
 group, and learned-annotation BayesC backends before migrating any of them.
+
+### Phase 9A comparative boundary
+
+Fixed-prior, group, and learned-annotation CSR BayesC production routes remain
+unchanged and unmigrated. They share binding-neutral borrowed-CSR ownership,
+scalar controls, LD-swap controls, result vocabulary, and policy tags. Fixed
+marker vectors are immutable inputs; group state has indexed Beta/variance
+updates and optional normalization; learned annotations use centered logistic
+and exponential links with random-walk Metropolis updates. Nine permanent
+raw/formatted reference pairs and per-backend benchmarks protect these
+boundaries. Fixed-prior BayesC is the recommended first migration.

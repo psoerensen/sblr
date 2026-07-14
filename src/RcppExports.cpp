@@ -94,6 +94,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// blr_phase9a_validate_fixed_prior_bayesc_cpp
+Rcpp::List blr_phase9a_validate_fixed_prior_bayesc_cpp(Rcpp::List spec);
+RcppExport SEXP _sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp(SEXP specSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase9a_validate_fixed_prior_bayesc_cpp(spec));
+    return rcpp_result_gen;
+END_RCPP
+}
+// blr_phase9a_validate_group_bayesc_cpp
+Rcpp::List blr_phase9a_validate_group_bayesc_cpp(Rcpp::List spec);
+RcppExport SEXP _sblr_blr_phase9a_validate_group_bayesc_cpp(SEXP specSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase9a_validate_group_bayesc_cpp(spec));
+    return rcpp_result_gen;
+END_RCPP
+}
+// blr_phase9a_validate_learned_annotation_bayesc_cpp
+Rcpp::List blr_phase9a_validate_learned_annotation_bayesc_cpp(Rcpp::List spec);
+RcppExport SEXP _sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp(SEXP specSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase9a_validate_learned_annotation_bayesc_cpp(spec));
+    return rcpp_result_gen;
+END_RCPP
+}
 // readLD_to_CSR_R
 SEXP readLD_to_CSR_R(SEXP filenameSEXP, SEXP mchrSEXP, SEXP msizeSEXP, SEXP thresholdSEXP, SEXP onebasedSEXP);
 RcppExport SEXP _sblr_readLD_to_CSR_R(SEXP filenameSEXPSEXP, SEXP mchrSEXPSEXP, SEXP msizeSEXPSEXP, SEXP thresholdSEXPSEXP, SEXP onebasedSEXPSEXP) {
@@ -1357,6 +1390,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_blr_phase4_retained_iterations_cpp", (DL_FUNC) &_sblr_blr_phase4_retained_iterations_cpp, 3},
     {"_sblr_blr_phase5a_validate_bayesr_contract_cpp", (DL_FUNC) &_sblr_blr_phase5a_validate_bayesr_contract_cpp, 1},
     {"_sblr_blr_phase7a_validate_sbayesrc_contract_cpp", (DL_FUNC) &_sblr_blr_phase7a_validate_sbayesrc_contract_cpp, 1},
+    {"_sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp, 1},
+    {"_sblr_blr_phase9a_validate_group_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_group_bayesc_cpp, 1},
+    {"_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp, 1},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_mtblr_cpg", (DL_FUNC) &_sblr_mtblr_cpg, 24},
     {"_sblr_mtblr_cpg_arma", (DL_FUNC) &_sblr_mtblr_cpg_arma, 24},
