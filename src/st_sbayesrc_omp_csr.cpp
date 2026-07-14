@@ -1833,7 +1833,7 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
   Rcpp::colnames(cp) = component_names;
   comp_prob_out[t] = cp;
   alpha_mean_out[t] = alpha_mean[static_cast<std::size_t>(t)];
-  // The legacy SBayesRC backend did not retain final alpha draws separately.
+  // The SBayesRC sampler does not retain final alpha draws separately.
   // Expose the posterior mean in both fields to keep the raw namespace complete
   // without adding sampler-state mutations or RNG-dependent behavior.
   alpha_final_out[t] = alpha_mean[static_cast<std::size_t>(t)];

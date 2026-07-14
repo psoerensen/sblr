@@ -1,7 +1,7 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 7B complete; ordinary-CSR BayesC/BayesR canonical and SBayesRC migrated behind typed boundaries
-**Date:** 2026-07-13  
+**Status:** Phase 8 complete; ordinary-CSR BayesC, BayesR, and SBayesRC canonical
+**Date:** 2026-07-14
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
 ## 1. Purpose
@@ -1070,14 +1070,16 @@ Do not combine in one task:
 
 ## 26. Current migration boundary
 
-Ordinary-CSR SBayesRC is migrated behind typed execution boundaries. Its typed
-borrowed CSR/annotation context, operator-aware templated core, typed result,
-and single ordinary-CSR Rcpp converter are active. Ordered-probit
-stick-breaking and alpha behavior are unchanged; all six permanent raw and
-formatted references are exact, and runtime/memory have been checked. The
-public route and schema are unchanged. The route is ready for Phase 8
-canonicalization. CSR BayesC and BayesR remain canonical. The existing
-block-eigen SBayesRC compile-time instantiation is preserved but is not an
-independently migrated typed public adapter. BED BayesRC, scheduled,
-fixed-prior, group, learned-annotation, and multivariate backends remain
-unchanged.
+Ordinary-CSR SBayesRC is canonical. Its typed borrowed CSR/annotation context,
+operator-aware templated core, typed result, and sole ordinary-CSR Rcpp
+converter are active. Ordered-probit stick-breaking and alpha behavior are
+unchanged; all six permanent raw and formatted references are exact, and a
+canonical timing and completed-fit RSS baseline is recorded. Shared scalar
+task, seed, and status infrastructure is active. The public route and schema
+are unchanged, and migration-only active-path wording has been removed. CSR
+BayesC and BayesR remain canonical. The existing block-eigen SBayesRC
+compile-time instantiation is preserved but is not an independently migrated
+typed public adapter. BED BayesRC, scheduled, fixed-prior, group,
+learned-annotation, and multivariate backends remain unchanged. The next
+bounded phase should compare contracts and references across the fixed-prior,
+group, and learned-annotation BayesC backends before migrating any of them.
