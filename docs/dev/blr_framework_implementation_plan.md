@@ -1081,10 +1081,9 @@ BayesC, BayesR, and fixed-prior CSR BayesC are canonical. Fixed-prior BayesC
 uses borrowed typed priors, one callable core, one converter, and one preserved
 wrapper aggregation path. The existing block-eigen SBayesRC
 compile-time instantiation is preserved but is not an independently migrated
-typed public adapter. BED BayesRC, scheduled, group,
-learned-annotation, and multivariate backends remain unchanged. The next
-bounded phase should compare contracts and references across the fixed-prior,
-group, and learned-annotation BayesC backends before migrating any of them.
+typed public adapter. Group CSR BayesC is migrated behind typed execution
+boundaries; BED BayesRC, scheduled, learned-annotation, and multivariate
+backends remain unchanged.
 
 ### Phase 9A comparative boundary
 
@@ -1096,7 +1095,8 @@ updates and optional normalization; learned annotations use centered logistic
 and exponential links with random-walk Metropolis updates. Nine permanent
 raw/formatted reference pairs and per-backend benchmarks protect these
 boundaries. Fixed-prior BayesC subsequently completed Phase 9B migration;
-group and learned-annotation production remain unchanged and unmigrated.
+group subsequently completed Phase 9D migration; learned-annotation production
+remains unchanged and unmigrated.
 
 ### Phase 9B3 fixed-prior migration closure
 
@@ -1121,4 +1121,17 @@ binding converter, and sole wrapper-level aggregation path are active. The
 public route and schema are unchanged; permanent exact references and runtime
 and completed-fit RSS baselines are established; the current trait-dimension
 restriction remains protected. Migration scaffolding and active-path wording
-have been removed. Phase 9D may begin with mechanical group BayesC extraction.
+have been removed.
+
+### Phase 9D3 group BayesC migration closure
+
+Group CSR BayesC is migrated behind typed execution boundaries. The typed
+borrowed zero-based group mapping and `GroupBayesCPolicyView`, callable
+`run_csr_group_bayesc()` numerical core, typed execution result, one named
+binding-layer result converter, and one wrapper-level multichain aggregation
+path are active. Group order, update timing, both normalization modes, RNG,
+scheduling, public routing, and public schemas are unchanged. All three raw
+and three formatted frozen references are exact; runtime and completed-fit RSS
+were checked, and existing unsupported cases remain protected. Group CSR
+BayesC is ready for canonicalization. Learned-annotation CSR BayesC remains
+production unchanged with contracts and references ready, but is not migrated.

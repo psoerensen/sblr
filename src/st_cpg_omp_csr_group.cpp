@@ -1099,8 +1099,8 @@ static Rcpp::List cpg_group_chains_raw_v1(
  return traits;
 }
 
-static Rcpp::List cpg_group_raw_v1(
- const std::vector<std::vector<std::vector<double>>>& raw,
+static Rcpp::List stblr_csr_group_bayesc_result_to_raw(
+ const sblr::core::CsrGroupBayesCExecutionResult& execution_result,
  const std::vector<int>& group_index,
  bool updateLDswap,
  int m,
@@ -1112,6 +1112,7 @@ static Rcpp::List cpg_group_raw_v1(
  int nchains,
  bool keep_chains
 ) {
+ const std::vector<std::vector<std::vector<double>>>& raw=execution_result.raw;
  const int n_trace = nit + nburn;
  Rcpp::NumericVector nsamples(nt), n_used(nt), log_cpo(nt), mean_log_cpo(nt), seconds_mean(nt), seconds_max(nt);
  for (int t = 0; t < nt; ++t) {
@@ -1442,14 +1443,18 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
    extended[38] = chain_group_vb_flat;
    extended[39] = chain_group_nincluded_flat;
   }
-  return cpg_group_raw_v1(
-   extended, group_index, updateLDswap, static_cast<int>(wy[0].size()),
+  sblr::core::CsrGroupBayesCExecutionResult aggregate_result;
+  aggregate_result.raw=std::move(extended);
+  return stblr_csr_group_bayesc_result_to_raw(
+   aggregate_result, group_index, updateLDswap, static_cast<int>(wy[0].size()),
    static_cast<int>(wy.size()), ngroup, nit, nburn, nthin, nchains, keep_chains
   );
  }
 
- return cpg_group_raw_v1(
-  out, group_index, updateLDswap, static_cast<int>(wy[0].size()),
+ sblr::core::CsrGroupBayesCExecutionResult aggregate_result;
+ aggregate_result.raw=std::move(out);
+ return stblr_csr_group_bayesc_result_to_raw(
+  aggregate_result, group_index, updateLDswap, static_cast<int>(wy[0].size()),
   static_cast<int>(wy.size()), ngroup, nit, nburn, nthin, nchains, keep_chains
  );
 }

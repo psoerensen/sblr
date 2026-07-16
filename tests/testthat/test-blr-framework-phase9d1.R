@@ -29,7 +29,7 @@ test_that("Phase 9D1 group execution is extracted once at the approved seam", {
   expect_match(core_text, "normalize_group_vb", fixed = TRUE)
   expect_false(grepl("use_old|use_new|old_path|new_path|fallback", source_text,
                      ignore.case = TRUE))
-  expect_match(source_text, "static Rcpp::List cpg_group_raw_v1(", fixed = TRUE)
+  expect_match(source_text, "static Rcpp::List stblr_csr_group_bayesc_result_to_raw(", fixed = TRUE)
   expect_match(source_text, "for (int chain = 0; chain < nchains; ++chain)", fixed = TRUE)
 
   cpp <- list.files(phase9d1_path("src"), pattern = "\\.(cpp|h)$", full.names = TRUE)

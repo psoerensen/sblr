@@ -23,7 +23,7 @@ test_that("Phase 9D2 typed group execution boundary is singular and binding neut
   expect_equal(phase9d2_active(core_lines, "for (int isort = 0; isort < m; ++isort)"), 1L)
   expect_equal(phase9d2_active(source_lines, "run_csr_group_bayesc(context)"), 1L)
   expect_equal(phase9d2_active(source_lines, "for (int chain = 0; chain < nchains; ++chain)"), 1L)
-  expect_equal(phase9d2_active(source_lines, "static Rcpp::List cpg_group_raw_v1("), 1L)
+  expect_equal(phase9d2_active(source_lines, "static Rcpp::List stblr_csr_group_bayesc_result_to_raw("), 1L)
   expect_equal(phase9d2_active(source_lines, "#include \"blr_csr_group_bayesc_core_impl.h\""), 1L)
   expect_match(type_text, "struct CsrGroupBayesCExecutionContext", fixed = TRUE)
   expect_match(type_text, "struct CsrGroupBayesCExecutionResult", fixed = TRUE)
