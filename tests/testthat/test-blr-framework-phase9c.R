@@ -80,7 +80,7 @@ test_that("Phase 9C protects canonical and adjacent implementations", {
     "src/blr_csr_bayesc_core_impl.h" = "f7c617cbfc172639c1f8aea1bd8b1876",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
-    "src/st_cpg_omp_csr_group.cpp" = "f0a6e9ab389b6cb4a8421c0693962e3f",
+    "src/st_cpg_omp_csr_group.cpp" = "f9701762d2e0245a40e996c89a4addb2",
     "src/st_cpg_omp_csr_annot.cpp" = "baaf3a0919ba97c78401066f7ac7d6f3",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h" = "bec3bc1e41841ab77747e34dc9818574",

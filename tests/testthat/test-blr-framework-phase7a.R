@@ -67,6 +67,6 @@ test_that("Phase 7A protects extracted production structure and backend hashes",
  expect_match(src,"#include \"blr_csr_sbayesrc_core_impl.h\"",fixed=TRUE)
  expect_match(core,"for (int it = 0; it < nit + nburn; ++it)",fixed=TRUE)
  paths<-c("src/st_cpg_omp_csr.cpp","src/blr_csr_bayesc_types.h","src/blr_csr_bayesc_core_impl.h","src/st_cpg_omp_csr_bayesr.cpp","src/blr_csr_bayesr_types.h","src/blr_csr_bayesr_core_impl.h","src/st_block_eigen.cpp","src/st_block_eigen.h","src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp","src/st_cpg_omp_csr_annot.cpp","src/st_cpg_omp_csr_group.cpp","NAMESPACE")
- expected<-c("92dafc0266d5a0e72aea000224154cef","e5975c311c69fe536db57dd21f01334f","f7c617cbfc172639c1f8aea1bd8b1876","0a005f9d5a19037285fd4869fdc4dcf0","bf1d4b73065207ca361c7abdab3cb253","4dac6bef2df917613df8e1a827640303","49f0a62c9fe235967a264b0f8de144a7","bec3bc1e41841ab77747e34dc9818574","5904c60b32165a7ae73bfc9d6c0f920c","baaf3a0919ba97c78401066f7ac7d6f3","f0a6e9ab389b6cb4a8421c0693962e3f","f5b6ee37a3972aa436357bdc8f602f4e")
+ expected<-c("92dafc0266d5a0e72aea000224154cef","e5975c311c69fe536db57dd21f01334f","f7c617cbfc172639c1f8aea1bd8b1876","0a005f9d5a19037285fd4869fdc4dcf0","bf1d4b73065207ca361c7abdab3cb253","4dac6bef2df917613df8e1a827640303","49f0a62c9fe235967a264b0f8de144a7","bec3bc1e41841ab77747e34dc9818574","5904c60b32165a7ae73bfc9d6c0f920c","baaf3a0919ba97c78401066f7ac7d6f3","f9701762d2e0245a40e996c89a4addb2","f5b6ee37a3972aa436357bdc8f602f4e")
  expect_identical(unname(tools::md5sum(vapply(paths,phase7a_path,character(1)))),expected)
 })
