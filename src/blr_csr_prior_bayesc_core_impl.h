@@ -1,8 +1,54 @@
 #ifndef SBLR_BLR_CSR_PRIOR_BAYESC_CORE_IMPL_H
 #define SBLR_BLR_CSR_PRIOR_BAYESC_CORE_IMPL_H
 
-// Implementation-detail execution block. Include only at the approved lexical
-// seam inside stblr_cpg_omp_csr_prior_single in st_cpg_omp_csr_prior.cpp.
+// Callable fixed-prior BayesC core. The aliases below are the complete,
+// explicit handoff from the typed execution context to the preserved block.
+#include <iostream>
+
+namespace sblr { namespace core {
+
+inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
+ const CsrPriorBayesCExecutionContext& context
+) {
+ validate_csr_prior_bayesc_execution_context(context);
+ const int m=context.marker_count, nt=context.trait_count;
+ const int nit=context.iterations, nburn=context.burnin;
+ const int nthin=context.thinning, ncores=context.cores, seed=context.seed;
+ const bool use_d_init=context.use_initial_inclusion;
+ const bool use_r_init=context.use_initial_residual;
+ const bool rebuild_r_before_updateE=context.rebuild_residual_before_update;
+ const bool use_pi_marker=context.use_marker_probability;
+ const bool use_vb_multiplier=context.use_marker_multiplier;
+ const bool updateB=context.update_marker_variance;
+ const bool updateE=context.update_residual_variance;
+ const bool updatePi=context.update_global_probability;
+ const bool updateLDswap=context.update_ld_swap;
+ const double nub=context.marker_degrees_freedom;
+ const double nue=context.residual_degrees_freedom;
+ const double adjE=context.residual_adjustment;
+ const double pi_prior_a=context.inclusion_prior_active;
+ const double pi_prior_b=context.inclusion_prior_null;
+ const double ld_swap_prob=context.ld_swap_probability;
+ const int ld_swap_moves=context.ld_swap_moves;
+ arma::mat& wy_mat=*context.marker_score;
+ const arma::mat& ww_mat=*context.marker_diagonal;
+ arma::mat& b_mat=*context.effect;
+ arma::mat& r_mat=*context.residual;
+ arma::Mat<int>& d_mat=*context.inclusion;
+ const arma::mat& pi_marker_mat=*context.marker_probability;
+ const arma::mat& vb_multiplier_mat=*context.marker_multiplier;
+ const arma::vec& yy_vec=*context.phenotype_sum_squares;
+ const arma::mat& ssb_prior_mat=*context.marker_scale_prior;
+ const arma::mat& sse_prior_mat=*context.residual_scale_prior;
+ const arma::mat& B=*context.marker_variance_initial;
+ const arma::mat& E=*context.residual_variance_initial;
+ const std::vector<double>& pi=*context.global_probability;
+ const std::vector<int>& n=*context.sample_size;
+ const std::vector<std::vector<double>>& d_init=*context.initial_inclusion;
+ const std::vector<std::vector<double>>& r_init=*context.initial_residual;
+ const STLDCSR& ld=*static_cast<const STLDCSR*>(context.ld_storage);
+ const CsrPriorBayesCLdFriendsView& ld_swap_friends=*context.ld_friends;
+ const std::vector<int>& order=*context.marker_order;
  // --------------------------------------------------------------------------
  // Output storage
  // --------------------------------------------------------------------------
@@ -43,7 +89,7 @@
  nthreads = std::max(1, std::min(ncores, nt));
  omp_set_num_threads(nthreads);
 
- Rcpp::Rcout
+ std::cout
  << "STBLR prior CSR OpenMP requested threads = "
  << nthreads
  << ", omp_get_max_threads = "
@@ -53,7 +99,7 @@
  << "\n";
 #endif
 
- Rcpp::Rcout
+ std::cout
  << "STBLR prior CSR: use_pi_marker=" << use_pi_marker
  << ", use_vb_multiplier=" << use_vb_multiplier
  << ", updatePi=" << updatePi
@@ -383,7 +429,7 @@
 
 #ifdef _OPENMP
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout
+  std::cout
   << "trait " << t
   << " used thread " << thread_used[static_cast<std::size_t>(t)]
   << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
@@ -544,6 +590,12 @@
   result[22][ts][3] = 1.0;
  }
 
- return result;
+ CsrPriorBayesCExecutionResult execution_result;
+ execution_result.raw = std::move(result);
+ return execution_result;
+
+}
+
+} }
 
 #endif  // SBLR_BLR_CSR_PRIOR_BAYESC_CORE_IMPL_H

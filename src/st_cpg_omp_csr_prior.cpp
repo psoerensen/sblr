@@ -5,6 +5,7 @@
 #include "distributions.h"
 #include "st_chain_utils.h"
 #include "st_csr_common.h"
+#include "blr_csr_prior_bayesc_types.h"
 
 #include <algorithm>
 #include <cmath>
@@ -575,11 +576,7 @@ inline double computeLE_ST_csr_prior(
  return vle / static_cast<double>(n);
 }
 
-struct LDLDFriendsPrior {
- std::vector<uint64_t> ptr;
- std::vector<int> idx;
- std::vector<double> r2;
-};
+using LDLDFriendsPrior = sblr::core::CsrPriorBayesCLdFriendsView;
 
 inline LDLDFriendsPrior build_ld_swap_friends_st_csr_prior(
   int m,
@@ -1268,8 +1265,44 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
             return x2[static_cast<std::size_t>(a)] > x2[static_cast<std::size_t>(b)];
            });
 
- #include "blr_csr_prior_bayesc_core_impl.h"
+ sblr::core::CsrPriorBayesCExecutionContext context;
+ context.marker_count=m; context.trait_count=nt;
+ context.iterations=nit; context.burnin=nburn; context.thinning=nthin;
+ context.cores=ncores; context.seed=seed;
+ context.use_initial_inclusion=use_d_init;
+ context.use_initial_residual=use_r_init;
+ context.rebuild_residual_before_update=rebuild_r_before_updateE;
+ context.use_marker_probability=use_pi_marker;
+ context.use_marker_multiplier=use_vb_multiplier;
+ context.update_marker_variance=updateB;
+ context.update_residual_variance=updateE;
+ context.update_global_probability=updatePi;
+ context.update_ld_swap=updateLDswap;
+ context.marker_degrees_freedom=nub;
+ context.residual_degrees_freedom=nue;
+ context.residual_adjustment=adjE;
+ context.inclusion_prior_active=pi_prior_a;
+ context.inclusion_prior_null=pi_prior_b;
+ context.ld_swap_probability=ld_swap_prob;
+ context.ld_swap_moves=ld_swap_moves;
+ context.marker_score=&wy_mat; context.marker_diagonal=&ww_mat;
+ context.effect=&b_mat; context.residual=&r_mat; context.inclusion=&d_mat;
+ context.marker_probability=&pi_marker_mat;
+ context.marker_multiplier=&vb_multiplier_mat;
+ context.phenotype_sum_squares=&yy_vec;
+ context.marker_scale_prior=&ssb_prior_mat;
+ context.residual_scale_prior=&sse_prior_mat;
+ context.marker_variance_initial=&B;
+ context.residual_variance_initial=&E;
+ context.global_probability=&pi; context.sample_size=&n;
+ context.initial_inclusion=&d_init; context.initial_residual=&r_init;
+ context.ld_storage=&ld; context.ld_row_ptr_count=ld.ptr.size();
+ context.ld_friends=&ld_swap_friends;
+ context.marker_order=&order;
+ return sblr::core::run_csr_prior_bayesc(context).raw;
 }
+
+#include "blr_csr_prior_bayesc_core_impl.h"
 
 static Rcpp::NumericMatrix cpg_raw_marker_matrix(
  const std::vector<std::vector<std::vector<double>>>& raw,
