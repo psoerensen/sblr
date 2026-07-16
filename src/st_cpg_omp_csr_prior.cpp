@@ -972,7 +972,7 @@ inline void validate_prior_matrix_input(
 // Main exported function: STBLR over traits with marker-specific priors
 // -----------------------------------------------------------------------------
 
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
+sblr::core::CsrPriorBayesCExecutionResult stblr_cpg_omp_csr_prior_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -1299,7 +1299,7 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_prior_single(
  context.ld_storage=&ld; context.ld_row_ptr_count=ld.ptr.size();
  context.ld_friends=&ld_swap_friends;
  context.marker_order=&order;
- return sblr::core::run_csr_prior_bayesc(context).raw;
+ return sblr::core::run_csr_prior_bayesc(context);
 }
 
 #include "blr_csr_prior_bayesc_core_impl.h"
@@ -1403,8 +1403,8 @@ static Rcpp::List cpg_prior_chains_raw_v1(
  return traits;
 }
 
-static Rcpp::List cpg_prior_raw_v1(
- const std::vector<std::vector<std::vector<double>>>& raw,
+static Rcpp::List stblr_csr_prior_bayesc_result_to_raw(
+ const sblr::core::CsrPriorBayesCExecutionResult& execution_result,
  const std::vector<std::vector<double>>& pi_marker,
  const std::vector<std::vector<double>>& vb_multiplier,
  bool updateLDswap,
@@ -1416,6 +1416,7 @@ static Rcpp::List cpg_prior_raw_v1(
  int nchains,
  bool keep_chains
 ) {
+ const std::vector<std::vector<std::vector<double>>>& raw = execution_result.raw;
  const int n_trace = nit + nburn;
  Rcpp::NumericMatrix nsamples(nt, 2);
  Rcpp::NumericVector log_cpo(nt), mean_log_cpo(nt), seconds_mean(nt), seconds_max(nt);
@@ -1621,7 +1622,7 @@ Rcpp::List stblr_cpg_omp_csr_prior(
    chain_seed = seed + 9176 * (chain + 1);
   }
 
-  std::vector<std::vector<std::vector<double>>> raw =
+  sblr::core::CsrPriorBayesCExecutionResult execution_result =
    stblr_cpg_omp_csr_prior_single(
     wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
     rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
@@ -1630,6 +1631,7 @@ Rcpp::List stblr_cpg_omp_csr_prior(
     pi_prior_b, ncores, chain_seed, updateLDswap, ld_swap_prob, ld_swap_r2,
     ld_swap_max_friends, ld_swap_moves
    );
+  const std::vector<std::vector<std::vector<double>>>& raw = execution_result.raw;
 
   if (chain == 0) {
    out = raw;
@@ -1736,14 +1738,18 @@ Rcpp::List stblr_cpg_omp_csr_prior(
    extended[31] = chain_bm_flat;
    extended[32] = chain_diag_flat;
   }
-  return cpg_prior_raw_v1(
-   extended, pi_marker, vb_multiplier, updateLDswap, static_cast<int>(wy[0].size()),
+  sblr::core::CsrPriorBayesCExecutionResult aggregate_result;
+  aggregate_result.raw = std::move(extended);
+  return stblr_csr_prior_bayesc_result_to_raw(
+   aggregate_result, pi_marker, vb_multiplier, updateLDswap, static_cast<int>(wy[0].size()),
    static_cast<int>(wy.size()), nit, nburn, nthin, nchains, keep_chains
   );
  }
 
- return cpg_prior_raw_v1(
-  out, pi_marker, vb_multiplier, updateLDswap, static_cast<int>(wy[0].size()),
+ sblr::core::CsrPriorBayesCExecutionResult aggregate_result;
+ aggregate_result.raw = std::move(out);
+ return stblr_csr_prior_bayesc_result_to_raw(
+  aggregate_result, pi_marker, vb_multiplier, updateLDswap, static_cast<int>(wy[0].size()),
   static_cast<int>(wy.size()), nit, nburn, nthin, nchains, keep_chains
  );
 }

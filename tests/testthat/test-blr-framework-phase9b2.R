@@ -21,7 +21,7 @@ test_that("Phase 9B2 exposes an explicit fixed-prior callable boundary", {
   expect_match(types, "struct CsrPriorBayesCExecutionContext", fixed = TRUE)
   expect_match(types, "struct CsrPriorBayesCExecutionResult", fixed = TRUE)
   expect_match(core, "run_csr_prior_bayesc(", fixed = TRUE)
-  expect_match(source_text, "run_csr_prior_bayesc(context).raw", fixed = TRUE)
+  expect_match(source_text, "return sblr::core::run_csr_prior_bayesc(context);", fixed = TRUE)
   expect_false(grepl("Rcpp::|SEXP", paste(types, core), perl = TRUE))
 })
 
@@ -61,6 +61,6 @@ test_that("Phase 9B2 leaves wrapper-level multichain aggregation in place", {
     "src", "st_cpg_omp_csr_prior.cpp"
   ), warn = FALSE), collapse = "\n")
   expect_match(source_text, "for (int chain = 0; chain < nchains; ++chain)", fixed = TRUE)
-  expect_match(source_text, "cpg_prior_raw_v1", fixed = TRUE)
+  expect_match(source_text, "stblr_csr_prior_bayesc_result_to_raw", fixed = TRUE)
   expect_match(source_text, "cpg_prior_chains_raw_v1", fixed = TRUE)
 })

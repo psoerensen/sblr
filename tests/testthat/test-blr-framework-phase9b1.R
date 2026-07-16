@@ -36,7 +36,7 @@ test_that("Phase 9B1 has one active fixed-prior BayesC execution block", {
   )
 })
 
-test_that("Phase 9B1 preserves fixed-prior accesses and inline conversion", {
+test_that("Phase 9B1 preserves fixed-prior accesses and one conversion", {
   source_text <- paste(readLines(
     phase9b1_path("src", "st_cpg_omp_csr_prior.cpp"), warn = FALSE
   ), collapse = "\n")
@@ -48,8 +48,8 @@ test_that("Phase 9B1 preserves fixed-prior accesses and inline conversion", {
   expect_match(core_text, "use_vb_multiplier ? vb_multiplier_t(iu) : 1.0", fixed = TRUE)
   expect_match(core_text, "samplePi_ST_prior", fixed = TRUE)
   expect_match(core_text, "sampleB_ST_csr_prior", fixed = TRUE)
-  expect_match(source_text, "static Rcpp::List cpg_prior_raw_v1(", fixed = TRUE)
-  expect_match(source_text, "return cpg_prior_raw_v1(", fixed = TRUE)
+  expect_match(source_text, "static Rcpp::List stblr_csr_prior_bayesc_result_to_raw(", fixed = TRUE)
+  expect_match(source_text, "return stblr_csr_prior_bayesc_result_to_raw(", fixed = TRUE)
   expect_false(grepl("getenv", paste(source_text, core_text), fixed = TRUE))
   expect_false(grepl("new_path", paste(source_text, core_text), fixed = TRUE))
   expect_false(grepl("legacy_path", paste(source_text, core_text), fixed = TRUE))

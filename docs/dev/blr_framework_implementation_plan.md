@@ -1,7 +1,7 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 9A complete; adjacent annotation-aware BayesC contracts and references established
-**Date:** 2026-07-14
+**Status:** Phase 9B3 complete; fixed-prior CSR BayesC migrated and ready for canonicalization
+**Date:** 2026-07-16
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
 ## 1. Purpose
@@ -1077,20 +1077,36 @@ unchanged; all six permanent raw and formatted references are exact, and a
 canonical timing and completed-fit RSS baseline is recorded. Shared scalar
 task, seed, and status infrastructure is active. The public route and schema
 are unchanged, and migration-only active-path wording has been removed. CSR
-BayesC and BayesR remain canonical. The existing block-eigen SBayesRC
+BayesC and BayesR remain canonical. Fixed-prior CSR BayesC is migrated behind
+typed execution boundaries and ready for canonicalization. The existing block-eigen SBayesRC
 compile-time instantiation is preserved but is not an independently migrated
-typed public adapter. BED BayesRC, scheduled, fixed-prior, group,
+typed public adapter. BED BayesRC, scheduled, group,
 learned-annotation, and multivariate backends remain unchanged. The next
 bounded phase should compare contracts and references across the fixed-prior,
 group, and learned-annotation BayesC backends before migrating any of them.
 
 ### Phase 9A comparative boundary
 
-Fixed-prior, group, and learned-annotation CSR BayesC production routes remain
-unchanged and unmigrated. They share binding-neutral borrowed-CSR ownership,
+Fixed-prior, group, and learned-annotation CSR BayesC production routes were
+frozen here before migration. They share binding-neutral borrowed-CSR ownership,
 scalar controls, LD-swap controls, result vocabulary, and policy tags. Fixed
 marker vectors are immutable inputs; group state has indexed Beta/variance
 updates and optional normalization; learned annotations use centered logistic
 and exponential links with random-walk Metropolis updates. Nine permanent
 raw/formatted reference pairs and per-backend benchmarks protect these
-boundaries. Fixed-prior BayesC is the recommended first migration.
+boundaries. Fixed-prior BayesC subsequently completed Phase 9B migration;
+group and learned-annotation production remain unchanged and unmigrated.
+
+### Phase 9B3 fixed-prior migration closure
+
+Fixed-prior CSR BayesC now uses the explicit borrowed
+`CsrPriorBayesCExecutionContext`, callable `run_csr_prior_bayesc()` numerical
+core, typed `CsrPriorBayesCExecutionResult`, and one named binding-layer result
+converter. Borrowed immutable `pi_marker` and `vb_multiplier` semantics are
+active. Wrapper-level multichain aggregation, the public route, native public
+signature, `stblr_raw_v1`, and formatted fit remain unchanged. All frozen
+references are exact, runtime and completed-fit RSS were checked, and the
+existing unsupported trait-dimension construction remains rejected. The route
+is ready for Phase 9C canonicalization. Group and learned-annotation CSR BayesC
+remain production-unchanged with contracts and references ready but are not
+migrated.
