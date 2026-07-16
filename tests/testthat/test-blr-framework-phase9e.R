@@ -105,7 +105,6 @@ test_that("canonical group public and protected boundaries remain frozen", {
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
-    "src/st_cpg_omp_csr_annot.cpp" = "ec2f789a044d2675bb2d142a3f3e1492",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/st_cpg_omp_csr_scheduled.cpp" = "fdac03befb742f4f6fa7c22ccbbbc920",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",

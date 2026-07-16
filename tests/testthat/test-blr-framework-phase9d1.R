@@ -98,7 +98,6 @@ test_that("Phase 9D1 protects adjacent backends, wrappers, signatures, and schem
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
     "src/blr_csr_sbayesrc_types.h" = "103b2a1282b99069be963d4ff3da15c8",
     "src/blr_csr_sbayesrc_core_impl.h" = "d06ec2a530e8c914201ee22b6be65739",
-    "src/st_cpg_omp_csr_annot.cpp" = "ec2f789a044d2675bb2d142a3f3e1492",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h" = "bec3bc1e41841ab77747e34dc9818574",
     "src/st_cpg_omp_csr_scheduled.cpp" = "fdac03befb742f4f6fa7c22ccbbbc920",

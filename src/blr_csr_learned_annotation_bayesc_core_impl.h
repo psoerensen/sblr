@@ -1,13 +1,68 @@
 #ifndef SBLR_BLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_H
 #define SBLR_BLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_H
 
-// Learned-annotation BayesC implementation detail. Include only from
-// st_cpg_omp_csr_annot.cpp at the established execution seam after annotation,
-// coefficient-policy, marker-order, and CSR/operator preparation. Phase 9F1
-// deliberately preserves the surrounding function lexical dependencies.
+// Binding-neutral learned-annotation BayesC implementation detail. Include only
+// from st_cpg_omp_csr_annot.cpp after native helpers and concrete CSR types exist.
 #ifndef SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT
 #error "blr_csr_learned_annotation_bayesc_core_impl.h may only be included by st_cpg_omp_csr_annot.cpp"
 #endif
+
+#include "blr_csr_learned_annotation_bayesc_types.h"
+#include <iostream>
+
+namespace sblr { namespace core {
+
+inline CsrLearnedAnnotationBayesCExecutionResult
+run_csr_learned_annotation_bayesc(
+ const CsrLearnedAnnotationBayesCExecutionContext& context
+) {
+ validate_csr_learned_annotation_bayesc_execution_context(context);
+ const int m=context.marker_count, nt=context.trait_count, K=context.annotation_count;
+ const int nit=context.iterations, nburn=context.burnin, nthin=context.thinning;
+ const int ncores=context.cores, seed=context.seed;
+ const bool use_d_init=context.use_initial_inclusion;
+ const bool use_r_init=context.use_initial_residual;
+ const bool rebuild_r_before_updateE=context.rebuild_residual_before_update;
+ const bool learn_pi_annot=context.learn_probability;
+ const bool learn_vb_annot=context.learn_multiplier;
+ const bool updateB=context.update_marker_variance;
+ const bool updateE=context.update_residual_variance;
+ const bool updatePi=context.update_global_probability;
+ const bool updateLDswap=context.update_ld_swap;
+ const int annot_update_every=context.annotation_update_every;
+ const int ld_swap_moves=context.ld_swap_moves;
+ const double sigma_eta_pi=context.probability_prior_sd;
+ const double sigma_eta_vb=context.multiplier_prior_sd;
+ const double rw_sd_eta_pi=context.probability_proposal_sd;
+ const double rw_sd_eta_vb=context.multiplier_proposal_sd;
+ const double pi_min=context.probability_min, pi_max=context.probability_max;
+ const double vb_multiplier_min=context.multiplier_min;
+ const double vb_multiplier_max=context.multiplier_max;
+ const double nub=context.marker_degrees_freedom, nue=context.residual_degrees_freedom;
+ const double adjE=context.residual_adjustment;
+ const double pi_prior_a=context.global_probability_prior_a;
+ const double pi_prior_b=context.global_probability_prior_b;
+ const double ld_swap_prob=context.ld_swap_probability;
+ arma::mat& wy_mat=*context.marker_score;
+ const arma::mat& ww_mat=*context.marker_diagonal;
+ arma::mat& b_mat=*context.effect;
+ arma::mat& r_mat=*context.residual;
+ arma::Mat<int>& d_mat=*context.inclusion;
+ const arma::vec& yy_vec=*context.phenotype_sum_squares;
+ const arma::mat& ssb_prior_mat=*context.marker_scale_prior;
+ const arma::mat& sse_prior_mat=*context.residual_scale_prior;
+ const arma::mat& B=*context.marker_variance_initial;
+ const arma::mat& E=*context.residual_variance_initial;
+ const std::vector<double>& pi=*context.global_probability;
+ const std::vector<int>& n=*context.sample_size;
+ const std::vector<std::vector<double>>& d_init=*context.initial_inclusion;
+ const std::vector<std::vector<double>>& r_init=*context.initial_residual;
+ const arma::mat& A=*context.annotation;
+ const arma::mat& eta_pi_init=*context.initial_probability_coefficient;
+ const arma::mat& eta_vb_init=*context.initial_multiplier_coefficient;
+ const std::vector<int>& order=*context.marker_order;
+ const STLDCSR& ld=*static_cast<const STLDCSR*>(context.ld_storage);
+ const LDLDFriendsAnnot& ld_swap_friends=*static_cast<const LDLDFriendsAnnot*>(context.ld_friends_storage);
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
@@ -48,7 +103,7 @@
  nthreads = std::max(1, std::min(ncores, nt));
  omp_set_num_threads(nthreads);
 
- Rcpp::Rcout
+ std::cout
  << "STBLR annotation CSR OpenMP requested threads = "
  << nthreads
  << ", omp_get_max_threads = "
@@ -58,7 +113,7 @@
  << "\n";
 #endif
 
- Rcpp::Rcout
+ std::cout
  << "STBLR annotation CSR: K=" << K
  << ", learn_pi_annot=" << learn_pi_annot
  << ", learn_vb_annot=" << learn_vb_annot
@@ -482,7 +537,7 @@
 
 #ifdef _OPENMP
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout
+  std::cout
   << "trait " << t
   << " used thread " << thread_used[static_cast<std::size_t>(t)]
   << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
@@ -636,24 +691,30 @@
   result[22][ts][3] = 1.0;
  }
 
- Rcpp::Rcout << "Annotation eta_pi MH accepted/proposed by trait:\n";
+ std::cout << "Annotation eta_pi MH accepted/proposed by trait:\n";
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout
+  std::cout
   << "trait " << t
   << ": " << eta_pi_accept(static_cast<arma::uword>(t), 0)
   << "/" << eta_pi_accept(static_cast<arma::uword>(t), 1)
   << "\n";
  }
 
- Rcpp::Rcout << "Annotation eta_vb MH accepted/proposed by trait:\n";
+ std::cout << "Annotation eta_vb MH accepted/proposed by trait:\n";
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout
+  std::cout
   << "trait " << t
   << ": " << eta_vb_accept(static_cast<arma::uword>(t), 0)
   << "/" << eta_vb_accept(static_cast<arma::uword>(t), 1)
   << "\n";
  }
 
- return result;
+ CsrLearnedAnnotationBayesCExecutionResult execution_result;
+ execution_result.raw=std::move(result);
+ return execution_result;
+
+}
+
+} }
 
 #endif

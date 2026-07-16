@@ -1090,6 +1090,10 @@ inline void samplePi_ST_annot(
  pi[1] = g1 / s;
 }
 
+#define SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
+#include "blr_csr_learned_annotation_bayesc_core_impl.h"
+#undef SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT
+
 std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
@@ -1375,9 +1379,79 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot_single(
            });
 
 
-#define SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
-#include "blr_csr_learned_annotation_bayesc_core_impl.h"
-#undef SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT
+ sblr::core::LearnedAnnotationBayesCPolicyView annotation_policy;
+ annotation_policy.marker_count=static_cast<std::size_t>(m);
+ annotation_policy.annotation_count=static_cast<std::size_t>(K);
+ annotation_policy.trait_count=static_cast<std::size_t>(nt);
+ annotation_policy.annotation=A.memptr();
+ annotation_policy.annotation_value_count=A.n_elem;
+ annotation_policy.annotation_order.reserve(static_cast<std::size_t>(K));
+ for (int k=0; k<K; ++k)
+  annotation_policy.annotation_order.push_back("annotation_"+std::to_string(k));
+ annotation_policy.layout="column_major_marker_by_annotation";
+ annotation_policy.includes_intercept=false;
+ annotation_policy.eta_probability_init=eta_pi_init.memptr();
+ annotation_policy.eta_probability_count=eta_pi_init.n_elem;
+ annotation_policy.eta_multiplier_init=eta_vb_init.memptr();
+ annotation_policy.eta_multiplier_count=eta_vb_init.n_elem;
+ annotation_policy.learn_probability=learn_pi_annot;
+ annotation_policy.learn_multiplier=learn_vb_annot;
+ annotation_policy.probability_prior_sd=sigma_eta_pi;
+ annotation_policy.multiplier_prior_sd=sigma_eta_vb;
+ annotation_policy.probability_proposal_sd=rw_sd_eta_pi;
+ annotation_policy.multiplier_proposal_sd=rw_sd_eta_vb;
+ annotation_policy.update_every=annot_update_every;
+ annotation_policy.probability_min=pi_min;
+ annotation_policy.probability_max=pi_max;
+ annotation_policy.multiplier_min=vb_multiplier_min;
+ annotation_policy.multiplier_max=vb_multiplier_max;
+
+ sblr::core::CsrLearnedAnnotationBayesCExecutionContext context;
+ context.marker_count=m; context.trait_count=nt; context.annotation_count=K;
+ context.iterations=nit; context.burnin=nburn; context.thinning=nthin;
+ context.cores=ncores; context.seed=seed;
+ context.use_initial_inclusion=use_d_init;
+ context.use_initial_residual=use_r_init;
+ context.rebuild_residual_before_update=rebuild_r_before_updateE;
+ context.learn_probability=learn_pi_annot;
+ context.learn_multiplier=learn_vb_annot;
+ context.update_marker_variance=updateB;
+ context.update_residual_variance=updateE;
+ context.update_global_probability=updatePi;
+ context.update_ld_swap=updateLDswap;
+ context.annotation_update_every=annot_update_every;
+ context.ld_swap_moves=ld_swap_moves;
+ context.probability_prior_sd=sigma_eta_pi;
+ context.multiplier_prior_sd=sigma_eta_vb;
+ context.probability_proposal_sd=rw_sd_eta_pi;
+ context.multiplier_proposal_sd=rw_sd_eta_vb;
+ context.probability_min=pi_min; context.probability_max=pi_max;
+ context.multiplier_min=vb_multiplier_min;
+ context.multiplier_max=vb_multiplier_max;
+ context.marker_degrees_freedom=nub; context.residual_degrees_freedom=nue;
+ context.residual_adjustment=adjE;
+ context.global_probability_prior_a=pi_prior_a;
+ context.global_probability_prior_b=pi_prior_b;
+ context.ld_swap_probability=ld_swap_prob;
+ context.marker_score=&wy_mat; context.marker_diagonal=&ww_mat;
+ context.effect=&b_mat; context.residual=&r_mat; context.inclusion=&d_mat;
+ context.phenotype_sum_squares=&yy_vec;
+ context.marker_scale_prior=&ssb_prior_mat;
+ context.residual_scale_prior=&sse_prior_mat;
+ context.marker_variance_initial=&B; context.residual_variance_initial=&E;
+ context.global_probability=&pi; context.sample_size=&n;
+ context.initial_inclusion=&d_init; context.initial_residual=&r_init;
+ context.annotation=&A;
+ context.initial_probability_coefficient=&eta_pi_init;
+ context.initial_multiplier_coefficient=&eta_vb_init;
+ context.marker_order=&order; context.ld_storage=&ld;
+ context.ld_row_ptr_count=ld.ptr.size();
+ context.ld_friends_storage=&ld_swap_friends;
+ context.annotation_policy=annotation_policy;
+
+ sblr::core::CsrLearnedAnnotationBayesCExecutionResult execution_result=
+  sblr::core::run_csr_learned_annotation_bayesc(context);
+ return std::move(execution_result.raw);
 }
 
 static Rcpp::NumericMatrix cpg_raw_marker_matrix(

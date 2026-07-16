@@ -74,9 +74,8 @@ test_that("Phase 9B3 keeps public and protected surfaces unchanged", {
     unname(tools::md5sum(phase9b3_path("NAMESPACE"))),
     "f5b6ee37a3972aa436357bdc8f602f4e"
   )
-  protected <- c(
-    "src/st_cpg_omp_csr_annot.cpp" = "ec2f789a044d2675bb2d142a3f3e1492"
-  )
-  actual <- unname(tools::md5sum(vapply(names(protected), phase9b3_path, character(1))))
-  expect_identical(actual, unname(protected))
+  source <- paste(readLines(phase9b3_path("src/st_cpg_omp_csr_annot.cpp")), collapse = "\n")
+  core <- paste(readLines(phase9b3_path("src/blr_csr_learned_annotation_bayesc_core_impl.h")), collapse = "\n")
+  expect_match(source, "run_csr_learned_annotation_bayesc", fixed = TRUE)
+  expect_match(core, "CsrLearnedAnnotationBayesCExecutionResult", fixed = TRUE)
 })
