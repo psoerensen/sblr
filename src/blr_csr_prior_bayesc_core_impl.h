@@ -1,8 +1,10 @@
 #ifndef SBLR_BLR_CSR_PRIOR_BAYESC_CORE_IMPL_H
 #define SBLR_BLR_CSR_PRIOR_BAYESC_CORE_IMPL_H
 
-// Callable fixed-prior BayesC core. The aliases below are the complete,
-// explicit handoff from the typed execution context to the preserved block.
+// Canonical fixed-prior BayesC implementation detail. Include only from
+// st_cpg_omp_csr_prior.cpp after its native helpers are defined. The inline
+// definition and include guard prevent duplicate definitions in that unit.
+// The aliases below are the complete explicit handoff from the typed context.
 #include <iostream>
 
 namespace sblr { namespace core {

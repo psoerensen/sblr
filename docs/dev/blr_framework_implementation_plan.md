@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 9B3 complete; fixed-prior CSR BayesC migrated and ready for canonicalization
+**Status:** Phase 9C complete; fixed-prior CSR BayesC canonicalized and stabilized
 **Date:** 2026-07-16
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -1077,8 +1077,9 @@ unchanged; all six permanent raw and formatted references are exact, and a
 canonical timing and completed-fit RSS baseline is recorded. Shared scalar
 task, seed, and status infrastructure is active. The public route and schema
 are unchanged, and migration-only active-path wording has been removed. CSR
-BayesC and BayesR remain canonical. Fixed-prior CSR BayesC is migrated behind
-typed execution boundaries and ready for canonicalization. The existing block-eigen SBayesRC
+BayesC, BayesR, and fixed-prior CSR BayesC are canonical. Fixed-prior BayesC
+uses borrowed typed priors, one callable core, one converter, and one preserved
+wrapper aggregation path. The existing block-eigen SBayesRC
 compile-time instantiation is preserved but is not an independently migrated
 typed public adapter. BED BayesRC, scheduled, group,
 learned-annotation, and multivariate backends remain unchanged. The next
@@ -1107,6 +1108,17 @@ active. Wrapper-level multichain aggregation, the public route, native public
 signature, `stblr_raw_v1`, and formatted fit remain unchanged. All frozen
 references are exact, runtime and completed-fit RSS were checked, and the
 existing unsupported trait-dimension construction remains rejected. The route
-is ready for Phase 9C canonicalization. Group and learned-annotation CSR BayesC
+completed Phase 9C canonicalization with permanent exact fixtures and canonical
+runtime/completed-fit-RSS baselines. Group and learned-annotation CSR BayesC
 remain production-unchanged with contracts and references ready but are not
 migrated.
+
+### Phase 9C fixed-prior canonical implementation
+
+Fixed-prior CSR BayesC is canonical. Borrowed immutable `pi_marker` and
+`vb_multiplier`, the callable numerical core, typed execution result, sole
+binding converter, and sole wrapper-level aggregation path are active. The
+public route and schema are unchanged; permanent exact references and runtime
+and completed-fit RSS baselines are established; the current trait-dimension
+restriction remains protected. Migration scaffolding and active-path wording
+have been removed. Phase 9D may begin with mechanical group BayesC extraction.
