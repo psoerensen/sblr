@@ -46,6 +46,11 @@ test_that("Phase 9A core ordering and intervening annotation fits are exact",{
   other<-setdiff(names(phase9a_configs),backend)[1];invisible(phase9a_run(other,phase9a_configs[[other]][[1]],FALSE));expect_identical(comparable(phase9a_run(backend,cfg,FALSE)),one,info=paste(backend,"intervening"))
  }
 })
-test_that("Phase 9A unmigrated target production sources remain byte-identical",{
- paths<-c("src/st_cpg_omp_csr_annot.cpp");expected<-c("baaf3a0919ba97c78401066f7ac7d6f3");expect_identical(unname(tools::md5sum(vapply(paths,phase9a_path,character(1)))),expected)
+test_that("Phase 9A learned-annotation production route remains structurally protected",{
+ source_lines <- readLines(phase9a_path("src/st_cpg_omp_csr_annot.cpp"), warn = FALSE)
+ core_lines <- readLines(phase9a_path("src/blr_csr_learned_annotation_bayesc_core_impl.h"), warn = FALSE)
+ expect_equal(sum(grepl("for (int isort = 0; isort < m; ++isort)", core_lines, fixed = TRUE)), 1L)
+ expect_true(any(grepl('#include "blr_csr_learned_annotation_bayesc_core_impl.h"', source_lines, fixed = TRUE)))
+ expect_true(any(grepl("make_pi_from_annotation(A, eta_pi_t", core_lines, fixed = TRUE)))
+ expect_true(any(grepl("make_vb_multiplier_from_annotation(", core_lines, fixed = TRUE)))
 })

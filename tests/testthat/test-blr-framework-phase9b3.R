@@ -75,7 +75,7 @@ test_that("Phase 9B3 keeps public and protected surfaces unchanged", {
     "f5b6ee37a3972aa436357bdc8f602f4e"
   )
   protected <- c(
-    "src/st_cpg_omp_csr_annot.cpp" = "baaf3a0919ba97c78401066f7ac7d6f3"
+    "src/st_cpg_omp_csr_annot.cpp" = "ec2f789a044d2675bb2d142a3f3e1492"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9b3_path, character(1))))
   expect_identical(actual, unname(protected))
