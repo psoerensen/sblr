@@ -1572,8 +1572,8 @@ static Rcpp::List cpg_annot_chains_raw_v1(
  return traits;
 }
 
-static Rcpp::List cpg_annot_raw_v1(
- const std::vector<std::vector<std::vector<double>>>& raw,
+static Rcpp::List stblr_csr_learned_annotation_bayesc_result_to_raw(
+ const sblr::core::CsrLearnedAnnotationBayesCExecutionResult& result,
  bool updateLDswap,
  int m,
  int nt,
@@ -1584,6 +1584,7 @@ static Rcpp::List cpg_annot_raw_v1(
  int nchains,
  bool keep_chains
 ) {
+ const std::vector<std::vector<std::vector<double>>>& raw=result.raw;
  const int n_trace = nit + nburn;
  Rcpp::NumericVector nsamples(nt), n_used(nt), log_cpo(nt), mean_log_cpo(nt), seconds_mean(nt), seconds_max(nt);
  for (int t = 0; t < nt; ++t) {
@@ -1890,14 +1891,18 @@ Rcpp::List stblr_cpg_omp_csr_annot(
    extended[33] = chain_eta_pi_flat;
    extended[34] = chain_eta_vb_flat;
   }
-  return cpg_annot_raw_v1(
-   extended, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
+  sblr::core::CsrLearnedAnnotationBayesCExecutionResult execution_result;
+  execution_result.raw=std::move(extended);
+  return stblr_csr_learned_annotation_bayesc_result_to_raw(
+   execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
    static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains
   );
  }
 
- return cpg_annot_raw_v1(
-  out, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
+ sblr::core::CsrLearnedAnnotationBayesCExecutionResult execution_result;
+ execution_result.raw=std::move(out);
+ return stblr_csr_learned_annotation_bayesc_result_to_raw(
+  execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
   static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains
  );
 }

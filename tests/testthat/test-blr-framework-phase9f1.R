@@ -53,7 +53,7 @@ test_that("Phase 9F1 preserves learned-annotation policy statements", {
   expect_match(core_text, "eta_pi_proposed", fixed = TRUE)
   expect_match(core_text, "eta_vb_accepted", fixed = TRUE)
   expect_match(core_text, "eta_vb_proposed", fixed = TRUE)
-  expect_match(source_text, "static Rcpp::List cpg_annot_raw_v1(", fixed = TRUE)
+  expect_match(source_text, "stblr_csr_learned_annotation_bayesc_result_to_raw(", fixed = TRUE)
   expect_equal(length(gregexpr("for (int chain = 0; chain < nchains; ++chain)",
                               source_text, fixed = TRUE)[[1]]), 1L)
 })

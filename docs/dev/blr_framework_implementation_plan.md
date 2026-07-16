@@ -1082,7 +1082,13 @@ uses borrowed typed priors, one callable core, one converter, and one preserved
 wrapper aggregation path. The existing block-eigen SBayesRC
 compile-time instantiation is preserved but is not an independently migrated
 typed public adapter. Group CSR BayesC is canonical behind typed execution
-boundaries; BED BayesRC, scheduled, learned-annotation, and multivariate
+boundaries. Learned-annotation CSR BayesC has completed migration behind a
+typed borrowed annotation context, active learned policy, callable core, typed
+result, one binding converter, and one preserved wrapper aggregation path.
+Centered-logistic probabilities, exponential multipliers, proposal, bound, and
+update-frequency semantics, public routing, and schema remain unchanged; exact
+references and post-migration runtime/completed-fit-RSS checks are active. It
+is ready for canonicalization. BED BayesRC, scheduled, and multivariate
 backends remain unchanged.
 
 ### Phase 9A comparative boundary
@@ -1095,8 +1101,8 @@ updates and optional normalization; learned annotations use centered logistic
 and exponential links with random-walk Metropolis updates. Nine permanent
 raw/formatted reference pairs and per-backend benchmarks protect these
 boundaries. Fixed-prior BayesC subsequently completed Phase 9B migration;
-group subsequently completed Phase 9D migration; learned-annotation production
-remains unchanged and unmigrated.
+group subsequently completed Phase 9D migration; learned annotation completed
+Phase 9F migration without changing its public route or policy semantics.
 
 ### Phase 9B3 fixed-prior migration closure
 
@@ -1109,9 +1115,9 @@ signature, `stblr_raw_v1`, and formatted fit remain unchanged. All frozen
 references are exact, runtime and completed-fit RSS were checked, and the
 existing unsupported trait-dimension construction remains rejected. The route
 completed Phase 9C canonicalization with permanent exact fixtures and canonical
-runtime/completed-fit-RSS baselines. Group and learned-annotation CSR BayesC
-remain production-unchanged with contracts and references ready but are not
-migrated.
+runtime/completed-fit-RSS baselines. Group CSR BayesC is canonical, and
+learned-annotation CSR BayesC is migrated behind its typed execution boundary
+with exact references retained.
 
 ### Phase 9C fixed-prior canonical implementation
 
