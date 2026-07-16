@@ -1,13 +1,62 @@
 #ifndef SBLR_BLR_CSR_GROUP_BAYESC_CORE_IMPL_H
 #define SBLR_BLR_CSR_GROUP_BAYESC_CORE_IMPL_H
 
-// Group BayesC implementation detail. Include only from
-// st_cpg_omp_csr_group.cpp at the established execution seam after group
-// policy, marker order, and CSR/operator preparation. Phase 9D1 deliberately
-// preserves the surrounding function's lexical dependencies.
+// Binding-neutral group BayesC implementation detail. Include only from
+// st_cpg_omp_csr_group.cpp after native helpers and concrete CSR types exist.
 #ifndef SBLR_CSR_GROUP_BAYESC_CORE_IMPL_TRANSLATION_UNIT
 #error "blr_csr_group_bayesc_core_impl.h may only be included by st_cpg_omp_csr_group.cpp"
 #endif
+
+#include "blr_csr_group_bayesc_types.h"
+#include <iostream>
+
+namespace sblr { namespace core {
+
+inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
+ const CsrGroupBayesCExecutionContext& context
+) {
+ validate_csr_group_bayesc_execution_context(context);
+ const int m=context.marker_count, nt=context.trait_count, ngroup=context.group_count;
+ const int nit=context.iterations, nburn=context.burnin, nthin=context.thinning;
+ const int ncores=context.cores, seed=context.seed;
+ const bool use_d_init=context.use_initial_inclusion;
+ const bool use_r_init=context.use_initial_residual;
+ const bool rebuild_r_before_updateE=context.rebuild_residual_before_update;
+ const bool updateGroupVb=context.update_group_multiplier;
+ const bool normalize_group_vb=context.normalize_group_multiplier;
+ const bool updateB=context.update_marker_variance;
+ const bool updateE=context.update_residual_variance;
+ const bool updatePi=context.update_group_probability;
+ const bool updateLDswap=context.update_ld_swap;
+ const double nub_group=context.group_multiplier_prior_df;
+ const double ssb_group_prior=context.group_multiplier_prior_scale;
+ const double nub=context.marker_degrees_freedom, nue=context.residual_degrees_freedom;
+ const double adjE=context.residual_adjustment;
+ const double ld_swap_prob=context.ld_swap_probability;
+ const int ld_swap_moves=context.ld_swap_moves;
+ arma::mat& wy_mat=*context.marker_score;
+ const arma::mat& ww_mat=*context.marker_diagonal;
+ arma::mat& b_mat=*context.effect;
+ arma::mat& r_mat=*context.residual;
+ arma::Mat<int>& d_mat=*context.inclusion;
+ const arma::vec& yy_vec=*context.phenotype_sum_squares;
+ const arma::mat& ssb_prior_mat=*context.marker_scale_prior;
+ const arma::mat& sse_prior_mat=*context.residual_scale_prior;
+ const arma::mat& B=*context.marker_variance_initial;
+ const arma::mat& E=*context.residual_variance_initial;
+ const std::vector<double>& pi=*context.global_probability;
+ const std::vector<int>& n=*context.sample_size;
+ const std::vector<std::vector<double>>& d_init=*context.initial_inclusion;
+ const std::vector<std::vector<double>>& r_init=*context.initial_residual;
+ const std::vector<std::vector<double>>& group_pi_init=*context.initial_group_probability;
+ const std::vector<std::vector<double>>& group_vb_multiplier_init=*context.initial_group_multiplier;
+ const arma::rowvec& prior_a=*context.probability_prior_a;
+ const arma::rowvec& prior_b=*context.probability_prior_b;
+ const arma::Row<int>& group=*context.marker_group;
+ const arma::rowvec& group_size=*context.group_size;
+ const std::vector<int>& order=*context.marker_order;
+ const STLDCSR& ld=*static_cast<const STLDCSR*>(context.ld_storage);
+ const LDLDFriendsGroup& ld_swap_friends=*static_cast<const LDLDFriendsGroup*>(context.ld_friends_storage);
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
@@ -40,12 +89,12 @@
  omp_set_dynamic(0);
  nthreads = std::max(1, std::min(ncores, nt));
  omp_set_num_threads(nthreads);
- Rcpp::Rcout << "STBLR group annotation CSR OpenMP requested threads = "
+ std::cout << "STBLR group annotation CSR OpenMP requested threads = "
              << nthreads << ", omp_get_max_threads = " << omp_get_max_threads()
              << ", num procs = " << omp_get_num_procs() << "\n";
 #endif
 
- Rcpp::Rcout << "STBLR group annotation CSR: ngroup=" << ngroup
+ std::cout << "STBLR group annotation CSR: ngroup=" << ngroup
              << ", updatePi=" << updatePi
              << ", updateGroupVb=" << updateGroupVb
              << ", updateB=" << updateB
@@ -310,7 +359,7 @@
 
 #ifdef _OPENMP
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout << "trait " << t << " used thread " << thread_used[static_cast<std::size_t>(t)]
+  std::cout << "trait " << t << " used thread " << thread_used[static_cast<std::size_t>(t)]
               << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)] << "\n";
  }
 #endif
@@ -432,6 +481,12 @@
   result[26][ts][3] = 1.0;
  }
 
- return result;
+ CsrGroupBayesCExecutionResult execution_result;
+ execution_result.raw=std::move(result);
+ return execution_result;
+
+}
+
+} }
 
 #endif

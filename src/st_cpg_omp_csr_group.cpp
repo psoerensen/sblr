@@ -697,7 +697,11 @@ inline bool attempt_ld_swap_st_csr_group(
  return accept;
 }
 
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_single(
+#define SBLR_CSR_GROUP_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
+#include "blr_csr_group_bayesc_core_impl.h"
+#undef SBLR_CSR_GROUP_BAYESC_CORE_IMPL_TRANSLATION_UNIT
+
+sblr::core::CsrGroupBayesCExecutionResult stblr_cpg_omp_csr_group_annot_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -919,9 +923,59 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_group_annot_sing
   return x2[static_cast<std::size_t>(a)] > x2[static_cast<std::size_t>(b)];
  });
 
-#define SBLR_CSR_GROUP_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
-#include "blr_csr_group_bayesc_core_impl.h"
-#undef SBLR_CSR_GROUP_BAYESC_CORE_IMPL_TRANSLATION_UNIT
+ sblr::core::CsrGroupBayesCExecutionContext context;
+ context.marker_count=m; context.trait_count=nt; context.group_count=ngroup;
+ context.iterations=nit; context.burnin=nburn; context.thinning=nthin;
+ context.cores=ncores; context.seed=seed;
+ context.use_initial_inclusion=use_d_init;
+ context.use_initial_residual=use_r_init;
+ context.rebuild_residual_before_update=rebuild_r_before_updateE;
+ context.update_group_multiplier=updateGroupVb;
+ context.normalize_group_multiplier=normalize_group_vb;
+ context.update_marker_variance=updateB;
+ context.update_residual_variance=updateE;
+ context.update_group_probability=updatePi;
+ context.update_ld_swap=updateLDswap;
+ context.group_multiplier_prior_df=nub_group;
+ context.group_multiplier_prior_scale=ssb_group_prior;
+ context.marker_degrees_freedom=nub;
+ context.residual_degrees_freedom=nue;
+ context.residual_adjustment=adjE;
+ context.ld_swap_probability=ld_swap_prob;
+ context.ld_swap_moves=ld_swap_moves;
+ context.marker_score=&wy_mat; context.marker_diagonal=&ww_mat;
+ context.effect=&b_mat; context.residual=&r_mat; context.inclusion=&d_mat;
+ context.phenotype_sum_squares=&yy_vec;
+ context.marker_scale_prior=&ssb_prior_mat;
+ context.residual_scale_prior=&sse_prior_mat;
+ context.marker_variance_initial=&B; context.residual_variance_initial=&E;
+ context.global_probability=&pi; context.sample_size=&n;
+ context.initial_inclusion=&d_init; context.initial_residual=&r_init;
+ context.initial_group_probability=&group_pi_init;
+ context.initial_group_multiplier=&group_vb_multiplier_init;
+ context.probability_prior_a=&prior_a; context.probability_prior_b=&prior_b;
+ context.marker_group=&group; context.group_size=&group_size;
+ context.marker_order=&order; context.ld_storage=&ld;
+ context.ld_row_ptr_count=ld.ptr.size();
+ context.ld_friends_storage=&ld_swap_friends;
+ context.group_policy.marker_group=group.memptr();
+ context.group_policy.marker_group_count=static_cast<std::size_t>(m);
+ context.group_policy.group_count=static_cast<std::size_t>(ngroup);
+ context.group_policy.group_order.reserve(static_cast<std::size_t>(ngroup));
+ for (int g=0; g<ngroup; ++g) context.group_policy.group_order.push_back(std::to_string(g));
+ context.group_policy.zero_based_index=true;
+ context.group_policy.shared_read_only=true;
+ context.group_policy.per_chain_payload=false;
+ context.group_policy.storage_outlives_execution=true;
+ context.group_policy.probability_prior_a=prior_a.memptr();
+ context.group_policy.probability_prior_b=prior_b.memptr();
+ context.group_policy.probability_prior_count=static_cast<std::size_t>(ngroup);
+ context.group_policy.update_probability=updatePi;
+ context.group_policy.update_multiplier=updateGroupVb;
+ context.group_policy.normalize_multiplier=normalize_group_vb;
+ context.group_policy.multiplier_prior_df=nub_group;
+ context.group_policy.multiplier_prior_scale=ssb_group_prior;
+ return sblr::core::run_csr_group_bayesc(context);
 }
 
 static Rcpp::NumericMatrix cpg_raw_marker_matrix(
@@ -1258,7 +1312,7 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
    chain_seed = seed + 9176 * (chain + 1);
   }
 
-  std::vector<std::vector<std::vector<double>>> raw =
+  sblr::core::CsrGroupBayesCExecutionResult execution_result =
    stblr_cpg_omp_csr_group_annot_single(
     wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
     rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
@@ -1268,6 +1322,7 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
     nit, nburn, nthin, ncores, chain_seed, updateLDswap, ld_swap_prob,
     ld_swap_r2, ld_swap_max_friends, ld_swap_moves
    );
+  std::vector<std::vector<std::vector<double>>>& raw=execution_result.raw;
 
   if (chain == 0) {
    out = raw;

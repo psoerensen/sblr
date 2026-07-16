@@ -47,5 +47,5 @@ test_that("Phase 9A core ordering and intervening annotation fits are exact",{
  }
 })
 test_that("Phase 9A unmigrated target production sources remain byte-identical",{
- paths<-c("src/st_cpg_omp_csr_group.cpp","src/st_cpg_omp_csr_annot.cpp");expected<-c("f9701762d2e0245a40e996c89a4addb2","baaf3a0919ba97c78401066f7ac7d6f3");expect_identical(unname(tools::md5sum(vapply(paths,phase9a_path,character(1)))),expected)
+ paths<-c("src/st_cpg_omp_csr_annot.cpp");expected<-c("baaf3a0919ba97c78401066f7ac7d6f3");expect_identical(unname(tools::md5sum(vapply(paths,phase9a_path,character(1)))),expected)
 })
