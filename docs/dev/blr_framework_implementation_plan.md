@@ -1102,7 +1102,8 @@ and exponential links with random-walk Metropolis updates. Nine permanent
 raw/formatted reference pairs and per-backend benchmarks protect these
 boundaries. Fixed-prior BayesC subsequently completed Phase 9B migration;
 group subsequently completed Phase 9D migration; learned annotation completed
-Phase 9F migration without changing its public route or policy semantics.
+Phase 9F migration without changing its public route or policy semantics, and
+Phase 9G subsequently established it as canonical.
 
 ### Phase 9B3 fixed-prior migration closure
 
@@ -1152,6 +1153,18 @@ parameter, RNG and scheduling semantics are preserved. The public route,
 native signature, `stblr_raw_v1` and formatted schema are unchanged. Three raw
 and three formatted fixtures are permanent and exact; canonical timing and
 completed-fit RSS baselines are established; existing unsupported cases remain
-protected. Migration scaffolding is removed. Learned-annotation CSR BayesC
-remains production unchanged with contracts and references ready, but is not
-migrated.
+protected. Migration scaffolding is removed. Learned-annotation CSR BayesC is
+also canonical behind its distinct typed learned-policy boundary.
+
+### Phase 9G canonical learned-annotation BayesC implementation
+
+Learned-annotation CSR BayesC is canonical. Its typed borrowed annotation
+design, active `LearnedAnnotationBayesCPolicyView`, callable numerical core,
+typed execution result, sole binding converter, and sole wrapper-level
+multichain aggregation path are permanent. Centered-logistic probability,
+exponential multiplier, coefficient prior/proposal, bound, clipping,
+update-frequency, diagnostic, RNG, and scheduling semantics are preserved. The
+public route, native signature, `stblr_raw_v1`, and formatted schema are
+unchanged. Three raw and three formatted fixtures are permanent and exact;
+canonical runtime and completed-fit RSS baselines are established; existing
+unsupported cases remain protected; migration scaffolding is removed.
