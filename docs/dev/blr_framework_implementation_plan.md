@@ -1081,7 +1081,7 @@ BayesC, BayesR, and fixed-prior CSR BayesC are canonical. Fixed-prior BayesC
 uses borrowed typed priors, one callable core, one converter, and one preserved
 wrapper aggregation path. The existing block-eigen SBayesRC
 compile-time instantiation is preserved but is not an independently migrated
-typed public adapter. Group CSR BayesC is migrated behind typed execution
+typed public adapter. Group CSR BayesC is canonical behind typed execution
 boundaries; BED BayesRC, scheduled, learned-annotation, and multivariate
 backends remain unchanged.
 
@@ -1132,6 +1132,20 @@ binding-layer result converter, and one wrapper-level multichain aggregation
 path are active. Group order, update timing, both normalization modes, RNG,
 scheduling, public routing, and public schemas are unchanged. All three raw
 and three formatted frozen references are exact; runtime and completed-fit RSS
-were checked, and existing unsupported cases remain protected. Group CSR
-BayesC is ready for canonicalization. Learned-annotation CSR BayesC remains
+were checked, and existing unsupported cases remain protected. Phase 9E
+subsequently canonicalized this route. Learned-annotation CSR BayesC remains
 production unchanged with contracts and references ready, but is not migrated.
+
+### Phase 9E canonical group BayesC implementation
+
+Group CSR BayesC is canonical. Its typed borrowed zero-based group mapping,
+active `GroupBayesCPolicyView`, callable numerical core, typed execution result,
+sole binding converter, and sole wrapper-level multichain aggregation path are
+permanent. Group probability, multiplier, ordering, normalization, global
+parameter, RNG and scheduling semantics are preserved. The public route,
+native signature, `stblr_raw_v1` and formatted schema are unchanged. Three raw
+and three formatted fixtures are permanent and exact; canonical timing and
+completed-fit RSS baselines are established; existing unsupported cases remain
+protected. Migration scaffolding is removed. Learned-annotation CSR BayesC
+remains production unchanged with contracts and references ready, but is not
+migrated.
