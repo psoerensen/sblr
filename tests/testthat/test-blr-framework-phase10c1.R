@@ -52,8 +52,8 @@ test_that("implementation header owns scheduler and corrected RNG execution", {
   expect_match(core, "ScheduledChainRng chain_rng(task_seed)", fixed = TRUE)
   expect_match(core, "sampleBetaC_ST_csr_scheduled_one(", fixed = TRUE)
   expect_false(grepl("Rcpp::List::create", core, fixed = TRUE))
-  expect_match(source, "Rcpp::List marker = Rcpp::List::create(", fixed = TRUE)
-  expect_match(source, 'Rcpp::Named("schema") = Rcpp::List::create(', fixed = TRUE)
+  expect_match(source, "Rcpp::List marker=Rcpp::List::create(", fixed = TRUE)
+  expect_match(source, 'Rcpp::Named("schema")=Rcpp::List::create(', fixed = TRUE)
 })
 
 test_that("implementation header inclusion is restricted to scheduled CSR translation unit", {

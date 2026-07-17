@@ -1209,8 +1209,9 @@ Phase 10A scheduler contracts through a binding-neutral
 `run_csr_scheduled_bayesc()`, and typed
 `CsrScheduledBayesCExecutionResult`. CSR/statistic/prior/order inputs remain
 borrowed immutable; scheduler, sampler, accumulator, and
-`ScheduledChainRng` state remain logical-chain-owned. The existing inline
-Rcpp converter is retained for Phase 10C3. Corrected references and fit-local,
-fresh-process, explicit-seed, and worker-assignment reproducibility remain
-exact. Scheduled BayesR remains unsupported; scheduled BayesC migration is in
-progress and is not yet canonical.
+`ScheduledChainRng` state remain logical-chain-owned. Phase 10C3 closes the
+migration with one named binding-layer converter and one native aggregation
+path. Corrected references and fit-local, fresh-process, explicit-seed, and
+worker-assignment reproducibility remain exact. The public route and schema are
+unchanged. Scheduled BayesC migration is complete and ready for
+canonicalization; scheduled BayesR remains unsupported.

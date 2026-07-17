@@ -78,7 +78,7 @@ test_that("borrowed inputs and chain-owned mutable state are explicit", {
   expect_false(grepl("context.ld =", core, fixed = TRUE))
 })
 
-test_that("implementation inclusion and inline converter boundaries are permanent", {
+test_that("implementation inclusion and binding converter boundaries are permanent", {
   source <- phase10c2_text("src/st_cpg_omp_csr_scheduled.cpp")
   core <- phase10c2_text("src/blr_csr_scheduled_bayesc_core_impl.h")
   src <- list.files(file.path(phase10c2_root, "src"), recursive = TRUE,
@@ -92,8 +92,9 @@ test_that("implementation inclusion and inline converter boundaries are permanen
   expect_identical(basename(src[hits]), "st_cpg_omp_csr_scheduled.cpp")
   expect_match(source, "auto execution_result=sblr::core::run_csr_scheduled_bayesc",
     fixed = TRUE)
-  expect_match(source, "Rcpp::List marker = Rcpp::List::create(", fixed = TRUE)
-  expect_match(source, 'Rcpp::Named("schema") = Rcpp::List::create(', fixed = TRUE)
+  expect_match(source, "stblr_csr_scheduled_bayesc_result_to_raw(", fixed = TRUE)
+  expect_match(source, "Rcpp::List marker=Rcpp::List::create(", fixed = TRUE)
+  expect_match(source, 'Rcpp::Named("schema")=Rcpp::List::create(', fixed = TRUE)
   expect_false(grepl("Rcpp::List::create", core, fixed = TRUE))
 })
 
