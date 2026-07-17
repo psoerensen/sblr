@@ -1168,3 +1168,20 @@ public route, native signature, `stblr_raw_v1`, and formatted schema are
 unchanged. Three raw and three formatted fixtures are permanent and exact;
 canonical runtime and completed-fit RSS baselines are established; existing
 unsupported cases remain protected; migration scaffolding is removed.
+
+### Phase 10A scheduled ordinary-CSR audit
+
+Scheduled ordinary CSR currently means scheduled BayesC only; scheduled CSR
+BayesR is rejected and no scheduled CSR BayesRC/SBayesRC route exists. Phase
+10A leaves production execution unchanged while establishing binding-neutral
+sweep, skip, candidate, neighbor-wakeup, execution, mutable-state, diagnostic,
+and result vocabularies. Three fresh-process raw and formatted scheduled BayesC
+references protect dense and nontrivial scheduling configurations.
+
+The audit confirms that production's `static thread_local`
+`std::normal_distribution<double>` is worker-thread-owned rather than fit- or
+chain-owned. Its cached second variate survives reconstruction/reseeding of the
+chain engine, producing same-process call-order dependence and potential
+thread-assignment dependence. Scheduled RNG ownership correction is therefore
+required before execution migration. All canonical ordinary-CSR models remain
+unchanged and scheduled CSR is neither canonical nor migrated.

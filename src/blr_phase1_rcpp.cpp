@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -11,7 +12,12 @@
 #include "blr_csr_bayesr_types.h"
 #include "blr_csr_sbayesrc_types.h"
 #include "blr_csr_annotation_bayesc_types.h"
+#include "blr_scheduled_execution_types.h"
 #include "blr_spec.h"
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 namespace {
 
@@ -538,4 +544,98 @@ Rcpp::List blr_phase9a_validate_learned_annotation_bayesc_cpp(Rcpp::List spec) {
  Rcpp::NumericMatrix A=p["annotation"]; std::vector<double> ep=Rcpp::as<std::vector<double>>(p["eta_probability_init"]), ev=Rcpp::as<std::vector<double>>(p["eta_multiplier_init"]);
  LearnedAnnotationBayesCPolicyView v; v.marker_count=Rcpp::as<std::size_t>(p["marker_count"]); v.annotation_count=Rcpp::as<std::size_t>(p["annotation_count"]); v.trait_count=Rcpp::as<std::size_t>(p["trait_count"]); v.annotation=A.begin(); v.annotation_value_count=A.size(); v.annotation_order=Rcpp::as<std::vector<std::string>>(p["annotation_order"]); v.layout=Rcpp::as<std::string>(p["layout"]); v.includes_intercept=Rcpp::as<bool>(p["includes_intercept"]); v.eta_probability_init=ep.data(); v.eta_probability_count=ep.size(); v.eta_multiplier_init=ev.data(); v.eta_multiplier_count=ev.size(); v.learn_probability=Rcpp::as<bool>(p["learn_probability"]); v.learn_multiplier=Rcpp::as<bool>(p["learn_multiplier"]); v.probability_prior_sd=Rcpp::as<double>(p["probability_prior_sd"]); v.multiplier_prior_sd=Rcpp::as<double>(p["multiplier_prior_sd"]); v.probability_proposal_sd=Rcpp::as<double>(p["probability_proposal_sd"]); v.multiplier_proposal_sd=Rcpp::as<double>(p["multiplier_proposal_sd"]); v.update_every=Rcpp::as<int>(p["update_every"]); v.probability_min=Rcpp::as<double>(p["probability_min"]); v.probability_max=Rcpp::as<double>(p["probability_max"]); v.multiplier_min=Rcpp::as<double>(p["multiplier_min"]); v.multiplier_max=Rcpp::as<double>(p["multiplier_max"]); v.probability_link=Rcpp::as<std::string>(p["probability_link"]); v.multiplier_link=Rcpp::as<std::string>(p["multiplier_link"]); v.shared_read_only=Rcpp::as<bool>(p["shared_read_only"]); v.per_chain_payload=Rcpp::as<bool>(p["per_chain_payload"]); v.storage_outlives_execution=Rcpp::as<bool>(p["storage_outlives_execution"]);
  validate_annotation_bayesc_common(b.data,b.controls); validate_learned_annotation_policy(v,b.data.marker_count,b.data.trait_count); return phase9a_result(spec,"learned_annotation");
+}
+
+// Internal Phase 10A validation-only scheduled contract bridge. It constructs
+// metadata/state vocabulary only and invokes neither sampler nor RNG.
+// [[Rcpp::export]]
+Rcpp::List blr_phase10a_validate_scheduled_execution_cpp(Rcpp::List spec) {
+ using namespace sblr::core;
+ Rcpp::List execution=spec["execution"], sweep=spec["sweep"], skip=spec["skip"];
+ Rcpp::List candidate=spec["candidate"], neighbor=spec["neighbor"], state=spec["state"];
+ ScheduledExecutionControl x;
+ x.marker_count=Rcpp::as<std::size_t>(execution["marker_count"]);
+ x.trait_count=Rcpp::as<std::size_t>(execution["trait_count"]);
+ x.iterations=Rcpp::as<int>(execution["iterations"]); x.burnin=Rcpp::as<int>(execution["burnin"]);
+ x.thinning=Rcpp::as<int>(execution["thinning"]); x.chains=Rcpp::as<int>(execution["chains"]);
+ x.cores=Rcpp::as<int>(execution["cores"]); x.seed=Rcpp::as<int>(execution["seed"]);
+ x.chain_seeds=Rcpp::as<std::vector<int>>(execution["chain_seeds"]);
+ x.keep_chains=Rcpp::as<bool>(execution["keep_chains"]);
+ x.sweep.full_sweep_every=Rcpp::as<int>(sweep["full_sweep_every"]);
+ x.sweep.iteration_zero_is_full=Rcpp::as<bool>(sweep["iteration_zero_is_full"]);
+ x.skip.base_interval=Rcpp::as<int>(skip["null_skip_base"]);
+ x.skip.maximum_interval=Rcpp::as<int>(skip["null_skip_max"]);
+ x.skip.burnin_only=Rcpp::as<bool>(skip["burnin_only"]);
+ x.skip.growth_rule=Rcpp::as<std::string>(skip["growth_rule"]);
+ x.candidate.probability_threshold=Rcpp::as<double>(candidate["threshold"]);
+ x.candidate.lifetime=Rcpp::as<int>(candidate["lifetime"]);
+ x.neighbor.enabled=Rcpp::as<bool>(neighbor["enabled"]);
+ x.neighbor.effect_difference_threshold=Rcpp::as<double>(neighbor["difference_threshold"]);
+ x.neighbor.maximum_neighbors=Rcpp::as<int>(neighbor["maximum_neighbors"]);
+ x.neighbor.friend_marker_count=Rcpp::as<std::size_t>(neighbor["friend_marker_count"]);
+ x.neighbor.shared_read_only=Rcpp::as<bool>(neighbor["shared_read_only"]);
+ x.neighbor.storage_outlives_execution=Rcpp::as<bool>(neighbor["storage_outlives_execution"]);
+ // The non-null sentinel represents borrowed friend storage during validation.
+ const int friend_sentinel=0; x.neighbor.friend_data=&friend_sentinel;
+ validate_scheduled_execution_control(x);
+ ScheduledMarkerState s;
+ s.scheduled_at=Rcpp::as<std::vector<int>>(state["scheduled_at"]);
+ s.last_updated=Rcpp::as<std::vector<int>>(state["last_updated"]);
+ s.candidate=Rcpp::as<std::vector<unsigned char>>(state["candidate"]);
+ s.in_candidate_list=Rcpp::as<std::vector<unsigned char>>(state["in_candidate_list"]);
+ s.in_active_list=Rcpp::as<std::vector<unsigned char>>(state["in_active_list"]);
+ s.last_interesting=Rcpp::as<std::vector<int>>(state["last_interesting"]);
+ validate_scheduled_marker_state(s,x.marker_count);
+ return Rcpp::List::create(Rcpp::Named("schema")="blr_scheduled_execution_contract_v1",
+  Rcpp::Named("spec")=spec,Rcpp::Named("validated")=true,
+  Rcpp::Named("invokes_sampler")=false,Rcpp::Named("consumes_rng")=false);
+}
+
+namespace {
+double phase10a_persistent_normal(std::mt19937& engine, bool reset) {
+ static thread_local std::normal_distribution<double> distribution(0.0,1.0);
+ if (reset) distribution.reset();
+ return distribution(engine);
+}
+}
+
+// Internal Phase 10A diagnostic for the exact persistent-distribution pattern.
+// [[Rcpp::export]]
+Rcpp::List blr_phase10a_distribution_cache_diagnostic_cpp(int seed, int threads=2) {
+ if (threads<=0) throw std::invalid_argument("threads must be positive");
+ Rcpp::NumericVector cached(threads), fresh(threads), first(threads);
+ std::vector<double> first_native(static_cast<std::size_t>(threads));
+ std::vector<double> cached_native(static_cast<std::size_t>(threads));
+ std::vector<double> fresh_native(static_cast<std::size_t>(threads));
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(static)
+#endif
+ for (int thread=0; thread<threads; ++thread) {
+  const unsigned int thread_seed=static_cast<unsigned int>(seed+1009*thread);
+  std::mt19937 engine(thread_seed);
+  first_native[static_cast<std::size_t>(thread)]=phase10a_persistent_normal(engine,true);
+  std::mt19937 reseeded(thread_seed);
+  cached_native[static_cast<std::size_t>(thread)]=phase10a_persistent_normal(reseeded,false);
+  std::mt19937 reset_engine(thread_seed);
+  fresh_native[static_cast<std::size_t>(thread)]=phase10a_persistent_normal(reset_engine,true);
+ }
+ for (int thread=0;thread<threads;++thread) {
+  first[thread]=first_native[static_cast<std::size_t>(thread)];
+  cached[thread]=cached_native[static_cast<std::size_t>(thread)];
+  fresh[thread]=fresh_native[static_cast<std::size_t>(thread)];
+ }
+ bool cached_state_survives_engine_reseed=false;
+ for (int thread=0;thread<threads;++thread) {
+  if (cached_native[static_cast<std::size_t>(thread)] !=
+      fresh_native[static_cast<std::size_t>(thread)]) {
+   cached_state_survives_engine_reseed=true;
+   break;
+  }
+ }
+ return Rcpp::List::create(Rcpp::Named("first")=first,
+  Rcpp::Named("after_engine_reseed_without_distribution_reset")=cached,
+  Rcpp::Named("after_distribution_reset")=fresh,
+  Rcpp::Named("cached_state_survives_engine_reseed")=
+   cached_state_survives_engine_reseed,
+  Rcpp::Named("threads")=threads);
 }

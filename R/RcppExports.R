@@ -41,6 +41,14 @@ blr_phase9a_validate_learned_annotation_bayesc_cpp <- function(spec) {
     .Call(`_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp`, spec)
 }
 
+blr_phase10a_validate_scheduled_execution_cpp <- function(spec) {
+    .Call(`_sblr_blr_phase10a_validate_scheduled_execution_cpp`, spec)
+}
+
+blr_phase10a_distribution_cache_diagnostic_cpp <- function(seed, threads = 2L) {
+    .Call(`_sblr_blr_phase10a_distribution_cache_diagnostic_cpp`, seed, threads)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }

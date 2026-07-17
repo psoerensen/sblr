@@ -99,8 +99,8 @@ test_that("canonical group policy and unsupported cases stay protected", {
 test_that("canonical group public and protected boundaries remain frozen", {
   protected <- c(
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e",
-    "src/RcppExports.cpp" = "15b6a14c11fd99c810b8dd883ef0e0bf",
-    "R/RcppExports.R" = "8f28eff300d1c8780dea79746a6b6b48",
+    "src/RcppExports.cpp" = "8e4fd28d6658c32900792c316eb639fd",
+    "R/RcppExports.R" = "67243ea7c7dd31154b2d1e2e5f9637e7",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",

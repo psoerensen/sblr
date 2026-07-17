@@ -104,8 +104,8 @@ test_that("Phase 9F1 protects canonical and unrelated backends", {
     "src/st_cpg_omp_csr_scheduled.cpp" = "fdac03befb742f4f6fa7c22ccbbbc920",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e",
-    "src/RcppExports.cpp" = "15b6a14c11fd99c810b8dd883ef0e0bf",
-    "R/RcppExports.R" = "8f28eff300d1c8780dea79746a6b6b48",
+    "src/RcppExports.cpp" = "8e4fd28d6658c32900792c316eb639fd",
+    "R/RcppExports.R" = "67243ea7c7dd31154b2d1e2e5f9637e7",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9f1_path, character(1))))
