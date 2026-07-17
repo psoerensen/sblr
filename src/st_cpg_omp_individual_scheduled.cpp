@@ -4,6 +4,7 @@
 #include "cpg_samplers.h"
 #include "distributions.h"
 #include "packed_bed.h"
+#include "blr_bed_scheduled_bayesc_rng.h"
 
 #include <algorithm>
 #include <cmath>
@@ -306,11 +307,8 @@ static inline double sample_marker_scheduled(
   arma::vec& e,
   double& b_j,
   int& d_j,
-  std::mt19937& gen
+  sblr::core::BedScheduledBayesCChainRng& rng
 ) {
- static thread_local std::uniform_real_distribution<double> runif(0.0, 1.0);
- static thread_local std::normal_distribution<double> norm01(0.0, 1.0);
-
  const double xj2 = map.xx;
  const double vei_safe = std::max(vei, 1e-300);
  const double pi0 = std::max(pi[0], 1e-300);
@@ -333,14 +331,14 @@ static inline double sample_marker_scheduled(
  else if (delta_log < -35.0) p1 = 1.0;
  else p1 = 1.0 / (1.0 + std::exp(delta_log));
 
- const int d_new = (runif(gen) < p1) ? 1 : 0;
+ const int d_new = (rng.uniform(rng.engine) < p1) ? 1 : 0;
  double b_new = 0.0;
 
  if (d_new == 1) {
   const double lhs = xj2 + vei_safe / vb;
   const double mean = score / lhs;
   const double sd = std::sqrt(vei_safe / lhs);
-  b_new = mean + sd * norm01(gen);
+  b_new = mean + sd * rng.normal(rng.engine);
  }
 
  const double diff = b_new - b_j;
@@ -744,7 +742,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled(
 #endif
 
   try {
-   std::mt19937 gen_t(static_cast<unsigned int>(seed + 1000003 * (t + 1)));
+   sblr::core::BedScheduledBayesCChainRng chain_rng(
+    static_cast<unsigned int>(seed + 1000003 * (t + 1)));
+   std::mt19937& gen_t = chain_rng.engine;
    std::uniform_int_distribution<int> jitter_dist(0, std::max(0, null_skip_base - 1));
 
    arma::vec y_t = y_mat.col(static_cast<arma::uword>(t));
@@ -857,7 +857,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled(
                 e_t,
                 bj,
                 dj,
-                gen_t
+                chain_rng
     );
 
     b_t(ju) = bj;

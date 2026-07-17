@@ -1250,3 +1250,14 @@ retain worker-owned `static thread_local` normal/uniform distributions and
 require fit-local RNG correction before migration. BayesR and BayesRC construct
 distributions per logical chain. Deterministic references are established
 where valid; migration has not started.
+
+### Phase 11B scheduled packed-BED BayesC RNG correction
+
+Scheduled single-chain and multichain packed-BED BayesC now construct one
+`BedScheduledBayesCChainRng` per logical chain. Its `std::mt19937`, normal and
+uniform distributions have one-chain lifetimes; no stateful distribution is
+static, thread-local, worker-owned or fit-persistent. Seed formulas, logical
+draw sites, scheduler transitions, genotype decoding, I/O, public routing and
+schemas are unchanged. Post-correction deterministic references and fit-local,
+worker-independent reproducibility are active. Numerical-core migration has
+not started; packed-BED BayesR and BayesRC remain unchanged.

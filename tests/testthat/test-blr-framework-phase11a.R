@@ -70,12 +70,12 @@ test_that("safe BED BayesR and BayesRC references reproduce exactly", {
   }
 })
 
-test_that("BED BayesC same-process repetition is stable but worker assignment risk is detected", {
+test_that("BED BayesC correction removes the Phase 11A worker assignment risk", {
   a <- phase11a_capture("bayesc", 1L, 2L, 71L)
   repeat_a <- phase11a_capture("bayesc", 1L, 2L, 71L)
   expect_identical(phase11a_normalize(repeat_a), phase11a_normalize(a))
   two_core <- phase11a_capture("bayesc", 2L, 2L, 71L)
-  expect_false(identical(phase11a_normalize(two_core), phase11a_normalize(a)))
+  expect_identical(phase11a_normalize(two_core), phase11a_normalize(a))
 })
 
 test_that("safe BED models are core-order independent after metadata normalization", {
@@ -104,8 +104,8 @@ test_that("scheduler semantics are similar only for BayesC and BayesR", {
 test_that("Phase 11A leaves production and protected sources unchanged", {
   protected <- c(
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
-    "src/st_cpg_omp_individual_scheduled.cpp" = "ead3070c97cfcc733fe2144fe67d6b72",
-    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "947ecab35bd7444101c5d23d956202c0",
+    "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
+    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "f58fbefcffb183b9d54a96b398321dfb",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp" = "85a5e45e03c59ce62654496a2f076fe9",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
@@ -120,7 +120,7 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
 test_that("fresh-process references can be checked explicitly", {
   skip_if_not(identical(Sys.getenv("SBLR_RUN_PHASE11A_FRESH"), "true"))
   skip_if_not_installed("callr")
-  for (model in c("bayesc", "bayesr", "bayesrc")) {
+  for (model in c("bayesr", "bayesrc")) {
     observed <- callr::r(function(root, model) {
       setwd(root); pkgload::load_all(".", compile = FALSE, quiet = TRUE)
       source(file.path("tests", "testthat", "fixtures", "blr-phase11a-bed-reference.R"))

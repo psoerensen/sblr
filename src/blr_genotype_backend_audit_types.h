@@ -47,6 +47,8 @@ struct BedChainSpec {
  RngOwner engine_owner=RngOwner::chain;
  RngOwner distribution_owner=RngOwner::chain;
  bool fit_persistent_distribution_state=false;
+ bool worker_owns_distribution_state=false;
+ bool distribution_lifetime_is_one_chain=true;
 };
 
 struct BedExecutionAuditContract {
@@ -90,6 +92,13 @@ inline void validate_bed_execution_audit_contract(
   throw std::invalid_argument("invalid BED execution dimensions or MCMC controls");
  if (x.chains.chains<=0 || x.chains.cores<=0)
   throw std::invalid_argument("BED chains and cores must be positive");
+ if (x.chains.engine_owner!=RngOwner::chain ||
+     x.chains.distribution_owner!=RngOwner::chain ||
+     x.chains.fit_persistent_distribution_state ||
+     x.chains.worker_owns_distribution_state ||
+     !x.chains.distribution_lifetime_is_one_chain)
+  throw std::invalid_argument(
+   "scheduled BED RNG engines and distributions must be one-chain owned");
  if (!x.chains.explicit_chain_seeds.empty() &&
      static_cast<int>(x.chains.explicit_chain_seeds.size())!=x.chains.chains)
   throw std::invalid_argument("BED explicit chain seeds must match chains");
