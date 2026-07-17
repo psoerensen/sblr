@@ -3,40 +3,44 @@
 
 // Implementation detail: included only by st_cpg_omp_individual_scheduled_chains.cpp.
 
-static ChainResultSTScheduled run_one_scheduled_bed_chain(
-  const FastPackedBedMatrix& G,
-  const std::vector<MarkerMapSTScheduledChains>& marker_maps,
-  const std::vector<int>& marker_order,
-  const arma::mat& y_mat,
-  const std::vector<std::vector<double>>& b_init,
-  const arma::mat& B,
-  const arma::mat& E,
-  const arma::mat& ssb_prior_mat,
-  const arma::mat& sse_prior_mat,
-  const std::vector<double>& pi,
-  double nub,
-  double nue,
-  bool updateB,
-  bool updateE,
-  bool updatePi,
-  double adjE,
-  int nit,
-  int nburn,
-  int nthin,
-  int rebuild_every,
-  int full_sweep_every,
-  int null_skip_base,
-  int null_skip_max,
-  double candidate_threshold,
-  int candidate_lifetime,
-  bool skip_nulls_burnin_only,
-  int t,
-  int chain,
-  int seed,
-  int progress_every,
-  double pi_prior_a,
-  double pi_prior_b
+namespace sblr { namespace core {
+
+template <class PackedGenotype>
+BedScheduledBayesCChainExecutionResult run_bed_scheduled_bayesc_chain(
+ const BedScheduledBayesCChainExecutionContext<PackedGenotype>& context
 ) {
+ validate_bed_scheduled_bayesc_chain_context(context);
+ const PackedGenotype& G=context.genotype.storage;
+ const std::vector<BedScheduledBayesCMarkerMap>& marker_maps=context.marker_maps;
+ const std::vector<int>& marker_order=context.marker_order;
+ const arma::mat& y_mat=context.phenotype;
+ const std::vector<std::vector<double>>& b_init=context.initial_effects;
+ const arma::mat& B=context.initial_B;
+ const arma::mat& E=context.initial_E;
+ const arma::mat& ssb_prior_mat=context.ssb_prior;
+ const arma::mat& sse_prior_mat=context.sse_prior;
+ const std::vector<double>& pi=context.initial_pi;
+ const double nub=context.nub;
+ const double nue=context.nue;
+ const double adjE=context.adjE;
+ const double pi_prior_a=context.pi_prior_a;
+ const double pi_prior_b=context.pi_prior_b;
+ const int nit=context.iterations;
+ const int nburn=context.burnin;
+ const int nthin=context.thinning;
+ const int rebuild_every=context.rebuild_every;
+ const int full_sweep_every=context.sweep.full_sweep_every;
+ const int null_skip_base=context.skip.base_interval;
+ const int null_skip_max=context.skip.maximum_interval;
+ const double candidate_threshold=context.candidate.probability_threshold;
+ const int candidate_lifetime=context.candidate.lifetime;
+ const bool skip_nulls_burnin_only=context.skip.burnin_only;
+ const int t=context.trait_index;
+ const int chain=context.chain_index;
+ const int progress_every=context.progress_every;
+ const bool updateB=context.updateB;
+ const bool updateE=context.updateE;
+ const bool updatePi=context.updatePi;
 #ifdef _OPENMP
  const double wall_start = omp_get_wtime();
 #else
@@ -44,7 +48,7 @@ static ChainResultSTScheduled run_one_scheduled_bed_chain(
 #endif
 
  const int m = G.m;
- ChainResultSTScheduled out;
+ BedScheduledBayesCChainExecutionResult out;
  out.bm = arma::rowvec(m, arma::fill::zeros);
  out.dm = arma::rowvec(m, arma::fill::zeros);
  out.b = arma::rowvec(m, arma::fill::zeros);
@@ -57,11 +61,7 @@ static ChainResultSTScheduled run_one_scheduled_bed_chain(
  out.vlds = arma::rowvec(nit + nburn, arma::fill::zeros);
 
  try {
-  const unsigned int chain_seed = static_cast<unsigned int>(
-   seed + 1000003 * (t + 1) + 9176 * (chain + 1)
-  );
-
-  sblr::core::BedScheduledBayesCChainRng chain_rng(chain_seed);
+  BedScheduledBayesCChainRng chain_rng(context.chain_seed);
   std::mt19937& gen_t = chain_rng.engine;
   std::uniform_int_distribution<int> jitter_dist(0, std::max(0, null_skip_base - 1));
 
@@ -222,7 +222,7 @@ static ChainResultSTScheduled run_one_scheduled_bed_chain(
 #pragma omp critical
 #endif
 {
- Rcpp::Rcout
+ std::cout
  << "progress chain " << chain
  << ", trait " << t
  << ": iter " << (it + 1)
@@ -420,5 +420,7 @@ static ChainResultSTScheduled run_one_scheduled_bed_chain(
 
  return out;
 }
+
+} }
 
 #endif

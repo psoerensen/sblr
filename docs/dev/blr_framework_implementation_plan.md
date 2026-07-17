@@ -1272,3 +1272,17 @@ loading/decoding, task orchestration, native aggregation and existing R result
 construction remain in the selected binding source. The experimental
 single-chain route is unchanged. Typed callable execution boundaries are not
 yet active; migration remains in progress.
+
+### Phase 11C2 packed-BED BayesC typed per-chain boundary
+
+The corrected public multichain route now constructs a binding-neutral
+`BedScheduledBayesCChainExecutionContext` for each logical trait-chain and calls
+`run_bed_scheduled_bayesc_chain()`, which returns a typed
+`BedScheduledBayesCChainExecutionResult`. Fit-owned decoded packed genotype
+storage, marker maps, phenotypes and priors are borrowed immutable. The Phase
+10A sweep, null-skip and candidate contracts are reused with their identical
+BED semantics; neighbor wake-up is not activated. Logical-chain RNG ownership
+and Phase 11B corrected references remain exact. OpenMP task dispatch,
+cross-chain aggregation and existing result conversion remain in the adapter;
+migration remains in progress. The experimental route, BayesR and BayesRC are
+unchanged.

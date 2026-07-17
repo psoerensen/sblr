@@ -136,7 +136,7 @@ test_that("Phase 10C1 protects unrelated native backends and public namespace", 
     "src/st_cpg_omp_csr_group.cpp" = "87e923f7f8ee6420e39d9f041263d11b",
     "src/st_cpg_omp_csr_annot.cpp" = "59bd49f048d116d0fe61d73d79bd4693",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "f93588d0c531734dd81ed8a1c42237bc",
+    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "43e8ff78b759656c5e897da186c1a548",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e"

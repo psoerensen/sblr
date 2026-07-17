@@ -15,7 +15,7 @@ test_that("public scheduled packed-BED BayesC uses one extracted numerical body"
   core <- active11c1(read11c1("src/blr_bed_scheduled_bayesc_core_impl.h"))
   public <- read11c1("R/sparse_ld_bed_helper.R")
   expect_match(public, "stblr_cpg_omp_bed_marker_scheduled_chains", fixed = TRUE)
-  expect_identical(count11c1("run_one_scheduled_bed_chain\\s*\\(", core), 1L)
+  expect_identical(count11c1("run_bed_scheduled_bayesc_chain\\s*\\(", core), 1L)
   expect_identical(count11c1("for \\(int it = 0; it < total_it; \\+\\+it\\)", core), 1L)
   expect_match(src, '#include "blr_bed_scheduled_bayesc_core_impl.h"', fixed = TRUE)
   expect_false(grepl("for \\(int it = 0; it < total_it", src))

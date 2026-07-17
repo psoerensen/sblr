@@ -5,6 +5,7 @@
 #include "distributions.h"
 #include "packed_bed.h"
 #include "blr_bed_scheduled_bayesc_rng.h"
+#include "blr_bed_scheduled_bayesc_types.h"
 
 #include <algorithm>
 #include <cmath>
@@ -13,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <iostream>
 #include <numeric>
 #include <random>
 #include <stdexcept>
@@ -53,36 +55,8 @@ using namespace arma;
 //                                      dm_sd, dm_min, dm_max
 // =============================================================================
 
-struct MarkerMapSTScheduledChains {
- double val[4];
- double xx;
-};
-
-struct ChainResultSTScheduled {
- arma::rowvec bm;
- arma::rowvec dm;
- arma::rowvec b;
- arma::rowvec d_as_double;
- arma::rowvec vbs;
- arma::rowvec vgs;
- arma::rowvec ves;
- arma::rowvec pis;
- arma::rowvec vles;
- arma::rowvec vlds;
- double final_vb = 0.0;
- double final_vg = 0.0;
- double final_ve = 0.0;
- double final_pi = 0.0;
- double final_vle = 0.0;
- double final_vld = 0.0;
- double log_cpo = NA_REAL;
- double mean_log_cpo = NA_REAL;
- double mean_pi = 0.0;
- double nsamples = 0.0;
- double seconds = 0.0;
- int failed = 0;
- std::string error;
-};
+using MarkerMapSTScheduledChains=sblr::core::BedScheduledBayesCMarkerMap;
+using ChainResultSTScheduled=sblr::core::BedScheduledBayesCChainExecutionResult;
 
 struct FastPackedBedMatrix {
  int n = 0;
@@ -982,41 +956,23 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  for (int job = 0; job < njobs; ++job) {
   const int chain = job / nt;
   const int t = job % nt;
+  const unsigned int chain_seed=static_cast<unsigned int>(
+   seed+1000003*(t+1)+9176*(chain+1));
+  const sblr::core::BedPackedGenotypeView<FastPackedBedMatrix> genotype{
+   G,G.data.data(),G.data.size(),static_cast<std::size_t>(G.m),
+   static_cast<std::size_t>(G.n),G.nbytes,G.stride};
+  const sblr::core::ScheduledSweepControl sweep{full_sweep_every,true};
+  const sblr::core::NullSkipControl skip{
+   null_skip_base,null_skip_max,skip_nulls_burnin_only,"probability_adaptive"};
+  const sblr::core::CandidateControl candidate{
+   candidate_threshold,candidate_lifetime};
+  const sblr::core::BedScheduledBayesCChainExecutionContext<FastPackedBedMatrix> context{
+   genotype,marker_maps,marker_order,y_mat,b_init,B,E,ssb_prior_mat,sse_prior_mat,
+   pi,sweep,skip,candidate,nub,nue,adjE,pi_prior_a,pi_prior_b,nit,nburn,nthin,
+   rebuild_every,progress_every,chain_seed,t,chain,updateB,updateE,updatePi};
 
-  job_results[static_cast<std::size_t>(job)] = run_one_scheduled_bed_chain(
-   G,
-   marker_maps,
-   marker_order,
-   y_mat,
-   b_init,
-   B,
-   E,
-   ssb_prior_mat,
-   sse_prior_mat,
-   pi,
-   nub,
-   nue,
-   updateB,
-   updateE,
-   updatePi,
-   adjE,
-   nit,
-   nburn,
-   nthin,
-   rebuild_every,
-   full_sweep_every,
-   null_skip_base,
-   null_skip_max,
-   candidate_threshold,
-   candidate_lifetime,
-   skip_nulls_burnin_only,
-   t,
-   chain,
-   seed,
-   progress_every,
-   pi_prior_a,
-   pi_prior_b
-  );
+  job_results[static_cast<std::size_t>(job)]=
+   sblr::core::run_bed_scheduled_bayesc_chain(context);
  }
 
  int failed_total = 0;

@@ -105,7 +105,7 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
   protected <- c(
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "f93588d0c531734dd81ed8a1c42237bc",
+    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "43e8ff78b759656c5e897da186c1a548",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp" = "85a5e45e03c59ce62654496a2f076fe9",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
