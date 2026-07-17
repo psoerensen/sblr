@@ -57,6 +57,58 @@ struct BedScheduledBayesCChainExecutionResult {
  std::string error;
 };
 
+struct BedScheduledBayesCExecutionResult {
+ arma::mat bm;
+ arma::mat dm;
+ arma::mat bm_sd;
+ arma::mat dm_sd;
+ arma::mat bm_min;
+ arma::mat dm_min;
+ arma::mat bm_max;
+ arma::mat dm_max;
+ arma::mat final_effects;
+ arma::mat final_states;
+ arma::mat wy;
+ arma::mat residual_scores;
+ arma::mat marker_variance_trace;
+ arma::mat genetic_variance_trace;
+ arma::mat residual_variance_trace;
+ arma::mat inclusion_trace;
+ arma::mat vle_trace;
+ arma::mat vld_trace;
+ arma::vec final_marker_variance;
+ arma::vec final_genetic_variance;
+ arma::vec final_residual_variance;
+ arma::vec final_inclusion_probability;
+ arma::vec final_vle;
+ arma::vec final_vld;
+ arma::vec mean_inclusion_probability;
+ arma::vec mean_total_log_cpo;
+ arma::vec mean_log_cpo;
+ arma::vec mean_retained_samples;
+ arma::vec mean_seconds;
+ arma::vec max_seconds;
+ int marker_count=0;
+ int sample_count=0;
+ int trait_count=0;
+ int chain_count=0;
+ int task_count=0;
+ int trace_length=0;
+};
+
+template <class PackedGenotype>
+struct BedScheduledBayesCAggregationContext {
+ BedPackedGenotypeView<PackedGenotype> genotype;
+ const std::vector<BedScheduledBayesCMarkerMap>& marker_maps;
+ const std::vector<int>& marker_order;
+ const arma::mat& phenotype;
+ int trait_count;
+ int chain_count;
+ int trace_length;
+ bool return_wy;
+ bool return_residual_scores;
+};
+
 template <class PackedGenotype>
 struct BedScheduledBayesCChainExecutionContext {
  BedPackedGenotypeView<PackedGenotype> genotype;

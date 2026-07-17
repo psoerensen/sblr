@@ -105,7 +105,6 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
   protected <- c(
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "src/st_cpg_omp_individual_scheduled_chains.cpp" = "43e8ff78b759656c5e897da186c1a548",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp" = "85a5e45e03c59ce62654496a2f076fe9",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
@@ -115,6 +114,10 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e")
   expect_identical(unname(tools::md5sum(file.path(phase11a_root, names(protected)))),
     unname(protected))
+  migrated <- phase11a_text("src/st_cpg_omp_individual_scheduled_chains.cpp")
+  expect_match(migrated, "run_bed_scheduled_bayesc_chain(context)", fixed = TRUE)
+  expect_match(migrated, "aggregate_bed_scheduled_bayesc_results", fixed = TRUE)
+  expect_match(migrated, "stblr_bed_scheduled_bayesc_result_to_raw", fixed = TRUE)
 })
 
 test_that("fresh-process references can be checked explicitly", {

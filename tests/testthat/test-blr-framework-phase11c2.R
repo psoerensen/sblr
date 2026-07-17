@@ -51,13 +51,16 @@ test_that("scheduler contracts and mutable ownership remain chain-local", {
   expect_match(core, "const std::vector<int>& due", fixed = TRUE)
 })
 
-test_that("dispatch aggregation decoding and conversion remain in adapter", {
+test_that("dispatch and decoding remain in adapter after migration closure", {
   src <- read11c2("src/st_cpg_omp_individual_scheduled_chains.cpp")
   core <- read11c2("src/blr_bed_scheduled_bayesc_core_impl.h")
+  aggregate <- read11c2("src/blr_bed_scheduled_bayesc_aggregate_impl.h")
   for (needle in c("#pragma omp parallel for", "job_results", "std::fread",
-      "std::fseek", "Rcpp::List marker", "stblr_raw_v1", "bm_mat", "dm_mat"))
+      "std::fseek", "stblr_bed_scheduled_bayesc_result_to_raw"))
     expect_match(src, needle, fixed = TRUE)
   expect_false(grepl("#pragma omp parallel for|job_results|Rcpp::List|stblr_raw_v1", core))
+  expect_match(aggregate, "aggregate_bed_scheduled_bayesc_results", fixed = TRUE)
+  expect_false(grepl("Rcpp|SEXP|mt19937|ChainRng", aggregate))
 })
 
 test_that("Phase 11B corrected raw and formatted references remain exact", {

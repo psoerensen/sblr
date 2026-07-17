@@ -1286,3 +1286,16 @@ and Phase 11B corrected references remain exact. OpenMP task dispatch,
 cross-chain aggregation and existing result conversion remain in the adapter;
 migration remains in progress. The experimental route, BayesR and BayesRC are
 unchanged.
+
+### Phase 11C3 packed-BED BayesC migration closure
+
+The public multichain packed-BED BayesC route now feeds its typed per-chain
+results through one binding-neutral `aggregate_bed_scheduled_bayesc_results()`
+path and one typed `BedScheduledBayesCExecutionResult`. One named binding
+converter, `stblr_bed_scheduled_bayesc_result_to_raw()`, constructs the
+unchanged `stblr_raw_v1`. Fit-local decoding and OpenMP task dispatch remain in
+the adapter; the per-chain numerical core remains binding neutral and borrows
+immutable packed genotype storage. Logical-chain RNG ownership, scheduler
+semantics, Phase 11B corrected references, and fit-local/thread-independent
+reproducibility remain exact. The public route is migrated and ready for
+canonicalization; the experimental route, BayesR, and BayesRC are unchanged.
