@@ -1228,3 +1228,25 @@ reproducibility, public routing, `stblr_raw_v1`, and formatted schemas remain
 unchanged. Runtime and completed-fit-RSS baselines are established, unsupported
 cases are preserved, and migration scaffolding is absent. Scheduled ordinary-
 CSR BayesR remains unsupported.
+
+### Phase 11A individual-level and packed-BED backend audit
+
+The remaining public individual-level route is `stblr_bed()`, backed entirely
+by SNP-major packed-BED marker execution rather than an in-memory genotype
+matrix. BayesC exposes historical sparse and scheduled single-chain native
+entries plus the active scheduled multichain route; BayesR uses adaptive
+scheduled multichain execution; BayesRC uses unscheduled full sweeps with an
+annotation-component prior. Production execution is unchanged.
+
+Packed-BED BayesC scheduling is semantically close to packed-BED BayesR and to
+canonical scheduled CSR for sweeps, adaptive null skips, candidates, due
+buckets and skipped-marker RNG avoidance, but lacks CSR neighbor wake-up and
+has backend-specific decoding and seed ownership. BayesRC does not share the
+adaptive scheduler. Shared scheduled infrastructure is therefore only
+partially appropriate: control vocabulary may be reused as a subset for BED
+BayesC/BayesR after correction, while genotype access and BayesRC execution
+remain backend-specific. Active packed-BED BayesC single/multichain samplers
+retain worker-owned `static thread_local` normal/uniform distributions and
+require fit-local RNG correction before migration. BayesR and BayesRC construct
+distributions per logical chain. Deterministic references are established
+where valid; migration has not started.
