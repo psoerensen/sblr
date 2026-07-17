@@ -117,7 +117,7 @@ test_that("Phase 10A protects the extracted scheduled route and unrelated source
     "src/st_cpg_omp_csr_group.cpp"="87e923f7f8ee6420e39d9f041263d11b",
     "src/st_cpg_omp_csr_annot.cpp"="59bd49f048d116d0fe61d73d79bd4693",
     "src/st_cpg_omp_individual_scheduled.cpp"="0d726fe3faf5deec887381c1458ab6b6",
-    "src/st_cpg_omp_individual_scheduled_chains.cpp"="f58fbefcffb183b9d54a96b398321dfb",
+    "src/st_cpg_omp_individual_scheduled_chains.cpp"="f93588d0c531734dd81ed8a1c42237bc",
     "NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")
   actual <- unname(tools::md5sum(file.path(phase10a_root,names(protected))))
   expect_identical(actual,unname(protected))

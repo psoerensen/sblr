@@ -8,11 +8,14 @@ test_that("scheduled BED BayesC RNG state is logical-chain owned", {
   rng <- phase11b_text("src/blr_bed_scheduled_bayesc_rng.h")
   single <- phase11b_text("src/st_cpg_omp_individual_scheduled.cpp")
   multi <- phase11b_text("src/st_cpg_omp_individual_scheduled_chains.cpp")
+  multi_core <- phase11b_text("src/blr_bed_scheduled_bayesc_core_impl.h")
   expect_match(rng, "struct BedScheduledBayesCChainRng", fixed = TRUE)
   expect_match(rng, "std::mt19937 engine", fixed = TRUE)
   expect_match(rng, "std::normal_distribution<double> normal", fixed = TRUE)
   expect_match(rng, "std::uniform_real_distribution<double> uniform", fixed = TRUE)
-  for (x in list(single, multi)) {
+  expect_match(multi, "#include \"blr_bed_scheduled_bayesc_core_impl.h\"",
+    fixed = TRUE)
+  for (x in list(single, paste(multi, multi_core, sep = "\n"))) {
     active <- paste(grep("^//", strsplit(x, "\n", fixed = TRUE)[[1]],
       value = TRUE, invert = TRUE), collapse = "\n")
     expect_false(grepl("static thread_local std::(normal|uniform)", active))

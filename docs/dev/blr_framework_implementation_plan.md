@@ -1261,3 +1261,14 @@ draw sites, scheduler transitions, genotype decoding, I/O, public routing and
 schemas are unchanged. Post-correction deterministic references and fit-local,
 worker-independent reproducibility are active. Numerical-core migration has
 not started; packed-BED BayesR and BayesRC remain unchanged.
+
+### Phase 11C1 packed-BED BayesC mechanical extraction
+
+The corrected 417-line logical-chain numerical body behind the public
+multichain packed-BED BayesC route is mechanically located in
+`blr_bed_scheduled_bayesc_core_impl.h`. The guarded implementation header holds
+the sole active public-path MCMC/marker loop and chain RNG construction. BED
+loading/decoding, task orchestration, native aggregation and existing R result
+construction remain in the selected binding source. The experimental
+single-chain route is unchanged. Typed callable execution boundaries are not
+yet active; migration remains in progress.
