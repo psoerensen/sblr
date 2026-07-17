@@ -1199,3 +1199,18 @@ traversal, skipped-marker policy, posterior formulas, public route, and schema
 are unchanged. Repeated, intervening-fit, fresh/reused-process, different-chain,
 and 1/2-core sequences are exact with post-correction references. Scheduled
 BayesR remains unsupported and scheduled execution migration has not started.
+
+### Phase 10C scheduled ordinary-CSR execution migration
+
+Phase 10C1 mechanically extracted the corrected deterministic scheduled BayesC
+execution body into one guarded implementation header. Phase 10C2 activates the
+Phase 10A scheduler contracts through a binding-neutral
+`CsrScheduledBayesCExecutionContext`, callable
+`run_csr_scheduled_bayesc()`, and typed
+`CsrScheduledBayesCExecutionResult`. CSR/statistic/prior/order inputs remain
+borrowed immutable; scheduler, sampler, accumulator, and
+`ScheduledChainRng` state remain logical-chain-owned. The existing inline
+Rcpp converter is retained for Phase 10C3. Corrected references and fit-local,
+fresh-process, explicit-seed, and worker-assignment reproducibility remain
+exact. Scheduled BayesR remains unsupported; scheduled BayesC migration is in
+progress and is not yet canonical.

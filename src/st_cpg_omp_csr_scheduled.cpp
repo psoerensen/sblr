@@ -6,6 +6,7 @@
 #include "st_csr_common.h"
 #include "st_chain_utils.h"
 #include "blr_scheduled_execution_types.h"
+#include "blr_csr_scheduled_bayesc_types.h"
 
 
 #include <algorithm>
@@ -303,6 +304,8 @@ inline int adaptive_skip_length_csr_scheduled(
  return std::max(1, skip);
 }
 
+#include "blr_csr_scheduled_bayesc_core_impl.h"
+
 // =============================================================================
 // Main exported scheduled CSR function
 // =============================================================================
@@ -530,7 +533,62 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
  // --------------------------------------------------------------------------
  // Output storage.
  // --------------------------------------------------------------------------
-#include "blr_csr_scheduled_bayesc_core_impl.h"
+ sblr::core::ScheduledExecutionControl scheduled_control;
+ scheduled_control.marker_count=static_cast<std::size_t>(m);
+ scheduled_control.trait_count=static_cast<std::size_t>(nt);
+ scheduled_control.iterations=nit;
+ scheduled_control.burnin=nburn;
+ scheduled_control.thinning=nthin;
+ scheduled_control.chains=nchains;
+ scheduled_control.cores=ncores;
+ scheduled_control.seed=seed;
+ scheduled_control.chain_seeds=chain_seeds;
+ scheduled_control.keep_chains=keep_chains;
+ scheduled_control.sweep.full_sweep_every=full_sweep_every;
+ scheduled_control.sweep.iteration_zero_is_full=true;
+ scheduled_control.skip.base_interval=null_skip_base;
+ scheduled_control.skip.maximum_interval=null_skip_max;
+ scheduled_control.skip.burnin_only=skip_nulls_burnin_only;
+ scheduled_control.candidate.probability_threshold=candidate_threshold;
+ scheduled_control.candidate.lifetime=candidate_lifetime;
+ scheduled_control.neighbor.enabled=wakeup_ld_neighbors;
+ scheduled_control.neighbor.effect_difference_threshold=wakeup_diff_threshold;
+ scheduled_control.neighbor.maximum_neighbors=wakeup_max_neighbors;
+ scheduled_control.neighbor.friend_data=static_cast<const void*>(&ld);
+ scheduled_control.neighbor.friend_marker_count=static_cast<std::size_t>(m);
+
+ const sblr::core::CsrScheduledBayesCExecutionContext<STLDCSR> execution_context{
+  ld, wy_mat, ww_mat, b_mat, yy_vec, ssb_prior_mat, sse_prior_mat,
+  B, E, pi, n, order, d_init, r_init, scheduled_control,
+  m, nt, nub, nue, adjE, pi_prior_a, pi_prior_b,
+  use_d_init, use_r_init, rebuild_r_before_updateE,
+  updateB, updateE, updatePi
+ };
+ auto execution_result=sblr::core::run_csr_scheduled_bayesc(execution_context);
+
+ const arma::mat& bm_mat=execution_result.bm;
+ const arma::mat& dm_mat=execution_result.dm;
+ const arma::mat& bm_sd_mat=execution_result.bm_sd;
+ const arma::mat& dm_sd_mat=execution_result.dm_sd;
+ const arma::mat& bm_min_mat=execution_result.bm_min;
+ const arma::mat& dm_min_mat=execution_result.dm_min;
+ const arma::mat& bm_max_mat=execution_result.bm_max;
+ const arma::mat& dm_max_mat=execution_result.dm_max;
+ const arma::mat& b_out_mat=execution_result.b;
+ const arma::mat& r_out_mat=execution_result.r;
+ const arma::mat& d_out_mat=execution_result.state;
+ const arma::mat& vbs_mat=execution_result.vbs;
+ const arma::mat& vgs_mat=execution_result.vgs;
+ const arma::mat& ves_mat=execution_result.ves;
+ const arma::mat& pis_mat=execution_result.pis;
+ const arma::mat& vles_mat=execution_result.vle;
+ const arma::mat& vlds_mat=execution_result.vld;
+ const arma::vec& final_vb=execution_result.final_vb;
+ const arma::vec& final_vg=execution_result.final_vg;
+ const arma::vec& final_ve=execution_result.final_ve;
+ const arma::vec& final_pi=execution_result.final_pi;
+ const arma::vec& nsamples_vec=execution_result.nsamples;
+ const std::vector<double>& task_seconds=execution_result.task_seconds;
 
  // Build named raw schema v1
  // --------------------------------------------------------------------------

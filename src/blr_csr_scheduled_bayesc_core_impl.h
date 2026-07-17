@@ -1,8 +1,65 @@
 #ifndef SBLR_BLR_CSR_SCHEDULED_BAYESC_CORE_IMPL_H
 #define SBLR_BLR_CSR_SCHEDULED_BAYESC_CORE_IMPL_H
 
+#include "blr_csr_scheduled_bayesc_types.h"
+
+#include <iostream>
+#include <utility>
+
 // Implementation detail: included only by st_cpg_omp_csr_scheduled.cpp.
-// Phase 10C1 mechanically extracted corrected scheduled BayesC execution.
+namespace sblr { namespace core {
+
+template <class Operator>
+CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
+ const CsrScheduledBayesCExecutionContext<Operator>& context
+) {
+ validate_csr_scheduled_bayesc_context(context);
+
+ const Operator& ld=context.ld;
+ const arma::mat& wy_mat=context.wy;
+ const arma::mat& ww_mat=context.ww;
+ const arma::mat& b_mat=context.initial_b;
+ const arma::vec& yy_vec=context.yy;
+ const arma::mat& ssb_prior_mat=context.ssb_prior;
+ const arma::mat& sse_prior_mat=context.sse_prior;
+ const arma::mat& B=context.initial_B;
+ const arma::mat& E=context.initial_E;
+ const std::vector<double>& pi=context.initial_pi;
+ const std::vector<int>& n=context.sample_sizes;
+ const std::vector<int>& order=context.marker_order;
+ const std::vector<std::vector<double>>& d_init=context.initial_d;
+ const std::vector<std::vector<double>>& r_init=context.initial_r;
+ const ScheduledExecutionControl& scheduled_control=context.scheduled;
+ const std::vector<int>& chain_seeds=scheduled_control.chain_seeds;
+ const int m=context.marker_count;
+ const int nt=context.trait_count;
+ const int nit=scheduled_control.iterations;
+ const int nburn=scheduled_control.burnin;
+ const int nthin=scheduled_control.thinning;
+ const int nchains=scheduled_control.chains;
+ const int ncores=scheduled_control.cores;
+ const int seed=scheduled_control.seed;
+ const int full_sweep_every=scheduled_control.sweep.full_sweep_every;
+ const int null_skip_base=scheduled_control.skip.base_interval;
+ const int null_skip_max=scheduled_control.skip.maximum_interval;
+ const bool skip_nulls_burnin_only=scheduled_control.skip.burnin_only;
+ const double candidate_threshold=scheduled_control.candidate.probability_threshold;
+ const int candidate_lifetime=scheduled_control.candidate.lifetime;
+ const bool wakeup_ld_neighbors=scheduled_control.neighbor.enabled;
+ const double wakeup_diff_threshold=
+  scheduled_control.neighbor.effect_difference_threshold;
+ const int wakeup_max_neighbors=scheduled_control.neighbor.maximum_neighbors;
+ const double nub=context.nub;
+ const double nue=context.nue;
+ const double adjE=context.adjE;
+ const double pi_prior_a=context.pi_prior_a;
+ const double pi_prior_b=context.pi_prior_b;
+ const bool use_d_init=context.use_d_init;
+ const bool use_r_init=context.use_r_init;
+ const bool rebuild_r_before_updateE=context.rebuild_r_before_updateE;
+ const bool updateB=context.updateB;
+ const bool updateE=context.updateE;
+ const bool updatePi=context.updatePi;
 
  const int ntasks = stblr_num_chain_tasks(nt, nchains);
 
@@ -66,7 +123,7 @@
  nthreads = stblr_num_threads_for_tasks(ncores, ntasks);
  omp_set_num_threads(nthreads);
 
- Rcpp::Rcout
+ std::cout
  << "STBLR scheduled CSR OpenMP requested threads = " << nthreads
  << ", omp_get_max_threads = " << omp_get_max_threads()
  << ", num procs = " << omp_get_num_procs()
@@ -77,7 +134,7 @@
  << "\n";
 #endif
 
- Rcpp::Rcout
+ std::cout
  << "Scheduled CSR sampler: full_sweep_every=" << full_sweep_every
  << ", null_skip_base=" << null_skip_base
  << ", null_skip_max=" << null_skip_max
@@ -497,7 +554,7 @@
  for (int task = 0; task < ntasks; ++task) {
   const int t = stblr_task_trait(task, nchains);
   const int chain = stblr_task_chain(task, nchains);
-  Rcpp::Rcout
+  std::cout
   << "trait " << t
   << ", chain " << chain
   << " used thread " << thread_used[static_cast<std::size_t>(task)]
@@ -596,5 +653,40 @@
  }
 
  // --------------------------------------------------------------------------
+
+ CsrScheduledBayesCExecutionResult result;
+ result.bm=std::move(bm_mat);
+ result.dm=std::move(dm_mat);
+ result.bm_sd=std::move(bm_sd_mat);
+ result.dm_sd=std::move(dm_sd_mat);
+ result.bm_min=std::move(bm_min_mat);
+ result.dm_min=std::move(dm_min_mat);
+ result.bm_max=std::move(bm_max_mat);
+ result.dm_max=std::move(dm_max_mat);
+ result.b=std::move(b_out_mat);
+ result.r=std::move(r_out_mat);
+ result.state=std::move(d_out_mat);
+ result.vbs=std::move(vbs_mat);
+ result.vgs=std::move(vgs_mat);
+ result.ves=std::move(ves_mat);
+ result.pis=std::move(pis_mat);
+ result.vle=std::move(vles_mat);
+ result.vld=std::move(vlds_mat);
+ result.final_vb=std::move(final_vb);
+ result.final_vg=std::move(final_vg);
+ result.final_ve=std::move(final_ve);
+ result.final_pi=std::move(final_pi);
+ result.final_vle=std::move(final_vle);
+ result.final_vld=std::move(final_vld);
+ result.nsamples=std::move(nsamples_vec);
+ result.task_seconds=std::move(task_seconds);
+ result.marker_count=m;
+ result.trait_count=nt;
+ result.chain_count=nchains;
+ result.task_count=ntasks;
+ return result;
+}
+
+} }
 
 #endif  // SBLR_BLR_CSR_SCHEDULED_BAYESC_CORE_IMPL_H
