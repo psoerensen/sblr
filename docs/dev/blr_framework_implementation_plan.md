@@ -1299,3 +1299,16 @@ immutable packed genotype storage. Logical-chain RNG ownership, scheduler
 semantics, Phase 11B corrected references, and fit-local/thread-independent
 reproducibility remain exact. The public route is migrated and ready for
 canonicalization; the experimental route, BayesR, and BayesRC are unchanged.
+
+### Phase 11D public scheduled packed-BED BayesC canonicalization
+
+The public multichain packed-BED BayesC route is canonical. Its fit-owned
+decoded packed genotype is borrowed immutable through a typed per-chain
+context; one callable chain core, one typed chain result, one typed aggregate
+result, one native aggregation path, and one named binding converter remain.
+Logical-chain-owned RNG state, scheduler semantics, public routing and
+`stblr_raw_v1` are unchanged. Phase 11B corrected fixtures are permanent
+canonical references, and Phase 11C3/11D establish runtime, completed-fit RSS,
+BED-size and page-cache-qualified I/O baselines. Migration scaffolding is
+absent. The experimental scheduled single-chain and sparse BayesC routes,
+packed-BED BayesR, and packed-BED BayesRC remain unchanged and noncanonical.
