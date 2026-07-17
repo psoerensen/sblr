@@ -1215,3 +1215,16 @@ path. Corrected references and fit-local, fresh-process, explicit-seed, and
 worker-assignment reproducibility remain exact. The public route and schema are
 unchanged. Scheduled BayesC migration is complete and ready for
 canonicalization; scheduled BayesR remains unsupported.
+
+### Phase 10D scheduled ordinary-CSR BayesC canonicalization
+
+Scheduled ordinary-CSR BayesC is canonical. The corrected fit-bounded,
+chain-owned RNG design, Phase 10A scheduler contracts, borrowed typed context,
+callable numerical core, typed result, one native aggregation path, and one
+named binding converter are the sole production architecture. Phase 10B
+corrected fixtures are permanent canonical references; Phase 10A defective
+fixtures remain historical audit evidence only. Fit-local and thread-assignment
+reproducibility, public routing, `stblr_raw_v1`, and formatted schemas remain
+unchanged. Runtime and completed-fit-RSS baselines are established, unsupported
+cases are preserved, and migration scaffolding is absent. Scheduled ordinary-
+CSR BayesR remains unsupported.
