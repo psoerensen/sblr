@@ -49,11 +49,13 @@ test_that("persistent normal distribution retains cached state after engine rese
 
 test_that("Phase 10A audit artifact and corrected production ownership are explicit", {
   scheduled <- readLines(file.path(phase10a_root,"src","st_cpg_omp_csr_scheduled.cpp"),warn=FALSE)
+  scheduled_core <- readLines(file.path(phase10a_root,"src","blr_csr_scheduled_bayesc_core_impl.h"),warn=FALSE)
+  scheduled_native <- paste(c(scheduled, scheduled_core),collapse="\n")
   route <- readLines(file.path(phase10a_root,"R","sparse_ld_bed_helper.R"),warn=FALSE)
-  expect_false(grepl("static thread_local",paste(scheduled,collapse="\n"),fixed=TRUE))
-  expect_match(paste(scheduled,collapse="\n"),"ScheduledChainRng chain_rng",fixed=TRUE)
-  expect_match(paste(scheduled,collapse="\n"),"std::chi_squared_distribution<double>",fixed=TRUE)
-  expect_match(paste(scheduled,collapse="\n"),"std::gamma_distribution<double>",fixed=TRUE)
+  expect_false(grepl("static thread_local",scheduled_native,fixed=TRUE))
+  expect_match(scheduled_native,"ScheduledChainRng chain_rng",fixed=TRUE)
+  expect_match(scheduled_native,"std::chi_squared_distribution<double>",fixed=TRUE)
+  expect_match(scheduled_native,"std::gamma_distribution<double>",fixed=TRUE)
   expect_match(paste(route,collapse="\n"),"scheduled CSR BayesR is not currently implemented",fixed=TRUE)
   expect_match(paste(route,collapse="\n"),"stblr_cpg_omp_csr_scheduled",fixed=TRUE)
 })
@@ -103,9 +105,11 @@ test_that("dense scheduled controls are audited rather than assumed canonical", 
   expect_false(identical(phase10a_normalize(scheduled),phase10a_normalize(ordinary)))
 })
 
-test_that("Phase 10A leaves production and protected sources byte-identical", {
+test_that("Phase 10A protects the extracted scheduled route and unrelated sources", {
+  scheduled <- paste(readLines(file.path(phase10a_root,"src","st_cpg_omp_csr_scheduled.cpp"),
+    warn=FALSE),collapse="\n")
+  expect_match(scheduled,"#include \"blr_csr_scheduled_bayesc_core_impl.h\"",fixed=TRUE)
   protected <- c(
-    "src/st_cpg_omp_csr_scheduled.cpp"="deb44962018a888f446bd485ee051282",
     "src/st_cpg_omp_csr.cpp"="92dafc0266d5a0e72aea000224154cef",
     "src/st_cpg_omp_csr_bayesr.cpp"="0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp"="8c1b03d8f5b93e6831ccbed856c77ead",

@@ -19,16 +19,18 @@ test_that("Phase 10B chain RNG reconstructs exactly and isolates odd other-chain
 
 test_that("scheduled production owns distributions by logical chain", {
   source <- paste(readLines(file.path(phase10b_root,"src","st_cpg_omp_csr_scheduled.cpp"),warn=FALSE),collapse="\n")
+  core <- paste(readLines(file.path(phase10b_root,"src","blr_csr_scheduled_bayesc_core_impl.h"),warn=FALSE),collapse="\n")
+  native <- paste(source,core,sep="\n")
   types <- paste(readLines(file.path(phase10b_root,"src","blr_scheduled_execution_types.h"),warn=FALSE),collapse="\n")
-  expect_false(grepl("static thread_local",source,fixed=TRUE))
-  expect_false(grepl("thread_local",source,fixed=TRUE))
-  expect_match(source,"ScheduledChainRng chain_rng(task_seed)",fixed=TRUE)
+  expect_false(grepl("static thread_local",native,fixed=TRUE))
+  expect_false(grepl("thread_local",native,fixed=TRUE))
+  expect_match(core,"ScheduledChainRng chain_rng(task_seed)",fixed=TRUE)
   expect_match(source,"rng.normal(rng.engine)",fixed=TRUE)
   expect_match(source,"rng.uniform(rng.engine)",fixed=TRUE)
   expect_match(types,"std::mt19937 engine",fixed=TRUE)
   expect_match(types,"std::normal_distribution<double> normal",fixed=TRUE)
   expect_match(types,"std::uniform_real_distribution<double> uniform",fixed=TRUE)
-  expect_false(grepl("old_rng|new_rng|rng_selector|fallback",source))
+  expect_false(grepl("old_rng|new_rng|rng_selector|fallback",native))
 })
 
 test_that("post-correction raw and formatted references are exact", {
