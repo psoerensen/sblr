@@ -99,14 +99,14 @@ test_that("canonical group policy and unsupported cases stay protected", {
 test_that("canonical group public and protected boundaries remain frozen", {
   protected <- c(
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e",
-    "src/RcppExports.cpp" = "8e4fd28d6658c32900792c316eb639fd",
-    "R/RcppExports.R" = "67243ea7c7dd31154b2d1e2e5f9637e7",
+    "src/RcppExports.cpp" = "b4859db0f6308fa7e38051ddcf32d245",
+    "R/RcppExports.R" = "9d13ea00b326c7e0cd606194d13a8bca",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "src/st_cpg_omp_csr_scheduled.cpp" = "fdac03befb742f4f6fa7c22ccbbbc920",
+    "src/st_cpg_omp_csr_scheduled.cpp" = "deb44962018a888f446bd485ee051282",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )

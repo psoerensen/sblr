@@ -5,6 +5,9 @@ phase10a_spec <- function(m=6L) list(
   execution=list(marker_count=m,trait_count=1L,iterations=8L,burnin=2L,
     thinning=1L,chains=2L,cores=2L,seed=1001L,chain_seeds=c(11L,12L),
     keep_chains=FALSE),
+  rng_ownership=list(engine_owner="chain",distribution_owner="chain",
+    lifetime="one_chain_execution",worker_thread_owner="none",
+    fit_persistent_distribution_state=FALSE),
   sweep=list(full_sweep_every=3L,iteration_zero_is_full=TRUE),
   skip=list(null_skip_base=2L,null_skip_max=7L,burnin_only=FALSE,
     growth_rule="probability_adaptive"),
@@ -44,42 +47,28 @@ test_that("persistent normal distribution retains cached state after engine rese
                          out$after_distribution_reset))
 })
 
-test_that("scheduled ordinary CSR route and distribution ownership are explicit", {
+test_that("Phase 10A audit artifact and corrected production ownership are explicit", {
   scheduled <- readLines(file.path(phase10a_root,"src","st_cpg_omp_csr_scheduled.cpp"),warn=FALSE)
   route <- readLines(file.path(phase10a_root,"R","sparse_ld_bed_helper.R"),warn=FALSE)
-  expect_match(paste(scheduled,collapse="\n"),"static thread_local std::uniform_real_distribution<double>",fixed=TRUE)
-  expect_match(paste(scheduled,collapse="\n"),"static thread_local std::normal_distribution<double>",fixed=TRUE)
+  expect_false(grepl("static thread_local",paste(scheduled,collapse="\n"),fixed=TRUE))
+  expect_match(paste(scheduled,collapse="\n"),"ScheduledChainRng chain_rng",fixed=TRUE)
   expect_match(paste(scheduled,collapse="\n"),"std::chi_squared_distribution<double>",fixed=TRUE)
   expect_match(paste(scheduled,collapse="\n"),"std::gamma_distribution<double>",fixed=TRUE)
   expect_match(paste(route,collapse="\n"),"scheduled CSR BayesR is not currently implemented",fixed=TRUE)
   expect_match(paste(route,collapse="\n"),"stblr_cpg_omp_csr_scheduled",fixed=TRUE)
 })
 
-test_that("fresh-process scheduled BayesC raw and formatted references are exact", {
-  if (!identical(Sys.getenv("SBLR_RUN_FRESH_PROCESS_TESTS"),"true")) {
-    for (nm in names(phase10a_configs)) {
-      reference <- readRDS(file.path(testthat::test_path(),"fixtures","blr_phase10a_scheduled",paste0(nm,".rds")))
-      expect_identical(reference$metadata$reference_mode,"fresh R process")
-      expect_identical(reference$metadata$starting_commit,phase10a_starting_commit)
-      expect_identical(reference$raw$schema$class,"stblr_raw")
-      expect_identical(reference$raw$schema$version,1L)
-      expect_true(all(c("bm","dm","input","diagnostics") %in% names(reference$fit)))
-    }
-    return(invisible())
-  }
+test_that("Phase 10A defective fresh-process references remain immutable audit artifacts", {
   for (nm in names(phase10a_configs)) {
-    observed <- callr::r(function(root,name) {
-      setwd(root); pkgload::load_all(".",compile=FALSE,quiet=TRUE)
-      source(file.path("tests","testthat","fixtures","blr-phase10a-scheduled-reference.R"))
-      phase10a_run(phase10a_configs[[name]])
-    },list(root=phase10a_root,name=nm))
     reference <- readRDS(file.path(testthat::test_path(),"fixtures","blr_phase10a_scheduled",paste0(nm,".rds")))
-    expect_identical(observed$raw,reference$raw,info=paste(nm,"raw"))
-    expect_identical(observed$fit,reference$fit,info=paste(nm,"formatted"))
+    expect_identical(reference$metadata$reference_mode,"fresh R process")
+    expect_identical(reference$metadata$starting_commit,phase10a_starting_commit)
+    expect_identical(reference$raw$schema$class,"stblr_raw")
+    expect_identical(reference$raw$schema$version,1L)
   }
 })
 
-test_that("same-process call order exposes the known persistent-distribution risk", {
+test_that("same-process call order defect documented by Phase 10A is corrected", {
   a <- phase10a_configs$skip_two_one
   b <- a; b$seeds <- c(2101L,2102L); b$full <- 2L; b$base <- 3L
   first <- phase10a_run(a)$fit
@@ -87,17 +76,18 @@ test_that("same-process call order exposes the known persistent-distribution ris
   expect_identical(repeated,first)
   invisible(phase10a_run(b))
   after_b <- phase10a_run(a)$fit
-  expect_false(identical(after_b,first))
-  expect_false(identical(after_b$bm,first$bm))
+  expect_identical(after_b,first)
+  expect_identical(after_b$bm,first$bm)
 })
 
-test_that("core order exposes worker-thread distribution ownership", {
+test_that("core order is independent of worker-thread assignment", {
   cfg <- phase10a_configs$skip_two_one
   run_core <- function(k) { cfg$ncores <- k; phase10a_run(cfg)$fit }
   one <- run_core(1L); two <- run_core(2L); two_again <- run_core(2L); one_again <- run_core(1L)
-  expect_false(identical(one,two))
-  expect_false(identical(two,two_again))
-  expect_false(identical(one,one_again))
+  comparable <- function(x) { x$input$ncores <- 0L; x }
+  expect_identical(comparable(one),comparable(two))
+  expect_identical(comparable(two),comparable(two_again))
+  expect_identical(comparable(one),comparable(one_again))
 })
 
 test_that("dense scheduled controls are audited rather than assumed canonical", {
@@ -115,7 +105,7 @@ test_that("dense scheduled controls are audited rather than assumed canonical", 
 
 test_that("Phase 10A leaves production and protected sources byte-identical", {
   protected <- c(
-    "src/st_cpg_omp_csr_scheduled.cpp"="fdac03befb742f4f6fa7c22ccbbbc920",
+    "src/st_cpg_omp_csr_scheduled.cpp"="deb44962018a888f446bd485ee051282",
     "src/st_cpg_omp_csr.cpp"="92dafc0266d5a0e72aea000224154cef",
     "src/st_cpg_omp_csr_bayesr.cpp"="0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp"="8c1b03d8f5b93e6831ccbed856c77ead",

@@ -150,6 +150,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// blr_phase10b_chain_rng_diagnostic_cpp
+Rcpp::List blr_phase10b_chain_rng_diagnostic_cpp(int seed, int draws);
+RcppExport SEXP _sblr_blr_phase10b_chain_rng_diagnostic_cpp(SEXP seedSEXP, SEXP drawsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type draws(drawsSEXP);
+    rcpp_result_gen = Rcpp::wrap(blr_phase10b_chain_rng_diagnostic_cpp(seed, draws));
+    return rcpp_result_gen;
+END_RCPP
+}
 // readLD_to_CSR_R
 SEXP readLD_to_CSR_R(SEXP filenameSEXP, SEXP mchrSEXP, SEXP msizeSEXP, SEXP thresholdSEXP, SEXP onebasedSEXP);
 RcppExport SEXP _sblr_readLD_to_CSR_R(SEXP filenameSEXPSEXP, SEXP mchrSEXPSEXP, SEXP msizeSEXPSEXP, SEXP thresholdSEXPSEXP, SEXP onebasedSEXPSEXP) {
@@ -1418,6 +1430,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp, 1},
     {"_sblr_blr_phase10a_validate_scheduled_execution_cpp", (DL_FUNC) &_sblr_blr_phase10a_validate_scheduled_execution_cpp, 1},
     {"_sblr_blr_phase10a_distribution_cache_diagnostic_cpp", (DL_FUNC) &_sblr_blr_phase10a_distribution_cache_diagnostic_cpp, 2},
+    {"_sblr_blr_phase10b_chain_rng_diagnostic_cpp", (DL_FUNC) &_sblr_blr_phase10b_chain_rng_diagnostic_cpp, 2},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_mtblr_cpg", (DL_FUNC) &_sblr_mtblr_cpg, 24},
     {"_sblr_mtblr_cpg_arma", (DL_FUNC) &_sblr_mtblr_cpg_arma, 24},

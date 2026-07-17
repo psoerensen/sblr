@@ -49,6 +49,10 @@ blr_phase10a_distribution_cache_diagnostic_cpp <- function(seed, threads = 2L) {
     .Call(`_sblr_blr_phase10a_distribution_cache_diagnostic_cpp`, seed, threads)
 }
 
+blr_phase10b_chain_rng_diagnostic_cpp <- function(seed, draws = 7L) {
+    .Call(`_sblr_blr_phase10b_chain_rng_diagnostic_cpp`, seed, draws)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }

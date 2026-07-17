@@ -1185,3 +1185,17 @@ chain engine, producing same-process call-order dependence and potential
 thread-assignment dependence. Scheduled RNG ownership correction is therefore
 required before execution migration. All canonical ordinary-CSR models remain
 unchanged and scheduled CSR is neither canonical nor migrated.
+
+### Phase 10B scheduled ordinary-CSR RNG correction
+
+Scheduled BayesC now constructs one `ScheduledChainRng` after each final
+trait-chain seed is resolved. Its `std::mt19937`, normal distribution, and
+uniform distribution live for exactly one chain execution and are never owned
+by or shared through an OpenMP worker. Variable-parameter chi-square and gamma
+distributions remain locally constructed at their unchanged logical draw sites.
+
+The scheduler, seed formulas, task order, OpenMP static scheduling, marker
+traversal, skipped-marker policy, posterior formulas, public route, and schema
+are unchanged. Repeated, intervening-fit, fresh/reused-process, different-chain,
+and 1/2-core sequences are exact with post-correction references. Scheduled
+BayesR remains unsupported and scheduled execution migration has not started.

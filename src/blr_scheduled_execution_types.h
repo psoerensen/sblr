@@ -2,11 +2,34 @@
 #define SBLR_BLR_SCHEDULED_EXECUTION_TYPES_H
 
 #include <cstddef>
+#include <cstdint>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace sblr { namespace core {
+
+// One instance belongs to one logical trait-chain task. It is constructed after
+// seed resolution and destroyed when that chain execution ends; worker threads
+// never own or share its engine or distributions.
+struct ScheduledChainRng {
+ std::mt19937 engine;
+ std::normal_distribution<double> normal;
+ std::uniform_real_distribution<double> uniform;
+
+ explicit ScheduledChainRng(std::uint64_t seed)
+  : engine(static_cast<std::mt19937::result_type>(seed)),
+    normal(0.0,1.0), uniform(0.0,1.0) {}
+};
+
+struct ScheduledRngOwnership {
+ std::string engine_owner="chain";
+ std::string distribution_owner="chain";
+ std::string lifetime="one_chain_execution";
+ std::string worker_thread_owner="none";
+ bool fit_persistent_distribution_state=false;
+};
 
 struct ScheduledSweepControl {
  int full_sweep_every=1;
@@ -46,6 +69,7 @@ struct ScheduledExecutionControl {
  int seed=0;
  std::vector<int> chain_seeds;
  bool keep_chains=false;
+ ScheduledRngOwnership rng_ownership;
  ScheduledSweepControl sweep;
  NullSkipControl skip;
  CandidateControl candidate;
@@ -96,6 +120,12 @@ inline void validate_scheduled_execution_control(
  if (x.cores<=0) throw std::invalid_argument("cores must be positive");
  if (!x.chain_seeds.empty() && static_cast<int>(x.chain_seeds.size())!=x.chains)
   throw std::invalid_argument("chain_seeds length must equal chains");
+ if (x.rng_ownership.engine_owner!="chain" ||
+     x.rng_ownership.distribution_owner!="chain" ||
+     x.rng_ownership.lifetime!="one_chain_execution" ||
+     x.rng_ownership.worker_thread_owner!="none" ||
+     x.rng_ownership.fit_persistent_distribution_state)
+  throw std::invalid_argument("scheduled RNG ownership must be chain-local and fit-bounded");
  if (x.sweep.full_sweep_every<=0)
   throw std::invalid_argument("full_sweep_every must be positive in the contract");
  if (x.skip.base_interval<=0)

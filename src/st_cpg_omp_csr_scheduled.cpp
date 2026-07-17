@@ -5,6 +5,7 @@
 #include "distributions.h"
 #include "st_csr_common.h"
 #include "st_chain_utils.h"
+#include "blr_scheduled_execution_types.h"
 
 
 #include <algorithm>
@@ -80,11 +81,8 @@ inline STMarkerUpdateResult sampleBetaC_ST_csr_scheduled_one(
   arma::rowvec& b,
   arma::Row<int>& d,
   const STLDCSR& ld,
-  std::mt19937& gen
+  sblr::core::ScheduledChainRng& rng
 ) {
- static thread_local std::uniform_real_distribution<double> runif(0.0, 1.0);
- static thread_local std::normal_distribution<double> norm01(0.0, 1.0);
-
  const arma::uword iu = static_cast<arma::uword>(i);
  const double wi = ww(iu);
 
@@ -113,7 +111,7 @@ inline STMarkerUpdateResult sampleBetaC_ST_csr_scheduled_one(
   p1 = 1.0 / (1.0 + std::exp(delta_log));
  }
 
- const int di = (runif(gen) < p1) ? 1 : 0;
+ const int di = (rng.uniform(rng.engine) < p1) ? 1 : 0;
 
  double b_new = 0.0;
 
@@ -121,7 +119,7 @@ inline STMarkerUpdateResult sampleBetaC_ST_csr_scheduled_one(
   const double lhs = wi + vei_safe / vb;
   const double mean = score / lhs;
   const double sd = std::sqrt(vei_safe / lhs);
-  b_new = mean + sd * norm01(gen);
+  b_new = mean + sd * rng.normal(rng.engine);
  }
 
  const double diff = b_new - b(iu);
@@ -648,7 +646,8 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
    } else {
     task_seed = stblr_chain_seed(seed, t, chain);
    }
-   std::mt19937 gen_t(task_seed);
+   sblr::core::ScheduledChainRng chain_rng(task_seed);
+   std::mt19937& gen_t=chain_rng.engine;
    std::uniform_int_distribution<int> jitter_dist(0, std::max(0, null_skip_base - 1));
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
@@ -795,7 +794,7 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
      b_t,
      d_t,
      ld,
-     gen_t
+     chain_rng
     );
 
     if (res.d_new > 0) {
@@ -1378,8 +1377,6 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
 //   const STLDCSR& ld,
 //   std::mt19937& gen
 // ) {
-//  static thread_local std::uniform_real_distribution<double> runif(0.0, 1.0);
-//  static thread_local std::normal_distribution<double> norm01(0.0, 1.0);
 //
 //  const arma::uword iu = static_cast<arma::uword>(i);
 //  const double wi = ww(iu);

@@ -561,6 +561,13 @@ Rcpp::List blr_phase10a_validate_scheduled_execution_cpp(Rcpp::List spec) {
  x.cores=Rcpp::as<int>(execution["cores"]); x.seed=Rcpp::as<int>(execution["seed"]);
  x.chain_seeds=Rcpp::as<std::vector<int>>(execution["chain_seeds"]);
  x.keep_chains=Rcpp::as<bool>(execution["keep_chains"]);
+ Rcpp::List rng_ownership=spec["rng_ownership"];
+ x.rng_ownership.engine_owner=Rcpp::as<std::string>(rng_ownership["engine_owner"]);
+ x.rng_ownership.distribution_owner=Rcpp::as<std::string>(rng_ownership["distribution_owner"]);
+ x.rng_ownership.lifetime=Rcpp::as<std::string>(rng_ownership["lifetime"]);
+ x.rng_ownership.worker_thread_owner=Rcpp::as<std::string>(rng_ownership["worker_thread_owner"]);
+ x.rng_ownership.fit_persistent_distribution_state=
+  Rcpp::as<bool>(rng_ownership["fit_persistent_distribution_state"]);
  x.sweep.full_sweep_every=Rcpp::as<int>(sweep["full_sweep_every"]);
  x.sweep.iteration_zero_is_full=Rcpp::as<bool>(sweep["iteration_zero_is_full"]);
  x.skip.base_interval=Rcpp::as<int>(skip["null_skip_base"]);
@@ -638,4 +645,27 @@ Rcpp::List blr_phase10a_distribution_cache_diagnostic_cpp(int seed, int threads=
   Rcpp::Named("cached_state_survives_engine_reseed")=
    cached_state_survives_engine_reseed,
   Rcpp::Named("threads")=threads);
+}
+
+// Internal Phase 10B diagnostic for fit-bounded chain RNG ownership.
+// [[Rcpp::export]]
+Rcpp::List blr_phase10b_chain_rng_diagnostic_cpp(int seed, int draws=7) {
+ if (draws<=0) throw std::invalid_argument("draws must be positive");
+ using sblr::core::ScheduledChainRng;
+ ScheduledChainRng first(static_cast<std::uint64_t>(seed));
+ ScheduledChainRng second(static_cast<std::uint64_t>(seed));
+ Rcpp::NumericVector a(draws),b(draws),after_other(draws);
+ for(int i=0;i<draws;++i) {
+  a[i]=first.normal(first.engine);
+  b[i]=second.normal(second.engine);
+ }
+ ScheduledChainRng other(static_cast<std::uint64_t>(seed+1));
+ for(int i=0;i<2*draws+1;++i) (void)other.normal(other.engine);
+ ScheduledChainRng reconstructed(static_cast<std::uint64_t>(seed));
+ for(int i=0;i<draws;++i) after_other[i]=reconstructed.normal(reconstructed.engine);
+ return Rcpp::List::create(
+  Rcpp::Named("first")=a,Rcpp::Named("identical_seed")=b,
+  Rcpp::Named("after_odd_other_chain")=after_other,
+  Rcpp::Named("owner")="chain",Rcpp::Named("lifetime")="one_chain_execution",
+  Rcpp::Named("worker_thread_owner")="none");
 }
