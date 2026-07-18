@@ -34,14 +34,14 @@ test_that("maintained developer Markdown has no unintended control bytes", {
   expect_true(grepl("\\\\theta", reduction))
 })
 
-test_that("current framework status is synchronized at Phase 11D", {
+test_that("current framework status remains synchronized after Phase 12A", {
   root <- test_path("..", "..")
   plan <- paste(readLines(file.path(root, "docs", "dev", "blr_framework_implementation_plan.md"),
                           warn = FALSE), collapse = "\n")
   matrix <- paste(readLines(file.path(root, "docs", "dev", "blr_model_capability_matrix.md"),
                             warn = FALSE), collapse = "\n")
   for (text in list(plan, matrix)) {
-    expect_match(text, "latest completed model phase Phase 11D", fixed = TRUE)
+    expect_match(text, "Phase 13A packed-BED BayesR audit complete", fixed = TRUE)
     expect_match(text, "Canonical ordinary CSR", fixed = TRUE)
     expect_match(text, "Canonical scheduled", fixed = TRUE)
     expect_match(text, "historical", ignore.case = TRUE)

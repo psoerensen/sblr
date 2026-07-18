@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 12A cross-cutting hardening; latest completed model phase Phase 11D
+**Status:** Phase 13A packed-BED BayesR audit complete; migration not started
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -13,6 +13,11 @@ Experimental/sparse BED BayesC, packed-BED BayesR, packed-BED BayesRC,
 block-eigen routes where applicable, and legacy multivariate implementations
 remain audited or protected but noncanonical. Later phase sections are the
 current record; earlier status statements are historical snapshots.
+
+Phase 13A leaves packed-BED BayesR production unchanged while establishing its
+route/statistical contract, component ordering, scheduler and RNG ownership,
+aggregation/schema inventory, deterministic references, and future per-chain
+extraction seam.
 
 ## 1. Purpose
 
