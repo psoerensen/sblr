@@ -43,13 +43,13 @@ test_that("Phase 13B preserves component, scheduler, and RNG mechanics", {
   expect_false(grepl("static thread_local|thread_local|std::discrete_distribution", core))
 })
 
-test_that("Phase 13B keeps decoding, dispatch, aggregation, and conversion in adapter", {
+test_that("Phase 13B extraction remains compatible with the completed adapter boundary", {
   adapter <- phase13b_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
   core <- phase13b_text("src/blr_bed_bayesr_core_impl.h")
   for (needle in c("br_read_bed_blocked", "#pragma omp parallel for",
-      "// Aggregate across chains", "// Build named raw schema v1", "Rcpp::List marker"))
+      "aggregate_bed_bayesr_results", "stblr_bed_bayesr_result_to_raw", "Rcpp::List marker"))
     expect_match(adapter, needle, fixed = TRUE)
-  expect_false(grepl("br_read_bed_blocked|Rcpp::List marker|Aggregate across chains", core))
+  expect_false(grepl("br_read_bed_blocked|Rcpp::List marker|aggregate_bed_bayesr_results", core))
 })
 
 test_that("Phase 13B Phase 13A references and identities remain exact", {

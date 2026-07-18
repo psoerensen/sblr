@@ -45,6 +45,18 @@ using namespace arma;
 // =============================================================================
 
 #include "blr_bed_bayesr_core_impl.h"
+#include "blr_bed_bayesr_aggregate_impl.h"
+
+struct BedBayesRBindingMetadata {
+ int marker_count, trait_count, trace_length, iterations, burnin, thinning;
+ int chain_count, component_count, sample_count;
+ const std::vector<double>& component_scales;
+};
+
+static Rcpp::List stblr_bed_bayesr_result_to_raw(
+ const sblr::core::BedBayesRExecutionResult& result,
+ const BedBayesRBindingMetadata& metadata
+);
 // [[Rcpp::export]]
 Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   Rcpp::CharacterVector bed_files,
@@ -324,162 +336,49 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   }
  }
 
- // Aggregate across chains
- arma::mat bm_mat(nt, m, arma::fill::zeros);
- arma::mat dm_mat(nt, m, arma::fill::zeros);
- arma::mat component_mean_mat(nt, m, arma::fill::zeros);
- arma::mat b_mat(nt, m, arma::fill::zeros);
- arma::mat d_mat_double(nt, m, arma::fill::zeros);
- arma::mat bm_sd_mat(nt, m, arma::fill::zeros);
- arma::mat dm_sd_mat(nt, m, arma::fill::zeros);
- arma::mat bm_min_mat(nt, m, arma::fill::zeros);
- arma::mat dm_min_mat(nt, m, arma::fill::zeros);
- arma::mat bm_max_mat(nt, m, arma::fill::zeros);
- arma::mat dm_max_mat(nt, m, arma::fill::zeros);
- arma::mat vbs_mat(nt, nit + nburn, arma::fill::zeros);
- arma::mat vgs_mat(nt, nit + nburn, arma::fill::zeros);
- arma::mat ves_mat(nt, nit + nburn, arma::fill::zeros);
- arma::mat vles_mat(nt, nit + nburn, arma::fill::zeros);
- arma::mat vlds_mat(nt, nit + nburn, arma::fill::zeros);
- arma::vec final_vb(nt, arma::fill::zeros);
- arma::vec final_vg(nt, arma::fill::zeros);
- arma::vec final_ve(nt, arma::fill::zeros);
- arma::vec final_vle(nt, arma::fill::zeros);
- arma::vec final_vld(nt, arma::fill::zeros);
- arma::mat final_pi_mat(static_cast<arma::uword>(K), static_cast<arma::uword>(nt), arma::fill::zeros);
- arma::mat mean_pi_mat(static_cast<arma::uword>(K), static_cast<arma::uword>(nt), arma::fill::zeros);
- arma::vec mean_total_log_cpo(nt, arma::fill::zeros);
- arma::vec mean_log_cpo(nt, arma::fill::zeros);
- arma::vec mean_nsamples(nt, arma::fill::zeros);
- arma::vec mean_seconds(nt, arma::fill::zeros);
- arma::vec max_seconds(nt, arma::fill::zeros);
-
- // pip_k aggregation: one K x m matrix per trait
- std::vector<arma::mat> pip_k_mat(
-  static_cast<std::size_t>(nt),
-  arma::mat(static_cast<arma::uword>(K), static_cast<arma::uword>(m), arma::fill::zeros)
- );
-
- for (int ch = 0; ch < nchains; ++ch) {
-  for (int t = 0; t < nt; ++t) {
-   const int job = ch * nt + t;
-   const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
-   const arma::uword tu = static_cast<arma::uword>(t);
-
-   bm_mat.row(tu) += r.bm;
-   dm_mat.row(tu) += r.dm;
-   component_mean_mat.row(tu) += r.component_mean;
-   b_mat.row(tu) += r.b;
-   d_mat_double.row(tu) += r.d_as_double;
-   vbs_mat.row(tu) += r.vbs;
-   vgs_mat.row(tu) += r.vgs;
-   ves_mat.row(tu) += r.ves;
-   vles_mat.row(tu) += r.vles;
-   vlds_mat.row(tu) += r.vlds;
-   pip_k_mat[static_cast<std::size_t>(t)] += r.pip_k;
-   final_vb(tu) += r.final_vb;
-   final_vg(tu) += r.final_vg;
-   final_ve(tu) += r.final_ve;
-   final_vle(tu) += r.final_vle;
-   final_vld(tu) += r.final_vld;
-   mean_total_log_cpo(tu) += r.log_cpo;
-   mean_log_cpo(tu) += r.mean_log_cpo;
-   mean_nsamples(tu) += r.nsamples;
-   mean_seconds(tu) += r.seconds;
-   max_seconds(tu) = std::max(max_seconds(tu), r.seconds);
-
-   for (int k = 0; k < K; ++k) {
-    final_pi_mat(static_cast<arma::uword>(k), tu) += r.final_pi[static_cast<std::size_t>(k)];
-    mean_pi_mat(static_cast<arma::uword>(k), tu)  += r.mean_pi[static_cast<std::size_t>(k)];
-   }
-  }
- }
-
- const double inv_chains = 1.0 / static_cast<double>(nchains);
- bm_mat *= inv_chains;
- dm_mat *= inv_chains;
- component_mean_mat *= inv_chains;
- b_mat *= inv_chains;
- d_mat_double *= inv_chains;
- vbs_mat *= inv_chains;
- vgs_mat *= inv_chains;
- ves_mat *= inv_chains;
- vles_mat *= inv_chains;
- vlds_mat *= inv_chains;
- for (auto& mat : pip_k_mat) mat *= inv_chains;
- final_vb *= inv_chains;
- final_vg *= inv_chains;
- final_ve *= inv_chains;
- final_vle *= inv_chains;
- final_vld *= inv_chains;
- final_pi_mat *= inv_chains;
- mean_pi_mat *= inv_chains;
- mean_total_log_cpo *= inv_chains;
- mean_log_cpo *= inv_chains;
- mean_nsamples *= inv_chains;
- mean_seconds *= inv_chains;
-
- for (int t = 0; t < nt; ++t) {
-  const arma::uword tu = static_cast<arma::uword>(t);
-  bm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
-  dm_min_mat.row(tu).fill(std::numeric_limits<double>::infinity());
-  bm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
-  dm_max_mat.row(tu).fill(-std::numeric_limits<double>::infinity());
-
-  for (int ch = 0; ch < nchains; ++ch) {
-   const int job = ch * nt + t;
-   const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
-
-   for (int j = 0; j < m; ++j) {
-    const arma::uword ju = static_cast<arma::uword>(j);
-    bm_min_mat(tu, ju) = std::min(bm_min_mat(tu, ju), r.bm(ju));
-    dm_min_mat(tu, ju) = std::min(dm_min_mat(tu, ju), r.dm(ju));
-    bm_max_mat(tu, ju) = std::max(bm_max_mat(tu, ju), r.bm(ju));
-    dm_max_mat(tu, ju) = std::max(dm_max_mat(tu, ju), r.dm(ju));
-   }
-
-   if (nchains > 1) {
-    const arma::rowvec bm_diff = r.bm - bm_mat.row(tu);
-    const arma::rowvec dm_diff = r.dm - dm_mat.row(tu);
-    bm_sd_mat.row(tu) += bm_diff % bm_diff;
-    dm_sd_mat.row(tu) += dm_diff % dm_diff;
-   }
-  }
-
-  if (nchains > 1) {
-   bm_sd_mat.row(tu) = arma::sqrt(bm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
-   dm_sd_mat.row(tu) = arma::sqrt(dm_sd_mat.row(tu) / static_cast<double>(nchains - 1));
-  }
- }
-
- arma::mat wy_mat(nt, m, arma::fill::zeros);
- arma::mat r_mat(nt, m, arma::fill::zeros);
+ const sblr::core::BedBayesRAggregationContext aggregation_context{
+  static_cast<std::size_t>(m), static_cast<std::size_t>(nt),
+  static_cast<std::size_t>(nchains), static_cast<std::size_t>(nit+nburn),
+  static_cast<std::size_t>(K), 0u
+ };
+ sblr::core::BedBayesRExecutionResult result=
+  sblr::core::aggregate_bed_bayesr_results(job_results,aggregation_context);
 
  if (return_wy || return_r) {
   for (int t = 0; t < nt; ++t) {
    arma::vec y_t = y_mat.col(static_cast<arma::uword>(t));
-   arma::rowvec b_t = b_mat.row(static_cast<arma::uword>(t));
+   arma::rowvec b_t = result.final_effects.row(static_cast<arma::uword>(t));
    arma::vec xb_t = br_xb(G, marker_maps, marker_order, b_t);
    arma::vec e_t = y_t - xb_t;
 
    for (int j = 0; j < m; ++j) {
     if (return_wy)
-     wy_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(j)) =
+     result.wy(static_cast<arma::uword>(t), static_cast<arma::uword>(j)) =
       br_dot_residual(G, j, marker_maps[static_cast<std::size_t>(j)], y_t.memptr());
     if (return_r)
-     r_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(j)) =
+     result.residual_score(static_cast<arma::uword>(t), static_cast<arma::uword>(j)) =
       br_dot_residual(G, j, marker_maps[static_cast<std::size_t>(j)], e_t.memptr());
    }
   }
  }
 
- // --------------------------------------------------------------------------
- // Build named raw schema v1 (same schema as the migrated CSR backends;
- // values below are numerically identical to the previous positional
- // result[0..29] slots).
- // --------------------------------------------------------------------------
+ const BedBayesRBindingMetadata binding_metadata{
+  m,nt,nit+nburn,nit,nburn,nthin,nchains,K,n_used,c
+ };
+ return stblr_bed_bayesr_result_to_raw(result,binding_metadata);
+}
 
- const int n_trace = nit + nburn;
+static Rcpp::List stblr_bed_bayesr_result_to_raw(
+ const sblr::core::BedBayesRExecutionResult& result,
+ const BedBayesRBindingMetadata& metadata
+) {
+ const int m=metadata.marker_count, nt=metadata.trait_count;
+ const int n_trace=metadata.trace_length, nit=metadata.iterations;
+ const int nburn=metadata.burnin, nthin=metadata.thinning;
+ const int nchains=metadata.chain_count, K=metadata.component_count;
+ const int n_used=metadata.sample_count;
+ const std::vector<double>& c=metadata.component_scales;
+
 
  auto marker_matrix = [&](const arma::mat& x) {
   Rcpp::NumericMatrix out(m, nt);
@@ -522,15 +421,15 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  for (int t = 0; t < nt; ++t) {
   for (int k = 0; k < K; ++k) {
    final_pi(static_cast<arma::uword>(t), static_cast<arma::uword>(k)) =
-    final_pi_mat(static_cast<arma::uword>(k), static_cast<arma::uword>(t));
+    result.final_pi(static_cast<arma::uword>(k), static_cast<arma::uword>(t));
    mean_pi(static_cast<arma::uword>(t), static_cast<arma::uword>(k)) =
-    mean_pi_mat(static_cast<arma::uword>(k), static_cast<arma::uword>(t));
+    result.mean_pi(static_cast<arma::uword>(k), static_cast<arma::uword>(t));
   }
  }
 
  Rcpp::List comp_prob_out(nt);
  for (int t = 0; t < nt; ++t) {
-  comp_prob_out[t] = arma::mat(pip_k_mat[static_cast<std::size_t>(t)].t());
+  comp_prob_out[t] = arma::mat(result.component_probability[static_cast<std::size_t>(t)].t());
  }
 
  Rcpp::NumericVector nsamples_out(nt);
@@ -542,45 +441,45 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
 
  for (int t = 0; t < nt; ++t) {
   const arma::uword tu = static_cast<arma::uword>(t);
-  nsamples_out[t] = mean_nsamples(tu);
+  nsamples_out[t] = result.retained_samples(tu);
   n_used_out[t] = n_used;
-  log_cpo_out[t] = mean_total_log_cpo(tu);
-  mean_log_cpo_out[t] = mean_log_cpo(tu);
-  seconds_mean_out[t] = mean_seconds(tu);
-  seconds_max_out[t] = max_seconds(tu);
+  log_cpo_out[t] = result.log_cpo(tu);
+  mean_log_cpo_out[t] = result.mean_log_cpo(tu);
+  seconds_mean_out[t] = result.seconds_mean(tu);
+  seconds_max_out[t] = result.seconds_max(tu);
  }
 
  Rcpp::List marker = Rcpp::List::create(
-  Rcpp::Named("bm") = marker_matrix(bm_mat),
-  Rcpp::Named("dm") = marker_matrix(dm_mat),
-  Rcpp::Named("wy") = marker_matrix(wy_mat),
-  Rcpp::Named("r") = marker_matrix(r_mat),
-  Rcpp::Named("b") = marker_matrix(b_mat),
-  Rcpp::Named("state") = marker_matrix(d_mat_double),
-  Rcpp::Named("bm_sd") = marker_matrix(bm_sd_mat),
-  Rcpp::Named("bm_min") = marker_matrix(bm_min_mat),
-  Rcpp::Named("bm_max") = marker_matrix(bm_max_mat),
-  Rcpp::Named("dm_sd") = marker_matrix(dm_sd_mat),
-  Rcpp::Named("dm_min") = marker_matrix(dm_min_mat),
-  Rcpp::Named("dm_max") = marker_matrix(dm_max_mat)
+  Rcpp::Named("bm") = marker_matrix(result.bm),
+  Rcpp::Named("dm") = marker_matrix(result.dm),
+  Rcpp::Named("wy") = marker_matrix(result.wy),
+  Rcpp::Named("r") = marker_matrix(result.residual_score),
+  Rcpp::Named("b") = marker_matrix(result.final_effects),
+  Rcpp::Named("state") = marker_matrix(result.final_states),
+  Rcpp::Named("bm_sd") = marker_matrix(result.bm_sd),
+  Rcpp::Named("bm_min") = marker_matrix(result.bm_min),
+  Rcpp::Named("bm_max") = marker_matrix(result.bm_max),
+  Rcpp::Named("dm_sd") = marker_matrix(result.dm_sd),
+  Rcpp::Named("dm_min") = marker_matrix(result.dm_min),
+  Rcpp::Named("dm_max") = marker_matrix(result.dm_max)
  );
 
  Rcpp::List trace = Rcpp::List::create(
-  Rcpp::Named("vbs") = trace_matrix(vbs_mat),
-  Rcpp::Named("vgs") = trace_matrix(vgs_mat),
-  Rcpp::Named("ves") = trace_matrix(ves_mat),
-  Rcpp::Named("vle") = trace_matrix(vles_mat),
-  Rcpp::Named("vld") = trace_matrix(vlds_mat),
+  Rcpp::Named("vbs") = trace_matrix(result.vbs),
+  Rcpp::Named("vgs") = trace_matrix(result.vgs),
+  Rcpp::Named("ves") = trace_matrix(result.ves),
+  Rcpp::Named("vle") = trace_matrix(result.vles),
+  Rcpp::Named("vld") = trace_matrix(result.vlds),
   Rcpp::Named("pis") = R_NilValue
  );
 
  Rcpp::List variance = Rcpp::List::create(
-  Rcpp::Named("covb") = diagonal_matrix(final_vb),
-  Rcpp::Named("covg") = diagonal_matrix(final_vg),
-  Rcpp::Named("cove") = diagonal_matrix(final_ve),
-  Rcpp::Named("vb") = diagonal_matrix(final_vb),
-  Rcpp::Named("vg") = diagonal_matrix(final_vg),
-  Rcpp::Named("ve") = diagonal_matrix(final_ve)
+  Rcpp::Named("covb") = diagonal_matrix(result.final_vb),
+  Rcpp::Named("covg") = diagonal_matrix(result.final_vg),
+  Rcpp::Named("cove") = diagonal_matrix(result.final_ve),
+  Rcpp::Named("vb") = diagonal_matrix(result.final_vb),
+  Rcpp::Named("vg") = diagonal_matrix(result.final_vg),
+  Rcpp::Named("ve") = diagonal_matrix(result.final_ve)
  );
 
  Rcpp::List diagnostics = Rcpp::List::create(
@@ -645,7 +544,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
    Rcpp::Named("mixture_var") = mixture_var_vec,
    Rcpp::Named("prob") = comp_prob_out,
    Rcpp::Named("ncomp") = R_NilValue,
-   Rcpp::Named("dm_component_mean") = marker_matrix(component_mean_mat)
+   Rcpp::Named("dm_component_mean") = marker_matrix(result.component_mean)
   ),
   Rcpp::Named("selection") = selection
  );

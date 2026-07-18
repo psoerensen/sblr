@@ -35,8 +35,8 @@ test_that("Phase 13C preserves RNG, inverse-CDF, scheduler, and genotype boundar
   expect_match(types, "const PackedGenotype& storage", fixed = TRUE)
   expect_match(adapter, "br_read_bed_blocked", fixed = TRUE)
   expect_match(adapter, "Rcpp::Rcout", fixed = TRUE)
-  expect_match(adapter, "// Aggregate across chains", fixed = TRUE)
-  expect_match(adapter, "// Build named raw schema v1", fixed = TRUE)
+  expect_match(adapter, "aggregate_bed_bayesr_results", fixed = TRUE)
+  expect_match(adapter, "stblr_bed_bayesr_result_to_raw", fixed = TRUE)
 })
 
 test_that("Phase 13C preserves all Phase 13A frozen references exactly", {

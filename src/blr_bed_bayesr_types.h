@@ -64,6 +64,26 @@ struct BedBayesRChainExecutionResult {
  std::vector<BedBayesRProgressEvent> progress_events;
 };
 
+struct BedBayesRAggregationContext {
+ std::size_t marker_count=0, trait_count=0, chain_count=0, trace_length=0;
+ std::size_t component_count=0, null_component=0;
+};
+
+struct BedBayesRExecutionResult {
+ std::size_t marker_count=0, trait_count=0, chain_count=0, trace_length=0;
+ std::size_t component_count=0;
+ arma::mat bm, dm, component_mean, final_effects, final_states;
+ arma::mat bm_sd, bm_min, bm_max, dm_sd, dm_min, dm_max;
+ arma::mat wy, residual_score;
+ arma::mat vbs, vgs, ves, vles, vlds;
+ std::vector<arma::mat> component_probability;
+ arma::vec final_vb, final_vg, final_ve, final_vle, final_vld;
+ arma::mat final_pi, mean_pi;
+ arma::vec log_cpo, mean_log_cpo, retained_samples;
+ arma::vec seconds_mean, seconds_max;
+ int failed_tasks=0;
+};
+
 template <class PackedGenotype, class MarkerMap>
 struct BedBayesRChainExecutionContext {
  BedBayesRPackedGenotypeView<PackedGenotype> genotype;

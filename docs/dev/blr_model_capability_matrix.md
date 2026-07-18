@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 13C packed-BED BayesR typed per-chain boundary active; migration in progress
+**Status:** Phase 13D packed-BED BayesR migration complete; ready for canonicalization
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -21,6 +21,11 @@ Phase 13C activates the typed component specification, immutable genotype view,
 per-chain execution context, callable numerical core, typed chain result, and
 binding-neutral progress-event boundary. Phase 13A trajectories, task dispatch,
 inline aggregation/conversion, public route, and schema remain unchanged.
+
+Phase 13D activates `BedBayesRExecutionResult`, one native aggregation callable,
+and one named binding converter. Fit-local/thread-independent reproducibility,
+logical-chain RNG, adaptive scheduling, immutable genotype ownership, public
+routing and schemas remain exact. The route is migrated, not yet canonical.
 
 ## 1. Purpose
 
