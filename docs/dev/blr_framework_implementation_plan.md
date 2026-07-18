@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 13B packed-BED BayesR per-chain block extracted; migration in progress
+**Status:** Phase 13C packed-BED BayesR typed per-chain boundary active; migration in progress
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -19,11 +19,12 @@ route/statistical contract, component ordering, scheduler and RNG ownership,
 aggregation/schema inventory, deterministic references, and future per-chain
 extraction seam.
 
-Phase 13B mechanically relocates the deterministic per-chain helper and its
-binding-neutral result/helper vocabulary into one guarded implementation header.
-Logical-chain RNG, component and scheduler semantics, genotype ownership, inline
-task aggregation and inline conversion are unchanged. A typed callable boundary
-is not yet active.
+Phase 13C activates a binding-neutral component specification, immutable packed
+genotype view, typed per-chain context, callable `run_bed_bayesr_chain()` core,
+and typed chain result. Logical-chain RNG, component sampling, scheduler jitter
+and traversal, genotype ownership, task dispatch, inline aggregation, and inline
+conversion remain unchanged. Progress events are captured by the core and
+rendered by the adapter after parallel execution.
 
 ## 1. Purpose
 

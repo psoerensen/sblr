@@ -3,32 +3,7 @@
 
 // Implementation detail for the public packed-BED BayesR translation unit.
 
-struct ChainResultBayesR {
- arma::rowvec bm;
- arma::rowvec dm;
- arma::rowvec component_mean;
- arma::rowvec b;
- arma::rowvec d_as_double;
- arma::rowvec vbs;
- arma::rowvec vgs;
- arma::rowvec ves;
- arma::mat    pip_k;           // K x m: per-component PIP, averaged over post-burnin
- arma::rowvec vles;
- arma::rowvec vlds;
- double final_vb = 0.0;
- double final_vg = 0.0;
- double final_ve = 0.0;
- std::vector<double> final_pi; // length K
- double final_vle = 0.0;
- double final_vld = 0.0;
- double log_cpo = NA_REAL;
- double mean_log_cpo = NA_REAL;
- std::vector<double> mean_pi;  // length K
- double nsamples = 0.0;
- double seconds = 0.0;
- int failed = 0;
- std::string error;
-};
+namespace sblr { namespace core {
 
 // FastPackedBedMatrix: identical definition to st_cpg_omp_individual_scheduled_chains.cpp.
 // Static functions below have internal linkage so there is no ODR conflict.
@@ -154,40 +129,35 @@ static inline int br_adaptive_skip(double p_nonnull, int null_skip_base, int nul
  return std::max(1, skip);
 }
 
-static ChainResultBayesR run_one_bayesr_chain(
-  const FastPackedBedMatrixBR& G,
-  const std::vector<MarkerMapBayesR>& marker_maps,
-  const std::vector<int>& marker_order,
-  const arma::mat& y_mat,
-  const std::vector<std::vector<double>>& b_init,
-  const arma::mat& B,
-  const arma::mat& E,
-  const arma::mat& ssb_prior_mat,
-  const arma::mat& sse_prior_mat,
-  const std::vector<double>& pi_init,
-  const std::vector<double>& c,
-  const std::vector<double>& alpha,
-  double nub,
-  double nue,
-  bool updateB,
-  bool updateE,
-  bool updatePi,
-  double adjE,
-  int nit,
-  int nburn,
-  int nthin,
-  int rebuild_every,
-  int full_sweep_every,
-  int null_skip_base,
-  int null_skip_max,
-  double candidate_threshold,
-  int candidate_lifetime,
-  bool skip_nulls_burnin_only,
-  int t,
-  int chain,
-  int seed,
-  int progress_every
+template <class PackedGenotype, class MarkerMap>
+BedBayesRChainExecutionResult run_bed_bayesr_chain(
+ const BedBayesRChainExecutionContext<PackedGenotype,MarkerMap>& context
 ) {
+ validate_bed_bayesr_chain_context(context);
+ const PackedGenotype& G=context.genotype.storage;
+ const std::vector<MarkerMap>& marker_maps=context.marker_maps;
+ const std::vector<int>& marker_order=context.marker_order;
+ const arma::mat& y_mat=context.phenotype;
+ const std::vector<std::vector<double>>& b_init=context.initial_effects;
+ const arma::mat& B=context.initial_B;
+ const arma::mat& E=context.initial_E;
+ const arma::mat& ssb_prior_mat=context.ssb_prior;
+ const arma::mat& sse_prior_mat=context.sse_prior;
+ const std::vector<double>& pi_init=context.components.initial_probabilities;
+ const std::vector<double>& c=context.components.scales;
+ const std::vector<double>& alpha=context.components.dirichlet_prior;
+ const double nub=context.nub, nue=context.nue, adjE=context.adjE;
+ const bool updateB=context.updateB, updateE=context.updateE, updatePi=context.updatePi;
+ const int nit=context.iterations, nburn=context.burnin, nthin=context.thinning;
+ const int rebuild_every=context.rebuild_every;
+ const int full_sweep_every=context.scheduler.sweep.full_sweep_every;
+ const int null_skip_base=context.scheduler.skip.base_interval;
+ const int null_skip_max=context.scheduler.skip.maximum_interval;
+ const double candidate_threshold=context.scheduler.candidate.probability_threshold;
+ const int candidate_lifetime=context.scheduler.candidate.lifetime;
+ const bool skip_nulls_burnin_only=context.scheduler.skip.burnin_only;
+ const int t=context.trait_index, chain=context.chain_index;
+ const int progress_every=context.progress_every;
 #ifdef _OPENMP
  const double wall_start = omp_get_wtime();
 #else
@@ -196,7 +166,7 @@ static ChainResultBayesR run_one_bayesr_chain(
 
  const int m = G.m;
  const int K = static_cast<int>(c.size());
- ChainResultBayesR out;
+ BedBayesRChainExecutionResult out;
  out.bm = arma::rowvec(m, arma::fill::zeros);
  out.dm = arma::rowvec(m, arma::fill::zeros);
  out.component_mean = arma::rowvec(m, arma::fill::zeros);
@@ -212,9 +182,7 @@ static ChainResultBayesR run_one_bayesr_chain(
  out.mean_pi.assign(static_cast<std::size_t>(K), 0.0);
 
  try {
-  const unsigned int chain_seed = static_cast<unsigned int>(
-   seed + 1000003 * (t + 1) + 9176 * (chain + 1)
-  );
+  const unsigned int chain_seed=static_cast<unsigned int>(context.chain_seed);
 
   std::mt19937 gen_t(chain_seed);
   std::uniform_real_distribution<double> runif(0.0, 1.0);
@@ -385,28 +353,15 @@ static ChainResultBayesR run_one_bayesr_chain(
     const double vld_progress = vg_t - vle_progress;
     const double pi_nonnull = 1.0 - pi_t[0];
 
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-{
- Rcpp::Rcout
- << "progress chain " << chain
- << ", trait " << t
- << ": iter " << (it + 1)
- << "/" << total_it
- << ", vb=" << vb_t
- << ", ve=" << ve_t
- << ", vg=" << vg_t
- << ", vle=" << vle_progress
- << ", vld=" << vld_progress
- << ", vei=" << vei_t
- << ", pi_nonnull=" << pi_nonnull
- << ", K=" << K
- << ", n_included=" << n_included_progress
- << ", active=" << active_list.size()
- << ", candidates=" << candidate_list.size()
- << "\n";
-}
+    BedBayesRProgressEvent event;
+    event.iteration=it+1; event.total_iterations=total_it;
+    event.trait_index=t; event.chain_index=chain;
+    event.vb=vb_t; event.ve=ve_t; event.vg=vg_t;
+    event.vle=vle_progress; event.vld=vld_progress; event.vei=vei_t;
+    event.pi_nonnull=pi_nonnull; event.included=n_included_progress;
+    event.component_count=static_cast<std::size_t>(K);
+    event.active_count=active_list.size(); event.candidate_count=candidate_list.size();
+    out.progress_events.push_back(event);
    }
 
    const bool skipping_allowed =
@@ -587,5 +542,6 @@ static ChainResultBayesR run_one_bayesr_chain(
  return out;
 }
 
+} }
 
 #endif

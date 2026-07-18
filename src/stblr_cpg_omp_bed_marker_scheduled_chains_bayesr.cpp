@@ -5,6 +5,7 @@
 #include "distributions.h"
 #include "packed_bed.h"
 #include "st_bed_bayesr_common.h"
+#include "blr_bed_bayesr_types.h"
 
 #include <algorithm>
 #include <cmath>
@@ -239,7 +240,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  for (int t = 0; t < nt; ++t)
   for (int i = 0; i < n_used; ++i) y_mat(i, t) = y(i, t);
 
- std::vector<ChainResultBayesR> job_results(static_cast<std::size_t>(njobs));
+ std::vector<sblr::core::BedBayesRChainExecutionResult> job_results(static_cast<std::size_t>(njobs));
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -248,47 +249,52 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   const int ch = job / nt;
   const int t  = job % nt;
 
-  job_results[static_cast<std::size_t>(job)] = run_one_bayesr_chain(
-   G,
-   marker_maps,
-   marker_order,
-   y_mat,
-   b_init,
-   B,
-   E,
-   ssb_prior_mat,
-   sse_prior_mat,
-   pi,
-   c,
-   alpha,
-   nub,
-   nue,
-   updateB,
-   updateE,
-   updatePi,
-   adjE,
-   nit,
-   nburn,
-   nthin,
-   rebuild_every,
-   full_sweep_every,
-   null_skip_base,
-   null_skip_max,
-   candidate_threshold,
-   candidate_lifetime,
-   skip_nulls_burnin_only,
-   t,
-   ch,
-   seed,
-   progress_every
+  const sblr::core::BedBayesRPackedGenotypeView<FastPackedBedMatrixBR> genotype{
+   G, G.data.data(), G.data.size(), static_cast<std::size_t>(G.m),
+   static_cast<std::size_t>(G.n), G.nbytes, G.stride
+  };
+  const sblr::core::BedBayesRComponentSpec components{0u, c, pi, alpha};
+  const sblr::core::BedBayesRSchedulerControl scheduler{
+   sblr::core::ScheduledSweepControl{full_sweep_every},
+   sblr::core::NullSkipControl{null_skip_base, null_skip_max,
+                              skip_nulls_burnin_only, "probability_adaptive"},
+   sblr::core::CandidateControl{candidate_threshold, candidate_lifetime}
+  };
+  const std::uint64_t chain_seed=static_cast<unsigned int>(
+   seed + 1000003 * (t + 1) + 9176 * (ch + 1)
   );
+  const sblr::core::BedBayesRChainExecutionContext<FastPackedBedMatrixBR,MarkerMapBayesR> context{
+   genotype, marker_maps, marker_order, y_mat, b_init, B, E,
+   ssb_prior_mat, sse_prior_mat, components, scheduler, nub, nue, adjE,
+   nit, nburn, nthin, rebuild_every, progress_every, chain_seed, t, ch,
+   updateB, updateE, updatePi
+  };
+  job_results[static_cast<std::size_t>(job)] = sblr::core::run_bed_bayesr_chain(context);
  }
 
  int failed_total = 0;
  for (int job = 0; job < njobs; ++job) {
-  const ChainResultBayesR& r = job_results[static_cast<std::size_t>(job)];
+  const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
   const int ch = job / nt;
   const int t  = job % nt;
+  for (const sblr::core::BedBayesRProgressEvent& event : r.progress_events) {
+   Rcpp::Rcout
+   << "progress chain " << event.chain_index
+   << ", trait " << event.trait_index
+   << ": iter " << event.iteration << "/" << event.total_iterations
+   << ", vb=" << event.vb
+   << ", ve=" << event.ve
+   << ", vg=" << event.vg
+   << ", vle=" << event.vle
+   << ", vld=" << event.vld
+   << ", vei=" << event.vei
+   << ", pi_nonnull=" << event.pi_nonnull
+   << ", K=" << event.component_count
+   << ", n_included=" << event.included
+   << ", active=" << event.active_count
+   << ", candidates=" << event.candidate_count
+   << "\n";
+  }
   Rcpp::Rcout
   << "chain " << ch
   << ", trait " << t
@@ -306,7 +312,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
 
  if (failed_total > 0) {
   for (int job = 0; job < njobs; ++job) {
-   const ChainResultBayesR& r = job_results[static_cast<std::size_t>(job)];
+   const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
    if (r.failed) {
     const int ch = job / nt;
     const int t  = job % nt;
@@ -357,7 +363,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  for (int ch = 0; ch < nchains; ++ch) {
   for (int t = 0; t < nt; ++t) {
    const int job = ch * nt + t;
-   const ChainResultBayesR& r = job_results[static_cast<std::size_t>(job)];
+   const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
    const arma::uword tu = static_cast<arma::uword>(t);
 
    bm_mat.row(tu) += r.bm;
@@ -422,7 +428,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
 
   for (int ch = 0; ch < nchains; ++ch) {
    const int job = ch * nt + t;
-   const ChainResultBayesR& r = job_results[static_cast<std::size_t>(job)];
+   const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
 
    for (int j = 0; j < m; ++j) {
     const arma::uword ju = static_cast<arma::uword>(j);

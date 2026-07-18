@@ -11,7 +11,7 @@ test_that("Phase 13A BayesR route and future per-chain seam are discoverable", {
   expect_match(public, 'method = c("bayesc", "bayesr", "bayesrc")', fixed = TRUE)
   expect_match(public, ".fit_stblr_bed_bayesr", fixed = TRUE)
   expect_source_count("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(", native, 1L)
-  expect_source_count("static ChainResultBayesR run_one_bayesr_chain(", core, 1L)
+  expect_source_count("BedBayesRChainExecutionResult run_bed_bayesr_chain(", core, 1L)
   expect_match(native, "#pragma omp parallel for num_threads(nthreads) schedule(static)", fixed = TRUE)
 })
 
