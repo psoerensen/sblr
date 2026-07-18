@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 14E packed-BED BayesRC canonicalized and stabilized
+**Status:** Phase 15A packed-BED family consolidation audit complete
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -58,6 +58,13 @@ aggregate architecture, singular final-prior and converter paths, full-sweep
 policy, Rmath-backed probability boundary, permanent Phase 14A fixtures, and
 Phase 14D runtime/completed-fit-RSS/I/O baseline are permanent. Unsupported
 annotation and scheduling policies remain unchanged.
+
+Phase 15A classifies packed-BED family consolidation opportunities. Exact task
+mapping and seed policy are candidates for narrow sharing; immutable genotype
+ownership, dispatch/failure/timing, converter metadata, reference testing, and
+benchmark reporting are convention-level opportunities. Canonical numerical
+cores and all model-specific statistical contracts remain unchanged, and
+production consolidation has not started.
 
 ## 1. Purpose
 

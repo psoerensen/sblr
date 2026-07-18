@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 14E packed-BED BayesRC canonicalized and stabilized
+**Status:** Phase 15A packed-BED family consolidation audit complete
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -71,6 +71,13 @@ final-prior, converter, full-sweep, Rmath probability, and logical-chain RNG
 contracts are permanent. Phase 14A fixtures and the Phase 14D
 runtime/completed-fit-RSS/I/O measurements are canonical regression baselines;
 unsupported annotation and scheduler cases remain unchanged.
+
+Phase 15A audits consolidation boundaries across canonical packed-BED BayesC,
+BayesR, and BayesRC without changing production. Task indexing and logical-chain
+seed formulas are exactly shared; genotype ownership, dispatch, failure/timing,
+progress, diagnostics, converter metadata, reference, test, and benchmark
+conventions are explicitly classified. Model-specific contexts, results, cores,
+schedulers, probability policies, aggregators, and converters remain separate.
 
 ## 1. Purpose
 
