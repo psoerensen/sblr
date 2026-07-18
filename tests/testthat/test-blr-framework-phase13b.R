@@ -70,7 +70,7 @@ test_that("Phase 13B Phase 13A references and identities remain exact", {
 
 test_that("Phase 13B protected files remain unchanged", {
   protected <- c(
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "9812450ae103f5026d1632b2bcc31e95",
+    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "9ef7d514895f80b8561de831798f2701",
     "src/st_cpg_omp_individual_scheduled_chains.cpp" = "43c71b13d8259a95f88d8a95498b213b",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",

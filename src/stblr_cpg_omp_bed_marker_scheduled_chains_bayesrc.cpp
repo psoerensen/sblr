@@ -215,7 +215,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
    }
   }
  }
- result.has_wy=return_wy; result.has_residual_marker_score=return_r;
  const BedBayesRCBindingMetadata metadata{
   gamma,m,nt,ntrace,nit,nburn,nthin,nchains,n_used,static_cast<double>(A.n_cols),
   updateAlpha ? (nit+nburn)/annot_alpha_update_every : 0,

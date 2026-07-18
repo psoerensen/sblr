@@ -84,7 +84,6 @@ struct BedBayesRCExecutionResult {
  arma::vec log_cpo, mean_log_cpo, nsamples;
  arma::mat component_counts;
  arma::mat wy, residual_marker_score;
- bool has_wy=false, has_residual_marker_score=false;
  std::vector<BedBayesRCChainExecutionResult> retained_chains;
  std::vector<std::string> failures;
  std::size_t marker_count=0, annotation_count=0, component_count=0;

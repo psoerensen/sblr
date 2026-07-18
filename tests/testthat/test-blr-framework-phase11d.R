@@ -92,7 +92,7 @@ test_that("route nonidentity and protected sources are permanent", {
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "src/blr_bed_scheduled_bayesc_rng.h" = "002468fa8afd7d0c491f61ea4324f982",
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "9812450ae103f5026d1632b2bcc31e95",
+    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "9ef7d514895f80b8561de831798f2701",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
     "R/RcppExports.R" = "9d13ea00b326c7e0cd606194d13a8bca",
@@ -115,10 +115,10 @@ test_that("canonical implementation headers are guarded and singly included", {
   expect_identical(basename(agg_users), "st_cpg_omp_individual_scheduled_chains.cpp")
 })
 
-test_that("documentation marks only the public packed-BED BayesC route canonical", {
+test_that("documentation keeps experimental packed-BED BayesC routes noncanonical", {
   plan <- read11d("docs/dev/blr_framework_implementation_plan.md")
   matrix <- read11d("docs/dev/blr_model_capability_matrix.md")
   expect_match(plan, "Phase 11D public scheduled packed-BED BayesC canonicalization", fixed = TRUE)
   expect_match(matrix, "Canonical corrected logical-chain RNG", fixed = TRUE)
-  expect_match(matrix, "experimental single-chain route remains unchanged and noncanonical", fixed = TRUE)
+  expect_match(matrix, "experimental single-chain and sparse BayesC routes remain unchanged and noncanonical", fixed = TRUE)
 })

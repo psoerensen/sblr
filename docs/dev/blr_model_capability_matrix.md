@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 14D packed-BED BayesRC migration complete
+**Status:** Phase 14E packed-BED BayesRC canonicalized and stabilized
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -9,7 +9,7 @@
 Canonical ordinary CSR: BayesC, BayesR, SBayesRC, fixed-prior BayesC, group
 BayesC, and learned-annotation BayesC. Canonical scheduled: ordinary-CSR BayesC
 and public scheduled packed-BED BayesC. Experimental/sparse BED BayesC,
-packed-BED BayesRC, block-eigen where applicable, and legacy
+block-eigen where applicable, and legacy
 multivariate implementations remain audited/protected and noncanonical.
 Historical phase descriptions below retain their original point-in-time scope.
 
@@ -52,6 +52,12 @@ marker-prior recomputation path, and one named binding converter. Full sweeps,
 probit sticks, latent/alpha updates, logical-chain RNG, Phase 14A references,
 the public route, and schemas remain exact. BayesRC is migrated, noncanonical,
 and ready for canonicalization.
+
+Phase 14E marks public packed-BED BayesRC canonical. The typed chain and
+aggregate architecture, singular final-prior and converter paths, full-sweep
+policy, Rmath-backed probability boundary, permanent Phase 14A fixtures, and
+Phase 14D runtime/completed-fit-RSS/I/O baseline are permanent. Unsupported
+annotation and scheduling policies remain unchanged.
 
 ## 1. Purpose
 
@@ -144,16 +150,16 @@ Status labels:
 | ST BayesC CSR | scalar | binary | global_binary | unit | scalar | CSR | Canonical typed unscheduled CSR using proven shared scalar execution utilities | Migrated; canonical; legacy path removed | Active architecture reference; public schema unchanged; performance and memory validated |
 | ST BayesC scheduled CSR | scalar | binary | global_binary | unit | scalar | CSR | Canonical corrected chain-owned RNG implementation with active scheduler contracts, typed borrowed context, callable core, typed result, one named converter, and one native aggregation path | Canonical; migration scaffolding removed; public route/schema unchanged; permanent Phase 10B corrected references and runtime/completed-fit-RSS baselines active | Fit-local/thread-assignment reproducibility exact; unsupported cases preserved; scheduled BayesR remains unsupported |
 | ST BayesC BED | scalar | binary | global_binary | unit | scalar | BED | Current BED kernels | Preserve decoder/kernel, refactor boundary | After CSR architecture proven |
-| ST BayesC scheduled packed BED | scalar | binary | global_binary | unit | scalar | SNP-major packed BED | Canonical corrected logical-chain RNG with borrowed typed per-chain context/result, callable core, typed aggregate result, one native aggregation path, and one named binding converter | Fit-owned immutable genotype borrowed; task dispatch retained in adapter; permanent Phase 11B references and fit-local/thread-independent reproducibility exact; public route/schema unchanged; runtime/completed-fit-RSS/I/O baselines established; migration scaffolding removed | Public multichain route canonical; experimental single-chain route remains unchanged and noncanonical; sparse BayesC, BayesR and BayesRC unchanged and noncanonical |
+| ST BayesC scheduled packed BED | scalar | binary | global_binary | unit | scalar | SNP-major packed BED | Canonical corrected logical-chain RNG with borrowed typed per-chain context/result, callable core, typed aggregate result, one native aggregation path, and one named binding converter | Fit-owned immutable genotype borrowed; task dispatch retained in adapter; permanent Phase 11B references and fit-local/thread-independent reproducibility exact; public route/schema unchanged; runtime/completed-fit-RSS/I/O baselines established; migration scaffolding removed | Public multichain route canonical; experimental single-chain and sparse BayesC routes remain unchanged and noncanonical; packed-BED BayesR and BayesRC are canonical separate implementations |
 | ST BayesC fixed marker prior | scalar | binary | fixed_marker/global | fixed_marker | scalar | CSR | Canonical typed implementation with borrowed `pi_marker`/`vb_multiplier`, callable core, typed result, one binding converter, and one wrapper aggregation path | Canonical; public route/schema unchanged; permanent exact references and runtime/completed-fit-RSS baselines active; trait restriction preserved; migration scaffolding removed | Stable canonical fixed-prior reference |
 | ST BayesC + `selection_s` | scalar | binary | global_binary | maf_s | scalar | CSR | Current | Preserve and migrate | Good composite-scale test |
 | ST group BayesC | scalar | binary | group | group | scalar | CSR | Canonical typed implementation with borrowed zero-based mapping, active group policy, callable core, typed result, one binding converter, and one wrapper aggregation path | Canonical; public route/schema and normalization semantics unchanged; permanent exact references and runtime/completed-fit-RSS baselines active; unsupported cases preserved; migration scaffolding removed | Stable canonical group reference; group normalization and mutable state remain specific |
 | ST learned annotation BayesC | scalar | binary | annot_logit | learned annotation scale | scalar | CSR | Canonical typed implementation with borrowed annotation design, active learned policy, callable core, typed result, one binding converter, and one wrapper aggregation path | Canonical; public route/schema unchanged; permanent exact references and canonical runtime/completed-fit-RSS baselines active; unsupported cases preserved; migration scaffolding removed | Stable canonical learned-annotation reference; centered logistic/exponential MH policy, proposals, bounds, and update frequency remain specific |
 | ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Canonical | Typed borrowed context, operator-aware templated core, typed result, one converter; permanent exact references and runtime/memory baseline | Stable canonical scalar mixture reference |
-| ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | SNP-major packed BED | Canonical typed component/genotype/context/core/chain-result/aggregate-result architecture with one native aggregation path and one named converter | Canonical; logical-chain RNG, adaptive scheduler, adapter-rendered progress, permanent Phase 13A fixtures, and Phase 13D runtime/completed-fit-RSS/I/O baseline active | Public route/schema unchanged; BayesRC and experimental/sparse BayesC remain noncanonical |
-| ST BayesRC scheduled-chains BED | scalar | mixture | annotation probit stick | component | scalar | SNP-major packed BED | Phase 14D typed component/annotation/prior/views/context/core/chain-result/aggregate-result architecture; one aggregation, final-prior, and converter path; exact Rmath-backed probability interface | Production behavior, ordered sticks, latent/alpha updates, logical-chain RNG, and Phase 14A references unchanged; migration complete, ready for canonicalization, noncanonical | Alignment, dispatch, and optional genotype diagnostics remain adapter-owned; adaptive controls do not apply |
+| ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | SNP-major packed BED | Canonical typed component/genotype/context/core/chain-result/aggregate-result architecture with one native aggregation path and one named converter | Canonical; logical-chain RNG, adaptive scheduler, adapter-rendered progress, permanent Phase 13A fixtures, and Phase 13D runtime/completed-fit-RSS/I/O baseline active | Public route/schema unchanged; BayesRC is canonical separately; experimental/sparse BayesC remains noncanonical |
+| ST BayesRC scheduled-chains BED | scalar | mixture | annotation probit stick | component | scalar | SNP-major packed BED | Canonical typed component/annotation/prior/views/context/core/chain-result/aggregate-result architecture; one aggregation, final-prior, and converter path; exact Rmath-backed probability interface | Canonical; ordered sticks, latent/alpha updates, logical-chain RNG, permanent Phase 14A references, and Phase 14D runtime/completed-fit-RSS/I/O baseline active | Public route/schema unchanged; alignment, dispatch, and optional genotype diagnostics remain adapter-owned; adaptive controls do not apply |
 | ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Canonical typed borrowed CSR/annotation context with operator-aware templated core, typed result, and one ordinary-CSR converter | Ordered-probit and alpha behavior preserved; shared task/seed/status infrastructure active; public route/schema unchanged; permanent exact references and runtime/completed-fit-RSS baseline established | Canonical annotation-aware mixture reference |
-| ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Alias inventory entry for the same audited public full-sweep route above | Phase 14A audit complete; production unchanged and noncanonical | Do not interpret as a second execution path |
+| ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Alias inventory entry for the same canonical public full-sweep route above | Canonical through the scheduled-chains implementation row; not a second execution path | Permanent alias inventory only |
 | ST hierarchical BayesC | scalar | binary | global_binary | hierarchy | scalar | CSR first | Not implemented | New policy on migrated scalar core | Planned |
 | ST hierarchical BayesR | scalar | mixture | global_dirichlet | component × hierarchy | scalar | CSR first | Not implemented | Compose after hierarchy | Planned |
 | ST hierarchical BayesRC | scalar | mixture | annot_probit_stick | component × hierarchy | scalar | CSR first | Not implemented | Compose after BayesRC migration | Planned |
