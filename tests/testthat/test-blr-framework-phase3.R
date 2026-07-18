@@ -71,10 +71,10 @@ test_that("ordinary CSR BayesC has one canonical typed production route", {
     test_path("..", "..", "R", "sparse_ld_bed_helper.R"), warn = FALSE
   ), collapse = "\n")
 
-  expect_length(gregexpr("CsrBayesCResult run_csr_bayesc\\(", core)[[1]], 1L)
-  expect_length(gregexpr("inline void sample_marker_scaled\\(", core)[[1]], 1L)
-  expect_length(gregexpr("inline void sample_marker_unscaled\\(", core)[[1]], 1L)
-  expect_length(gregexpr("run_csr_bayesc\\(input\\)", binding)[[1]], 1L)
+  expect_source_count("CsrBayesCResult run_csr_bayesc\\(", core, 1L, fixed = FALSE)
+  expect_source_count("inline void sample_marker_scaled\\(", core, 1L, fixed = FALSE)
+  expect_source_count("inline void sample_marker_unscaled\\(", core, 1L, fixed = FALSE)
+  expect_source_count("run_csr_bayesc\\(input\\)", binding, 1L, fixed = FALSE)
   expect_match(
     binding,
     paste0(
@@ -120,7 +120,7 @@ test_that("the native CSR adapter and raw converter have single responsibilities
   expect_false(grepl("sample_marker_", adapter, fixed = TRUE))
   expect_false(grepl("for (int it =", adapter, fixed = TRUE))
   expect_false(grepl("std::mt19937", adapter, fixed = TRUE))
-  expect_length(gregexpr("stblr_csr_bayesc_result_to_raw\\(", text)[[1]], 2L)
+  expect_source_count("stblr_csr_bayesc_result_to_raw\\(", text, 2L, fixed = FALSE)
 })
 
 test_that("the binding-neutral implementation header is single-TU and guarded", {

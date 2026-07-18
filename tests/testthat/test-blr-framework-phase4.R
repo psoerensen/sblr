@@ -113,7 +113,7 @@ test_that("comparative boundaries remain shared only where proven", {
   expect_false(grepl("blr_scalar_execution", bayesr, fixed = TRUE))
   expect_match(bayesc, "delta_log", fixed = TRUE)
   expect_match(bayesr, "sample_categorical_logprob_bayesr", fixed = TRUE)
-  expect_equal(length(gregexpr("for (int it = 0; it < trace_len", bayesr, fixed = TRUE)[[1L]]), 1L)
+  expect_equal(source_match_count("for (int it = 0; it < trace_len", bayesr, fixed = TRUE), 1L)
   expect_match(bayesr, "run_csr_bayesr", fixed = TRUE)
 })
 

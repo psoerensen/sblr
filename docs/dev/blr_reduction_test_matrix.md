@@ -1,7 +1,7 @@
 # Unified BLR Framework: Reduction, Regression, and Validation Test Matrix
 
-**Status:** Revised validation specification  
-**Date:** 2026-07-13  
+**Status:** Phase 12A hardened validation specification
+**Date:** 2026-07-18
 **Target location:** `docs/dev/blr_reduction_test_matrix.md`
 
 ## 1. Purpose
@@ -226,7 +226,7 @@ For each hierarchy layer:
 
 \[
 \exp\left[
-rac{\sum_g n_{hg}\log	heta_{hg}}
+\frac{\sum_g n_{hg}\log\theta_{hg}}
 {\sum_g n_{hg}}
 ight]=1.
 \]
@@ -254,7 +254,7 @@ Test all markers within numerical tolerance.
 When retained state samples are available:
 
 \[
-dm_j = rac{1}{S}\sum_s d_j^{(s)}.
+dm_j = \frac{1}{S}\sum_s d_j^{(s)}.
 \]
 
 ### Mixture state
@@ -495,7 +495,7 @@ For CPO:
 \[
 \mathrm{mean\_log\_cpo}
 =
-rac{\mathrm{log\_cpo}}{n_{\mathrm{used}}}.
+\frac{\mathrm{log\_cpo}}{n_{\mathrm{used}}}.
 \]
 
 For thinning:
@@ -503,7 +503,7 @@ For thinning:
 \[
 n_{\mathrm{samples}}
 =
-\#\{i\ge nburn:(i-nburn)mod nthin=0\}.
+\#\{i\ge nburn:(i-nburn)\bmod nthin=0\}.
 \]
 
 Prior probabilities and realized state frequencies must remain distinct.

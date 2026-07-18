@@ -86,7 +86,9 @@ When supplied, these override `pi_prior_mean` and `pi_prior_strength`.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 
-\item{rebuild_every, full_sweep_every, candidate_threshold, candidate_lifetime}{Sampler scheduling and residual-rebuild controls.}
+\item{rebuild_every, full_sweep_every, candidate_threshold, candidate_lifetime}{Sampler scheduling and residual-rebuild controls. For scheduled routes,
+`full_sweep_every = 0` forces a full sweep every iteration; positive
+values are periodic and negative values are rejected.}
 
 \item{skip_nulls_burnin_only}{Restrict null-marker skipping to burn-in.}
 

@@ -17,7 +17,7 @@ test_that("Phase 7B1 keeps operator sharing and the permanent converter", {
  src<-paste(readLines(phase7b1_path("src","st_sbayesrc_omp_csr.cpp"),warn=FALSE),collapse="\n")
  expect_match(src,"SBayesRCOperatorContext<CsrOperator>",fixed=TRUE)
  expect_match(src,"SBayesRCOperatorContext<BlockEigenOperator>",fixed=TRUE)
- expect_equal(length(gregexpr("#include \"blr_csr_sbayesrc_core_impl.h\"",src,fixed=TRUE)[[1L]]),1L)
+ expect_equal(source_match_count("#include \"blr_csr_sbayesrc_core_impl.h\"",src,fixed=TRUE),1L)
  expect_match(src,"run_csr_sbayesrc(execution_context)",fixed=TRUE)
  expect_match(src,"stblr_csr_sbayesrc_result_to_raw",fixed=TRUE)
  expect_match(src,"Rcpp::List comp_prob_out",fixed=TRUE)

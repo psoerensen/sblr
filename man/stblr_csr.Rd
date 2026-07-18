@@ -154,7 +154,9 @@ supported.}
 
 \item{scheduled}{Use the scheduled sparse-LD sampler.}
 
-\item{full_sweep_every, null_skip_base, null_skip_max, candidate_threshold}{Scheduled sampler controls.}
+\item{full_sweep_every, null_skip_base, null_skip_max, candidate_threshold}{Scheduled sampler controls. `full_sweep_every = 0` forces a full sweep on
+every iteration; positive values use that periodic interval and negative
+values are rejected.}
 
 \item{candidate_lifetime}{Number of scheduled sweeps that candidates remain
 active.}

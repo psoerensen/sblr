@@ -68,8 +68,8 @@ test_that("Phase 9F2 keeps learned policy and native ownership explicit", {
   expect_match(type_text, "const void* ld_storage", fixed = TRUE)
   expect_match(type_text, "storage is", fixed = TRUE)
   expect_match(source_text, "stblr_csr_learned_annotation_bayesc_result_to_raw(", fixed = TRUE)
-  expect_equal(length(gregexpr("for (int chain = 0; chain < nchains; ++chain)",
-                              source_text, fixed = TRUE)[[1]]), 1L)
+  expect_equal(source_match_count("for (int chain = 0; chain < nchains; ++chain)",
+                              source_text, fixed = TRUE), 1L)
 })
 
 test_that("Phase 9F2 learned-annotation references remain exact", {

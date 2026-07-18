@@ -22,7 +22,7 @@ test_that("Phase 10C2 typed scheduled boundary is singular and binding neutral",
   types <- phase10c2_text("src/blr_csr_scheduled_bayesc_types.h")
   scheduled <- phase10c2_text("src/blr_scheduled_execution_types.h")
 
-  expect_equal(length(gregexpr("run_csr_scheduled_bayesc(", core, fixed = TRUE)[[1]]), 1L)
+  expect_equal(source_match_count("run_csr_scheduled_bayesc(", core, fixed = TRUE), 1L)
   expect_match(source, "run_csr_scheduled_bayesc(execution_context)", fixed = TRUE)
   expect_match(types, "struct CsrScheduledBayesCExecutionContext", fixed = TRUE)
   expect_match(types, "struct CsrScheduledBayesCExecutionResult", fixed = TRUE)
@@ -43,10 +43,10 @@ test_that("scheduler loop, traversal, and chain RNG remain in one callable core"
   core <- phase10c2_text("src/blr_csr_scheduled_bayesc_core_impl.h")
   native <- paste(source, core, sep = "\n")
 
-  expect_equal(length(gregexpr("for (int it = 0; it < total_it; ++it)", core,
-    fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("ScheduledChainRng chain_rng(task_seed)", core,
-    fixed = TRUE)[[1]]), 1L)
+  expect_equal(source_match_count("for (int it = 0; it < total_it; ++it)", core,
+    fixed = TRUE), 1L)
+  expect_equal(source_match_count("ScheduledChainRng chain_rng(task_seed)", core,
+    fixed = TRUE), 1L)
   expect_false(grepl("static thread_local", native, fixed = TRUE))
   expect_false(grepl("thread_local", native, fixed = TRUE))
   expect_match(core, "#pragma omp parallel for num_threads(nthreads) schedule(static)",

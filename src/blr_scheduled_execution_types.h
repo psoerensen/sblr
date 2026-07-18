@@ -32,6 +32,8 @@ struct ScheduledRngOwnership {
 };
 
 struct ScheduledSweepControl {
+ // Zero is accepted and means a full sweep on every iteration. Positive
+ // values request the established periodic schedule; negative values reject.
  int full_sweep_every=1;
  bool iteration_zero_is_full=true;
 };
@@ -126,8 +128,8 @@ inline void validate_scheduled_execution_control(
      x.rng_ownership.worker_thread_owner!="none" ||
      x.rng_ownership.fit_persistent_distribution_state)
   throw std::invalid_argument("scheduled RNG ownership must be chain-local and fit-bounded");
- if (x.sweep.full_sweep_every<=0)
-  throw std::invalid_argument("full_sweep_every must be positive in the contract");
+ if (x.sweep.full_sweep_every<0)
+  throw std::invalid_argument("full_sweep_every must be non-negative");
  if (x.skip.base_interval<=0)
   throw std::invalid_argument("null_skip_base must be positive");
  if (x.skip.maximum_interval<0)

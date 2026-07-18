@@ -7,10 +7,10 @@ source(phase7b3_path("tests", "testthat", "fixtures", "blr-phase7a-sbayesrc-refe
 test_that("Phase 7B3 has one callable core, marker loop, and result converter", {
  src <- paste(readLines(phase7b3_path("src", "st_sbayesrc_omp_csr.cpp"), warn = FALSE), collapse = "\n")
  core <- paste(readLines(phase7b3_path("src", "blr_csr_sbayesrc_core_impl.h"), warn = FALSE), collapse = "\n")
- expect_equal(length(gregexpr("CsrSBayesRCExecutionResult run_csr_sbayesrc(", core, fixed = TRUE)[[1L]]), 1L)
- expect_equal(length(gregexpr("for (int it = 0; it < nit + nburn; ++it)", core, fixed = TRUE)[[1L]]), 1L)
- expect_equal(length(gregexpr("static Rcpp::List stblr_csr_sbayesrc_result_to_raw(", src, fixed = TRUE)[[1L]]), 2L)
- expect_equal(length(gregexpr("return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);", src, fixed = TRUE)[[1L]]), 1L)
+ expect_equal(source_match_count("CsrSBayesRCExecutionResult run_csr_sbayesrc(", core, fixed = TRUE), 1L)
+ expect_equal(source_match_count("for (int it = 0; it < nit + nburn; ++it)", core, fixed = TRUE), 1L)
+ expect_equal(source_match_count("static Rcpp::List stblr_csr_sbayesrc_result_to_raw(", src, fixed = TRUE), 2L)
+ expect_equal(source_match_count("return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);", src, fixed = TRUE), 1L)
  expect_match(src, "CsrSBayesRCExecutionContext<Operator> execution_context", fixed = TRUE)
  expect_match(src, "SBayesRCOperatorContext<CsrOperator>", fixed = TRUE)
  expect_match(src, "SBayesRCOperatorContext<BlockEigenOperator>", fixed = TRUE)
@@ -27,9 +27,9 @@ test_that("Phase 7B3 core remains binding neutral with explicit ownership", {
  for (token in c("const Operator& op", "const arma::mat& A", "const arma::vec& gamma",
                   "const SBayesRCLDLDFriends& ld_swap_friends", "storage_outlives_execution",
                   "std::mt19937 gen_t(task_seed)")) expect_match(core, token, fixed = TRUE)
- expect_equal(length(gregexpr("#include \"blr_csr_sbayesrc_core_impl.h\"",
+ expect_equal(source_match_count("#include \"blr_csr_sbayesrc_core_impl.h\"",
                               paste(readLines(phase7b3_path("src", "st_sbayesrc_omp_csr.cpp"), warn = FALSE), collapse = "\n"),
-                              fixed = TRUE)[[1L]]), 1L)
+                              fixed = TRUE), 1L)
 })
 
 test_that("Phase 7B3 all frozen raw and formatted references are exact", {

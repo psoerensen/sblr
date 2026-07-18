@@ -112,7 +112,7 @@ test_that("Phase 9D1 protects adjacent backends, wrappers, signatures, and schem
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e",
     "src/RcppExports.cpp" = "b4859db0f6308fa7e38051ddcf32d245",
     "R/RcppExports.R" = "9d13ea00b326c7e0cd606194d13a8bca",
-    "R/sparse_ld_bed_helper.R" = "26c5c894058434deea25e3242dd56d4a",
+    "R/sparse_ld_bed_helper.R" = "142f674bbe43063280f2dda25fa30a64",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9d1_path, character(1))))

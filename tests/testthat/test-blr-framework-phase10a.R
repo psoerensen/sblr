@@ -25,7 +25,9 @@ test_that("Phase 10A scheduled contracts round trip without sampler or RNG", {
   expect_identical(out$schema,"blr_scheduled_execution_contract_v1")
   expect_identical(out$spec,spec)
   expect_true(out$validated); expect_false(out$invokes_sampler); expect_false(out$consumes_rng)
-  bad <- spec; bad$sweep$full_sweep_every <- 0L
+  zero <- spec; zero$sweep$full_sweep_every <- 0L
+  expect_true(sblr:::blr_phase10a_validate_scheduled_execution_cpp(zero)$validated)
+  bad <- spec; bad$sweep$full_sweep_every <- -1L
   expect_error(sblr:::blr_phase10a_validate_scheduled_execution_cpp(bad),"full_sweep_every")
   bad <- spec; bad$skip$null_skip_base <- 8L
   expect_error(sblr:::blr_phase10a_validate_scheduled_execution_cpp(bad),"null_skip_base")

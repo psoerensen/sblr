@@ -13,7 +13,7 @@ test_that("Phase 7B2 exposes one explicit operator-templated callable core", {
  expect_match(src, "run_csr_sbayesrc(execution_context)", fixed = TRUE)
  expect_match(src, "SBayesRCOperatorContext<CsrOperator>", fixed = TRUE)
  expect_match(src, "SBayesRCOperatorContext<BlockEigenOperator>", fixed = TRUE)
- expect_equal(length(gregexpr("for (int it = 0; it < nit + nburn; ++it)", core, fixed = TRUE)[[1L]]), 1L)
+ expect_equal(source_match_count("for (int it = 0; it < nit + nburn; ++it)", core, fixed = TRUE), 1L)
  expect_false(grepl("#include \"blr_csr_sbayesrc_core_impl.h\"\n\n const bool return_chain_summaries", src, fixed = TRUE))
  expect_false(any(vapply(c("getenv", "new_path", "old_path", "legacy_route"),
                          function(token) grepl(token, src, fixed = TRUE), logical(1))))
@@ -30,9 +30,9 @@ test_that("Phase 7B2 core is binding neutral and ownership is explicit", {
                   "storage_outlives_execution", "std::mt19937 gen_t(task_seed)")) {
   expect_match(core, token, fixed = TRUE)
  }
- expect_equal(length(gregexpr("#include \"blr_csr_sbayesrc_core_impl.h\"",
+ expect_equal(source_match_count("#include \"blr_csr_sbayesrc_core_impl.h\"",
                               paste(readLines(phase7b2_path("src", "st_sbayesrc_omp_csr.cpp"), warn = FALSE), collapse = "\n"),
-                              fixed = TRUE)[[1L]]), 1L)
+                              fixed = TRUE), 1L)
 })
 
 test_that("Phase 7B2 frozen raw and formatted references remain exact", {
@@ -73,8 +73,8 @@ test_that("Phase 7B2 reproducibility and alpha modes remain exact", {
 
 test_that("Phase 7B2 keeps one named converter and protected source files", {
  src <- paste(readLines(phase7b2_path("src", "st_sbayesrc_omp_csr.cpp"), warn = FALSE), collapse = "\n")
- expect_equal(length(gregexpr("static Rcpp::List stblr_csr_sbayesrc_result_to_raw(", src, fixed = TRUE)[[1L]]), 2L)
- expect_equal(length(gregexpr("return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);", src, fixed = TRUE)[[1L]]), 1L)
+ expect_equal(source_match_count("static Rcpp::List stblr_csr_sbayesrc_result_to_raw(", src, fixed = TRUE), 2L)
+ expect_equal(source_match_count("return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);", src, fixed = TRUE), 1L)
  expect_match(src, "Rcpp::List comp_prob_out", fixed = TRUE)
  expect_match(src, "Rcpp::List marker = Rcpp::List::create", fixed = TRUE)
  paths <- c("src/st_cpg_omp_csr.cpp", "src/blr_csr_bayesc_types.h", "src/blr_csr_bayesc_core_impl.h",

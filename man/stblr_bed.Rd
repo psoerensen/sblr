@@ -172,7 +172,9 @@ annotations. By default binary columns remain on the 0/1 scale.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 
-\item{rebuild_every, full_sweep_every, candidate_threshold, candidate_lifetime}{Sampler scheduling and residual-rebuild controls.}
+\item{rebuild_every, full_sweep_every, candidate_threshold, candidate_lifetime}{Sampler scheduling and residual-rebuild controls. For scheduled routes,
+`full_sweep_every = 0` forces a full sweep every iteration; positive
+values are periodic and negative values are rejected.}
 
 \item{skip_nulls_burnin_only}{Restrict null-marker skipping to burn-in.}
 

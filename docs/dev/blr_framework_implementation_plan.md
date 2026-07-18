@@ -1,8 +1,18 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 9C complete; fixed-prior CSR BayesC canonicalized and stabilized
-**Date:** 2026-07-16
+**Status:** Phase 12A cross-cutting hardening; latest completed model phase Phase 11D
+**Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
+
+## Current framework status
+
+Canonical ordinary CSR routes are BayesC, BayesR, SBayesRC, fixed-prior
+BayesC, group BayesC, and learned-annotation BayesC. Canonical scheduled routes
+are ordinary-CSR BayesC and the public scheduled packed-BED BayesC route.
+Experimental/sparse BED BayesC, packed-BED BayesR, packed-BED BayesRC,
+block-eigen routes where applicable, and legacy multivariate implementations
+remain audited or protected but noncanonical. Later phase sections are the
+current record; earlier status statements are historical snapshots.
 
 ## 1. Purpose
 
@@ -581,7 +591,7 @@ Initial scale policies:
 For a categorical hierarchy:
 
 \[
-q_j=\prod_{h=1}^{H}	heta_{h,g_h(j)}.
+q_j=\prod_{h=1}^{H}\theta_{h,g_h(j)}.
 \]
 
 A scale-preserving weighted geometric normalization is:
@@ -589,13 +599,13 @@ A scale-preserving weighted geometric normalization is:
 \[
 c_h =
 \exp\left[
-rac{\sum_g n_{hg}\log	heta_{hg}}
+\frac{\sum_g n_{hg}\log\theta_{hg}}
 {\sum_g n_{hg}}
 ight],
 \]
 
 \[
-	heta_{hg}\leftarrow	heta_{hg}/c_h,
+\theta_{hg}\leftarrow\theta_{hg}/c_h,
 \qquad
 v_b\leftarrow v_bc_h.
 \]
@@ -1312,3 +1322,14 @@ canonical references, and Phase 11C3/11D establish runtime, completed-fit RSS,
 BED-size and page-cache-qualified I/O baselines. Migration scaffolding is
 absent. The experimental scheduled single-chain and sparse BayesC routes,
 packed-BED BayesR, and packed-BED BayesRC remain unchanged and noncanonical.
+
+### Phase 12A cross-cutting hardening
+
+Current-status metadata is synchronized; maintained Markdown rejects control
+bytes; structural source counts distinguish zero, one, and duplicates; and
+`full_sweep_every=0` is consistently accepted as full sweep every iteration
+for scheduled routes already implementing that behavior. Posterior aggregation
+and converter responsibilities are explicit, unconditional scheduled-CSR core
+console writes are removed, canonical commented snapshots are removed, fast
+and extended CI are established, and peak-RSS tooling distinguishes sampled
+peak from completed-fit RSS. Canonical numerical references remain unchanged.

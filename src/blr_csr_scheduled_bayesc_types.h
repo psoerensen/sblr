@@ -67,6 +67,7 @@ struct CsrScheduledBayesCExecutionResult {
  arma::vec final_vg;
  arma::vec final_ve;
  arma::vec final_pi;
+ arma::vec mean_pi;
  arma::vec final_vle;
  arma::vec final_vld;
  arma::vec nsamples;
@@ -148,4 +149,3 @@ inline void validate_csr_scheduled_bayesc_context(
 } }
 
 #endif
-

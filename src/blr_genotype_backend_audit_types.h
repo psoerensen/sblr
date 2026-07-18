@@ -103,8 +103,8 @@ inline void validate_bed_execution_audit_contract(
      static_cast<int>(x.chains.explicit_chain_seeds.size())!=x.chains.chains)
   throw std::invalid_argument("BED explicit chain seeds must match chains");
  if (x.scheduler.kind==SchedulerKind::adaptive_due) {
-  if (x.scheduler.full_sweep_every<=0)
-   throw std::invalid_argument("full_sweep_every must be positive");
+  if (x.scheduler.full_sweep_every<0)
+   throw std::invalid_argument("full_sweep_every must be non-negative");
   if (x.scheduler.null_skip_base<=0 ||
       x.scheduler.null_skip_max<x.scheduler.null_skip_base)
    throw std::invalid_argument("invalid adaptive BED skip controls");

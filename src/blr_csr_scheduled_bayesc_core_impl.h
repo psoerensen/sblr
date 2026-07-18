@@ -3,7 +3,6 @@
 
 #include "blr_csr_scheduled_bayesc_types.h"
 
-#include <iostream>
 #include <utility>
 
 // Implementation detail: included only by st_cpg_omp_csr_scheduled.cpp.
@@ -123,30 +122,7 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
  nthreads = stblr_num_threads_for_tasks(ncores, ntasks);
  omp_set_num_threads(nthreads);
 
- std::cout
- << "STBLR scheduled CSR OpenMP requested threads = " << nthreads
- << ", omp_get_max_threads = " << omp_get_max_threads()
- << ", num procs = " << omp_get_num_procs()
- << ", nchains=" << nchains
- << ", tasks=" << ntasks
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 #endif
-
- std::cout
- << "Scheduled CSR sampler: full_sweep_every=" << full_sweep_every
- << ", null_skip_base=" << null_skip_base
- << ", null_skip_max=" << null_skip_max
- << ", candidate_threshold=" << candidate_threshold
- << ", candidate_lifetime=" << candidate_lifetime
- << ", skip_nulls_burnin_only=" << skip_nulls_burnin_only
- << ", wakeup_ld_neighbors=" << wakeup_ld_neighbors
- << ", wakeup_diff_threshold=" << wakeup_diff_threshold
- << ", wakeup_max_neighbors=" << wakeup_max_neighbors
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -550,19 +526,6 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
   }
  }
 
-#ifdef _OPENMP
- for (int task = 0; task < ntasks; ++task) {
-  const int t = stblr_task_trait(task, nchains);
-  const int chain = stblr_task_chain(task, nchains);
-  std::cout
-  << "trait " << t
-  << ", chain " << chain
-  << " used thread " << thread_used[static_cast<std::size_t>(task)]
-  << ", seconds = " << task_seconds[static_cast<std::size_t>(task)]
-  << "\n";
- }
-#endif
-
  for (int task = 0; task < ntasks; ++task) {
   if (failed[static_cast<std::size_t>(task)]) {
    const int t = stblr_task_trait(task, nchains);
@@ -654,6 +617,17 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
 
  // --------------------------------------------------------------------------
 
+ arma::vec mean_pi(nt,arma::fill::zeros);
+ for (int t=0;t<nt;++t) {
+  const arma::uword tu=static_cast<arma::uword>(t);
+  double sum=0.0; int count=0;
+  for (int it=nburn;it<nit+nburn;++it) {
+   if ((it-nburn)%nthin!=0) continue;
+   sum+=pis_mat(tu,static_cast<arma::uword>(it)); ++count;
+  }
+  mean_pi(tu)=count>0?sum/static_cast<double>(count):final_pi(tu);
+ }
+
  CsrScheduledBayesCExecutionResult result;
  result.bm=std::move(bm_mat);
  result.dm=std::move(dm_mat);
@@ -676,6 +650,7 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
  result.final_vg=std::move(final_vg);
  result.final_ve=std::move(final_ve);
  result.final_pi=std::move(final_pi);
+ result.mean_pi=std::move(mean_pi);
  result.final_vle=std::move(final_vle);
  result.final_vld=std::move(final_vld);
  result.nsamples=std::move(nsamples_vec);

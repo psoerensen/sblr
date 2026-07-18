@@ -28,7 +28,7 @@ test_that("binding-neutral BED audit contracts encode current distinctions", {
   expect_match(types, "full_sweep_only", fixed = TRUE)
   expect_match(types, "worker_thread_persistent", fixed = TRUE)
   for (field_error in c("bed_paths must not be empty", "packed BED must be SNP-major",
-      "full_sweep_every must be positive", "explicit chain seeds must match chains",
+      "full_sweep_every must be non-negative", "explicit chain seeds must match chains",
       "BayesRC annotations must have one row per marker and positive columns"))
     expect_match(types, field_error, fixed = TRUE)
   expect_false(grepl("Rcpp|SEXP|pybind11|Python.h", types))
@@ -36,12 +36,16 @@ test_that("binding-neutral BED audit contracts encode current distinctions", {
 
 test_that("RNG ownership risks and safe backends are localized", {
   single <- phase11a_text("src/st_cpg_omp_individual_scheduled.cpp")
-  chains <- phase11a_text("src/st_cpg_omp_individual_scheduled_chains.cpp")
+  chains <- phase11a_text("src/blr_bed_scheduled_bayesc_core_impl.h")
+  rng <- phase11a_text("src/blr_bed_scheduled_bayesc_rng.h")
   bayesr <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
   bayesrc <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
-  expect_match(single, "static thread_local std::normal_distribution<double>", fixed = TRUE)
-  expect_match(chains, "static thread_local std::normal_distribution<double>", fixed = TRUE)
-  expect_match(chains, "static thread_local std::uniform_real_distribution<double>", fixed = TRUE)
+  active <- paste(grep("^\\s*//", strsplit(paste(single, chains), "\\n")[[1L]],
+                       invert = TRUE, value = TRUE), collapse = "\n")
+  expect_false(grepl("static thread_local", active, fixed = TRUE))
+  expect_match(rng, "BedScheduledBayesCChainRng", fixed = TRUE)
+  expect_match(rng, "std::normal_distribution<double>", fixed = TRUE)
+  expect_match(rng, "std::uniform_real_distribution<double>", fixed = TRUE)
   expect_match(bayesr, "std::normal_distribution<double> norm01(0.0, 1.0)", fixed = TRUE)
   expect_match(bayesrc, "std::normal_distribution<double> norm01(0.0, 1.0)", fixed = TRUE)
   diagnostic <- sblr:::blr_phase10a_distribution_cache_diagnostic_cpp(1701L, 2L)
@@ -89,7 +93,7 @@ test_that("safe BED models are core-order independent after metadata normalizati
 })
 
 test_that("scheduler semantics are similar only for BayesC and BayesR", {
-  chains <- phase11a_text("src/st_cpg_omp_individual_scheduled_chains.cpp")
+  chains <- phase11a_text("src/blr_bed_scheduled_bayesc_core_impl.h")
   bayesr <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
   bayesrc <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
   for (needle in c("full_sweep_every", "null_skip_base", "candidate_lifetime",
@@ -108,7 +112,6 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp" = "85a5e45e03c59ce62654496a2f076fe9",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
-    "src/st_cpg_omp_csr_scheduled.cpp" = "fa2148492bdee4a5a363f7ecdf67c789",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e")

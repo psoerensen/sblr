@@ -2347,7 +2347,9 @@ stblr_csr_bayesr <- function(
 #'   supported.
 #' @param scheduled Use the scheduled sparse-LD sampler.
 #' @param full_sweep_every,null_skip_base,null_skip_max,candidate_threshold
-#'   Scheduled sampler controls.
+#'   Scheduled sampler controls. `full_sweep_every = 0` forces a full sweep on
+#'   every iteration; positive values use that periodic interval and negative
+#'   values are rejected.
 #' @param candidate_lifetime Number of scheduled sweeps that candidates remain
 #'   active.
 #' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
@@ -3533,7 +3535,9 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
 #' @param adjE Residual adjustment factor.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime
-#'   Sampler scheduling and residual-rebuild controls.
+#'   Sampler scheduling and residual-rebuild controls. For scheduled routes,
+#'   `full_sweep_every = 0` forces a full sweep every iteration; positive
+#'   values are periodic and negative values are rejected.
 #' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
@@ -3842,7 +3846,9 @@ stblr_bed_marker <- function(
 #'   annotations. By default binary columns remain on the 0/1 scale.
 #' @param nub,nue Prior degrees of freedom.
 #' @param rebuild_every,full_sweep_every,candidate_threshold,candidate_lifetime
-#'   Sampler scheduling and residual-rebuild controls.
+#'   Sampler scheduling and residual-rebuild controls. For scheduled routes,
+#'   `full_sweep_every = 0` forces a full sweep every iteration; positive
+#'   values are periodic and negative values are rejected.
 #' @param skip_nulls_burnin_only Restrict null-marker skipping to burn-in.
 #' @param null_skip_base,null_skip_max Null-marker scheduling controls.
 #' @param return_wy,return_r Return optional sampler state.

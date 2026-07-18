@@ -15,13 +15,13 @@ test_that("Phase 10C3 has one core, scheduler, converter, aggregation, and RNG p
   source <- phase10c3_text("src/st_cpg_omp_csr_scheduled.cpp")
   core <- phase10c3_text("src/blr_csr_scheduled_bayesc_core_impl.h")
   types <- phase10c3_text("src/blr_csr_scheduled_bayesc_types.h")
-  expect_equal(length(gregexpr("run_csr_scheduled_bayesc(", core, fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("for (int it = 0; it < total_it; ++it)", core,
-    fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("ScheduledChainRng chain_rng(task_seed)", core,
-    fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("stblr_csr_scheduled_bayesc_result_to_raw(", source,
-    fixed = TRUE)[[1]]), 2L) # definition and sole call
+  expect_equal(source_match_count("run_csr_scheduled_bayesc(", core, fixed = TRUE), 1L)
+  expect_equal(source_match_count("for (int it = 0; it < total_it; ++it)", core,
+    fixed = TRUE), 1L)
+  expect_equal(source_match_count("ScheduledChainRng chain_rng(task_seed)", core,
+    fixed = TRUE), 1L)
+  expect_equal(source_match_count("stblr_csr_scheduled_bayesc_result_to_raw(", source,
+    fixed = TRUE), 2L) # definition and sole call
   expect_match(types, "struct CsrScheduledBayesCExecutionContext", fixed = TRUE)
   expect_match(types, "struct CsrScheduledBayesCExecutionResult", fixed = TRUE)
   expect_match(source, "return stblr_csr_scheduled_bayesc_result_to_raw(", fixed = TRUE)

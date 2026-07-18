@@ -28,11 +28,11 @@ test_that("Phase 10C1 has one guarded scheduled execution block", {
   expect_match(core, "#define SBLR_BLR_CSR_SCHEDULED_BAYESC_CORE_IMPL_H", fixed = TRUE)
   expect_match(core, "#endif  // SBLR_BLR_CSR_SCHEDULED_BAYESC_CORE_IMPL_H", fixed = TRUE)
   expect_match(source, '#include "blr_csr_scheduled_bayesc_core_impl.h"', fixed = TRUE)
-  expect_equal(length(gregexpr("for (int it = 0; it < total_it; ++it)", core,
-    fixed = TRUE)[[1]]), 1L)
+  expect_equal(source_match_count("for (int it = 0; it < total_it; ++it)", core,
+    fixed = TRUE), 1L)
   expect_false(grepl("for (int it = 0; it < total_it; ++it)", source_active, fixed = TRUE))
-  expect_equal(length(gregexpr("ScheduledChainRng chain_rng(task_seed)", core,
-    fixed = TRUE)[[1]]), 1L)
+  expect_equal(source_match_count("ScheduledChainRng chain_rng(task_seed)", core,
+    fixed = TRUE), 1L)
   expect_false(grepl("old_path|new_path|route_selector|execution_selector", paste(source, core)))
 })
 

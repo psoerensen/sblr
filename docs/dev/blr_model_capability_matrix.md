@@ -1,8 +1,17 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 4 shared scalar infrastructure recorded
-**Date:** 2026-07-13  
+**Status:** Phase 12A cross-cutting hardening; latest completed model phase Phase 11D
+**Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
+
+## Current framework status
+
+Canonical ordinary CSR: BayesC, BayesR, SBayesRC, fixed-prior BayesC, group
+BayesC, and learned-annotation BayesC. Canonical scheduled: ordinary-CSR BayesC
+and public scheduled packed-BED BayesC. Experimental/sparse BED BayesC,
+packed-BED BayesR/BayesRC, block-eigen where applicable, and legacy
+multivariate implementations remain audited/protected and noncanonical.
+Historical phase descriptions below retain their original point-in-time scope.
 
 ## 1. Purpose
 

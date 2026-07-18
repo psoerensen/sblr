@@ -18,11 +18,11 @@ test_that("canonical scheduled BayesC architecture is singular and build safe", 
   scheduled <- phase10d_text("src/blr_scheduled_execution_types.h")
   expect_match(core, "#ifndef SBLR_BLR_CSR_SCHEDULED_BAYESC_CORE_IMPL_H", fixed = TRUE)
   expect_match(core, "Implementation detail: included only by st_cpg_omp_csr_scheduled.cpp", fixed = TRUE)
-  expect_equal(length(gregexpr("run_csr_scheduled_bayesc(", core, fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("for (int it = 0; it < total_it; ++it)", core, fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("ScheduledChainRng chain_rng(task_seed)", core, fixed = TRUE)[[1]]), 1L)
-  expect_equal(length(gregexpr("stblr_csr_scheduled_bayesc_result_to_raw(", source,
-    fixed = TRUE)[[1]]), 2L)
+  expect_equal(source_match_count("run_csr_scheduled_bayesc(", core, fixed = TRUE), 1L)
+  expect_equal(source_match_count("for (int it = 0; it < total_it; ++it)", core, fixed = TRUE), 1L)
+  expect_equal(source_match_count("ScheduledChainRng chain_rng(task_seed)", core, fixed = TRUE), 1L)
+  expect_equal(source_match_count("stblr_csr_scheduled_bayesc_result_to_raw(", source,
+    fixed = TRUE), 2L)
   expect_match(types, "struct CsrScheduledBayesCExecutionContext", fixed = TRUE)
   expect_match(types, "struct CsrScheduledBayesCExecutionResult", fixed = TRUE)
   expect_match(types, "const Operator& ld", fixed = TRUE)
