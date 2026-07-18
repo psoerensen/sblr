@@ -7,10 +7,11 @@ phase13a_text <- function(path) paste(readLines(file.path(phase13a_root, path),
 test_that("Phase 13A BayesR route and future per-chain seam are discoverable", {
   public <- phase13a_text("R/sparse_ld_bed_helper.R")
   native <- phase13a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
+  core <- phase13a_text("src/blr_bed_bayesr_core_impl.h")
   expect_match(public, 'method = c("bayesc", "bayesr", "bayesrc")', fixed = TRUE)
   expect_match(public, ".fit_stblr_bed_bayesr", fixed = TRUE)
   expect_source_count("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(", native, 1L)
-  expect_source_count("static ChainResultBayesR run_one_bayesr_chain(", native, 1L)
+  expect_source_count("static ChainResultBayesR run_one_bayesr_chain(", core, 1L)
   expect_match(native, "#pragma omp parallel for num_threads(nthreads) schedule(static)", fixed = TRUE)
 })
 
@@ -27,7 +28,9 @@ test_that("Phase 13A binding-neutral audit contracts encode validated semantics"
 })
 
 test_that("BayesR RNG and scheduler ownership are logical-chain local", {
-  native <- phase13a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
+  native <- paste(
+    phase13a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"),
+    phase13a_text("src/blr_bed_bayesr_core_impl.h"), sep = "\n")
   for (needle in c("std::mt19937 gen_t(chain_seed)",
       "std::uniform_real_distribution<double> runif(0.0, 1.0)",
       "std::normal_distribution<double> norm01(0.0, 1.0)",
@@ -97,7 +100,6 @@ test_that("BayesR reductions and nonreductions are explicit", {
 
 test_that("BayesR production and protected sources remain byte-identical", {
   protected <- c(
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp" = "85a5e45e03c59ce62654496a2f076fe9",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
     "src/st_cpg_omp_individual_scheduled_chains.cpp" = "43c71b13d8259a95f88d8a95498b213b",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",

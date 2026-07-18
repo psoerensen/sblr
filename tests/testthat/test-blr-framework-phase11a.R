@@ -38,7 +38,8 @@ test_that("RNG ownership risks and safe backends are localized", {
   single <- phase11a_text("src/st_cpg_omp_individual_scheduled.cpp")
   chains <- phase11a_text("src/blr_bed_scheduled_bayesc_core_impl.h")
   rng <- phase11a_text("src/blr_bed_scheduled_bayesc_rng.h")
-  bayesr <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
+  bayesr <- paste(phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"),
+    phase11a_text("src/blr_bed_bayesr_core_impl.h"), sep = "\n")
   bayesrc <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
   active <- paste(grep("^\\s*//", strsplit(paste(single, chains), "\\n")[[1L]],
                        invert = TRUE, value = TRUE), collapse = "\n")
@@ -94,7 +95,8 @@ test_that("safe BED models are core-order independent after metadata normalizati
 
 test_that("scheduler semantics are similar only for BayesC and BayesR", {
   chains <- phase11a_text("src/blr_bed_scheduled_bayesc_core_impl.h")
-  bayesr <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
+  bayesr <- paste(phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"),
+    phase11a_text("src/blr_bed_bayesr_core_impl.h"), sep = "\n")
   bayesrc <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
   for (needle in c("full_sweep_every", "null_skip_base", "candidate_lifetime",
       "scheduled_at", "candidate_list")) {
@@ -109,7 +111,6 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
   protected <- c(
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp" = "85a5e45e03c59ce62654496a2f076fe9",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",

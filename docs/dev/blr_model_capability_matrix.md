@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 13A packed-BED BayesR audit complete; migration not started
+**Status:** Phase 13B packed-BED BayesR per-chain block extracted; migration in progress
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -16,6 +16,10 @@ Historical phase descriptions below retain their original point-in-time scope.
 Packed-BED BayesR remains noncanonical and production-unchanged. Phase 13A
 completed its route/model/component, scheduler/RNG, aggregation/schema,
 deterministic-reference, and extraction-boundary audit.
+
+Phase 13B mechanically extracted its deterministic per-chain implementation;
+the Phase 13A trajectories, inline aggregation/conversion, public route and
+schema remain unchanged. Typed execution contracts are not yet active.
 
 ## 1. Purpose
 

@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 13A packed-BED BayesR audit complete; migration not started
+**Status:** Phase 13B packed-BED BayesR per-chain block extracted; migration in progress
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -18,6 +18,12 @@ Phase 13A leaves packed-BED BayesR production unchanged while establishing its
 route/statistical contract, component ordering, scheduler and RNG ownership,
 aggregation/schema inventory, deterministic references, and future per-chain
 extraction seam.
+
+Phase 13B mechanically relocates the deterministic per-chain helper and its
+binding-neutral result/helper vocabulary into one guarded implementation header.
+Logical-chain RNG, component and scheduler semantics, genotype ownership, inline
+task aggregation and inline conversion are unchanged. A typed callable boundary
+is not yet active.
 
 ## 1. Purpose
 
