@@ -35,11 +35,11 @@ test_that("Phase 14B preserves the shared probit, latent and alpha boundary",{
  expect_false(grepl("factor|marker_id|rownames|colnames|add_intercept|data.frame",core))
 })
 
-test_that("Phase 14B leaves decoding, dispatch, aggregation and conversion adapter-owned",{
+test_that("Phase 14B extraction remains underneath the migrated adapter boundary",{
  adapter<-phase14b_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
  core<-phase14b_text("src/blr_bed_bayesrc_core_impl.h")
- for(x in c("br_read_bed_blocked","std::vector<sblr::core::BedBayesRCChainExecutionResult> jobs","const sblr::core::BedBayesRCChainExecutionResult& z = jobs[ch * nt + t]",
-  "Rcpp::List raw = Rcpp::List::create","marker_prior_final[t] += st_bayesrc_compute_snp_pi")) expect_match(adapter,x,fixed=TRUE)
+ for(x in c("br_read_bed_blocked","std::vector<sblr::core::BedBayesRCChainExecutionResult> jobs",
+  "aggregate_bed_bayesrc_results(jobs,aggregation_context)","stblr_bed_bayesrc_result_to_raw(result,metadata)")) expect_match(adapter,x,fixed=TRUE)
  expect_false(grepl("Rcpp::List|br_read_bed_blocked|fopen|fseek|fread|bed_files|R_NilValue",core))
 })
 

@@ -60,6 +60,37 @@ struct BedBayesRCChainExecutionResult {
  std::string error;
 };
 
+struct BedBayesRCAggregationContext {
+ const arma::mat& annotation;
+ const std::vector<double>& component_scales;
+ std::size_t marker_count;
+ std::size_t annotation_count;
+ std::size_t component_count;
+ std::size_t trait_count;
+ std::size_t chain_count;
+ std::size_t trace_length;
+ double pi_floor;
+ bool keep_chains;
+};
+
+struct BedBayesRCExecutionResult {
+ arma::mat bm, dm, b, state, component_mean;
+ arma::mat vbs, vgs, ves, vle, vld, pis;
+ arma::mat final_prior, mean_prior;
+ std::vector<arma::mat> comp_prob, marker_prior_final;
+ std::vector<arma::mat> alpha_mean, alpha_final;
+ arma::mat sigma_mean, sigma_final;
+ arma::vec final_vb, final_vg, final_ve;
+ arma::vec log_cpo, mean_log_cpo, nsamples;
+ arma::mat component_counts;
+ arma::mat wy, residual_marker_score;
+ bool has_wy=false, has_residual_marker_score=false;
+ std::vector<BedBayesRCChainExecutionResult> retained_chains;
+ std::vector<std::string> failures;
+ std::size_t marker_count=0, annotation_count=0, component_count=0;
+ std::size_t trait_count=0, chain_count=0, trace_length=0;
+};
+
 template <class PackedGenotype, class AnnotationMatrix, class MarkerMap>
 struct BedBayesRCChainExecutionContext {
  BedBayesRCPackedGenotypeView<PackedGenotype> genotype;

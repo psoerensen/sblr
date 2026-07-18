@@ -86,7 +86,7 @@ test_that("Phase 14A fixed intercept reduction remains BayesR-exact",{
 })
 
 test_that("Phase 14A production and protected sources remain frozen",{
- protected<-c("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"="1f09f1e420c20a395c26867ad1d912d2",
+ protected<-c("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"="9812450ae103f5026d1632b2bcc31e95",
  "src/blr_bed_bayesrc_core_impl.h"="82365cf3f1f5306c57b980f59b4d83d3",
  "src/st_bayesrc_annotation_prior.h"="1e7072512f4246fc2a36e79de655d8c5","src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
  "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83","src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739",

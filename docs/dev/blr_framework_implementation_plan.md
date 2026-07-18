@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 14C packed-BED BayesRC typed chain boundary active
+**Status:** Phase 14D packed-BED BayesRC migration complete
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -57,6 +57,13 @@ contracts. The core uses a stateless binding-neutral normal-probability interfac
 backed by the unchanged Rmath calls. Full sweeps, ordered probit sticks, latent and
 alpha updates, logical-chain RNG, and Phase 14A references remain exact. Alignment,
 dispatch, aggregation, and conversion remain adapter-owned; migration continues.
+
+Phase 14D completes the packed-BED BayesRC migration with one typed aggregate
+result, one binding-neutral aggregation path, singular final marker-prior
+recomputation, and one named binding converter. Annotation alignment, BED
+decoding, OpenMP task dispatch, and optional genotype-derived diagnostics remain
+adapter-owned. Phase 14A references and public schemas remain exact; the route
+is migrated, noncanonical, and ready for canonicalization.
 
 ## 1. Purpose
 

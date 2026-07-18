@@ -75,7 +75,7 @@ test_that("Phase 7B3 protected sources and public namespace remain unchanged", {
              "NAMESPACE")
  expected <- c("92dafc0266d5a0e72aea000224154cef", "e5975c311c69fe536db57dd21f01334f", "f7c617cbfc172639c1f8aea1bd8b1876",
                "0a005f9d5a19037285fd4869fdc4dcf0", "bf1d4b73065207ca361c7abdab3cb253", "4dac6bef2df917613df8e1a827640303",
-               "49f0a62c9fe235967a264b0f8de144a7", "bec3bc1e41841ab77747e34dc9818574", "1f09f1e420c20a395c26867ad1d912d2",
+               "49f0a62c9fe235967a264b0f8de144a7", "bec3bc1e41841ab77747e34dc9818574", "9812450ae103f5026d1632b2bcc31e95",
                "f5b6ee37a3972aa436357bdc8f602f4e")
  expect_identical(unname(tools::md5sum(vapply(paths, phase7b3_path, character(1)))), expected)
 })

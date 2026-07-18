@@ -3,6 +3,107 @@
 #include "st_bed_bayesr_common.h"
 #include "st_bayesrc_annotation_prior.h"
 #include "blr_bed_bayesrc_core_impl.h"
+#include "blr_bed_bayesrc_aggregate_impl.h"
+
+struct BedBayesRCBindingMetadata {
+ const std::vector<double>& gamma;
+ int m, nt, ntrace, nit, nburn, nthin, nchains, n_used;
+ double n_annotations;
+ int annotation_updates_per_chain;
+ bool keep_chains, return_wy, return_r;
+};
+
+static Rcpp::List stblr_bed_bayesrc_result_to_raw(
+ const sblr::core::BedBayesRCExecutionResult& result,
+ const BedBayesRCBindingMetadata& metadata
+) {
+ const int K=static_cast<int>(metadata.gamma.size());
+ Rcpp::List cp_out(metadata.nt), marker_prior_final_out(metadata.nt);
+ Rcpp::List alpha_out(metadata.nt), alpha_final_out(metadata.nt);
+ for (int t=0;t<metadata.nt;++t) {
+  cp_out[t]=result.comp_prob[static_cast<std::size_t>(t)];
+  marker_prior_final_out[t]=result.marker_prior_final[static_cast<std::size_t>(t)];
+  alpha_out[t]=result.alpha_mean[static_cast<std::size_t>(t)];
+  alpha_final_out[t]=result.alpha_final[static_cast<std::size_t>(t)];
+ }
+ Rcpp::CharacterVector component_names(K);
+ for (int k=0;k<K;++k) {
+  char buf[64];
+  std::snprintf(buf,sizeof(buf),"gamma_%.2f",metadata.gamma[static_cast<std::size_t>(k)]);
+  component_names[k]=std::string(buf);
+ }
+ component_names[0]="gamma_0.00";
+ Rcpp::RObject chains_out=R_NilValue;
+ if (metadata.keep_chains) {
+  Rcpp::List retained_chains(metadata.nt);
+  for (int t=0;t<metadata.nt;++t) {
+   Rcpp::List trait_chains(metadata.nchains);
+   for (int ch=0;ch<metadata.nchains;++ch) {
+    const auto& z=result.retained_chains[static_cast<std::size_t>(ch*metadata.nt+t)];
+    trait_chains[ch]=Rcpp::List::create(
+     Rcpp::Named("bm")=z.bm,Rcpp::Named("dm")=z.dm,
+     Rcpp::Named("b")=z.b,Rcpp::Named("state")=z.state,
+     Rcpp::Named("comp_prob")=z.comp_prob,
+     Rcpp::Named("alpha")=z.annot_alpha_mean,
+     Rcpp::Named("sigmaSqAlpha")=z.annot_sigma_mean,
+     Rcpp::Named("pis")=z.pis
+    );
+   }
+   retained_chains[t]=trait_chains;
+  }
+  chains_out=retained_chains;
+ }
+ Rcpp::NumericVector nsamples(result.nsamples.begin(),result.nsamples.end());
+ Rcpp::NumericVector log_cpo(result.log_cpo.begin(),result.log_cpo.end());
+ Rcpp::NumericVector mean_log_cpo(result.mean_log_cpo.begin(),result.mean_log_cpo.end());
+ Rcpp::List raw=Rcpp::List::create(
+  Rcpp::Named("schema")=Rcpp::List::create(Rcpp::Named("class")="stblr_raw",Rcpp::Named("version")=1),
+  Rcpp::Named("meta")=Rcpp::List::create(
+   Rcpp::Named("model")="bayesrc",Rcpp::Named("backend")="bed_bayesrc",
+   Rcpp::Named("data_level")="individual",Rcpp::Named("prior_type")="annotation_component",
+   Rcpp::Named("m")=metadata.m,Rcpp::Named("nt")=metadata.nt,Rcpp::Named("n_trace")=metadata.ntrace,
+   Rcpp::Named("nit")=metadata.nit,Rcpp::Named("nburn")=metadata.nburn,Rcpp::Named("nthin")=metadata.nthin,
+   Rcpp::Named("nchains")=metadata.nchains,Rcpp::Named("keep_chains")=metadata.keep_chains,
+   Rcpp::Named("n_components")=K,Rcpp::Named("n_annotations")=metadata.n_annotations,
+   Rcpp::Named("n_groups")=0,Rcpp::Named("annotations")=true,Rcpp::Named("scheduled")=false),
+  Rcpp::Named("marker")=Rcpp::List::create(
+   Rcpp::Named("bm")=result.bm,Rcpp::Named("dm")=result.dm,
+   Rcpp::Named("wy")=metadata.return_wy ? Rcpp::wrap(result.wy) : R_NilValue,
+   Rcpp::Named("r")=metadata.return_r ? Rcpp::wrap(result.residual_marker_score) : R_NilValue,
+   Rcpp::Named("b")=result.b,Rcpp::Named("state")=result.state),
+  Rcpp::Named("trace")=Rcpp::List::create(
+   Rcpp::Named("vbs")=result.vbs,Rcpp::Named("vgs")=result.vgs,Rcpp::Named("ves")=result.ves,
+   Rcpp::Named("vle")=result.vle,Rcpp::Named("vld")=result.vld,Rcpp::Named("pis")=result.pis),
+  Rcpp::Named("variance")=Rcpp::List::create(
+   Rcpp::Named("covb")=arma::diagmat(result.final_vb),Rcpp::Named("covg")=arma::diagmat(result.final_vg),
+   Rcpp::Named("cove")=arma::diagmat(result.final_ve),Rcpp::Named("vb")=arma::diagmat(result.final_vb),
+   Rcpp::Named("vg")=arma::diagmat(result.final_vg),Rcpp::Named("ve")=arma::diagmat(result.final_ve)),
+  Rcpp::Named("pi")=Rcpp::List::create(Rcpp::Named("final")=result.final_prior,
+   Rcpp::Named("mean")=result.mean_prior,Rcpp::Named("names")=component_names),
+  Rcpp::Named("diagnostics")=Rcpp::List::create(
+   Rcpp::Named("nsamples")=nsamples,Rcpp::Named("n_used")=metadata.n_used,
+   Rcpp::Named("log_cpo")=log_cpo,Rcpp::Named("mean_log_cpo")=mean_log_cpo,
+   Rcpp::Named("full_sweeps")=true,Rcpp::Named("adaptive_skipping")=false,
+   Rcpp::Named("annotation_updates_per_chain")=metadata.annotation_updates_per_chain,
+   Rcpp::Named("ld_swap")=R_NilValue),
+  Rcpp::Named("chains")=chains_out,Rcpp::Named("prior")=Rcpp::List::create(),
+  Rcpp::Named("group")=Rcpp::List::create(),
+  Rcpp::Named("annotation")=Rcpp::List::create(
+   Rcpp::Named("annotation_names")=R_NilValue,Rcpp::Named("alpha_mean")=alpha_out,
+   Rcpp::Named("alpha_final")=alpha_final_out,
+   Rcpp::Named("sigmaSqAlpha_mean")=result.sigma_mean.t(),
+   Rcpp::Named("sigmaSqAlpha_final")=result.sigma_final.t(),
+   Rcpp::Named("marker_prior_final")=marker_prior_final_out),
+  Rcpp::Named("component")=Rcpp::List::create(
+   Rcpp::Named("names")=component_names,Rcpp::Named("mixture_var")=metadata.gamma,
+   Rcpp::Named("prob")=cp_out,Rcpp::Named("ncomp")=result.component_counts,
+   Rcpp::Named("dm_component_mean")=result.component_mean),
+  Rcpp::Named("selection")=Rcpp::List::create(Rcpp::Named("enabled")=false,
+   Rcpp::Named("fixed")=false,Rcpp::Named("trace")=R_NilValue)
+ );
+ raw.attr("class")=Rcpp::CharacterVector::create("stblr_raw_v1","stblr_raw","list");
+ return raw;
+}
 
 // [[Rcpp::export]]
 Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
@@ -94,140 +195,31 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  for (int job = 0; job < njobs; ++job)
   if (jobs[job].failed) throw std::runtime_error(jobs[job].error);
  const int ntrace = nit + nburn;
- arma::mat bm(m, nt, arma::fill::zeros), dm(m, nt, arma::fill::zeros);
- arma::mat b(m, nt, arma::fill::zeros), state(m, nt, arma::fill::zeros);
- arma::mat component_mean(m, nt, arma::fill::zeros);
- arma::mat vbs(ntrace, nt, arma::fill::zeros), vgs(ntrace, nt, arma::fill::zeros);
- arma::mat ves(ntrace, nt, arma::fill::zeros), vle(ntrace, nt, arma::fill::zeros);
- arma::mat vld(ntrace, nt, arma::fill::zeros), pis(ntrace, nt, arma::fill::zeros);
- arma::mat final_prior(nt, K, arma::fill::zeros), mean_prior(nt, K, arma::fill::zeros);
- std::vector<arma::mat> comp_prob(static_cast<std::size_t>(nt));
- std::vector<arma::mat> marker_prior_final(static_cast<std::size_t>(nt));
- std::vector<arma::mat> alpha_mean(static_cast<std::size_t>(nt));
- std::vector<arma::mat> alpha_final(static_cast<std::size_t>(nt));
- arma::mat sigma_mean(nt, K - 1, arma::fill::zeros);
- arma::mat sigma_final(nt, K - 1, arma::fill::zeros);
- arma::vec final_vb(nt, arma::fill::zeros), final_vg(nt, arma::fill::zeros), final_ve(nt, arma::fill::zeros);
- Rcpp::NumericVector log_cpo(nt), mean_log_cpo(nt), nsamples(nt);
- for (int t = 0; t < nt; ++t) {
-  comp_prob[t].zeros(m, K); marker_prior_final[t].zeros(m, K);
-  alpha_mean[t].zeros(A.n_cols, K - 1);
-  alpha_final[t].zeros(A.n_cols, K - 1);
-  for (int ch = 0; ch < nchains; ++ch) {
-   const sblr::core::BedBayesRCChainExecutionResult& z = jobs[ch * nt + t];
-   bm.col(t) += z.bm.t(); dm.col(t) += z.dm.t(); b.col(t) += z.b.t();
-   state.col(t) += z.state.t(); component_mean.col(t) += z.component_mean.t();
-   vbs.col(t) += z.vbs.t(); vgs.col(t) += z.vgs.t(); ves.col(t) += z.ves.t();
-   vle.col(t) += z.vles.t(); vld.col(t) += z.vlds.t(); pis.col(t) += z.pis.t();
-   comp_prob[t] += z.comp_prob; alpha_mean[t] += z.annot_alpha_mean;
-   alpha_final[t] += z.annot_alpha_final;
-   sigma_mean.row(t) += z.annot_sigma_mean.t(); mean_prior.row(t) += z.mean_prior;
-   sigma_final.row(t) += z.annot_sigma_final.t();
-   marker_prior_final[t] += st_bayesrc_compute_snp_pi(A, z.annot_alpha_final, pi_floor);
-   final_prior.row(t) += arma::mean(st_bayesrc_compute_snp_pi(A, z.annot_alpha_final, pi_floor), 0);
-   final_vb(t) += z.final_vb; final_vg(t) += z.final_vg; final_ve(t) += z.final_ve;
-   log_cpo[t] += z.log_cpo; mean_log_cpo[t] += z.mean_log_cpo; nsamples[t] += z.nsamples;
-  }
- }
- const double inv = 1.0 / nchains;
- bm *= inv; dm *= inv; b *= inv; state *= inv; component_mean *= inv;
- vbs *= inv; vgs *= inv; ves *= inv; vle *= inv; vld *= inv; pis *= inv;
- final_prior *= inv; mean_prior *= inv; sigma_mean *= inv; sigma_final *= inv;
- final_vb *= inv; final_vg *= inv; final_ve *= inv;
- Rcpp::List cp_out(nt), marker_prior_final_out(nt), alpha_out(nt), alpha_final_out(nt);
- for (int t = 0; t < nt; ++t) {
-  cp_out[t] = comp_prob[t] * inv;
-  marker_prior_final_out[t] = marker_prior_final[t] * inv;
-  alpha_out[t] = alpha_mean[t] * inv;
-  alpha_final_out[t] = alpha_final[t] * inv;
- }
- arma::mat wy(m, nt, arma::fill::zeros), r(m, nt, arma::fill::zeros);
+ const sblr::core::BedBayesRCAggregationContext aggregation_context{
+  A,gamma,static_cast<std::size_t>(m),static_cast<std::size_t>(A.n_cols),
+  static_cast<std::size_t>(K),static_cast<std::size_t>(nt),
+  static_cast<std::size_t>(nchains),static_cast<std::size_t>(ntrace),pi_floor,keep_chains
+ };
+ sblr::core::BedBayesRCExecutionResult result=
+  sblr::core::aggregate_bed_bayesrc_results(jobs,aggregation_context);
+ if (!result.failures.empty()) throw std::runtime_error(result.failures.front());
+ result.wy.zeros(m,nt); result.residual_marker_score.zeros(m,nt);
  if (return_wy || return_r) {
   for (int t = 0; t < nt; ++t) {
    arma::vec y_t = y_mat.col(t);
-   arma::vec residual = y_t - br_xb(G, maps, order, b.col(t).t());
+   arma::vec residual = y_t - br_xb(G,maps,order,result.b.col(t).t());
    for (int j = 0; j < m; ++j) {
-    if (return_wy) wy(j, t) = br_dot_residual(G, j, maps[j], y_t.memptr());
-    if (return_r) r(j, t) = br_dot_residual(G, j, maps[j], residual.memptr());
+    if (return_wy) result.wy(j,t)=br_dot_residual(G,j,maps[j],y_t.memptr());
+    if (return_r) result.residual_marker_score(j,t)=
+     br_dot_residual(G,j,maps[j],residual.memptr());
    }
   }
  }
- Rcpp::CharacterVector component_names(K);
- for (int k = 0; k < K; ++k) {
-  char buf[64];
-  std::snprintf(buf, sizeof(buf), "gamma_%.2f", gamma[k]);
-  component_names[k] = std::string(buf);
- }
- component_names[0] = "gamma_0.00";
- arma::mat ncomp(nt, K, arma::fill::zeros);
- for (int t = 0; t < nt; ++t) ncomp.row(t) = arma::sum(comp_prob[t], 0) * inv;
- Rcpp::RObject chains_out = R_NilValue;
- if (keep_chains) {
-  Rcpp::List retained_chains(nt);
-  for (int t = 0; t < nt; ++t) {
-   Rcpp::List trait_chains(nchains);
-   for (int ch = 0; ch < nchains; ++ch) {
-    const sblr::core::BedBayesRCChainExecutionResult& z = jobs[ch * nt + t];
-    trait_chains[ch] = Rcpp::List::create(
-     Rcpp::Named("bm")=z.bm, Rcpp::Named("dm")=z.dm,
-     Rcpp::Named("b")=z.b, Rcpp::Named("state")=z.state,
-     Rcpp::Named("comp_prob")=z.comp_prob,
-     Rcpp::Named("alpha")=z.annot_alpha_mean,
-     Rcpp::Named("sigmaSqAlpha")=z.annot_sigma_mean,
-     Rcpp::Named("pis")=z.pis
-    );
-   }
-   retained_chains[t] = trait_chains;
-  }
-  chains_out = retained_chains;
- }
- Rcpp::List raw = Rcpp::List::create(
-  Rcpp::Named("schema") = Rcpp::List::create(Rcpp::Named("class")="stblr_raw", Rcpp::Named("version")=1),
-  Rcpp::Named("meta") = Rcpp::List::create(
-   Rcpp::Named("model")="bayesrc", Rcpp::Named("backend")="bed_bayesrc",
-   Rcpp::Named("data_level")="individual", Rcpp::Named("prior_type")="annotation_component",
-   Rcpp::Named("m")=m, Rcpp::Named("nt")=nt, Rcpp::Named("n_trace")=ntrace,
-   Rcpp::Named("nit")=nit, Rcpp::Named("nburn")=nburn, Rcpp::Named("nthin")=nthin,
-   Rcpp::Named("nchains")=nchains, Rcpp::Named("keep_chains")=keep_chains,
-   Rcpp::Named("n_components")=K, Rcpp::Named("n_annotations")=A.n_cols,
-   Rcpp::Named("n_groups")=0, Rcpp::Named("annotations")=true,
-   Rcpp::Named("scheduled")=false),
-  Rcpp::Named("marker") = Rcpp::List::create(
-   Rcpp::Named("bm")=bm, Rcpp::Named("dm")=dm,
-   Rcpp::Named("wy")=return_wy ? Rcpp::wrap(wy) : R_NilValue,
-   Rcpp::Named("r")=return_r ? Rcpp::wrap(r) : R_NilValue,
-   Rcpp::Named("b")=b, Rcpp::Named("state")=state),
-  Rcpp::Named("trace") = Rcpp::List::create(
-   Rcpp::Named("vbs")=vbs, Rcpp::Named("vgs")=vgs, Rcpp::Named("ves")=ves,
-   Rcpp::Named("vle")=vle, Rcpp::Named("vld")=vld, Rcpp::Named("pis")=pis),
-  Rcpp::Named("variance") = Rcpp::List::create(
-   Rcpp::Named("covb")=arma::diagmat(final_vb), Rcpp::Named("covg")=arma::diagmat(final_vg),
-   Rcpp::Named("cove")=arma::diagmat(final_ve), Rcpp::Named("vb")=arma::diagmat(final_vb),
-   Rcpp::Named("vg")=arma::diagmat(final_vg), Rcpp::Named("ve")=arma::diagmat(final_ve)),
-  Rcpp::Named("pi") = Rcpp::List::create(Rcpp::Named("final")=final_prior,
-   Rcpp::Named("mean")=mean_prior, Rcpp::Named("names")=component_names),
-  Rcpp::Named("diagnostics") = Rcpp::List::create(
-   Rcpp::Named("nsamples")=nsamples*inv, Rcpp::Named("n_used")=n_used,
-   Rcpp::Named("log_cpo")=log_cpo*inv, Rcpp::Named("mean_log_cpo")=mean_log_cpo*inv,
-   Rcpp::Named("full_sweeps")=true, Rcpp::Named("adaptive_skipping")=false,
-   Rcpp::Named("annotation_updates_per_chain")=
-    (updateAlpha ? (nit + nburn) / annot_alpha_update_every : 0),
-   Rcpp::Named("ld_swap")=R_NilValue),
-  Rcpp::Named("chains")=chains_out, Rcpp::Named("prior")=Rcpp::List::create(),
-  Rcpp::Named("group")=Rcpp::List::create(),
-  Rcpp::Named("annotation") = Rcpp::List::create(
-   Rcpp::Named("annotation_names")=R_NilValue, Rcpp::Named("alpha_mean")=alpha_out,
-   Rcpp::Named("alpha_final")=alpha_final_out,
-   Rcpp::Named("sigmaSqAlpha_mean")=sigma_mean.t(),
-   Rcpp::Named("sigmaSqAlpha_final")=sigma_final.t(),
-   Rcpp::Named("marker_prior_final")=marker_prior_final_out),
-  Rcpp::Named("component") = Rcpp::List::create(
-   Rcpp::Named("names")=component_names, Rcpp::Named("mixture_var")=gamma,
-   Rcpp::Named("prob")=cp_out, Rcpp::Named("ncomp")=ncomp,
-   Rcpp::Named("dm_component_mean")=component_mean),
-  Rcpp::Named("selection") = Rcpp::List::create(Rcpp::Named("enabled")=false,
-   Rcpp::Named("fixed")=false, Rcpp::Named("trace")=R_NilValue)
- );
- raw.attr("class") = Rcpp::CharacterVector::create("stblr_raw_v1", "stblr_raw", "list");
- return raw;
+ result.has_wy=return_wy; result.has_residual_marker_score=return_r;
+ const BedBayesRCBindingMetadata metadata{
+  gamma,m,nt,ntrace,nit,nburn,nthin,nchains,n_used,static_cast<double>(A.n_cols),
+  updateAlpha ? (nit+nburn)/annot_alpha_update_every : 0,
+  keep_chains,return_wy,return_r
+ };
+ return stblr_bed_bayesrc_result_to_raw(result,metadata);
 }

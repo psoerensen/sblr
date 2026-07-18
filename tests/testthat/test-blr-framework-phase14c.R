@@ -44,7 +44,7 @@ test_that("Phase 14C preserves probability latent alpha and full-sweep operation
  expect_false(grepl("thread_local|omp_get_thread_num|full_sweep_every|null_skip|candidate_list|active_list|due_bucket|scheduler",paste(types<-phase14c_text("src/blr_bed_bayesrc_types.h"),core)))
 })
 
-test_that("Phase 14C borrows genotype and annotation and leaves adapter work outside",{
+test_that("Phase 14C typed chain boundary remains active below aggregation",{
  types<-phase14c_text("src/blr_bed_bayesrc_types.h")
  core<-phase14c_text("src/blr_bed_bayesrc_core_impl.h")
  adapter<-phase14c_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
@@ -52,8 +52,8 @@ test_that("Phase 14C borrows genotype and annotation and leaves adapter work out
  expect_match(types,"const AnnotationMatrix& matrix",fixed=TRUE)
  expect_match(adapter,"br_read_bed_blocked",fixed=TRUE)
  expect_match(adapter,"BedBayesRCChainExecutionContext<",fixed=TRUE)
- expect_match(adapter,"Rcpp::List raw = Rcpp::List::create",fixed=TRUE)
- expect_match(adapter,"marker_prior_final[t] += st_bayesrc_compute_snp_pi",fixed=TRUE)
+ expect_match(adapter,"aggregate_bed_bayesrc_results(jobs,aggregation_context)",fixed=TRUE)
+ expect_match(adapter,"stblr_bed_bayesrc_result_to_raw(result,metadata)",fixed=TRUE)
  expect_false(grepl("fopen|fseek|fread|bed_files|Rcpp::List|R_NilValue|marker_id|factor|add_intercept",core))
 })
 
