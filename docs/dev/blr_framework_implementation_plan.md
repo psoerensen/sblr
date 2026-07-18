@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 13D packed-BED BayesR migration complete; ready for canonicalization
+**Status:** Phase 13E public packed-BED BayesR canonicalized and stabilized
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -9,7 +9,7 @@
 Canonical ordinary CSR routes are BayesC, BayesR, SBayesRC, fixed-prior
 BayesC, group BayesC, and learned-annotation BayesC. Canonical scheduled routes
 are ordinary-CSR BayesC and the public scheduled packed-BED BayesC route.
-Experimental/sparse BED BayesC, packed-BED BayesR, packed-BED BayesRC,
+Experimental/sparse BED BayesC and packed-BED BayesRC,
 block-eigen routes where applicable, and legacy multivariate implementations
 remain audited or protected but noncanonical. Later phase sections are the
 current record; earlier status statements are historical snapshots.
@@ -30,6 +30,12 @@ Phase 13D adds one typed aggregate result, one binding-neutral native aggregatio
 path, and the named `stblr_bed_bayesr_result_to_raw()` converter. Task dispatch
 and progress rendering remain adapter-owned; Phase 13A references and public
 schemas remain exact. Migration is complete but canonicalization is deferred.
+
+Phase 13E designates the public packed-BED BayesR route canonical. Its typed
+component/genotype/context/result contracts, singular chain core, aggregation,
+converter and adapter-rendered progress boundary are permanent; Phase 13A
+fixtures and the Phase 13D runtime/completed-fit-RSS/I/O measurements are the
+canonical regression baselines. Unsupported cases remain unchanged.
 
 ## 1. Purpose
 
