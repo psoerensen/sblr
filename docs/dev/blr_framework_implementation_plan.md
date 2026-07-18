@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 14A packed-BED BayesRC contract and migration audit active
+**Status:** Phase 14B packed-BED BayesRC per-chain execution mechanically extracted
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -43,6 +43,13 @@ input, probit-stick probabilities, coefficient/latent updates, logical-chain
 RNG, aggregation, schema and future per-chain extraction seam are documented;
 deterministic references are permanent. Migration has not started and BayesRC
 remains noncanonical.
+
+Phase 14B mechanically moves the deterministic 174-line chain-result,
+marker-update, and `run_one_bayesrc_chain()` block into the guarded
+`blr_bed_bayesrc_core_impl.h`. Full sweeps, probit-stick/annotation updates,
+logical-chain RNG, genotype/annotation ownership and Phase 14A references are
+unchanged. Alignment, dispatch, aggregation and conversion remain adapter-owned;
+the typed callable boundary is not yet active and migration remains in progress.
 
 ## 1. Purpose
 

@@ -60,7 +60,7 @@ test_that("Phase 13E canonical reproducibility and identities remain exact", {
 test_that("Phase 13E documentation identifies BayesR as canonical", {
   plan <- phase13e_text("docs/dev/blr_framework_implementation_plan.md")
   matrix <- phase13e_text("docs/dev/blr_model_capability_matrix.md")
-  expect_match(plan,"Phase 13E public packed-BED BayesR canonicalized and stabilized",fixed=TRUE)
+  expect_match(plan,"Phase 13E designates the public packed-BED BayesR route canonical",fixed=TRUE)
   expect_match(matrix,"Canonical typed component/genotype/context/core",fixed=TRUE)
-  expect_match(plan,"Phase 13A\\s+fixtures")
+  expect_match(plan,"fixtures and the Phase 13D runtime/completed-fit-RSS/I/O measurements",fixed=TRUE)
 })

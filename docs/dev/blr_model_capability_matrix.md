@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 14A packed-BED BayesRC contract and migration audit active
+**Status:** Phase 14B packed-BED BayesRC per-chain execution mechanically extracted
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -36,6 +36,11 @@ Phase 14A leaves packed-BED BayesRC production unchanged and noncanonical while
 auditing its public route, full-sweep model, ordered components, annotation
 alignment, probit-stick policy, coefficient updates, RNG ownership,
 deterministic references, aggregation/schema and future extraction seam.
+
+Phase 14B mechanically extracts the unchanged per-chain full-sweep execution to
+one guarded implementation header. Probit-stick, latent/coefficient updates,
+chain RNG and ownership remain exact; alignment, dispatch, aggregation and R
+conversion remain inline. The typed callable boundary is deferred to Phase 14C.
 
 ## 1. Purpose
 
@@ -135,7 +140,7 @@ Status labels:
 | ST learned annotation BayesC | scalar | binary | annot_logit | learned annotation scale | scalar | CSR | Canonical typed implementation with borrowed annotation design, active learned policy, callable core, typed result, one binding converter, and one wrapper aggregation path | Canonical; public route/schema unchanged; permanent exact references and canonical runtime/completed-fit-RSS baselines active; unsupported cases preserved; migration scaffolding removed | Stable canonical learned-annotation reference; centered logistic/exponential MH policy, proposals, bounds, and update frequency remain specific |
 | ST BayesR CSR | scalar | mixture | global_dirichlet | component | scalar | CSR | Canonical | Typed borrowed context, operator-aware templated core, typed result, one converter; permanent exact references and runtime/memory baseline | Stable canonical scalar mixture reference |
 | ST BayesR BED | scalar | mixture | global_dirichlet | component | scalar | SNP-major packed BED | Canonical typed component/genotype/context/core/chain-result/aggregate-result architecture with one native aggregation path and one named converter | Canonical; logical-chain RNG, adaptive scheduler, adapter-rendered progress, permanent Phase 13A fixtures, and Phase 13D runtime/completed-fit-RSS/I/O baseline active | Public route/schema unchanged; BayesRC and experimental/sparse BayesC remain noncanonical |
-| ST BayesRC scheduled-chains BED | scalar | mixture | annotation probit stick | component | scalar | SNP-major packed BED | Phase 14A audited unscheduled full-sweep implementation with marker-aligned annotation input, ordered probit sticks, chain-local RNG and explicit future per-chain seam | Production unchanged and noncanonical; three permanent raw/formatted references exact; migration not started | Adaptive scheduled controls do not apply; annotation/aggregation/schema contracts are BayesRC-specific |
+| ST BayesRC scheduled-chains BED | scalar | mixture | annotation probit stick | component | scalar | SNP-major packed BED | Phase 14B guarded lexical per-chain implementation; exact full sweep, ordered probit sticks and chain-local RNG | Production behavior and Phase 14A references unchanged; typed callable boundary not active; migration in progress and noncanonical | Alignment/dispatch/aggregation/conversion remain adapter-owned; adaptive controls do not apply |
 | ST SBayesRC CSR | scalar | mixture | annot_probit_stick | component/maf_s | scalar | CSR | Canonical typed borrowed CSR/annotation context with operator-aware templated core, typed result, and one ordinary-CSR converter | Ordered-probit and alpha behavior preserved; shared task/seed/status infrastructure active; public route/schema unchanged; permanent exact references and runtime/completed-fit-RSS baseline established | Canonical annotation-aware mixture reference |
 | ST BayesRC BED | scalar | mixture | annot_probit_stick | component | scalar | BED | Alias inventory entry for the same audited public full-sweep route above | Phase 14A audit complete; production unchanged and noncanonical | Do not interpret as a second execution path |
 | ST hierarchical BayesC | scalar | binary | global_binary | hierarchy | scalar | CSR first | Not implemented | New policy on migrated scalar core | Planned |

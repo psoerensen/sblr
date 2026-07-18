@@ -75,7 +75,7 @@ test_that("Phase 11A references and protected sources remain unchanged", {
     expect_true(file.exists(file.path("tests", "testthat", "fixtures",
       "blr_phase11a", paste0(model, ".rds"))))
   protected <- c(
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
+    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "21ee1d04ae816644c4d918202b29d515",
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e")
   expect_identical(unname(tools::md5sum(names(protected))), unname(protected))

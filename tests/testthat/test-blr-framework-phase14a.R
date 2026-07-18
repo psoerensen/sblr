@@ -4,7 +4,8 @@ phase14a_text <- function(path) paste(readLines(file.path(phase14a_root,path),wa
 
 test_that("Phase 14A route and full-sweep production seam are discoverable",{
  r <- phase14a_text("R/sparse_ld_bed_helper.R"); n <- phase14a_text("R/stblr-bed-bayesrc-internal.R")
- cpp <- phase14a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
+ cpp <- paste(phase14a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"),
+              phase14a_text("src/blr_bed_bayesrc_core_impl.h"),sep="\n")
  expect_match(r,'method = c("bayesc", "bayesr", "bayesrc")',fixed=TRUE)
  expect_match(r,".stblr_bed_bayesrc_native(",fixed=TRUE)
  expect_match(n,".stblr_align_bed_bayesrc_annotations",fixed=TRUE)
@@ -85,7 +86,8 @@ test_that("Phase 14A fixed intercept reduction remains BayesR-exact",{
 })
 
 test_that("Phase 14A production and protected sources remain frozen",{
- protected<-c("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"="5904c60b32165a7ae73bfc9d6c0f920c",
+ protected<-c("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"="21ee1d04ae816644c4d918202b29d515",
+ "src/blr_bed_bayesrc_core_impl.h"="c8de8c47fecea433383e8738f03252d7",
  "src/st_bayesrc_annotation_prior.h"="509a259e8764feb901c1c3a162fd96c6","src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
  "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83","src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739",
  "R/RcppExports.R"="9d13ea00b326c7e0cd606194d13a8bca","src/RcppExports.cpp"="b4859db0f6308fa7e38051ddcf32d245","NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")

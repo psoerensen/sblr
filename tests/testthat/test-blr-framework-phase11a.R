@@ -40,7 +40,9 @@ test_that("RNG ownership risks and safe backends are localized", {
   rng <- phase11a_text("src/blr_bed_scheduled_bayesc_rng.h")
   bayesr <- paste(phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"),
     phase11a_text("src/blr_bed_bayesr_core_impl.h"), sep = "\n")
-  bayesrc <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
+  bayesrc <- paste(
+    phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"),
+    phase11a_text("src/blr_bed_bayesrc_core_impl.h"), sep = "\n")
   active <- paste(grep("^\\s*//", strsplit(paste(single, chains), "\\n")[[1L]],
                        invert = TRUE, value = TRUE), collapse = "\n")
   expect_false(grepl("static thread_local", active, fixed = TRUE))
@@ -97,7 +99,9 @@ test_that("scheduler semantics are similar only for BayesC and BayesR", {
   chains <- phase11a_text("src/blr_bed_scheduled_bayesc_core_impl.h")
   bayesr <- paste(phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp"),
     phase11a_text("src/blr_bed_bayesr_core_impl.h"), sep = "\n")
-  bayesrc <- phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
+  bayesrc <- paste(
+    phase11a_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"),
+    phase11a_text("src/blr_bed_bayesrc_core_impl.h"), sep = "\n")
   for (needle in c("full_sweep_every", "null_skip_base", "candidate_lifetime",
       "scheduled_at", "candidate_list")) {
     expect_match(chains, needle, fixed = TRUE)
@@ -111,7 +115,7 @@ test_that("Phase 11A leaves production and protected sources unchanged", {
   protected <- c(
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "5904c60b32165a7ae73bfc9d6c0f920c",
+    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "21ee1d04ae816644c4d918202b29d515",
     "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
