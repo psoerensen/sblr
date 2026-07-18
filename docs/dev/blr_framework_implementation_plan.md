@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 13E public packed-BED BayesR canonicalized and stabilized
+**Status:** Phase 14A packed-BED BayesRC contract and migration audit active
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -36,6 +36,13 @@ component/genotype/context/result contracts, singular chain core, aggregation,
 converter and adapter-rendered progress boundary are permanent; Phase 13A
 fixtures and the Phase 13D runtime/completed-fit-RSS/I/O measurements are the
 canonical regression baselines. Unsupported cases remain unchanged.
+
+Phase 14A audits public packed-BED BayesRC without changing production. The
+route, full-sweep statistical model, component order, marker-aligned annotation
+input, probit-stick probabilities, coefficient/latent updates, logical-chain
+RNG, aggregation, schema and future per-chain extraction seam are documented;
+deterministic references are permanent. Migration has not started and BayesRC
+remains noncanonical.
 
 ## 1. Purpose
 
