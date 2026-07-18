@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 14B packed-BED BayesRC per-chain execution mechanically extracted
+**Status:** Phase 14C packed-BED BayesRC typed chain boundary active
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -50,6 +50,13 @@ marker-update, and `run_one_bayesrc_chain()` block into the guarded
 logical-chain RNG, genotype/annotation ownership and Phase 14A references are
 unchanged. Alignment, dispatch, aggregation and conversion remain adapter-owned;
 the typed callable boundary is not yet active and migration remains in progress.
+
+Phase 14C activates typed component, annotation, coefficient-prior, immutable
+genotype/annotation view, per-chain context, callable core, and typed chain-result
+contracts. The core uses a stateless binding-neutral normal-probability interface
+backed by the unchanged Rmath calls. Full sweeps, ordered probit sticks, latent and
+alpha updates, logical-chain RNG, and Phase 14A references remain exact. Alignment,
+dispatch, aggregation, and conversion remain adapter-owned; migration continues.
 
 ## 1. Purpose
 

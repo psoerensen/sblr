@@ -7,17 +7,17 @@ test_that("Phase 14B has one guarded extracted chain implementation",{
  core<-phase14b_text("src/blr_bed_bayesrc_core_impl.h")
  expect_match(core,"#ifndef SBLR_BLR_BED_BAYESRC_CORE_IMPL_H",fixed=TRUE)
  expect_source_count('#include "blr_bed_bayesrc_core_impl.h"',adapter,1L)
- expect_source_count("static ChainResultBayesRC run_one_bayesrc_chain(",core,1L)
+ expect_source_count("static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(",core,1L)
  expect_source_count("for (int it = 0; it < total_it; ++it)",core,1L)
- expect_source_count("run_one_bayesrc_chain(",paste(adapter,core),2L)
+ expect_source_count("run_bed_bayesrc_chain(",paste(adapter,core),2L)
  expect_source_count("#pragma omp parallel for num_threads(ncores) schedule(static)",adapter,1L)
- expect_false(grepl("static ChainResultBayesRC run_one_bayesrc_chain|for \\(int it",adapter))
+ expect_false(grepl("run_one_bayesrc_chain|for \\(int it",adapter))
  expect_false(grepl("old_path|new_path|fallback|execution_selector|rng_selector",paste(adapter,core)))
 })
 
 test_that("Phase 14B preserves full sweeps, component sampling and RNG",{
  core<-phase14b_text("src/blr_bed_bayesrc_core_impl.h")
- for(x in c("std::mt19937 gen(static_cast<unsigned int>(","seed + 1000003 * (trait + 1) + 9176 * (chain + 1)",
+ for(x in c("std::mt19937 gen(static_cast<unsigned int>(context.chain_seed))",
   "std::uniform_real_distribution<double> runif(0.0, 1.0)","std::normal_distribution<double> norm01(0.0, 1.0)",
   "for (int marker : marker_order)","const double vbk = vb * gamma","component_new = ncomponent - 1",
   "if (component_new > 0)","component_t(ju) > 0 ? 1.0 : 0.0")) expect_match(core,x,fixed=TRUE)
@@ -27,7 +27,7 @@ test_that("Phase 14B preserves full sweeps, component sampling and RNG",{
 test_that("Phase 14B preserves the shared probit, latent and alpha boundary",{
  helper<-phase14b_text("src/st_bayesrc_annotation_prior.h")
  core<-phase14b_text("src/blr_bed_bayesrc_core_impl.h")
- for(x in c("R::pnorm","R::qnorm","std::max(val, pi_floor)","snp_pi.row","/= s",
+ for(x in c("StandardNormalProbability::cdf","StandardNormalProbability::quantile","std::max(val, pi_floor)","snp_pi.row","/= s",
   "st_bayesrc_sample_truncated_normal_std","(ci > j) ? 1 : 0","std::normal_distribution<double> norm(mean, sd)",
   "std::chi_squared_distribution<double> rchisq(df)")) expect_match(helper,x,fixed=TRUE)
  expect_source_count("st_bayesrc_compute_snp_pi(annotation, annot_alpha, pi_floor)",core,2L)
@@ -38,7 +38,7 @@ test_that("Phase 14B preserves the shared probit, latent and alpha boundary",{
 test_that("Phase 14B leaves decoding, dispatch, aggregation and conversion adapter-owned",{
  adapter<-phase14b_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
  core<-phase14b_text("src/blr_bed_bayesrc_core_impl.h")
- for(x in c("br_read_bed_blocked","std::vector<ChainResultBayesRC> jobs","const ChainResultBayesRC& z = jobs[ch * nt + t]",
+ for(x in c("br_read_bed_blocked","std::vector<sblr::core::BedBayesRCChainExecutionResult> jobs","const sblr::core::BedBayesRCChainExecutionResult& z = jobs[ch * nt + t]",
   "Rcpp::List raw = Rcpp::List::create","marker_prior_final[t] += st_bayesrc_compute_snp_pi")) expect_match(adapter,x,fixed=TRUE)
  expect_false(grepl("Rcpp::List|br_read_bed_blocked|fopen|fseek|fread|bed_files|R_NilValue",core))
 })
@@ -69,7 +69,7 @@ test_that("Phase 14B protects unrelated backends and generated interfaces",{
  protected<-c("src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
  "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83",
  "src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739",
- "src/st_bayesrc_annotation_prior.h"="509a259e8764feb901c1c3a162fd96c6",
+ "src/st_bayesrc_annotation_prior.h"="1e7072512f4246fc2a36e79de655d8c5",
  "R/RcppExports.R"="9d13ea00b326c7e0cd606194d13a8bca","src/RcppExports.cpp"="b4859db0f6308fa7e38051ddcf32d245","NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")
  expect_identical(unname(tools::md5sum(file.path(phase14b_root,names(protected)))),unname(protected))
 })

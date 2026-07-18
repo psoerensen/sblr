@@ -7,17 +7,18 @@
 #include <stdexcept>
 #include <vector>
 
-#include <RcppArmadillo.h>
+#include <armadillo>
+#include "blr_normal_probability.h"
 
 inline double st_bayesrc_safe_pnorm(double x) {
- double p = R::pnorm(x, 0.0, 1.0, 1, 0);
+ double p = sblr::core::StandardNormalProbability::cdf(x);
  if (!std::isfinite(p)) p = (x > 0.0) ? 1.0 : 0.0;
  return std::min(std::max(p, 1e-12), 1.0 - 1e-12);
 }
 
 inline double st_bayesrc_safe_qnorm(double p) {
  p = std::min(std::max(p, 1e-12), 1.0 - 1e-12);
- return R::qnorm(p, 0.0, 1.0, 1, 0);
+ return sblr::core::StandardNormalProbability::quantile(p);
 }
 
 inline double st_bayesrc_sample_truncated_normal_std(

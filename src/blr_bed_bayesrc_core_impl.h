@@ -1,20 +1,11 @@
 #ifndef SBLR_BLR_BED_BAYESRC_CORE_IMPL_H
 #define SBLR_BLR_BED_BAYESRC_CORE_IMPL_H
 
+#include "blr_bed_bayesrc_types.h"
+#include "st_bayesrc_annotation_prior.h"
+
 // Implementation detail: included only by the packed-BED BayesRC binding unit.
-struct ChainResultBayesRC {
- arma::rowvec bm, dm, component_mean, b, state;
- arma::rowvec vbs, vgs, ves, vles, vlds, pis;
- arma::mat comp_prob;
- arma::mat annot_alpha_mean, annot_alpha_final;
- arma::vec annot_sigma_mean, annot_sigma_final;
- arma::rowvec mean_prior;
- arma::vec residual;
- double final_vb = 0.0, final_vg = 0.0, final_ve = 0.0;
- double log_cpo = NA_REAL, mean_log_cpo = NA_REAL, nsamples = 0.0;
- int failed = 0;
- std::string error;
-};
+namespace sblr { namespace core {
 
 static inline void sample_marker_bayesrc(
   const FastPackedBedMatrixBR& G, int marker, const MarkerMapBayesR& map,
@@ -65,31 +56,47 @@ static inline void sample_marker_bayesrc(
  component = component_new;
 }
 
-static ChainResultBayesRC run_one_bayesrc_chain(
-  const FastPackedBedMatrixBR& G,
-  const std::vector<MarkerMapBayesR>& maps,
-  const std::vector<int>& marker_order, const arma::mat& y,
-  const std::vector<std::vector<double>>& b_init, const arma::mat& B,
-  const arma::mat& E, const arma::mat& ssb_prior, const arma::mat& sse_prior,
-  const arma::mat& annotation, const std::vector<double>& gamma,
-  const arma::mat& annot_alpha_init, const arma::vec& annot_sigma_init,
-  bool intercept_flat, double sigma_a, double sigma_b, double pi_floor,
-  double nub, double nue, bool update_alpha, bool update_b, bool update_e,
-  int alpha_every, double adjE, int nit, int nburn, int nthin,
-  int rebuild_every, int trait, int chain, int seed
+template <class PackedGenotype, class AnnotationMatrix, class MarkerMap>
+static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
+ const BedBayesRCChainExecutionContext<PackedGenotype,AnnotationMatrix,MarkerMap>& context
 ) {
+ const auto& G=context.genotype.storage;
+ const auto& maps=context.marker_maps;
+ const auto& marker_order=context.marker_order;
+ const auto& y=context.phenotype;
+ const auto& b_init=context.initial_effects;
+ const auto& B=context.initial_B;
+ const auto& E=context.initial_E;
+ const auto& ssb_prior=context.ssb_prior;
+ const auto& sse_prior=context.sse_prior;
+ const auto& annotation=context.annotation.matrix;
+ const auto& gamma=context.components.scales;
+ const auto& annot_alpha_init=context.coefficient_prior.initial_alpha;
+ const auto& annot_sigma_init=context.coefficient_prior.initial_step_variances;
+ const bool intercept_flat=context.coefficient_prior.intercept_flat;
+ const double sigma_a=context.coefficient_prior.inverse_chisq_df;
+ const double sigma_b=context.coefficient_prior.inverse_chisq_scale;
+ const double pi_floor=context.pi_floor;
+ const double nub=context.nub, nue=context.nue;
+ const bool update_alpha=context.coefficient_prior.update_coefficients;
+ const bool update_b=context.update_marker_variance;
+ const bool update_e=context.update_residual_variance;
+ const int alpha_every=context.coefficient_prior.update_every;
+ const double adjE=context.adjE;
+ const int nit=context.iterations, nburn=context.burnin, nthin=context.thinning;
+ const int rebuild_every=context.rebuild_every;
+ const int trait=context.trait_index;
  const int m = G.m, K = static_cast<int>(gamma.size());
  const int total_it = nit + nburn;
- ChainResultBayesRC out;
+ BedBayesRCChainExecutionResult out;
  out.bm.zeros(m); out.dm.zeros(m); out.component_mean.zeros(m);
  out.b.zeros(m); out.state.zeros(m);
  out.vbs.zeros(total_it); out.vgs.zeros(total_it); out.ves.zeros(total_it);
  out.vles.zeros(total_it); out.vlds.zeros(total_it); out.pis.zeros(total_it);
  out.comp_prob.zeros(m, K); out.mean_prior.zeros(K);
  try {
-  std::mt19937 gen(static_cast<unsigned int>(
-   seed + 1000003 * (trait + 1) + 9176 * (chain + 1)
-  ));
+  validate_bed_bayesrc_chain_context(context);
+  std::mt19937 gen(static_cast<unsigned int>(context.chain_seed));
   std::uniform_real_distribution<double> runif(0.0, 1.0);
   std::normal_distribution<double> norm01(0.0, 1.0);
   arma::vec y_t = y.col(static_cast<arma::uword>(trait));
@@ -176,5 +183,7 @@ static ChainResultBayesRC run_one_bayesrc_chain(
  } catch (const std::exception& ex) { out.failed = 1; out.error = ex.what(); }
  return out;
 }
+
+} }
 
 #endif

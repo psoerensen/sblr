@@ -9,7 +9,7 @@ test_that("Phase 14A route and full-sweep production seam are discoverable",{
  expect_match(r,'method = c("bayesc", "bayesr", "bayesrc")',fixed=TRUE)
  expect_match(r,".stblr_bed_bayesrc_native(",fixed=TRUE)
  expect_match(n,".stblr_align_bed_bayesrc_annotations",fixed=TRUE)
- expect_source_count("static ChainResultBayesRC run_one_bayesrc_chain(",cpp,1L)
+ expect_source_count("run_bed_bayesrc_chain(",cpp,2L)
  expect_source_count("for (int it = 0; it < total_it; ++it)",cpp,1L)
  expect_match(cpp,"Exact full sweep: every marker is visited once",fixed=TRUE)
  expect_false(grepl("candidate_list|scheduled_at|due_buckets|null_skip",cpp))
@@ -86,9 +86,9 @@ test_that("Phase 14A fixed intercept reduction remains BayesR-exact",{
 })
 
 test_that("Phase 14A production and protected sources remain frozen",{
- protected<-c("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"="21ee1d04ae816644c4d918202b29d515",
- "src/blr_bed_bayesrc_core_impl.h"="c8de8c47fecea433383e8738f03252d7",
- "src/st_bayesrc_annotation_prior.h"="509a259e8764feb901c1c3a162fd96c6","src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
+ protected<-c("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"="1f09f1e420c20a395c26867ad1d912d2",
+ "src/blr_bed_bayesrc_core_impl.h"="82365cf3f1f5306c57b980f59b4d83d3",
+ "src/st_bayesrc_annotation_prior.h"="1e7072512f4246fc2a36e79de655d8c5","src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
  "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83","src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739",
  "R/RcppExports.R"="9d13ea00b326c7e0cd606194d13a8bca","src/RcppExports.cpp"="b4859db0f6308fa7e38051ddcf32d245","NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")
  expect_identical(unname(tools::md5sum(file.path(phase14a_root,names(protected)))),unname(protected))
