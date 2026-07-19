@@ -2,6 +2,7 @@
 #define SBLR_BLR_BED_SCHEDULED_BAYESC_TYPES_H
 
 #include "blr_scheduled_execution_types.h"
+#include "blr_bed_family_types.h"
 
 #include <armadillo>
 #include <cmath>
@@ -13,18 +14,6 @@
 #include <vector>
 
 namespace sblr { namespace core {
-
-// Borrowed immutable view of fit-owned, already decoded SNP-major storage.
-template <class PackedGenotype>
-struct BedPackedGenotypeView {
- const PackedGenotype& storage;
- const std::uint8_t* packed_markers;
- std::size_t packed_size;
- std::size_t marker_count;
- std::size_t sample_count;
- std::size_t bytes_per_marker;
- std::size_t stride;
-};
 
 struct BedScheduledBayesCMarkerMap {
  double val[4];

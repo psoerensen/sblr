@@ -4,12 +4,15 @@ phase13e_text <- function(path) paste(readLines(file.path(phase13e_root,path),wa
 
 test_that("Phase 13E permanently protects the canonical BayesR architecture", {
   types <- phase13e_text("src/blr_bed_bayesr_types.h")
+  family_types <- phase13e_text("src/blr_bed_family_types.h")
   core <- phase13e_text("src/blr_bed_bayesr_core_impl.h")
   aggregate <- phase13e_text("src/blr_bed_bayesr_aggregate_impl.h")
   adapter <- phase13e_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
-  for (symbol in c("BedBayesRComponentSpec","BedBayesRPackedGenotypeView",
+  for (symbol in c("BedBayesRComponentSpec",
       "BedBayesRChainExecutionContext","BedBayesRChainExecutionResult",
       "BedBayesRExecutionResult")) expect_source_count(paste0("struct ",symbol),types,1L)
+  expect_source_count("using BedBayesRPackedGenotypeView",types,1L)
+  expect_source_count("struct BedPackedGenotypeView",family_types,1L)
   expect_source_count("BedBayesRChainExecutionResult run_bed_bayesr_chain(",core,1L)
   expect_source_count("for (int it = 0; it < total_it; ++it)",core,1L)
   expect_source_count("BedBayesRExecutionResult aggregate_bed_bayesr_results(",aggregate,1L)
@@ -18,7 +21,7 @@ test_that("Phase 13E permanently protects the canonical BayesR architecture", {
   expect_source_count("for (const sblr::core::BedBayesRProgressEvent& event",adapter,1L)
   expect_false(grepl("Rcpp|SEXP|Python.h|pybind11|fopen|fseek|fread",paste(core,aggregate,types)))
   expect_false(grepl("thread_local|std::discrete_distribution|old_path|new_path|aggregation_selector|rng_selector",paste(core,aggregate,adapter)))
-  expect_match(types,"const PackedGenotype& storage",fixed=TRUE)
+  expect_match(family_types,"const PackedGenotype& storage",fixed=TRUE)
   expect_match(adapter,"br_read_bed_blocked",fixed=TRUE)
 })
 

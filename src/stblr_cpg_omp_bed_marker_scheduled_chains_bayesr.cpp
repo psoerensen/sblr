@@ -258,8 +258,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
 #pragma omp parallel for num_threads(nthreads) schedule(static)
 #endif
  for (int job = 0; job < njobs; ++job) {
-  const int ch = job / nt;
-  const int t  = job % nt;
+  const auto task=sblr::core::make_bed_family_task_index(job,nt);
+  const int ch=task.chain;
+  const int t=task.trait;
 
   const sblr::core::BedBayesRPackedGenotypeView<FastPackedBedMatrixBR> genotype{
    G, G.data.data(), G.data.size(), static_cast<std::size_t>(G.m),
@@ -272,9 +273,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
                               skip_nulls_burnin_only, "probability_adaptive"},
    sblr::core::CandidateControl{candidate_threshold, candidate_lifetime}
   };
-  const std::uint64_t chain_seed=static_cast<unsigned int>(
-   seed + 1000003 * (t + 1) + 9176 * (ch + 1)
-  );
+  const std::uint64_t chain_seed=
+   sblr::core::resolve_bed_family_logical_chain_seed(seed,t,ch);
   const sblr::core::BedBayesRChainExecutionContext<FastPackedBedMatrixBR,MarkerMapBayesR> context{
    genotype, marker_maps, marker_order, y_mat, b_init, B, E,
    ssb_prior_mat, sse_prior_mat, components, scheduler, nub, nue, adjE,
@@ -287,8 +287,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  int failed_total = 0;
  for (int job = 0; job < njobs; ++job) {
   const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
-  const int ch = job / nt;
-  const int t  = job % nt;
+  const auto task=sblr::core::make_bed_family_task_index(job,nt);
+  const int ch=task.chain;
+  const int t=task.trait;
   for (const sblr::core::BedBayesRProgressEvent& event : r.progress_events) {
    Rcpp::Rcout
    << "progress chain " << event.chain_index
@@ -326,8 +327,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   for (int job = 0; job < njobs; ++job) {
    const sblr::core::BedBayesRChainExecutionResult& r = job_results[static_cast<std::size_t>(job)];
    if (r.failed) {
-    const int ch = job / nt;
-    const int t  = job % nt;
+    const auto task=sblr::core::make_bed_family_task_index(job,nt);
+    const int ch=task.chain;
+    const int t=task.trait;
     throw std::runtime_error(
       "stblr_cpg_omp_bed_marker_scheduled_chains_bayesr failed for chain " +
        std::to_string(ch) + ", trait " + std::to_string(t) + ": " + r.error

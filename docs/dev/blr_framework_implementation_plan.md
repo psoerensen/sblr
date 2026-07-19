@@ -1,6 +1,6 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 15A packed-BED family consolidation audit complete
+**Status:** Phase 15B packed-BED common infrastructure canonicalized
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 
@@ -78,6 +78,13 @@ seed formulas are exactly shared; genotype ownership, dispatch, failure/timing,
 progress, diagnostics, converter metadata, reference, test, and benchmark
 conventions are explicitly classified. Model-specific contexts, results, cores,
 schedulers, probability policies, aggregators, and converters remain separate.
+
+Phase 15B activates canonical common packed-BED task indexing and logical-chain
+seed resolution for BayesC, BayesR, and BayesRC, plus one representation-identical
+immutable genotype view for BayesC/R. BayesRC retains its smaller view. Dispatch,
+failure/timing/progress policy, contexts, results, numerical cores, aggregators,
+converters, schedulers, and probability policies remain model-specific. Shared
+structural/reference test helpers and benchmark reporting conventions are active.
 
 ## 1. Purpose
 

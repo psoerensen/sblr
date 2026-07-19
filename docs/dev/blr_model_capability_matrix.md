@@ -1,6 +1,6 @@
 # Unified BLR Framework: Model, Architecture, and Migration Capability Matrix
 
-**Status:** Phase 15A packed-BED family consolidation audit complete
+**Status:** Phase 15B packed-BED common infrastructure canonicalized
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_model_capability_matrix.md`
 
@@ -65,6 +65,13 @@ ownership, dispatch/failure/timing, converter metadata, reference testing, and
 benchmark reporting are convention-level opportunities. Canonical numerical
 cores and all model-specific statistical contracts remain unchanged, and
 production consolidation has not started.
+
+Phase 15B makes the proven common layer canonical: exact task indexing, exact
+logical-chain seeds, and the compatible BayesC/R immutable genotype view.
+BayesRC representation-specific ownership and all model-specific dispatch,
+failure/timing/progress, numerical, aggregation, conversion, scheduler, and
+probability contracts remain separate. Shared test/reference and benchmark
+conventions are active; all public model classifications remain canonical.
 
 ## 1. Purpose
 

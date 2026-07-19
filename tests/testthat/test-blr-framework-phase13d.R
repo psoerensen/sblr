@@ -4,6 +4,7 @@ phase13d_text <- function(path) paste(readLines(file.path(phase13d_root,path),wa
 
 test_that("Phase 13D has one typed aggregation and one named converter", {
   types <- phase13d_text("src/blr_bed_bayesr_types.h")
+  family_types <- phase13d_text("src/blr_bed_family_types.h")
   core <- phase13d_text("src/blr_bed_bayesr_core_impl.h")
   aggregate <- phase13d_text("src/blr_bed_bayesr_aggregate_impl.h")
   adapter <- phase13d_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
@@ -33,13 +34,14 @@ test_that("Phase 13D aggregation permanently protects legacy formulas", {
 test_that("Phase 13D preserves core, progress, component and genotype boundaries", {
   core <- phase13d_text("src/blr_bed_bayesr_core_impl.h")
   types <- phase13d_text("src/blr_bed_bayesr_types.h")
+  family_types <- phase13d_text("src/blr_bed_family_types.h")
   adapter <- phase13d_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
   for (needle in c("std::mt19937 gen_t(chain_seed)","if (u < cumsum)",
       "std::uniform_int_distribution<int> jitter_dist","for (int marker : active_list)",
       "for (int marker : candidate_list)","const std::vector<int>& due"))
     expect_match(core,needle,fixed=TRUE)
   expect_false(grepl("Rcpp|SEXP|std::discrete_distribution|thread_local",core))
-  expect_match(types,"const PackedGenotype& storage",fixed=TRUE)
+  expect_match(family_types,"const PackedGenotype& storage",fixed=TRUE)
   expect_match(adapter,"for (const sblr::core::BedBayesRProgressEvent& event",fixed=TRUE)
   expect_match(adapter,"br_read_bed_blocked",fixed=TRUE)
 })

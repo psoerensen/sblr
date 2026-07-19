@@ -14,12 +14,13 @@ test_that("public BED BayesC uses one typed per-chain execution boundary", {
   src <- active11c2(read11c2("src/st_cpg_omp_individual_scheduled_chains.cpp"))
   core <- active11c2(read11c2("src/blr_bed_scheduled_bayesc_core_impl.h"))
   types <- active11c2(read11c2("src/blr_bed_scheduled_bayesc_types.h"))
+  family_types <- active11c2(read11c2("src/blr_bed_family_types.h"))
   expect_identical(count11c2("run_bed_scheduled_bayesc_chain\\s*\\(", core), 1L)
   expect_identical(count11c2("for \\(int it = 0; it < total_it; \\+\\+it\\)", core), 1L)
   expect_identical(count11c2("BedScheduledBayesCChainRng chain_rng", core), 1L)
   expect_identical(count11c2("struct BedScheduledBayesCChainExecutionContext", types), 1L)
   expect_identical(count11c2("struct BedScheduledBayesCChainExecutionResult", types), 1L)
-  expect_identical(count11c2("struct BedPackedGenotypeView", types), 1L)
+  expect_identical(count11c2("struct BedPackedGenotypeView", family_types), 1L)
   expect_match(src, "BedScheduledBayesCChainExecutionContext<FastPackedBedMatrix> context", fixed = TRUE)
   expect_match(src, "run_bed_scheduled_bayesc_chain(context)", fixed = TRUE)
   expect_false(grepl("run_one_scheduled_bed_chain", paste(src, core)))
@@ -29,11 +30,12 @@ test_that("public BED BayesC uses one typed per-chain execution boundary", {
 test_that("typed numerical core is binding neutral and I/O free", {
   core <- active11c2(read11c2("src/blr_bed_scheduled_bayesc_core_impl.h"))
   types <- active11c2(read11c2("src/blr_bed_scheduled_bayesc_types.h"))
+  family_types <- active11c2(read11c2("src/blr_bed_family_types.h"))
   expect_false(grepl("Rcpp|SEXP|Python|pybind11", paste(core, types)))
   expect_false(grepl("fread|fseek|fopen|bed_files|std::FILE|FILE\\s*\\*", paste(core, types)))
   expect_false(grepl("static thread_local std::(normal|uniform)", core))
-  expect_match(types, "const PackedGenotype& storage", fixed = TRUE)
-  expect_match(types, "const std::uint8_t* packed_markers", fixed = TRUE)
+  expect_match(family_types, "const PackedGenotype& storage", fixed = TRUE)
+  expect_match(family_types, "const std::uint8_t* packed_markers", fixed = TRUE)
   expect_false(grepl("std::vector<uint8_t>.*genotype|std::vector<std::uint8_t>.*genotype", core))
 })
 
@@ -82,7 +84,7 @@ test_that("unselected and protected sources remain unchanged", {
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
     "src/blr_bed_scheduled_bayesc_rng.h" = "002468fa8afd7d0c491f61ea4324f982",
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "9ef7d514895f80b8561de831798f2701",
+    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "72d4a9fa0a7cd51071328c2d62d0192b",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
     "R/RcppExports.R" = "9d13ea00b326c7e0cd606194d13a8bca",

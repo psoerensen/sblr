@@ -2,6 +2,7 @@
 #define SBLR_BLR_BED_BAYESR_TYPES_H
 
 #include "blr_scheduled_execution_types.h"
+#include "blr_bed_family_types.h"
 
 #include <armadillo>
 #include <cmath>
@@ -15,15 +16,7 @@
 namespace sblr { namespace core {
 
 template <class PackedGenotype>
-struct BedBayesRPackedGenotypeView {
- const PackedGenotype& storage;
- const std::uint8_t* packed_markers;
- std::size_t packed_size;
- std::size_t marker_count;
- std::size_t sample_count;
- std::size_t bytes_per_marker;
- std::size_t stride;
-};
+using BedBayesRPackedGenotypeView=BedPackedGenotypeView<PackedGenotype>;
 
 struct BedBayesRComponentSpec {
  std::size_t null_component;

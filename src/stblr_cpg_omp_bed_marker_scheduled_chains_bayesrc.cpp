@@ -175,10 +175,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
 #pragma omp parallel for num_threads(ncores) schedule(static)
 #endif
  for (int job = 0; job < njobs; ++job) {
-  const int trait=job%nt, chain=job/nt;
-  const std::uint64_t chain_seed=static_cast<unsigned int>(
-   seed+1000003*(trait+1)+9176*(chain+1)
-  );
+  const auto task=sblr::core::make_bed_family_task_index(job,nt);
+  const int trait=task.trait, chain=task.chain;
+  const std::uint64_t chain_seed=
+   sblr::core::resolve_bed_family_logical_chain_seed(seed,trait,chain);
   const sblr::core::BedBayesRCChainExecutionContext<
    FastPackedBedMatrixBR,arma::mat,MarkerMapBayesR
   > context{

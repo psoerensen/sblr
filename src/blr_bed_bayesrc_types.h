@@ -1,6 +1,8 @@
 #ifndef SBLR_BLR_BED_BAYESRC_TYPES_H
 #define SBLR_BLR_BED_BAYESRC_TYPES_H
 
+#include "blr_bed_family_types.h"
+
 #include <armadillo>
 #include <cmath>
 #include <cstddef>

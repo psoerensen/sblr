@@ -6,12 +6,15 @@ phase13c_text <- function(path) paste(readLines(file.path(phase13c_root, path),
 
 test_that("Phase 13C typed BayesR chain boundary is singular and binding-neutral", {
   types <- phase13c_text("src/blr_bed_bayesr_types.h")
+  family_types <- phase13c_text("src/blr_bed_family_types.h")
   core <- phase13c_text("src/blr_bed_bayesr_core_impl.h")
   adapter <- phase13c_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
-  for (symbol in c("BedBayesRPackedGenotypeView", "BedBayesRComponentSpec",
+  for (symbol in c("BedBayesRComponentSpec",
       "BedBayesRSchedulerControl", "BedBayesRChainExecutionContext",
       "BedBayesRChainExecutionResult", "BedBayesRProgressEvent"))
     expect_source_count(paste0("struct ", symbol), types, 1L)
+  expect_source_count("using BedBayesRPackedGenotypeView", types, 1L)
+  expect_source_count("struct BedPackedGenotypeView", family_types, 1L)
   expect_source_count("BedBayesRChainExecutionResult run_bed_bayesr_chain(", core, 1L)
   expect_source_count("for (int it = 0; it < total_it; ++it)", core, 1L)
   expect_source_count("run_bed_bayesr_chain(context)", adapter, 1L)
@@ -22,6 +25,7 @@ test_that("Phase 13C typed BayesR chain boundary is singular and binding-neutral
 
 test_that("Phase 13C preserves RNG, inverse-CDF, scheduler, and genotype boundaries", {
   types <- phase13c_text("src/blr_bed_bayesr_types.h")
+  family_types <- phase13c_text("src/blr_bed_family_types.h")
   core <- phase13c_text("src/blr_bed_bayesr_core_impl.h")
   adapter <- phase13c_text("src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesr.cpp")
   for (needle in c("std::mt19937 gen_t(chain_seed)",
@@ -32,7 +36,7 @@ test_that("Phase 13C preserves RNG, inverse-CDF, scheduler, and genotype boundar
     expect_match(core, needle, fixed = TRUE)
   expect_false(grepl("static thread_local|thread_local|std::discrete_distribution", core))
   expect_false(grepl("fopen|fseek|fread|ifstream|Rcpp::Rcout", core))
-  expect_match(types, "const PackedGenotype& storage", fixed = TRUE)
+  expect_match(family_types, "const PackedGenotype& storage", fixed = TRUE)
   expect_match(adapter, "br_read_bed_blocked", fixed = TRUE)
   expect_match(adapter, "Rcpp::Rcout", fixed = TRUE)
   expect_match(adapter, "aggregate_bed_bayesr_results", fixed = TRUE)

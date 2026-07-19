@@ -1069,10 +1069,11 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
 #pragma omp parallel for num_threads(nthreads) schedule(static)
 #endif
  for (int job = 0; job < njobs; ++job) {
-  const int chain = job / nt;
-  const int t = job % nt;
-  const unsigned int chain_seed=static_cast<unsigned int>(
-   seed+1000003*(t+1)+9176*(chain+1));
+  const auto task=sblr::core::make_bed_family_task_index(job,nt);
+  const int chain=task.chain;
+  const int t=task.trait;
+  const std::uint64_t chain_seed=
+   sblr::core::resolve_bed_family_logical_chain_seed(seed,t,chain);
   const sblr::core::BedPackedGenotypeView<FastPackedBedMatrix> genotype{
    G,G.data.data(),G.data.size(),static_cast<std::size_t>(G.m),
    static_cast<std::size_t>(G.n),G.nbytes,G.stride};
@@ -1093,8 +1094,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  int failed_total = 0;
  for (int job = 0; job < njobs; ++job) {
   const auto& r = job_results[static_cast<std::size_t>(job)];
-  const int chain = job / nt;
-  const int t = job % nt;
+  const auto task=sblr::core::make_bed_family_task_index(job,nt);
+  const int chain=task.chain;
+  const int t=task.trait;
   Rcpp::Rcout
   << "chain " << chain
   << ", trait " << t
@@ -1117,8 +1119,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   for (int job = 0; job < njobs; ++job) {
    const auto& r = job_results[static_cast<std::size_t>(job)];
    if (r.failed) {
-    const int chain = job / nt;
-    const int t = job % nt;
+    const auto task=sblr::core::make_bed_family_task_index(job,nt);
+    const int chain=task.chain;
+    const int t=task.trait;
     throw std::runtime_error(
       "stblr_cpg_omp_bed_marker_scheduled_chains failed for chain " +
        std::to_string(chain) +
