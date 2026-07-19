@@ -610,3 +610,16 @@ Errors should identify the failing field and expected contract.
 - alignment and identifiability tests pass;
 - simulation recovery passes;
 - output uncertainty is documented.
+
+### Phase 17C corrected legacy multivariate contract
+
+- Phase 17B historical fixtures remain byte-identical;
+- three corrected native and formatted references require exact structure and
+  numerical agreement within `1e-12`;
+- `updateB=FALSE` preserves supplied `B`, while `updateB=TRUE` preserves final
+  state and RNG-trajectory fields;
+- post-burn, relative-thinning, covariance, and probability contribution counts
+  are tested independently;
+- updated `pim` sums to one and disabled-update zero summaries stay stable;
+- same-process, fresh-process, thread-environment, and intervening-backend
+  comparisons protect the corrected route before extraction.

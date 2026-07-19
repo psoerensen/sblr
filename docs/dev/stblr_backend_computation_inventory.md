@@ -593,3 +593,14 @@ fields) followed the design work in
 `docs/dev/archive/stblr_csr_multichain_design.md`. Those recommendations are
 now implemented; the archived documents are kept for historical rationale
 only, not as a current reference.
+
+## Phase 17C corrected default multivariate execution
+
+Only the authoritative public `mtblr` body changed. Set-local `sampleBset` and
+`sampleB_latent`, plus the existing global `sampleB`, all respect `updateB`.
+Post-burn accumulation begins at `it >= nburn`; marker thinning uses
+`(it - nburn) % nthin`; and `bm`/`dm`, `covb`, `covg`, `cove`, and `pim` use
+their own positive contribution counts. Disabled covariance/probability updates
+retain zero posterior summaries. Native positions 0--19 and R naming,
+orientation, and conditional correlation fields remain unchanged. Inputs remain
+in-memory with no numerical disk I/O.

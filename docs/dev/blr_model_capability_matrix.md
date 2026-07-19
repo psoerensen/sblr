@@ -319,7 +319,7 @@ A model/operator route may become canonical when:
 | CSR BayesR and CSR SBayesRC | supported public | canonical | permanent exact | canonical |
 | fixed-prior, group, and learned-annotation CSR BayesC | supported public | canonical | permanent exact | canonical |
 | block-eigen BayesC/BayesR/SBayesRC | internal research | audited but noncanonical | smoke only | retain experimental |
-| default legacy multivariate `mtblr` | authoritative supported public legacy | legacy and noncanonical | deterministic references established; `updateB=FALSE` defect documented; posterior denominator policy requires decision | freeze as legacy reference; correct policy/defects before deliberate migration or coherent replacement |
+| default legacy multivariate `mtblr` | authoritative supported public legacy | legacy and noncanonical | `updateB` corrected; explicit post-burn policy and accumulator-specific counts; historical and corrected deterministic references established | ready for guarded mechanical extraction; retain historical behavior as legacy evidence |
 | CPG/Armadillo/eigen multivariate variants | public algorithm variants | legacy multivariate | smoke only | retain experimental |
 | OpenMP CPG multivariate | public algorithm variant | legacy multivariate | worker-sensitive RNG risk | correct before migration |
 | hybrid multivariate | native-only | legacy multivariate | none | retirement candidate |
@@ -332,7 +332,7 @@ routing, exports, schemas, or the canonical packed-BED classifications.
 
 | Route | Contract/reference status | Disposition |
 |---|---|---|
-| default `mtblr` | supported public legacy; authoritative; model, ownership, RNG, schema, and migration boundary audited; 3/3 raw and 3/3 formatted references within `1e-12`, exact structure | correct `updateB` defect before migration |
+| default `mtblr` | supported public legacy; authoritative; noncanonical; update control and retained-sample policy corrected; 3/3 corrected raw and 3/3 corrected formatted references within `1e-12`, exact structure; Phase 17B history retained | ready for mechanical extraction; migration not started |
 | `mtblr_cpg` | public experimental progression variant | retain experimental |
 | `mtblr_cpg_arma` | public experimental Armadillo variant | retain experimental |
 | `mtblr_cpg_omp` | worker-sensitive sparse native branch | correct RNG before retention |
@@ -342,3 +342,10 @@ routing, exports, schemas, or the canonical packed-BED classifications.
 
 No `stblr_raw_v1` boundary, route, or production implementation changes in
 Phase 17B.
+
+## 15. Phase 17C corrected public multivariate status
+
+All `B` updates honor `updateB`; post-burn begins at `nburn`; marker thinning is
+post-burn-relative; and marker, covariance, and probability summaries use
+distinct retained counts. Alternative multivariate classifications remain
+unchanged, including the `mtblr_cpg_omp` worker-sensitive RNG risk.

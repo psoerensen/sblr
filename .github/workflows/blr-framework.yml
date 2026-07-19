@@ -22,6 +22,6 @@ jobs:
       - name: Compile attributes and load native package
         run: Rscript -e "Rcpp::compileAttributes('.'); pkgload::load_all('.', compile=TRUE)"
       - name: Fast deterministic framework and schema tests
-        run: Rscript -e "pkgload::load_all('.', compile=FALSE, quiet=TRUE); devtools::test('.', filter='blr-framework-phase(10|11|12|17b)|raw-schema|backend-consistency|csr-interface|bed-interface')"
+        run: Rscript -e "pkgload::load_all('.', compile=FALSE, quiet=TRUE); devtools::test('.', filter='blr-framework-phase(10|11|12|17b|17c)|raw-schema|backend-consistency|csr-interface|bed-interface')"
       - name: Package check
         run: R CMD check --no-manual --no-build-vignettes .

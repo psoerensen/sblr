@@ -4076,7 +4076,11 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  int nt = wy.size();
  int m = wy[0].size();
  int nmodels = models.size();
- double nsamples=0.0;
+ double marker_retained_count = 0.0;
+ double covb_retained_count = 0.0;
+ double covg_retained_count = 0.0;
+ double cove_retained_count = 0.0;
+ double pi_retained_count = 0.0;
 
  //double logliksum, detC, diff, cumprobc;
  //int mselect;
@@ -4188,9 +4192,11 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
     const std::vector<int>& set = sets[s];
 
     // Step 1: Sample B using only markers in the current set
-    sampleBset(nt, m, nub, B, d, b, ssb_prior, set, gen);
-    //sampleB(nt, m, nub, B, d, b, ssb_prior, gen);
-    sampleB_latent(nt, m, nub, B, beta, ssb_prior, gen);
+    if (updateB) {
+     sampleBset(nt, m, nub, B, d, b, ssb_prior, set, gen);
+     //sampleB(nt, m, nub, B, d, b, ssb_prior, gen);
+     sampleB_latent(nt, m, nub, B, beta, ssb_prior, gen);
+    }
 
     // Step 2: Invert B to get Bi
     arma::mat Bi = arma::inv(B);
@@ -4240,7 +4246,7 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
    for ( int i = 0; i < m; i++) {
     //if (d[t][i] == 1) {
     if (d[t][i] > 0) {
-     if ((it > nburn) && (it % nthin == 0)) {
+     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
       dm[t][i] = dm[t][i] + 1.0;
       bm[t][i] = bm[t][i] + b[t][i];
      }
@@ -4252,8 +4258,9 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
   if(updatePi && method==4) {
    samplePi(cmodel, pi, gen);
    for (int k = 0; k<nmodels ; k++) {
-    if(it>nburn) pis[k] = pis[k] + pi[k];
+    if(it >= nburn) pis[k] = pis[k] + pi[k];
    }
+   if (it >= nburn) pi_retained_count = pi_retained_count + 1.0;
   }
 
   // Sample marker variance
@@ -4264,9 +4271,10 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
    }
    for (int t1 = 0; t1 < nt; t1++) {
     for (int t2 = 0; t2 < nt; t2++) {
-     if(it>nburn) cvbm[t1][t2] = cvbm[t1][t2] + B(t1,t2);
+     if(it >= nburn) cvbm[t1][t2] = cvbm[t1][t2] + B(t1,t2);
     }
    }
+   if (it >= nburn) covb_retained_count = covb_retained_count + 1.0;
   }
 
   //Update genetic variance
@@ -4276,9 +4284,10 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
   }
   for (int t1 = 0; t1 < nt; t1++  ) {
    for (int t2 = 0; t2 < nt; t2++) {
-    if(it>nburn) cvgm[t1][t2] = cvgm[t1][t2] + G(t1,t2);
+    if(it >= nburn) cvgm[t1][t2] = cvgm[t1][t2] + G(t1,t2);
    }
   }
+  if (it >= nburn) covg_retained_count = covg_retained_count + 1.0;
 
   // Sample residual variance
   if(updateE) {
@@ -4289,16 +4298,21 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
    }
    for (int t1 = 0; t1 < nt; t1++) {
     for (int t2 = 0; t2 < nt; t2++) {
-     if(it>nburn) cvem[t1][t2] = cvem[t1][t2] + E(t1,t2);
+     if(it >= nburn) cvem[t1][t2] = cvem[t1][t2] + E(t1,t2);
     }
    }
+   if (it >= nburn) cove_retained_count = cove_retained_count + 1.0;
   }
 
-  if ( (it > nburn) && (it % nthin == 0) ) {
-   nsamples = nsamples + 1.0;
+  if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+   marker_retained_count = marker_retained_count + 1.0;
   }
 
  }
+ if (marker_retained_count <= 0.0) {
+  throw std::runtime_error("mtblr: no retained marker-summary samples.");
+ }
+
  // Summarize results
  std::vector<std::vector<std::vector<double>>> result;
  result.resize(20);
@@ -4349,8 +4363,8 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
 
  for (int t=0; t < nt; t++) {
   for (int i=0; i < m; i++) {
-   result[0][t][i] = bm[t][i]/nsamples;
-   result[1][t][i] = dm[t][i]/nsamples;
+   result[0][t][i] = bm[t][i]/marker_retained_count;
+   result[1][t][i] = dm[t][i]/marker_retained_count;
    result[2][t][i] = wy[t][i];
    result[3][t][i] = r[t][i];
    result[4][t][i] = b[t][i];
@@ -4368,9 +4382,12 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  }
  for (int t1=0; t1 < nt; t1++) {
   for (int t2=0; t2 < nt; t2++) {
-   result[10][t1][t2] = cvbm[t1][t2]/nit;
-   result[11][t1][t2] = cvgm[t1][t2]/nit;
-   result[12][t1][t2] = cvem[t1][t2]/nit;
+   result[10][t1][t2] = covb_retained_count > 0.0 ?
+    cvbm[t1][t2] / covb_retained_count : 0.0;
+   result[11][t1][t2] = covg_retained_count > 0.0 ?
+    cvgm[t1][t2] / covg_retained_count : 0.0;
+   result[12][t1][t2] = cove_retained_count > 0.0 ?
+    cvem[t1][t2] / cove_retained_count : 0.0;
    result[13][t1][t2] = B(t1,t2);
    result[14][t1][t2] = G(t1,t2);
    result[15][t1][t2] = E(t1,t2);
@@ -4379,7 +4396,8 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  for (int t=0; t < nt; t++) {
   for (int i=0; i < nmodels; i++) {
    result[16][t][i] = pi[i];
-   result[17][t][i] = pis[i]/nit;
+   result[17][t][i] = pi_retained_count > 0.0 ?
+    pis[i] / pi_retained_count : 0.0;
   }
  }
  for (int t=0; t < nt; t++) {

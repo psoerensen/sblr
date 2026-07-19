@@ -1443,3 +1443,16 @@ aggregation, and converter seams are documented. Migration has not started.
 a bounded correction before extraction. The CPG OpenMP sparse branch remains
 worker-sensitive. Alternatives retain explicit experimental, research,
 correction-required, or retirement-candidate dispositions.
+
+### Phase 17C public multivariate correctness contract
+
+The authoritative supported legacy `mtblr()` route now honors `updateB=FALSE`
+for every set-local, latent, and global marker-covariance update. Burn-in is
+iterations `0..nburn-1`; post-burn accumulation begins at `it >= nburn`, marker
+thinning is relative to that sequence, and every posterior summary uses its
+actual accumulator-specific contribution count. Three separate Phase 17C
+native/formatted fixture pairs freeze corrected behavior with exact structure
+and numerical tolerance `1e-12`; Phase 17B fixtures remain historical evidence.
+The 20-position/public schema, fit-local RNG, route, and alternatives are
+unchanged. Migration has not started; the corrected route is ready for bounded
+mechanical extraction.

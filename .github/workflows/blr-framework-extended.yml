@@ -11,6 +11,7 @@ jobs:
       SBLR_RUN_PHASE11A_FRESH: "true"
       SBLR_RUN_PHASE11B_FRESH: "true"
       SBLR_RUN_PHASE17B_FRESH: "true"
+      SBLR_RUN_PHASE17C_FRESH: "true"
       SBLR_RUN_PEAK_RSS: "true"
     steps:
       - uses: actions/checkout@v4

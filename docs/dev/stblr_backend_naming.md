@@ -326,3 +326,12 @@ rename or compatibility commitments.
 `blr_mt_default_audit_types.h` are audit-only vocabulary, not production types.
 Alternative names retain their explicit variant dispositions and do not imply
 equivalent models or supported schemas.
+
+## Phase 17C corrected multivariate contract names
+
+`mtblr` remains the authoritative supported public legacy, noncanonical route.
+“Phase 17C raw reference” means its corrected 20-position native legacy result,
+not `stblr_raw_v1`. “Retained count” is accumulator-specific: marker summaries
+use the post-burn-relative thinned count, while covariance and updated
+probability summaries use their own post-burn contribution counts. Phase 17B
+names and fixtures denote historical pre-correction evidence.

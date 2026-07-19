@@ -79,7 +79,6 @@ test_that("production numerical sources and public boundaries are unchanged", {
     "src/st_cpg_omp_csr_annot.cpp"="59bd49f048d116d0fe61d73d79bd4693",
     "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h"="bec3bc1e41841ab77747e34dc9818574",
-    "src/mtblr.cpp"="419472a9d17afbf39edfcafb98bba459",
     "src/mt_cpg.cpp"="49a2c308b127de69cfe3bdf9df2be227",
     "src/mt_cpg_arma.cpp"="f911293210e4a29017f64a92769ec814",
     "src/mt_cpg_omp.cpp"="4c2e24988bd3151674be3c8982a36118",
