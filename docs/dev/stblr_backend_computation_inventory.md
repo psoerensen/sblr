@@ -564,6 +564,18 @@ monolithic/positional boundaries; `mtblr_cpg_omp` additionally derives a seed
 from the OpenMP worker identity. See `blr_framework_phase17a_report.md` for the
 complete reachability, ownership, RNG, reference, and disposition matrices.
 
+### Phase 17B default multivariate execution
+
+Authoritative `mtblr` owns one fit-local `std::mt19937`, trait-major
+marker/effect/state/residual arrays, covariance matrices, and one serial Gibbs
+loop. It consumes in-memory dense summaries converted to nested vectors,
+produces a 20-position native result, and relies on R for naming/orientation and
+BayesC truncation to 18 base fields. Three native/formatted fixture pairs use a
+narrow `1e-12` tolerance for Armadillo ulp variation and exact structure to
+freeze this behavior. Unconditional set-local and latent `B` updates mean
+`updateB=FALSE` is not honored; this is a correction prerequisite, not changed
+by the audit.
+
 ## Validation Pointers
 
 The lightweight consistency checker validates common marker matrices, optional

@@ -317,3 +317,12 @@ routes. `sblr()` remains the public legacy multivariate wrapper; `mtblr`,
 native algorithm variants. `mtblr_hybrid` and `mtblr_cpg_omp_csr` are
 native-only, not additional public APIs. These are support classifications, not
 rename or compatibility commitments.
+
+## Phase 17B multivariate contract names
+
+`mtblr` is authoritative for public `sblr(algorithm = "default")`. Phase 17B
+“raw” fixtures mean its frozen 20-position native legacy result, not
+`stblr_raw_v1`; the public object is the named legacy fit. `Mt*` structures in
+`blr_mt_default_audit_types.h` are audit-only vocabulary, not production types.
+Alternative names retain their explicit variant dispositions and do not imply
+equivalent models or supported schemas.

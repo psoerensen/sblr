@@ -1430,3 +1430,16 @@ distinct but lacks typed/raw boundaries and permanent references; default
 variant has a documented worker-sensitive RNG risk that requires correction
 before migration. Native-only multivariate variants are classified for research
 retention or retirement. Public routes and schemas are unchanged.
+
+### Phase 17B authoritative multivariate contract audit
+
+The supported public legacy `sblr(algorithm = "default") -> mtblr()` route is
+frozen by three native positional and three formatted references at a narrowly
+justified `1e-12` numerical tolerance with exact structure.
+Its statistical model, ordering, covariance/probability updates, ownership,
+single-engine RNG, legacy schema, performance, and future single-fit extraction,
+aggregation, and converter seams are documented. Migration has not started.
+`updateB = FALSE` is confirmed not to keep marker covariance fixed and requires
+a bounded correction before extraction. The CPG OpenMP sparse branch remains
+worker-sensitive. Alternatives retain explicit experimental, research,
+correction-required, or retirement-candidate dispositions.

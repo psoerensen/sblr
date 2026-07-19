@@ -326,3 +326,18 @@ A model/operator route may become canonical when:
 
 Phase 17A changes status metadata only. It does not alter numerical code,
 routing, exports, schemas, or the canonical packed-BED classifications.
+
+## 14. Phase 17B public multivariate audit status
+
+| Route | Contract/reference status | Disposition |
+|---|---|---|
+| default `mtblr` | supported public legacy; authoritative; model, ownership, RNG, schema, and migration boundary audited; 3/3 raw and 3/3 formatted references within `1e-12`, exact structure | correct `updateB` defect before migration |
+| `mtblr_cpg` | public experimental progression variant | retain experimental |
+| `mtblr_cpg_arma` | public experimental Armadillo variant | retain experimental |
+| `mtblr_cpg_omp` | worker-sensitive sparse native branch | correct RNG before retention |
+| `mtblr_eigen` | public experimental eigen variant | retain experimental |
+| `mtblr_cpg_omp_csr` | native-only sparse research | retain internal representation research |
+| `mtblr_hybrid` | native-only, unused, unfrozen | retire/remove candidate |
+
+No `stblr_raw_v1` boundary, route, or production implementation changes in
+Phase 17B.
