@@ -307,3 +307,22 @@ A model/operator route may become canonical when:
 - output semantics are documented;
 - legacy implementation has a removal plan;
 - the extension path is clearer than before.
+
+---
+
+## 13. Phase 17A non-packed-BED status
+
+| Family | Reachability | Current architecture | Reference strength | Disposition |
+|---|---|---|---|---|
+| ordinary and scheduled CSR BayesC | supported public | canonical | permanent exact | canonical |
+| CSR BayesR and CSR SBayesRC | supported public | canonical | permanent exact | canonical |
+| fixed-prior, group, and learned-annotation CSR BayesC | supported public | canonical | permanent exact | canonical |
+| block-eigen BayesC/BayesR/SBayesRC | internal research | audited but noncanonical | smoke only | retain experimental |
+| default legacy multivariate `mtblr` | supported public | legacy multivariate | smoke only | retain supported; reference/boundary audit required |
+| CPG/Armadillo/eigen multivariate variants | public algorithm variants | legacy multivariate | smoke only | retain experimental |
+| OpenMP CPG multivariate | public algorithm variant | legacy multivariate | worker-sensitive RNG risk | correct before migration |
+| hybrid multivariate | native-only | legacy multivariate | none | retirement candidate |
+| CSR OpenMP multivariate | native-only research | legacy multivariate | none | retain experimental pending evidence |
+
+Phase 17A changes status metadata only. It does not alter numerical code,
+routing, exports, schemas, or the canonical packed-BED classifications.

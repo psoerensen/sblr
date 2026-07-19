@@ -1417,3 +1417,16 @@ and converter responsibilities are explicit, unconditional scheduled-CSR core
 console writes are removed, canonical commented snapshots are removed, fast
 and extended CI are established, and peak-RSS tooling distinguishes sampled
 peak from completed-fit RSS. Canonical numerical references remain unchanged.
+
+### Phase 17A remaining-backend audit
+
+All active non-packed-BED routes are now inventoried and prioritized without
+production migration. The seven scalar CSR families retain canonical
+architecture. The three block-eigen routes remain internal experimental,
+performance-specialized operators pending deterministic references and memory
+evidence. The public legacy multivariate `sblr()` family is scientifically
+distinct but lacks typed/raw boundaries and permanent references; default
+`mtblr()` is the P1 reference-and-boundary-audit candidate. The CPG OpenMP
+variant has a documented worker-sensitive RNG risk that requires correction
+before migration. Native-only multivariate variants are classified for research
+retention or retirement. Public routes and schemas are unchanged.

@@ -307,3 +307,13 @@ and should continue returning standardized metadata and annotation aliases.
 Direct `stblr_csr(..., annotations = ...)` dispatch can be added later after the
 annotation argument contract is stable. Annotation-aware changes should not
 rename native C++ files or symbols.
+
+## Phase 17A status vocabulary
+
+Current names are retained unchanged. Scalar CSR names denote canonical public
+routes. Names containing `block_eigen` denote internal experimental operator
+routes. `sblr()` remains the public legacy multivariate wrapper; `mtblr`,
+`mtblr_cpg`, `mtblr_cpg_arma`, `mtblr_cpg_omp`, and `mtblr_eigen` identify its
+native algorithm variants. `mtblr_hybrid` and `mtblr_cpg_omp_csr` are
+native-only, not additional public APIs. These are support classifications, not
+rename or compatibility commitments.

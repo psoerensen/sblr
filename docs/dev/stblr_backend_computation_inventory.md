@@ -550,6 +550,20 @@ as a sampled or fixed sampler parameter.
 | `src/st_sbayesrc_omp_csr_annot.cpp` is present but is not part of the current public backend set. | documentation gap | Documented as out of scope for current public audit. |
 | Full cross-backend field inventory was not tested directly. | missing test | Added `test-stblr-backend-field-inventory.R`. |
 
+## Phase 17A remaining-backend computation inventory
+
+The active non-packed-BED numerical surface comprises seven canonical scalar
+CSR routes, three internal block-eigen operator routes, five public legacy
+multivariate algorithm routes, and two native-only multivariate exports.
+Preparation utilities and shared sampler helpers are not independent routes.
+
+Canonical CSR routes own typed contexts/results and named raw conversion.
+Block-eigen routes reuse the canonical scalar cores after fit-local dense-block
+construction but remain experimental. The multivariate family retains legacy
+monolithic/positional boundaries; `mtblr_cpg_omp` additionally derives a seed
+from the OpenMP worker identity. See `blr_framework_phase17a_report.md` for the
+complete reachability, ownership, RNG, reference, and disposition matrices.
+
 ## Validation Pointers
 
 The lightweight consistency checker validates common marker matrices, optional
