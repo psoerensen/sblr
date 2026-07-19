@@ -370,3 +370,37 @@ references before any mechanical extraction.
 ## 29. Readiness marker
 
 PHASE 17B COMPLETE — PUBLIC MULTIVARIATE CONTRACT AND MIGRATION AUDIT READY
+
+## Post-review hardening
+
+The Phase 17B route assertion now uses the Phase 12A zero-safe source-count
+helper and directly distinguishes zero, one, and duplicate matches. The fast
+GitHub Actions gate includes ordinary Phase 17B tests, while extended validation
+sets `SBLR_RUN_PHASE17B_FRESH="true"` for the existing full suite. Hosted CI
+execution is not claimed by this local review.
+
+Current capability metadata now classifies default `mtblr()` as the
+authoritative supported public legacy implementation, explicitly noncanonical,
+with its `updateB=FALSE` defect and denominator-policy decision still blocking
+extraction. Alternative implementations retain their separate dispositions.
+
+Fixture metadata now states `structure_exact_numeric_tolerance`, numerical
+tolerance `1e-12`, and `structure_exact=TRUE`. Names, types, dimensions,
+dimnames, classes, order, and positional schema remain exact; only numerical
+comparisons use the narrow tolerance. The three existing RDS files received
+metadata-only rewrites, with their `raw` and `fit` objects proven identical
+before and after rewriting.
+
+A direct permanent runtime test freezes the current legacy probability summary:
+strict zero-based `it > nburn` accumulation contributes `nit - 1` probability
+vectors and final `pim` divides by `nit`, so `sum(pim)=(nit-1)/nit`. Source-level
+assertions retain both statements. This is evidence for Phase 17C, not the
+desired future policy. No numerical production behavior, route, API, wrapper,
+or schema changed, and Phase 17C has not started.
+
+Local post-review validation passed 147 ordinary Phase 17B expectations with
+one intended fresh-process skip, 148/148 with fresh-process validation enabled,
+48 Phase 12A workflow-structure expectations with its existing peak-RSS skip,
+and the full suite at 5,845 passes, zero failures, zero test warnings, and nine
+intentional opt-in skips. Native compile/load and `git diff --check` passed.
+These are local results; hosted GitHub Actions execution is not claimed.

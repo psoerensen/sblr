@@ -100,7 +100,9 @@ phase17b_mt_capture <- function(id = 1L, formatted = TRUE) {
 
 phase17b_mt_metadata <- function(id = 1L) {
   x <- phase17b_mt_config(id)
-  list(starting_commit = "dc429e1", reference_mode = "exact",
+  list(starting_commit = "dc429e1",
+    reference_mode = "structure_exact_numeric_tolerance",
+    numeric_tolerance = 1e-12, structure_exact = TRUE,
     schema = "legacy positional native / named public fit",
     rng = "R-generated seed; one fit-local std::mt19937",
     samples = x$n, markers = lengths(x$Xy)[1], traits = length(x$Xy),

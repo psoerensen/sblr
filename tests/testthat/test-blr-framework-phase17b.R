@@ -7,16 +7,17 @@ source(file.path(phase17b_root, "tests/testthat/fixtures/blr_phase17b_mt_default
 
 test_that("authoritative public route is singular and unchanged", {
   route <- phase17b_text("R/interface_mtblr.R")
+  call <- 'fit <- .Call("_sblr_mtblr"'
   expect_match(route, 'if(algorithm=="default")', fixed = TRUE)
-  expect_match(route, 'fit <- .Call("_sblr_mtblr"', fixed = TRUE)
-  expect_equal(length(gregexpr('fit <- .Call("_sblr_mtblr"', route,
-    fixed = TRUE)[[1]]), 1L)
+  expect_source_count(call, route, 1L)
+  expect_identical(source_match_count("missing Phase 17B route", route), 0L)
+  expect_identical(source_match_count(call, paste(route, route)), 2L)
   expect_match(route, "seed <- sample.int(.Machine$integer.max, 1)", fixed = TRUE)
   expect_match(route, 'names(fit) <- c("bm","dm","wy","r","b","d","o"',
     fixed = TRUE)
 })
 
-test_that("three raw and formatted references are exact", {
+test_that("three references have exact structure and narrow numeric tolerance", {
   for (id in 1:3) {
     ref <- readRDS(file.path(phase17b_root,
       "tests/testthat/fixtures/blr_phase17b_mt_default",
@@ -25,6 +26,10 @@ test_that("three raw and formatted references are exact", {
       info = paste("raw config", id))
     expect_equal(phase17b_mt_capture(id, TRUE), ref$fit, tolerance = 1e-12,
       info = paste("formatted config", id))
+    expect_identical(ref$metadata$reference_mode,
+      "structure_exact_numeric_tolerance")
+    expect_identical(ref$metadata$numeric_tolerance, 1e-12)
+    expect_true(isTRUE(ref$metadata$structure_exact))
   }
 })
 
@@ -99,6 +104,35 @@ test_that("update-control audit records the public updateB defect", {
   expect_identical(unname(fit$pi), c(.8, rep(.2 / 3, 3)))
   report <- phase17b_text("docs/dev/blr_framework_phase17b_report.md")
   expect_match(report, "updateB = FALSE does not keep B fixed", fixed = TRUE)
+})
+
+test_that("legacy posterior denominator is frozen evidence for Phase 17C", {
+  config <- phase17b_mt_config(1L)
+  fit <- phase17b_mt_capture(1L, formatted = TRUE)
+  iteration_index <- 0:(config$nit + config$nburn - 1L)
+  n_accumulated <- sum(iteration_index > config$nburn)
+  expect_identical(n_accumulated, config$nit - 1L)
+  expect_equal(sum(unname(fit$pim)), n_accumulated / config$nit,
+    tolerance = 1e-12)
+  expect_false(isTRUE(all.equal(sum(unname(fit$pim)), 1,
+    tolerance = 1e-12)))
+  core <- phase17b_text("src/mtblr.cpp")
+  public <- substr(core, regexpr("mtblr(", core, fixed = TRUE)[1],
+    regexpr("// [[Rcpp::export]]\nstd::vector<std::vector<std::vector<double>>>  mtblr_hybrid",
+      core, fixed = TRUE)[1] - 1L)
+  expect_source_count("if(it>nburn) pis[k] = pis[k] + pi[k];", public, 1L)
+  expect_source_count("result[17][t][i] = pis[i]/nit;", public, 1L)
+  succeed("Frozen legacy evidence only; this is not the desired future policy")
+})
+
+test_that("fast and extended CI include Phase 17B at the intended level", {
+  fast <- phase17b_text(".github/workflows/blr-framework.yml")
+  extended <- phase17b_text(".github/workflows/blr-framework-extended.yml")
+  expect_match(fast, "blr-framework-phase(10|11|12|17b)", fixed = TRUE)
+  expect_match(extended, 'SBLR_RUN_PHASE17B_FRESH: "true"', fixed = TRUE)
+  expect_match(extended, "devtools::test('.')", fixed = TRUE)
+  expect_false(grepl("blr_phase17b_mt_default_audit.R", fast, fixed = TRUE))
+  expect_false(grepl("blr_phase17b_mt_default_audit.R", extended, fixed = TRUE))
 })
 
 test_that("RNG ownership and update order are structurally frozen", {

@@ -8,9 +8,10 @@
 
 Canonical ordinary CSR: BayesC, BayesR, SBayesRC, fixed-prior BayesC, group
 BayesC, and learned-annotation BayesC. Canonical scheduled: ordinary-CSR BayesC
-and public scheduled packed-BED BayesC. Experimental/sparse BED BayesC,
-block-eigen where applicable, and legacy
-multivariate implementations remain audited/protected and noncanonical.
+and public scheduled packed-BED BayesC. Experimental/sparse BED BayesC and
+block-eigen remain audited/protected and noncanonical. The authoritative public
+default multivariate route is supported legacy and noncanonical; alternative
+multivariate implementations retain separate experimental/research statuses.
 Historical phase descriptions below retain their original point-in-time scope.
 
 Packed-BED BayesR remains noncanonical and production-unchanged. Phase 13A
@@ -318,7 +319,7 @@ A model/operator route may become canonical when:
 | CSR BayesR and CSR SBayesRC | supported public | canonical | permanent exact | canonical |
 | fixed-prior, group, and learned-annotation CSR BayesC | supported public | canonical | permanent exact | canonical |
 | block-eigen BayesC/BayesR/SBayesRC | internal research | audited but noncanonical | smoke only | retain experimental |
-| default legacy multivariate `mtblr` | supported public | legacy multivariate | smoke only | retain supported; reference/boundary audit required |
+| default legacy multivariate `mtblr` | authoritative supported public legacy | legacy and noncanonical | deterministic references established; `updateB=FALSE` defect documented; posterior denominator policy requires decision | freeze as legacy reference; correct policy/defects before deliberate migration or coherent replacement |
 | CPG/Armadillo/eigen multivariate variants | public algorithm variants | legacy multivariate | smoke only | retain experimental |
 | OpenMP CPG multivariate | public algorithm variant | legacy multivariate | worker-sensitive RNG risk | correct before migration |
 | hybrid multivariate | native-only | legacy multivariate | none | retirement candidate |
