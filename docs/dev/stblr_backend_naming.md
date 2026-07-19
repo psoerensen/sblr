@@ -1,5 +1,14 @@
 # ST-BLR Backend Naming
 
+## Experimental packed-BED BayesC names
+
+The canonical public name is `bed_bayesc`, reached through
+`stblr_bed(method = "bayesc")`. The lower-level native names
+`stblr_cpg_omp_bed_marker_scheduled` and
+`stblr_cpg_omp_bed_marker_sparse` are explicitly experimental. Their returned
+backend identifiers (`bed_scheduled_bayesc` and `bed_sparse_bayesc`) describe
+research implementations and must not be interpreted as canonical aliases.
+
 This note records the naming convention for the supported CSR and BED BLR
 backends. It is a maintenance guide only; it does not change sampler math,
 posterior output semantics, or public user-facing behavior.

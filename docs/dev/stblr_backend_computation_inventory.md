@@ -1,5 +1,16 @@
 # ST-BLR Backend Computation and Return Inventory
 
+## Experimental packed-BED BayesC routes
+
+`stblr_bed_marker()` retains two explicitly experimental implementations outside
+the canonical `stblr_bed(method = "bayesc")` path. The scheduled single-chain
+export `stblr_cpg_omp_bed_marker_scheduled()` is retained as a deterministic
+Phase 11B reference implementation. The sparse export
+`stblr_cpg_omp_bed_marker_sparse()` retains a distinct `null_update_prob`
+marker-scheduling experiment. Both decode fit-local packed BED storage, are
+noncanonical, and are unsupported for general use; neither is a fallback from
+the canonical public route.
+
 This document records what the supported BLR backends compute, accumulate,
 return from native code, and expose in formatted R fit objects. It is an audit
 artifact for backend alignment; it does not change sampler definitions.

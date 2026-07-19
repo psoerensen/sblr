@@ -3547,11 +3547,13 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
 #' @param rows Optional 1-based individual row indices into the BED file. When
 #'   omitted, subset phenotypes can instead be matched using `rownames(y)` and
 #'   `Glist$ids`.
-#' @param backend Sampler backend. `"auto"` selects the scheduled multi-chain
-#'   backend for multi-chromosome fits or when `nchains > 1`, and the scheduled
-#'   single-chain backend otherwise. `"scheduled"` forces a scheduled backend;
-#'   for multi-chromosome fits it uses the scheduled multi-chain backend.
-#'   `"sparse"` is only valid for one chromosome.
+#' @param backend Sampler backend. The canonical backend is the scheduled
+#'   multi-chain implementation. Experimental lower-level choices are retained
+#'   for research and deterministic-reference use: `"auto"` and `"scheduled"`
+#'   use the historical scheduled single-chain implementation for a one-file,
+#'   one-chain fit, while `"sparse"` selects the experimental sparse scheduler
+#'   and is only valid for one chromosome. These experimental choices are not
+#'   part of the canonical [stblr_bed()] route.
 #' @param nchains Number of MCMC chains. When `nchains > 1`, the scheduled
 #'   multi-chain backend is used and returns chain-stability summaries
 #'   `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`.

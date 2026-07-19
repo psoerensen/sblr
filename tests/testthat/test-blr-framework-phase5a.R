@@ -73,7 +73,7 @@ test_that("Phase 5A protects BayesC, block-eigen, and namespace sources", {
   paths <- c("R/sparse_ld_bed_helper.R","docs/dev/stblr_raw_schema.md",
     "src/st_cpg_omp_csr.cpp","src/blr_csr_bayesc_types.h",
     "src/blr_csr_bayesc_core_impl.h","src/st_block_eigen.cpp","src/st_block_eigen.h","NAMESPACE")
-  expected <- c("142f674bbe43063280f2dda25fa30a64","82ac9ba4b7d8edc6f3e16ee3a26d8466",
+  expected <- c("29f5f43c2abffd3259e42ed7a7f3cd7a","82ac9ba4b7d8edc6f3e16ee3a26d8466",
     "92dafc0266d5a0e72aea000224154cef","e5975c311c69fe536db57dd21f01334f",
     "f7c617cbfc172639c1f8aea1bd8b1876","49f0a62c9fe235967a264b0f8de144a7",
     "bec3bc1e41841ab77747e34dc9818574","f5b6ee37a3972aa436357bdc8f602f4e")

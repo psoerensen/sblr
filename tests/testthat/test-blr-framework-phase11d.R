@@ -122,5 +122,5 @@ test_that("documentation keeps experimental packed-BED BayesC routes noncanonica
   matrix <- read11d("docs/dev/blr_model_capability_matrix.md")
   expect_match(plan, "Phase 11D public scheduled packed-BED BayesC canonicalization", fixed = TRUE)
   expect_match(matrix, "Canonical corrected logical-chain RNG", fixed = TRUE)
-  expect_match(matrix, "experimental single-chain and sparse BayesC routes remain unchanged and noncanonical", fixed = TRUE)
+  expect_match(matrix, "Explicitly experimental lower-level scheduled single-chain and sparse routes are retained unchanged", fixed = TRUE)
 })

@@ -41,7 +41,7 @@ test_that("current framework status remains synchronized after Phase 12A", {
   matrix <- paste(readLines(file.path(root, "docs", "dev", "blr_model_capability_matrix.md"),
                             warn = FALSE), collapse = "\n")
   for (text in list(plan, matrix)) {
-    expect_match(text, "Phase 15B packed-BED common infrastructure canonicalized", fixed = TRUE)
+    expect_match(text, "Phase 16A experimental packed-BED BayesC routes explicitly disposed", fixed = TRUE)
     expect_match(text, "Canonical ordinary CSR", fixed = TRUE)
     expect_match(text, "Canonical scheduled", fixed = TRUE)
     expect_match(text, "historical", ignore.case = TRUE)

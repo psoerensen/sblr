@@ -96,11 +96,13 @@ values are periodic and negative values are rejected.}
 
 \item{seed}{Sampler seed.}
 
-\item{backend}{Sampler backend. `"auto"` selects the scheduled multi-chain
-backend for multi-chromosome fits or when `nchains > 1`, and the scheduled
-single-chain backend otherwise. `"scheduled"` forces a scheduled backend;
-for multi-chromosome fits it uses the scheduled multi-chain backend.
-`"sparse"` is only valid for one chromosome.}
+\item{backend}{Sampler backend. The canonical backend is the scheduled
+multi-chain implementation. Experimental lower-level choices are retained
+for research and deterministic-reference use: `"auto"` and `"scheduled"`
+use the historical scheduled single-chain implementation for a one-file,
+one-chain fit, while `"sparse"` selects the experimental sparse scheduler
+and is only valid for one chromosome. These experimental choices are not
+part of the canonical [stblr_bed()] route.}
 
 \item{null_update_prob, null_skip_base, null_skip_max}{Null-marker scheduling
 controls.}

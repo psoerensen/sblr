@@ -1,6 +1,18 @@
 # Unified BLR Framework: Architecture and Incremental Refactoring Plan
 
-**Status:** Phase 15B packed-BED common infrastructure canonicalized
+**Status:** Phase 16A experimental packed-BED BayesC routes explicitly disposed
+
+## Phase 16A experimental packed-BED BayesC disposition
+
+The lower-level `stblr_bed_marker()` scheduled single-chain and sparse routes
+remain callable but are explicitly experimental rather than supported
+alternatives. The single-chain route is retained as the permanent deterministic
+Phase 11B oracle; it is a strict execution subset with intentionally different
+seed mapping from the canonical multichain route. The sparse route is retained
+for its distinct `null_update_prob` scheduler research policy. Neither route is
+used by `stblr_bed(method = "bayesc")`, neither is canonical, and neither was
+migrated. Historical commented implementations remain historical audit artifacts.
+The canonical BayesC, BayesR, and BayesRC numerical sources are unchanged.
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_framework_implementation_plan.md`
 

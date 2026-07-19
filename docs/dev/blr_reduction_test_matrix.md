@@ -1,5 +1,12 @@
 # Unified BLR Framework: Reduction, Regression, and Validation Test Matrix
 
+Phase 16A disposition note: the experimental packed-BED scheduled single-chain
+route is not an exact reduction of canonical one-chain BayesC because its
+historical logical-chain seed mapping differs; Phase 11B permanently records the
+first numerical nonidentity. The experimental sparse route uses a distinct
+stochastic null-marker scheduling policy and is not required to reduce exactly
+to canonical scheduled BayesC. Both remain noncanonical research routes.
+
 **Status:** Phase 12A hardened validation specification
 **Date:** 2026-07-18
 **Target location:** `docs/dev/blr_reduction_test_matrix.md`
