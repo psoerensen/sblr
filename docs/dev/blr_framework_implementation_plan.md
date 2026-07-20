@@ -1494,3 +1494,13 @@ reuse the future canonical scalar representation with per-trait decompositions.
 No CSR, eigen, multichain, operator, converter, or public-schema implementation
 is introduced. The supported legacy route remains noncanonical and is ready for
 a shared-CSR compatibility audit.
+## Phase 17F2: permanent BLR test-contract ownership
+
+Phase 17F2 replaces superseded phase-by-phase migration duplication with three
+explicit tiers and one permanent owner for each numerical, public, scientific,
+reproducibility, architecture, and historical contract. Canonical reference
+owners remain ordinary tests; fresh-process and thread-environment matrices are
+centralized in `test-blr-extended-reproducibility.R`. Frozen fixtures retain
+hash protection, while active source relies on behavioral references and narrow
+binding/ownership assertions. No production, CSR, eigen, schema, or RNG behavior
+changes in this phase.

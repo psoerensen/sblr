@@ -138,7 +138,7 @@ test_that("fast and extended framework workflows are independently visible", {
                    "Rcpp::compileAttributes", "devtools::test", "R CMD check"))
     expect_match(fast, needle, fixed = TRUE)
   expect_match(extended, "workflow_dispatch:", fixed = TRUE)
-  expect_match(extended, "SBLR_RUN_PHASE11B_FRESH", fixed = TRUE)
+  expect_match(extended, "SBLR_RUN_EXTENDED_REPRODUCIBILITY", fixed = TRUE)
   expect_match(extended, "measure_peak_rss.R --smoke", fixed = TRUE)
 })
 

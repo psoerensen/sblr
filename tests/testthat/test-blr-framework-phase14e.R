@@ -80,10 +80,3 @@ test_that("canonical BayesRC protects other backends and interfaces",{
   "R/RcppExports.R"="9d13ea00b326c7e0cd606194d13a8bca","src/RcppExports.cpp"="b4859db0f6308fa7e38051ddcf32d245","NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")
  expect_identical(unname(tools::md5sum(file.path(phase14e_root,names(protected)))),unname(protected))
 })
-
-test_that("canonical fresh-process reference is opt-in",{
- skip_if_not(identical(Sys.getenv("SBLR_RUN_PHASE14A_FRESH"),"true"));skip_if_not_installed("callr")
- observed<-callr::r(function(root){setwd(root);pkgload::load_all(".",compile=FALSE,quiet=TRUE);library(testthat);source("tests/testthat/fixtures/blr-phase14a-bed-bayesrc-reference.R");phase14a_normalize(phase14a_capture(2,2,143,TRUE,TRUE))},list(root=phase14e_root))
- ref<-readRDS(file.path(testthat::test_path(),"fixtures","blr_phase14a_bed_bayesrc","two_chains_two_cores.rds"))
- expect_identical(observed$raw,ref$raw);expect_identical(observed$fit,ref$fit)
-})

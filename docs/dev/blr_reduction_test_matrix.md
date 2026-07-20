@@ -647,3 +647,12 @@ Errors should identify the failing field and expected contract.
   exact under the 3/3 corrected native and formatted references;
 - future CSR and block-eigen contracts are documentation requirements only and
   introduce no numerical reduction or execution path.
+## Phase 17F2 permanent test ownership
+
+The permanent numerical owners are Phase 3 (CSR BayesC), Phase 6 (CSR BayesR),
+Phase 8 (CSR SBayesRC), Phase 9C (fixed prior), Phase 9E (group), Phase 9G
+(learned annotation), Phase 10D (scheduled CSR), Phase 11D (packed-BED BayesC),
+Phase 13E (packed-BED BayesR), Phase 14E (packed-BED BayesRC), and Phase 17C
+(corrected dense MT). Phase 17E owns the typed MT core contract and Phase 17F
+owns typed finalization. Representative fresh-process coverage is extended-only.
+See `blr_test_contract_ownership.md` for the complete matrix.
