@@ -349,3 +349,13 @@ All `B` updates honor `updateB`; post-burn begins at `nburn`; marker thinning is
 post-burn-relative; and marker, covariance, and probability summaries use
 distinct retained counts. Alternative multivariate classifications remain
 unchanged, including the `mtblr_cpg_omp` worker-sensitive RNG risk.
+
+## 16. Phase 17D lexical extraction status
+
+| Route | Execution boundary | Result/conversion boundary | Status |
+|---|---|---|---|
+| default `mtblr` | one guarded lexical corrected single-fit implementation header; fit-local RNG and retained-count contract preserved | legacy 20-position finalization remains inline; R formatting unchanged | supported public legacy, noncanonical, migration in progress; typed context/result not active |
+
+Phase 17C corrected references remain authoritative current behavior and Phase
+17B fixtures remain immutable historical evidence. Alternative multivariate
+and block-eigen dispositions are unchanged.

@@ -1456,3 +1456,14 @@ and numerical tolerance `1e-12`; Phase 17B fixtures remain historical evidence.
 The 20-position/public schema, fit-local RNG, route, and alternatives are
 unchanged. Migration has not started; the corrected route is ready for bounded
 mechanical extraction.
+
+### Phase 17D lexical multivariate execution extraction
+
+The corrected authoritative public `mtblr()` single-fit numerical setup and
+Gibbs loop are mechanically relocated to the guarded lexical implementation
+header `blr_mt_default_core_impl.h`. One include inside the unchanged native
+entry activates the sole public execution path. The 20-position finalization
+remains inline in `mtblr.cpp`, and R naming/orientation remains in
+`interface_mtblr.R`. Phase 17C references and the fit-local RNG contract remain
+active. No typed production context/result, aggregation object, or converter is
+active; migration remains in progress and the route remains noncanonical.

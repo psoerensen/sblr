@@ -164,19 +164,21 @@ test_that("corrected scientific identities and legacy schema are stable", {
 
 test_that("public source freezes guards, conditions, and distinct counts", {
   public <- phase17c_public_source()
-  expect_source_count("if (updateB) {", public, 1L)
-  expect_source_count("sampleBset(nt, m, nub, B", public, 1L)
-  expect_source_count("sampleB_latent(nt, m, nub, B", public, 1L)
-  expect_source_count("if(updateB && method==4)", public, 1L)
-  expect_source_count("it >= nburn", public, 10L)
-  expect_source_count("(it - nburn) % nthin", public, 2L)
+  execution <- phase17c_text("src/blr_mt_default_core_impl.h")
+  expect_source_count('#include "blr_mt_default_core_impl.h"', public, 1L)
+  expect_source_count("if (updateB) {", execution, 1L)
+  expect_source_count("sampleBset(nt, m, nub, B", execution, 1L)
+  expect_source_count("sampleB_latent(nt, m, nub, B", execution, 1L)
+  expect_source_count("if(updateB && method==4)", execution, 1L)
+  expect_source_count("it >= nburn", execution, 10L)
+  expect_source_count("(it - nburn) % nthin", execution, 2L)
   for (name in c("marker_retained_count", "covb_retained_count",
       "covg_retained_count", "cove_retained_count", "pi_retained_count"))
-    expect_true(source_match_count(name, public) >= 3L)
-  expect_source_forbidden(public, c("it>nburn", "it > nburn",
+    expect_true(source_match_count(name, execution) >= 3L)
+  expect_source_forbidden(execution, c("it>nburn", "it > nburn",
     "bm[t][i]/nsamples", "pis[i]/nit"))
-  expect_source_count("std::mt19937 gen(seed);", public, 1L)
-  expect_source_forbidden(public, c("omp_get_thread_num", "static std::mt19937",
+  expect_source_count("std::mt19937 gen(seed);", execution, 1L)
+  expect_source_forbidden(execution, c("omp_get_thread_num", "static std::mt19937",
     "thread_local"))
 })
 
