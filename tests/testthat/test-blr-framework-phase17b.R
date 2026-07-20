@@ -131,7 +131,7 @@ test_that("legacy posterior denominator is frozen evidence for Phase 17C", {
 test_that("fast and extended CI include Phase 17B at the intended level", {
   fast <- phase17b_text(".github/workflows/blr-framework.yml")
   extended <- phase17b_text(".github/workflows/blr-framework-extended.yml")
-  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d)", fixed = TRUE)
+  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d|17e)", fixed = TRUE)
   expect_match(extended, 'SBLR_RUN_PHASE17B_FRESH: "true"', fixed = TRUE)
   expect_match(extended, "devtools::test('.')", fixed = TRUE)
   expect_false(grepl("blr_phase17b_mt_default_audit.R", fast, fixed = TRUE))
@@ -139,20 +139,23 @@ test_that("fast and extended CI include Phase 17B at the intended level", {
 })
 
 test_that("RNG ownership and update order are structurally frozen", {
-  core <- phase17b_text("src/mtblr.cpp")
-  expect_source_count("std::mt19937 gen(seed);", core, 3L)
-  public <- substr(core, regexpr("mtblr(", core, fixed = TRUE)[1],
+  adapter <- phase17b_text("src/mtblr.cpp")
+  execution <- phase17b_text("src/blr_mt_default_core_impl.h")
+  expect_source_count("std::mt19937 gen(seed);", adapter, 2L)
+  expect_source_count("std::mt19937 gen(execution.seed);", execution, 1L)
+  public <- substr(adapter, regexpr("mtblr(", adapter, fixed = TRUE)[1],
     regexpr("// [[Rcpp::export]]\nstd::vector<std::vector<std::vector<double>>>  mtblr_hybrid",
-      core, fixed = TRUE)[1] - 1L)
-  expect_match(public, "sampleBset", fixed = TRUE)
-  expect_match(public, "sampleBetaCPG_Mt_latent", fixed = TRUE)
-  expect_match(public, "samplePi(cmodel, pi, gen)", fixed = TRUE)
-  expect_match(public, "sampleB(nt, m, nub, B", fixed = TRUE)
-  expect_match(public, "computeG(nt, m", fixed = TRUE)
-  expect_match(public, "sampleE(nt, m, nue, E", fixed = TRUE)
-  expect_false(grepl("omp_get_thread_num", public, fixed = TRUE))
-  expect_false(grepl("static std::mt19937", public, fixed = TRUE))
-  expect_false(grepl("thread_local", public, fixed = TRUE))
+      adapter, fixed = TRUE)[1] - 1L)
+  expect_match(execution, "sampleBset", fixed = TRUE)
+  expect_match(execution, "sampleBetaCPG_Mt_latent", fixed = TRUE)
+  expect_match(execution, "samplePi(cmodel, pi, gen)", fixed = TRUE)
+  expect_match(execution, "sampleB(nt, m, nub, B", fixed = TRUE)
+  expect_match(execution, "computeG(nt, m", fixed = TRUE)
+  expect_match(execution, "sampleE(nt, m, nue, E", fixed = TRUE)
+  expect_false(grepl("omp_get_thread_num", execution, fixed = TRUE))
+  expect_false(grepl("static std::mt19937", execution, fixed = TRUE))
+  expect_false(grepl("thread_local", execution, fixed = TRUE))
+  expect_match(public, "run_mt_default_core", fixed = TRUE)
 })
 
 test_that("worker-sensitive CPG OpenMP risk remains explicit", {

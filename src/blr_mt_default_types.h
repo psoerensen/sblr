@@ -1,0 +1,89 @@
+#ifndef SBLR_BLR_MT_DEFAULT_TYPES_H
+#define SBLR_BLR_MT_DEFAULT_TYPES_H
+
+#include <armadillo>
+#include <utility>
+#include <vector>
+
+namespace sblr {
+namespace mt {
+
+struct MtDefaultDataView {
+ const std::vector<std::vector<double>>& wy;
+ const std::vector<std::vector<double>>& ww;
+ const std::vector<double>& yy;
+ const std::vector<std::vector<std::vector<double>>>& XXvalues;
+ const std::vector<std::vector<int>>& XXindices;
+ const std::vector<int>& n;
+};
+
+struct MtDefaultModelSpec {
+ const std::vector<std::vector<int>>& models;
+ const std::vector<std::vector<int>>& sets;
+ int method;
+};
+
+struct MtDefaultCovariancePriorView {
+ const std::vector<std::vector<double>>& ssb_prior;
+ const std::vector<std::vector<double>>& sse_prior;
+ double nub;
+ double nue;
+};
+
+struct MtDefaultExecutionSpec {
+ bool updateB;
+ bool updateE;
+ bool updatePi;
+ int nit;
+ int nburn;
+ int nthin;
+ int seed;
+};
+
+struct MtDefaultInitialState {
+ std::vector<std::vector<double>> b;
+ arma::mat B;
+ arma::mat E;
+ std::vector<double> pi;
+};
+
+struct MtDefaultCoreResult {
+ int nt=0;
+ int m=0;
+ int nmodels=0;
+
+ double marker_retained_count=0.0;
+ double covb_retained_count=0.0;
+ double covg_retained_count=0.0;
+ double cove_retained_count=0.0;
+ double pi_retained_count=0.0;
+
+ std::vector<std::vector<double>> bm;
+ std::vector<std::vector<double>> dm;
+ std::vector<std::vector<double>> r;
+ std::vector<std::vector<double>> b;
+ std::vector<std::vector<int>> d;
+ std::vector<int> order;
+
+ std::vector<std::vector<double>> vbs;
+ std::vector<std::vector<double>> vgs;
+ std::vector<std::vector<double>> ves;
+
+ std::vector<std::vector<double>> cvbm;
+ std::vector<std::vector<double>> cvgm;
+ std::vector<std::vector<double>> cvem;
+
+ arma::mat B;
+ arma::mat G;
+ arma::mat E;
+ std::vector<double> pi;
+ std::vector<double> pis;
+
+ std::vector<std::vector<double>> pistrait;
+ std::vector<double> pismarker;
+};
+
+}  // namespace mt
+}  // namespace sblr
+
+#endif

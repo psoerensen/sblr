@@ -1,7 +1,36 @@
 #ifndef SBLR_BLR_MT_DEFAULT_CORE_IMPL_H
 #define SBLR_BLR_MT_DEFAULT_CORE_IMPL_H
 
-// Lexical implementation detail for the corrected public mtblr() execution.
+#include "blr_mt_default_types.h"
+
+namespace sblr {
+namespace mt {
+
+inline MtDefaultCoreResult run_mt_default_core(
+ const MtDefaultDataView& data,
+ const MtDefaultModelSpec& model,
+ const MtDefaultCovariancePriorView& prior,
+ const MtDefaultExecutionSpec& execution,
+ MtDefaultInitialState initial_state
+) {
+ const auto& wy=data.wy;
+ const auto& ww=data.ww;
+ const auto& yy=data.yy;
+ const auto& XXvalues=data.XXvalues;
+ const auto& XXindices=data.XXindices;
+ const auto& n=data.n;
+ const auto& models=model.models;
+ const auto& sets=model.sets;
+ const int method=model.method;
+ const auto& ssb_prior=prior.ssb_prior;
+ const auto& sse_prior=prior.sse_prior;
+ const double nub=prior.nub;
+ const double nue=prior.nue;
+ auto b=std::move(initial_state.b);
+ auto B=std::move(initial_state.B);
+ auto E=std::move(initial_state.E);
+ auto pi=std::move(initial_state.pi);
+
  // Define local variables
  int nt = wy.size();
  int m = wy[0].size();
@@ -24,13 +53,13 @@
 
  std::vector<std::vector<double>> bm(nt, std::vector<double>(m, 0.0));
  std::vector<std::vector<double>> dm(nt, std::vector<double>(m, 0.0));
- std::vector<std::vector<double>> ves(nt, std::vector<double>(nit+nburn, 0.0));
- std::vector<std::vector<double>> vbs(nt, std::vector<double>(nit+nburn, 0.0));
- std::vector<std::vector<double>> vgs(nt, std::vector<double>(nit+nburn, 0.0));
+ std::vector<std::vector<double>> ves(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
+ std::vector<std::vector<double>> vbs(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
+ std::vector<std::vector<double>> vgs(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
  std::vector<std::vector<double>> cvbm(nt, std::vector<double>(nt, 0.0));
  std::vector<std::vector<double>> cvem(nt, std::vector<double>(nt, 0.0));
  std::vector<std::vector<double>> cvgm(nt, std::vector<double>(nt, 0.0));
- std::vector<std::vector<double>> mus(nt, std::vector<double>(nit+nburn, 0.0));
+ std::vector<std::vector<double>> mus(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
 
  std::vector<double> x2t(m);
  std::vector<std::vector<double>> x2(nt, std::vector<double>(m, 0.0));
@@ -110,9 +139,9 @@
 
  // Start Gibbs sampler
  std::random_device rd;
- std::mt19937 gen(seed);
+ std::mt19937 gen(execution.seed);
 
- for ( int it = 0; it < nit+nburn; it++) {
+ for ( int it = 0; it < execution.nit+execution.nburn; it++) {
 
   std::fill(cmodel.begin(), cmodel.end(), 1.0);
 
@@ -122,7 +151,7 @@
     const std::vector<int>& set = sets[s];
 
     // Step 1: Sample B using only markers in the current set
-    if (updateB) {
+    if (execution.updateB) {
      sampleBset(nt, m, nub, B, d, b, ssb_prior, set, gen);
      //sampleB(nt, m, nub, B, d, b, ssb_prior, gen);
      sampleB_latent(nt, m, nub, B, beta, ssb_prior, gen);
@@ -176,7 +205,7 @@
    for ( int i = 0; i < m; i++) {
     //if (d[t][i] == 1) {
     if (d[t][i] > 0) {
-     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+     if ((it >= execution.nburn) && ((it - execution.nburn) % execution.nthin == 0)) {
       dm[t][i] = dm[t][i] + 1.0;
       bm[t][i] = bm[t][i] + b[t][i];
      }
@@ -185,26 +214,26 @@
   }
 
   // Sample pi for Bayes C
-  if(updatePi && method==4) {
+  if(execution.updatePi && method==4) {
    samplePi(cmodel, pi, gen);
    for (int k = 0; k<nmodels ; k++) {
-    if(it >= nburn) pis[k] = pis[k] + pi[k];
+    if(it >= execution.nburn) pis[k] = pis[k] + pi[k];
    }
-   if (it >= nburn) pi_retained_count = pi_retained_count + 1.0;
+   if (it >= execution.nburn) pi_retained_count = pi_retained_count + 1.0;
   }
 
   // Sample marker variance
-  if(updateB && method==4) {
+  if(execution.updateB && method==4) {
    sampleB(nt, m, nub, B, d, b, ssb_prior, gen);
    for (int t = 0; t < nt; t++) {
     vbs[t][it] = B(t,t);
    }
    for (int t1 = 0; t1 < nt; t1++) {
     for (int t2 = 0; t2 < nt; t2++) {
-     if(it >= nburn) cvbm[t1][t2] = cvbm[t1][t2] + B(t1,t2);
+     if(it >= execution.nburn) cvbm[t1][t2] = cvbm[t1][t2] + B(t1,t2);
     }
    }
-   if (it >= nburn) covb_retained_count = covb_retained_count + 1.0;
+   if (it >= execution.nburn) covb_retained_count = covb_retained_count + 1.0;
   }
 
   //Update genetic variance
@@ -214,13 +243,13 @@
   }
   for (int t1 = 0; t1 < nt; t1++  ) {
    for (int t2 = 0; t2 < nt; t2++) {
-    if(it >= nburn) cvgm[t1][t2] = cvgm[t1][t2] + G(t1,t2);
+    if(it >= execution.nburn) cvgm[t1][t2] = cvgm[t1][t2] + G(t1,t2);
    }
   }
-  if (it >= nburn) covg_retained_count = covg_retained_count + 1.0;
+  if (it >= execution.nburn) covg_retained_count = covg_retained_count + 1.0;
 
   // Sample residual variance
-  if(updateE) {
+  if(execution.updateE) {
    sampleE(nt, m, nue, E, b, wy, r, sse_prior, yy, n, gen);
    Ei = arma::inv(E);
    for (int t = 0; t < nt; t++) {
@@ -228,13 +257,13 @@
    }
    for (int t1 = 0; t1 < nt; t1++) {
     for (int t2 = 0; t2 < nt; t2++) {
-     if(it >= nburn) cvem[t1][t2] = cvem[t1][t2] + E(t1,t2);
+     if(it >= execution.nburn) cvem[t1][t2] = cvem[t1][t2] + E(t1,t2);
     }
    }
-   if (it >= nburn) cove_retained_count = cove_retained_count + 1.0;
+   if (it >= execution.nburn) cove_retained_count = cove_retained_count + 1.0;
   }
 
-  if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+  if ((it >= execution.nburn) && ((it - execution.nburn) % execution.nthin == 0)) {
    marker_retained_count = marker_retained_count + 1.0;
   }
 
@@ -242,5 +271,39 @@
  if (marker_retained_count <= 0.0) {
   throw std::runtime_error("mtblr: no retained marker-summary samples.");
  }
+
+ MtDefaultCoreResult result;
+ result.nt=nt;
+ result.m=m;
+ result.nmodels=nmodels;
+ result.marker_retained_count=marker_retained_count;
+ result.covb_retained_count=covb_retained_count;
+ result.covg_retained_count=covg_retained_count;
+ result.cove_retained_count=cove_retained_count;
+ result.pi_retained_count=pi_retained_count;
+ result.bm=std::move(bm);
+ result.dm=std::move(dm);
+ result.r=std::move(r);
+ result.b=std::move(b);
+ result.d=std::move(d);
+ result.order=std::move(order);
+ result.vbs=std::move(vbs);
+ result.vgs=std::move(vgs);
+ result.ves=std::move(ves);
+ result.cvbm=std::move(cvbm);
+ result.cvgm=std::move(cvgm);
+ result.cvem=std::move(cvem);
+ result.B=std::move(B);
+ result.G=std::move(G);
+ result.E=std::move(E);
+ result.pi=std::move(pi);
+ result.pis=std::move(pis);
+ result.pistrait=std::move(pistrait);
+ result.pismarker=std::move(pismarker);
+ return result;
+}
+
+}  // namespace mt
+}  // namespace sblr
 
 #endif

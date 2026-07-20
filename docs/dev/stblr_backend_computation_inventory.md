@@ -604,3 +604,14 @@ their own positive contribution counts. Disabled covariance/probability updates
 retain zero posterior summaries. Native positions 0--19 and R naming,
 orientation, and conditional correlation fields remain unchanged. Inputs remain
 in-memory with no numerical disk I/O.
+
+## Phase 17E typed default multivariate execution
+
+`mtblr()` now constructs immutable borrowed views for `wy/ww/yy`, sparse nested
+`XXvalues/XXindices`, sample counts, models, sets, and covariance priors. Small
+execution controls are copied. Existing by-value mutable `b/B/E/pi` inputs move
+into `MtDefaultInitialState`; `run_mt_default_core()` owns all workspaces and
+its fit-local RNG and returns an owning `MtDefaultCoreResult`. Dense `XX` is not
+copied by the typed boundary. The inline positional finalizer reads the result
+and borrowed `wy`; no MCMC-time I/O, native aggregation, or binding conversion
+was added.

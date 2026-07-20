@@ -4045,6 +4045,7 @@ void sampleBetaCSt(int i,
  }
 }
 
+#include "blr_mt_default_core_impl.h"
 
 // [[Rcpp::export]]
 std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<double>> wy,
@@ -4072,7 +4073,50 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
                                                         int seed,
                                                         int method) {
 
-#include "blr_mt_default_core_impl.h"
+ sblr::mt::MtDefaultDataView data{
+  wy, ww, yy, XXvalues, XXindices, n
+ };
+ sblr::mt::MtDefaultModelSpec model{models, sets, method};
+ sblr::mt::MtDefaultCovariancePriorView prior{
+  ssb_prior, sse_prior, nub, nue
+ };
+ sblr::mt::MtDefaultExecutionSpec execution{
+  updateB, updateE, updatePi, nit, nburn, nthin, seed
+ };
+ sblr::mt::MtDefaultInitialState initial_state{
+  std::move(b), std::move(B), std::move(E), std::move(pi)
+ };
+ sblr::mt::MtDefaultCoreResult core_result=sblr::mt::run_mt_default_core(
+  data, model, prior, execution, std::move(initial_state)
+ );
+
+ const int nt=core_result.nt;
+ const int m=core_result.m;
+ const int nmodels=core_result.nmodels;
+ const double marker_retained_count=core_result.marker_retained_count;
+ const double covb_retained_count=core_result.covb_retained_count;
+ const double covg_retained_count=core_result.covg_retained_count;
+ const double cove_retained_count=core_result.cove_retained_count;
+ const double pi_retained_count=core_result.pi_retained_count;
+ const auto& bm=core_result.bm;
+ const auto& dm=core_result.dm;
+ const auto& r=core_result.r;
+ const auto& final_b=core_result.b;
+ const auto& d=core_result.d;
+ const auto& order=core_result.order;
+ const auto& vbs=core_result.vbs;
+ const auto& vgs=core_result.vgs;
+ const auto& ves=core_result.ves;
+ const auto& cvbm=core_result.cvbm;
+ const auto& cvgm=core_result.cvgm;
+ const auto& cvem=core_result.cvem;
+ const auto& final_B=core_result.B;
+ const auto& G=core_result.G;
+ const auto& final_E=core_result.E;
+ const auto& final_pi=core_result.pi;
+ const auto& pis=core_result.pis;
+ const auto& pistrait=core_result.pistrait;
+ const auto& pismarker=core_result.pismarker;
 
  // Summarize results
  std::vector<std::vector<std::vector<double>>> result;
@@ -4128,7 +4172,7 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
    result[1][t][i] = dm[t][i]/marker_retained_count;
    result[2][t][i] = wy[t][i];
    result[3][t][i] = r[t][i];
-   result[4][t][i] = b[t][i];
+   result[4][t][i] = final_b[t][i];
    result[5][t][i] = d[t][i];
    result[6][t][i] = order[i];
   }
@@ -4149,14 +4193,14 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
     cvgm[t1][t2] / covg_retained_count : 0.0;
    result[12][t1][t2] = cove_retained_count > 0.0 ?
     cvem[t1][t2] / cove_retained_count : 0.0;
-   result[13][t1][t2] = B(t1,t2);
+   result[13][t1][t2] = final_B(t1,t2);
    result[14][t1][t2] = G(t1,t2);
-   result[15][t1][t2] = E(t1,t2);
+   result[15][t1][t2] = final_E(t1,t2);
   }
  }
  for (int t=0; t < nt; t++) {
   for (int i=0; i < nmodels; i++) {
-   result[16][t][i] = pi[i];
+   result[16][t][i] = final_pi[i];
    result[17][t][i] = pi_retained_count > 0.0 ?
     pis[i] / pi_retained_count : 0.0;
   }

@@ -359,3 +359,13 @@ unchanged, including the `mtblr_cpg_omp` worker-sensitive RNG risk.
 Phase 17C corrected references remain authoritative current behavior and Phase
 17B fixtures remain immutable historical evidence. Alternative multivariate
 and block-eigen dispositions are unchanged.
+
+## 17. Phase 17E typed core-boundary status
+
+| Route | Typed numerical boundary | Ownership | Remaining legacy boundary | Status |
+|---|---|---|---|---|
+| default `mtblr` | typed data/model/prior/execution/initial-state/result contracts and one callable binding-neutral core | dense summaries, models, sets, priors borrowed; mutable `b/B/E/pi` and core outputs owned | inline 20-position finalization and unchanged R formatting | authoritative supported public legacy; noncanonical; Phase 17C contract active; ready for typed finalization separation |
+
+No native aggregation, named converter, chain/task framework, or generic data
+operator is active. Alternative multivariate and block-eigen classifications
+remain unchanged.

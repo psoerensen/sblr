@@ -623,3 +623,16 @@ Errors should identify the failing field and expected contract.
 - updated `pim` sums to one and disabled-update zero summaries stay stable;
 - same-process, fresh-process, thread-environment, and intervening-backend
   comparisons protect the corrected route before extraction.
+
+### Phase 17E typed-boundary preservation
+
+- Phase 17D numerical statements remain operation-order equivalent after only
+  typed qualification and ownership moves;
+- RNG and sampler-update call order remain unchanged;
+- Phase 17C corrected native/formatted references remain 3/3 and 3/3 with exact
+  structure and numerical tolerance `1e-12`;
+- fixed-control, probability normalization, retained-count, covariance/state,
+  same-process, fresh-process, thread-environment, and intervening-backend
+  protections apply across the callable typed core boundary;
+- no cross-model reduction, aggregation, converter, or operator abstraction is
+  introduced by the boundary.

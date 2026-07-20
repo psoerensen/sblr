@@ -335,3 +335,14 @@ not `stblr_raw_v1`. “Retained count” is accumulator-specific: marker summari
 use the post-burn-relative thinned count, while covariance and updated
 probability summaries use their own post-burn contribution counts. Phase 17B
 names and fixtures denote historical pre-correction evidence.
+
+## Phase 17E production multivariate names
+
+`MtDefaultDataView`, `MtDefaultModelSpec`,
+`MtDefaultCovariancePriorView`, `MtDefaultExecutionSpec`,
+`MtDefaultInitialState`, and `MtDefaultCoreResult` are production vocabulary for
+the authoritative default legacy route. `run_mt_default_core()` is its sole
+callable numerical core. These names do not denote a generic MT framework and
+do not apply to `mtblr_cpg*`, `mtblr_eigen`, or `mtblr_hybrid`. “Result” means a
+binding-neutral numerical result consumed by the still-inline legacy
+20-position finalizer, not `stblr_raw_v1`.
