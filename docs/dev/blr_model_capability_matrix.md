@@ -369,3 +369,13 @@ and block-eigen dispositions are unchanged.
 No native aggregation, named converter, chain/task framework, or generic data
 operator is active. Alternative multivariate and block-eigen classifications
 remain unchanged.
+
+## 18. Phase 17F typed finalization and future-operator status
+
+| Route | Core | Finalization | Compatibility adapter | Future operator status |
+|---|---|---|---|---|
+| default `mtblr` | one typed binding-neutral callable core | one typed binding-neutral posterior finalizer and owning finalized result | unchanged legacy 20-position positional adapter and R formatter | no operator active; canonical scalar CSR/block-eigen representation reuse and one operator per trait are required |
+
+The route remains authoritative supported public legacy and noncanonical.
+Multichain aggregation, a named R converter, a versioned raw schema, CSR/eigen
+execution, and a generic operator abstraction remain inactive.

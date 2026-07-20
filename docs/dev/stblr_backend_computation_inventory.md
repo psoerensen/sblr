@@ -615,3 +615,23 @@ its fit-local RNG and returns an owning `MtDefaultCoreResult`. Dense `XX` is not
 copied by the typed boundary. The inline positional finalizer reads the result
 and borrowed `wy`; no MCMC-time I/O, native aggregation, or binding conversion
 was added.
+
+## Phase 17F finalized default multivariate result
+
+`MtDefaultCoreResult` retains raw marker/covariance/probability accumulators,
+traces, final state, and contribution counts. `finalize_mt_default_result()`
+moves those buffers, performs all posterior divisions, and returns
+`MtDefaultFinalResult` with finalized `bm/dm`, covariance means,
+`pi_final/pi_mean`, traces, final state, legacy zero fields, and retained-count
+metadata. `mtblr()` only allocates/shapes/copies the legacy positions, including
+borrowed `wy`. No extra dense LD copy or MCMC-time I/O is introduced.
+
+Future canonical MT LD execution must reuse the scalar CSR ABI (zero-based
+`uint64` row offsets, canonical column indices/value buffers, marker diagonal,
+summary statistics, sample sizes, immutable borrowing) rather than create an
+MT-specific format. An MT bundle must permit one operator per trait: identical
+row/column structure may be shared with trait-specific values, while different
+cohorts/ancestries/panels/thresholds may use independent structures without a
+union sparsity pattern. The same rule applies to the future canonical scalar
+block-eigen representation: one compatible decomposition per trait, shareable
+only for truly identical LD.

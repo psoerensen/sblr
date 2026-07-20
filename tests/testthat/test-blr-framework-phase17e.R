@@ -202,7 +202,7 @@ test_that("CI covers ordinary and fresh Phase 17E tests", {
   fast <- phase17e_text(".github/workflows/blr-framework.yml")
   extended <- phase17e_text(".github/workflows/blr-framework-extended.yml")
   expect_match(fast,
-    "blr-framework-phase(10|11|12|17b|17c|17d|17e)", fixed = TRUE)
+    "blr-framework-phase(10|11|12|17b|17c|17d|17e|17f)", fixed = TRUE)
   expect_match(extended, 'SBLR_RUN_PHASE17E_FRESH: "true"', fixed = TRUE)
   expect_false(grepl("blr_phase17e_mt_default_typed_boundary.R", fast,
     fixed = TRUE))

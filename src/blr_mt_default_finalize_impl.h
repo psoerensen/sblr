@@ -1,0 +1,73 @@
+#ifndef SBLR_BLR_MT_DEFAULT_FINALIZE_IMPL_H
+#define SBLR_BLR_MT_DEFAULT_FINALIZE_IMPL_H
+
+#include "blr_mt_default_types.h"
+
+namespace sblr {
+namespace mt {
+
+inline MtDefaultFinalResult finalize_mt_default_result(
+ MtDefaultCoreResult core_result
+) {
+ MtDefaultFinalResult result;
+ result.nt=core_result.nt;
+ result.m=core_result.m;
+ result.nmodels=core_result.nmodels;
+ result.marker_retained_count=core_result.marker_retained_count;
+ result.covb_retained_count=core_result.covb_retained_count;
+ result.covg_retained_count=core_result.covg_retained_count;
+ result.cove_retained_count=core_result.cove_retained_count;
+ result.pi_retained_count=core_result.pi_retained_count;
+
+ result.bm=std::move(core_result.bm);
+ result.dm=std::move(core_result.dm);
+ for (int t=0; t < result.nt; t++) {
+  for (int i=0; i < result.m; i++) {
+   result.bm[t][i] = result.bm[t][i]/result.marker_retained_count;
+   result.dm[t][i] = result.dm[t][i]/result.marker_retained_count;
+  }
+ }
+
+ result.r=std::move(core_result.r);
+ result.b=std::move(core_result.b);
+ result.d=std::move(core_result.d);
+ result.marker_order=std::move(core_result.order);
+ result.vbs=std::move(core_result.vbs);
+ result.vgs=std::move(core_result.vgs);
+ result.ves=std::move(core_result.ves);
+
+ result.covb=std::move(core_result.cvbm);
+ result.covg=std::move(core_result.cvgm);
+ result.cove=std::move(core_result.cvem);
+ for (int t1=0; t1 < result.nt; t1++) {
+  for (int t2=0; t2 < result.nt; t2++) {
+   result.covb[t1][t2] = result.covb_retained_count > 0.0 ?
+    result.covb[t1][t2] / result.covb_retained_count : 0.0;
+   result.covg[t1][t2] = result.covg_retained_count > 0.0 ?
+    result.covg[t1][t2] / result.covg_retained_count : 0.0;
+   result.cove[t1][t2] = result.cove_retained_count > 0.0 ?
+    result.cove[t1][t2] / result.cove_retained_count : 0.0;
+  }
+ }
+
+ result.vb=std::move(core_result.B);
+ result.vg=std::move(core_result.G);
+ result.ve=std::move(core_result.E);
+ result.pi_final=std::move(core_result.pi);
+ result.pi_mean.assign(static_cast<std::size_t>(result.nmodels), 0.0);
+ for (int i=0; i < result.nmodels; i++) {
+  result.pi_mean[i] = result.pi_retained_count > 0.0 ?
+   core_result.pis[i] / result.pi_retained_count : 0.0;
+ }
+
+ // These legacy fields are unsupported by the authoritative method and their
+ // core accumulators remain zero. Moving them preserves their zero semantics.
+ result.pitrait=std::move(core_result.pistrait);
+ result.pimarker=std::move(core_result.pismarker);
+ return result;
+}
+
+}  // namespace mt
+}  // namespace sblr
+
+#endif

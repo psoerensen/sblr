@@ -1480,3 +1480,17 @@ Phase 17C Gibbs order, fit-local RNG, controls, and retained counts remain
 active. Legacy positional finalization remains inline and public R formatting
 is unchanged. Native aggregation, a named converter, and a generic operator
 abstraction are not active; the supported legacy route remains noncanonical.
+
+### Phase 17F typed multivariate finalization
+
+One binding-neutral `finalize_mt_default_result()` now converts raw core
+accumulators into an owning `MtDefaultFinalResult`. The public `mtblr()` adapter
+retains only the unchanged 20-position allocation, shaping, borrowed-`wy`
+copying, and field mapping. Shared ST/MT naming, marker alignment, and future LD
+operator requirements are fixed: MT CSR must reuse the canonical scalar CSR
+layout and support one operator per trait with either shared structure and
+trait-specific values or fully independent structures; MT block-eigen must
+reuse the future canonical scalar representation with per-trait decompositions.
+No CSR, eigen, multichain, operator, converter, or public-schema implementation
+is introduced. The supported legacy route remains noncanonical and is ready for
+a shared-CSR compatibility audit.

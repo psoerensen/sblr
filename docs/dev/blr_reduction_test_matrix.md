@@ -636,3 +636,14 @@ Errors should identify the failing field and expected contract.
   protections apply across the callable typed core boundary;
 - no cross-model reduction, aggregation, converter, or operator abstraction is
   introduced by the boundary.
+
+### Phase 17F finalization preservation
+
+- the six active Phase 17E posterior divisions occur in the same nested-loop
+  and per-field order inside `finalize_mt_default_result()`;
+- marker, covariance, probability, and disabled-update denominator policies are
+  unchanged;
+- the public adapter contains no posterior arithmetic and positions 1--20 remain
+  exact under the 3/3 corrected native and formatted references;
+- future CSR and block-eigen contracts are documentation requirements only and
+  introduce no numerical reduction or execution path.

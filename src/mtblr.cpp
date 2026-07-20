@@ -4046,6 +4046,7 @@ void sampleBetaCSt(int i,
 }
 
 #include "blr_mt_default_core_impl.h"
+#include "blr_mt_default_finalize_impl.h"
 
 // [[Rcpp::export]]
 std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<double>> wy,
@@ -4089,34 +4090,31 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  sblr::mt::MtDefaultCoreResult core_result=sblr::mt::run_mt_default_core(
   data, model, prior, execution, std::move(initial_state)
  );
+ sblr::mt::MtDefaultFinalResult final_result=
+  sblr::mt::finalize_mt_default_result(std::move(core_result));
 
- const int nt=core_result.nt;
- const int m=core_result.m;
- const int nmodels=core_result.nmodels;
- const double marker_retained_count=core_result.marker_retained_count;
- const double covb_retained_count=core_result.covb_retained_count;
- const double covg_retained_count=core_result.covg_retained_count;
- const double cove_retained_count=core_result.cove_retained_count;
- const double pi_retained_count=core_result.pi_retained_count;
- const auto& bm=core_result.bm;
- const auto& dm=core_result.dm;
- const auto& r=core_result.r;
- const auto& final_b=core_result.b;
- const auto& d=core_result.d;
- const auto& order=core_result.order;
- const auto& vbs=core_result.vbs;
- const auto& vgs=core_result.vgs;
- const auto& ves=core_result.ves;
- const auto& cvbm=core_result.cvbm;
- const auto& cvgm=core_result.cvgm;
- const auto& cvem=core_result.cvem;
- const auto& final_B=core_result.B;
- const auto& G=core_result.G;
- const auto& final_E=core_result.E;
- const auto& final_pi=core_result.pi;
- const auto& pis=core_result.pis;
- const auto& pistrait=core_result.pistrait;
- const auto& pismarker=core_result.pismarker;
+ const int nt=final_result.nt;
+ const int m=final_result.m;
+ const int nmodels=final_result.nmodels;
+ const auto& bm=final_result.bm;
+ const auto& dm=final_result.dm;
+ const auto& r=final_result.r;
+ const auto& final_b=final_result.b;
+ const auto& d=final_result.d;
+ const auto& order=final_result.marker_order;
+ const auto& vbs=final_result.vbs;
+ const auto& vgs=final_result.vgs;
+ const auto& ves=final_result.ves;
+ const auto& covb=final_result.covb;
+ const auto& covg=final_result.covg;
+ const auto& cove=final_result.cove;
+ const auto& final_B=final_result.vb;
+ const auto& G=final_result.vg;
+ const auto& final_E=final_result.ve;
+ const auto& final_pi=final_result.pi_final;
+ const auto& pi_mean=final_result.pi_mean;
+ const auto& pistrait=final_result.pitrait;
+ const auto& pismarker=final_result.pimarker;
 
  // Summarize results
  std::vector<std::vector<std::vector<double>>> result;
@@ -4168,8 +4166,8 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
 
  for (int t=0; t < nt; t++) {
   for (int i=0; i < m; i++) {
-   result[0][t][i] = bm[t][i]/marker_retained_count;
-   result[1][t][i] = dm[t][i]/marker_retained_count;
+   result[0][t][i] = bm[t][i];
+   result[1][t][i] = dm[t][i];
    result[2][t][i] = wy[t][i];
    result[3][t][i] = r[t][i];
    result[4][t][i] = final_b[t][i];
@@ -4187,12 +4185,9 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  }
  for (int t1=0; t1 < nt; t1++) {
   for (int t2=0; t2 < nt; t2++) {
-   result[10][t1][t2] = covb_retained_count > 0.0 ?
-    cvbm[t1][t2] / covb_retained_count : 0.0;
-   result[11][t1][t2] = covg_retained_count > 0.0 ?
-    cvgm[t1][t2] / covg_retained_count : 0.0;
-   result[12][t1][t2] = cove_retained_count > 0.0 ?
-    cvem[t1][t2] / cove_retained_count : 0.0;
+   result[10][t1][t2] = covb[t1][t2];
+   result[11][t1][t2] = covg[t1][t2];
+   result[12][t1][t2] = cove[t1][t2];
    result[13][t1][t2] = final_B(t1,t2);
    result[14][t1][t2] = G(t1,t2);
    result[15][t1][t2] = final_E(t1,t2);
@@ -4201,16 +4196,15 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  for (int t=0; t < nt; t++) {
   for (int i=0; i < nmodels; i++) {
    result[16][t][i] = final_pi[i];
-   result[17][t][i] = pi_retained_count > 0.0 ?
-    pis[i] / pi_retained_count : 0.0;
+   result[17][t][i] = pi_mean[i];
   }
  }
  for (int t=0; t < nt; t++) {
   for (int i=0; i < 4; i++) {
-   result[18][t][i] = pistrait[t][i]/nit;
+   result[18][t][i] = pistrait[t][i];
   }
   for (int i=0; i < 2; i++) {
-   result[19][t][i] = pismarker[i]/nit;
+   result[19][t][i] = pismarker[i];
   }
  }
  return result;

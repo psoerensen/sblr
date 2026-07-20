@@ -131,7 +131,7 @@ test_that("legacy posterior denominator is frozen evidence for Phase 17C", {
 test_that("fast and extended CI include Phase 17B at the intended level", {
   fast <- phase17b_text(".github/workflows/blr-framework.yml")
   extended <- phase17b_text(".github/workflows/blr-framework-extended.yml")
-  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d|17e)", fixed = TRUE)
+  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d|17e|17f)", fixed = TRUE)
   expect_match(extended, 'SBLR_RUN_PHASE17B_FRESH: "true"', fixed = TRUE)
   expect_match(extended, "devtools::test('.')", fixed = TRUE)
   expect_false(grepl("blr_phase17b_mt_default_audit.R", fast, fixed = TRUE))

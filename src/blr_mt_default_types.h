@@ -83,6 +83,42 @@ struct MtDefaultCoreResult {
  std::vector<double> pismarker;
 };
 
+struct MtDefaultFinalResult {
+ int nt=0;
+ int m=0;
+ int nmodels=0;
+
+ double marker_retained_count=0.0;
+ double covb_retained_count=0.0;
+ double covg_retained_count=0.0;
+ double cove_retained_count=0.0;
+ double pi_retained_count=0.0;
+
+ std::vector<std::vector<double>> bm;
+ std::vector<std::vector<double>> dm;
+ std::vector<std::vector<double>> r;
+ std::vector<std::vector<double>> b;
+ std::vector<std::vector<int>> d;
+ std::vector<int> marker_order;
+
+ std::vector<std::vector<double>> vbs;
+ std::vector<std::vector<double>> vgs;
+ std::vector<std::vector<double>> ves;
+
+ std::vector<std::vector<double>> covb;
+ std::vector<std::vector<double>> covg;
+ std::vector<std::vector<double>> cove;
+
+ arma::mat vb;
+ arma::mat vg;
+ arma::mat ve;
+ std::vector<double> pi_final;
+ std::vector<double> pi_mean;
+
+ std::vector<std::vector<double>> pitrait;
+ std::vector<double> pimarker;
+};
+
 }  // namespace mt
 }  // namespace sblr
 

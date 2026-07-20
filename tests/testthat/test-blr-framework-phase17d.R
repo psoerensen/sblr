@@ -134,7 +134,7 @@ test_that("fresh process matches corrected formatted reference", {
 test_that("fast and extended CI cover Phase 17D at the intended level", {
   fast <- phase17d_text(".github/workflows/blr-framework.yml")
   extended <- phase17d_text(".github/workflows/blr-framework-extended.yml")
-  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d|17e)",
+  expect_match(fast, "blr-framework-phase(10|11|12|17b|17c|17d|17e|17f)",
     fixed = TRUE)
   expect_match(extended, 'SBLR_RUN_PHASE17D_FRESH: "true"', fixed = TRUE)
   expect_false(grepl("blr_phase17d_mt_default_extraction.R", fast,

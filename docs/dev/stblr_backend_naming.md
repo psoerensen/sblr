@@ -346,3 +346,53 @@ callable numerical core. These names do not denote a generic MT framework and
 do not apply to `mtblr_cpg*`, `mtblr_eigen`, or `mtblr_hybrid`. “Result” means a
 binding-neutral numerical result consumed by the still-inline legacy
 20-position finalizer, not `stblr_raw_v1`.
+
+## Phase 17F shared ST/MT naming plan
+
+Legacy public names remain unchanged. New typed names distinguish final values,
+posterior means, and traces and avoid MT-only synonyms.
+
+| Scientific concept | Current scalar name | Current MT legacy name | Phase 17F typed name | Planned canonical shared name | Compatibility decision |
+|---|---|---|---|---|---|
+| sample size | `sample_size`, `n` | `n` | data-view `n` | `sample_size` | translate only at legacy boundary |
+| marker IDs | marker names/input metadata | marker dimnames | none yet | `marker_ids` | shared validation metadata |
+| trait IDs | trait names | trait dimnames | none yet | `trait_ids` | shared validation metadata |
+| summary cross-products | `wy` | `wy` | `wy` | `wy` | reuse |
+| marker diagonal | `diagonal`, `ww` | `ww` | `ww` | `marker_diagonal` with `ww` compatibility | clarify without changing public field |
+| sparse LD | CSR row/column/value buffers | experimental CSR prefix | none | `SparseLdCsrView` | reuse canonical scalar representation exactly |
+| dense LD | dense/operator-specific LD | nested `XXvalues/XXindices` summaries | same borrowed view | `ld_operator` metadata | do not claim representation equivalence |
+| initial marker effects | `initial_effects`, `b` | `b` | initial-state `b` | `initial_effects` | typed canonical name later |
+| posterior marker means | `bm` | `bm` | `bm` | `bm` | reuse |
+| inclusion probabilities | `dm` | `dm` | `dm` | `dm` | reuse |
+| final marker effects | `b` | `b` | `b` | `final_effects` | preserve public `b` |
+| final states | `d` | `d` | `d` | `final_states` | preserve public `d` |
+| marker variance/covariance | `vb`, `covb` | `vb`, `covb` | `vb`, `covb` | `marker_covariance` | scalar variance is a 1x1 specialization |
+| genetic variance/covariance | `vg`, `covg` | `vg`, `covg` | `vg`, `covg` | `genetic_covariance` | same specialization rule |
+| residual variance/covariance | `ve`, `cove` | `ve`, `cove` | `ve`, `cove` | `residual_covariance` | do not equate with overlap policy |
+| mixture/pattern probabilities | `pi`, `pim`, `pis` | `pi`, `pim` | `pi_final`, `pi_mean` | `pi_final`, `pi_mean`, `pi_trace` | distinguish final/mean/trace |
+| iteration count | `iterations`, `nit` | `nit` | `nit` | `iterations` | preserve public argument |
+| burn-in | `burnin`, `nburn` | `nburn` | `nburn` | `burnin` | preserve public argument |
+| thinning | `thinning`, `nthin` | `nthin` | `nthin` | `thinning` | preserve public argument |
+| input metadata | `input` | legacy call metadata | none in numerical types | `input` | binding-owned |
+| diagnostics | named optional fields | legacy optional/omitted | none in final result | named diagnostics | binding-owned, present policy model-specific |
+
+### Future MT operator, alignment, and study metadata
+
+Canonical MT CSR must reuse the scalar CSR representation and expose one view per trait/study.
+Shared row offsets and column indices are permitted only when identical; LD
+values, `ww`, `wy`, and sample size remain trait-specific. Fully independent CSR structures
+are required for different ancestries, cohorts,
+populations, LD panels, or sparsity thresholds; no artificial union pattern is
+allowed. Canonical MT block-eigen must likewise reuse scalar conventions and
+allow trait-specific blocks, eigenvectors, eigenvalues, retained ranks,
+tolerances, and panel metadata.
+
+Marker row `i` must denote the same canonical marker ID and effect-allele orientation
+in every summary and operator. R validation owns marker matching,
+trait/study order, allele orientation, duplicates, missing-marker policy, and
+panel metadata. The first canonical MT CSR route should use explicit marker
+intersection unless a union-with-mask likelihood is specified and tested.
+Future metadata must distinguish trait, study, population, ancestry, LD
+reference, sample size, marker set, and sample-overlap policy. Independent,
+known-overlap, and unknown-overlap studies are distinct; residual covariance
+alone must not silently stand for GWAS sample overlap.
