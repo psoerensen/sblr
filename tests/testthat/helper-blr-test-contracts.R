@@ -16,7 +16,7 @@ blr_mt_public_source <- function() {
   adapter <- blr_source_text("src/mtblr.cpp")
   first <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr(",
     adapter, fixed = TRUE)[1]
-  last <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr_hybrid(",
+  last <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr_eigen(",
     adapter, fixed = TRUE)[1]
   substr(adapter, first, last - 1L)
 }

@@ -177,108 +177,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// mtblr_cpg
-std::vector<std::vector<std::vector<double>>> mtblr_cpg(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b, const std::vector<std::vector<std::vector<double>>>& XXvalues, const std::vector<std::vector<int>>& XXindices, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
-RcppExport SEXP _sblr_mtblr_cpg(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP bSEXP, SEXP XXvaluesSEXP, SEXP XXindicesSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b(bSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<std::vector<double>>>& >::type XXvalues(XXvaluesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type XXindices(XXindicesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
-    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
-    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
-    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
-    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
-    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_cpg(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
-    return rcpp_result_gen;
-END_RCPP
-}
-// mtblr_cpg_arma
-std::vector<std::vector<std::vector<double>>> mtblr_cpg_arma(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b, const std::vector<std::vector<std::vector<double>>>& XXvalues, const std::vector<std::vector<int>>& XXindices, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
-RcppExport SEXP _sblr_mtblr_cpg_arma(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP bSEXP, SEXP XXvaluesSEXP, SEXP XXindicesSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b(bSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<std::vector<double>>>& >::type XXvalues(XXvaluesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type XXindices(XXindicesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
-    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
-    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
-    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
-    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
-    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_cpg_arma(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
-    return rcpp_result_gen;
-END_RCPP
-}
-// mtblr_cpg_omp
-std::vector<std::vector<std::vector<double>>> mtblr_cpg_omp(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, const std::vector<std::vector<std::vector<double>>>& XXvalues, const std::vector<std::vector<int>>& XXindices, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
-RcppExport SEXP _sblr_mtblr_cpg_omp(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP XXvaluesSEXP, SEXP XXindicesSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<std::vector<double>>>& >::type XXvalues(XXvaluesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type XXindices(XXindicesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
-    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
-    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
-    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
-    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
-    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_cpg_omp(wy, ww, yy, b_init, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
-    return rcpp_result_gen;
-END_RCPP
-}
 // mtblr_cpg_omp_csr
 std::vector<std::vector<std::vector<double>>> mtblr_cpg_omp_csr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<std::vector<double>> yy, std::vector<std::vector<double>> b_init, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
 RcppExport SEXP _sblr_mtblr_cpg_omp_csr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
@@ -364,40 +262,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< int >::type method(methodSEXP);
     rcpp_result_gen = Rcpp::wrap(mtblr(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
-    return rcpp_result_gen;
-END_RCPP
-}
-// mtblr_hybrid
-std::vector<std::vector<std::vector<double>>> mtblr_hybrid(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b, const std::vector<std::vector<std::vector<double>>>& XXvalues, const std::vector<std::vector<int>>& XXindices, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
-RcppExport SEXP _sblr_mtblr_hybrid(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP bSEXP, SEXP XXvaluesSEXP, SEXP XXindicesSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b(bSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<std::vector<double>>>& >::type XXvalues(XXvaluesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type XXindices(XXindicesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
-    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
-    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
-    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
-    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
-    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
-    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_hybrid(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1432,13 +1296,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_blr_phase10a_distribution_cache_diagnostic_cpp", (DL_FUNC) &_sblr_blr_phase10a_distribution_cache_diagnostic_cpp, 2},
     {"_sblr_blr_phase10b_chain_rng_diagnostic_cpp", (DL_FUNC) &_sblr_blr_phase10b_chain_rng_diagnostic_cpp, 2},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
-    {"_sblr_mtblr_cpg", (DL_FUNC) &_sblr_mtblr_cpg, 24},
-    {"_sblr_mtblr_cpg_arma", (DL_FUNC) &_sblr_mtblr_cpg_arma, 24},
-    {"_sblr_mtblr_cpg_omp", (DL_FUNC) &_sblr_mtblr_cpg_omp, 24},
     {"_sblr_mtblr_cpg_omp_csr", (DL_FUNC) &_sblr_mtblr_cpg_omp_csr, 23},
     {"_sblr_bed_xtx_xty", (DL_FUNC) &_sblr_bed_xtx_xty, 11},
     {"_sblr_mtblr", (DL_FUNC) &_sblr_mtblr, 24},
-    {"_sblr_mtblr_hybrid", (DL_FUNC) &_sblr_mtblr_hybrid, 24},
     {"_sblr_mtblr_eigen", (DL_FUNC) &_sblr_mtblr_eigen, 24},
     {"_sblr_test_read_bedfiles_to_packed_matrix", (DL_FUNC) &_sblr_test_read_bedfiles_to_packed_matrix, 4},
     {"_sblr_test_read_bedfiles_to_dense_matrix", (DL_FUNC) &_sblr_test_read_bedfiles_to_dense_matrix, 4},

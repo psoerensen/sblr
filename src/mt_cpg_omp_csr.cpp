@@ -24,6 +24,9 @@
 using namespace arma;
 
 // -----------------------------------------------------------------------------
+// INTERNAL RESEARCH ONLY: this local LDCSR assumes one shared LD object. It is
+// noncanonical and must not replace the canonical scalar CSR representation or
+// the planned per-trait/study multivariate LD-operator bundle.
 // Shared flat LD structure
 // Stores pre-scaled X_i'X_j, not raw LD correlation.
 // Disk input is expected to contain raw LD correlations r_ij in 0-based CSR.
@@ -995,6 +998,8 @@ inline void sampleBetaCPG_Mt_arma_ld(
 }
 
 // -----------------------------------------------------------------------------
+// INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained solely as
+// sparse multivariate research evidence; its LDCSR is not a canonical contract.
 // Main exported function
 // -----------------------------------------------------------------------------
 

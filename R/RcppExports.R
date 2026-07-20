@@ -57,18 +57,6 @@ readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, on
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }
 
-mtblr_cpg <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_cpg`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_cpg_arma <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_cpg_arma`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_cpg_omp <- function(wy, ww, yy, b_init, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_cpg_omp`, wy, ww, yy, b_init, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
 mtblr_cpg_omp_csr <- function(wy, ww, yy, b_init, ld_prefix, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, seed, method) {
     .Call(`_sblr_mtblr_cpg_omp_csr`, wy, ww, yy, b_init, ld_prefix, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, seed, method)
 }
@@ -79,10 +67,6 @@ bed_xtx_xty <- function(bed_file, n, cls, af, y, rows = NULL, scale = TRUE, nthr
 
 mtblr <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
     .Call(`_sblr_mtblr`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_hybrid <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_hybrid`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }
 
 mtblr_eigen <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {

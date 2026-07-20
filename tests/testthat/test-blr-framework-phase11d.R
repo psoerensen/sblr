@@ -96,8 +96,6 @@ test_that("route nonidentity and protected sources are permanent", {
     "src/blr_bed_scheduled_bayesc_rng.h" = "002468fa8afd7d0c491f61ea4324f982",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "72d4a9fa0a7cd51071328c2d62d0192b",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "src/mt_cpg_omp_csr.cpp" = "aec85896b5c30db3014efaeb5e3c3a96",
-    "R/RcppExports.R" = "9d13ea00b326c7e0cd606194d13a8bca",
     "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e")
   expect_identical(unname(tools::md5sum(names(protected))), unname(protected))
 })

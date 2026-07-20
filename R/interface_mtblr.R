@@ -17,7 +17,8 @@
 #'   covariance matrices.
 #' @param ssb_prior,sse_prior Optional prior scale matrices.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
-#' @param algorithm Sampler implementation.
+#' @param algorithm Sampler implementation. Only `"default"` is supported;
+#'   historical experimental implementations have been retired.
 #' @param nub,nue Prior degrees of freedom.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param method Bayesian regression method.
@@ -32,11 +33,11 @@ sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
                   updateB=TRUE, updateE=TRUE, updatePi=TRUE, algorithm="default",
                   nub=4, nue=4, nit=1000, nburn=500, nthin=1, method="bayesC", verbose=NULL) {
 
- if (algorithm == "eigen") {
-  ww <- lapply(XX, function(x){colSums(x^2)})
- } else {
-  ww <- lapply(XX, diag)
+ if (!identical(algorithm, "default")) {
+  stop("Only algorithm = \"default\" is supported; experimental multivariate backends were retired.")
  }
+
+ ww <- lapply(XX, diag)
  wy <- lapply(Xy, as.vector)
  m <- mean(sapply(wy,length))
  nt <- length(wy)
@@ -71,10 +72,6 @@ sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
  if(is.null(vb)) vb <- diag((diag(vy)*h2)/(m*pi))
  if(is.null(ssb_prior))  ssb_prior <-  diag(((nub-2.0)/nub)*(diag(vg)/(m*pi)))
  if(is.null(sse_prior)) sse_prior <- diag(((nue-2.0)/nue)*diag(ve))
- if (algorithm == "eigen") {
-  ve <- ve / n       # residual variance per rotated dimension
-  sse_prior <- sse_prior / n
- }
  if(is.null(sets)) sets <- list(1:m)
  if(!is.null(sets)) sets <- lapply(sets,function(x) { x-1 } )
  trait_names <- names(yy)
@@ -112,8 +109,7 @@ sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
 
  seed <- sample.int(.Machine$integer.max, 1)
 
- if(algorithm=="default") {
-  fit <- .Call("_sblr_mtblr",
+ fit <- .Call("_sblr_mtblr",
                wy=wy,
                ww=ww,
                yy=yy,
@@ -138,116 +134,6 @@ sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
                nthin=nthin,
                seed=seed,
                method=as.integer(method))
- }
- if(algorithm=="cpg") {
-  fit <- .Call("_sblr_mtblr_cpg",
-               wy=wy,
-               ww=ww,
-               yy=yy,
-               b = b,
-               XXvalues=XXvalues,
-               XXindices=XXindices,
-               sets=sets,
-               B = vb,
-               E = ve,
-               ssb_prior=split(ssb_prior, rep(1:ncol(ssb_prior), each = nrow(ssb_prior))),
-               sse_prior=split(sse_prior, rep(1:ncol(sse_prior), each = nrow(sse_prior))),
-               models=models,
-               pi=pimodels,
-               nub=nub,
-               nue=nue,
-               updateB = updateB,
-               updateE = updateE,
-               updatePi = updatePi,
-               n=n,
-               nit=nit,
-               nburn=nburn,
-               nthin=nthin,
-               seed=seed,
-               method=as.integer(method))
- }
-  if(algorithm=="cpg_arma") {
-  fit <- .Call("_sblr_mtblr_cpg_arma",
-               wy=wy,
-               ww=ww,
-               yy=yy,
-               b = b,
-               XXvalues=XXvalues,
-               XXindices=XXindices,
-               sets=sets,
-               B = vb,
-               E = ve,
-               ssb_prior=split(ssb_prior, rep(1:ncol(ssb_prior), each = nrow(ssb_prior))),
-               sse_prior=split(sse_prior, rep(1:ncol(sse_prior), each = nrow(sse_prior))),
-               models=models,
-               pi=pimodels,
-               nub=nub,
-               nue=nue,
-               updateB = updateB,
-               updateE = updateE,
-               updatePi = updatePi,
-               n=n,
-               nit=nit,
-               nburn=nburn,
-               nthin=nthin,
-               seed=seed,
-               method=as.integer(method))
-  }
- if(algorithm=="cpg_omp") {
-  fit <- .Call("_sblr_mtblr_cpg_omp",
-               wy=wy,
-               ww=ww,
-               yy=yy,
-               b = b,
-               XXvalues=XXvalues,
-               XXindices=XXindices,
-               sets=sets,
-               B = vb,
-               E = ve,
-               ssb_prior=split(ssb_prior, rep(1:ncol(ssb_prior), each = nrow(ssb_prior))),
-               sse_prior=split(sse_prior, rep(1:ncol(sse_prior), each = nrow(sse_prior))),
-               models=models,
-               pi=pimodels,
-               nub=nub,
-               nue=nue,
-               updateB = updateB,
-               updateE = updateE,
-               updatePi = updatePi,
-               n=n,
-               nit=nit,
-               nburn=nburn,
-               nthin=nthin,
-               seed=seed,
-               method=as.integer(method))
- }
-
- if(algorithm=="eigen") {
-  fit <- .Call("_sblr_mtblr_eigen",
-               wy=wy,
-               ww=ww,
-               yy=yy,
-               b = b,
-               XXvalues=XXvalues,
-               XXindices=XXindices,
-               sets=sets,
-               B = vb,
-               E = ve,
-               ssb_prior=split(ssb_prior, rep(1:ncol(ssb_prior), each = nrow(ssb_prior))),
-               sse_prior=split(sse_prior, rep(1:ncol(sse_prior), each = nrow(sse_prior))),
-               models=models,
-               pi=pimodels,
-               nub=nub,
-               nue=nue,
-               updateB = updateB,
-               updateE = updateE,
-               updatePi = updatePi,
-               n=n,
-               nit=nit,
-               nburn=nburn,
-               nthin=nthin,
-               seed=seed,
-               method=as.integer(method))
- }
 
  names(fit) <- c("bm","dm","wy","r","b","d","o",
                  "vbs","vgs","ves",

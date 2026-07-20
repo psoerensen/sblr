@@ -82,9 +82,7 @@ test_that("Phase 9C protects canonical and adjacent implementations", {
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h" = "bec3bc1e41841ab77747e34dc9818574",
-    "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e",
-    "src/RcppExports.cpp" = "b4859db0f6308fa7e38051ddcf32d245",
-    "R/RcppExports.R" = "9d13ea00b326c7e0cd606194d13a8bca"
+    "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9c_path, character(1))))
   expect_identical(actual, unname(protected))

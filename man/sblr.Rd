@@ -61,7 +61,8 @@ covariance matrices.}
 
 \item{updateB, updateE, updatePi}{Logical sampler update controls.}
 
-\item{algorithm}{Sampler implementation.}
+\item{algorithm}{Sampler implementation. Only `"default"` is supported;
+historical experimental implementations have been retired.}
 
 \item{nub, nue}{Prior degrees of freedom.}
 

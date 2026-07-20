@@ -333,12 +333,12 @@ routing, exports, schemas, or the canonical packed-BED classifications.
 | Route | Contract/reference status | Disposition |
 |---|---|---|
 | default `mtblr` | supported public legacy; authoritative; noncanonical; update control and retained-sample policy corrected; 3/3 corrected raw and 3/3 corrected formatted references within `1e-12`, exact structure; Phase 17B history retained | ready for mechanical extraction; migration not started |
-| `mtblr_cpg` | public experimental progression variant | retain experimental |
-| `mtblr_cpg_arma` | public experimental Armadillo variant | retain experimental |
-| `mtblr_cpg_omp` | worker-sensitive sparse native branch | correct RNG before retention |
-| `mtblr_eigen` | public experimental eigen variant | retain experimental |
-| `mtblr_cpg_omp_csr` | native-only sparse research | retain internal representation research |
-| `mtblr_hybrid` | native-only, unused, unfrozen | retire/remove candidate |
+| `mtblr_cpg` | historical redundant/defective progression variant | retired and removed in Phase 17G |
+| `mtblr_cpg_arma` | historical redundant/defective Armadillo variant | retired and removed in Phase 17G |
+| `mtblr_cpg_omp` | historical worker-sensitive branch | retired and removed in Phase 17G |
+| `mtblr_eigen` | native-only legacy eigen evidence; unsupported | retain temporarily as internal research |
+| `mtblr_cpg_omp_csr` | native-only local-CSR evidence; unsupported and noncanonical | retain temporarily as internal research |
+| `mtblr_hybrid` | historical unused prototype | retired and removed in Phase 17G |
 
 No `stblr_raw_v1` boundary, route, or production implementation changes in
 Phase 17B.

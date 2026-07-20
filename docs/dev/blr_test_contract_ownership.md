@@ -28,7 +28,7 @@ This document assigns one primary executable owner to every supported BLR contra
 
 | Contract | Permanent owner | Tier | Notes/action |
 |---|---|---|---|
-| R arguments/defaults and routing | CSR/BED interface tests; Phase 17C for MT | 1 | behavioral public calls preferred |
+| R arguments/defaults and routing | CSR/BED interface tests; Phase 17C for the sole MT default route | 1 | retired MT algorithms fail early; behavioral public calls preferred |
 | native signatures | interface and generated-wrapper tests | 1 | wrapper hash only where deliberate immutability applies |
 | raw schemas and actual NULL semantics | `test-stblr-raw-schema.R` | 1 | sole raw-schema owner |
 | formatted schemas, names, dimensions | backend interface tests | 1 | model-specific format owners |
@@ -64,4 +64,3 @@ This document assigns one primary executable owner to every supported BLR contra
 | historical route dispositions | Phase 16A/17A documentation checks | reports/inventory | 2 | no repeated numerical execution |
 
 Frozen binary fixtures and generated wrappers may retain hashes. Actively maintained numerical source files are protected by deterministic references, behavioral identities, and narrow architectural assertions instead of repeated whole-file hashes. Function-region hashes are temporary only while an untouched legacy function shares a translation unit with an active implementation; they should disappear when that legacy route is separately disposed.
-

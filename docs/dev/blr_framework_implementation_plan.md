@@ -1504,3 +1504,15 @@ centralized in `test-blr-extended-reproducibility.R`. Frozen fixtures retain
 hash protection, while active source relies on behavioral references and narrow
 binding/ownership assertions. No production, CSR, eigen, schema, or RNG behavior
 changes in this phase.
+
+## Phase 17G: public multivariate route consolidation
+
+The corrected typed `mtblr()` route is the sole supported public multivariate
+sampler. The transitional `algorithm` argument remains for interface stability
+but accepts only `"default"`; retired values fail before data preparation.
+Redundant `mtblr_cpg`, `mtblr_cpg_arma`, and worker-sensitive `mtblr_cpg_omp`
+implementations and the unused native-only `mtblr_hybrid` prototype are removed.
+`mtblr_eigen` and `mtblr_cpg_omp_csr` remain native-only, explicitly unsupported
+research evidence. The next work is a contract audit of the canonical scalar
+CSR representation for a per-trait/study MT operator bundle, not a sampler
+implementation.

@@ -656,3 +656,11 @@ Phase 13E (packed-BED BayesR), Phase 14E (packed-BED BayesRC), and Phase 17C
 (corrected dense MT). Phase 17E owns the typed MT core contract and Phase 17F
 owns typed finalization. Representative fresh-process coverage is extended-only.
 See `blr_test_contract_ownership.md` for the complete matrix.
+
+## Phase 17G multivariate route ownership
+
+Phase 17C remains the sole numerical owner for the corrected dense MT BayesC
+route (3/3 raw and 3/3 formatted references). Phase 17E and Phase 17F retain
+only typed-core and typed-finalization architecture ownership. Route inventory
+tests prove retired algorithms fail early and retired native registrations are
+absent; no duplicate numerical reference family was added.

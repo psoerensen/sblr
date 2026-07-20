@@ -349,6 +349,15 @@ binding-neutral numerical result consumed by the still-inline legacy
 
 ## Phase 17F shared ST/MT naming plan
 
+### Phase 17G active multivariate names
+
+`mtblr` alone names the supported public dense MT BayesC sampler.
+`mtblr_eigen` and `mtblr_cpg_omp_csr` name unsupported native-only research
+evidence and must not appear as `sblr()` algorithm values. The latter's local
+`LDCSR` is explicitly noncanonical. Retired names `mtblr_cpg`,
+`mtblr_cpg_arma`, `mtblr_cpg_omp`, and `mtblr_hybrid` remain only in historical
+documentation and Git history.
+
 Legacy public names remain unchanged. New typed names distinguish final values,
 posterior means, and traces and avoid MT-only synonyms.
 

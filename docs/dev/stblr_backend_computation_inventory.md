@@ -578,6 +578,19 @@ by the audit.
 
 ## Validation Pointers
 
+## Phase 17G current multivariate inventory
+
+| Route | Reachability | Status | Statistical role | Representation | Action |
+|---|---|---|---|---|---|
+| `mtblr()` | public through `sblr()` | authoritative | corrected MT BayesC reference | dense summary representation | retain |
+| `mtblr_eigen()` | native/internal | research | historical eigen evidence | legacy eigen convention | retain temporarily |
+| `mtblr_cpg_omp_csr()` | native/internal | research | sparse research evidence | local noncanonical `LDCSR` | retain temporarily |
+
+Phase 17G removed `mtblr_cpg()`, `mtblr_cpg_arma()`, `mtblr_cpg_omp()`, and
+`mtblr_hybrid()`. They are historical dispositions, not active routes. The
+retained local `LDCSR` assumes one shared operator and is not a candidate
+canonical representation.
+
 The lightweight consistency checker validates common marker matrices, optional
 `vle`/`vld` traces, chain summaries, compact chain marker names, chain
 component probabilities, and LD-swap diagnostics when present. It remains

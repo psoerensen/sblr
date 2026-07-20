@@ -9,6 +9,19 @@ phase17c_reference <- function(id) readRDS(file.path(blr_test_root,
   "tests/testthat/fixtures/blr_phase17c_mt_default_corrected",
   sprintf("config-%d.rds", id)))
 
+test_that("the corrected default is the sole supported public MT route", {
+  route <- blr_source_text("R/interface_mtblr.R")
+  expect_equal(source_match_count('.Call("_sblr_mtblr"', route, fixed = TRUE), 1L)
+  for (algorithm in c("cpg", "cpg_arma", "cpg_omp", "eigen")) {
+    expect_error(
+      sblr(algorithm = algorithm),
+      "experimental multivariate backends were retired",
+      fixed = TRUE)
+  }
+  expect_false(any(c("mtblr_cpg", "mtblr_cpg_arma", "mtblr_cpg_omp",
+    "mtblr_hybrid") %in% ls(getNamespace("sblr"), all.names = TRUE)))
+})
+
 test_that("Phase 17C uniquely owns corrected raw and formatted references", {
   for (id in 1:3) {
     ref <- phase17c_reference(id)

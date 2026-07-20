@@ -7,9 +7,10 @@ test_that("all remaining non-packed backend routes are classified", {
   old <- setwd(phase17a_root); on.exit(setwd(old), add = TRUE)
   env <- new.env(parent = globalenv())
   sys.source("tools/audit/blr_phase17a_backend_inventory.R", env)
-  expect_equal(nrow(env$inventory), 17L)
+  expect_equal(nrow(env$inventory), 13L)
   expect_false(anyNA(env$inventory$disposition))
   expect_true(all(env$inventory$generated_wrapper))
+  expect_equal(nrow(env$historical_disposition), 4L)
   expect_setequal(unique(env$inventory$family),
     c("scalar CSR", "block-eigen", "multivariate"))
 })
@@ -55,20 +56,23 @@ test_that("every multivariate implementation has a disposition", {
   for (symbol in c("mtblr()", "mtblr_cpg()", "mtblr_cpg_arma()",
       "mtblr_cpg_omp()", "mtblr_eigen()", "mtblr_hybrid()",
       "mtblr_cpg_omp_csr()")) expect_match(report, symbol, fixed = TRUE)
-  omp <- phase17a_text("src/mt_cpg_omp.cpp")
-  expect_match(omp, "omp_get_thread_num()", fixed = TRUE)
-  expect_match(omp, "seed + 100000 * it + omp_get_thread_num()", fixed = TRUE)
+  inventory <- phase17a_text("tools/audit/blr_phase17a_backend_inventory.R")
+  expect_match(inventory, "historical_disposition", fixed = TRUE)
+  expect_match(inventory, "retired and removed", fixed = TRUE)
 })
 
-test_that("public routing and legacy schema boundary remain unchanged", {
+test_that("public routing retains one supported legacy schema boundary", {
   route <- phase17a_text("R/interface_mtblr.R")
-  for (algorithm in c("default", "cpg", "cpg_arma", "cpg_omp", "eigen"))
-    expect_match(route, paste0('algorithm=="', algorithm, '"'), fixed = TRUE)
+  expect_match(route, '!identical(algorithm, "default")', fixed = TRUE)
+  expect_equal(source_match_count('.Call("_sblr_mtblr"', route, fixed = TRUE), 1L)
+  for (algorithm in c("_sblr_mtblr_cpg", "_sblr_mtblr_cpg_arma",
+      "_sblr_mtblr_cpg_omp", "_sblr_mtblr_eigen"))
+    expect_false(grepl(algorithm, route, fixed = TRUE))
   expect_match(route, 'names(fit) <- c("bm","dm","wy","r"', fixed = TRUE)
   expect_match(route, "seed <- sample.int(.Machine$integer.max, 1)", fixed = TRUE)
 })
 
-test_that("production numerical sources and public boundaries are unchanged", {
+test_that("canonical scalar and block-eigen sources remain protected", {
   protected <- c(
     "src/st_cpg_omp_csr.cpp"="92dafc0266d5a0e72aea000224154cef",
     "src/st_cpg_omp_csr_scheduled.cpp"="abeabf03db69e3358fb4850c0a432db2",
@@ -79,12 +83,6 @@ test_that("production numerical sources and public boundaries are unchanged", {
     "src/st_cpg_omp_csr_annot.cpp"="59bd49f048d116d0fe61d73d79bd4693",
     "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h"="bec3bc1e41841ab77747e34dc9818574",
-    "src/mt_cpg.cpp"="49a2c308b127de69cfe3bdf9df2be227",
-    "src/mt_cpg_arma.cpp"="f911293210e4a29017f64a92769ec814",
-    "src/mt_cpg_omp.cpp"="4c2e24988bd3151674be3c8982a36118",
-    "src/mt_cpg_omp_csr.cpp"="aec85896b5c30db3014efaeb5e3c3a96",
-    "R/RcppExports.R"="9d13ea00b326c7e0cd606194d13a8bca",
-    "src/RcppExports.cpp"="b4859db0f6308fa7e38051ddcf32d245",
     "NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")
   actual <- unname(tools::md5sum(file.path(phase17a_root, names(protected))))
   expect_identical(actual, unname(protected))

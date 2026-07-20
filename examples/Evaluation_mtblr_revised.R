@@ -274,17 +274,6 @@ system.time(MT1 <- sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
                         h2 = h2, pi = pi, updateB =TRUE, updatePi = TRUE,
                         method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE))
 
-system.time(MT2 <- sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
-                        sets = NULL, model = NULL, algorithm="cpg_arma",
-                        h2 = h2, pi = pi, updateB =TRUE, updatePi = TRUE,
-                        method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE))
-
-system.time(MT3 <- sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
-                        sets = NULL, model = NULL, algorithm="cpg_omp",
-                        h2 = h2, pi = pi, updateB =TRUE, updateE =TRUE, updatePi = TRUE,
-                        method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE))
-
-
 # -----------------------------------------------------------------------------
 # Simulation Loop
 # -----------------------------------------------------------------------------
@@ -374,12 +363,7 @@ for (rep in 1:nrep) {
   MT1 = sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
               sets = NULL, model = NULL, algorithm="default",
               h2 = h2, pi = pi, updateB =TRUE, updatePi = TRUE,
-              method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE),
-
-  MT2 = sblr(yy = stat$yy, Xy = stat$Xy, XX = stat$XX, n = stat$n,
-             sets = NULL, model = NULL, algorithm="cpg_arma",
-             h2 = h2, pi = pi, updateB = TRUE, updatePi = TRUE,
-             method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE)
+              method = "bayesC", nit = nit, nburn = nburn, verbose = FALSE)
 
  )
 
