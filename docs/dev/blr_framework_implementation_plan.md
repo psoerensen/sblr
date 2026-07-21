@@ -1529,3 +1529,7 @@ Phase 17I activates an internal canonical CSR route with one
 `SparseLdCsrView` per trait/study. Dense and CSR wrappers share one MT BayesC
 implementation, result, finalizer, and positional adapter. Public `sblr()`
 remains dense/default-only; Phase 17J owns public alignment and API design.
+Phase 17J activates the public `mtblr_csr()` boundary with strict marker,
+orientation, scale, overlap, and residual-policy validation, named
+`mtblr_raw` version 1 output, and stable `mtblr_fit` formatting. The next phase
+is only the scalar block-eigen contract audit for future trait-specific reuse.

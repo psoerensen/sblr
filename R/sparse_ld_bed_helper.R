@@ -4686,6 +4686,22 @@ make_summary_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
     Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls),
     use.names = FALSE
   )
+  if (anyNA(unlist(cls, use.names = FALSE))) {
+    stop("Could not match every rsidsLD marker to Glist$rsids.")
+  }
+  if (anyNA(marker_names) || any(!nzchar(marker_names)) || anyDuplicated(marker_names)) {
+    stop("Resolved marker IDs must be unique, nonempty, and non-missing.")
+  }
+  if (any(!is.finite(unlist(af, use.names = FALSE)))) {
+    stop("Resolved allele frequencies must be finite.")
+  }
+  marker_metadata <- data.frame(
+    marker_id = marker_names,
+    chromosome_or_file = rep(chr, lengths(cls)),
+    bed_column = unlist(cls, use.names = FALSE),
+    allele_frequency = unlist(af, use.names = FALSE),
+    stringsAsFactors = FALSE
+  )
 
   wy <- lapply(seq_len(nt), function(t) {
     out <- unlist(
@@ -4724,6 +4740,11 @@ make_summary_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
     rows = rows,
     marker_names = marker_names,
     trait_names = trait_names,
+    scale = if (isTRUE(scale)) "standardized_genotype" else "unscaled_genotype",
+    source = "make_summary_stats",
+    marker_metadata = marker_metadata,
+    sample_metadata = list(analysis_n = nrow(y), rows = rows),
+    orientation_status = "bed_coding_by_construction",
     stats_by_chr = stats_by_chr
   )
 }
@@ -4809,6 +4830,9 @@ make_sparse_ld <- function(Glist,
 
   cls <- lapply(cls, as.integer)
   names(cls) <- paste0("chr", chr)
+  if (anyNA(unlist(cls, use.names = FALSE))) {
+    stop("Could not match every rsidsLD marker to Glist$rsids.")
+  }
 
   af <- Map(function(cc, cl) Glist$af[[cc]][cl], chr, cls)
 
@@ -4839,12 +4863,31 @@ make_sparse_ld <- function(Glist,
     allow_full_ld = allow_full_ld
   )
 
+  marker_names <- unlist(Map(function(cc, cl) Glist$rsids[[cc]][cl], chr, cls), use.names = FALSE)
+  if (anyNA(marker_names) || any(!nzchar(marker_names)) || anyDuplicated(marker_names)) {
+    stop("Resolved sparse-LD marker IDs must be unique, nonempty, and non-missing.")
+  }
+  marker_metadata <- data.frame(
+    marker_id = marker_names,
+    chromosome_or_file = rep(chr, lengths(cls)),
+    bed_column = unlist(cls, use.names = FALSE),
+    allele_frequency = unlist(af, use.names = FALSE),
+    stringsAsFactors = FALSE
+  )
+
   Glist$sparseLD <- list(
     prefix = out_prefix,
     chr = chr,
     bed_files = bedfiles[chr],
     cls = cls,
     af = af,
+    marker_names = marker_names,
+    marker_metadata = marker_metadata,
+    scale = "standardized_genotype",
+    source = "make_sparse_ld",
+    reference_n = if (is.null(rows)) Glist$n else length(rows),
+    reference_id = NA_character_,
+    orientation_status = "bed_coding_by_construction",
     rows = rows,
     max_distance_bp = max_distance_bp,
     max_distance_variants = max_distance_variants,

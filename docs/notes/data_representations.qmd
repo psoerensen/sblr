@@ -364,3 +364,6 @@ comparison.
 - [Technical summary statistics](technical_summary_statistics.qmd)
 - [Technical multi-trait sample overlap](technical_multitrait_overlap.qmd)
 - [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd)
+Phase 17J records canonical `marker_metadata`, scale, source, and sample
+provenance on `make_summary_stats()` and `make_sparse_ld()` outputs for strict
+public `mtblr_csr()` validation.

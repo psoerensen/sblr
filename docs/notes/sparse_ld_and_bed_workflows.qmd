@@ -494,3 +494,5 @@ predictive checks. Compact output guidance is covered in
 - [Annotation-informed models](annotation_informed_models.qmd)
 - [Complete sparse-LD/BED workflow](../../examples/workflows/sparse_ld_bed_workflow.R)
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
+`mtblr_csr()` accepts one raw LD reference or one per trait. A repeated raw
+reference with differing `ww` is rebuilt and scaled separately per trait.

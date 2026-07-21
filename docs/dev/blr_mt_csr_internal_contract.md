@@ -87,3 +87,6 @@ test-only.
 Phase 17J must design R/Glist ID and allele alignment, study/ancestry/reference
 metadata, explicit marker intersection, naming, validation, API, and stable
 named MT raw/fit conversion without changing this core.
+Phase 17J exposes this validated numerical route through `mtblr_csr()`. Public
+marker/allele/scale/resource validation remains R-owned; the internal core
+continues to accept an already aligned positional domain.

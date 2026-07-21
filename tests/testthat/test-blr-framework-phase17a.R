@@ -83,7 +83,7 @@ test_that("canonical scalar and block-eigen sources remain protected", {
     "src/st_cpg_omp_csr_annot.cpp"="59bd49f048d116d0fe61d73d79bd4693",
     "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h"="bec3bc1e41841ab77747e34dc9818574",
-    "NAMESPACE"="f5b6ee37a3972aa436357bdc8f602f4e")
+    "NAMESPACE"="ab1479ce78ea20b39bf8b94f9bc0aa62")
   actual <- unname(tools::md5sum(file.path(phase17a_root, names(protected))))
   expect_identical(actual, unname(protected))
 })

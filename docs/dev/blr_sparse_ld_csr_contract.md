@@ -125,3 +125,6 @@ alignment and trait-resource bundles are Phase 17I concerns.
 internal MT BayesC route. Fully shared pointers, shared patterns with distinct
 values, and independent patterns are supported. Biological alignment and a
 public route remain Phase 17J responsibilities.
+Phase 17J public resolution distinguishes a fully shared pre-scaled operator,
+one shared raw-correlation reference rebuilt with trait-specific diagonals, and
+trait-specific reference resources. The binary CSR format is unchanged.

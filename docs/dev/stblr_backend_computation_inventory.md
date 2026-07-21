@@ -661,3 +661,6 @@ local one-LD `LDCSR` strictly as noncanonical internal research evidence.
 `SparseLdCsrStorage/View`, one operator per trait, the shared corrected MT core,
 the existing finalizer, and the shared legacy adapter. It is not routed by
 `sblr()` and is distinct from noncanonical `mtblr_cpg_omp_csr()` research.
+Phase 17J adds the public serial `mtblr_csr()` adapter. It uses the canonical
+Phase 17I trait-specific CSR core and adds no Gibbs loop, OpenMP path, or
+research-backend dependency.

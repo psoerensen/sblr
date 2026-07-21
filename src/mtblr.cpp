@@ -4200,6 +4200,130 @@ std::vector<std::vector<std::vector<double>>> mtblr_csr_internal(
   final_result, wy, nit, nburn);
 }
 
+namespace {
+
+Rcpp::NumericMatrix mt_legacy_trait_matrix(
+ const std::vector<std::vector<std::vector<double>>>& value,
+ int field
+) {
+ const int nt=static_cast<int>(value[field].size());
+ const int nr=nt==0 ? 0 : static_cast<int>(value[field][0].size());
+ Rcpp::NumericMatrix out(nr, nt);
+ for (int trait=0; trait<nt; ++trait)
+  for (int row=0; row<nr; ++row) out(row, trait)=value[field][trait][row];
+ return out;
+}
+
+Rcpp::IntegerMatrix mt_legacy_state_matrix(
+ const std::vector<std::vector<std::vector<double>>>& value,
+ int field
+) {
+ const int nt=static_cast<int>(value[field].size());
+ const int nr=nt==0 ? 0 : static_cast<int>(value[field][0].size());
+ Rcpp::IntegerMatrix out(nr, nt);
+ for (int trait=0; trait<nt; ++trait)
+  for (int row=0; row<nr; ++row)
+   out(row, trait)=static_cast<int>(value[field][trait][row]);
+ return out;
+}
+
+Rcpp::NumericVector mt_legacy_vector(
+ const std::vector<std::vector<std::vector<double>>>& value,
+ int field
+) {
+ if (value[field].empty()) return Rcpp::NumericVector();
+ return Rcpp::NumericVector(Rcpp::wrap(value[field][0]));
+}
+
+}  // namespace
+
+// Named schema adapter for the public R mtblr_csr() boundary. Numerical
+// execution remains exclusively owned by mtblr_csr_internal() and its shared
+// Phase 17I core; this function only names and shapes finalized values.
+// [[Rcpp::export]]
+Rcpp::List mtblr_csr_raw_internal(
+ std::vector<std::vector<double>> wy,
+ std::vector<std::vector<double>> ww,
+ std::vector<double> yy,
+ std::vector<std::vector<double>> b,
+ std::vector<std::string> ld_prefixes,
+ const std::vector<std::vector<int>>& sets,
+ arma::mat B,
+ arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi,
+ double nub,
+ double nue,
+ bool updateB,
+ bool updateE,
+ bool updatePi,
+ std::vector<int> n,
+ int nit,
+ int nburn,
+ int nthin,
+ int seed,
+ int method
+) {
+ const int nt=static_cast<int>(wy.size());
+ const int m=nt==0 ? 0 : static_cast<int>(wy[0].size());
+ const int nmodels=static_cast<int>(models.size());
+ auto legacy=mtblr_csr_internal(
+  std::move(wy), std::move(ww), std::move(yy), std::move(b),
+  std::move(ld_prefixes), sets, std::move(B), std::move(E),
+  std::move(ssb_prior), std::move(sse_prior), models, std::move(pi),
+  nub, nue, updateB, updateE, updatePi, std::move(n), nit, nburn,
+  nthin, seed, method);
+ Rcpp::IntegerMatrix patterns(nmodels, nt);
+ for (int model=0; model<nmodels; ++model)
+  for (int trait=0; trait<nt; ++trait) patterns(model, trait)=models[model][trait];
+ Rcpp::IntegerVector order(m);
+ for (int marker=0; marker<m; ++marker)
+  order[marker]=static_cast<int>(legacy[6][0][marker]);
+ const int marker_count=(nit+nthin-1)/nthin;
+ return Rcpp::List::create(
+  Rcpp::_["schema"]=Rcpp::List::create(
+   Rcpp::_["class"]="mtblr_raw", Rcpp::_["version"]=1),
+  Rcpp::_["meta"]=Rcpp::List::create(
+   Rcpp::_["model"]="bayesc", Rcpp::_["backend"]="mt_csr_bayesc",
+   Rcpp::_["data_level"]="summary", Rcpp::_["m"]=m,
+   Rcpp::_["nt"]=nt, Rcpp::_["n_trace"]=nit+nburn,
+   Rcpp::_["nit"]=nit, Rcpp::_["nburn"]=nburn,
+   Rcpp::_["nthin"]=nthin, Rcpp::_["nmodels"]=nmodels),
+  Rcpp::_["marker"]=Rcpp::List::create(
+   Rcpp::_["bm"]=mt_legacy_trait_matrix(legacy,0),
+   Rcpp::_["dm"]=mt_legacy_trait_matrix(legacy,1),
+   Rcpp::_["wy"]=mt_legacy_trait_matrix(legacy,2),
+   Rcpp::_["r"]=mt_legacy_trait_matrix(legacy,3),
+   Rcpp::_["b"]=mt_legacy_trait_matrix(legacy,4),
+   Rcpp::_["state"]=mt_legacy_state_matrix(legacy,5),
+   Rcpp::_["order"]=order),
+  Rcpp::_["trace"]=Rcpp::List::create(
+   Rcpp::_["vbs"]=mt_legacy_trait_matrix(legacy,7),
+   Rcpp::_["vgs"]=mt_legacy_trait_matrix(legacy,8),
+   Rcpp::_["ves"]=mt_legacy_trait_matrix(legacy,9)),
+  Rcpp::_["variance"]=Rcpp::List::create(
+   Rcpp::_["covb"]=mt_legacy_trait_matrix(legacy,10),
+   Rcpp::_["covg"]=mt_legacy_trait_matrix(legacy,11),
+   Rcpp::_["cove"]=mt_legacy_trait_matrix(legacy,12),
+   Rcpp::_["vb"]=mt_legacy_trait_matrix(legacy,13),
+   Rcpp::_["vg"]=mt_legacy_trait_matrix(legacy,14),
+   Rcpp::_["ve"]=mt_legacy_trait_matrix(legacy,15)),
+  Rcpp::_["pi"]=Rcpp::List::create(
+   Rcpp::_["final"]=mt_legacy_vector(legacy,16),
+   Rcpp::_["mean"]=mt_legacy_vector(legacy,17)),
+  Rcpp::_["model"]=Rcpp::List::create(Rcpp::_["patterns"]=patterns),
+  Rcpp::_["diagnostics"]=Rcpp::List::create(
+   Rcpp::_["marker"]=marker_count,
+   Rcpp::_["covb"]=updateB ? nit : 0,
+   Rcpp::_["covg"]=nit,
+   Rcpp::_["cove"]=updateE ? nit : 0,
+   Rcpp::_["pi"]=updatePi ? nit : 0),
+  Rcpp::_["data"]=Rcpp::List::create(),
+  Rcpp::_["alignment"]=Rcpp::List::create());
+}
+
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the
 // shared scalar/MT block-eigen representation and per-trait operators exist.
 // [[Rcpp::export]]

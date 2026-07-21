@@ -66,3 +66,4 @@ This document assigns one primary executable owner to every supported BLR contra
 | historical route dispositions | Phase 16A/17A documentation checks | reports/inventory | 2 | no repeated numerical execution |
 
 Frozen binary fixtures and generated wrappers may retain hashes. Actively maintained numerical source files are protected by deterministic references, behavioral identities, and narrow architectural assertions instead of repeated whole-file hashes. Function-region hashes are temporary only while an untouched legacy function shares a translation unit with an active implementation; they should disappear when that legacy route is separately disposed.
+| Public MT CSR normalization, biological alignment, named raw schema, and fit formatting | `test-blr-framework-phase17j.R` | ordinary fast/full | current |

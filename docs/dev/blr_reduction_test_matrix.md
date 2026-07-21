@@ -677,3 +677,4 @@ variable was added.
 updated controls, initialization, marker sets, three traits, trait-specific
 values, and independent patterns. Phase 17C remains the sole dense fixture and
 scientific-contract owner.
+| Phase 17J public MT CSR | Public named-raw/fit versus Phase 17I internal route | `1e-12`; shared, repeated-prefix scaling, trait-specific values/patterns |

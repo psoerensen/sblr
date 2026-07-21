@@ -390,3 +390,4 @@ local MT CSR and eigen implementations remain unsupported research.
 Trait-specific canonical MT CSR execution is validated internally against the
 corrected dense oracle, including shared operators, different values/diagonals,
 and independent sparsity. It is nonpublic and not yet a supported API.
+| MT CSR BayesC | `mtblr_csr()` | supported public, canonical CSR | trait-specific canonical CSR views; serial Phase 17I core; named MT raw v1; no overlap likelihood |

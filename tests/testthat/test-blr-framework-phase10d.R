@@ -109,7 +109,7 @@ test_that("Phase 10D protects canonical and unrelated native backends", {
     "src/st_cpg_omp_csr_annot.cpp" = "59bd49f048d116d0fe61d73d79bd4693",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "NAMESPACE" = "f5b6ee37a3972aa436357bdc8f602f4e")
+    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62")
   expect_identical(unname(tools::md5sum(file.path(phase10d_root, names(protected)))),
     unname(protected))
 })

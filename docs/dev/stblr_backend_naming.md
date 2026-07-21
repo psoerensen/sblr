@@ -417,3 +417,6 @@ trait/study and must not introduce an MT-specific CSR representation.
 `MtSparseLdBundleView` means an ordered vector of canonical trait/study
 operators on one marker domain. `MtCsrDataView` adds aligned `wy`, `yy`, and
 `n`. Neither name implies shared LD; sharing is a property of borrowed pointers.
+Public MT CSR naming uses `marker_id`, `effect_allele`, `other_allele`,
+`allele_frequency`, `trait_id`, `study_id`, `population`, `ancestry`, and
+`ld_reference`. Legacy numerical field names remain compatible in `mtblr_fit`.

@@ -777,3 +777,6 @@ borrowing or covariance estimates.
 This appendix consolidates every mathematical component of the archived
 `SSY` and sample-overlap theory while aligning its claims with the current
 multi-trait wrappers and CSR implementation.
+The Phase 17J public CSR interface accepts only
+`sample_overlap = "not_modeled"` and marginal `yy`. Residual covariance is not
+an implicit GWAS sampling-overlap likelihood.
