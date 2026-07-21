@@ -5,7 +5,7 @@ test_that("Phase 17F owns the typed binding-neutral finalizer", {
   expect_source_count("struct MtDefaultFinalResult", types, 1L)
   expect_source_count("inline MtDefaultFinalResult finalize_mt_default_result(",
     finalizer, 1L)
-  expect_source_count("finalize_mt_default_result(", adapter, 1L)
+  expect_source_count("finalize_mt_default_result(", adapter, 2L)
   expect_source_forbidden(paste(types, finalizer), c("Rcpp", "SEXP", "RObject",
     "NumericVector", "NumericMatrix", "schema_version"))
   expect_source_forbidden(finalizer, c("std::mt19937", "sampleBset(",
@@ -15,14 +15,15 @@ test_that("Phase 17F owns the typed binding-neutral finalizer", {
 test_that("Phase 17F owns posterior arithmetic and positional separation", {
   finalizer <- blr_source_text("src/blr_mt_default_finalize_impl.h")
   adapter <- blr_mt_public_source()
+  legacy <- blr_source_text("src/blr_mt_default_legacy_adapter.h")
   expect_identical(sum(grepl("/.*retained_count",
     strsplit(finalizer, "\n")[[1]])), 6L)
-  expect_source_count("result.resize(20);", adapter, 1L)
+  expect_source_count("MtDefaultLegacyResult result(20);", legacy, 1L)
   expect_source_forbidden(adapter, c("/marker_retained_count",
     "covb_retained_count >", "covg_retained_count >",
     "cove_retained_count >", "pi_retained_count >"))
   for (position in 0:19)
-    expect_true(source_match_count(sprintf("result[%d]", position), adapter) >= 2L)
+    expect_true(source_match_count(sprintf("result[%d]", position), legacy) >= 1L)
 })
 
 test_that("Phase 17F owns shared naming and future operator requirements", {

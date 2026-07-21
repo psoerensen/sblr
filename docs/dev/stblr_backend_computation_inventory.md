@@ -655,3 +655,9 @@ Canonical scalar CSR backends now share one owning definition,
 Ordinary CSR BayesC actively borrows `SparseLdCsrView`; the other scalar CSR
 families retain model-specific adapters. `mtblr_cpg_omp_csr()` retains its
 local one-LD `LDCSR` strictly as noncanonical internal research evidence.
+## Phase 17I internal MT CSR route
+
+`mtblr_csr_internal()` is a registered maintenance route using canonical
+`SparseLdCsrStorage/View`, one operator per trait, the shared corrected MT core,
+the existing finalizer, and the shared legacy adapter. It is not routed by
+`sblr()` and is distinct from noncanonical `mtblr_cpg_omp_csr()` research.

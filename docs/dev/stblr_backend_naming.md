@@ -412,3 +412,8 @@ one immutable operator view. `row_ptr`, `column_index`, and `offdiag_xij` are
 view vocabulary; the owner's legacy `ptr`, `idx`, and `xij` members remain a
 temporary source-compatibility detail. A future MT bundle contains one view per
 trait/study and must not introduce an MT-specific CSR representation.
+## Phase 17I MT CSR vocabulary
+
+`MtSparseLdBundleView` means an ordered vector of canonical trait/study
+operators on one marker domain. `MtCsrDataView` adds aligned `wy`, `yy`, and
+`n`. Neither name implies shared LD; sharing is a property of borrowed pointers.

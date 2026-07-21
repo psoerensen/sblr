@@ -2,6 +2,9 @@
 #include <RcppArmadillo.h>
 #include <cmath>
 
+#include "blr_mt_ld_access.h"
+#include "st_csr_common.h"
+
 using namespace Rcpp;
 using namespace arma;
 
@@ -2975,6 +2978,7 @@ void sampleBetaCMtMasked(int i,
 //   - r contains residuals with current EFFECTIVE effect added back:
 //         r = y - X b_eff + x_i * b_eff_i
 //
+template <class DataView>
 void sampleBetaCPG_Mt_latent(
   int i,
   int nt,
@@ -2984,13 +2988,11 @@ void sampleBetaCPG_Mt_latent(
   const std::vector<double>& pi,
   const arma::mat& Ei,
   const arma::mat& Bi,
-  const std::vector<std::vector<double>>& ww,
+  const DataView& data,
   std::vector<std::vector<double>>& r,
   std::vector<std::vector<double>>& beta,   // latent effects
   std::vector<std::vector<double>>& b,      // effective effects = D * beta
   std::vector<std::vector<int>>& d,
-  const std::vector<std::vector<int>>& XXindices,
-  const std::vector<std::vector<std::vector<double>>>& XXvalues,
   std::mt19937& gen)
 {
  // ------------------------------------------------------------
@@ -2998,7 +3000,8 @@ void sampleBetaCPG_Mt_latent(
  // ------------------------------------------------------------
  arma::vec rhs_base(nt, arma::fill::zeros);
  for (int t = 0; t < nt; ++t) {
-  rhs_base(t) = Ei(t, t) * (r[t][i] + ww[t][i] * b[t][i]);
+  rhs_base(t) = Ei(t, t) *
+   (r[t][i] + sblr::mt::mt_diagonal(data, t, i) * b[t][i]);
  }
 
  std::vector<double> loglik(nmodels, -std::numeric_limits<double>::infinity());
@@ -3027,7 +3030,7 @@ void sampleBetaCPG_Mt_latent(
   for (int t = 0; t < nt; ++t) {
    if (models[k][t] == 1) {
     rhs(t) = rhs_base(t);
-    C(t, t) += ww[t][i] * Ei(t, t);
+    C(t, t) += sblr::mt::mt_diagonal(data, t, i) * Ei(t, t);
    }
   }
 
@@ -3113,7 +3116,7 @@ void sampleBetaCPG_Mt_latent(
  for (int t = 0; t < nt; ++t) {
   if (models[mselect][t] == 1) {
    rhs(t) = rhs_base(t);
-   C(t, t) += ww[t][i] * Ei(t, t);
+   C(t, t) += sblr::mt::mt_diagonal(data, t, i) * Ei(t, t);
   }
  }
 
@@ -3159,10 +3162,7 @@ void sampleBetaCPG_Mt_latent(
  for (int t = 0; t < nt; ++t) {
   const double diff = b_new(t) - b[t][i];
   if (diff != 0.0) {
-   const size_t nnz = XXindices[i].size();
-   for (size_t j = 0; j < nnz; ++j) {
-    r[t][XXindices[i][j]] -= XXvalues[t][i][j] * diff;
-   }
+   sblr::mt::mt_apply_marker_difference(data, t, i, diff, r[t]);
   }
  }
 
@@ -4047,6 +4047,7 @@ void sampleBetaCSt(int i,
 
 #include "blr_mt_default_core_impl.h"
 #include "blr_mt_default_finalize_impl.h"
+#include "blr_mt_default_legacy_adapter.h"
 
 // [[Rcpp::export]]
 std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<double>> wy,
@@ -4093,121 +4094,110 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
  sblr::mt::MtDefaultFinalResult final_result=
   sblr::mt::finalize_mt_default_result(std::move(core_result));
 
- const int nt=final_result.nt;
- const int m=final_result.m;
- const int nmodels=final_result.nmodels;
- const auto& bm=final_result.bm;
- const auto& dm=final_result.dm;
- const auto& r=final_result.r;
- const auto& final_b=final_result.b;
- const auto& d=final_result.d;
- const auto& order=final_result.marker_order;
- const auto& vbs=final_result.vbs;
- const auto& vgs=final_result.vgs;
- const auto& ves=final_result.ves;
- const auto& covb=final_result.covb;
- const auto& covg=final_result.covg;
- const auto& cove=final_result.cove;
- const auto& final_B=final_result.vb;
- const auto& G=final_result.vg;
- const auto& final_E=final_result.ve;
- const auto& final_pi=final_result.pi_final;
- const auto& pi_mean=final_result.pi_mean;
- const auto& pistrait=final_result.pitrait;
- const auto& pismarker=final_result.pimarker;
+ return sblr::mt::make_mt_default_legacy_result(
+  final_result, wy, nit, nburn);
+}
 
- // Summarize results
- std::vector<std::vector<std::vector<double>>> result;
- result.resize(20);
-
- result[0].resize(nt);
- result[1].resize(nt);
- result[2].resize(nt);
- result[3].resize(nt);
- result[4].resize(nt);
- result[5].resize(nt);
- result[6].resize(nt);
- result[7].resize(nt);
- result[8].resize(nt);
- result[9].resize(nt);
- result[10].resize(nt);
- result[11].resize(nt);
- result[12].resize(nt);
- result[13].resize(nt);
- result[14].resize(nt);
- result[15].resize(nt);
- result[16].resize(nt);
- result[17].resize(nt);
- result[18].resize(nt);
- result[19].resize(nt);
-
- for (int t=0; t < nt; t++) {
-  result[0][t].resize(m);
-  result[1][t].resize(m);
-  result[2][t].resize(m);
-  result[3][t].resize(m);
-  result[4][t].resize(m);
-  result[5][t].resize(m);
-  result[6][t].resize(m);
-  result[7][t].resize(nit+nburn);
-  result[8][t].resize(nit+nburn);
-  result[9][t].resize(nit+nburn);
-  result[10][t].resize(nt);
-  result[11][t].resize(nt);
-  result[12][t].resize(nt);
-  result[13][t].resize(nt);
-  result[14][t].resize(nt);
-  result[15][t].resize(nt);
-  result[16][t].resize(nmodels);
-  result[17][t].resize(nmodels);
-  result[18][t].resize(4);
-  result[19][t].resize(2);
+// Internal canonical trait-specific CSR execution. This native maintenance
+// route is deliberately not selected by sblr() and is not namespace-exported.
+// [[Rcpp::export]]
+std::vector<std::vector<std::vector<double>>> mtblr_csr_internal(
+ std::vector<std::vector<double>> wy,
+ std::vector<std::vector<double>> ww,
+ std::vector<double> yy,
+ std::vector<std::vector<double>> b,
+ std::vector<std::string> ld_prefixes,
+ const std::vector<std::vector<int>>& sets,
+ arma::mat B,
+ arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi,
+ double nub,
+ double nue,
+ bool updateB,
+ bool updateE,
+ bool updatePi,
+ std::vector<int> n,
+ int nit,
+ int nburn,
+ int nthin,
+ int seed,
+ int method
+) {
+ const std::size_t nt=wy.size();
+ if (nt==0 || ww.size()!=nt || yy.size()!=nt || n.size()!=nt) {
+  throw std::invalid_argument("mtblr_csr_internal: inconsistent trait dimensions");
  }
-
- for (int t=0; t < nt; t++) {
-  for (int i=0; i < m; i++) {
-   result[0][t][i] = bm[t][i];
-   result[1][t][i] = dm[t][i];
-   result[2][t][i] = wy[t][i];
-   result[3][t][i] = r[t][i];
-   result[4][t][i] = final_b[t][i];
-   result[5][t][i] = d[t][i];
-   result[6][t][i] = order[i];
+ const std::size_t m=wy[0].size();
+ if (m==0 || (ld_prefixes.size()!=1 && ld_prefixes.size()!=nt)) {
+  throw std::invalid_argument(
+   "mtblr_csr_internal: ld_prefixes must have length one or trait count");
+ }
+ for (std::size_t trait=0; trait<nt; ++trait) {
+  if (wy[trait].size()!=m || ww[trait].size()!=m) {
+   throw std::invalid_argument("mtblr_csr_internal: inconsistent marker dimensions");
+  }
+ }
+ const bool shared=ld_prefixes.size()==1;
+ if (shared) {
+  for (std::size_t trait=1; trait<nt; ++trait) {
+   if (ww[trait]!=ww[0]) {
+    throw std::invalid_argument(
+     "mtblr_csr_internal: shared LD requires identical trait diagonals");
+   }
   }
  }
 
- for (int t=0; t < nt; t++) {
-  for (int i=0; i < nit+nburn; i++) {
-   result[7][t][i] = vbs[t][i];
-   result[8][t][i] = vgs[t][i];
-   result[9][t][i] = ves[t][i];
-  }
+ std::vector<sblr::core::SparseLdCsrStorage> storage_owners;
+ std::vector<arma::rowvec> diagonal_owners;
+ const std::size_t owner_count=shared ? 1 : nt;
+ storage_owners.reserve(owner_count);
+ diagonal_owners.reserve(owner_count);
+ for (std::size_t owner=0; owner<owner_count; ++owner) {
+  const std::size_t trait=shared ? 0 : owner;
+  storage_owners.push_back(read_and_build_st_ld_csr(
+   ld_prefixes[shared ? 0 : trait], static_cast<int>(m), ww[trait]));
+  arma::rowvec diagonal(m);
+  for (std::size_t marker=0; marker<m; ++marker) diagonal(marker)=ww[trait][marker];
+  diagonal_owners.push_back(std::move(diagonal));
  }
- for (int t1=0; t1 < nt; t1++) {
-  for (int t2=0; t2 < nt; t2++) {
-   result[10][t1][t2] = covb[t1][t2];
-   result[11][t1][t2] = covg[t1][t2];
-   result[12][t1][t2] = cove[t1][t2];
-   result[13][t1][t2] = final_B(t1,t2);
-   result[14][t1][t2] = G(t1,t2);
-   result[15][t1][t2] = final_E(t1,t2);
-  }
+
+ std::vector<sblr::core::SparseLdCsrView> trait_views;
+ trait_views.reserve(nt);
+ for (std::size_t trait=0; trait<nt; ++trait) {
+  const std::size_t owner=shared ? 0 : trait;
+  const auto& storage=storage_owners[owner];
+  sblr::core::SparseLdCsrView view;
+  view.marker_count=m;
+  view.row_ptr=storage.ptr.data();
+  view.row_ptr_size=storage.ptr.size();
+  view.column_index=storage.idx.empty() ? nullptr : storage.idx.data();
+  view.offdiag_xij=storage.xij.empty() ? nullptr : storage.xij.data();
+  view.nonzero_count=storage.idx.size();
+  view.diagonal=&diagonal_owners[owner];
+  trait_views.push_back(view);
  }
- for (int t=0; t < nt; t++) {
-  for (int i=0; i < nmodels; i++) {
-   result[16][t][i] = final_pi[i];
-   result[17][t][i] = pi_mean[i];
-  }
- }
- for (int t=0; t < nt; t++) {
-  for (int i=0; i < 4; i++) {
-   result[18][t][i] = pistrait[t][i];
-  }
-  for (int i=0; i < 2; i++) {
-   result[19][t][i] = pismarker[i];
-  }
- }
- return result;
+
+ sblr::mt::MtCsrDataView data{
+  wy, yy, n, sblr::mt::MtSparseLdBundleView{m, std::move(trait_views)}
+ };
+ sblr::mt::MtDefaultModelSpec model{models, sets, method};
+ sblr::mt::MtDefaultCovariancePriorView prior{
+  ssb_prior, sse_prior, nub, nue
+ };
+ sblr::mt::MtDefaultExecutionSpec execution{
+  updateB, updateE, updatePi, nit, nburn, nthin, seed
+ };
+ sblr::mt::MtDefaultInitialState initial_state{
+  std::move(b), std::move(B), std::move(E), std::move(pi)
+ };
+ auto core_result=sblr::mt::run_mt_csr_core(
+  data, model, prior, execution, std::move(initial_state));
+ auto final_result=sblr::mt::finalize_mt_default_result(std::move(core_result));
+ return sblr::mt::make_mt_default_legacy_result(
+  final_result, wy, nit, nburn);
 }
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the

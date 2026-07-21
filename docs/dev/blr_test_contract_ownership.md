@@ -53,6 +53,7 @@ This document assigns one primary executable owner to every supported BLR contra
 | one MT numerical finalizer | Phase 17F | 1 | owns division/adaptation boundary |
 | shared CSR naming requirements | Phase 17F | 1 | documentation contract only |
 | shared CSR storage/view and validation | `test-blr-framework-phase17h.R` | 1 | architecture only; Phase 3 owns ordinary BayesC numerics |
+| internal trait-specific MT CSR reduction | `test-blr-framework-phase17i.R` | 1 | shared/trait-specific/independent operators; Phase 17C remains dense oracle owner |
 
 ## Historical evidence and hashes
 

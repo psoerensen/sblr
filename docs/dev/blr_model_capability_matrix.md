@@ -385,3 +385,8 @@ All canonical scalar CSR families share `SparseLdCsrStorage`; ordinary CSR
 BayesC additionally uses `SparseLdCsrView`. This is a storage/ownership
 contract only. Dense corrected MT remains the sole public MT route, while the
 local MT CSR and eigen implementations remain unsupported research.
+## Phase 17I capability note
+
+Trait-specific canonical MT CSR execution is validated internally against the
+corrected dense oracle, including shared operators, different values/diagonals,
+and independent sparsity. It is nonpublic and not yet a supported API.

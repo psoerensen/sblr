@@ -1523,3 +1523,9 @@ definition (with `STLDCSR` as a compatibility alias), and ordinary canonical
 CSR BayesC actively consumes `SparseLdCsrView`. The view is binding-neutral,
 immutable, centrally validated, and suitable for one operator per future MT
 trait/study. No MT CSR sampler or public route was introduced.
+## Phase 17I — internal trait-specific MT CSR
+
+Phase 17I activates an internal canonical CSR route with one
+`SparseLdCsrView` per trait/study. Dense and CSR wrappers share one MT BayesC
+implementation, result, finalizer, and positional adapter. Public `sblr()`
+remains dense/default-only; Phase 17J owns public alignment and API design.

@@ -2,22 +2,21 @@
 #define SBLR_BLR_MT_DEFAULT_CORE_IMPL_H
 
 #include "blr_mt_default_types.h"
+#include "blr_mt_ld_access.h"
 
 namespace sblr {
 namespace mt {
 
-inline MtDefaultCoreResult run_mt_default_core(
- const MtDefaultDataView& data,
+template <class DataView>
+inline MtDefaultCoreResult run_mt_bayesc_core_impl(
+ const DataView& data,
  const MtDefaultModelSpec& model,
  const MtDefaultCovariancePriorView& prior,
  const MtDefaultExecutionSpec& execution,
  MtDefaultInitialState initial_state
 ) {
  const auto& wy=data.wy;
- const auto& ww=data.ww;
  const auto& yy=data.yy;
- const auto& XXvalues=data.XXvalues;
- const auto& XXindices=data.XXindices;
  const auto& n=data.n;
  const auto& models=model.models;
  const auto& sets=model.sets;
@@ -32,8 +31,8 @@ inline MtDefaultCoreResult run_mt_default_core(
  auto pi=std::move(initial_state.pi);
 
  // Define local variables
- int nt = wy.size();
- int m = wy[0].size();
+ int nt = static_cast<int>(mt_trait_count(data));
+ int m = static_cast<int>(mt_marker_count(data));
  int nmodels = models.size();
  double marker_retained_count = 0.0;
  double covb_retained_count = 0.0;
@@ -94,24 +93,16 @@ inline MtDefaultCoreResult run_mt_default_core(
  pimarker[0] = 1.0-pi[0];
  pimarker[1] = pi[0];
 
- // Initialize variables
+ // Initialize representation-neutral marker scores.
  for (int i = 0; i < m; i++) {
   for (int t = 0; t < nt; t++) {
-   r[t][i] = wy[t][i];
-   x2[t][i] = (wy[t][i]/ww[t][i])*(wy[t][i]/ww[t][i]);
+   const double diagonal=mt_diagonal(data, t, i);
+   x2[t][i] = (wy[t][i]/diagonal)*(wy[t][i]/diagonal);
   }
  }
 
- // Wy - W'Wb
- for ( int i = 0; i < m; i++) {
-  for (int t = 0; t < nt; t++) {
-   if (b[t][i]!= 0.0) {
-    for (size_t j = 0; j < XXindices[i].size(); j++) {
-     r[t][XXindices[i][j]]=r[t][XXindices[i][j]] - XXvalues[t][i][j]*b[t][i];
-    }
-   }
-  }
- }
+ // Wy - W'Wb, preserving each representation's stored traversal order.
+ mt_rebuild_residuals(data, b, r);
 
  for ( int i = 0; i < m; i++) {
   x2t[i] = 0.0;
@@ -192,8 +183,7 @@ inline MtDefaultCoreResult run_mt_default_core(
       sampleBetaCPG_Mt_latent(i, nt,
                        nmodels, models, cmodel, pi,
                        Ei, Bi,
-                       ww, r, beta, b, d,
-                       XXindices, XXvalues,
+                       data, r, beta, b, d,
                        gen);
 
      }
@@ -301,6 +291,29 @@ inline MtDefaultCoreResult run_mt_default_core(
  result.pistrait=std::move(pistrait);
  result.pismarker=std::move(pismarker);
  return result;
+}
+
+inline MtDefaultCoreResult run_mt_default_core(
+ const MtDefaultDataView& data,
+ const MtDefaultModelSpec& model,
+ const MtDefaultCovariancePriorView& prior,
+ const MtDefaultExecutionSpec& execution,
+ MtDefaultInitialState initial_state
+) {
+ return run_mt_bayesc_core_impl(
+  data, model, prior, execution, std::move(initial_state));
+}
+
+inline MtDefaultCoreResult run_mt_csr_core(
+ const MtCsrDataView& data,
+ const MtDefaultModelSpec& model,
+ const MtDefaultCovariancePriorView& prior,
+ const MtDefaultExecutionSpec& execution,
+ MtDefaultInitialState initial_state
+) {
+ validate_mt_csr_data(data, model);
+ return run_mt_bayesc_core_impl(
+  data, model, prior, execution, std::move(initial_state));
 }
 
 }  // namespace mt

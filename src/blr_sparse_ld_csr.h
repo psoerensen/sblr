@@ -50,6 +50,18 @@ struct SparseLdCsrView {
     }
   }
 
+  inline void apply_offdiag(int marker, double difference,
+                            std::vector<double>& residual) const {
+    const std::uint64_t start = row_ptr[static_cast<std::size_t>(marker)];
+    const std::uint64_t end = row_ptr[static_cast<std::size_t>(marker + 1)];
+    for (std::uint64_t position = start; position < end; ++position) {
+      const int neighbour = column_index[static_cast<std::size_t>(position)];
+      residual[static_cast<std::size_t>(neighbour)] -=
+        static_cast<double>(offdiag_xij[static_cast<std::size_t>(position)]) *
+        difference;
+    }
+  }
+
   inline void rebuild(const arma::rowvec& trait_wy,
                       const arma::rowvec& effects,
                       arma::rowvec& residual) const {
@@ -59,6 +71,19 @@ struct SparseLdCsrView {
       const double effect = effects(marker_u);
       if (effect == 0.0) continue;
       residual(marker_u) -= (*diagonal)(marker_u) * effect;
+      apply_offdiag(static_cast<int>(marker), effect, residual);
+    }
+  }
+
+
+  inline void rebuild(const std::vector<double>& trait_wy,
+                      const std::vector<double>& effects,
+                      std::vector<double>& residual) const {
+    residual = trait_wy;
+    for (std::size_t marker = 0; marker < marker_count; ++marker) {
+      const double effect = effects[marker];
+      if (effect == 0.0) continue;
+      residual[marker] -= (*diagonal)(static_cast<arma::uword>(marker)) * effect;
       apply_offdiag(static_cast<int>(marker), effect, residual);
     }
   }

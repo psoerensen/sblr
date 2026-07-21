@@ -671,3 +671,9 @@ validation, builder-semantics, and future trait-sharing architecture contract.
 Numerical behavior remains owned by Phase 3, 6, 8, 9C/9E/9G, 10D, and 17C
 reference tests. The focused Phase 17H test is in fast CI; no new fresh-process
 variable was added.
+## Phase 17I reductions
+
+`test-blr-framework-phase17i.R` owns dense/CSR reductions for shared fixed and
+updated controls, initialization, marker sets, three traits, trait-specific
+values, and independent patterns. Phase 17C remains the sole dense fixture and
+scientific-contract owner.

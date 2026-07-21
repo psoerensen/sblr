@@ -118,3 +118,10 @@ buffer, not an execution storage contract.
 Changes extend this shared contract or use explicit compatibility adapters;
 they must not introduce parallel scalar and MT file/storage formats. Marker
 alignment and trait-resource bundles are Phase 17I concerns.
+
+## Phase 17I activation
+
+`MtSparseLdBundleView` now composes one canonical view per trait/study for the
+internal MT BayesC route. Fully shared pointers, shared patterns with distinct
+values, and independent patterns are supported. Biological alignment and a
+public route remain Phase 17J responsibilities.
