@@ -16,6 +16,18 @@ struct CsrOperator {
   CsrOperator(const STLDCSR& ld_, const arma::rowvec& xx_) :
     ld(ld_), xx(xx_) {}
 
+  inline sblr::core::SparseLdCsrView view() const {
+    sblr::core::SparseLdCsrView result;
+    result.marker_count = static_cast<std::size_t>(xx.n_elem);
+    result.row_ptr = ld.ptr.data();
+    result.row_ptr_size = ld.ptr.size();
+    result.column_index = ld.idx.empty() ? nullptr : ld.idx.data();
+    result.offdiag_xij = ld.xij.empty() ? nullptr : ld.xij.data();
+    result.nonzero_count = ld.idx.size();
+    result.diagonal = &xx;
+    return result;
+  }
+
   inline const arma::rowvec& diag() const { return xx; }
 
   inline void apply_offdiag(int i, double diff, arma::rowvec& r) const {

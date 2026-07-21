@@ -405,3 +405,10 @@ Future metadata must distinguish trait, study, population, ancestry, LD
 reference, sample size, marker set, and sample-overlap policy. Independent,
 known-overlap, and unknown-overlap studies are distinct; residual covariance
 alone must not silently stand for GWAS sample overlap.
+## Shared sparse-LD names (Phase 17H)
+
+Use `SparseLdCsrStorage` for the model-neutral owner and `SparseLdCsrView` for
+one immutable operator view. `row_ptr`, `column_index`, and `offdiag_xij` are
+view vocabulary; the owner's legacy `ptr`, `idx`, and `xij` members remain a
+temporary source-compatibility detail. A future MT bundle contains one view per
+trait/study and must not introduce an MT-specific CSR representation.

@@ -1516,3 +1516,10 @@ implementations and the unused native-only `mtblr_hybrid` prototype are removed.
 research evidence. The next work is a contract audit of the canonical scalar
 CSR representation for a per-trait/study MT operator bundle, not a sampler
 implementation.
+## Phase 17H — shared sparse-LD CSR contract
+
+Phase 17H is complete. `SparseLdCsrStorage` is the sole canonical owning
+definition (with `STLDCSR` as a compatibility alias), and ordinary canonical
+CSR BayesC actively consumes `SparseLdCsrView`. The view is binding-neutral,
+immutable, centrally validated, and suitable for one operator per future MT
+trait/study. No MT CSR sampler or public route was introduced.

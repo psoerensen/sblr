@@ -172,16 +172,19 @@ test_that("canonical contracts retain binding neutrality and borrowed ownership"
   types_text <- paste(types, collapse = "\n")
   expect_match(types_text, "Borrowed immutable view", fixed = TRUE)
   expect_match(types_text, "must keep it alive", fixed = TRUE)
-  expect_match(types_text, "const std::uint64_t* row_ptr", fixed = TRUE)
-  expect_match(types_text, "const int* column_index", fixed = TRUE)
-  expect_match(types_text, "const float* values", fixed = TRUE)
+  shared_text <- paste(readLines(
+    test_path("..", "..", "src", "blr_sparse_ld_csr.h"), warn = FALSE
+  ), collapse = "\n")
+  expect_match(shared_text, "const std::uint64_t* row_ptr", fixed = TRUE)
+  expect_match(shared_text, "const int* column_index", fixed = TRUE)
+  expect_match(shared_text, "const float* offdiag_xij", fixed = TRUE)
 
   first <- grep("struct CsrBayesCChainResult", types, fixed = TRUE)
   last <- grep("struct CsrBayesCResult", types, fixed = TRUE) - 1L
   chain_payload <- paste(types[seq.int(first, last)], collapse = "\n")
   expect_false(grepl("row_ptr =", chain_payload, fixed = TRUE))
   expect_false(grepl("column_index =", chain_payload, fixed = TRUE))
-  expect_false(grepl("const float* values", chain_payload, fixed = TRUE))
+  expect_false(grepl("const float* offdiag_xij", chain_payload, fixed = TRUE))
 })
 
 test_that("all permanent pre-refactor raw and formatted references remain exact", {

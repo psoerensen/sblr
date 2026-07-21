@@ -101,7 +101,7 @@ test_that("dense scheduled execution retains its documented nonidentity", {
 
 test_that("Phase 10D protects canonical and unrelated native backends", {
   protected <- c(
-    "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
+    "src/st_cpg_omp_csr.cpp" = "f7a12b24018eb525eb5ad0c59950a630",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",

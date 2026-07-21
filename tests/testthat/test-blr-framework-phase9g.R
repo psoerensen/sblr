@@ -105,7 +105,7 @@ test_that("Phase 9G canonical route remains reproducible", {
 
 test_that("Phase 9G protects public and unrelated backends", {
   protected <- c(
-    "src/st_cpg_omp_csr.cpp" = "92dafc0266d5a0e72aea000224154cef",
+    "src/st_cpg_omp_csr.cpp" = "f7a12b24018eb525eb5ad0c59950a630",
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_group.cpp" = "87e923f7f8ee6420e39d9f041263d11b",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",

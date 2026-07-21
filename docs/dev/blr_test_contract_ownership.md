@@ -52,6 +52,7 @@ This document assigns one primary executable owner to every supported BLR contra
 | binding-neutral MT types/core | Phase 17E | 1 | forbids Rcpp/SEXP and adapter Gibbs/RNG work |
 | one MT numerical finalizer | Phase 17F | 1 | owns division/adaptation boundary |
 | shared CSR naming requirements | Phase 17F | 1 | documentation contract only |
+| shared CSR storage/view and validation | `test-blr-framework-phase17h.R` | 1 | architecture only; Phase 3 owns ordinary BayesC numerics |
 
 ## Historical evidence and hashes
 

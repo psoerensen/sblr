@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "blr_result.h"
+#include "blr_sparse_ld_csr.h"
 #include "blr_spec.h"
 
 namespace sblr {
@@ -39,42 +40,10 @@ namespace core {
 struct CsrBayesCDataView {
   std::size_t marker_count = 0;
   std::size_t trait_count = 0;
-  const std::uint64_t* row_ptr = nullptr;
-  std::size_t row_ptr_size = 0;
-  const int* column_index = nullptr;
-  const float* values = nullptr;
-  std::size_t nonzero_count = 0;
-  const arma::rowvec* diagonal = nullptr;
+  SparseLdCsrView ld;
   const arma::mat* wy = nullptr;  // traits x markers
   const arma::vec* yy = nullptr;  // traits
   const std::vector<int>* sample_size = nullptr;
-
-  inline const arma::rowvec& diag() const { return *diagonal; }
-
-  inline void apply_offdiag(int marker, double difference,
-                            arma::rowvec& residual) const {
-    const std::uint64_t start = row_ptr[static_cast<std::size_t>(marker)];
-    const std::uint64_t end = row_ptr[static_cast<std::size_t>(marker + 1)];
-    for (std::uint64_t position = start; position < end; ++position) {
-      const int neighbour = column_index[static_cast<std::size_t>(position)];
-      residual(static_cast<arma::uword>(neighbour)) -=
-        static_cast<double>(values[static_cast<std::size_t>(position)]) *
-        difference;
-    }
-  }
-
-  inline void rebuild(const arma::rowvec& trait_wy,
-                      const arma::rowvec& effects,
-                      arma::rowvec& residual) const {
-    residual = trait_wy;
-    for (std::size_t marker = 0; marker < marker_count; ++marker) {
-      const arma::uword marker_u = static_cast<arma::uword>(marker);
-      const double effect = effects(marker_u);
-      if (effect == 0.0) continue;
-      residual(marker_u) -= (*diagonal)(marker_u) * effect;
-      apply_offdiag(static_cast<int>(marker), effect, residual);
-    }
-  }
 };
 
 struct CsrBayesCPriors {

@@ -379,3 +379,9 @@ remain unchanged.
 The route remains authoritative supported public legacy and noncanonical.
 Multichain aggregation, a named R converter, a versioned raw schema, CSR/eigen
 execution, and a generic operator abstraction remain inactive.
+## Phase 17H storage note
+
+All canonical scalar CSR families share `SparseLdCsrStorage`; ordinary CSR
+BayesC additionally uses `SparseLdCsrView`. This is a storage/ownership
+contract only. Dense corrected MT remains the sole public MT route, while the
+local MT CSR and eigen implementations remain unsupported research.

@@ -13,18 +13,9 @@
 #include <string>
 #include <vector>
 
-struct STLDCSR {
- std::vector<uint64_t> ptr;  // length m + 1
- std::vector<int> idx;       // neighbor marker index
- std::vector<float> xij;     // pre-scaled X_i'X_j
+#include "blr_sparse_ld_csr.h"
 
- // Diagnostics stored as data rather than printed.
- // This keeps the core C++ wrapper-neutral for R, Python, or command-line use.
- uint64_t input_nnz = 0;
- uint64_t symmetric_nnz = 0;
- double max_abs_r = 0.0;
- double max_abs_xij = 0.0;
-};
+using STLDCSR = sblr::core::SparseLdCsrStorage;
 
 inline void read_exact_file(
   const std::string& path,

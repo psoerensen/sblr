@@ -74,7 +74,7 @@ test_that("public routing retains one supported legacy schema boundary", {
 
 test_that("canonical scalar and block-eigen sources remain protected", {
   protected <- c(
-    "src/st_cpg_omp_csr.cpp"="92dafc0266d5a0e72aea000224154cef",
+    "src/st_cpg_omp_csr.cpp"="f7a12b24018eb525eb5ad0c59950a630",
     "src/st_cpg_omp_csr_scheduled.cpp"="abeabf03db69e3358fb4850c0a432db2",
     "src/st_cpg_omp_csr_bayesr.cpp"="0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp"="8c1b03d8f5b93e6831ccbed856c77ead",

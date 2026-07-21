@@ -1372,12 +1372,7 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
  input.specification = std::move(specification);
  input.data.marker_count = static_cast<std::size_t>(m);
  input.data.trait_count = static_cast<std::size_t>(nt);
- input.data.row_ptr = op.ld.ptr.data();
- input.data.row_ptr_size = op.ld.ptr.size();
- input.data.column_index = op.ld.idx.empty() ? nullptr : op.ld.idx.data();
- input.data.values = op.ld.xij.empty() ? nullptr : op.ld.xij.data();
- input.data.nonzero_count = op.ld.idx.size();
- input.data.diagonal = &op.xx;
+ input.data.ld = op.view();
  input.data.wy = &wy_mat;
  input.data.yy = &yy_vec;
  input.data.sample_size = &n;

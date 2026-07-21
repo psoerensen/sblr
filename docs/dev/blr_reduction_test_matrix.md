@@ -664,3 +664,10 @@ route (3/3 raw and 3/3 formatted references). Phase 17E and Phase 17F retain
 only typed-core and typed-finalization architecture ownership. Route inventory
 tests prove retired algorithms fail early and retired native registrations are
 absent; no duplicate numerical reference family was added.
+## Phase 17H permanent owner
+
+`test-blr-framework-phase17h.R` owns only the shared CSR storage/view,
+validation, builder-semantics, and future trait-sharing architecture contract.
+Numerical behavior remains owned by Phase 3, 6, 8, 9C/9E/9G, 10D, and 17C
+reference tests. The focused Phase 17H test is in fast CI; no new fresh-process
+variable was added.

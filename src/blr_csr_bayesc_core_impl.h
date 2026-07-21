@@ -62,7 +62,7 @@ inline void sample_marker_scaled(
   const double diff = b_new - b(iu);
   if (diff != 0.0) {
     r(iu) -= wi * diff;
-    op.apply_offdiag(i, diff, r);
+    op.ld.apply_offdiag(i, diff, r);
   }
   b(iu) = b_new;
   d(iu) = di;
@@ -102,7 +102,7 @@ inline void sample_marker_unscaled(
   const double diff = b_new - b(iu);
   if (diff != 0.0) {
     r(iu) -= wi * diff;
-    op.apply_offdiag(i, diff, r);
+    op.ld.apply_offdiag(i, diff, r);
   }
   b(iu) = b_new;
   d(iu) = di;
@@ -323,7 +323,7 @@ inline void set_marker_effect(
   const double difference = new_effect - effects(marker_u);
   if (difference != 0.0) {
     residual(marker_u) -= diagonal(marker_u) * difference;
-    op.apply_offdiag(marker, difference, residual);
+    op.ld.apply_offdiag(marker, difference, residual);
   }
   effects(marker_u) = new_effect;
   state(marker_u) = new_state;
@@ -442,22 +442,15 @@ void validate_csr_bayesc_execution_input(
   validate_resolved_spec(input.specification);
   const std::size_t markers = input.data.marker_count;
   const std::size_t traits = input.data.trait_count;
-  if (markers == 0 || traits == 0 ||
-      input.data.row_ptr == nullptr ||
-      input.data.row_ptr_size != markers + 1 ||
-      input.data.diagonal == nullptr || input.data.wy == nullptr ||
+  if (markers == 0 || traits == 0 || input.data.wy == nullptr ||
       input.data.yy == nullptr || input.data.sample_size == nullptr) {
     throw std::invalid_argument("csr_bayesc$data view is incomplete");
   }
-  if (input.data.nonzero_count > 0 &&
-      (input.data.column_index == nullptr || input.data.values == nullptr)) {
-    throw std::invalid_argument("csr_bayesc$data CSR payload is incomplete");
+  if (input.data.ld.marker_count != markers) {
+    throw std::invalid_argument("csr_bayesc$data LD marker count is inconsistent");
   }
-  if (input.data.row_ptr[markers] != input.data.nonzero_count) {
-    throw std::invalid_argument("csr_bayesc$data row_ptr does not match nnz");
-  }
-  if (input.data.diagonal->n_elem != markers ||
-      input.data.wy->n_rows != traits || input.data.wy->n_cols != markers ||
+  validate_sparse_ld_csr_view(input.data.ld);
+  if (input.data.wy->n_rows != traits || input.data.wy->n_cols != markers ||
       input.data.yy->n_elem != traits ||
       input.data.sample_size->size() != traits) {
     throw std::invalid_argument("csr_bayesc$data dimensions are inconsistent");
@@ -549,7 +542,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       status.seed = task_seed;
       std::mt19937 gen(task_seed);
       arma::rowvec wy = input.data.wy->row(static_cast<arma::uword>(trait));
-      const arma::rowvec& diagonal = input.data.diag();
+      const arma::rowvec& diagonal = input.data.ld.diag();
       arma::rowvec effects(m, arma::fill::zeros);
       for (int marker = 0; marker < m; ++marker) {
         effects(static_cast<arma::uword>(marker)) =
@@ -582,7 +575,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
           );
         }
       } else {
-        input.data.rebuild(wy, effects, residual);
+        input.data.ld.rebuild(wy, effects, residual);
       }
       double marker_variance = (*input.priors.marker_variance)(trait, trait);
       double residual_variance = (*input.priors.residual_variance)(trait, trait);
@@ -714,7 +707,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         }
         if (input.controls.update_residual_variance) {
           if (input.controls.rebuild_residual_before_update) {
-            input.data.rebuild(wy, effects, residual);
+            input.data.ld.rebuild(wy, effects, residual);
           }
           sample_residual_variance(
             m, input.priors.residual_degrees_freedom, residual_variance,

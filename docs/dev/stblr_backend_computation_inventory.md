@@ -648,3 +648,10 @@ cohorts/ancestries/panels/thresholds may use independent structures without a
 union sparsity pattern. The same rule applies to the future canonical scalar
 block-eigen representation: one compatible decomposition per trait, shareable
 only for truly identical LD.
+## Phase 17H CSR representation
+
+Canonical scalar CSR backends now share one owning definition,
+`sblr::core::SparseLdCsrStorage`, through the temporary `STLDCSR` alias.
+Ordinary CSR BayesC actively borrows `SparseLdCsrView`; the other scalar CSR
+families retain model-specific adapters. `mtblr_cpg_omp_csr()` retains its
+local one-LD `LDCSR` strictly as noncanonical internal research evidence.
