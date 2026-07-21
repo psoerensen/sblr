@@ -533,6 +533,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// stblr_block_eigen_contract_internal
+Rcpp::List stblr_block_eigen_contract_internal(Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, Rcpp::NumericMatrix wy, Rcpp::NumericVector effects, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string validation_mutation);
+RcppExport SEXP _sblr_stblr_block_eigen_contract_internal(SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP wySEXP, SEXP effectsSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP validation_mutationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type bed_files(bed_filesSEXP);
+    Rcpp::traits::input_parameter< int >::type n_bed(n_bedSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type cls(clsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type rows(rowsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type af(afSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type block_start(block_startSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type effects(effectsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type eigen_filter(eigen_filterSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_tau(eigen_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_eta(eigen_etaSEXP);
+    Rcpp::traits::input_parameter< std::string >::type validation_mutation(validation_mutationSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_block_eigen_contract_internal(bed_files, n_bed, cls, rows, af, block_start, wy, effects, eigen_filter, eigen_tau, eigen_eta, validation_mutation));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_csr
 Rcpp::List stblr_cpg_omp_csr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale, bool estimate_selection_s, double selection_s_init, Rcpp::NumericVector selection_s_prior, double selection_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h);
 RcppExport SEXP _sblr_stblr_cpg_omp_csr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP selection_s_prior_scaleSEXP, SEXP estimate_selection_sSEXP, SEXP selection_s_initSEXP, SEXP selection_s_priorSEXP, SEXP selection_s_proposal_sdSEXP, SEXP selection_s_log_hSEXP) {
@@ -1378,6 +1400,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_sparseLD_write_CSR", (DL_FUNC) &_sblr_sparseLD_write_CSR, 12},
     {"_sblr_sparseLD_read_CSR", (DL_FUNC) &_sblr_sparseLD_read_CSR, 2},
     {"_sblr_stblr_color_blocks_from_ld", (DL_FUNC) &_sblr_stblr_color_blocks_from_ld, 7},
+    {"_sblr_stblr_block_eigen_contract_internal", (DL_FUNC) &_sblr_stblr_block_eigen_contract_internal, 12},
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 43},
     {"_sblr_stblr_cpg_omp_csr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_block_eigen, 52},
     {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 51},

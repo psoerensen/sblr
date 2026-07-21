@@ -6,6 +6,7 @@
 #include "st_chain_utils.h"
 #include "st_csr_common.h"
 #include "st_block_eigen.h"
+#include "st_block_eigen_rcpp.h"
 #include "st_ld_operator.h"
 #define SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
 #include "blr_csr_bayesc_core_impl.h"
@@ -125,42 +126,6 @@ static std::vector<int> stblr_copy_integer_vector(
  return out;
 }
 
-static EigenFilterMode stblr_eigen_filter_mode(const std::string& mode) {
- if (mode == "hard_truncate") return EigenFilterMode::hard_truncate;
- if (mode == "ridge_fixed") return EigenFilterMode::ridge_fixed;
- if (mode == "ridge_lw") return EigenFilterMode::ridge_lw;
- throw std::runtime_error(
-  "eigen_filter must be one of 'hard_truncate', 'ridge_fixed', or 'ridge_lw'."
- );
-}
-
-static Rcpp::DataFrame stblr_block_eigen_diag_frame(
-  const std::vector<BlockEigenDiag>& diag
-) {
- const int nb = static_cast<int>(diag.size());
- Rcpp::IntegerVector start(nb);
- Rcpp::IntegerVector size(nb);
- Rcpp::IntegerVector n_kept(nb);
- Rcpp::NumericVector mu_min(nb);
- Rcpp::NumericVector shrink(nb);
-
- for (int i = 0; i < nb; ++i) {
-  const BlockEigenDiag& d = diag[static_cast<std::size_t>(i)];
-  start[i] = d.start;
-  size[i] = d.size;
-  n_kept[i] = d.n_kept;
-  mu_min[i] = d.mu_min;
-  shrink[i] = d.shrink;
- }
-
- return Rcpp::DataFrame::create(
-  Rcpp::Named("start") = start,
-  Rcpp::Named("size") = size,
-  Rcpp::Named("n_kept") = n_kept,
-  Rcpp::Named("mu_min") = mu_min,
-  Rcpp::Named("shrink") = shrink
- );
-}
 
 // -----------------------------------------------------------------------------
 // ST-specific LD structure: flat symmetric CSR
@@ -2902,7 +2867,7 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
  const std::vector<double> af_cpp = stblr_copy_numeric_vector(af, "af");
  const std::vector<int> block_start_cpp =
   stblr_copy_integer_vector(block_start, "block_start");
- const EigenFilterMode mode = stblr_eigen_filter_mode(eigen_filter);
+ const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
 
  auto make_block_eigen_operator = [&](int m,
                                       const std::vector<double>& xx,
@@ -2950,7 +2915,7 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   LDLDFriends ld_swap_friends;
   ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
   Rcpp::List diagnostics = Rcpp::List::create(
-   Rcpp::Named("blocks") = stblr_block_eigen_diag_frame(block_diag)
+   Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag)
   );
   return BayescOperatorContext<BlockEigenOperator>(
    std::move(op),

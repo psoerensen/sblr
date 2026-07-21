@@ -4,6 +4,7 @@
 #include "st_chain_utils.h"
 #include "st_bayesrc_annotation_prior.h"
 #include "st_block_eigen.h"
+#include "st_block_eigen_rcpp.h"
 #include "st_csr_common.h"
 #include "st_ld_operator.h"
 #include "blr_csr_sbayesrc_types.h"
@@ -84,37 +85,6 @@ static std::vector<int> stblr_sbayesrc_copy_rows0_or_empty(
  return out;
 }
 
-static EigenFilterMode stblr_sbayesrc_eigen_filter_mode(const std::string& mode) {
- if (mode == "hard_truncate") return EigenFilterMode::hard_truncate;
- if (mode == "ridge_fixed") return EigenFilterMode::ridge_fixed;
- if (mode == "ridge_lw") return EigenFilterMode::ridge_lw;
- throw std::runtime_error(
-  "eigen_filter must be one of 'hard_truncate', 'ridge_fixed', or 'ridge_lw'."
- );
-}
-
-static Rcpp::DataFrame stblr_sbayesrc_block_diag_frame(
-  const std::vector<BlockEigenDiag>& diag
-) {
- const int nb = static_cast<int>(diag.size());
- Rcpp::IntegerVector start(nb), size(nb), n_kept(nb);
- Rcpp::NumericVector mu_min(nb), shrink(nb);
- for (int i = 0; i < nb; ++i) {
-  const BlockEigenDiag& d = diag[static_cast<std::size_t>(i)];
-  start[i] = d.start;
-  size[i] = d.size;
-  n_kept[i] = d.n_kept;
-  mu_min[i] = d.mu_min;
-  shrink[i] = d.shrink;
- }
- return Rcpp::DataFrame::create(
-  Rcpp::Named("start") = start,
-  Rcpp::Named("size") = size,
-  Rcpp::Named("n_kept") = n_kept,
-  Rcpp::Named("mu_min") = mu_min,
-  Rcpp::Named("shrink") = shrink
- );
-}
 
 // =============================================================================
 // STBLR summary-stat CSR: SBayesRC-style sampler with overlapping annotations
@@ -2218,7 +2188,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
  const std::vector<int> rows0 = stblr_sbayesrc_copy_rows0_or_empty(rows, n_bed);
  const std::vector<double> af_cpp = Rcpp::as<std::vector<double>>(af);
  const std::vector<int> starts = Rcpp::as<std::vector<int>>(block_start);
- const EigenFilterMode mode = stblr_sbayesrc_eigen_filter_mode(eigen_filter);
+ const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
 
  auto make_block_operator = [&](int m, const std::vector<double>& xx,
                                 const arma::rowvec& xx_row, arma::mat& wy_mat,
@@ -2244,7 +2214,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   SBayesRCLDLDFriends friends;
   friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
   Rcpp::List diag = Rcpp::List::create(
-   Rcpp::Named("blocks") = stblr_sbayesrc_block_diag_frame(block_diag)
+   Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag)
   );
   return SBayesRCOperatorContext<BlockEigenOperator>(
    std::move(op), std::move(friends), diag

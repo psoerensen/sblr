@@ -664,3 +664,7 @@ the existing finalizer, and the shared legacy adapter. It is not routed by
 Phase 17J adds the public serial `mtblr_csr()` adapter. It uses the canonical
 Phase 17I trait-specific CSR core and adds no Gibbs loop, OpenMP path, or
 research-backend dependency.
+Phase 17K terminology: scalar “block eigen” routes construct operators using
+eigendecomposition or ridge regularization, then store reconstructed dense
+within-block cross-products as float-packed upper triangles. BayesC, BayesR,
+and SBayesRC borrow the same canonical view; no eigensystem persists at runtime.

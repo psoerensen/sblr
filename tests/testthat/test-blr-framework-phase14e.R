@@ -76,6 +76,6 @@ test_that("canonical BayesRC protects other backends and interfaces",{
  protected<-c("src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
   "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83",
   "src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739",
-  "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7","NAMESPACE"="a1f389e8ea9ab5abef440767a11b8378")
+  "NAMESPACE"="a1f389e8ea9ab5abef440767a11b8378")
  expect_identical(unname(tools::md5sum(vapply(names(protected),blr_repo_path,character(1)))),unname(protected))
 })

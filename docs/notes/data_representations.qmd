@@ -367,3 +367,6 @@ comparison.
 Phase 17J records canonical `marker_metadata`, scale, source, and sample
 provenance on `make_summary_stats()` and `make_sparse_ld()` outputs for strict
 public `mtblr_csr()` validation.
+Phase 17K distinguishes block-eigen construction from runtime representation:
+the runtime operator is a float-packed reconstructed dense matrix per block,
+with mappings and a separate double view of the packed diagonal.

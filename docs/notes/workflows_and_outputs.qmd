@@ -1009,3 +1009,6 @@ post-processing before adding long chains or many traits.
 - [Complete annotation workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/03_annotation_models_workflow.R)
 The scalable multivariate summary-statistics path is `mtblr_csr()`, returning a
 validated `mtblr_fit` through named `mtblr_raw` version 1.
+The scalar block-eigen helpers remain internal experimental workflows. Their
+outputs continue through `stblr_raw` version 1; no public block-eigen selector
+or output schema was added in Phase 17K.

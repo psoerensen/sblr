@@ -393,3 +393,6 @@ and independent sparsity. It is nonpublic and not yet a supported API.
 | MT CSR BayesC | `mtblr_csr()` | supported public, canonical CSR | trait-specific canonical CSR views; serial Phase 17I core; named MT raw v1; no overlap likelihood |
 Test portability: Phase 17J2 validates supported scientific/public capabilities
 from both source and installed-package contexts without changing capability.
+Phase 17K: scalar block-eigen BayesC, BayesR, and SBayesRC remain internal and
+experimental. They share canonical block-filtered storage/view contracts; no
+public selector, scheduled execution, LD-swap, or MT block-eigen route exists.

@@ -1537,3 +1537,8 @@ is only the scalar block-eigen contract audit for future trait-specific reuse.
 Phase 17J2 makes the permanent test ownership model portable across source-tree
 development and built-package checks. Fixtures and scientific/public owners run
 in both contexts; repository architecture assertions use narrow explicit skips.
+
+Phase 17K activates one canonical `BlockEigenStorage`/`BlockEigenView` contract
+for the internal scalar BayesC, BayesR, and SBayesRC block-filtered routes. The
+runtime remains float-packed reconstructed dense blocks, not low-rank storage.
+The next phase is an internal trait-specific MT adapter using the shared MT core.

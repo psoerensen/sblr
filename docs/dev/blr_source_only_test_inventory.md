@@ -11,5 +11,6 @@ These blocks inspect repository assets and execute in source-tree development an
 | annotation backend design | design-document assertions | `docs/dev/` | developer documentation |
 | individual BayesRC | shared-header inclusion | `src/` | source composition |
 | Phase 3/4 runtime MD5 | toolchain-specific serialized runtime identity | source fixture harness and same compiler | developer-tier bitwise evidence |
+| Phase 17K | binding-neutral type singularity, scalar source integration, public-routing and research disposition | `src/`, `R/` | repository architecture; numerical filter/oracle tests remain portable |
 
 Portable fixture MD5 checks, numerical references, public schemas, alignment, update controls, reproducibility, and scientific identities are not in this inventory and remain installed-check requirements.

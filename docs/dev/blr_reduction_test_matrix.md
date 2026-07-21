@@ -681,3 +681,4 @@ scientific-contract owner.
 Phase 17J2: all numerical/public owners are installed-check required; only the
 repository-asset blocks listed in `blr_source_only_test_inventory.md` skip when
 a source checkout is unavailable. Portable fixture integrity remains active.
+| Phase 17K block-filtered operator | portable independent hard/ridge/LW oracle, mappings, diagonal, vector/Armadillo rebuild; source-only singularity/routing | ordinary plus installed check |

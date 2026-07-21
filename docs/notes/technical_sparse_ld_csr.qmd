@@ -599,3 +599,7 @@ longer chains, and convergence diagnostics.
 - [Technical summary statistics](technical_summary_statistics.html)
 - [Complete sparse-LD/BED workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R)
 - [Complete annotation workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/annotation_based_models.R)
+Block-filtered LD is a distinct canonical operator representation: it stores
+dense within-block upper triangles, whereas CSR stores explicit sparse
+off-diagonal cross-products. Future MT bundles may hold one view of either
+representation per trait but must not conflate their storage contracts.

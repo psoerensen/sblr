@@ -3,24 +3,13 @@
 
 #include <vector>
 
-#include <RcppArmadillo.h>
+#include <armadillo>
 
 #include "packed_bed.h"
 #include "st_ld_operator.h"
 
-enum class EigenFilterMode {
-  hard_truncate = 0,
-  ridge_fixed = 1,
-  ridge_lw = 2
-};
-
-struct BlockEigenDiag {
-  int start = 0;
-  int size = 0;
-  int n_kept = 0;
-  double mu_min = 0.0;
-  double shrink = 0.0;
-};
+using EigenFilterMode = sblr::core::BlockEigenFilterMode;
+using BlockEigenDiag = sblr::core::BlockEigenBlockDiagnostics;
 
 BlockEigenOperator build_block_eigen(
     const PackedBedMatrix& G,

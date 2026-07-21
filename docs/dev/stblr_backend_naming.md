@@ -420,3 +420,10 @@ operators on one marker domain. `MtCsrDataView` adds aligned `wy`, `yy`, and
 Public MT CSR naming uses `marker_id`, `effect_allele`, `other_allele`,
 `allele_frequency`, `trait_id`, `study_id`, `population`, `ancestry`, and
 `ld_reference`. Legacy numerical field names remain compatible in `mtblr_fit`.
+
+## Block-filtered names (Phase 17K)
+
+`BlockEigenStorage` is the canonical owner and `BlockEigenView` its immutable
+borrower. “Block eigen” describes construction/filtering; runtime data are
+`BlockEigenBlockStorage::upper_triangle` float-packed filtered dense blocks.
+Do not use names implying retained eigenvectors or low-rank runtime factors.
