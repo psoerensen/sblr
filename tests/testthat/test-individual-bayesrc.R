@@ -6,9 +6,8 @@ test_that("individual BayesRC helpers are internal", {
 })
 
 test_that("individual BayesRC uses the shared BED utility header", {
-  source_path <- testthat::test_path(
-    "..", "..", "src", "stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"
-  )
+  source_path <- blr_repo_path(
+    "src", "stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp")
   source <- paste(readLines(source_path, warn = FALSE), collapse = "\n")
   expect_match(source, '#include "st_bed_bayesr_common.h"', fixed = TRUE)
   expect_false(grepl(

@@ -1,4 +1,4 @@
-source(file.path("tests", "testthat", "fixtures", "blr-phase11a-bed-reference.R"))
+source(testthat::test_path("fixtures", "blr-phase11a-bed-reference.R"))
 
 phase11b_capture <- function(route = c("multichain", "single"), ncores = 1L,
     nchains = 2L, seed = 71L) {

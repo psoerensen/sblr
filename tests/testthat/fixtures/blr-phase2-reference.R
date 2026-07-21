@@ -106,7 +106,7 @@ phase2_reference_native <- function(config, prefix, inputs) {
     scheduled = FALSE,
     return_log_h = FALSE
   )
-  stblr_cpg_omp_csr(
+  sblr:::stblr_cpg_omp_csr(
     wy = stats$wy, ww = stats$ww, yy = stats$yy,
     b_init = replicate(nt, rep(0, m), simplify = FALSE),
     d_init = replicate(nt, rep(0, m), simplify = FALSE),

@@ -1,20 +1,5 @@
-source_sblr_test_file <- function(path) {
-  candidates <- c(path, file.path("..", "..", path))
-  path <- candidates[file.exists(candidates)][1L]
-  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
-  source(path)
-}
-
-if (!exists("stblr_csr_annot", mode = "function") ||
-    !"updateLDswap" %in% names(formals(stblr_csr_annot))) {
-  source_sblr_test_file("R/annotation-helpers.R")
-  source_sblr_test_file("R/stblr-csr-annot.R")
-}
-if (!exists("stblr_csr_sbayesrc_generic", mode = "function") ||
-    !"updateLDswap" %in% names(formals(stblr_csr_sbayesrc_generic))) {
-  source_sblr_test_file("R/sbayesrc-helpers.R")
-  source_sblr_test_file("R/stblr-csr-sbayesrc.R")
-}
+stblr_csr_annot <- getFromNamespace("stblr_csr_annot", "sblr")
+stblr_csr_sbayesrc_generic <- getFromNamespace("stblr_csr_sbayesrc_generic", "sblr")
 
 make_tiny_annotation_sbayesrc_ldswap_csr_prefix <- function() {
   prefix <- tempfile("tiny_annotation_sbayesrc_ldswap_csr_")

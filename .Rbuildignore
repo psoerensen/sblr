@@ -4,3 +4,7 @@
 ^Read-and-delete-me$
 ^docs$
 ^examples$
+^\.agents$
+^\.claude$
+^\.codex$
+^\.github$

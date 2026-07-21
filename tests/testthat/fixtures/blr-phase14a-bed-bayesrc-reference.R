@@ -1,6 +1,4 @@
-phase14a_fixture_dir <- if (file.exists(file.path("tests","testthat","fixtures","blr-phase11a-bed-reference.R")))
- file.path("tests","testthat","fixtures") else file.path(testthat::test_path(),"fixtures")
-source(file.path(phase14a_fixture_dir, "blr-phase11a-bed-reference.R"))
+source(testthat::test_path("fixtures", "blr-phase11a-bed-reference.R"))
 
 phase14a_capture <- function(ncores=1L,nchains=1L,seed=141L,updateAlpha=TRUE,
                              multiple_annotations=TRUE) {

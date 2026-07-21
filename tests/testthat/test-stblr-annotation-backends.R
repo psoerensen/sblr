@@ -115,7 +115,7 @@ test_that("annotation-aware exported wrappers and helpers are available", {
 })
 
 test_that("annotation backend design document records the backend contract", {
-  path <- test_path("..", "..", "docs", "dev", "stblr_annotation_backend_design.md")
+  path <- blr_repo_path("docs", "dev", "stblr_annotation_backend_design.md")
   expect_true(file.exists(path))
   txt <- readLines(path, warn = FALSE)
   for (backend in c(

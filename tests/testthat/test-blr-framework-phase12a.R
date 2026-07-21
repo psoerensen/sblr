@@ -8,7 +8,7 @@ test_that("source architecture helpers distinguish absent and duplicate matches"
 })
 
 test_that("maintained developer Markdown has no unintended control bytes", {
-  files <- list.files(test_path("..", "..", "docs", "dev"), "[.]md$",
+  files <- list.files(blr_repo_path("docs", "dev"), "[.]md$",
                       full.names = TRUE)
   bad <- character()
   for (file in files) {
@@ -26,7 +26,7 @@ test_that("maintained developer Markdown has no unintended control bytes", {
     }
   }
   expect_identical(bad, character())
-  reduction <- paste(readLines(test_path("..", "..", "docs", "dev",
+  reduction <- paste(readLines(blr_repo_path("docs", "dev",
                                          "blr_reduction_test_matrix.md"), warn = FALSE),
                      collapse = "\n")
   expect_true(grepl("\\\\frac", reduction))
@@ -35,7 +35,7 @@ test_that("maintained developer Markdown has no unintended control bytes", {
 })
 
 test_that("current framework status remains synchronized after Phase 12A", {
-  root <- test_path("..", "..")
+  root <- blr_repo_path()
   plan <- paste(readLines(file.path(root, "docs", "dev", "blr_framework_implementation_plan.md"),
                           warn = FALSE), collapse = "\n")
   matrix <- paste(readLines(file.path(root, "docs", "dev", "blr_model_capability_matrix.md"),
@@ -76,7 +76,7 @@ test_that("full_sweep_every zero policy is consistent and behavior preserving", 
     expect_true(sblr:::blr_phase10a_validate_scheduled_execution_cpp(
       phase12_scheduled_spec(value))$validated)
   }
-  root <- test_path("..", "..")
+  root <- blr_repo_path()
   binding <- paste(readLines(file.path(root, "src", "st_cpg_omp_csr_scheduled.cpp"),
                              warn = FALSE), collapse = "\n")
   core <- paste(readLines(file.path(root, "src", "blr_csr_scheduled_bayesc_core_impl.h"),
@@ -86,7 +86,7 @@ test_that("full_sweep_every zero policy is consistent and behavior preserving", 
 })
 
 test_that("posterior pi aggregation is native and converter is presentation only", {
-  root <- test_path("..", "..")
+  root <- blr_repo_path()
   types <- paste(readLines(file.path(root, "src", "blr_csr_scheduled_bayesc_types.h"),
                            warn = FALSE), collapse = "\n")
   core <- paste(readLines(file.path(root, "src", "blr_csr_scheduled_bayesc_core_impl.h"),
@@ -100,7 +100,7 @@ test_that("posterior pi aggregation is native and converter is presentation only
 })
 
 test_that("canonical scheduled cores have hardened diagnostic boundaries", {
-  root <- test_path("..", "..")
+  root <- blr_repo_path()
   csr <- paste(readLines(file.path(root, "src", "blr_csr_scheduled_bayesc_core_impl.h"),
                          warn = FALSE), collapse = "\n")
   bed <- paste(readLines(file.path(root, "src", "blr_bed_scheduled_bayesc_core_impl.h"),
@@ -116,7 +116,7 @@ test_that("canonical scheduled cores have hardened diagnostic boundaries", {
 })
 
 test_that("canonical binding sources do not retain full commented snapshots", {
-  root <- test_path("..", "..")
+  root <- blr_repo_path()
   for (file in c("st_cpg_omp_csr_scheduled.cpp",
                  "st_cpg_omp_individual_scheduled_chains.cpp")) {
     text <- paste(readLines(file.path(root, "src", file), warn = FALSE), collapse = "\n")
@@ -128,7 +128,7 @@ test_that("canonical binding sources do not retain full commented snapshots", {
 })
 
 test_that("fast and extended framework workflows are independently visible", {
-  root <- test_path("..", "..")
+  root <- blr_repo_path()
   fast <- paste(readLines(file.path(root, ".github", "workflows", "blr-framework.yml"),
                           warn = FALSE), collapse = "\n")
   extended <- paste(readLines(file.path(root, ".github", "workflows",
@@ -143,7 +143,7 @@ test_that("fast and extended framework workflows are independently visible", {
 })
 
 test_that("peak RSS tool measures a child process when explicitly enabled", {
-  tool <- test_path("..", "..", "tools", "benchmarks", "measure_peak_rss.R")
+  tool <- blr_repo_path("tools", "benchmarks", "measure_peak_rss.R")
   expect_true(file.exists(tool))
   skip_if_not(identical(Sys.getenv("SBLR_RUN_PEAK_RSS"), "true"))
   skip_if_not_installed("processx")

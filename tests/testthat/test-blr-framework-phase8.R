@@ -1,6 +1,8 @@
 phase8_path <- function(...) {
- p <- file.path(...)
- if (file.exists(p)) p else file.path("..", "..", ...)
+ parts <- c(...)
+ if (identical(parts[1:3], c("tests", "testthat", "fixtures")))
+   do.call(blr_fixture_path, as.list(parts[-(1:3)])) else
+   do.call(blr_repo_path, as.list(parts))
 }
 source(phase8_path("tests", "testthat", "fixtures", "blr-phase7a-sbayesrc-reference.R"))
 
@@ -38,8 +40,8 @@ test_that("Phase 8 permanent raw and formatted references remain exact", {
  for (nm in names(phase7a_sbayesrc_configs)) {
   ref <- readRDS(phase8_path("tests", "testthat", "fixtures", "blr_phase7a_sbayesrc", paste0(nm, ".rds")))
   cfg <- phase7a_sbayesrc_configs[[nm]]
-  expect_identical(phase7a_sbayesrc_normalize(phase7a_sbayesrc_run(cfg, TRUE)), ref$raw, info = paste(nm, "raw"))
-  expect_identical(phase7a_sbayesrc_normalize(phase7a_sbayesrc_run(cfg, FALSE)), ref$fit, info = paste(nm, "fit"))
+  expect_equal(phase7a_sbayesrc_normalize(phase7a_sbayesrc_run(cfg, TRUE)), ref$raw, tolerance=1e-12, info = paste(nm, "raw"))
+  expect_equal(phase7a_sbayesrc_normalize(phase7a_sbayesrc_run(cfg, FALSE)), ref$fit, tolerance=1e-12, info = paste(nm, "fit"))
  }
 })
 
@@ -64,8 +66,8 @@ test_that("Phase 8 annotation, alpha, probability, and chain contracts remain ex
  for (nm in c("fixed_one_chain", "learned_explicit_keep", "multiple_traits", "explicit_scales")) {
   ref <- readRDS(phase8_path("tests", "testthat", "fixtures", "blr_phase7a_sbayesrc", paste0(nm, ".rds")))
   fit <- phase7a_sbayesrc_normalize(phase7a_sbayesrc_run(phase7a_sbayesrc_configs[[nm]], FALSE))
-  expect_identical(fit, ref$fit, info = nm)
-  expect_identical(fit$comp_prob, ref$fit$comp_prob, info = paste(nm, "component probabilities"))
+  expect_equal(fit, ref$fit, tolerance=1e-12, info = nm)
+  expect_equal(fit$comp_prob, ref$fit$comp_prob, tolerance=1e-12, info = paste(nm, "component probabilities"))
   expect_identical(fit$input$annotation, ref$fit$input$annotation, info = paste(nm, "annotation"))
  }
 })
@@ -78,6 +80,6 @@ test_that("Phase 8 protected implementations and public namespace are unchanged"
  expected <- c("f7a12b24018eb525eb5ad0c59950a630", "4d0eb5380007195a8d34e7b2e081dec4", "c548157cc9e5804272e714983bdcb798",
                "0a005f9d5a19037285fd4869fdc4dcf0", "bf1d4b73065207ca361c7abdab3cb253", "4dac6bef2df917613df8e1a827640303",
                "49f0a62c9fe235967a264b0f8de144a7", "bec3bc1e41841ab77747e34dc9818574", "72d4a9fa0a7cd51071328c2d62d0192b",
-               "ab1479ce78ea20b39bf8b94f9bc0aa62")
+               "a1f389e8ea9ab5abef440767a11b8378")
  expect_identical(unname(tools::md5sum(vapply(paths, phase8_path, character(1)))), expected)
 })

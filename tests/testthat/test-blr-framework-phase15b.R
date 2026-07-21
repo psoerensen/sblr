@@ -1,5 +1,4 @@
-phase15b_root<-normalizePath(file.path(testthat::test_path(),"..",".."),winslash="/",mustWork=TRUE)
-phase15b_text<-function(path)paste(readLines(file.path(phase15b_root,path),warn=FALSE),collapse="\n")
+phase15b_text<-function(path)paste(readLines(blr_repo_path(path),warn=FALSE),collapse="\n")
 
 test_that("shared task indexing is exact and used by all canonical adapters",{
  common<-phase15b_text("src/blr_bed_family_types.h")

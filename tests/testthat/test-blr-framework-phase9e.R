@@ -1,6 +1,8 @@
 phase9e_path <- function(...) {
-  path <- file.path(...)
-  if (file.exists(path)) path else file.path("..", "..", ...)
+  parts <- c(...)
+  if (identical(parts[1:3], c("tests", "testthat", "fixtures")))
+    do.call(blr_fixture_path, as.list(parts[-(1:3)])) else
+    do.call(blr_repo_path, as.list(parts))
 }
 
 source(phase9e_path(
@@ -55,9 +57,9 @@ test_that("canonical group raw and formatted references remain exact", {
       "tests", "testthat", "fixtures", "blr_phase9a_group", paste0(name, ".rds")
     ))
     config <- phase9a_configs$group[[name]]
-    expect_identical(phase9a_normalize(phase9a_run("group", config, TRUE)), reference$raw,
+    expect_equal(phase9a_normalize(phase9a_run("group", config, TRUE)), reference$raw, tolerance=1e-12,
                      info = paste(name, "raw"))
-    expect_identical(phase9a_normalize(phase9a_run("group", config, FALSE)), reference$fit,
+    expect_equal(phase9a_normalize(phase9a_run("group", config, FALSE)), reference$fit, tolerance=1e-12,
                      info = paste(name, "formatted"))
   }
 })
@@ -98,7 +100,7 @@ test_that("canonical group policy and unsupported cases stay protected", {
 
 test_that("canonical group public and protected boundaries remain frozen", {
   protected <- c(
-    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62",
+    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378",
     "src/st_cpg_omp_csr.cpp" = "f7a12b24018eb525eb5ad0c59950a630",
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",

@@ -1,12 +1,10 @@
-source(file.path(blr_test_root,
-  "tests/testthat/fixtures/blr_phase17b_mt_default",
+source(blr_fixture_path("blr_phase17b_mt_default",
   "blr-phase17b-mt-default-reference.R"))
-source(file.path(blr_test_root,
-  "tests/testthat/fixtures/blr_phase17c_mt_default_corrected",
+source(blr_fixture_path("blr_phase17c_mt_default_corrected",
   "blr-phase17c-mt-default-corrected-reference.R"))
 
-phase17c_reference <- function(id) readRDS(file.path(blr_test_root,
-  "tests/testthat/fixtures/blr_phase17c_mt_default_corrected",
+phase17c_reference <- function(id) readRDS(blr_fixture_path(
+  "blr_phase17c_mt_default_corrected",
   sprintf("config-%d.rds", id)))
 
 test_that("the corrected default is the sole supported public MT route", {

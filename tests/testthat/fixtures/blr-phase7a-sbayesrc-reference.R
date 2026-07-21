@@ -27,7 +27,7 @@ phase7a_sbayesrc_inputs <- function(traits=1L) {
 
 phase7a_sbayesrc_run <- function(config,raw=FALSE) {
   x<-phase7a_sbayesrc_inputs(config$traits); captured<-NULL
-  native<-function(...) { captured<<-do.call(stblr_cpg_omp_csr_sbayesrc,list(...)); captured }
+  native<-function(...) { captured<<-do.call(sblr:::stblr_cpg_omp_csr_sbayesrc,list(...)); captured }
   fit<-sblr:::.stblr_csr_sbayesrc_generic_impl(stats=x$stats,ld_prefix=phase7a_sbayesrc_write_csr(),A=x$A,gamma=config$gamma,pi_init=.35,pi_prior_mean=.35,pi_prior_strength=2,add_intercept=FALSE,standardize_annotations=FALSE,updateAlpha=config$update,alpha_update_every=config$every,updateB=TRUE,updateE=FALSE,nit=10L,nburn=2L,nthin=1L,ncores=config$ncores,seed=73L,nchains=config$nchains,chain_seeds=config$seeds,keep_chains=config$keep,updateLDswap=FALSE,.native_fun=native)
   if(raw) captured else fit
 }

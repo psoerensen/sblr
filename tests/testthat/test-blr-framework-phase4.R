@@ -77,7 +77,7 @@ test_that("retained-iteration counting is the shared exact predicate", {
 
 test_that("shared scalar infrastructure is binding-neutral and allocation-safe", {
   header <- paste(readLines(
-    test_path("..", "..", "src", "blr_scalar_execution.h"), warn = FALSE
+    blr_repo_path("src", "blr_scalar_execution.h"), warn = FALSE
   ), collapse = "\n")
   forbidden <- c(
     "Rcpp", "RcppArmadillo", "SEXP", "RObject", "NumericVector",
@@ -96,11 +96,11 @@ test_that("shared scalar infrastructure is binding-neutral and allocation-safe",
 
 test_that("comparative boundaries remain shared only where proven", {
   bayesc <- paste(readLines(
-    test_path("..", "..", "src", "blr_csr_bayesc_core_impl.h"),
+    blr_repo_path("src", "blr_csr_bayesc_core_impl.h"),
     warn = FALSE
   ), collapse = "\n")
-  bayesr_path <- test_path("..", "..", "src", "st_cpg_omp_csr_bayesr.cpp")
-  bayesr_core_path <- test_path("..", "..", "src", "blr_csr_bayesr_core_impl.h")
+  bayesr_path <- blr_repo_path("src", "st_cpg_omp_csr_bayesr.cpp")
+  bayesr_core_path <- blr_repo_path("src", "blr_csr_bayesr_core_impl.h")
   bayesr <- paste(c(readLines(bayesr_path, warn = FALSE),
     readLines(bayesr_core_path, warn = FALSE)), collapse = "\n")
 
@@ -118,6 +118,7 @@ test_that("comparative boundaries remain shared only where proven", {
 })
 
 test_that("all frozen BayesC raw and formatted references remain exact", {
+  blr_skip_if_no_source_tree()
   observed <- phase4_quiet(phase2_reference_hashes())
   expect_identical(names(observed), names(phase2_reference_expected_hashes))
   for (name in names(observed)) {
@@ -150,10 +151,10 @@ test_that("BayesC reproducibility remains input and seed only", {
 
 test_that("ownership, routes, and public schemas remain unchanged", {
   types <- paste(readLines(
-    test_path("..", "..", "src", "blr_csr_bayesc_types.h"), warn = FALSE
+    blr_repo_path("src", "blr_csr_bayesc_types.h"), warn = FALSE
   ), collapse = "\n")
   public_r <- paste(readLines(
-    test_path("..", "..", "R", "sparse_ld_bed_helper.R"), warn = FALSE
+    blr_repo_path("R", "sparse_ld_bed_helper.R"), warn = FALSE
   ), collapse = "\n")
   expect_match(types, "Borrowed immutable view", fixed = TRUE)
   expect_match(types, "no chain result or chain state owns a CSR payload",

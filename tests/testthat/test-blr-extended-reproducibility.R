@@ -1,6 +1,7 @@
 test_that("representative canonical BLR routes are fresh-process reproducible", {
   skip_if_not(identical(Sys.getenv("SBLR_RUN_EXTENDED_REPRODUCIBILITY"), "true"))
   skip_if_not_installed("callr")
+  root <- blr_repo_path()
   observed <- callr::r(function(root) {
     setwd(root); pkgload::load_all(".", compile = FALSE, quiet = TRUE)
     source("tests/testthat/fixtures/blr-phase2-reference.R")
@@ -17,8 +18,8 @@ test_that("representative canonical BLR routes are fresh-process reproducible", 
     Sys.setenv(OMP_NUM_THREADS = "1"); mt_one <- phase17c_mt_capture(1L, TRUE)
     Sys.setenv(OMP_NUM_THREADS = "2"); mt_two <- phase17c_mt_capture(1L, TRUE)
     list(scalar=scalar, scheduled=scheduled, bed=bed, mt=mt, mt_one=mt_one, mt_two=mt_two)
-  }, list(root = blr_test_root))
-  oldwd <- setwd(blr_test_root)
+  }, list(root = root))
+  oldwd <- setwd(root)
   on.exit(setwd(oldwd), add = TRUE)
   source("tests/testthat/fixtures/blr-phase2-reference.R", local = TRUE)
   source("tests/testthat/fixtures/blr-phase10b-scheduled-reference.R", local = TRUE)

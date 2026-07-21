@@ -90,6 +90,8 @@ moves when `updateLDswap = TRUE`.}
 marker, prioritized by highest r-squared.}
 
 \item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
+
+\item{verbose}{Logical; print progress information for local fits.}
 }
 \value{
 A list of class `"stblr_finemap"` with locus summaries,

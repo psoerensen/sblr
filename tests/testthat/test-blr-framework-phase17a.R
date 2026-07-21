@@ -1,10 +1,8 @@
-phase17a_root <- normalizePath(file.path(testthat::test_path(), "..", ".."),
-  winslash = "/", mustWork = TRUE)
-phase17a_text <- function(path) paste(readLines(file.path(phase17a_root, path),
+phase17a_text <- function(path) paste(readLines(blr_repo_path(path),
   warn = FALSE), collapse = "\n")
 
 test_that("all remaining non-packed backend routes are classified", {
-  old <- setwd(phase17a_root); on.exit(setwd(old), add = TRUE)
+  old <- setwd(blr_repo_path()); on.exit(setwd(old), add = TRUE)
   env <- new.env(parent = globalenv())
   sys.source("tools/audit/blr_phase17a_backend_inventory.R", env)
   expect_equal(nrow(env$inventory), 13L)
@@ -83,7 +81,7 @@ test_that("canonical scalar and block-eigen sources remain protected", {
     "src/st_cpg_omp_csr_annot.cpp"="59bd49f048d116d0fe61d73d79bd4693",
     "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h"="bec3bc1e41841ab77747e34dc9818574",
-    "NAMESPACE"="ab1479ce78ea20b39bf8b94f9bc0aa62")
-  actual <- unname(tools::md5sum(file.path(phase17a_root, names(protected))))
+    "NAMESPACE"="a1f389e8ea9ab5abef440767a11b8378")
+  actual <- unname(tools::md5sum(vapply(names(protected), blr_repo_path, character(1))))
   expect_identical(actual, unname(protected))
 })

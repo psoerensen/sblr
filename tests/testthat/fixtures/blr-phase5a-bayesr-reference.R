@@ -57,7 +57,7 @@ phase5a_bayesr_run <- function(config, raw=FALSE) {
   B <- diag((vy*.4)/(m*active),nt); E <- diag(vy*.6,nt)
   ssb <- diag(((4-2)/4)*(vy*.4)/(m*active),nt)
   sse <- diag(((4-2)/4)*(vy*.6),nt)
-  stblr_cpg_omp_csr_bayesr(x$stats$wy,x$stats$ww,x$stats$yy,
+  sblr:::stblr_cpg_omp_csr_bayesr(x$stats$wy,x$stats$ww,x$stats$yy,
     replicate(nt,rep(0,m),simplify=FALSE),replicate(nt,rep(0,m),simplify=FALSE),FALSE,
     x$stats$wy,FALSE,FALSE,prefix,B,E,
     split(ssb,rep(seq_len(nt),each=nt)),split(sse,rep(seq_len(nt),each=nt)),

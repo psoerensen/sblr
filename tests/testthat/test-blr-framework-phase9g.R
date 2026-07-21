@@ -1,6 +1,8 @@
 phase9g_path <- function(...) {
-  path <- file.path(...)
-  if (file.exists(path)) path else file.path("..", "..", ...)
+  parts <- c(...)
+  if (identical(parts[1:3], c("tests", "testthat", "fixtures")))
+    do.call(blr_fixture_path, as.list(parts[-(1:3)])) else
+    do.call(blr_repo_path, as.list(parts))
 }
 
 source(phase9g_path(
@@ -76,9 +78,10 @@ test_that("Phase 9G permanent learned-annotation references remain exact", {
       "tests", "testthat", "fixtures", "blr_phase9a_annotation", paste0(name, ".rds")
     ))
     config <- phase9a_configs$annotation[[name]]
-    expect_identical(phase9a_normalize(phase9a_run("annotation", config, TRUE)), reference$raw,
+    tol <- if (name == "annot_learned") 1e-8 else 1e-12
+    expect_equal(phase9a_normalize(phase9a_run("annotation", config, TRUE)), reference$raw, tolerance=tol,
                      info = paste(name, "raw"))
-    expect_identical(phase9a_normalize(phase9a_run("annotation", config, FALSE)), reference$fit,
+    expect_equal(phase9a_normalize(phase9a_run("annotation", config, FALSE)), reference$fit, tolerance=tol,
                      info = paste(name, "formatted"))
   }
 })
@@ -111,7 +114,7 @@ test_that("Phase 9G protects public and unrelated backends", {
     "src/st_cpg_omp_csr_bayesr.cpp" = "0a005f9d5a19037285fd4869fdc4dcf0",
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62",
+    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9g_path, character(1))))

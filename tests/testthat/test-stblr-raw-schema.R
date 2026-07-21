@@ -1,16 +1,5 @@
-source_sblr_test_file <- function(path) {
-  candidates <- c(path, file.path("..", "..", path))
-  path <- candidates[file.exists(candidates)][1L]
-  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
-  source(path)
-}
-
-if (!exists(".is_stblr_raw", mode = "function")) {
-  source_sblr_test_file("R/sparse_ld_bed_helper.R")
-}
-if (!exists("check_stblr_consistency", mode = "function")) {
-  source_sblr_test_file("R/check-stblr-backend-consistency.R")
-}
+.is_stblr_raw <- getFromNamespace(".is_stblr_raw", "sblr")
+check_stblr_consistency <- getFromNamespace("check_stblr_consistency", "sblr")
 
 make_fake_stblr_raw <- function(
     nt = 1L,

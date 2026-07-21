@@ -61,14 +61,14 @@ phase3_one_marker_raw <- function() {
 
 test_that("ordinary CSR BayesC has one canonical typed production route", {
   binding <- paste(readLines(
-    test_path("..", "..", "src", "st_cpg_omp_csr.cpp"), warn = FALSE
+    blr_repo_path("src", "st_cpg_omp_csr.cpp"), warn = FALSE
   ), collapse = "\n")
   core <- paste(readLines(
-    test_path("..", "..", "src", "blr_csr_bayesc_core_impl.h"),
+    blr_repo_path("src", "blr_csr_bayesc_core_impl.h"),
     warn = FALSE
   ), collapse = "\n")
   public_r <- paste(readLines(
-    test_path("..", "..", "R", "sparse_ld_bed_helper.R"), warn = FALSE
+    blr_repo_path("R", "sparse_ld_bed_helper.R"), warn = FALSE
   ), collapse = "\n")
 
   expect_source_count("CsrBayesCResult run_csr_bayesc\\(", core, 1L, fixed = FALSE)
@@ -96,7 +96,7 @@ test_that("ordinary CSR BayesC has one canonical typed production route", {
 
 test_that("the native CSR adapter and raw converter have single responsibilities", {
   source <- readLines(
-    test_path("..", "..", "src", "st_cpg_omp_csr.cpp"), warn = FALSE
+    blr_repo_path("src", "st_cpg_omp_csr.cpp"), warn = FALSE
   )
   text <- paste(source, collapse = "\n")
   expect_length(
@@ -124,7 +124,7 @@ test_that("the native CSR adapter and raw converter have single responsibilities
 })
 
 test_that("the binding-neutral implementation header is single-TU and guarded", {
-  src_dir <- test_path("..", "..", "src")
+  src_dir <- blr_repo_path("src")
   files <- list.files(src_dir, pattern = "\\.(cpp|h)$", full.names = TRUE)
   include_pattern <- '#include "blr_csr_bayesc_core_impl.h"'
   includes <- vapply(files, function(file) {
@@ -153,7 +153,7 @@ test_that("canonical contracts retain binding neutrality and borrowed ownership"
     "blr_csr_bayesc_types.h", "blr_csr_bayesc_core_impl.h"
   )
   text <- paste(vapply(files, function(file) {
-    paste(readLines(test_path("..", "..", "src", file), warn = FALSE),
+    paste(readLines(blr_repo_path("src", file), warn = FALSE),
           collapse = "\n")
   }, character(1)), collapse = "\n")
   forbidden <- c(
@@ -167,13 +167,13 @@ test_that("canonical contracts retain binding neutrality and borrowed ownership"
   }
 
   types <- readLines(
-    test_path("..", "..", "src", "blr_csr_bayesc_types.h"), warn = FALSE
+    blr_repo_path("src", "blr_csr_bayesc_types.h"), warn = FALSE
   )
   types_text <- paste(types, collapse = "\n")
   expect_match(types_text, "Borrowed immutable view", fixed = TRUE)
   expect_match(types_text, "must keep it alive", fixed = TRUE)
   shared_text <- paste(readLines(
-    test_path("..", "..", "src", "blr_sparse_ld_csr.h"), warn = FALSE
+    blr_repo_path("src", "blr_sparse_ld_csr.h"), warn = FALSE
   ), collapse = "\n")
   expect_match(shared_text, "const std::uint64_t* row_ptr", fixed = TRUE)
   expect_match(shared_text, "const int* column_index", fixed = TRUE)
@@ -188,6 +188,7 @@ test_that("canonical contracts retain binding neutrality and borrowed ownership"
 })
 
 test_that("all permanent pre-refactor raw and formatted references remain exact", {
+  blr_skip_if_no_source_tree()
   observed <- phase3_quiet(phase2_reference_hashes())
   expect_identical(names(observed), names(phase2_reference_expected_hashes))
   for (name in names(observed)) {

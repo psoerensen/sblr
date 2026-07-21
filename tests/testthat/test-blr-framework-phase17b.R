@@ -1,5 +1,4 @@
-source(file.path(blr_test_root,
-  "tests/testthat/fixtures/blr_phase17b_mt_default",
+source(blr_fixture_path("blr_phase17b_mt_default",
   "blr-phase17b-mt-default-reference.R"))
 
 test_that("Phase 17B historical multivariate fixtures remain immutable", {
@@ -10,7 +9,7 @@ test_that("Phase 17B historical multivariate fixtures remain immutable", {
     "d6d8abec35168a088a9accab87b3c6d0",
     "48fe8040d52b1d23c6e7437d632ebebf"))
   for (path in paths) {
-    ref <- readRDS(file.path(blr_test_root, path))
+    ref <- readRDS(blr_fixture_path("blr_phase17b_mt_default", basename(path)))
     expect_identical(length(ref$raw), 20L)
     expect_identical(ref$metadata$reference_mode,
       "structure_exact_numeric_tolerance")
@@ -18,8 +17,7 @@ test_that("Phase 17B historical multivariate fixtures remain immutable", {
   }
 })
 test_that("Phase 17B preserves the historical fixed-B defect evidence", {
-  ref <- readRDS(file.path(blr_test_root,
-    "tests/testthat/fixtures/blr_phase17b_mt_default/config-2.rds"))
+  ref <- readRDS(blr_fixture_path("blr_phase17b_mt_default", "config-2.rds"))
   config <- phase17b_mt_config(2L)
   dimnames(config$vb) <- dimnames(ref$fit$vb)
   expect_false(isTRUE(all.equal(ref$fit$vb, config$vb, tolerance = 0)))
@@ -28,8 +26,7 @@ test_that("Phase 17B preserves the historical fixed-B defect evidence", {
 })
 
 test_that("Phase 17B preserves the historical denominator evidence", {
-  ref <- readRDS(file.path(blr_test_root,
-    "tests/testthat/fixtures/blr_phase17b_mt_default/config-1.rds"))
+  ref <- readRDS(blr_fixture_path("blr_phase17b_mt_default", "config-1.rds"))
   config <- phase17b_mt_config(1L)
   accumulated <- sum(0:(config$nit + config$nburn - 1L) > config$nburn)
   expect_identical(accumulated, config$nit - 1L)

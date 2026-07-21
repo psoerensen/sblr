@@ -51,6 +51,7 @@
 #' @param ld_swap_max_friends Maximum number of high-LD friends stored per
 #'   marker, prioritized by highest r-squared.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
+#' @param verbose Logical; print progress information for local fits.
 #'
 #' @return A list of class `"stblr_finemap"` with locus summaries,
 #'   marker-level aggregated results, optional credible sets, locus metadata,

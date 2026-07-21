@@ -1,5 +1,5 @@
 phase17i_src <- function(file) paste(readLines(
-  test_path("..", "..", file), warn = FALSE), collapse = "\n")
+  blr_repo_path(file), warn = FALSE), collapse = "\n")
 
 phase17i_float <- function(x) {
   con <- rawConnection(raw(), "w+b"); on.exit(close(con))
@@ -177,6 +177,6 @@ test_that("one core, finalizer, adapter, and internal-only wrapper remain", {
   expect_false(grepl("mtblr_csr_internal", rroute, fixed=TRUE))
   expect_false(grepl("mtblr_csr_internal", namespace, fixed=TRUE))
   expect_false(grepl("mtblr_cpg_omp_csr", cpp, fixed=TRUE))
-  expect_silent(yaml::read_yaml(test_path("..", "..", ".github", "workflows", "blr-framework.yml")))
-  expect_silent(yaml::read_yaml(test_path("..", "..", ".github", "workflows", "blr-framework-extended.yml")))
+  expect_silent(yaml::read_yaml(blr_repo_path(".github", "workflows", "blr-framework.yml")))
+  expect_silent(yaml::read_yaml(blr_repo_path(".github", "workflows", "blr-framework-extended.yml")))
 })

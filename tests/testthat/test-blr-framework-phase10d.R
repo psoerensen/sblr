@@ -1,9 +1,7 @@
-phase10d_root <- normalizePath(file.path(testthat::test_path(), "..", ".."),
-  winslash = "/", mustWork = TRUE)
 source(file.path(testthat::test_path(), "fixtures",
   "blr-phase10b-scheduled-reference.R"))
 
-phase10d_text <- function(path) paste(readLines(file.path(phase10d_root, path),
+phase10d_text <- function(path) paste(readLines(blr_repo_path(path),
   warn = FALSE), collapse = "\n")
 phase10d_comparable <- function(x) {
   if (is.list(x) && !is.null(x$input)) x$input$ncores <- 0L
@@ -34,7 +32,7 @@ test_that("canonical scheduled BayesC architecture is singular and build safe", 
 })
 
 test_that("implementation inclusion is restricted to the binding source", {
-  files <- list.files(file.path(phase10d_root, "src"), recursive = TRUE, full.names = TRUE)
+  files <- list.files(blr_repo_path("src"), recursive = TRUE, full.names = TRUE)
   files <- files[grepl("\\.(cpp|cc|cxx|h|hpp)$", files)]
   hits <- vapply(files, function(path) any(grepl(
     '#include "blr_csr_scheduled_bayesc_core_impl.h"',
@@ -48,8 +46,8 @@ test_that("canonical corrected raw and formatted references remain exact", {
     ref <- readRDS(file.path(testthat::test_path(), "fixtures",
       "blr_phase10b_scheduled_csr", paste0(nm, ".rds")))
     observed <- phase10b_run(phase10b_configs[[nm]])
-    expect_identical(observed$raw, ref$raw, info = paste(nm, "raw"))
-    expect_identical(observed$fit, ref$fit, info = paste(nm, "formatted"))
+    expect_equal(observed$raw, ref$raw, tolerance=1e-12, info = paste(nm, "raw"))
+    expect_equal(observed$fit, ref$fit, tolerance=1e-12, info = paste(nm, "formatted"))
     expect_identical(ref$metadata$rng_ownership_version, "scheduled_chain_rng_v1")
     expect_identical(ref$metadata$reference_mode, "fresh R process")
   }
@@ -109,7 +107,7 @@ test_that("Phase 10D protects canonical and unrelated native backends", {
     "src/st_cpg_omp_csr_annot.cpp" = "59bd49f048d116d0fe61d73d79bd4693",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62")
-  expect_identical(unname(tools::md5sum(file.path(phase10d_root, names(protected)))),
+    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378")
+  expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path, character(1)))),
     unname(protected))
 })

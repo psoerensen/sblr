@@ -1,5 +1,5 @@
 phase17h_src <- function(file) {
-  paste(readLines(test_path("..", "..", "src", file), warn = FALSE),
+  paste(readLines(blr_repo_path("src", file), warn = FALSE),
         collapse = "\n")
 }
 

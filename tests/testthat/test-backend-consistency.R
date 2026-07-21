@@ -1,13 +1,4 @@
-source_sblr_test_file <- function(path) {
-  candidates <- c(path, file.path("..", "..", path))
-  path <- candidates[file.exists(candidates)][1L]
-  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
-  source(path)
-}
-
-if (!exists("check_stblr_consistency", mode = "function")) {
-  source_sblr_test_file("R/check-stblr-backend-consistency.R")
-}
+check_stblr_consistency <- getFromNamespace("check_stblr_consistency", "sblr")
 
 make_backend_consistency_fit <- function(nchains = 1L, summaries = FALSE) {
   markers <- paste0("m", 1:3)

@@ -1,6 +1,4 @@
-phase13a_fixture_root <- if (file.exists(file.path("tests", "testthat", "fixtures",
-    "blr-phase11a-bed-reference.R"))) file.path("tests", "testthat") else testthat::test_path()
-source(file.path(phase13a_fixture_root, "fixtures", "blr-phase11a-bed-reference.R"))
+source(testthat::test_path("fixtures", "blr-phase11a-bed-reference.R"))
 
 phase13a_capture <- function(ncores = 1L, nchains = 1L, seed = 71L,
                              full_sweep_every = 10L,

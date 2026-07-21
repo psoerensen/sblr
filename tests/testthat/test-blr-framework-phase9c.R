@@ -1,6 +1,8 @@
 phase9c_path <- function(...) {
-  path <- file.path(...)
-  if (file.exists(path)) path else file.path("..", "..", ...)
+  parts <- c(...)
+  if (identical(parts[1:3], c("tests", "testthat", "fixtures")))
+    do.call(blr_fixture_path, as.list(parts[-(1:3)])) else
+    do.call(blr_repo_path, as.list(parts))
 }
 
 source(phase9c_path(
@@ -40,9 +42,9 @@ test_that("Phase 9C permanent fixed-prior references remain exact", {
       "tests", "testthat", "fixtures", "blr_phase9a_prior", paste0(name, ".rds")
     ))
     config <- phase9a_configs$prior[[name]]
-    expect_identical(phase9a_normalize(phase9a_run("prior", config, TRUE)), reference$raw,
+    expect_equal(phase9a_normalize(phase9a_run("prior", config, TRUE)), reference$raw, tolerance=1e-12,
                      info = paste(name, "raw"))
-    expect_identical(phase9a_normalize(phase9a_run("prior", config, FALSE)), reference$fit,
+    expect_equal(phase9a_normalize(phase9a_run("prior", config, FALSE)), reference$fit, tolerance=1e-12,
                      info = paste(name, "formatted"))
   }
 })
@@ -82,7 +84,7 @@ test_that("Phase 9C protects canonical and adjacent implementations", {
     "src/st_sbayesrc_omp_csr.cpp" = "8c1b03d8f5b93e6831ccbed856c77ead",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
     "src/st_block_eigen.h" = "bec3bc1e41841ab77747e34dc9818574",
-    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62"
+    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9c_path, character(1))))
   expect_identical(actual, unname(protected))

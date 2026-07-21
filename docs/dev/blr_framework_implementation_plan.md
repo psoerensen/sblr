@@ -1533,3 +1533,7 @@ Phase 17J activates the public `mtblr_csr()` boundary with strict marker,
 orientation, scale, overlap, and residual-policy validation, named
 `mtblr_raw` version 1 output, and stable `mtblr_fit` formatting. The next phase
 is only the scalar block-eigen contract audit for future trait-specific reuse.
+
+Phase 17J2 makes the permanent test ownership model portable across source-tree
+development and built-package checks. Fixtures and scientific/public owners run
+in both contexts; repository architecture assertions use narrow explicit skips.

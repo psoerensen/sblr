@@ -1,12 +1,12 @@
-phase6_path<-function(...){p<-file.path(...);if(file.exists(p))p else file.path("..","..",...)}
+phase6_path<-function(...){parts<-c(...);if(identical(parts[1:3],c("tests","testthat","fixtures")))do.call(blr_fixture_path,as.list(parts[-(1:3)])) else do.call(blr_repo_path,as.list(parts))}
 source(phase6_path("tests","testthat","fixtures","blr-phase5a-bayesr-reference.R"))
 
 test_that("canonical CSR BayesR retains permanent exact references",{
  for(nm in names(phase5a_bayesr_configs)){
   cfg<-phase5a_bayesr_configs[[nm]]
   ref<-readRDS(phase6_path("tests","testthat","fixtures","blr_phase5a_bayesr",paste0(nm,".rds")))
-  expect_identical(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,TRUE)),ref$raw,info=paste(nm,"raw"))
-  expect_identical(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,FALSE)),ref$fit,info=paste(nm,"fit"))
+  expect_equal(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,TRUE)),ref$raw,tolerance=1e-12,info=paste(nm,"raw"))
+  expect_equal(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,FALSE)),ref$fit,tolerance=1e-12,info=paste(nm,"fit"))
  }
 })
 

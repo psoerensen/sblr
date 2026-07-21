@@ -1,13 +1,4 @@
-source_sblr_test_file <- function(path) {
-  candidates <- c(path, file.path("..", "..", path))
-  path <- candidates[file.exists(candidates)][1L]
-  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
-  source(path)
-}
-
-if (!exists("summarise_components", mode = "function")) {
-  source_sblr_test_file("R/summarise-stblr-bayesr-components.R")
-}
+summarise_components <- getFromNamespace("summarise_components", "sblr")
 
 make_bayesr_component_summary_fit <- function(optional = TRUE) {
   markers <- paste0("m", 1:4)

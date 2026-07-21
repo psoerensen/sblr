@@ -437,7 +437,7 @@ make_multisignal_credible_sets_from_ld <- function(
 #'   [make_credible_sets_from_ld()]. `"pip"` (default) selects the
 #'   not-yet-assigned marker with the highest PIP as the lead. `"ld_pip"`
 #'   instead selects the not-yet-assigned marker with the highest LD-smoothed
-#'   score (`LD^2 %*% pip`, restricted to not-yet-assigned markers).
+#'   score (`LD^2 \%*\% pip`, restricted to not-yet-assigned markers).
 #' @param allow_incomplete Logical; if `TRUE`, return credible-set candidates
 #'   whose cumulative PIP does not reach `coverage` (with all qualifying
 #'   candidates included) rather than discarding them. The default `FALSE`

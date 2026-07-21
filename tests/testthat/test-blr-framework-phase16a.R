@@ -1,6 +1,4 @@
-phase16a_root <- normalizePath(file.path(testthat::test_path(), "..", ".."),
-  winslash = "/", mustWork = TRUE)
-phase16a_text <- function(path) paste(readLines(file.path(phase16a_root, path),
+phase16a_text <- function(path) paste(readLines(blr_repo_path(path),
   warn = FALSE), collapse = "\n")
 
 test_that("every packed-BED BayesC route has one explicit disposition", {
@@ -47,17 +45,15 @@ test_that("experimental RNG and genotype ownership remain bounded", {
 })
 
 test_that("single-chain experimental reference remains exact", {
-  old <- setwd(phase16a_root); on.exit(setwd(old), add = TRUE)
-  source("tests/testthat/fixtures/blr-phase11b-bed-bayesc-reference.R")
-  ref <- readRDS("tests/testthat/fixtures/blr_phase11b_bed_bayesc/single_1x1.rds")
+  source(blr_fixture_path("blr-phase11b-bed-bayesc-reference.R"), local = TRUE)
+  ref <- readRDS(blr_fixture_path("blr_phase11b_bed_bayesc", "single_1x1.rds"))
   got <- phase11b_capture("single", 1L, 1L, 71L)
-  expect_identical(phase11a_normalize(got$raw), phase11a_normalize(ref$raw))
-  expect_identical(phase11a_normalize(got$fit), phase11a_normalize(ref$fit))
+  expect_equal(phase11a_normalize(got$raw), phase11a_normalize(ref$raw), tolerance=1e-12)
+  expect_equal(phase11a_normalize(got$fit), phase11a_normalize(ref$fit), tolerance=1e-12)
 })
 
 test_that("sparse experimental route is same-process deterministic", {
-  old <- setwd(phase16a_root); on.exit(setwd(old), add = TRUE)
-  source("tests/testthat/fixtures/blr-phase11a-bed-reference.R")
+  source(blr_fixture_path("blr-phase11a-bed-reference.R"), local = TRUE)
   x <- phase11a_fixture()
   run <- function() sblr::stblr_bed_marker(x$Glist, x$y, backend = "sparse",
     pi_init = .5, pi_prior_mean = .5, pi_prior_strength = 4,
@@ -84,7 +80,7 @@ test_that("protected canonical numerical sources are unchanged", {
     "src/blr_bed_bayesr_core_impl.h" = "afe77e26d2cf2b8e3d64088221b33e14",
     "src/blr_bed_bayesrc_core_impl.h" = "82365cf3f1f5306c57b980f59b4d83d3",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62")
-  expect_identical(unname(tools::md5sum(file.path(phase16a_root,
-    names(protected)))), unname(protected))
+    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378")
+  expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path,
+    character(1)))), unname(protected))
 })

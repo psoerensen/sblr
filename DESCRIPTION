@@ -2,6 +2,7 @@ Package: sblr
 Type: Package
 Title: Scalable Bayesian Linear Regression Models
 Version: 0.1.0
+Depends: R (>= 3.5.0)
 Authors@R: person("Peter", "Sørensen", email = "peter.sorensen@r-qgg.org",
     role = c("aut", "cre"))
 Description: Experimental tools for scalable Bayesian linear regression
@@ -11,8 +12,7 @@ Description: Experimental tools for scalable Bayesian linear regression
     matrices, PLINK BED genotype files, and annotation-informed priors.
 License: GPL-3
 Imports:
-    Rcpp (>= 1.0.13),
-    RcppArmadillo
+    Rcpp (>= 1.0.13)
 Suggests:
     coda,
     qgg,

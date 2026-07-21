@@ -1,15 +1,4 @@
-source_sblr_test_file <- function(path) {
-  candidates <- c(path, file.path("..", "..", path))
-  path <- candidates[file.exists(candidates)][1L]
-  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
-  source(path)
-}
-
-if (!exists("stblr_csr_annot", mode = "function") ||
-    !"nchains" %in% names(formals(stblr_csr_annot))) {
-  source_sblr_test_file("R/annotation-helpers.R")
-  source_sblr_test_file("R/stblr-csr-annot.R")
-}
+stblr_csr_annot <- getFromNamespace("stblr_csr_annot", "sblr")
 
 make_tiny_sbayesrc_chain_csr_prefix <- function(m = 4L) {
   prefix <- tempfile("tiny_sbayesrc_chain_csr_")

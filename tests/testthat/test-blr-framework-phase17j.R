@@ -1,43 +1,3 @@
-phase17j_load_phase17i_helpers <- function() {
-  path <- test_path("test-blr-framework-phase17i.R")
-  lines <- readLines(path, warn = FALSE)
-  stop_at <- grep('^test_that\\(', lines)[1L]
-  eval(parse(text = lines[seq_len(stop_at - 1L)]), envir = .GlobalEnv)
-}
-phase17j_load_phase17i_helpers()
-
-phase17j_public_case <- function(trait_specific = FALSE, independent = FALSE) {
-  x <- phase17i_case(trait_specific = trait_specific, independent = independent,
-                     updates = FALSE)
-  nt <- length(x$csr$wy); ids <- paste0("m", seq_along(x$csr$wy[[1L]]))
-  alleles <- data.frame(marker_id = ids, effect_allele = rep("A", length(ids)),
-                        other_allele = rep("C", length(ids)))
-  stats <- list(
-    wy = setNames(lapply(x$csr$wy, function(z) setNames(z, ids)), paste0("T", seq_len(nt))),
-    ww = setNames(lapply(x$csr$ww, function(z) setNames(z, ids)), paste0("T", seq_len(nt))),
-    yy = setNames(x$csr$yy, paste0("T", seq_len(nt))), n = x$csr$n,
-    marker_names = ids, trait_names = paste0("T", seq_len(nt)),
-    marker_metadata = alleles, scale = "standardized_genotype", source = "external")
-  descriptors <- lapply(rep(x$prefixes, length.out = nt), function(prefix)
-    list(prefix = prefix, marker_ids = ids, marker_metadata = alleles,
-         scale = "standardized_genotype", source = "external"))
-  list(x = x, stats = stats, metadata = if (length(x$prefixes) == 1L) descriptors[[1L]] else descriptors)
-}
-
-phase17j_call <- function(case, marker_policy = "strict", ...) {
-  x <- case$x$csr; nt <- length(x$wy)
-  args <- list(stats = case$stats, ld_prefix = x$ld_prefixes, ld_metadata = case$metadata,
-    marker_policy = marker_policy, b = do.call(cbind, x$b), vb = x$B, ve = x$E,
-    ssb_prior = do.call(cbind, x$ssb_prior), sse_prior = do.call(cbind, x$sse_prior),
-    models = do.call(rbind, x$models), pimodels = x$pi, sets = lapply(x$sets, `+`, 1L),
-    updateB = x$updateB, updateE = x$updateE, updatePi = x$updatePi,
-    nub = x$nub, nue = x$nue, nit = x$nit, nburn = x$nburn,
-    nthin = x$nthin, seed = x$seed)
-  overrides <- list(...)
-  args[names(overrides)] <- overrides
-  do.call(mtblr_csr, args)
-}
-
 test_that("public MT CSR fit uses named raw and matches the internal route", {
   case <- phase17j_public_case()
   fit <- phase17j_call(case)
@@ -113,8 +73,8 @@ test_that("explicit seed and stable metadata are reproducible", {
 })
 
 test_that("public route remains singular and research routes are absent", {
-  r <- paste(readLines(test_path("..", "..", "R", "mtblr-csr.R"), warn=FALSE), collapse="\n")
-  cpp <- paste(readLines(test_path("..", "..", "src", "mtblr.cpp"), warn=FALSE), collapse="\n")
+  r <- paste(readLines(blr_repo_path("R", "mtblr-csr.R"), warn=FALSE), collapse="\n")
+  cpp <- paste(readLines(blr_repo_path("src", "mtblr.cpp"), warn=FALSE), collapse="\n")
   expect_match(r, "mtblr_csr_raw_internal", fixed=TRUE)
   expect_false(grepl("mtblr_eigen|mtblr_cpg_omp_csr", r))
   expect_identical(source_match_count("for ( int it =", phase17i_src("src/blr_mt_default_core_impl.h"), fixed=TRUE), 1L)

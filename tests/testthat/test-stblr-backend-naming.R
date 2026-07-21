@@ -1,13 +1,11 @@
-source_sblr_test_file <- function(path) {
-  candidates <- c(path, file.path("..", "..", path))
-  path <- candidates[file.exists(candidates)][1L]
-  if (is.na(path)) stop("Could not find ", path, call. = FALSE)
-  source(path)
-}
-
-if (!exists(".fit_stblr_bed_bayesr", mode = "function")) {
-  source_sblr_test_file("R/sparse_ld_bed_helper.R")
-}
+.format_stblr_csr_bayesc_fit <- getFromNamespace(".format_stblr_csr_bayesc_fit", "sblr")
+.format_stblr_csr_bayesr_fit <- getFromNamespace(".format_stblr_csr_bayesr_fit", "sblr")
+.format_stblr_bed_bayesc_fit <- getFromNamespace(".format_stblr_bed_bayesc_fit", "sblr")
+.format_stblr_bed_bayesr_fit <- getFromNamespace(".format_stblr_bed_bayesr_fit", "sblr")
+.fit_stblr_csr_bayesc <- getFromNamespace(".fit_stblr_csr_bayesc", "sblr")
+.fit_stblr_csr_bayesr <- getFromNamespace(".fit_stblr_csr_bayesr", "sblr")
+.fit_stblr_bed_bayesc <- getFromNamespace(".fit_stblr_bed_bayesc", "sblr")
+.fit_stblr_bed_bayesr <- getFromNamespace(".fit_stblr_bed_bayesr", "sblr")
 
 test_that("backend-specific internal helper names are available", {
   expect_true(exists(".format_stblr_csr_bayesc_fit", mode = "function"))

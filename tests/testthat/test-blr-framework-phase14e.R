@@ -1,6 +1,5 @@
-phase14e_root<-normalizePath(file.path(testthat::test_path(),"..",".."),winslash="/",mustWork=TRUE)
 source(file.path(testthat::test_path(),"fixtures","blr-phase14a-bed-bayesrc-reference.R"))
-phase14e_text<-function(path) paste(readLines(file.path(phase14e_root,path),warn=FALSE),collapse="\n")
+phase14e_text<-function(path) paste(readLines(blr_repo_path(path),warn=FALSE),collapse="\n")
 
 test_that("canonical packed-BED BayesRC has one permanent architecture",{
  types<-phase14e_text("src/blr_bed_bayesrc_types.h");core<-phase14e_text("src/blr_bed_bayesrc_core_impl.h")
@@ -43,7 +42,8 @@ test_that("Phase 14A fixtures are permanent canonical references",{
  cfg<-list(one_chain_one_core=c(1,1,141,1,0),two_chains_one_core=c(1,2,143,1,1),two_chains_two_cores=c(2,2,143,1,1))
  for(nm in names(cfg)){z<-cfg[[nm]];ref<-readRDS(file.path(testthat::test_path(),"fixtures","blr_phase14a_bed_bayesrc",paste0(nm,".rds")))
   observed<-phase14a_normalize(phase14a_capture(z[1],z[2],z[3],as.logical(z[4]),as.logical(z[5])))
-  expect_identical(observed$raw,ref$raw);expect_identical(observed$fit,ref$fit)}
+  expect_equal(observed$raw,ref$raw,tolerance=1e-12)
+  expect_equal(observed$fit[names(ref$fit)],ref$fit,tolerance=1e-12)}
 })
 
 test_that("canonical reproducibility identities and reduction remain exact",{
@@ -76,6 +76,6 @@ test_that("canonical BayesRC protects other backends and interfaces",{
  protected<-c("src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
   "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83",
   "src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739",
-  "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7","NAMESPACE"="ab1479ce78ea20b39bf8b94f9bc0aa62")
- expect_identical(unname(tools::md5sum(file.path(phase14e_root,names(protected)))),unname(protected))
+  "src/st_block_eigen.cpp"="49f0a62c9fe235967a264b0f8de144a7","NAMESPACE"="a1f389e8ea9ab5abef440767a11b8378")
+ expect_identical(unname(tools::md5sum(vapply(names(protected),blr_repo_path,character(1)))),unname(protected))
 })

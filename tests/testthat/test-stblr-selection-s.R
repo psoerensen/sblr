@@ -1,3 +1,5 @@
+check_stblr_consistency <- getFromNamespace("check_stblr_consistency", "sblr")
+
 make_selection_s_csr_prefix <- function() {
   prefix <- tempfile("tiny_selection_s_csr_")
   row_ptr <- c(0, 1, 1, 1)
@@ -440,9 +442,6 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
-  if (!exists("check_stblr_consistency", mode = "function")) {
-    source_sblr_test_file("R/check-stblr-backend-consistency.R")
-  }
 
   fit <- make_selection_s_csr_fit(selection_s = 0, updateLDswap = TRUE, seed = 131)
 
@@ -697,9 +696,6 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
-  if (!exists("check_stblr_consistency", mode = "function")) {
-    source_sblr_test_file("R/check-stblr-backend-consistency.R")
-  }
 
   fit <- make_selection_s_csr_bayesr_fit(
     selection_s = 0,
@@ -828,9 +824,6 @@ test_that("selection_s works with CSR SBayesRC LD-swap and backend consistency",
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
-  if (!exists("check_stblr_consistency", mode = "function")) {
-    source_sblr_test_file("R/check-stblr-backend-consistency.R")
-  }
 
   fit <- make_selection_s_csr_sbayesrc_fit(
     selection_s = 0,

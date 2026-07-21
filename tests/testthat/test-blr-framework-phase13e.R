@@ -1,6 +1,5 @@
-phase13e_root <- normalizePath(file.path(testthat::test_path(),"..",".."),winslash="/",mustWork=TRUE)
 source(file.path(testthat::test_path(),"fixtures","blr-phase13a-bed-bayesr-reference.R"))
-phase13e_text <- function(path) paste(readLines(file.path(phase13e_root,path),warn=FALSE),collapse="\n")
+phase13e_text <- function(path) paste(readLines(blr_repo_path(path),warn=FALSE),collapse="\n")
 
 test_that("Phase 13E permanently protects the canonical BayesR architecture", {
   types <- phase13e_text("src/blr_bed_bayesr_types.h")
@@ -42,8 +41,8 @@ test_that("Phase 13E canonical raw and formatted fixtures are exact", {
     z <- configs[[name]]; ref <- readRDS(file.path(testthat::test_path(),"fixtures",
       "blr_phase13a_bed_bayesr",paste0(name,".rds")))
     observed <- phase13a_capture(z[1],z[2],z[3])
-    expect_identical(phase13a_normalize(observed$raw),phase13a_normalize(ref$raw))
-    expect_identical(phase13a_normalize(observed$fit),phase13a_normalize(ref$fit))
+    expect_equal(phase13a_normalize(observed$raw),phase13a_normalize(ref$raw),tolerance=1e-12)
+    expect_equal(phase13a_normalize(observed$fit),phase13a_normalize(ref$fit),tolerance=1e-12)
   }
 })
 

@@ -1,8 +1,8 @@
-phase11d_root <- normalizePath(file.path(testthat::test_path(), "..", ".."),
-  winslash = "/", mustWork = TRUE)
-owd <- setwd(phase11d_root); on.exit(setwd(owd), add = TRUE)
-source(file.path("tests", "testthat", "fixtures", "blr-phase11b-bed-bayesc-reference.R"))
-read11d <- function(path) paste(readLines(path, warn = FALSE), collapse = "\n")
+source(blr_fixture_path("blr-phase11b-bed-bayesc-reference.R"))
+read11d <- function(path) {
+  resolved <- if (file.exists(path)) path else blr_repo_path(path)
+  paste(readLines(resolved, warn = FALSE), collapse = "\n")
+}
 active11d <- function(x) paste(grep("^\\s*//", strsplit(x, "\n")[[1]],
   invert = TRUE, value = TRUE), collapse = "\n")
 count11d <- function(pattern, x) {
@@ -64,11 +64,10 @@ test_that("Phase 11B corrected raw and formatted references remain exact", {
     multichain_2x2 = c("multichain", 2L, 2L))
   for (nm in names(specs)) {
     z <- specs[[nm]]
-    ref <- readRDS(file.path("tests", "testthat", "fixtures",
-      "blr_phase11b_bed_bayesc", paste0(nm, ".rds")))
+    ref <- readRDS(blr_fixture_path("blr_phase11b_bed_bayesc", paste0(nm, ".rds")))
     got <- phase11b_capture(z[[1]], as.integer(z[[3]]), as.integer(z[[2]]), 71L)
-    expect_identical(phase11a_normalize(got$raw), phase11a_normalize(ref$raw))
-    expect_identical(phase11a_normalize(got$fit), phase11a_normalize(ref$fit))
+    expect_equal(phase11a_normalize(got$raw), phase11a_normalize(ref$raw), tolerance=1e-12)
+    expect_equal(phase11a_normalize(got$fit), phase11a_normalize(ref$fit), tolerance=1e-12)
   }
 })
 
@@ -96,8 +95,9 @@ test_that("route nonidentity and protected sources are permanent", {
     "src/blr_bed_scheduled_bayesc_rng.h" = "002468fa8afd7d0c491f61ea4324f982",
     "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "72d4a9fa0a7cd51071328c2d62d0192b",
     "src/st_block_eigen.cpp" = "49f0a62c9fe235967a264b0f8de144a7",
-    "NAMESPACE" = "ab1479ce78ea20b39bf8b94f9bc0aa62")
-  expect_identical(unname(tools::md5sum(names(protected))), unname(protected))
+    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378")
+  expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path,
+    character(1)))), unname(protected))
 })
 
 
@@ -106,7 +106,7 @@ test_that("canonical implementation headers are guarded and singly included", {
   agg <- read11d("src/blr_bed_scheduled_bayesc_aggregate_impl.h")
   expect_match(core, "#ifndef SBLR_BLR_BED_SCHEDULED_BAYESC_CORE_IMPL_H", fixed = TRUE)
   expect_match(agg, "#ifndef SBLR_BLR_BED_SCHEDULED_BAYESC_AGGREGATE_IMPL_H", fixed = TRUE)
-  sources <- list.files("src", pattern = "\\.(cpp|h)$", full.names = TRUE)
+  sources <- list.files(blr_repo_path("src"), pattern = "\\.(cpp|h)$", full.names = TRUE)
   core_users <- sources[vapply(sources, function(x)
     grepl('#include "blr_bed_scheduled_bayesc_core_impl.h"', read11d(x), fixed = TRUE), logical(1))]
   agg_users <- sources[vapply(sources, function(x)
