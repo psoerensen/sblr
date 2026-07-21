@@ -69,3 +69,6 @@ Frozen binary fixtures and generated wrappers may retain hashes. Actively mainta
 | Public MT CSR normalization, biological alignment, named raw schema, and fit formatting | `test-blr-framework-phase17j.R` | ordinary fast/full | current |
 | Source/installed test-context and path contract | `test-blr-framework-phase17j2.R` | ordinary fast/full | source assertions narrow-skip only |
 | Canonical block-filtered storage/view and filter mathematics | `test-blr-framework-phase17k.R` | generated tiny BED | ordinary and installed; source structure blocks skip narrowly |
+# Phase 17L ownership
+
+`test-blr-framework-phase17l.R` owns MT block-eigen contracts, internal execution reductions, descriptor validation, transformed-summary identities, shared-core structure, and public/research exclusion. Phase 17K continues to own filtering mathematics and scalar block-eigen behavior.

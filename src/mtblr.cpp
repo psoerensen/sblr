@@ -4,6 +4,8 @@
 
 #include "blr_mt_ld_access.h"
 #include "st_csr_common.h"
+#include "st_block_eigen.h"
+#include "st_block_eigen_rcpp.h"
 
 using namespace Rcpp;
 using namespace arma;
@@ -4197,7 +4199,175 @@ std::vector<std::vector<std::vector<double>>> mtblr_csr_internal(
   data, model, prior, execution, std::move(initial_state));
  auto final_result=sblr::mt::finalize_mt_default_result(std::move(core_result));
  return sblr::mt::make_mt_default_legacy_result(
-  final_result, wy, nit, nburn);
+ final_result, wy, nit, nburn);
+}
+
+namespace {
+
+struct MtBlockEigenDescriptor {
+ std::vector<std::string> bed_files;
+ int n_bed=0;
+ std::vector<std::vector<int>> cls;
+ std::vector<int> rows0;
+ std::vector<double> af;
+ std::vector<int> block_start;
+ EigenFilterMode filter=EigenFilterMode::hard_truncate;
+ double tau=0.01;
+ double eta=0.0;
+};
+
+MtBlockEigenDescriptor parse_mt_block_eigen_descriptor(
+ const Rcpp::List& descriptor, std::size_t marker_count) {
+ const char* required[]={"bed_files", "n_bed", "cls", "af", "block_start",
+                         "eigen_filter", "eigen_tau", "eigen_eta"};
+ for (const char* field : required) {
+  if (!descriptor.containsElementNamed(field))
+   throw std::invalid_argument(std::string("mt block-eigen descriptor lacks '")+field+"'");
+ }
+ MtBlockEigenDescriptor out;
+ out.bed_files=Rcpp::as<std::vector<std::string>>(descriptor["bed_files"]);
+ out.n_bed=Rcpp::as<int>(descriptor["n_bed"]);
+ out.cls=Rcpp::as<std::vector<std::vector<int>>>(descriptor["cls"]);
+ out.af=Rcpp::as<std::vector<double>>(descriptor["af"]);
+ out.block_start=Rcpp::as<std::vector<int>>(descriptor["block_start"]);
+ out.filter=parse_block_eigen_filter_mode(Rcpp::as<std::string>(descriptor["eigen_filter"]));
+ out.tau=Rcpp::as<double>(descriptor["eigen_tau"]);
+ out.eta=Rcpp::as<double>(descriptor["eigen_eta"]);
+ if (out.bed_files.empty() || out.n_bed<=0 || out.cls.size()!=out.bed_files.size())
+  throw std::invalid_argument("mt block-eigen descriptor BED dimensions are invalid");
+ std::size_t selected=0;
+ for (const auto& file_cls : out.cls) {
+  for (int marker : file_cls) {
+   if (marker<=0) throw std::invalid_argument("mt block-eigen cls values must be positive and 1-based");
+  }
+  selected += file_cls.size();
+ }
+ if (selected!=marker_count || out.af.size()!=marker_count)
+  throw std::invalid_argument("mt block-eigen descriptor marker count does not match wy");
+ for (double frequency : out.af) {
+  if (!std::isfinite(frequency) || frequency<=0.0 || frequency>=1.0)
+   throw std::invalid_argument("mt block-eigen allele frequencies must be finite and in (0, 1)");
+ }
+ if (!std::isfinite(out.tau) || out.tau<0.0 ||
+     !std::isfinite(out.eta) || out.eta<0.0)
+  throw std::invalid_argument("mt block-eigen tau and eta must be finite and nonnegative");
+ if (out.block_start.empty() || out.block_start[0]!=0)
+  throw std::invalid_argument("mt block-eigen block_start must begin at zero");
+ for (std::size_t i=0; i<out.block_start.size(); ++i) {
+  if (out.block_start[i]<0 || static_cast<std::size_t>(out.block_start[i])>=marker_count ||
+      (i>0 && out.block_start[i]<=out.block_start[i-1]))
+   throw std::invalid_argument("mt block-eigen block_start must be strictly ascending and in range");
+ }
+ if (descriptor.containsElementNamed("rows") && !Rf_isNull(descriptor["rows"])) {
+  out.rows0=Rcpp::as<std::vector<int>>(descriptor["rows"]);
+  if (out.rows0.empty()) throw std::invalid_argument("mt block-eigen rows must be nonempty when supplied");
+  for (int& row : out.rows0) {
+   if (row<=0 || row>out.n_bed)
+    throw std::invalid_argument("mt block-eigen rows must be positive, 1-based, and within n_bed");
+   --row;
+  }
+ }
+ return out;
+}
+
+}  // namespace
+
+// Internal canonical trait-specific block-eigen execution. Operator building
+// and any matching wy projection complete before the shared MT core creates
+// its fit-local RNG. This maintenance route is not namespace-exported.
+// [[Rcpp::export]]
+std::vector<std::vector<std::vector<double>>> mtblr_block_eigen_internal(
+ std::vector<std::vector<double>> wy,
+ std::vector<double> yy,
+ std::vector<std::vector<double>> b,
+ Rcpp::List operator_descriptors,
+ const std::vector<std::vector<int>>& sets,
+ arma::mat B,
+ arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi,
+ double nub,
+ double nue,
+ bool updateB,
+ bool updateE,
+ bool updatePi,
+ std::vector<int> n,
+ int nit,
+ int nburn,
+ int nthin,
+ int seed,
+ int method=4
+) {
+ if (method!=4) throw std::invalid_argument("mtblr_block_eigen_internal supports method = 4 only");
+ const std::size_t nt=wy.size();
+ if (nt==0 || yy.size()!=nt || n.size()!=nt || b.size()!=nt)
+  throw std::invalid_argument("mtblr_block_eigen_internal: inconsistent trait dimensions");
+ const std::size_t m=wy[0].size();
+ if (m==0 || (operator_descriptors.size()!=1 &&
+              static_cast<std::size_t>(operator_descriptors.size())!=nt))
+  throw std::invalid_argument("mtblr_block_eigen_internal: operator_descriptors must have length one or trait count");
+ for (std::size_t trait=0; trait<nt; ++trait) {
+  if (wy[trait].size()!=m || b[trait].size()!=m)
+   throw std::invalid_argument("mtblr_block_eigen_internal: inconsistent marker dimensions");
+ }
+
+ const bool shared=operator_descriptors.size()==1;
+ const std::size_t owner_count=shared ? 1 : nt;
+ std::vector<MtBlockEigenDescriptor> descriptors;
+ descriptors.reserve(owner_count);
+ for (std::size_t owner=0; owner<owner_count; ++owner)
+  descriptors.push_back(parse_mt_block_eigen_descriptor(
+   Rcpp::as<Rcpp::List>(operator_descriptors[static_cast<R_xlen_t>(owner)]), m));
+
+ std::vector<sblr::core::BlockEigenStorage> storage_owners;
+ storage_owners.reserve(owner_count);
+ std::vector<std::vector<double>> transformed_wy=wy;
+ for (std::size_t owner=0; owner<owner_count; ++owner) {
+  const auto& descriptor=descriptors[owner];
+  const int* rows=descriptor.rows0.empty() ? nullptr : descriptor.rows0.data();
+  PackedBedMatrix packed=read_bedfiles_to_packed_matrix(
+   descriptor.bed_files, descriptor.n_bed, rows,
+   static_cast<int>(descriptor.rows0.size()), descriptor.cls);
+  const std::size_t rows_in_build=shared ? nt : 1;
+  arma::mat wy_matrix(rows_in_build, m);
+  for (std::size_t row=0; row<rows_in_build; ++row) {
+   const std::size_t trait=shared ? row : owner;
+   for (std::size_t marker=0; marker<m; ++marker)
+    wy_matrix(static_cast<arma::uword>(row), static_cast<arma::uword>(marker))=wy[trait][marker];
+  }
+  storage_owners.push_back(build_block_eigen(
+   packed, descriptor.af, descriptor.block_start, descriptor.filter,
+   descriptor.tau, descriptor.eta, wy_matrix, 1, nullptr));
+  for (std::size_t row=0; row<rows_in_build; ++row) {
+   const std::size_t trait=shared ? row : owner;
+   for (std::size_t marker=0; marker<m; ++marker)
+    transformed_wy[trait][marker]=wy_matrix(
+     static_cast<arma::uword>(row), static_cast<arma::uword>(marker));
+  }
+ }
+
+ std::vector<sblr::core::BlockEigenView> trait_views;
+ trait_views.reserve(nt);
+ for (std::size_t trait=0; trait<nt; ++trait)
+  trait_views.push_back(storage_owners[shared ? 0 : trait].view());
+
+ sblr::mt::MtBlockEigenDataView data{
+  transformed_wy, yy, n,
+  sblr::mt::MtBlockEigenBundleView{m, std::move(trait_views)}
+ };
+ sblr::mt::MtDefaultModelSpec model{models, sets, method};
+ sblr::mt::MtDefaultCovariancePriorView prior{ssb_prior, sse_prior, nub, nue};
+ sblr::mt::MtDefaultExecutionSpec execution{
+  updateB, updateE, updatePi, nit, nburn, nthin, seed};
+ sblr::mt::MtDefaultInitialState initial_state{
+  std::move(b), std::move(B), std::move(E), std::move(pi)};
+ auto core_result=sblr::mt::run_mt_block_eigen_core(
+  data, model, prior, execution, std::move(initial_state));
+ auto final_result=sblr::mt::finalize_mt_default_result(std::move(core_result));
+ return sblr::mt::make_mt_default_legacy_result(
+  final_result, transformed_wy, nit, nburn);
 }
 
 namespace {

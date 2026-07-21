@@ -668,3 +668,6 @@ Phase 17K terminology: scalar “block eigen” routes construct operators using
 eigendecomposition or ridge regularization, then store reconstructed dense
 within-block cross-products as float-packed upper triangles. BayesC, BayesR,
 and SBayesRC borrow the same canonical view; no eigensystem persists at runtime.
+# Internal MT block-eigen execution (Phase 17L)
+
+`mtblr_block_eigen_internal()` builds canonical `BlockEigenStorage` owners from BED descriptors, retains matching transformed `wy`, and delegates through `MtBlockEigenDataView` to the Phase 17I shared MT BayesC core. It does not use the retained research `mtblr_eigen()` implementation.

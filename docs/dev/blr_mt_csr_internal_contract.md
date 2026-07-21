@@ -90,3 +90,6 @@ named MT raw/fit conversion without changing this core.
 Phase 17J exposes this validated numerical route through `mtblr_csr()`. Public
 marker/allele/scale/resource validation remains R-owned; the internal core
 continues to accept an already aligned positional domain.
+# Parallel Phase 17L representation
+
+The canonical CSR route remains unchanged. Phase 17L adds a sibling block-eigen data view that uses the same representation seam and shared statistical core, result, finalizer, and legacy adapter.

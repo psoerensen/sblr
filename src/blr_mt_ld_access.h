@@ -2,6 +2,7 @@
 #define SBLR_BLR_MT_LD_ACCESS_H
 
 #include "blr_mt_csr_types.h"
+#include "blr_mt_block_eigen_types.h"
 
 namespace sblr {
 namespace mt {
@@ -72,6 +73,36 @@ inline void mt_apply_marker_difference(
  residual[static_cast<std::size_t>(marker)] -=
   mt_diagonal(data, trait, marker)*difference;
  data.ld.trait_ld[static_cast<std::size_t>(trait)].apply_offdiag(
+  marker, difference, residual);
+}
+
+inline std::size_t mt_trait_count(const MtBlockEigenDataView& data) {
+ return data.wy.size();
+}
+inline std::size_t mt_marker_count(const MtBlockEigenDataView& data) {
+ return data.operators.marker_count;
+}
+inline double mt_diagonal(const MtBlockEigenDataView& data, int trait, int marker) {
+ return data.operators.trait_operator[static_cast<std::size_t>(trait)].diag()(
+  static_cast<arma::uword>(marker));
+}
+inline void mt_rebuild_residuals(
+ const MtBlockEigenDataView& data,
+ const std::vector<std::vector<double>>& effects,
+ std::vector<std::vector<double>>& residuals
+) {
+ for (std::size_t trait=0; trait<data.wy.size(); ++trait) {
+  data.operators.trait_operator[trait].rebuild(
+   data.wy[trait], effects[trait], residuals[trait]);
+ }
+}
+inline void mt_apply_marker_difference(
+ const MtBlockEigenDataView& data, int trait, int marker, double difference,
+ std::vector<double>& residual
+) {
+ residual[static_cast<std::size_t>(marker)] -=
+  mt_diagonal(data, trait, marker)*difference;
+ data.operators.trait_operator[static_cast<std::size_t>(trait)].apply_offdiag(
   marker, difference, residual);
 }
 

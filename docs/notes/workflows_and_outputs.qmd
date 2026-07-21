@@ -1012,3 +1012,6 @@ validated `mtblr_fit` through named `mtblr_raw` version 1.
 The scalar block-eigen helpers remain internal experimental workflows. Their
 outputs continue through `stblr_raw` version 1; no public block-eigen selector
 or output schema was added in Phase 17K.
+# Internal MT block-eigen workflow
+
+Phase 17L adds no user workflow or output schema. Its internal route returns the existing MT legacy native structure through the shared finalizer/adapter and is used only for deterministic development validation.

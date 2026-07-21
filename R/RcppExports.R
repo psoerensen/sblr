@@ -73,6 +73,10 @@ mtblr_csr_internal <- function(wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior
     .Call(`_sblr_mtblr_csr_internal`, wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }
 
+mtblr_block_eigen_internal <- function(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method = 4L) {
+    .Call(`_sblr_mtblr_block_eigen_internal`, wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
+}
+
 mtblr_csr_raw_internal <- function(wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
     .Call(`_sblr_mtblr_csr_raw_internal`, wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }

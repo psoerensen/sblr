@@ -95,3 +95,6 @@ Storage is `sum_b s_b(s_b+1)/2` floats plus two `m`-integer mappings and `m` dou
 ## 24. Evolution policy
 
 New scalar/MT block-filtered execution must extend this owner/view contract rather than introduce a parallel representation. Format changes require numerical references, explicit versioning if persisted, and documented ownership/alignment migration.
+# Phase 17L MT consumption
+
+An internal MT adapter now consumes one canonical `BlockEigenView` and its matching builder-transformed `wy` per trait. Shared, shared-boundary-only, and independent operators are representable; public provenance remains future work.

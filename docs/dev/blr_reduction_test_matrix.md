@@ -682,3 +682,6 @@ Phase 17J2: all numerical/public owners are installed-check required; only the
 repository-asset blocks listed in `blr_source_only_test_inventory.md` skip when
 a source checkout is unavailable. Portable fixture integrity remains active.
 | Phase 17K block-filtered operator | portable independent hard/ridge/LW oracle, mappings, diagonal, vector/Armadillo rebuild; source-only singularity/routing | ordinary plus installed check |
+# Phase 17L reductions
+
+The Phase 17L owner compares the internal block-eigen route with the dense MT oracle for shared hard/ridge, updates, initialization, sets, three traits, independent boundaries, mixed filters, differing sample sizes, and one trait. Diagonal and representable nontrivial operators are also compared with the canonical CSR route.

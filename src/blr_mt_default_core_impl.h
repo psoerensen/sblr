@@ -316,6 +316,18 @@ inline MtDefaultCoreResult run_mt_csr_core(
   data, model, prior, execution, std::move(initial_state));
 }
 
+inline MtDefaultCoreResult run_mt_block_eigen_core(
+ const MtBlockEigenDataView& data,
+ const MtDefaultModelSpec& model,
+ const MtDefaultCovariancePriorView& prior,
+ const MtDefaultExecutionSpec& execution,
+ MtDefaultInitialState initial_state
+) {
+ validate_mt_block_eigen_data(data, model);
+ return run_mt_bayesc_core_impl(
+  data, model, prior, execution, std::move(initial_state));
+}
+
 }  // namespace mt
 }  // namespace sblr
 

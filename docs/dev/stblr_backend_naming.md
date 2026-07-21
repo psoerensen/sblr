@@ -427,3 +427,6 @@ Public MT CSR naming uses `marker_id`, `effect_allele`, `other_allele`,
 borrower. “Block eigen” describes construction/filtering; runtime data are
 `BlockEigenBlockStorage::upper_triangle` float-packed filtered dense blocks.
 Do not use names implying retained eigenvectors or low-rank runtime factors.
+# Phase 17L naming
+
+“MT block-eigen” names the internal canonical route using `BlockEigenView`; it does not refer to legacy `mtblr_eigen()`. The new native maintenance symbol is `mtblr_block_eigen_internal()` and is not a public API.

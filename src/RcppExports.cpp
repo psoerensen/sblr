@@ -298,6 +298,38 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mtblr_block_eigen_internal
+std::vector<std::vector<std::vector<double>>> mtblr_block_eigen_internal(std::vector<std::vector<double>> wy, std::vector<double> yy, std::vector<std::vector<double>> b, Rcpp::List operator_descriptors, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
+RcppExport SEXP _sblr_mtblr_block_eigen_internal(SEXP wySEXP, SEXP yySEXP, SEXP bSEXP, SEXP operator_descriptorsSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b(bSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type operator_descriptors(operator_descriptorsSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_block_eigen_internal(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mtblr_csr_raw_internal
 Rcpp::List mtblr_csr_raw_internal(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b, std::vector<std::string> ld_prefixes, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
 RcppExport SEXP _sblr_mtblr_csr_raw_internal(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP bSEXP, SEXP ld_prefixesSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
@@ -1388,6 +1420,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_bed_xtx_xty", (DL_FUNC) &_sblr_bed_xtx_xty, 11},
     {"_sblr_mtblr", (DL_FUNC) &_sblr_mtblr, 24},
     {"_sblr_mtblr_csr_internal", (DL_FUNC) &_sblr_mtblr_csr_internal, 23},
+    {"_sblr_mtblr_block_eigen_internal", (DL_FUNC) &_sblr_mtblr_block_eigen_internal, 22},
     {"_sblr_mtblr_csr_raw_internal", (DL_FUNC) &_sblr_mtblr_csr_raw_internal, 23},
     {"_sblr_mtblr_eigen", (DL_FUNC) &_sblr_mtblr_eigen, 24},
     {"_sblr_test_read_bedfiles_to_packed_matrix", (DL_FUNC) &_sblr_test_read_bedfiles_to_packed_matrix, 4},

@@ -5,7 +5,7 @@ test_that("Phase 17F owns the typed binding-neutral finalizer", {
   expect_source_count("struct MtDefaultFinalResult", types, 1L)
   expect_source_count("inline MtDefaultFinalResult finalize_mt_default_result(",
     finalizer, 1L)
-  expect_source_count("finalize_mt_default_result(", adapter, 2L)
+  expect_source_count("finalize_mt_default_result(", adapter, 3L)
   expect_source_forbidden(paste(types, finalizer), c("Rcpp", "SEXP", "RObject",
     "NumericVector", "NumericMatrix", "schema_version"))
   expect_source_forbidden(finalizer, c("std::mt19937", "sampleBset(",

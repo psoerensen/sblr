@@ -14,3 +14,11 @@ These blocks inspect repository assets and execute in source-tree development an
 | Phase 17K | binding-neutral type singularity, scalar source integration, public-routing and research disposition | `src/`, `R/` | repository architecture; numerical filter/oracle tests remain portable |
 
 Portable fixture MD5 checks, numerical references, public schemas, alignment, update controls, reproducibility, and scientific identities are not in this inventory and remain installed-check requirements.
+# Phase 17L additions
+
+| Test file | Block | Repository assets | Why source-only | Source-tree owner |
+|---|---|---|---|---|
+| `test-blr-framework-phase17l.R` | MT block-eigen contracts are binding-neutral and share the MT core | `src/*.h`, `src/mtblr.cpp` | Verifies implementation structure, not installed behavior | fast framework tier |
+| `test-blr-framework-phase17l.R` | internal registration does not create a public block-eigen route (source-text portion) | `src/mtblr.cpp` | Verifies research dependency absence in source | fast framework tier |
+
+All Phase 17L execution, reduction, validation, and residual-identity blocks remain installed-package requirements.

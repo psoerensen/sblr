@@ -396,3 +396,6 @@ from both source and installed-package contexts without changing capability.
 Phase 17K: scalar block-eigen BayesC, BayesR, and SBayesRC remain internal and
 experimental. They share canonical block-filtered storage/view contracts; no
 public selector, scheduled execution, LD-swap, or MT block-eigen route exists.
+# Phase 17L internal capability
+
+The internal MT BayesC block-eigen route supports shared and trait-specific operators, independent block boundaries, mixed filters, and trait-specific analysis sample sizes. It is serial, single-chain, internal-only, and does not model sample overlap. Public scalar and MT routes remain CSR/dense as previously documented.

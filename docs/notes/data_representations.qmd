@@ -370,3 +370,6 @@ public `mtblr_csr()` validation.
 Phase 17K distinguishes block-eigen construction from runtime representation:
 the runtime operator is a float-packed reconstructed dense matrix per block,
 with mappings and a separate double view of the packed diagonal.
+# Internal multivariate block-filtered representation
+
+The internal MT block-eigen route borrows one packed filtered block operator per trait and consumes the matching builder-transformed summary vector. Hard truncation projects `wy`; ridge modes do not. This remains an internal numerical representation.
