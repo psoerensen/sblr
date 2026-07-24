@@ -4541,6 +4541,7 @@ stblr_bed <- function(
 #'   \item{ww}{List of marker cross-products, one vector per trait.}
 #'   \item{yy}{Trait sums of squares.}
 #'   \item{n}{Analysis sample size after phenotype-to-BED matching.}
+#'   \item{n_bed}{Original sample count in the BED file.}
 #'   \item{m}{Total number of markers.}
 #'   \item{chr}{Chromosome/file indices used.}
 #'   \item{bed_files}{BED files used, in the same order as `chr`.}
@@ -4732,6 +4733,7 @@ make_summary_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
     ww = ww,
     yy = yy,
     n = nrow(y),
+    n_bed = as.integer(Glist$n),
     m = length(marker_names),
     chr = chr,
     bed_files = bedfiles[chr],

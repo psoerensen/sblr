@@ -685,3 +685,10 @@ a source checkout is unavailable. Portable fixture integrity remains active.
 # Phase 17L reductions
 
 The Phase 17L owner compares the internal block-eigen route with the dense MT oracle for shared hard/ridge, updates, initialization, sets, three traits, independent boundaries, mixed filters, differing sample sizes, and one trait. Diagonal and representable nontrivial operators are also compared with the canonical CSR route.
+
+# Phase 17M reductions
+
+Portable Phase 17M tests own public/internal equality, raw schema, provenance
+rejection, block/filter/sharing validation, transformed `wy`, diagnostics, and
+fit formatting. Phase 17J, 17L, and 17K remain the CSR, internal MT, and scalar
+protection owners.

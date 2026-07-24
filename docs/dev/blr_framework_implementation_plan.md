@@ -1545,3 +1545,10 @@ The next phase is an internal trait-specific MT adapter using the shared MT core
 # Phase 17L
 
 Phase 17L adds an internal trait-specific MT block-eigen adapter over the Phase 17I shared Gibbs core. It accepts one or one-per-trait canonical block operator descriptor, retains the matching transformed `wy`, and creates no public route. The next phase is the public provenance/alignment design described in the Phase 17L report.
+
+# Phase 17M
+
+Phase 17M activates `mtblr_block_eigen()` for same-BED/by-construction
+statistics. It adds strict provenance, explicit one-based blocks, filter and
+sharing policy, named raw diagnostics, and shared fit formatting while leaving
+the Phase 17L numerical route unchanged.

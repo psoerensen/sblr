@@ -109,3 +109,47 @@ phase17l_compare_csr <- function(case, tolerance=1e-10) {
   csr <- do.call(sblr:::mtblr_csr_internal,args)
   testthat::expect_equal(block,csr,tolerance=tolerance)
 }
+
+phase17m_public_case <- function(nt = 2L, filters = rep("hard_truncate", nt),
+                                 blocks = rep(list(c(1L, 3L)), nt),
+                                 rows = NULL) {
+  dosage <- rbind(c(0,1,2,0,1,2,1,0), c(2,1,0,2,1,0,NA,2),
+                  c(0,0,1,1,2,2,1,0), c(2,2,1,1,0,0,1,2))
+  bed <- tempfile(fileext = ".bed")
+  phase17l_write_bed(bed, dosage)
+  if (is.null(rows)) rows <- seq_len(ncol(dosage))
+  ids <- paste0("m", seq_len(nrow(dosage)))
+  af <- c(.25, .35, .4, .3)
+  metadata <- data.frame(
+    marker_id = ids, chromosome_or_file = 1L,
+    bed_column = seq_along(ids), allele_frequency = af)
+  wy <- setNames(lapply(seq_len(nt), function(t)
+    setNames(c(1.2,-.6,.5,.9) + .08 * (t - 1L), ids)),
+    paste0("T", seq_len(nt)))
+  ww <- setNames(lapply(seq_len(nt), function(t)
+    setNames(rep(length(rows), length(ids)), ids)), names(wy))
+  stats <- list(
+    wy = wy, ww = ww, yy = setNames(rep(50, nt), names(wy)),
+    n = rep(length(rows), nt), n_bed = ncol(dosage), m = length(ids),
+    bed_files = bed, cls = list(seq_along(ids)), af = list(af),
+    rows = rows, marker_names = ids, trait_names = names(wy),
+    marker_metadata = metadata, scale = "standardized_genotype",
+    source = "make_summary_stats")
+  glist <- list(
+    bedfiles = bed, n = ncol(dosage), ids = paste0("i", seq_len(ncol(dosage))),
+    rsids = list(ids), rsidsLD = list(ids), af = list(af))
+  list(stats = stats, Glist = glist, blocks = blocks, filters = filters)
+}
+
+phase17m_call <- function(case, operator_sharing = "auto", ...) {
+  args <- list(
+    stats = case$stats, Glist = case$Glist,
+    block_start = case$blocks, eigen_filter = case$filters,
+    eigen_tau = .01, eigen_eta = .5,
+    operator_sharing = operator_sharing,
+    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
+    nit = 8L, nburn = 3L, nthin = 2L, seed = 17013L)
+  overrides <- list(...)
+  args[names(overrides)] <- overrides
+  do.call(mtblr_block_eigen, args)
+}

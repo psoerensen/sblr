@@ -71,10 +71,10 @@ test_that("descriptor validation rejects malformed execution before MCMC", {
   expect_error(do.call(sblr:::mtblr_block_eigen_internal,x$block),"method = 4")
 })
 
-test_that("internal registration does not create a public block-eigen route", {
+test_that("internal registration stays private beside the Phase 17M public route", {
   expect_true(exists("mtblr_block_eigen_internal",asNamespace("sblr"),inherits=FALSE))
   expect_false("mtblr_block_eigen_internal" %in% getNamespaceExports("sblr"))
-  expect_false("mtblr_block_eigen" %in% getNamespaceExports("sblr"))
+  expect_true("mtblr_block_eigen" %in% getNamespaceExports("sblr"))
   expect_false("block_start" %in% names(formals(sblr::mtblr_csr)))
   native <- blr_source_text("src/mtblr.cpp")
   expect_false(grepl("run_mt_block_eigen_core[\\s\\S]*mtblr_eigen\\(", native))

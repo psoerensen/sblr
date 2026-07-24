@@ -80,6 +80,6 @@ test_that("Phase 8 protected implementations and public namespace are unchanged"
  expected <- c("4d0eb5380007195a8d34e7b2e081dec4", "c548157cc9e5804272e714983bdcb798",
                "bf1d4b73065207ca361c7abdab3cb253", "4dac6bef2df917613df8e1a827640303",
                "72d4a9fa0a7cd51071328c2d62d0192b",
-               "a1f389e8ea9ab5abef440767a11b8378")
+               "1aae574d7dc2a324d4460e3477639f9a")
  expect_identical(unname(tools::md5sum(vapply(paths, phase8_path, character(1)))), expected)
 })

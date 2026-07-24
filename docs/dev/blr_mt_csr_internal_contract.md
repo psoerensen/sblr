@@ -93,3 +93,9 @@ continues to accept an already aligned positional domain.
 # Parallel Phase 17L representation
 
 The canonical CSR route remains unchanged. Phase 17L adds a sibling block-eigen data view that uses the same representation seam and shared statistical core, result, finalizer, and legacy adapter.
+
+# Phase 17M raw conversion protection
+
+CSR and public block-eigen raw boundaries now share one representation-neutral
+legacy-to-raw converter. The CSR backend name, namespaces, dimensions,
+diagnostics, alignment enrichment, and formatted output remain unchanged.

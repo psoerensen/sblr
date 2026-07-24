@@ -399,3 +399,10 @@ public selector, scheduled execution, LD-swap, or MT block-eigen route exists.
 # Phase 17L internal capability
 
 The internal MT BayesC block-eigen route supports shared and trait-specific operators, independent block boundaries, mixed filters, and trait-specific analysis sample sizes. It is serial, single-chain, internal-only, and does not model sample overlap. Public scalar and MT routes remain CSR/dense as previously documented.
+
+# Phase 17M public capability
+
+`mtblr_block_eigen()` is the supported public same-BED summary route for
+serial multivariate BayesC. External GWAS/reference-panel combinations,
+sample-overlap modeling, non-diagonal residual covariance, OpenMP, and
+multichain execution remain unsupported.

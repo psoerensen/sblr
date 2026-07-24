@@ -1015,3 +1015,10 @@ or output schema was added in Phase 17K.
 # Internal MT block-eigen workflow
 
 Phase 17L adds no user workflow or output schema. Its internal route returns the existing MT legacy native structure through the shared finalizer/adapter and is used only for deterministic development validation.
+
+# Public MT block-eigen workflow
+
+Phase 17M adds `mtblr_block_eigen()` and retains `mtblr_raw` version 1 and the
+shared `mtblr_fit` formatter. Fits add `block_diagnostics` and
+`operator_metadata`; users should retain the original stats object externally
+if they need the unprojected `wy`.

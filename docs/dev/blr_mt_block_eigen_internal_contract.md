@@ -91,3 +91,9 @@ Legacy `mtblr_eigen()` has different storage, sampler, retention, and output log
 ## 23. Public Phase 17M requirements
 
 A future public adapter must define biological alignment, reference/BED metadata, selected rows and columns, frequencies, blocks, filters, sharing policy, projection provenance, named raw output, fit formatting, and diagnostics.
+
+## 24. Phase 17M public adapter
+
+Phase 17M supplies those contracts through `mtblr_block_eigen()`. The internal
+legacy symbol remains unchanged; `mtblr_block_eigen_raw_internal()` consumes
+the same single adapter result and adds actual-build diagnostics.

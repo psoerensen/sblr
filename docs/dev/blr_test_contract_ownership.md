@@ -72,3 +72,9 @@ Frozen binary fixtures and generated wrappers may retain hashes. Actively mainta
 # Phase 17L ownership
 
 `test-blr-framework-phase17l.R` owns MT block-eigen contracts, internal execution reductions, descriptor validation, transformed-summary identities, shared-core structure, and public/research exclusion. Phase 17K continues to own filtering mathematics and scalar block-eigen behavior.
+
+# Phase 17M ownership
+
+`test-blr-framework-phase17m.R` owns the public same-BED contract, named raw,
+provenance and alignment failures, one-based blocks, operator sharing,
+transformed-summary metadata, diagnostics, and public/internal reductions.

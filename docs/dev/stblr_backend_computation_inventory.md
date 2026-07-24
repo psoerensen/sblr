@@ -671,3 +671,9 @@ and SBayesRC borrow the same canonical view; no eigensystem persists at runtime.
 # Internal MT block-eigen execution (Phase 17L)
 
 `mtblr_block_eigen_internal()` builds canonical `BlockEigenStorage` owners from BED descriptors, retains matching transformed `wy`, and delegates through `MtBlockEigenDataView` to the Phase 17I shared MT BayesC core. It does not use the retained research `mtblr_eigen()` implementation.
+
+# Public MT block-eigen execution (Phase 17M)
+
+`mtblr_block_eigen()` validates same-BED provenance and delegates to
+`mtblr_block_eigen_raw_internal()`. The raw adapter builds and samples once;
+summary `ww` never enters the runtime operator.

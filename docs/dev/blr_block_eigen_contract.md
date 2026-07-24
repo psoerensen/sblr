@@ -98,3 +98,10 @@ New scalar/MT block-filtered execution must extend this owner/view contract rath
 # Phase 17L MT consumption
 
 An internal MT adapter now consumes one canonical `BlockEigenView` and its matching builder-transformed `wy` per trait. Shared, shared-boundary-only, and independent operators are representable; public provenance remains future work.
+
+# Phase 17M public consumption
+
+The public route supplies only validated same-BED descriptors. Diagnostics are
+captured during the canonical build, native starts remain zero-based, and the
+formatted fit adds one-based diagnostic starts. No operator is rebuilt for
+inspection.

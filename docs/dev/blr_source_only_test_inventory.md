@@ -22,3 +22,8 @@ Portable fixture MD5 checks, numerical references, public schemas, alignment, up
 | `test-blr-framework-phase17l.R` | internal registration does not create a public block-eigen route (source-text portion) | `src/mtblr.cpp` | Verifies research dependency absence in source | fast framework tier |
 
 All Phase 17L execution, reduction, validation, and residual-identity blocks remain installed-package requirements.
+
+Phase 17M public execution, provenance, validation, named-raw, fit-formatting,
+diagnostic, and numerical-equivalence tests are installed-package
+requirements. Only Phase 17M source-text singularity and forbidden-route
+assertions may skip when no source tree is available.

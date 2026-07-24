@@ -47,6 +47,7 @@ A list with genome-wide sufficient statistics:
   \item{ww}{List of marker cross-products, one vector per trait.}
   \item{yy}{Trait sums of squares.}
   \item{n}{Analysis sample size after phenotype-to-BED matching.}
+  \item{n_bed}{Original sample count in the BED file.}
   \item{m}{Total number of markers.}
   \item{chr}{Chromosome/file indices used.}
   \item{bed_files}{BED files used, in the same order as `chr`.}

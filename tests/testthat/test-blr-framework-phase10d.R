@@ -103,7 +103,7 @@ test_that("Phase 10D protects canonical and unrelated native backends", {
     "src/st_cpg_omp_csr_group.cpp" = "87e923f7f8ee6420e39d9f041263d11b",
     "src/st_cpg_omp_csr_annot.cpp" = "59bd49f048d116d0fe61d73d79bd4693",
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "NAMESPACE" = "a1f389e8ea9ab5abef440767a11b8378")
+    "NAMESPACE" = "1aae574d7dc2a324d4460e3477639f9a")
   expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path, character(1)))),
     unname(protected))
 })

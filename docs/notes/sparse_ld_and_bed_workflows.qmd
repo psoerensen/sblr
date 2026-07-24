@@ -496,3 +496,8 @@ predictive checks. Compact output guidance is covered in
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
 `mtblr_csr()` accepts one raw LD reference or one per trait. A repeated raw
 reference with differing `ww` is rebuilt and scaled separately per trait.
+
+`mtblr_block_eigen()` instead reconstructs filtered blocks directly from the
+same selected BED genotypes used for `make_summary_stats()`. Explicit
+one-based block starts are mandatory. External GWAS summaries with a separate
+BED reference are rejected.

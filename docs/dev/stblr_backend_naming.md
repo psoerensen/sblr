@@ -430,3 +430,9 @@ Do not use names implying retained eigenvectors or low-rank runtime factors.
 # Phase 17L naming
 
 “MT block-eigen” names the internal canonical route using `BlockEigenView`; it does not refer to legacy `mtblr_eigen()`. The new native maintenance symbol is `mtblr_block_eigen_internal()` and is not a public API.
+
+# Phase 17M naming
+
+The public function is `mtblr_block_eigen()` and its raw backend identifier is
+`mt_block_eigen_bayesc`. `mtblr_eigen()` remains an unsupported research
+symbol and is not an implementation component of the public route.

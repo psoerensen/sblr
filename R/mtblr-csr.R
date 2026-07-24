@@ -12,6 +12,18 @@
   metadata
 }
 
+.mtblr_stats_provenance <- function(x, marker_ids, marker_metadata, source,
+                                    scale, sample_size) {
+  fields <- c("bed_files", "n_bed", "cls", "rows", "af")
+  out <- setNames(lapply(fields, function(field) x[[field]]), fields)
+  out$marker_ids <- marker_ids
+  out$marker_metadata <- marker_metadata
+  out$source <- unname(source)
+  out$scale <- unname(scale)
+  out$sample_size <- sample_size
+  out
+}
+
 .mtblr_normalize_stats <- function(stats) {
   is_multi <- is.list(stats) && all(c("wy", "ww", "yy") %in% names(stats))
   if (is_multi) {
@@ -30,6 +42,7 @@
     scale <- rep(stats$scale %||% NA_character_, nt)
     n <- stats$n
     yy <- stats$yy
+    provenance_source <- replicate(nt, stats, simplify = FALSE)
   } else if (is.list(stats) && length(stats) && !is.null(names(stats)) && all(nzchar(names(stats)))) {
     entries <- stats; nt <- length(entries); trait_names <- names(entries)
     valid <- vapply(entries, function(x) is.list(x) && all(c("wy", "ww", "yy", "n") %in% names(x)), logical(1))
@@ -51,6 +64,7 @@
     scale <- vapply(entries, function(x) x$scale %||% NA_character_, character(1))
     yy <- vapply(entries, function(x) as.numeric(x$yy)[1L], numeric(1))
     n <- vapply(entries, function(x) as.integer(x$n)[1L], integer(1))
+    provenance_source <- entries
   } else {
     stop("stats must be one multi-trait stats object or a named list of single-trait stats objects.", call. = FALSE)
   }
@@ -73,11 +87,15 @@
     .mtblr_marker_metadata(x)$marker_id
   })
   marker_metadata <- Map(.mtblr_marker_metadata, marker_by_trait, marker_metadata)
+  genotype_provenance <- lapply(seq_len(nt), function(t)
+    .mtblr_stats_provenance(provenance_source[[t]], marker_by_trait[[t]],
+      marker_metadata[[t]], source[t], scale[t], as.integer(n[t])))
   names(wy) <- names(ww) <- trait_names
   list(wy = lapply(wy, as.numeric), ww = lapply(ww, as.numeric), yy = as.numeric(yy),
        n = as.integer(n), m = m, nt = nt, trait_names = trait_names,
        marker_ids = marker_by_trait, marker_metadata = marker_metadata,
-       source = source, scale = scale)
+       source = source, scale = scale,
+       genotype_provenance = genotype_provenance)
 }
 
 .mtblr_glist_descriptor <- function(Glist) {
@@ -122,6 +140,7 @@
 }
 
 .mtblr_normalize_scale <- function(x) {
+  x <- unname(x)
   if (isTRUE(x)) return("standardized_genotype")
   if (identical(x, "standardized_genotype")) return(x)
   NA_character_
@@ -152,7 +171,7 @@
       if (any(comp & !(se == le & so == lo))) stop("Strand-complement-only allele matches are not accepted.", call. = FALSE)
       if (any(se != le | so != lo)) stop("Stats and LD allele orientation differs.", call. = FALSE)
       allele_status <- "exact"
-    } else if (identical(stats$source[t], "make_summary_stats") && isTRUE(ld$descriptors[[t]]$by_construction)) {
+    } else if (identical(unname(stats$source[t]), "make_summary_stats") && isTRUE(ld$descriptors[[t]]$by_construction)) {
       provenance_fields <- c("chromosome_or_file", "bed_column")
       if (!all(provenance_fields %in% names(sm)) || !all(provenance_fields %in% names(lm)) ||
           any(vapply(provenance_fields, function(field)
@@ -228,6 +247,35 @@
   for (x in c("covb", "covg", "cove", "vb", "vg", "ve")) if (!identical(dim(raw$variance[[x]]), c(nt, nt))) stop("Invalid mtblr_raw covariance dimensions.", call. = FALSE)
   if (length(raw$pi$final) != nm || length(raw$pi$mean) != nm || !identical(dim(raw$model$patterns), c(nm, nt))) stop("Invalid mtblr_raw probability/model dimensions.", call. = FALSE)
   if (any(!raw$model$patterns %in% 0:1) || length(raw$marker$order) != m) stop("Invalid mtblr_raw patterns or marker order.", call. = FALSE)
+  if (identical(raw$meta$backend, "mt_block_eigen_bayesc")) {
+    block <- raw$diagnostics$block_eigen
+    if (!is.list(block) || length(block$owner_count) != 1L ||
+        !is.finite(block$owner_count) || block$owner_count < 1L) {
+      stop("Invalid mtblr_raw block-eigen owner count.", call. = FALSE)
+    }
+    owner_count <- as.integer(block$owner_count)
+    if (length(block$trait_owner) != nt ||
+        any(!is.finite(block$trait_owner)) ||
+        any(block$trait_owner < 1L | block$trait_owner > owner_count) ||
+        !is.list(block$owners) || length(block$owners) != owner_count) {
+      stop("Invalid mtblr_raw block-eigen owner mapping.", call. = FALSE)
+    }
+    required_blocks <- c("start", "size", "n_kept", "mu_min", "shrink")
+    for (owner in block$owners) {
+      blocks <- owner$blocks
+      if (!is.data.frame(blocks) || !all(required_blocks %in% names(blocks)) ||
+          !nrow(blocks) || any(!is.finite(blocks$start)) ||
+          any(!is.finite(blocks$size)) || any(blocks$size <= 0) ||
+          any(!is.finite(blocks$n_kept)) || any(blocks$n_kept <= 0) ||
+          any(blocks$n_kept > blocks$size) ||
+          any(!is.finite(blocks$shrink)) ||
+          any(blocks$shrink < 0 | blocks$shrink > 1) ||
+          !identical(as.integer(blocks$start), cumsum(c(0L, head(as.integer(blocks$size), -1L)))) ||
+          sum(blocks$size) != m) {
+        stop("Invalid mtblr_raw block-eigen block diagnostics.", call. = FALSE)
+      }
+    }
+  }
   raw
 }
 
