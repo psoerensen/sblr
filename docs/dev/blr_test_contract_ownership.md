@@ -78,3 +78,10 @@ Frozen binary fixtures and generated wrappers may retain hashes. Actively mainta
 `test-blr-framework-phase17m.R` owns the public same-BED contract, named raw,
 provenance and alignment failures, one-based blocks, operator sharing,
 transformed-summary metadata, diagnostics, and public/internal reductions.
+
+# Phase 17N ownership
+
+`test-blr-framework-phase17n.R` and
+`helper-mtblr-bed-contract.R` own the implementation-plan BED decoder, dense-X
+algebra, sample-residual, covariance, conditional, memory, and forbidden-route
+contracts. Existing Phase 15 and 17 owners remain authoritative for production.

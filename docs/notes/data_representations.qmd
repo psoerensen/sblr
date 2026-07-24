@@ -380,3 +380,10 @@ The internal MT block-eigen route borrows one packed filtered block operator per
 same-BED/by-construction summaries. Runtime storage is reconstructed dense
 blocks, not low-rank factors; returned `wy` is the transformed value consumed
 by the sampler.
+
+# Planned individual-level MT representation
+
+Phase 17N selects one move-only `PackedBedMatrix`, the existing immutable
+`BedPackedGenotypeView`, column-major `n x nt` phenotype/residual matrices, and
+one reusable decoded double marker. This is a contract only; no MT BED sampler
+exists yet.

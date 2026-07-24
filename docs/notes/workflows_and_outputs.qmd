@@ -1022,3 +1022,9 @@ Phase 17M adds `mtblr_block_eigen()` and retains `mtblr_raw` version 1 and the
 shared `mtblr_fit` formatter. Fits add `block_diagnostics` and
 `operator_metadata`; users should retain the original stats object externally
 if they need the unprojected `wy`.
+
+# Planned individual-level MT workflow
+
+No `mtblr_bed()` workflow exists. The planned internal Phase 17O route uses
+complete centered pre-adjusted phenotypes and reconstructs marker-space
+`wy=X'Y` and `r=X'R_final` for the existing MT raw/fit semantics.

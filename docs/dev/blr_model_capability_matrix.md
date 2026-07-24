@@ -406,3 +406,10 @@ The internal MT BayesC block-eigen route supports shared and trait-specific oper
 serial multivariate BayesC. External GWAS/reference-panel combinations,
 sample-overlap modeling, non-diagonal residual covariance, OpenMP, and
 multichain execution remain unsupported.
+
+# Phase 17N planned capability
+
+No individual-level MT route exists. The Phase 17O internal target is serial,
+one-chain BayesC with one shared packed genotype matrix, complete finite
+pre-adjusted phenotypes, corrected joint patterns, canonical full residual
+covariance, and a diagonal reduction mode.

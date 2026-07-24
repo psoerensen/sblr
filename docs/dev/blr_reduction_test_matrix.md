@@ -692,3 +692,10 @@ Portable Phase 17M tests own public/internal equality, raw schema, provenance
 rejection, block/filter/sharing validation, transformed `wy`, diagnostics, and
 fit formatting. Phase 17J, 17L, and 17K remain the CSR, internal MT, and scalar
 protection owners.
+
+# Phase 17N contract oracles
+
+Portable Phase 17N tests independently decode two-file packed BED data and own
+code/padding/order, standardization, `X'X`, `X'Y`, sample-residual, genetic
+covariance, residual-cross-product, and full/diagonal marker-conditional
+identities. Source-only blocks assert that no sampler or public route exists.

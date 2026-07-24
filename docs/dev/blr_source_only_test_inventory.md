@@ -27,3 +27,8 @@ Phase 17M public execution, provenance, validation, named-raw, fit-formatting,
 diagnostic, and numerical-equivalence tests are installed-package
 requirements. Only Phase 17M source-text singularity and forbidden-route
 assertions may skip when no source tree is available.
+
+Phase 17N BED decoding, dense algebra, row/marker selection, sample-residual,
+marker-conditional, and contract-object tests are portable. Only production
+source inventory, no-MCMC-I/O, immutable-view, and forbidden sampler/export
+assertions use `blr_repo_path()` and skip narrowly without a source checkout.

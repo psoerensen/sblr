@@ -501,3 +501,7 @@ reference with differing `ww` is rebuilt and scaled separately per trait.
 same selected BED genotypes used for `make_summary_stats()`. Explicit
 one-based block starts are mandatory. External GWAS summaries with a separate
 BED reference are rejected.
+
+Phase 17N separately formalizes a future individual-level MT BED route: one
+shared selected genotype matrix, complete same-individual phenotypes,
+sample-space residuals, full residual covariance, and no public interface.

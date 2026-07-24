@@ -677,3 +677,10 @@ and SBayesRC borrow the same canonical view; no eigensystem persists at runtime.
 `mtblr_block_eigen()` validates same-BED provenance and delegates to
 `mtblr_block_eigen_raw_internal()`. The raw adapter builds and samples once;
 summary `ww` never enters the runtime operator.
+
+# Planned internal MT packed-BED computation (Phase 17N)
+
+Phase 17N adds no backend. The Phase 17O plan uses one `PackedBedMatrix`,
+`BedPackedGenotypeView`, a reusable decoded double marker, `arma::mat`
+sample residuals, full-`E` masked-latent marker algebra, and final `X'R`
+reconstruction into `mtblr_raw` version 1.

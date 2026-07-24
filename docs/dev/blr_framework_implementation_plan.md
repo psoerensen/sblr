@@ -1552,3 +1552,11 @@ Phase 17M activates `mtblr_block_eigen()` for same-BED/by-construction
 statistics. It adds strict provenance, explicit one-based blocks, filter and
 sharing policy, named raw diagnostics, and shared fit formatting while leaving
 the Phase 17L numerical route unchanged.
+
+# Phase 17N
+
+Phase 17N formalizes, without implementing, the future internal individual-level
+MT BayesC route. It selects one `PackedBedMatrix` owner and the existing common
+borrowed view, complete centered pre-adjusted phenotypes, sample-space residuals,
+full residual covariance with a diagonal reduction, decoded-marker workspace,
+and `mtblr_raw` version 1 reconstruction.
