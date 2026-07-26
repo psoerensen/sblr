@@ -453,3 +453,6 @@ name. It is not registered or callable in Phase 17Q; backend naming remains
 Phase 17R registers `mtblr_bed_chains_internal` as an internal maintenance
 route. Both serial and chains routes retain backend `mt_bed_bayesc`, data level
 `individual`, and `mtblr_raw` version 1; no public export is added.
+
+Phase 17S retains `mt_bed_bayesc` for both public single- and multichain calls.
+Execution topology is represented by version-1 chain metadata, not a new name.

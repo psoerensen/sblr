@@ -106,3 +106,8 @@ Repository-only assertions own the guarantee that no implementation exists.
 `helper-mtblr-bed-chains-internal.R` now own the internal execution reductions,
 seed sequence, worker equality, failure translation, stability, retained-chain,
 raw validation, formatting, and public serial-route protection.
+
+`test-blr-framework-phase17s.R` and
+`helper-mtblr-bed-public-chains.R` own public chain controls, dispatch,
+multichain metadata/memory, default serial compatibility, BLAS preservation,
+and public/internal numerical reductions. Phase 17R retains numerical ownership.

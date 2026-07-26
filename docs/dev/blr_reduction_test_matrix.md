@@ -723,3 +723,7 @@ Phase 17R owns full/diagonal single-chain exactness, two/four-chain serial
 reproducibility, serial/static-OpenMP equality, default/explicit seed paths,
 primary final state, pooled counts, trace means, compact records, deterministic
 failure ordering, and extended raw/formatter validation.
+
+Phase 17S owns public default-versus-serial reductions, public/internal chains
+equality, serial/OpenMP equality, explicit/default seeds, retained output,
+alignment/initialization variants, memory scaling, and BLAS preservation.

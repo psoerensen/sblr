@@ -58,10 +58,14 @@
   list(beta = beta, b = b, state = state, policy = policy)
 }
 
-.mtblr_bed_memory_estimate <- function(n, m, nt, nmodels, trace_length) {
+.mtblr_bed_memory_estimate <- function(
+  n, m, nt, nmodels, trace_length,
+  nchains = 1L, ncores = 1L, keep_chains = FALSE,
+  used_workers = NULL
+) {
   bytes_per_marker <- ceiling(n / 4)
   stride <- 64 * ceiling(bytes_per_marker / 64)
-  components <- c(
+  legacy_components <- c(
     packed_genotype = m * stride,
     phenotype = 8 * n * nt,
     sample_residual = 8 * n * nt,
@@ -77,14 +81,72 @@
     final_marker_r = 8 * m * nt,
     traces = 8 * trace_length * 3 * nt
   )
-  total <- sum(components)
+  shared_names <- c("packed_genotype", "phenotype", "marker_maps",
+                    "marker_order_and_sets", "marker_wy")
+  private_names <- c("sample_residual", "decoded_marker_workspace",
+                     "covariance_work", "model_work")
+  result_names <- c("effective_effects", "latent_effects", "state", "traces")
+  pooled_names <- "final_marker_r"
+  shared_components <- legacy_components[shared_names]
+  private_components <- legacy_components[private_names]
+  result_components <- legacy_components[result_names]
+  pooled_components <- legacy_components[pooled_names]
+  retained_components <- c(
+    marker_bm_dm_b = 3 * 8 * m * nt,
+    marker_state = 4 * m * nt,
+    traces = 8 * trace_length * 3 * nt,
+    covariance_matrices = 6 * 8 * nt * nt,
+    pi_final_and_mean = 2 * 8 * nmodels,
+    diagnostics = 8 * 8
+  )
+  requested_workers <- min(ncores, nchains)
+  if (is.null(used_workers)) used_workers <- requested_workers
+  shared_bytes <- sum(shared_components)
+  private_bytes <- sum(private_components)
+  result_bytes <- sum(result_components)
+  retained_bytes <- sum(retained_components)
+  pooled_bytes <- sum(pooled_components)
+  retained_total <- if (keep_chains) nchains * retained_bytes else 0
+  total <- shared_bytes + requested_workers * private_bytes +
+    nchains * result_bytes + retained_total + pooled_bytes
+  execution_total <- shared_bytes + used_workers * private_bytes +
+    nchains * result_bytes + retained_total + pooled_bytes
+  components <- if (nchains == 1L && requested_workers == 1L &&
+                    !keep_chains) legacy_components else c(
+    shared_components,
+    private_worker_copies = requested_workers * private_bytes,
+    chain_result_copies = nchains * result_bytes,
+    retained_chain_copies = retained_total,
+    pooled_output = pooled_bytes
+  )
   list(
     label = "analytical working-memory estimate",
+    estimate_kind = "analytical upper-bound estimate",
     measured_rss = FALSE,
     measured_peak_rss = FALSE,
     components_bytes = components,
+    shared_components_bytes = shared_components,
+    shared_bytes = shared_bytes,
+    private_components_bytes = private_components,
+    private_state_bytes_per_worker = private_bytes,
+    result_components_bytes = result_components,
+    result_bytes_per_chain = result_bytes,
+    retained_components_bytes = retained_components,
+    retained_chain_bytes_per_chain = retained_bytes,
+    pooled_output_bytes = pooled_bytes,
+    nchains = as.integer(nchains),
+    requested_cores = as.integer(ncores),
+    requested_worker_count = as.integer(requested_workers),
+    used_workers = as.integer(used_workers),
+    keep_chains = keep_chains,
+    estimated_concurrent_bytes = shared_bytes + requested_workers * private_bytes,
+    estimated_chain_results_bytes = nchains * result_bytes,
+    estimated_retained_output_bytes = retained_total,
     estimated_total_bytes = total,
-    estimated_total_gib = total / 1024^3
+    estimated_total_gib = total / 1024^3,
+    execution_estimated_concurrent_bytes = shared_bytes + used_workers * private_bytes,
+    execution_estimated_total_bytes = execution_total,
+    execution_estimated_total_gib = execution_total / 1024^3
   )
 }
 
@@ -145,6 +207,44 @@
   x
 }
 
+.mtblr_bed_positive_integer <- function(x, name) {
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
+      x < 1 || x > .Machine$integer.max || x != floor(x)) {
+    stop(name, " must be a positive integer-compatible scalar within the R integer range.",
+         call. = FALSE)
+  }
+  as.integer(x)
+}
+
+.mtblr_bed_chain_controls <- function(nchains, ncores, chain_seeds,
+                                      keep_chains) {
+  nchains <- .mtblr_bed_positive_integer(nchains, "nchains")
+  ncores <- .mtblr_bed_positive_integer(ncores, "ncores")
+  keep_chains <- .mtblr_bed_logical(keep_chains, "keep_chains")
+  requested <- chain_seeds
+  if (is.null(chain_seeds)) {
+    native <- integer()
+  } else {
+    if (!is.numeric(chain_seeds) || length(chain_seeds) != nchains ||
+        any(!is.finite(chain_seeds)) || any(chain_seeds != floor(chain_seeds)) ||
+        any(chain_seeds < -2147483648 | chain_seeds > 2147483647)) {
+      stop(paste0(
+        "chain_seeds must be NULL or a length-nchains integer-compatible ",
+        "numeric vector within the signed 32-bit range."), call. = FALSE)
+    }
+    native <- unname(chain_seeds)
+  }
+  list(nchains = nchains, ncores = ncores, requested = requested,
+       native = native, keep_chains = keep_chains)
+}
+
+.mtblr_bed_blas_environment <- function() {
+  variables <- c("OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
+                 "VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS",
+                 "OMP_THREAD_LIMIT")
+  as.list(Sys.getenv(variables, unset = NA_character_))
+}
+
 #' Fit joint multivariate BayesC models directly from PLINK BED genotypes
 #'
 #' Fits one joint individual-level multivariate BayesC likelihood using a
@@ -183,12 +283,41 @@
 #' @param ssb_prior,sse_prior Covariance prior scale matrices.
 #' @param updateB,updateE,updatePi Scalar logical update controls.
 #' @param nub,nue Covariance prior degrees of freedom.
-#' @param nit,nburn,nthin MCMC controls for one serial chain.
-#' @param seed Explicit fit-local native RNG seed.
+#' @param nit,nburn,nthin MCMC controls applied identically to every chain.
+#' @param seed Base fit-local native RNG seed when `chain_seeds` is `NULL`.
+#' @param nchains Number of complete joint-MT chains.
+#' @param ncores Requested package OpenMP chain workers. Used workers are capped
+#'   by `nchains`; this does not control BLAS threads.
+#' @param chain_seeds Optional signed 32-bit integer-compatible seed vector of
+#'   length `nchains`, retained in supplied order. Negative values represent
+#'   unsigned 32-bit seeds above the signed integer maximum.
+#' @param keep_chains Retain compact per-chain posterior records.
 #' @param memory_warning_gb Positive warning threshold in GiB, or `Inf`.
 #' @param verbose Print resolved execution metadata.
 #' @return An object of class `mtblr_fit` with BED diagnostics, phenotype
 #'   preprocessing, alignment provenance, and an analytical memory estimate.
+#'
+#' @section Multichain execution:
+#' Each chain fits one complete joint multivariate model. Chain-level OpenMP
+#' dispatch is static, and `ncores` is capped by `nchains`. If OpenMP is not
+#' available, a multi-core request warns once and runs serially. With
+#' `chain_seeds = NULL`, chain zero uses `seed` and later chains use the native
+#' modulo-2^32 `seed + 9176*c` policy; explicit signed seeds are used in their
+#' supplied order.
+#'
+#' Posterior marker means, covariance means, and model-probability means pool
+#' retained samples across chains. Traces are iterationwise chain means, while
+#' final effects, states, residual scores, covariance matrices, and final model
+#' probabilities come from primary chain 1. The `*_sd`, `*_min`, and `*_max`
+#' fields summarize per-chain posterior means; they are not posterior standard
+#' deviations, credible intervals, R-hat, ESS, or MCSE. Multiple chains alone
+#' do not establish convergence.
+#'
+#' Compact retained chains omit shared BED data, phenotypes, marker order,
+#' marker residuals, sample residuals, and genetic values. Timing is diagnostic
+#' and nondeterministic. The package never changes global BLAS settings; users
+#' should normally configure BLAS to one thread when running concurrent chain
+#' workers to avoid oversubscription.
 #' @export
 mtblr_bed <- function(
   y, Glist, covar = NULL, chr = NULL, cls = NULL, rows = NULL,
@@ -200,6 +329,7 @@ mtblr_bed <- function(
   ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
+  nchains = 1L, ncores = 1L, chain_seeds = NULL, keep_chains = FALSE,
   memory_warning_gb = 8, verbose = FALSE
 ) {
   if (missing(Glist) || is.null(Glist)) {
@@ -368,18 +498,28 @@ mtblr_bed <- function(
            call. = FALSE)
     }
   }
+  chain_control <- .mtblr_bed_chain_controls(
+    nchains, ncores, chain_seeds, keep_chains)
+  nchains <- chain_control$nchains
+  ncores <- chain_control$ncores
+  keep_chains <- chain_control$keep_chains
+  native_chain_seeds <- chain_control$native
   if (!is.numeric(memory_warning_gb) || length(memory_warning_gb) != 1L ||
       is.na(memory_warning_gb) || memory_warning_gb <= 0) {
     stop("memory_warning_gb must be a positive finite scalar or Inf.",
          call. = FALSE)
   }
   memory <- .mtblr_bed_memory_estimate(
-    nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn)
+    nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn,
+    nchains, ncores, keep_chains)
   if (memory$estimated_total_gib > memory_warning_gb) {
     warning(sprintf(
-      paste0("mtblr_bed analytical working-memory estimate (not measured peak RSS): ",
-             "n=%d, m=%d, nt=%d, models=%d, estimated %.6f GiB exceeds threshold %.6f GiB."),
+      paste0("mtblr_bed analytical upper-bound estimate (not measured RSS; ",
+             "not measured peak RSS): n=%d, m=%d, nt=%d, models=%d, ",
+             "nchains=%d, ncores=%d, requested workers=%d, keep_chains=%s, ",
+             "estimated %.6f GiB exceeds threshold %.6f GiB."),
       nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix),
+      nchains, ncores, memory$requested_worker_count, keep_chains,
       memory$estimated_total_gib, memory_warning_gb), call. = FALSE)
   }
   normalized_bed_files <- normalizePath(
@@ -411,8 +551,10 @@ mtblr_bed <- function(
   trait_metadata <- .mtblr_bed_trait_metadata(
     trait_metadata, trait_names, dat$n_used, preprocessing,
     residual_covariance)
+  blas_thread_environment <- .mtblr_bed_blas_environment()
+  blas_policy <- "package_does_not_modify_blas_threads"
 
-  raw <- mtblr_bed_internal(
+  raw <- mtblr_bed_chains_internal(
     bed_files = dat$bed_files, n_bed = dat$n_total, cls = dat$cls,
     rows = dat$rows, af = frequencies, Y = Y,
     beta_init = lapply(seq_len(dat$nt), function(t) initialization$beta[, t]),
@@ -425,8 +567,22 @@ mtblr_bed <- function(
     nub = nub, nue = nue, updateB = updateB, updateE = updateE,
     updatePi = updatePi, residual_covariance = residual_covariance,
     nit = as.integer(nit), nburn = as.integer(nburn),
-    nthin = as.integer(nthin), seed = as.integer(seed), method = 4L)
+    nthin = as.integer(nthin), seed = as.integer(seed), method = 4L,
+    nchains = nchains, ncores = ncores,
+    chain_seeds = native_chain_seeds, keep_chains = keep_chains)
   raw <- .validate_mtblr_raw(raw)
+  bed_diagnostics <- raw$diagnostics$mt_bed
+  alignment$nchains <- nchains
+  alignment$ncores_requested <- ncores
+  alignment$used_workers <- as.integer(bed_diagnostics$used_workers)
+  alignment$openmp_available <- bed_diagnostics$openmp_available
+  alignment$chain_seeds <- bed_diagnostics$chain_seeds
+  alignment$keep_chains <- keep_chains
+  alignment$chain_topology <- "one_complete_joint_mt_model_per_chain"
+  memory <- .mtblr_bed_memory_estimate(
+    nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn,
+    nchains, ncores, keep_chains,
+    used_workers = as.integer(bed_diagnostics$used_workers))
   raw$model$names <- model_spec$names
   raw$pi$names <- model_spec$names
   raw$data <- list(
@@ -440,7 +596,13 @@ mtblr_bed <- function(
     phenotype_units = "retained_not_scaled",
     residual_covariance = residual_covariance,
     sets = set_spec$public, set_source = set_source,
-    memory_estimate = memory)
+    memory_estimate = memory,
+    nchains = nchains, ncores_requested = ncores,
+    used_workers = as.integer(bed_diagnostics$used_workers),
+    openmp_available = bed_diagnostics$openmp_available,
+    chain_seeds = bed_diagnostics$chain_seeds,
+    keep_chains = keep_chains, blas_policy = blas_policy,
+    blas_thread_environment = blas_thread_environment)
   raw$alignment <- alignment
   input <- list(
     method = "bayesc", model = "bayesc", backend = "mt_bed_bayesc",
@@ -465,12 +627,26 @@ mtblr_bed <- function(
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     nit = as.integer(nit), nburn = as.integer(nburn),
     nthin = as.integer(nthin), seed = as.integer(seed),
+    nchains = nchains, ncores = ncores, ncores_requested = ncores,
+    used_workers = as.integer(bed_diagnostics$used_workers),
+    openmp_available = bed_diagnostics$openmp_available,
+    base_seed = as.integer(seed),
+    chain_seeds_requested = chain_control$requested,
+    chain_seeds_resolved = bed_diagnostics$chain_seeds,
+    chain_seed_policy = "native_uint32_base_plus_9176_or_explicit_signed_seeds",
+    keep_chains = keep_chains,
+    primary_chain = 1L, final_state_policy = "primary_chain",
+    posterior_summary_policy = "pooled_retained_samples",
+    trace_policy = "iterationwise_chain_mean",
+    blas_policy = blas_policy,
+    blas_thread_environment = blas_thread_environment,
     trait_metadata = trait_metadata, marker_metadata = marker_metadata,
     alignment = alignment, memory_estimate = memory,
     memory_warning_gb = memory_warning_gb)
   if (isTRUE(verbose)) {
     print(input[c("backend", "n_used", "m", "nt",
-                  "residual_covariance", "seed")])
+                  "residual_covariance", "seed", "nchains", "ncores",
+                  "used_workers")])
   }
   fit <- .as_mtblr_fit(
     raw, marker_metadata$marker_id, trait_names, marker_metadata,

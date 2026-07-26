@@ -144,20 +144,15 @@ test_that("Phase 17R RNG state is fit-local and fresh-process reproducible", {
                    phase17r_without_timing(expected))
 })
 
-test_that("Phase 17R preserves the public route and source architecture", {
-  expect_false(any(c("nchains", "ncores", "chain_seeds", "keep_chains") %in%
-                     names(formals(mtblr_bed))))
+test_that("Phase 17R preserves its internal source architecture", {
   root <- blr_repo_path()
   skip_if(is.null(root), "source checkout unavailable")
   mt <- readLines(file.path(root, "src", "mtblr.cpp"), warn = FALSE)
   execution <- readLines(file.path(
     root, "src", "blr_mt_bed_chains_execution_impl.h"), warn = FALSE)
-  public <- readLines(file.path(root, "R", "mtblr-bed.R"), warn = FALSE)
   expect_equal(sum(grepl("mtblr_bed_chains_internal(", mt, fixed = TRUE)), 1L)
   expect_equal(sum(grepl("#pragma omp parallel for schedule(static)",
                          execution, fixed = TRUE)), 1L)
   expect_equal(sum(grepl("run_mt_bed_bayesc_core(", execution,
                          fixed = TRUE)), 1L)
-  expect_equal(sum(grepl("mtblr_bed_internal(", public, fixed = TRUE)), 1L)
-  expect_false(any(grepl("mtblr_bed_chains_internal", public, fixed = TRUE)))
 })

@@ -252,3 +252,10 @@ prepares one stationary owner/view, dispatches chain-only tasks through one
 static OpenMP loop when available, captures all errors, pools actual counts,
 averages traces, uses chain 1 final state, computes sample-SD stability, and
 optionally returns compact chains. Public activation remains Phase 17S.
+
+## Phase 17S activation status
+
+The four chain controls are now public. Every `mtblr_bed()` call executes the
+chains route once, including the default one-chain reduction. Public metadata
+reports requested/used workers, resolved seeds, aggregation policies, BLAS
+environment, stability, optional compact records, and multichain memory.

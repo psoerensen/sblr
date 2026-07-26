@@ -405,3 +405,6 @@ Phase 17R now implements it internally: packed bytes, Y, maps, X'Y, and order
 exist once; each live chain owns only mutable Gibbs state, residual, decoded
 marker workspace, RNG, traces, and accumulators. Compact retained records never
 duplicate shared preparation data.
+
+Phase 17S exposes compact chains on request. Public memory metadata continues
+to count packed bytes, phenotype, maps, marker X'Y, and order exactly once.

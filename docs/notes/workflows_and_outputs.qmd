@@ -1046,3 +1046,7 @@ The Phase 17R internal chains workflow returns pooled posterior summaries,
 iterationwise mean traces, chain-1 final state, marker stability, diagnostics,
 and optional compact `chain1`, `chain2`, ... records. The public workflow remains
 serial until Phase 17S.
+
+Phase 17S activates public serial or chain-parallel execution through
+`nchains`, `ncores`, `chain_seeds`, and `keep_chains`. Pooled summaries,
+chain-1 final state, trace means, and stability retain distinct semantics.

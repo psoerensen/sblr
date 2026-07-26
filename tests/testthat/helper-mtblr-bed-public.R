@@ -125,8 +125,10 @@ phase17p_compare_public_internal <- function(args, tolerance = 1e-12) {
   testthat::expect_identical(unname(fit$d), raw$marker$state)
   testthat::expect_identical(fit$marker_order, raw$marker$order)
   testthat::expect_equal(
-    list(fit$raw_schema_version, fit$input$backend, fit$input$data_level,
-         fit$bed_diagnostics),
-    list(1L, "mt_bed_bayesc", "individual", raw$diagnostics$mt_bed))
+    list(fit$raw_schema_version, fit$input$backend, fit$input$data_level),
+    list(1L, "mt_bed_bayesc", "individual"))
+  serial_diagnostics <- names(raw$diagnostics$mt_bed)
+  testthat::expect_equal(fit$bed_diagnostics[serial_diagnostics],
+                         raw$diagnostics$mt_bed)
   invisible(fit)
 }

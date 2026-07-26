@@ -431,3 +431,7 @@ no trait, marker, or set parallelism is specified.
 Phase 17R makes chain-level multichain/OpenMP execution available through the
 internal `mtblr_bed_chains_internal()` maintenance route. Public `mtblr_bed()`
 remains serial and one-chain; no new statistical capability is introduced.
+
+Phase 17S makes serial and static chain-level OpenMP multichain execution public
+for individual-level MT BayesC. Full and diagonal residual covariance remain
+supported; no convergence diagnostic or other model family is added.

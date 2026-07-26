@@ -1589,3 +1589,9 @@ Phase 17R implements the internal prepared-data multichain dispatcher with
 optional static OpenMP, deterministic uint32 seeds and failures, pooled counts,
 trace means, primary-chain final state, stability, and compact optional chains.
 Phase 17S may activate it publicly without changing the core.
+
+## Phase 17S implementation status
+
+Public `mtblr_bed()` now exposes the four chain controls, dispatches the
+validated chains route once, and reports pooled, primary-chain, stability,
+compact-chain, BLAS, and multichain-memory metadata.

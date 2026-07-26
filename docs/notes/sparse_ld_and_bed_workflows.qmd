@@ -521,3 +521,6 @@ traits, markers, or sets. No multichain or OpenMP behavior is active yet.
 Phase 17R activates this only for the internal MT BED chains route. One BED read
 and immutable view are shared, each chain is complete and independent, and the
 public `mtblr_bed()` route remains unchanged.
+
+Phase 17S routes public `mtblr_bed()` through that shared owner/view path for
+all chain counts. `ncores` controls package workers only; BLAS is not changed.

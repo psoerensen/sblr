@@ -578,3 +578,8 @@ Phase 17R performs the narrow preparation refactor. The serial route and new
 internal chains route share one stationary packed owner and fresh immutable
 view. Each dispatched unchanged core owns its residual, workspace, RNG, and
 state; aggregation occurs only after deterministic failure inspection.
+
+## Phase 17S public dispatch note
+
+The Phase 17O serial function remains the exact maintenance reference. Public
+execution now uses the unchanged Phase 17R chains adapter for every chain count.

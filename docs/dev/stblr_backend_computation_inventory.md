@@ -699,3 +699,7 @@ once per independent chain and aggregates only after every chain succeeds.
 Phase 17R implements that internal computation: one prepared dataset feeds one
 unchanged `run_mt_bed_bayesc_core()` invocation per chain. Static OpenMP is
 chain-level only; aggregation invokes the existing finalizer exactly once.
+
+Phase 17S adds no backend computation. The public adapter validates controls,
+estimates memory, calls `mtblr_bed_chains_internal()` once, enriches metadata,
+and delegates formatting to `.as_mtblr_fit()`.

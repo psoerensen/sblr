@@ -59,3 +59,10 @@ Single-chain exactness, serial multichain execution, OpenMP equality, seeds,
 stability, retained records, raw validation, failure order, and reproducibility
 are installed-check tests. Only source counts for the shared preparation seam,
 static loop, unchanged core, and public serial call use `blr_repo_path()`.
+
+## Phase 17S
+
+Argument validation, default serial reduction, public/internal and OpenMP
+equality, seeds, retained records, memory formulas/warnings, BLAS preservation,
+formatting, and reproducibility run in installed checks. Only source dispatch,
+native-hash, wrapper, namespace, and unrelated-API assertions are source-only.

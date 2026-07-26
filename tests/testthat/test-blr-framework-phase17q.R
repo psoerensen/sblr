@@ -68,7 +68,7 @@ test_that("Phase 17Q future controls and current public boundary are explicit", 
   expect_identical(controls$primary_chain, 1L)
   expect_match(phase17q_future_internal_signature(), "int nchains")
   current <- names(formals(mtblr_bed))
-  expect_false(any(c("nchains", "ncores", "chain_seeds", "keep_chains") %in% current))
+  expect_true(all(c("nchains", "ncores", "chain_seeds", "keep_chains") %in% current))
 })
 
 test_that("Phase 17Q source architecture is audit-only", {
@@ -79,7 +79,9 @@ test_that("Phase 17Q source architecture is audit-only", {
   exports <- readLines(file.path(root, "NAMESPACE"), warn = FALSE)
   contract <- readLines(file.path(root, "docs", "dev",
                                   "blr_mt_bed_multichain_contract.md"), warn = FALSE)
-  expect_false(any(grepl("nchains|ncores|chain_seeds|keep_chains", public)))
+  expect_true(all(vapply(c("nchains", "ncores", "chain_seeds", "keep_chains"),
+                         function(x) any(grepl(x, public, fixed = TRUE)),
+                         logical(1))))
   expect_false(any(grepl("#pragma omp", native, fixed = TRUE)))
   expect_false(any(grepl("mtblr_bed_chains_internal", exports, fixed = TRUE)))
   required <- c("task_count = nchains", "schedule(static)",

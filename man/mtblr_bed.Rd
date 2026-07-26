@@ -39,6 +39,10 @@ mtblr_bed(
   nburn = 500,
   nthin = 1,
   seed = 1,
+  nchains = 1L,
+  ncores = 1L,
+  chain_seeds = NULL,
+  keep_chains = FALSE,
   memory_warning_gb = 8,
   verbose = FALSE
 )
@@ -89,9 +93,20 @@ inclusion states as marker-by-trait matrices or trait lists.}
 
 \item{nub, nue}{Covariance prior degrees of freedom.}
 
-\item{nit, nburn, nthin}{MCMC controls for one serial chain.}
+\item{nit, nburn, nthin}{MCMC controls applied identically to every chain.}
 
-\item{seed}{Explicit fit-local native RNG seed.}
+\item{seed}{Base fit-local native RNG seed when `chain_seeds` is `NULL`.}
+
+\item{nchains}{Number of complete joint-MT chains.}
+
+\item{ncores}{Requested package OpenMP chain workers. Used workers are capped
+by `nchains`; this does not control BLAS threads.}
+
+\item{chain_seeds}{Optional signed 32-bit integer-compatible seed vector of
+length `nchains`, retained in supplied order. Negative values represent
+unsigned 32-bit seeds above the signed integer maximum.}
+
+\item{keep_chains}{Retain compact per-chain posterior records.}
 
 \item{memory_warning_gb}{Positive warning threshold in GiB, or `Inf`.}
 
@@ -114,4 +129,27 @@ Phenotypes are centered by default but never scaled. Covariates are not
 fitted, and the complete aligned phenotype matrix must be finite. The
 returned memory estimate is analytical working memory, not measured RSS or
 measured peak RSS.
+}
+\section{Multichain execution}{
+
+Each chain fits one complete joint multivariate model. Chain-level OpenMP
+dispatch is static, and `ncores` is capped by `nchains`. If OpenMP is not
+available, a multi-core request warns once and runs serially. With
+`chain_seeds = NULL`, chain zero uses `seed` and later chains use the native
+modulo-2^32 `seed + 9176*c` policy; explicit signed seeds are used in their
+supplied order.
+
+Posterior marker means, covariance means, and model-probability means pool
+retained samples across chains. Traces are iterationwise chain means, while
+final effects, states, residual scores, covariance matrices, and final model
+probabilities come from primary chain 1. The `*_sd`, `*_min`, and `*_max`
+fields summarize per-chain posterior means; they are not posterior standard
+deviations, credible intervals, R-hat, ESS, or MCSE. Multiple chains alone
+do not establish convergence.
+
+Compact retained chains omit shared BED data, phenotypes, marker order,
+marker residuals, sample residuals, and genetic values. Timing is diagnostic
+and nondeterministic. The package never changes global BLAS settings; users
+should normally configure BLAS to one thread when running concurrent chain
+workers to avoid oversubscription.
 }

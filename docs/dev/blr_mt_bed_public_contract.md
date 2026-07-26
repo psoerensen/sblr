@@ -183,3 +183,48 @@ contracts for Phase 17R/17S, not current capabilities.
 
 Phase 17R activates those contracts internally only. Public `mtblr_bed()` still
 has no chain controls and continues to call the exact serial Phase 17O route.
+
+## Phase 17S public multichain activation
+
+The supported signature is:
+
+```r
+mtblr_bed(y, Glist, covar = NULL, chr = NULL, cls = NULL, rows = NULL,
+  scale = TRUE, center = TRUE,
+  residual_covariance = c("full", "diagonal"), method = "bayesC",
+  trait_metadata = NULL, sets = NULL, block_size = 1000,
+  beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
+  models = NULL, pimodels = NULL, vg = NULL, vb = NULL, ve = NULL,
+  ssb_prior = NULL, sse_prior = NULL,
+  updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
+  nit = 1000, nburn = 500, nthin = 1, seed = 1,
+  nchains = 1L, ncores = 1L, chain_seeds = NULL, keep_chains = FALSE,
+  memory_warning_gb = 8, verbose = FALSE)
+```
+
+One task is one complete joint-MT model. Defaults request one chain and one
+worker, use native default seeds, and omit compact records. `seed` remains the
+base seed; explicit signed 32-bit `chain_seeds` retain supplied order and may be
+negative. Native default resolution is modulo-2^32 `seed + 9176*c`.
+
+OpenMP is static and chain-level only; workers are capped by `nchains`. Without
+OpenMP, a multi-core request warns once and runs serially. The package never
+changes global BLAS settings, and one-thread BLAS is normally recommended for
+concurrent package workers.
+
+Marker, covariance, and probability posterior means pool retained samples.
+Traces are iterationwise chain means. Final effects, binary state, residual
+scores, covariance matrices, and probabilities come from primary chain 1;
+binary states are not averaged. Stability fields are sample SD/min/max across
+per-chain posterior means. They are not posterior standard deviations, R-hat,
+ESS, or MCSE, and multiple chains do not establish convergence.
+
+Compact retained records include marker means/final state, traces, covariance
+summaries/finals, probabilities, seed, and diagnostics. They omit marker
+residuals, `X'Y`, order, models, sets, phenotype and sample residual matrices,
+genetic values, packed bytes, maps, and BED metadata.
+
+The analytical memory estimate separates shared immutable bytes, private bytes
+per worker, results per chain, pooled output, and optional compact output per
+chain. It is an analytical upper-bound estimate, not measured RSS or measured
+peak RSS.
