@@ -417,3 +417,6 @@ no packed genotype data.
 Phase 17U adds an internal quantity-by-chain-by-iteration Tier 1 bundle,
 represented in R as an `nit × nchains × (3*nt)` array. It contains post-burn
 B/G/E diagonals only and is independent of compact retained chains.
+
+Phase 17V optionally exposes that bundle as `fit$convergence_traces`; it remains
+separate from compact chains and contains only B/G/E diagonal traces.

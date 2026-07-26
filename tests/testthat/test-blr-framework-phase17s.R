@@ -5,7 +5,8 @@ test_that("Phase 17S exposes and validates the exact public controls", {
     "beta", "b", "state", "h2", "pi", "models", "pimodels", "vg", "vb",
     "ve", "ssb_prior", "sse_prior", "updateB", "updateE", "updatePi",
     "nub", "nue", "nit", "nburn", "nthin", "seed", "nchains", "ncores",
-    "chain_seeds", "keep_chains", "memory_warning_gb", "verbose")
+    "chain_seeds", "keep_chains", "convergence", "convergence_control",
+    "memory_warning_gb", "verbose")
   expect_identical(names(formals(mtblr_bed)), expected)
   expect_identical(formals(mtblr_bed)$nchains, 1L)
   expect_identical(formals(mtblr_bed)$ncores, 1L)
@@ -186,8 +187,10 @@ test_that("Phase 17S changes only the public R activation surface", {
   root <- blr_repo_path()
   skip_if(is.null(root), "source checkout unavailable")
   public <- readLines(file.path(root, "R", "mtblr-bed.R"), warn = FALSE)
-  expect_equal(sum(grepl("mtblr_bed_chains_internal(", public, fixed = TRUE)),
-               1L)
+  expect_true(any(grepl("mtblr_bed_chains_internal", public,
+                        fixed = TRUE)))
+  expect_true(any(grepl("mtblr_bed_convergence_trace_internal", public,
+                        fixed = TRUE)))
   expect_false(any(grepl("mtblr_bed_internal(", public, fixed = TRUE)))
   expect_equal(sum(grepl(".mtblr_bed_memory_estimate <-", public,
                          fixed = TRUE)), 1L)

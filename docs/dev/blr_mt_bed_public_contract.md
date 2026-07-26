@@ -239,3 +239,12 @@ original per-chain post-burn B/G/E diagonal traces independently of
 An internal Tier 1 convergence engine exists, but public activation is deferred.
 `mtblr_bed()` has no convergence formals, does not call the trace route, emits
 no convergence warning, and returns no convergence fields in Phase 17U.
+
+## Phase 17V convergence controls
+
+The public signature adds `convergence=c("auto","none","core")` and
+`convergence_control=NULL` after `keep_chains`. Automatic multichain fits
+compute B/G/E-diagonal diagnostics; automatic single-chain fits report quiet
+unavailability; `none` disables capture. Optional post-burn traces are separate
+from compact chains. Memory and at most one advisory warning include requested
+diagnostic scope. Passing diagnostics does not prove convergence.

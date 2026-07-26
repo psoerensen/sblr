@@ -295,18 +295,18 @@ test_that("Phase 17U validators and memory accounting are failure closed", {
     memory$estimated_total_bytes)
 })
 
-test_that("Phase 17U keeps the public convergence surface inactive", {
-  expect_false("convergence" %in% names(formals(mtblr_bed)))
+test_that("Phase 17U engine remains protected after public activation", {
+  expect_true("convergence" %in% names(formals(mtblr_bed)))
   case <- phase17p_case()
   on.exit(phase17p_cleanup(case), add = TRUE)
   fit <- do.call(mtblr_bed, phase17p_public_args(case))
-  expect_false("convergence" %in% names(fit))
-  expect_false("convergence_traces" %in% names(fit))
+  expect_true("convergence" %in% names(fit))
+  expect_true("convergence_traces" %in% names(fit))
   root <- blr_repo_path()
   skip_if(is.null(root), "source checkout unavailable")
   public <- paste(readLines(file.path(root, "R", "mtblr-bed.R"),
                            warn = FALSE), collapse = "\n")
-  expect_false(grepl("mtblr_bed_convergence_trace_internal", public,
-                     fixed = TRUE))
+  expect_true(grepl("mtblr_bed_convergence_trace_internal", public,
+                    fixed = TRUE))
   expect_true(grepl("mtblr_bed_chains_internal", public, fixed = TRUE))
 })

@@ -465,3 +465,6 @@ Future diagnostic quantities use `B_diag[trait]`, `G_diag[trait]`,
 Internal Tier 1 quantities use `B_diag[trait]`, `G_diag[trait]`, and
 `E_diag[trait]`. The binding symbol is
 `mtblr_bed_convergence_trace_internal` and remains unexported.
+
+Phase 17V exposes quantity names at `fit$convergence$summary` and reserves
+`fit$convergence_traces` for optional post-burn Tier 1 arrays.

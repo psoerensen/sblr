@@ -533,3 +533,6 @@ to chain-by-iteration memory scaling.
 The internal Phase 17U route diagnoses post-burn per-chain B/G/E diagonal
 traces without rereading BED data or requiring `keep_chains=TRUE`. Public
 activation and convergence warnings remain deferred.
+
+Phase 17V selects one ordinary or trace-capable MT BED route based on public
+convergence controls. Summary-LD routes remain unchanged.

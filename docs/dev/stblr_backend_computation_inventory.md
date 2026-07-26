@@ -713,3 +713,8 @@ The MT BED convergence route performs the existing preparation and one sampler
 call per chain, extracts `3*nt` post-burn diagonal traces, reuses the existing
 aggregate/finalize/raw path, and performs diagnostic mathematics later in R.
 No diagnostic computation occurs in OpenMP workers.
+
+## Phase 17V public diagnostics
+
+Public MT BED conditionally captures those traces and computes the unchanged
+engine. No scalar, CSR, or block-eigen backend gains convergence diagnostics.

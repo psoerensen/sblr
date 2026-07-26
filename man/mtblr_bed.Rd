@@ -43,6 +43,8 @@ mtblr_bed(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
+  convergence = c("auto", "none", "core"),
+  convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE
 )
@@ -108,6 +110,14 @@ unsigned 32-bit seeds above the signed integer maximum.}
 
 \item{keep_chains}{Retain compact per-chain posterior records.}
 
+\item{convergence}{Convergence-diagnostic mode: `"auto"` computes Tier 1
+diagnostics for two or more chains, `"none"` disables diagnostics, and
+`"core"` explicitly requests them.}
+
+\item{convergence_control}{Optional uniquely named list controlling `warn`,
+`rhat_threshold`, `ess_per_chain_threshold`,
+`mcse_mean_over_sd_threshold`, and `keep_traces`.}
+
 \item{memory_warning_gb}{Positive warning threshold in GiB, or `Inf`.}
 
 \item{verbose}{Print resolved execution metadata.}
@@ -152,4 +162,22 @@ marker residuals, sample residuals, and genetic values. Timing is diagnostic
 and nondeterministic. The package never changes global BLAS settings; users
 should normally configure BLAS to one thread when running concurrent chain
 workers to avoid oversubscription.
+}
+
+\section{Convergence diagnostics}{
+
+Tier 1 diagnostics use post-burn, unthinned per-chain diagonal traces for
+`B`, `G`, and `E`. They report rank-normalized split and folded R-hat (using
+their maximum), bulk and two-tail ESS, mean ESS, posterior SD, and mean
+MCSE. R-hat requires at least two chains and four post-burn draws; ESS and
+MCSE require at least six draws. Two or three chains carry an advisory that
+four chains are generally recommended. Fixed `B` or `E` quantities are
+marked `not_updated` rather than diagnosed.
+
+Diagnostics are independent of `keep_chains`. Optional convergence traces
+contain only post-burn B/G/E diagonals, use no extra thinning, and increase
+the analytical memory estimate. Threshold warnings are advisory and are
+aggregated at most once per fit; multiple chains or passing thresholds do
+not prove convergence. Marker, covariance off-diagonal, model-probability,
+ESS-for-SD, and quantile/median-MCSE diagnostics are not implemented.
 }

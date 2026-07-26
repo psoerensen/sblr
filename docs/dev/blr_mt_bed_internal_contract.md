@@ -596,3 +596,7 @@ dispatch, aggregation, finalizer, legacy adapter, and raw converter. Before
 typed chain results are discarded it extracts only post-burn B/G/E diagonal
 traces into an Rcpp-free bundle. It neither changes nor reruns the Phase 17O
 core, and the ordinary internal chains route remains numerically exact.
+
+Phase 17V activates this unchanged route conditionally from public R. Native
+types, extraction, execution, aggregation, wrappers, and registration remain
+unchanged.

@@ -447,3 +447,6 @@ Formal convergence diagnostics are contract-only in Phase 17T. Current
 
 Tier 2 covariance/probability and Tier 3 selected-marker traces remain
 unsupported.
+
+Phase 17V makes Tier 1 B/G/E-diagonal diagnostics public for MT packed BED.
+Off-diagonal covariance, probability, and marker diagnostics remain unsupported.

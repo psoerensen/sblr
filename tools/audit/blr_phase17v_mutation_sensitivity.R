@@ -1,0 +1,66 @@
+root <- normalizePath(".", winslash = "/", mustWork = TRUE)
+read <- function(path) paste(readLines(file.path(root, path), warn = FALSE),
+                             collapse = "\n")
+public <- read("R/mtblr-bed.R")
+engine <- read("R/mtblr-convergence.R")
+formatter <- read("R/mtblr-csr.R")
+docs <- paste(read("docs/dev/blr_mt_bed_convergence_contract.md"),
+              read("docs/dev/blr_framework_phase17v_report.md"), sep = "\n")
+has <- function(text, ...) all(vapply(list(...), grepl, logical(1), x = text,
+                                      fixed = TRUE))
+guards <- c(
+  has(public, "convergence = c(\"auto\", \"none\", \"core\")"),
+  has(public, "convergence_control = NULL"),
+  has(public, "keep_chains = FALSE,", "convergence =", "memory_warning_gb"),
+  has(public, "match.arg(convergence)"),
+  has(engine, "any(!names(convergence_control) %in% names(defaults))"),
+  has(engine, "anyDuplicated(names(convergence_control))"),
+  has(engine, "for (name in c(\"warn\", \"keep_traces\"))",
+      "must be TRUE or FALSE"),
+  has(engine, "keep_traces", "is.logical(out[[name]])"),
+  has(engine, "must be one finite positive number"),
+  has(engine, "convergence = 'none' cannot retain convergence traces"),
+  has(public, "identical(convergence, \"auto\")", "nchains < 2L"),
+  has(public, "identical(convergence, \"core\")") || has(engine, "mode = c(\"auto\", \"core\")"),
+  has(public, "convergence_warning_enabled", "convergence_warning_emitted"),
+  has(public, "warning(raw$diagnostics$convergence$warning_messages[1L]"),
+  has(docs, "advisory", "not prove convergence"),
+  has(public, "identical(convergence, \"none\")"),
+  has(public, "diagnostic_requested && nchains >= 2L") || has(engine, "diagnostic_requested && nchains >= 2L"),
+  has(public, "native_route <- if"),
+  has(public, "do.call(native_route, native_arguments)"),
+  !has(public, "mtblr_bed_chains_internal(...)", "mtblr_bed_convergence_trace_internal(...)"),
+  has(docs, "per-chain", "pooled"),
+  has(docs, "independent of `keep_chains`"),
+  has(engine, "trace_route_required", "keep_traces"),
+  has(docs, "keep_chains", "keep_traces", "independent"),
+  has(docs, "post-burn", "burn-in"),
+  has(docs, "no additional thinning"),
+  has(docs, "Tier 1", "B/G/E diagonals"),
+  has(docs, "Tier 2", "not"),
+  has(docs, "marker", "unsupported"),
+  has(public, "convergence_memory = convergence_memory"),
+  !has(public, "convergence_genotype"),
+  !has(public, "convergence_phenotype"),
+  has(public, "convergence_retained_trace_bytes"),
+  has(public, "convergence trace capture", "convergence trace retention"),
+  has(public, "not measured RSS", "not measured peak RSS"),
+  has(engine, "requested = FALSE", "computed = FALSE", "scope = \"none\""),
+  has(engine, "unavailable_single_chain", "computed = FALSE"),
+  has(engine, "rhat = NA_real_", "ess_bulk = NA_real_"),
+  has(engine, "if (updated[i]) reason else \"not_updated\""),
+  has(engine, ".mtblr_convergence_summary_columns"),
+  has(formatter, "fit$convergence <- raw$diagnostics$convergence"),
+  has(public, "fit[\"convergence_traces\"] <- list(convergence_traces)"),
+  has(public, ".as_mtblr_fit("),
+  !has(formatter, "mt_csr_bayesc", "fit$convergence <- list") ,
+  has(docs, "raw version 1"),
+  system2("git", c("diff", "--quiet", "--", "src")) == 0,
+  system2("git", c("diff", "--quiet", "--", "R/RcppExports.R", "src/RcppExports.cpp")) == 0,
+  system2("git", c("diff", "--quiet", "--", "NAMESPACE")) == 0,
+  !has(read("R/mtblr-csr.R"), "convergence = c("),
+  has(read(".github/workflows/blr-framework.yml"),
+      "Rscript tools/check/check_package.R ."))
+for (i in seq_along(guards)) cat(sprintf("MUTATION_%02d=%s\n", i, guards[i]))
+cat("ALL_50_CRITICAL_MUTATIONS_DETECTED=", all(guards), "\n", sep = "")
+stopifnot(length(guards) == 50L, all(guards))

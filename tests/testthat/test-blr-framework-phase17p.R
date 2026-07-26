@@ -238,14 +238,18 @@ test_that("Phase 17P public architecture is singular and protected", {
     "pimodels", "vg", "vb", "ve", "ssb_prior", "sse_prior",
     "updateB", "updateE", "updatePi", "nub", "nue", "nit", "nburn",
     "nthin", "seed", "nchains", "ncores", "chain_seeds", "keep_chains",
-    "memory_warning_gb", "verbose")
+    "convergence", "convergence_control", "memory_warning_gb", "verbose")
   expect_identical(names(formals(mtblr_bed)), expected_formals)
   root <- blr_repo_path()
   skip_if(is.null(root), "source architecture requires repository source")
   source <- readLines(file.path(root, "R", "mtblr-bed.R"), warn = FALSE)
   expect_equal(sum(grepl("mtblr_bed <- function", source, fixed = TRUE)), 1L)
-  expect_equal(sum(grepl("raw <- mtblr_bed_chains_internal(", source,
-                         fixed = TRUE)), 1L)
+  expect_equal(sum(grepl("native_result <- do.call(native_route, native_arguments)",
+                         source, fixed = TRUE)), 1L)
+  expect_true(any(grepl("mtblr_bed_chains_internal", source,
+                         fixed = TRUE)))
+  expect_true(any(grepl("mtblr_bed_convergence_trace_internal", source,
+                         fixed = TRUE)))
   expect_equal(sum(grepl(".as_mtblr_fit(", source, fixed = TRUE)), 1L)
   expect_true(any(grepl(".make_bed_marker_data(", source, fixed = TRUE)))
   expect_false(any(grepl("mtblr_eigen(", source, fixed = TRUE)))

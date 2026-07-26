@@ -96,20 +96,20 @@ test_that("Phase 17T tiers and retention are explicitly separate", {
   expect_identical(scope$trace_retention, "independent_bundle")
 })
 
-test_that("Phase 17T keeps the public contract unchanged after Tier 1 staging", {
-  expect_false("convergence" %in% names(formals(mtblr_bed)))
+test_that("Phase 17T contract remains protected after public activation", {
+  expect_true("convergence" %in% names(formals(mtblr_bed)))
   fit_formals <- names(formals(mtblr_bed))
-  expect_identical(tail(fit_formals, 6),
+  expect_identical(tail(fit_formals, 8),
     c("nchains", "ncores", "chain_seeds", "keep_chains",
-      "memory_warning_gb", "verbose"))
+      "convergence", "convergence_control", "memory_warning_gb", "verbose"))
   root <- blr_repo_path()
   skip_if(is.null(root), "source checkout unavailable")
   source <- paste(readLines(file.path(root, "R", "mtblr-bed.R"), warn = FALSE),
                   collapse = "\n")
   native <- paste(readLines(file.path(root, "src", "mtblr.cpp"), warn = FALSE),
                   collapse = "\n")
-  expect_false(grepl("raw\\$diagnostics\\$convergence", source))
+  expect_true(grepl("diagnostics\\$convergence", source))
   expect_true(grepl("MtBedConvergenceTraceBundle", native, fixed = TRUE))
-  expect_false(grepl("ess_bulk|rhat_folded|mcse_mean", source))
+  expect_false(grepl("\\.mtblr_convergence_ess <-", source))
   expect_true(grepl("iterationwise_chain_mean", source, fixed = TRUE))
 })

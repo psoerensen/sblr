@@ -1059,3 +1059,6 @@ convergence diagnostics.
 The internal MT BED Tier 1 diagnostic result is available for maintenance
 testing, but `mtblr_bed()` does not yet expose it. Existing public workflows and
 outputs therefore remain unchanged in Phase 17U.
+
+Public MT BED fits now contain `fit$convergence` and a stable
+`fit$convergence_traces` field. Diagnostics are advisory and Tier 1 only.

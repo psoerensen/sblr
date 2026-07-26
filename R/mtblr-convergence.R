@@ -22,6 +22,171 @@
   out
 }
 
+.mtblr_bed_convergence_controls <- function(convergence,
+                                             convergence_control,
+                                             nchains) {
+  defaults <- list(
+    warn = TRUE,
+    rhat_threshold = 1.01,
+    ess_per_chain_threshold = 100,
+    mcse_mean_over_sd_threshold = 0.05,
+    keep_traces = FALSE
+  )
+  if (is.null(convergence_control)) {
+    out <- defaults
+  } else {
+    if (!is.list(convergence_control) || is.data.frame(convergence_control) ||
+        is.null(names(convergence_control)) ||
+        any(!nzchar(names(convergence_control))) ||
+        anyDuplicated(names(convergence_control)) ||
+        any(!names(convergence_control) %in% names(defaults))) {
+      stop("convergence_control must be a uniquely named list containing only supported controls.",
+           call. = FALSE)
+    }
+    out <- utils::modifyList(defaults, convergence_control)
+  }
+  for (name in c("warn", "keep_traces")) {
+    if (!is.logical(out[[name]]) || length(out[[name]]) != 1L ||
+        is.na(out[[name]])) {
+      stop("convergence_control$", name,
+           " must be TRUE or FALSE.", call. = FALSE)
+    }
+  }
+  for (name in c("rhat_threshold", "ess_per_chain_threshold",
+                 "mcse_mean_over_sd_threshold")) {
+    value <- out[[name]]
+    if (!is.numeric(value) || length(value) != 1L || !is.finite(value) ||
+        value <= 0) {
+      stop("convergence_control$", name,
+           " must be one finite positive number.", call. = FALSE)
+    }
+  }
+  if (identical(convergence, "none") && isTRUE(out$keep_traces)) {
+    stop("convergence = 'none' cannot retain convergence traces.",
+         call. = FALSE)
+  }
+  out$diagnostic_requested <- !identical(convergence, "none")
+  out$trace_route_required <- isTRUE(out$keep_traces) ||
+    (out$diagnostic_requested && nchains >= 2L)
+  out$thresholds <- out[c(
+    "rhat_threshold", "ess_per_chain_threshold",
+    "mcse_mean_over_sd_threshold")]
+  out
+}
+
+.mtblr_convergence_summary_columns <- function() c(
+  "quantity", "group", "trait", "trait2", "marker_id", "model_name",
+  "updated", "status", "rhat", "rhat_rank", "rhat_folded",
+  "ess_bulk", "ess_bulk_per_chain", "ess_q05", "ess_q95",
+  "ess_tail", "ess_tail_per_chain", "ess_mean", "posterior_sd",
+  "mcse_mean", "mcse_mean_over_sd", "nchains", "draws_per_chain",
+  "split_draws_per_chain", "rhat_available", "ess_bulk_available",
+  "ess_tail_available", "ess_mean_available", "mcse_mean_available",
+  "ess_stability_bound_applied", "rhat_flag", "ess_bulk_flag",
+  "ess_tail_flag", "mcse_flag")
+
+.mtblr_convergence_summary_row <- function(group, trait, updated, status,
+                                            nchains, nit) {
+  data.frame(
+    quantity = paste0(group, "[", trait, "]"), group = group,
+    trait = trait, trait2 = NA_character_, marker_id = NA_character_,
+    model_name = NA_character_, updated = updated, status = status,
+    rhat = NA_real_, rhat_rank = NA_real_, rhat_folded = NA_real_,
+    ess_bulk = NA_real_, ess_bulk_per_chain = NA_real_,
+    ess_q05 = NA_real_, ess_q95 = NA_real_, ess_tail = NA_real_,
+    ess_tail_per_chain = NA_real_, ess_mean = NA_real_,
+    posterior_sd = NA_real_, mcse_mean = NA_real_,
+    mcse_mean_over_sd = NA_real_, nchains = as.integer(nchains),
+    draws_per_chain = as.integer(nit),
+    split_draws_per_chain = as.integer(nit %/% 2L),
+    rhat_available = FALSE, ess_bulk_available = FALSE,
+    ess_tail_available = FALSE, ess_mean_available = FALSE,
+    mcse_mean_available = FALSE, ess_stability_bound_applied = FALSE,
+    rhat_flag = FALSE, ess_bulk_flag = FALSE, ess_tail_flag = FALSE,
+    mcse_flag = FALSE, stringsAsFactors = FALSE, check.names = FALSE)
+}
+
+.mtblr_convergence_empty_overview <- function(nchains,
+                                               status = "not_requested") {
+  list(
+    overall_status = status, n_quantities = 0L, n_computed = 0L,
+    n_partial = 0L, n_unavailable = 0L, n_not_updated = 0L,
+    n_flagged = 0L, max_rhat = NA_real_,
+    max_rhat_quantity = NA_character_, min_ess_bulk = NA_real_,
+    min_ess_bulk_per_chain = NA_real_,
+    min_ess_bulk_quantity = NA_character_, min_ess_tail = NA_real_,
+    min_ess_tail_per_chain = NA_real_,
+    min_ess_tail_quantity = NA_character_,
+    max_mcse_mean_over_sd = NA_real_, max_mcse_quantity = NA_character_,
+    n_constant_chain_mismatch = 0L,
+    n_ess_stability_bound_applied = 0L,
+    fewer_than_four_chains = nchains < 4L)
+}
+
+.mtblr_convergence_algorithm <- function() list(
+  authority = "Vehtari et al. 2021",
+  implementation_target = "posterior 1.6.1",
+  reference_package = "posterior", reference_version = "1.6.1",
+  contract_amendments = c(
+    "Blom rank denominator is S + 1/4",
+    "ESS stability bound is nominal times log10(nominal)",
+    "R-hat needs four draws; ESS and MCSE need six"))
+
+.mtblr_convergence_not_requested <- function(trait_names, updateB, updateE,
+                                               nchains, nit, control) {
+  template <- .mtblr_convergence_summary_row(
+    "G_diag", trait_names[1L], TRUE, "unavailable_single_chain",
+    nchains, nit)[0L, ]
+  result <- list(
+    version = 1L, requested = FALSE, computed = FALSE, scope = "none",
+    overall_status = "not_requested", nchains = as.integer(nchains),
+    postburn_draws_per_chain = as.integer(nit),
+    split_draws_per_chain = as.integer(nit %/% 2L),
+    total_postburn_draws = as.integer(nchains * nit), thresholds = control,
+    availability = list(rhat = 0L, ess_bulk = 0L, ess_tail = 0L,
+                        ess_mean = 0L, mcse_mean = 0L),
+    summary = template,
+    overview = .mtblr_convergence_empty_overview(nchains),
+    warning_messages = character(),
+    trace_retention = list(retained = FALSE, burnin_included = FALSE,
+                           additional_thinning = FALSE),
+    algorithm = .mtblr_convergence_algorithm())
+  .mtblr_validate_convergence_result(result)
+}
+
+.mtblr_convergence_unavailable <- function(trait_names, updateB, updateE,
+                                            nchains, nit, control,
+                                            reason = "unavailable_single_chain",
+                                            keep_traces = FALSE) {
+  groups <- rep(c("B_diag", "G_diag", "E_diag"), each = length(trait_names))
+  traits <- rep(trait_names, 3L)
+  updated <- c(rep(isTRUE(updateB), length(trait_names)),
+               rep(TRUE, length(trait_names)),
+               rep(isTRUE(updateE), length(trait_names)))
+  rows <- lapply(seq_along(groups), function(i) {
+    .mtblr_convergence_summary_row(
+      groups[i], traits[i], updated[i],
+      if (updated[i]) reason else "not_updated", nchains, nit)
+  })
+  summary <- do.call(rbind, rows)
+  rownames(summary) <- NULL
+  overview <- .mtblr_convergence_overview(summary)
+  result <- list(
+    version = 1L, requested = TRUE, computed = FALSE, scope = "core",
+    overall_status = overview$overall_status, nchains = as.integer(nchains),
+    postburn_draws_per_chain = as.integer(nit),
+    split_draws_per_chain = as.integer(nit %/% 2L),
+    total_postburn_draws = as.integer(nchains * nit), thresholds = control,
+    availability = list(rhat = 0L, ess_bulk = 0L, ess_tail = 0L,
+                        ess_mean = 0L, mcse_mean = 0L),
+    summary = summary, overview = overview, warning_messages = character(),
+    trace_retention = list(retained = isTRUE(keep_traces),
+                           burnin_included = FALSE,
+                           additional_thinning = FALSE),
+    algorithm = .mtblr_convergence_algorithm())
+  .mtblr_validate_convergence_result(result)
+}
+
 .mtblr_convergence_split_chains <- function(x) {
   if (!is.matrix(x) || !is.numeric(x)) {
     stop("convergence draws must be a numeric iteration-by-chain matrix.",
@@ -421,16 +586,7 @@
     trace_retention = list(
       retained = isTRUE(keep_traces), burnin_included = FALSE,
       additional_thinning = FALSE),
-    algorithm = list(
-      authority = "Vehtari et al. 2021",
-      implementation_target = "posterior 1.6.1",
-      reference_package = "posterior",
-      reference_version = "1.6.1",
-      contract_amendments = c(
-        "Blom rank denominator is S + 1/4",
-        "ESS stability bound is nominal times log10(nominal)",
-        "R-hat needs four draws; ESS and MCSE need six")
-    )
+    algorithm = .mtblr_convergence_algorithm()
   )
   .mtblr_validate_convergence_result(result)
 }
@@ -441,16 +597,7 @@
     "nchains", "postburn_draws_per_chain", "split_draws_per_chain",
     "total_postburn_draws", "thresholds", "availability", "summary",
     "overview", "warning_messages", "trace_retention", "algorithm")
-  summary_columns <- c(
-    "quantity", "group", "trait", "trait2", "marker_id", "model_name",
-    "updated", "status", "rhat", "rhat_rank", "rhat_folded",
-    "ess_bulk", "ess_bulk_per_chain", "ess_q05", "ess_q95",
-    "ess_tail", "ess_tail_per_chain", "ess_mean", "posterior_sd",
-    "mcse_mean", "mcse_mean_over_sd", "nchains", "draws_per_chain",
-    "split_draws_per_chain", "rhat_available", "ess_bulk_available",
-    "ess_tail_available", "ess_mean_available", "mcse_mean_available",
-    "ess_stability_bound_applied", "rhat_flag", "ess_bulk_flag",
-    "ess_tail_flag", "mcse_flag")
+  summary_columns <- .mtblr_convergence_summary_columns()
   statuses <- c(
     "not_updated", "nonfinite", "constant", "unavailable_single_chain",
     "insufficient_draws", "constant_chain_mismatch", "computed_partial",
@@ -484,13 +631,20 @@
     ess_tail = sum(summary$ess_tail_available),
     ess_mean = sum(summary$ess_mean_available),
     mcse_mean = sum(summary$mcse_mean_available)) else NULL
-  overview_consistent <- if (is.data.frame(summary)) {
+  not_requested <- is.list(result) && identical(result$scope, "none") &&
+    identical(result$overall_status, "not_requested")
+  overview_consistent <- if (not_requested && is.data.frame(summary) &&
+                             nrow(summary) == 0L) {
+    identical(.mtblr_convergence_empty_overview(result$nchains),
+              result$overview)
+  } else if (is.data.frame(summary) && nrow(summary)) {
     identical(.mtblr_convergence_overview(summary), result$overview)
   } else FALSE
   if (!is.list(result) || !all(required %in% names(result)) ||
       !identical(as.integer(result$version), 1L) ||
-      !identical(result$scope, "core") ||
-      !result$overall_status %in% c("unavailable", "ok", "warning", "partial") ||
+      !result$scope %in% c("none", "core") ||
+      !result$overall_status %in% c(
+        "not_requested", "unavailable", "ok", "warning", "partial") ||
       !is.data.frame(result$summary) ||
       !identical(names(result$summary), summary_columns) ||
       any(!result$summary$status %in% statuses) ||
@@ -517,10 +671,64 @@
       length(result$trace_retention$retained) != 1L ||
       is.na(result$trace_retention$retained) ||
       !identical(result$trace_retention$burnin_included, FALSE) ||
-      !identical(result$trace_retention$additional_thinning, FALSE)) {
+      !identical(result$trace_retention$additional_thinning, FALSE) ||
+      (identical(result$scope, "none") &&
+       (!identical(result$requested, FALSE) ||
+        !identical(result$computed, FALSE) || nrow(summary) != 0L ||
+        !identical(result$trace_retention$retained, FALSE))) ||
+      (!isTRUE(result$requested) && !identical(result$scope, "none")) ||
+      (identical(result$overall_status, "not_requested") &&
+       !identical(result$scope, "none"))) {
     stop("Invalid MT BLR convergence result.", call. = FALSE)
   }
   result
+}
+
+.mtblr_convergence_format_value <- function(value) {
+  if (length(value) != 1L || !is.finite(value)) "NA" else
+    formatC(value, digits = 6L, format = "fg", flag = "#")
+}
+
+.mtblr_convergence_format_quantity <- function(value) {
+  if (length(value) != 1L || is.na(value) || !nzchar(value)) "NA" else value
+}
+
+.mtblr_convergence_warning_messages <- function(convergence,
+                                                mode = c("auto", "core")) {
+  mode <- match.arg(mode)
+  convergence <- .mtblr_validate_convergence_result(convergence)
+  overview <- convergence$overview
+  advisory <- overview$n_flagged > 0L ||
+    identical(convergence$overall_status, "partial") ||
+    (identical(mode, "core") &&
+     identical(convergence$overall_status, "unavailable"))
+  if (!advisory) return(character())
+  if (identical(convergence$overall_status, "unavailable")) {
+    reasons <- unique(convergence$summary$status[
+      convergence$summary$status != "not_updated"])
+    return(sprintf(
+      paste0("MT BED Tier 1 convergence diagnostics are unavailable: ",
+             "nchains=%d, nit=%d, reason=%s; review fit$convergence."),
+      convergence$nchains, convergence$postburn_draws_per_chain,
+      if (length(reasons)) paste(reasons, collapse = ",") else "unavailable"))
+  }
+  sprintf(
+    paste0("MT BED Tier 1 convergence advisory requires review: status=%s; ",
+           "flagged quantities=%d; max R-hat=%s (%s); ",
+           "min bulk ESS/chain=%s (%s); min tail ESS/chain=%s (%s); ",
+           "max relative MCSE=%s (%s); constant-chain mismatches=%d; ",
+           "fewer than four chains=%s; review fit$convergence."),
+    convergence$overall_status, overview$n_flagged,
+    .mtblr_convergence_format_value(overview$max_rhat),
+    .mtblr_convergence_format_quantity(overview$max_rhat_quantity),
+    .mtblr_convergence_format_value(overview$min_ess_bulk_per_chain),
+    .mtblr_convergence_format_quantity(overview$min_ess_bulk_quantity),
+    .mtblr_convergence_format_value(overview$min_ess_tail_per_chain),
+    .mtblr_convergence_format_quantity(overview$min_ess_tail_quantity),
+    .mtblr_convergence_format_value(overview$max_mcse_mean_over_sd),
+    .mtblr_convergence_format_quantity(overview$max_mcse_quantity),
+    overview$n_constant_chain_mismatch,
+    if (isTRUE(overview$fewer_than_four_chains)) "yes" else "no")
 }
 
 .mtblr_bed_convergence_internal <- function(native_result, trait_names,

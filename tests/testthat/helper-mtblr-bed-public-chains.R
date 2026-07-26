@@ -1,11 +1,12 @@
 phase17s_public_args <- function(case, nchains = 1L, ncores = 1L,
                                  chain_seeds = NULL, keep_chains = FALSE,
                                  residual_covariance = "full",
-                                 updates = FALSE, ...) {
+                                 updates = FALSE,
+                                 convergence = "none", ...) {
   args <- phase17p_public_args(
     case, residual_covariance, updates, center = FALSE,
     nchains = nchains, ncores = ncores, chain_seeds = chain_seeds,
-    keep_chains = keep_chains, ...)
+    keep_chains = keep_chains, convergence = convergence, ...)
   args
 }
 
@@ -94,4 +95,3 @@ phase17s_preexisting_fields <- function(fit) {
               "bed_diagnostics", "phenotype_preprocessing")
   fit[fields]
 }
-

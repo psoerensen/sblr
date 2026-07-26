@@ -61,7 +61,7 @@
 .mtblr_bed_memory_estimate <- function(
   n, m, nt, nmodels, trace_length,
   nchains = 1L, ncores = 1L, keep_chains = FALSE,
-  used_workers = NULL
+  used_workers = NULL, convergence_memory = NULL
 ) {
   bytes_per_marker <- ceiling(n / 4)
   stride <- 64 * ceiling(bytes_per_marker / 64)
@@ -107,18 +107,34 @@
   retained_bytes <- sum(retained_components)
   pooled_bytes <- sum(pooled_components)
   retained_total <- if (keep_chains) nchains * retained_bytes else 0
+  convergence_total <- if (is.null(convergence_memory)) 0 else
+    convergence_memory$estimated_total_bytes
   total <- shared_bytes + requested_workers * private_bytes +
     nchains * result_bytes + retained_total + pooled_bytes
   execution_total <- shared_bytes + used_workers * private_bytes +
     nchains * result_bytes + retained_total + pooled_bytes
+  total <- total + convergence_total
+  execution_total <- execution_total + convergence_total
   components <- if (nchains == 1L && requested_workers == 1L &&
                     !keep_chains) legacy_components else c(
     shared_components,
     private_worker_copies = requested_workers * private_bytes,
     chain_result_copies = nchains * result_bytes,
     retained_chain_copies = retained_total,
-    pooled_output = pooled_bytes
+    pooled_output = pooled_bytes,
+    convergence = convergence_total
   )
+  if (convergence_total > 0 && !"convergence" %in% names(components)) {
+    components <- c(components, convergence = convergence_total)
+  }
+  convergence_components <- if (is.null(convergence_memory)) {
+    c(trace_capture = 0, workspace = 0, summary_output = 0,
+      retained_traces = 0)
+  } else c(
+    trace_capture = convergence_memory$trace_capture_bytes,
+    workspace = convergence_memory$maximum_workspace_bytes,
+    summary_output = convergence_memory$summary_output_bytes,
+    retained_traces = convergence_memory$retained_trace_bytes)
   list(
     label = "analytical working-memory estimate",
     estimate_kind = "analytical upper-bound estimate",
@@ -146,7 +162,20 @@
     estimated_total_gib = total / 1024^3,
     execution_estimated_concurrent_bytes = shared_bytes + used_workers * private_bytes,
     execution_estimated_total_bytes = execution_total,
-    execution_estimated_total_gib = execution_total / 1024^3
+    execution_estimated_total_gib = execution_total / 1024^3,
+    convergence_requested = if (is.null(convergence_memory)) FALSE else
+      isTRUE(convergence_memory$requested),
+    convergence_trace_capture = if (is.null(convergence_memory)) FALSE else
+      isTRUE(convergence_memory$trace_capture),
+    convergence_keep_traces = if (is.null(convergence_memory)) FALSE else
+      isTRUE(convergence_memory$keep_traces),
+    convergence_components_bytes = convergence_components,
+    convergence_trace_capture_bytes = unname(convergence_components[1L]),
+    convergence_workspace_bytes = unname(convergence_components[2L]),
+    convergence_summary_output_bytes = unname(convergence_components[3L]),
+    convergence_retained_trace_bytes = unname(convergence_components[4L]),
+    convergence_estimated_total_bytes = convergence_total,
+    convergence_estimated_total_gib = convergence_total / 1024^3
   )
 }
 
@@ -245,6 +274,32 @@
   as.list(Sys.getenv(variables, unset = NA_character_))
 }
 
+.mtblr_bed_convergence_memory <- function(convergence, controls, nchains,
+                                           nit, nt) {
+  estimate <- .mtblr_convergence_memory_estimate(
+    nchains, nit, nt, keep_traces = controls$keep_traces)
+  if (identical(convergence, "none")) {
+    estimate$trace_capture_bytes <- 0
+    estimate$maximum_workspace_bytes <- 0
+    estimate$workspace_bytes_per_quantity <- 0
+    estimate$summary_output_bytes <- 0
+    estimate$retained_trace_bytes <- 0
+  } else if (!isTRUE(controls$trace_route_required)) {
+    estimate$trace_capture_bytes <- 0
+    estimate$maximum_workspace_bytes <- 0
+    estimate$workspace_bytes_per_quantity <- 0
+    estimate$retained_trace_bytes <- 0
+  }
+  estimate$estimated_total_bytes <- sum(c(
+    estimate$trace_capture_bytes, estimate$maximum_workspace_bytes,
+    estimate$summary_output_bytes, estimate$retained_trace_bytes))
+  estimate$estimated_total_gib <- estimate$estimated_total_bytes / 1024^3
+  estimate$requested <- !identical(convergence, "none")
+  estimate$trace_capture <- isTRUE(controls$trace_route_required)
+  estimate$keep_traces <- isTRUE(controls$keep_traces)
+  estimate
+}
+
 #' Fit joint multivariate BayesC models directly from PLINK BED genotypes
 #'
 #' Fits one joint individual-level multivariate BayesC likelihood using a
@@ -292,6 +347,12 @@
 #'   length `nchains`, retained in supplied order. Negative values represent
 #'   unsigned 32-bit seeds above the signed integer maximum.
 #' @param keep_chains Retain compact per-chain posterior records.
+#' @param convergence Convergence-diagnostic mode: `"auto"` computes Tier 1
+#'   diagnostics for two or more chains, `"none"` disables diagnostics, and
+#'   `"core"` explicitly requests them.
+#' @param convergence_control Optional uniquely named list controlling `warn`,
+#'   `rhat_threshold`, `ess_per_chain_threshold`,
+#'   `mcse_mean_over_sd_threshold`, and `keep_traces`.
 #' @param memory_warning_gb Positive warning threshold in GiB, or `Inf`.
 #' @param verbose Print resolved execution metadata.
 #' @return An object of class `mtblr_fit` with BED diagnostics, phenotype
@@ -318,6 +379,22 @@
 #' and nondeterministic. The package never changes global BLAS settings; users
 #' should normally configure BLAS to one thread when running concurrent chain
 #' workers to avoid oversubscription.
+#'
+#' @section Convergence diagnostics:
+#' Tier 1 diagnostics use post-burn, unthinned per-chain diagonal traces for
+#' `B`, `G`, and `E`. They report rank-normalized split and folded R-hat (using
+#' their maximum), bulk and two-tail ESS, mean ESS, posterior SD, and mean
+#' MCSE. R-hat requires at least two chains and four post-burn draws; ESS and
+#' MCSE require at least six draws. Two or three chains carry an advisory that
+#' four chains are generally recommended. Fixed `B` or `E` quantities are
+#' marked `not_updated` rather than diagnosed.
+#'
+#' Diagnostics are independent of `keep_chains`. Optional convergence traces
+#' contain only post-burn B/G/E diagonals, use no extra thinning, and increase
+#' the analytical memory estimate. Threshold warnings are advisory and are
+#' aggregated at most once per fit; multiple chains or passing thresholds do
+#' not prove convergence. Marker, covariance off-diagonal, model-probability,
+#' ESS-for-SD, and quantile/median-MCSE diagnostics are not implemented.
 #' @export
 mtblr_bed <- function(
   y, Glist, covar = NULL, chr = NULL, cls = NULL, rows = NULL,
@@ -330,6 +407,7 @@ mtblr_bed <- function(
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL, keep_chains = FALSE,
+  convergence = c("auto", "none", "core"), convergence_control = NULL,
   memory_warning_gb = 8, verbose = FALSE
 ) {
   if (missing(Glist) || is.null(Glist)) {
@@ -357,6 +435,7 @@ mtblr_bed <- function(
   }
   center <- .mtblr_bed_logical(center, "center")
   residual_covariance <- match.arg(residual_covariance)
+  convergence <- match.arg(convergence)
   if (!identical(method, "bayesC")) {
     stop("Only method = 'bayesC' is supported.", call. = FALSE)
   }
@@ -504,6 +583,10 @@ mtblr_bed <- function(
   ncores <- chain_control$ncores
   keep_chains <- chain_control$keep_chains
   native_chain_seeds <- chain_control$native
+  convergence_controls <- .mtblr_bed_convergence_controls(
+    convergence, convergence_control, nchains)
+  convergence_memory <- .mtblr_bed_convergence_memory(
+    convergence, convergence_controls, nchains, as.integer(nit), dat$nt)
   if (!is.numeric(memory_warning_gb) || length(memory_warning_gb) != 1L ||
       is.na(memory_warning_gb) || memory_warning_gb <= 0) {
     stop("memory_warning_gb must be a positive finite scalar or Inf.",
@@ -511,15 +594,21 @@ mtblr_bed <- function(
   }
   memory <- .mtblr_bed_memory_estimate(
     nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn,
-    nchains, ncores, keep_chains)
+    nchains, ncores, keep_chains,
+    convergence_memory = convergence_memory)
   if (memory$estimated_total_gib > memory_warning_gb) {
     warning(sprintf(
       paste0("mtblr_bed analytical upper-bound estimate (not measured RSS; ",
              "not measured peak RSS): n=%d, m=%d, nt=%d, models=%d, ",
              "nchains=%d, ncores=%d, requested workers=%d, keep_chains=%s, ",
+             "convergence=%s, convergence trace capture=%s, ",
+             "convergence trace retention=%s, convergence=%.6f GiB, ",
              "estimated %.6f GiB exceeds threshold %.6f GiB."),
       nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix),
       nchains, ncores, memory$requested_worker_count, keep_chains,
+      convergence, convergence_controls$trace_route_required,
+      convergence_controls$keep_traces,
+      memory$convergence_estimated_total_gib,
       memory$estimated_total_gib, memory_warning_gb), call. = FALSE)
   }
   normalized_bed_files <- normalizePath(
@@ -554,7 +643,7 @@ mtblr_bed <- function(
   blas_thread_environment <- .mtblr_bed_blas_environment()
   blas_policy <- "package_does_not_modify_blas_threads"
 
-  raw <- mtblr_bed_chains_internal(
+  native_arguments <- list(
     bed_files = dat$bed_files, n_bed = dat$n_total, cls = dat$cls,
     rows = dat$rows, af = frequencies, Y = Y,
     beta_init = lapply(seq_len(dat$nt), function(t) initialization$beta[, t]),
@@ -570,6 +659,43 @@ mtblr_bed <- function(
     nthin = as.integer(nthin), seed = as.integer(seed), method = 4L,
     nchains = nchains, ncores = ncores,
     chain_seeds = native_chain_seeds, keep_chains = keep_chains)
+  native_route <- if (isTRUE(convergence_controls$trace_route_required)) {
+    mtblr_bed_convergence_trace_internal
+  } else {
+    mtblr_bed_chains_internal
+  }
+  native_result <- do.call(native_route, native_arguments)
+  convergence_traces <- NULL
+  if (isTRUE(convergence_controls$trace_route_required)) {
+    diagnostic_result <- .mtblr_bed_convergence_internal(
+      native_result = native_result, trait_names = trait_names,
+      updateB = updateB, updateE = updateE,
+      control = convergence_controls$thresholds,
+      keep_traces = convergence_controls$keep_traces)
+    raw <- diagnostic_result$raw
+    convergence_traces <- diagnostic_result$convergence_traces
+  } else {
+    raw <- native_result
+    raw$diagnostics$convergence <- if (identical(convergence, "none")) {
+      .mtblr_convergence_not_requested(
+        trait_names, updateB, updateE, nchains, as.integer(nit),
+        convergence_controls$thresholds)
+    } else {
+      .mtblr_convergence_unavailable(
+        trait_names, updateB, updateE, nchains, as.integer(nit),
+        convergence_controls$thresholds)
+    }
+  }
+  convergence_result <- raw$diagnostics$convergence
+  convergence_result$warning_messages <- if (identical(convergence, "none") ||
+                                                (identical(convergence, "auto") &&
+                                                 nchains < 2L)) {
+    character()
+  } else {
+    .mtblr_convergence_warning_messages(convergence_result, convergence)
+  }
+  raw$diagnostics$convergence <-
+    .mtblr_validate_convergence_result(convergence_result)
   raw <- .validate_mtblr_raw(raw)
   bed_diagnostics <- raw$diagnostics$mt_bed
   alignment$nchains <- nchains
@@ -582,7 +708,8 @@ mtblr_bed <- function(
   memory <- .mtblr_bed_memory_estimate(
     nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn,
     nchains, ncores, keep_chains,
-    used_workers = as.integer(bed_diagnostics$used_workers))
+    used_workers = as.integer(bed_diagnostics$used_workers),
+    convergence_memory = convergence_memory)
   raw$model$names <- model_spec$names
   raw$pi$names <- model_spec$names
   raw$data <- list(
@@ -602,7 +729,12 @@ mtblr_bed <- function(
     openmp_available = bed_diagnostics$openmp_available,
     chain_seeds = bed_diagnostics$chain_seeds,
     keep_chains = keep_chains, blas_policy = blas_policy,
-    blas_thread_environment = blas_thread_environment)
+    blas_thread_environment = blas_thread_environment,
+    convergence = convergence,
+    convergence_requested = convergence_controls$diagnostic_requested,
+    convergence_scope = if (identical(convergence, "none")) "none" else "core",
+    convergence_keep_traces = convergence_controls$keep_traces,
+    convergence_memory_estimate = convergence_memory)
   raw$alignment <- alignment
   input <- list(
     method = "bayesc", model = "bayesc", backend = "mt_bed_bayesc",
@@ -642,7 +774,21 @@ mtblr_bed <- function(
     blas_thread_environment = blas_thread_environment,
     trait_metadata = trait_metadata, marker_metadata = marker_metadata,
     alignment = alignment, memory_estimate = memory,
-    memory_warning_gb = memory_warning_gb)
+    memory_warning_gb = memory_warning_gb,
+    convergence = convergence,
+    convergence_requested = convergence_controls$diagnostic_requested,
+    convergence_scope = if (identical(convergence, "none")) "none" else "core",
+    convergence_trace_route = if (convergence_controls$trace_route_required)
+      "mtblr_bed_convergence_trace_internal" else
+      "mtblr_bed_chains_internal",
+    convergence_warning_enabled = convergence_controls$warn,
+    convergence_warning_emitted = convergence_controls$warn &&
+      length(raw$diagnostics$convergence$warning_messages) > 0L,
+    convergence_keep_traces = convergence_controls$keep_traces,
+    convergence_thresholds = convergence_controls$thresholds,
+    convergence_status = raw$diagnostics$convergence$overall_status,
+    convergence_computed = raw$diagnostics$convergence$computed,
+    convergence_memory_estimate = convergence_memory)
   if (isTRUE(verbose)) {
     print(input[c("backend", "n_used", "m", "nt",
                   "residual_covariance", "seed", "nchains", "ncores",
@@ -654,5 +800,9 @@ mtblr_bed <- function(
   fit$bed_diagnostics <- raw$diagnostics$mt_bed
   fit$phenotype_preprocessing <- preprocessing
   fit$memory_estimate <- memory
+  fit["convergence_traces"] <- list(convergence_traces)
+  if (isTRUE(input$convergence_warning_emitted)) {
+    warning(raw$diagnostics$convergence$warning_messages[1L], call. = FALSE)
+  }
   fit
 }

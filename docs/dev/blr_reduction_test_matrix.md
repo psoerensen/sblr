@@ -736,3 +736,9 @@ Phase 17U owns exact ordinary-raw equality between the Phase 17R chains route
 and convergence-trace route after timing normalization, exact serial/OpenMP
 trace equality, `keep_chains` independence, update-disabled reductions, frozen
 statistical references, and optional `posterior` 1.6.1 comparisons.
+
+## Phase 17V reductions
+
+Default/none ordinary output reduces to Phase 17S, and computed public output
+reduces to the Phase 17U native-plus-R engine. Chain/trace retention, worker
+count, seeds, and update modes are permanent equality owners.

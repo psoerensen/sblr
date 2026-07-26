@@ -272,3 +272,9 @@ prepared dataset still feeds one core call per chain; post-burn diagonal traces
 are copied before aggregation, then diagnosed in dependency-free R code.
 Compact chains, aggregation, final-state policy, seeds, and OpenMP dispatch are
 unchanged.
+
+## Phase 17V public selection
+
+The public adapter selects exactly one ordinary or trace-capable native route.
+It never reruns chains and never uses pooled or compact-chain data as formal
+diagnostic draws.

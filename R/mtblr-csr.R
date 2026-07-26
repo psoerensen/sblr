@@ -407,6 +407,10 @@
       }
     }
   }
+  if (!is.null(raw$diagnostics$convergence)) {
+    raw$diagnostics$convergence <-
+      .mtblr_validate_convergence_result(raw$diagnostics$convergence)
+  }
   raw
 }
 
@@ -461,6 +465,9 @@
       })
       fit$chains <- formatted_chains
     }
+  }
+  if (!is.null(raw$diagnostics$convergence)) {
+    fit$convergence <- raw$diagnostics$convergence
   }
   class(fit) <- c("mtblr_fit", "list")
   fit

@@ -264,3 +264,13 @@ trace retention, memory metadata, documentation, and exact default reduction.
 
 Only later add lower-triangle covariances, null/active probabilities, optional
 pattern probabilities, selected-marker b/d traces, and their memory controls.
+
+## Phase 17V public activation
+
+Public `mtblr_bed()` now supports `convergence=c("auto","none","core")` and a
+strict `convergence_control` list. Trace capture occurs only for requested
+multichain diagnostics or explicit trace retention. `none` returns a validated
+zero-row not-requested object; automatic single-chain use returns quiet
+unavailability. Warnings are aggregated, advisory, and do not prove
+convergence. Diagnostics remain independent of `keep_chains`, use per-chain
+post-burn rather than pooled traces, and expose no Tier 2 or marker scope.

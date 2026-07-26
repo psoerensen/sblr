@@ -120,3 +120,7 @@ statistical helpers run in installed checking; it owns no production engine.
 bulk/tail/mean ESS, mean MCSE, statuses, partial availability, validation,
 memory, actual packed-BED equality, threading, and public protection.
 Phase 17T continues to own the statistical scope contract.
+
+Phase 17V owns public modes/controls, one-route selection, disabled/unavailable
+objects, warnings, diagnostic memory, formatting, retained traces, and public
+reductions. Phase 17U continues to own all diagnostic mathematics.

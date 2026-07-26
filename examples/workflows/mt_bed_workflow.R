@@ -57,3 +57,32 @@ fit_retained$bm_sd
 fit_retained$dm_sd
 fit_retained$chains
 fit_retained$memory_estimate
+
+# Tier 1 convergence diagnostics use only post-burn B/G/E diagonal traces.
+# These short runs illustrate the interface; they are not convergence advice.
+fit_auto <- mtblr_bed(
+  y = Y, Glist = Glist, nit = 20, nburn = 10, seed = 101
+)
+fit_none <- mtblr_bed(
+  y = Y, Glist = Glist, nit = 20, nburn = 10, seed = 101,
+  convergence = "none"
+)
+fit_core <- mtblr_bed(
+  y = Y, Glist = Glist, nit = 20, nburn = 10, seed = 101,
+  nchains = 4, ncores = 2, convergence = "core",
+  convergence_control = list(warn = FALSE)
+)
+fit_custom <- mtblr_bed(
+  y = Y, Glist = Glist, nit = 20, nburn = 10, seed = 101,
+  nchains = 4, convergence = "core",
+  convergence_control = list(
+    warn = FALSE, rhat_threshold = 1.01,
+    ess_per_chain_threshold = 100,
+    mcse_mean_over_sd_threshold = 0.05,
+    keep_traces = TRUE)
+)
+fit_auto$convergence
+fit_core$convergence$summary
+fit_core$convergence$overview
+fit_custom$convergence_traces
+fit_custom$memory_estimate

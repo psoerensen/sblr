@@ -1605,3 +1605,9 @@ Implemented post-burn B/G/E diagonal capture, rank-normalized split and folded
 R-hat, reference-compatible bulk/tail/mean ESS, posterior SD, mean MCSE,
 metric-level availability, validation, optional internal traces, analytical
 memory, and one internal route. Public activation remains a later phase.
+
+## Phase 17V — public Tier 1 convergence activation
+
+Activated strict modes/controls, one-route dispatch, validated disabled and
+unavailable objects, additive formatting, advisory warnings, diagnostic memory,
+optional traces, documentation, and public reductions. Tier 2/3 remain future.

@@ -78,3 +78,10 @@ references, actual internal-route equality, `keep_chains` independence,
 serial/OpenMP equality, and memory estimates. Only source/hash architecture
 assertions skip narrowly when no checkout is present. Optional `posterior`
 comparisons skip when that development package is absent.
+
+## Phase 17V
+
+Portable owners cover mode/control validation, route selection, disabled and
+quiet results, computed diagnostics, warnings, memory, formatting, optional
+traces, reductions, OpenMP equality, and reproducibility. Only source/hash
+assertions skip without a checkout.
