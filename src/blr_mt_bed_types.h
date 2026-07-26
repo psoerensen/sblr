@@ -7,6 +7,7 @@
 #include <armadillo>
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -44,7 +45,7 @@ struct MtBedExecutionSpec {
  int nit=0;
  int nburn=0;
  int nthin=1;
- int seed=1;
+ std::uint32_t seed=1;
  int method=4;
 };
 

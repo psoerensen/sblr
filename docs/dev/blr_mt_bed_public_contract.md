@@ -180,3 +180,6 @@ The public interface remains serial and unchanged. Phase 17Q specifies future
 chain-only tasks, deterministic seeds, pooled summaries, primary-chain final
 state, optional compact chains, and analytical worker-aware memory. These are
 contracts for Phase 17R/17S, not current capabilities.
+
+Phase 17R activates those contracts internally only. Public `mtblr_bed()` still
+has no chain controls and continues to call the exact serial Phase 17O route.

@@ -93,6 +93,10 @@ mtblr_bed_internal <- function(bed_files, n_bed, cls, rows, af, Y, beta_init, b_
     .Call(`_sblr_mtblr_bed_internal`, bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method)
 }
 
+mtblr_bed_chains_internal <- function(bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, keep_chains) {
+    .Call(`_sblr_mtblr_bed_chains_internal`, bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, keep_chains)
+}
+
 mtblr_eigen <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
     .Call(`_sblr_mtblr_eigen`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }

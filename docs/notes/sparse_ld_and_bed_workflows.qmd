@@ -517,3 +517,7 @@ OpenMP, or multiple chains.
 Phase 17Q formalizes later chain-level parallelism only. One task will be one
 complete joint MT chain sharing the prepared packed BED view; it will not split
 traits, markers, or sets. No multichain or OpenMP behavior is active yet.
+
+Phase 17R activates this only for the internal MT BED chains route. One BED read
+and immutable view are shared, each chain is complete and independent, and the
+public `mtblr_bed()` route remains unchanged.

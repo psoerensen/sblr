@@ -52,3 +52,10 @@ Seed, topology, aggregation, chain-stability, retained-chain, failure, and
 memory-scaling oracles are portable under installed checking. Only assertions
 about absent OpenMP/native/public routes and source singularity use
 `blr_repo_path()` and skip without a source checkout.
+
+## Phase 17R
+
+Single-chain exactness, serial multichain execution, OpenMP equality, seeds,
+stability, retained records, raw validation, failure order, and reproducibility
+are installed-check tests. Only source counts for the shared preparation seam,
+static loop, unchanged core, and public serial call use `blr_repo_path()`.

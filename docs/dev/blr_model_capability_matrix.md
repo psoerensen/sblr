@@ -427,3 +427,7 @@ multichain execution.
 Phase 17Q does not change this capability matrix. It formalizes a future
 BayesC-only chain-parallel route: each chain remains a complete joint MT fit;
 no trait, marker, or set parallelism is specified.
+
+Phase 17R makes chain-level multichain/OpenMP execution available through the
+internal `mtblr_bed_chains_internal()` maintenance route. Public `mtblr_bed()`
+remains serial and one-chain; no new statistical capability is introduced.

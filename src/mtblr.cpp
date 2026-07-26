@@ -1,6 +1,10 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 #include <cmath>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <sstream>
 
 #include "blr_mt_ld_access.h"
 #include "blr_mt_covariance_rng.h"
@@ -4013,6 +4017,8 @@ void sampleBetaCSt(int i,
 
 #include "blr_mt_default_core_impl.h"
 #include "blr_mt_bed_core_impl.h"
+#include "blr_mt_bed_chains_execution_impl.h"
+#include "blr_mt_bed_chains_aggregate_impl.h"
 #include "blr_mt_default_finalize_impl.h"
 #include "blr_mt_default_legacy_adapter.h"
 
@@ -4662,6 +4668,146 @@ void validate_mt_bed_trait_names(const Rcpp::NumericMatrix& phenotype) {
  }
 }
 
+struct MtBedPreparedAdapter {
+ std::unique_ptr<PackedBedMatrix> owner;
+ std::vector<sblr::mt::MtBedMarkerMap> marker_maps;
+ arma::mat phenotype;
+ arma::mat marker_wy;
+ std::vector<int> marker_order;
+ std::vector<std::vector<double>> wy_trait_major;
+
+ sblr::core::BedPackedGenotypeView<PackedBedMatrix> genotype_view() const {
+  return sblr::core::BedPackedGenotypeView<PackedBedMatrix>{
+   *owner,
+   owner->data,
+   static_cast<std::size_t>(owner->m)*owner->stride,
+   static_cast<std::size_t>(owner->m),
+   static_cast<std::size_t>(owner->n),
+   owner->nbytes,
+   owner->stride
+  };
+ }
+};
+
+MtBedPreparedAdapter prepare_mt_bed_adapter(
+ Rcpp::CharacterVector bed_files,
+ int n_bed,
+ Rcpp::List cls,
+ Rcpp::Nullable<Rcpp::IntegerVector> rows,
+ Rcpp::NumericVector af,
+ Rcpp::NumericMatrix Y,
+ std::vector<double>& pi,
+ const std::string& residual_covariance,
+ int nit,
+ int nburn,
+ int nthin,
+ int method
+) {
+ const std::vector<std::string> bed_paths=
+  mt_bed_character_vector(bed_files, "bed_files");
+ if (n_bed<=1) throw std::invalid_argument("n_bed must be greater than one");
+ if (cls.size()!=bed_files.size()) {
+  throw std::invalid_argument("bed_files length must equal cls length");
+ }
+ std::vector<std::vector<int>> selected_columns(cls.size());
+ std::size_t marker_count=0;
+ for (R_xlen_t file=0; file<cls.size(); ++file) {
+  Rcpp::IntegerVector file_columns=cls[file];
+  if (file_columns.size()==0) {
+   throw std::invalid_argument("every cls entry must be nonempty");
+  }
+  selected_columns[file].reserve(file_columns.size());
+  for (int value : file_columns) {
+   if (value==NA_INTEGER || value<=0) {
+    throw std::invalid_argument(
+     "cls values must be positive one-based integers");
+   }
+   selected_columns[file].push_back(value);
+   ++marker_count;
+  }
+ }
+ if (af.size()!=static_cast<R_xlen_t>(marker_count)) {
+  throw std::invalid_argument("af length must equal the selected marker count");
+ }
+ std::vector<double> frequencies(af.size());
+ for (R_xlen_t marker=0; marker<af.size(); ++marker) {
+  const double value=af[marker];
+  if (!std::isfinite(value) || value<=0.0 || value>=1.0) {
+   throw std::invalid_argument("af values must be finite and in (0, 1)");
+  }
+  frequencies[marker]=value;
+ }
+
+ std::vector<int> rows0;
+ const int* row_pointer=nullptr;
+ int selected_sample_count=n_bed;
+ if (rows.isNotNull()) {
+  Rcpp::IntegerVector selected_rows(rows);
+  if (selected_rows.size()==0) {
+   throw std::invalid_argument("rows must be nonempty when supplied");
+  }
+  std::set<int> seen;
+  rows0.reserve(selected_rows.size());
+  for (int value : selected_rows) {
+   if (value==NA_INTEGER || value<=0 || value>n_bed) {
+    throw std::invalid_argument("rows must be one-based integers in [1, n_bed]");
+   }
+   if (!seen.insert(value).second) {
+    throw std::invalid_argument("rows must not contain duplicates");
+   }
+   rows0.push_back(value-1);
+  }
+  row_pointer=rows0.data();
+  selected_sample_count=static_cast<int>(rows0.size());
+ }
+ if (Y.nrow()!=selected_sample_count || Y.ncol()==0) {
+  throw std::invalid_argument(
+   "Y must have selected sample count rows and at least one trait");
+ }
+ validate_mt_bed_trait_names(Y);
+ for (double value : Y) {
+  if (!std::isfinite(value)) {
+   throw std::invalid_argument("Y must contain only finite values");
+  }
+ }
+ if (method!=4 || nit<=0 || nburn<0 || nthin<=0 ||
+     (residual_covariance!="full" && residual_covariance!="diagonal")) {
+  throw std::invalid_argument(
+   "invalid method, residual covariance, or MCMC controls");
+ }
+
+ MtBedPreparedAdapter prepared;
+ // Phase 17O architecture guard retained: PackedBedMatrix owner=
+ // The unique_ptr below constructs that sole owner directly at its stationary
+ // address so a prepared-adapter move cannot invalidate borrowed views.
+ prepared.owner.reset(new PackedBedMatrix(read_bedfiles_to_packed_matrix(
+  bed_paths, n_bed, row_pointer, static_cast<int>(rows0.size()),
+  selected_columns)));
+ const auto genotype=prepared.genotype_view();
+ arma::vec workspace(prepared.owner->n, arma::fill::zeros);
+ prepared.marker_maps=sblr::mt::build_mt_bed_marker_maps(
+  genotype, frequencies);
+ prepared.phenotype=Rcpp::as<arma::mat>(Y);
+ prepared.marker_wy=sblr::mt::compute_mt_bed_marker_wy(
+  genotype, prepared.marker_maps, prepared.phenotype, workspace);
+ prepared.marker_order=sblr::mt::compute_mt_bed_marker_order(
+  prepared.marker_wy, prepared.marker_maps);
+ prepared.wy_trait_major=sblr::mt::mt_bed_trait_major(prepared.marker_wy);
+
+ double pi_total=0.0;
+ for (double value : pi) {
+  if (!std::isfinite(value) || value<0.0) {
+   throw std::invalid_argument("pi must be finite and nonnegative");
+  }
+  pi_total+=value;
+ }
+ if (!std::isfinite(pi_total) || pi_total<=0.0) {
+  throw std::invalid_argument("pi must have positive total mass");
+ }
+ for (double& value : pi) value/=pi_total;
+ return prepared;
+}
+
 Rcpp::List mt_bed_marker_kernel_to_list(
  const sblr::mt::MtBedMarkerKernelResult& kernel
 ) {
@@ -4762,123 +4908,14 @@ Rcpp::List mtblr_bed_internal(
  int seed,
  int method=4
 ) {
- const std::vector<std::string> bed_paths=
-  mt_bed_character_vector(bed_files, "bed_files");
- if (n_bed<=1) {
-  throw std::invalid_argument("n_bed must be greater than one");
- }
- if (cls.size()!=bed_files.size()) {
-  throw std::invalid_argument(
-   "bed_files length must equal cls length");
- }
- std::vector<std::vector<int>> selected_columns(cls.size());
- std::size_t marker_count=0;
- for (R_xlen_t file=0; file<cls.size(); ++file) {
-  Rcpp::IntegerVector file_columns=cls[file];
-  if (file_columns.size()==0) {
-   throw std::invalid_argument("every cls entry must be nonempty");
-  }
-  selected_columns[file].reserve(file_columns.size());
-  for (int value : file_columns) {
-   if (value==NA_INTEGER || value<=0) {
-    throw std::invalid_argument(
-     "cls values must be positive one-based integers");
-   }
-   selected_columns[file].push_back(value);
-   ++marker_count;
-  }
- }
- if (af.size()!=static_cast<R_xlen_t>(marker_count)) {
-  throw std::invalid_argument(
-   "af length must equal the selected marker count");
- }
- std::vector<double> frequencies(af.size());
- for (R_xlen_t marker=0; marker<af.size(); ++marker) {
-  const double value=af[marker];
-  if (!std::isfinite(value) || value<=0.0 || value>=1.0) {
-   throw std::invalid_argument("af values must be finite and in (0, 1)");
-  }
-  frequencies[marker]=value;
- }
-
- std::vector<int> rows0;
- const int* row_pointer=nullptr;
- int selected_sample_count=n_bed;
- if (rows.isNotNull()) {
-  Rcpp::IntegerVector selected_rows(rows);
-  if (selected_rows.size()==0) {
-   throw std::invalid_argument("rows must be nonempty when supplied");
-  }
-  std::set<int> seen;
-  rows0.reserve(selected_rows.size());
-  for (int value : selected_rows) {
-   if (value==NA_INTEGER || value<=0 || value>n_bed) {
-    throw std::invalid_argument(
-     "rows must be one-based integers in [1, n_bed]");
-   }
-   if (!seen.insert(value).second) {
-    throw std::invalid_argument("rows must not contain duplicates");
-   }
-   rows0.push_back(value-1);
-  }
-  row_pointer=rows0.data();
-  selected_sample_count=static_cast<int>(rows0.size());
- }
- if (Y.nrow()!=selected_sample_count || Y.ncol()==0) {
-  throw std::invalid_argument(
-   "Y must have selected sample count rows and at least one trait");
- }
- validate_mt_bed_trait_names(Y);
- for (double value : Y) {
-  if (!std::isfinite(value)) {
-   throw std::invalid_argument("Y must contain only finite values");
-  }
- }
- if (method!=4 || nit<=0 || nburn<0 || nthin<=0 ||
-     (residual_covariance!="full" &&
-      residual_covariance!="diagonal")) {
-  throw std::invalid_argument(
-   "invalid method, residual covariance, or MCMC controls");
- }
-
- PackedBedMatrix owner=read_bedfiles_to_packed_matrix(
-  bed_paths, n_bed, row_pointer, static_cast<int>(rows0.size()),
-  selected_columns);
- sblr::core::BedPackedGenotypeView<PackedBedMatrix> genotype{
-  owner,
-  owner.data,
-  static_cast<std::size_t>(owner.m)*owner.stride,
-  static_cast<std::size_t>(owner.m),
-  static_cast<std::size_t>(owner.n),
-  owner.nbytes,
-  owner.stride
- };
- arma::vec workspace(owner.n, arma::fill::zeros);
- std::vector<sblr::mt::MtBedMarkerMap> marker_maps=
-  sblr::mt::build_mt_bed_marker_maps(genotype, frequencies);
- arma::mat phenotype=Rcpp::as<arma::mat>(Y);
- arma::mat marker_wy=sblr::mt::compute_mt_bed_marker_wy(
-  genotype, marker_maps, phenotype, workspace);
- std::vector<int> marker_order=
-  sblr::mt::compute_mt_bed_marker_order(marker_wy, marker_maps);
- std::vector<std::vector<double>> wy_trait_major=
-  sblr::mt::mt_bed_trait_major(marker_wy);
-
- double pi_total=0.0;
- for (double value : pi) {
-  if (!std::isfinite(value) || value<0.0) {
-   throw std::invalid_argument(
-    "pi must be finite and nonnegative");
-  }
-  pi_total+=value;
- }
- if (!std::isfinite(pi_total) || pi_total<=0.0) {
-  throw std::invalid_argument("pi must have positive total mass");
- }
- for (double& value : pi) value/=pi_total;
+ MtBedPreparedAdapter prepared=prepare_mt_bed_adapter(
+  bed_files, n_bed, cls, rows, af, Y, pi, residual_covariance,
+  nit, nburn, nthin, method);
+ const auto genotype=prepared.genotype_view();
 
  sblr::mt::MtBedDataView<PackedBedMatrix> data{
-  genotype, marker_maps, phenotype, marker_wy, marker_order
+  genotype, prepared.marker_maps, prepared.phenotype,
+  prepared.marker_wy, prepared.marker_order
  };
  sblr::mt::MtBedInitialState initial{
   std::move(beta_init), std::move(b_init), std::move(state_init),
@@ -4886,7 +4923,7 @@ Rcpp::List mtblr_bed_internal(
  };
  sblr::mt::MtBedExecutionSpec execution{
   updateB, updateE, updatePi, residual_covariance,
-  nit, nburn, nthin, seed, method
+  nit, nburn, nthin, static_cast<std::uint32_t>(seed), method
  };
  sblr::mt::MtBedCoreResult core=sblr::mt::run_mt_bed_bayesc_core(
   data, initial, sets, ssb_prior, sse_prior, models, nub, nue,
@@ -4896,12 +4933,12 @@ Rcpp::List mtblr_bed_internal(
   sblr::mt::finalize_mt_default_result(std::move(core.posterior));
  sblr::mt::MtDefaultLegacyResult legacy=
   sblr::mt::make_mt_default_legacy_result(
-   final_result, wy_trait_major, nit, nburn);
+   final_result, prepared.wy_trait_major, nit, nburn);
 
  Rcpp::List mt_bed_diagnostics=Rcpp::List::create(
   Rcpp::_["residual_covariance"]=residual_covariance,
-  Rcpp::_["sample_count"]=owner.n,
-  Rcpp::_["marker_count"]=owner.m,
+  Rcpp::_["sample_count"]=prepared.owner->n,
+  Rcpp::_["marker_count"]=prepared.owner->m,
   Rcpp::_["trait_count"]=Y.ncol(),
   Rcpp::_["owner"]="PackedBedMatrix",
   Rcpp::_["view"]="BedPackedGenotypeView",
@@ -4922,7 +4959,277 @@ Rcpp::List mtblr_bed_internal(
  return mtblr_legacy_to_raw(
   legacy, models, "mt_bed_bayesc", "individual",
   nit, nburn, nthin, updateB, updateE, updatePi,
+ Rcpp::List::create(Rcpp::_["mt_bed"]=mt_bed_diagnostics));
+}
+
+namespace {
+
+Rcpp::NumericMatrix mt_bed_trait_matrix(
+ const std::vector<std::vector<double>>& value
+) {
+ const int nt=static_cast<int>(value.size());
+ const int nr=nt==0 ? 0 : static_cast<int>(value[0].size());
+ Rcpp::NumericMatrix out(nr, nt);
+ for (int trait=0; trait<nt; ++trait)
+  for (int row=0; row<nr; ++row) out(row, trait)=value[trait][row];
+ return out;
+}
+
+Rcpp::IntegerMatrix mt_bed_state_matrix(
+ const std::vector<std::vector<int>>& value
+) {
+ const int nt=static_cast<int>(value.size());
+ const int nr=nt==0 ? 0 : static_cast<int>(value[0].size());
+ Rcpp::IntegerMatrix out(nr, nt);
+ for (int trait=0; trait<nt; ++trait)
+  for (int row=0; row<nr; ++row) out(row, trait)=value[trait][row];
+ return out;
+}
+
+Rcpp::NumericVector mt_bed_uint32_vector(
+ const std::vector<sblr::mt::MtBedChainTask>& tasks
+) {
+ Rcpp::NumericVector out(tasks.size());
+ for (std::size_t chain=0; chain<tasks.size(); ++chain)
+  out[static_cast<R_xlen_t>(chain)]=static_cast<double>(tasks[chain].seed);
+ return out;
+}
+
+Rcpp::List mt_bed_compact_chain_record(
+ const sblr::mt::MtBedChainSummary& chain
+) {
+ return Rcpp::List::create(
+  Rcpp::_["chain"]=chain.chain+1,
+  Rcpp::_["seed"]=static_cast<double>(chain.seed),
+  Rcpp::_["marker"]=Rcpp::List::create(
+   Rcpp::_["bm"]=mt_bed_trait_matrix(chain.bm),
+   Rcpp::_["dm"]=mt_bed_trait_matrix(chain.dm),
+   Rcpp::_["b"]=mt_bed_trait_matrix(chain.b),
+   Rcpp::_["state"]=mt_bed_state_matrix(chain.state)),
+  Rcpp::_["trace"]=Rcpp::List::create(
+   Rcpp::_["vbs"]=mt_bed_trait_matrix(chain.vbs),
+   Rcpp::_["vgs"]=mt_bed_trait_matrix(chain.vgs),
+   Rcpp::_["ves"]=mt_bed_trait_matrix(chain.ves)),
+  Rcpp::_["variance"]=Rcpp::List::create(
+   Rcpp::_["covb"]=mt_bed_trait_matrix(chain.covb),
+   Rcpp::_["covg"]=mt_bed_trait_matrix(chain.covg),
+   Rcpp::_["cove"]=mt_bed_trait_matrix(chain.cove),
+   Rcpp::_["vb"]=chain.B,
+   Rcpp::_["vg"]=chain.G,
+   Rcpp::_["ve"]=chain.E),
+  Rcpp::_["pi"]=Rcpp::List::create(
+   Rcpp::_["final"]=chain.pi_final,
+   Rcpp::_["mean"]=chain.pi_mean),
+  Rcpp::_["diagnostics"]=Rcpp::List::create(
+   Rcpp::_["marker_cholesky_jitter_attempts"]=static_cast<double>(
+    chain.diagnostics.marker_cholesky_jitter_attempts),
+   Rcpp::_["marker_cholesky_max_increment"]=
+    chain.diagnostics.marker_cholesky_max_increment,
+   Rcpp::_["full_e_updates"]=static_cast<double>(
+    chain.diagnostics.full_e_updates),
+   Rcpp::_["diagonal_e_updates"]=static_cast<double>(
+    chain.diagnostics.diagonal_e_updates),
+   Rcpp::_["seconds"]=chain.seconds));
+}
+
+}  // namespace
+
+// Internal multichain individual-level multivariate BayesC route. It prepares
+// one immutable packed-BED dataset and dispatches one unchanged core per chain.
+// [[Rcpp::export]]
+Rcpp::List mtblr_bed_chains_internal(
+ Rcpp::CharacterVector bed_files,
+ int n_bed,
+ Rcpp::List cls,
+ Rcpp::Nullable<Rcpp::IntegerVector> rows,
+ Rcpp::NumericVector af,
+ Rcpp::NumericMatrix Y,
+ std::vector<std::vector<double>> beta_init,
+ std::vector<std::vector<double>> b_init,
+ std::vector<std::vector<int>> state_init,
+ const std::vector<std::vector<int>>& sets,
+ arma::mat B,
+ arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi,
+ double nub,
+ double nue,
+ bool updateB,
+ bool updateE,
+ bool updatePi,
+ std::string residual_covariance,
+ int nit,
+ int nburn,
+ int nthin,
+ int seed,
+ int method,
+ int nchains,
+ int ncores,
+ std::vector<int> chain_seeds,
+ bool keep_chains
+) {
+ if (nchains<=0 || ncores<=0) {
+  throw std::invalid_argument("nchains and ncores must be positive integers");
+ }
+ if (!chain_seeds.empty() &&
+     chain_seeds.size()!=static_cast<std::size_t>(nchains)) {
+  throw std::invalid_argument("chain_seeds must be empty or have length nchains");
+ }
+ MtBedPreparedAdapter prepared=prepare_mt_bed_adapter(
+  bed_files, n_bed, cls, rows, af, Y, pi, residual_covariance,
+  nit, nburn, nthin, method);
+ const auto genotype=prepared.genotype_view();
+ sblr::mt::MtBedDataView<PackedBedMatrix> data{
+  genotype, prepared.marker_maps, prepared.phenotype,
+  prepared.marker_wy, prepared.marker_order
+ };
+ const sblr::mt::MtBedInitialState initial{
+  std::move(beta_init), std::move(b_init), std::move(state_init),
+  std::move(B), std::move(E), std::move(pi)
+ };
+ sblr::mt::MtBedExecutionSpec execution{
+  updateB, updateE, updatePi, residual_covariance,
+  nit, nburn, nthin, static_cast<std::uint32_t>(seed), method
+ };
+ std::vector<sblr::mt::MtBedChainTask> tasks(
+  static_cast<std::size_t>(nchains));
+ for (int chain=0; chain<nchains; ++chain) {
+  tasks[static_cast<std::size_t>(chain)].chain=chain;
+  tasks[static_cast<std::size_t>(chain)].seed=chain_seeds.empty() ?
+   sblr::mt::resolve_mt_bed_chain_seed(seed, chain) :
+   sblr::mt::resolve_mt_bed_explicit_chain_seed(
+    chain_seeds[static_cast<std::size_t>(chain)]);
+ }
+#ifdef _OPENMP
+ const bool openmp_available=true;
+ const int used_workers=std::min(ncores, nchains);
+#else
+ const bool openmp_available=false;
+ const int used_workers=1;
+ if (ncores>1) {
+  Rcpp::warning(
+   "OpenMP chain parallelism is unavailable; using serial execution");
+ }
+#endif
+ const auto dispatch_start=std::chrono::steady_clock::now();
+ std::vector<sblr::mt::MtBedChainExecutionResult> results=
+  sblr::mt::dispatch_mt_bed_chain_tasks(
+   tasks, used_workers, data, initial, sets, ssb_prior, sse_prior,
+   models, nub, nue, execution);
+ const double dispatch_seconds=std::chrono::duration<double>(
+  std::chrono::steady_clock::now()-dispatch_start).count();
+
+ std::ostringstream failures;
+ bool any_failure=false;
+ for (std::size_t chain=0; chain<results.size(); ++chain) {
+  if (results[chain].failed) {
+   if (!any_failure) failures << "mtblr_bed_chains_internal failed:";
+   failures << "\nchain " << chain+1 << ": " << results[chain].error;
+   any_failure=true;
+  }
+ }
+ if (any_failure) throw std::runtime_error(failures.str());
+
+ sblr::mt::MtBedChainsAggregateResult aggregate=
+  sblr::mt::aggregate_mt_bed_chains(results, keep_chains);
+ const double marker_count=aggregate.pooled.marker_retained_count;
+ const double covb_count=aggregate.pooled.covb_retained_count;
+ const double covg_count=aggregate.pooled.covg_retained_count;
+ const double cove_count=aggregate.pooled.cove_retained_count;
+ const double pi_count=aggregate.pooled.pi_retained_count;
+ sblr::mt::MtDefaultFinalResult final_result=
+  sblr::mt::finalize_mt_bed_chains_result(std::move(aggregate.pooled));
+ sblr::mt::MtDefaultLegacyResult legacy=
+  sblr::mt::make_mt_default_legacy_result(
+   final_result, prepared.wy_trait_major, nit, nburn);
+
+ Rcpp::NumericVector chain_seconds(results.size());
+ double seconds_sum=0.0;
+ double seconds_max=0.0;
+ for (std::size_t chain=0; chain<results.size(); ++chain) {
+  chain_seconds[static_cast<R_xlen_t>(chain)]=results[chain].seconds;
+  seconds_sum+=results[chain].seconds;
+  seconds_max=std::max(seconds_max, results[chain].seconds);
+ }
+ const sblr::mt::MtBedChainsDiagnostics& diagnostics=aggregate.diagnostics;
+ Rcpp::List mt_bed_diagnostics=Rcpp::List::create(
+  Rcpp::_["residual_covariance"]=residual_covariance,
+  Rcpp::_["sample_count"]=prepared.owner->n,
+  Rcpp::_["marker_count"]=prepared.owner->m,
+  Rcpp::_["trait_count"]=Y.ncol(),
+  Rcpp::_["owner"]="PackedBedMatrix",
+  Rcpp::_["view"]="BedPackedGenotypeView",
+  Rcpp::_["genotype_scale"]="standardized_genotype",
+  Rcpp::_["marker_workspace"]="double",
+  Rcpp::_["marker_cholesky_jitter_attempts"]=static_cast<double>(
+   diagnostics.marker_cholesky_jitter_attempts),
+  Rcpp::_["marker_cholesky_max_increment"]=
+   diagnostics.marker_cholesky_max_increment,
+  Rcpp::_["full_e_updates"]=static_cast<double>(diagnostics.full_e_updates),
+  Rcpp::_["diagonal_e_updates"]=static_cast<double>(
+   diagnostics.diagonal_e_updates),
+  Rcpp::_["sample_residual_returned"]=false,
+  Rcpp::_["genetic_values_returned"]=false,
+  Rcpp::_["cpo"]="unsupported",
+  Rcpp::_["le_ld"]="unsupported",
+  Rcpp::_["requested_cores"]=ncores,
+  Rcpp::_["used_workers"]=used_workers,
+  Rcpp::_["openmp_available"]=openmp_available,
+  Rcpp::_["chain_seeds"]=mt_bed_uint32_vector(tasks),
+  Rcpp::_["chain_seconds"]=chain_seconds,
+  Rcpp::_["seconds_mean"]=seconds_sum/static_cast<double>(nchains),
+  Rcpp::_["seconds_max"]=seconds_max,
+  Rcpp::_["dispatch_seconds"]=dispatch_seconds,
+  Rcpp::_["primary_chain"]=1,
+  Rcpp::_["final_state_policy"]="primary_chain",
+  Rcpp::_["posterior_summary_policy"]="pooled_retained_samples",
+  Rcpp::_["trace_policy"]="iterationwise_chain_mean",
+  Rcpp::_["chain_marker_cholesky_jitter_attempts"]=
+   diagnostics.chain_marker_cholesky_jitter_attempts,
+  Rcpp::_["chain_marker_cholesky_max_increment"]=
+   diagnostics.chain_marker_cholesky_max_increment,
+  Rcpp::_["chain_full_e_updates"]=diagnostics.chain_full_e_updates,
+  Rcpp::_["chain_diagonal_e_updates"]=
+   diagnostics.chain_diagonal_e_updates);
+ Rcpp::List raw=mtblr_legacy_to_raw(
+  legacy, models, "mt_bed_bayesc", "individual",
+  nit, nburn, nthin, updateB, updateE, updatePi,
   Rcpp::List::create(Rcpp::_["mt_bed"]=mt_bed_diagnostics));
+ Rcpp::List meta=raw["meta"];
+ meta["nchains"]=nchains;
+ meta["keep_chains"]=keep_chains;
+ raw["meta"]=meta;
+ Rcpp::List marker=raw["marker"];
+ marker["bm_sd"]=mt_bed_trait_matrix(aggregate.bm_sd);
+ marker["bm_min"]=mt_bed_trait_matrix(aggregate.bm_min);
+ marker["bm_max"]=mt_bed_trait_matrix(aggregate.bm_max);
+ marker["dm_sd"]=mt_bed_trait_matrix(aggregate.dm_sd);
+ marker["dm_min"]=mt_bed_trait_matrix(aggregate.dm_min);
+ marker["dm_max"]=mt_bed_trait_matrix(aggregate.dm_max);
+ raw["marker"]=marker;
+ Rcpp::List raw_diagnostics=raw["diagnostics"];
+ raw_diagnostics["marker"]=static_cast<int>(marker_count);
+ raw_diagnostics["covb"]=static_cast<int>(covb_count);
+ raw_diagnostics["covg"]=static_cast<int>(covg_count);
+ raw_diagnostics["cove"]=static_cast<int>(cove_count);
+ raw_diagnostics["pi"]=static_cast<int>(pi_count);
+ raw["diagnostics"]=raw_diagnostics;
+ if (keep_chains) {
+  Rcpp::List chains(aggregate.chains.size());
+  Rcpp::CharacterVector names(aggregate.chains.size());
+  for (std::size_t chain=0; chain<aggregate.chains.size(); ++chain) {
+   chains[static_cast<R_xlen_t>(chain)]=
+    mt_bed_compact_chain_record(aggregate.chains[chain]);
+   names[static_cast<R_xlen_t>(chain)]="chain"+std::to_string(chain+1);
+  }
+  chains.attr("names")=names;
+  raw["chains"]=chains;
+ } else {
+  raw["chains"]=R_NilValue;
+ }
+ return raw;
 }
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the

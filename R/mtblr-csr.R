@@ -278,8 +278,9 @@
   }
   if (identical(raw$meta$backend, "mt_bed_bayesc")) {
     bed <- raw$diagnostics$mt_bed
+    nchains <- if (is.null(raw$meta$nchains)) 1L else as.integer(raw$meta$nchains)
     expected_updates <- if (isTRUE(raw$diagnostics$cove > 0)) {
-      raw$meta$nit + raw$meta$nburn
+      (raw$meta$nit + raw$meta$nburn) * nchains
     } else {
       0
     }
@@ -318,6 +319,93 @@
       stop("Invalid mtblr_raw individual-level MT BED diagnostics.",
            call. = FALSE)
     }
+    if (!is.null(raw$meta$nchains)) {
+      stability <- c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")
+      valid_stability <- all(stability %in% names(raw$marker)) &&
+        all(vapply(raw$marker[stability], function(x) {
+          identical(dim(x), c(m, nt)) && all(is.finite(x))
+        }, logical(1))) &&
+        all(raw$marker$bm_sd >= 0) && all(raw$marker$dm_sd >= 0) &&
+        all(raw$marker$bm_min <= raw$marker$bm_max) &&
+        all(raw$marker$dm_min <= raw$marker$dm_max)
+      vector_fields <- c(
+        "chain_seeds", "chain_seconds",
+        "chain_marker_cholesky_jitter_attempts",
+        "chain_marker_cholesky_max_increment",
+        "chain_full_e_updates", "chain_diagonal_e_updates"
+      )
+      valid_vectors <- all(vapply(vector_fields, function(x) {
+        length(bed[[x]]) == nchains && all(is.finite(bed[[x]])) &&
+          all(bed[[x]] >= 0)
+      }, logical(1)))
+      valid_policies <- identical(as.integer(bed$primary_chain), 1L) &&
+        identical(bed$final_state_policy, "primary_chain") &&
+        identical(bed$posterior_summary_policy, "pooled_retained_samples") &&
+        identical(bed$trace_policy, "iterationwise_chain_mean")
+      valid_counts <- isTRUE(all.equal(
+        bed$marker_cholesky_jitter_attempts,
+        sum(bed$chain_marker_cholesky_jitter_attempts), tolerance = 0)) &&
+        isTRUE(all.equal(
+          bed$marker_cholesky_max_increment,
+          max(bed$chain_marker_cholesky_max_increment), tolerance = 0)) &&
+        isTRUE(all.equal(bed$full_e_updates,
+                         sum(bed$chain_full_e_updates), tolerance = 0)) &&
+        isTRUE(all.equal(bed$diagonal_e_updates,
+                         sum(bed$chain_diagonal_e_updates), tolerance = 0)) &&
+        (bed$residual_covariance == "full" &&
+           all(bed$chain_full_e_updates == expected_updates / nchains) &&
+           all(bed$chain_diagonal_e_updates == 0) ||
+         bed$residual_covariance == "diagonal" &&
+           all(bed$chain_diagonal_e_updates == expected_updates / nchains) &&
+           all(bed$chain_full_e_updates == 0))
+      valid_runtime <- length(raw$meta$keep_chains) == 1L &&
+        is.logical(raw$meta$keep_chains) && !is.na(raw$meta$keep_chains) &&
+        nchains > 0L && length(bed$requested_cores) == 1L &&
+        is.finite(bed$requested_cores) && bed$requested_cores > 0 &&
+        length(bed$used_workers) == 1L && is.finite(bed$used_workers) &&
+        bed$used_workers > 0 && bed$used_workers <= nchains &&
+        length(bed$openmp_available) == 1L &&
+        is.logical(bed$openmp_available) && !is.na(bed$openmp_available) &&
+        all(bed$chain_seeds <= 2^32 - 1) &&
+        all(is.finite(c(bed$seconds_mean, bed$seconds_max,
+                        bed$dispatch_seconds))) &&
+        all(c(bed$seconds_mean, bed$seconds_max,
+              bed$dispatch_seconds) >= 0)
+      valid_chains <- if (!isTRUE(raw$meta$keep_chains)) {
+        "chains" %in% names(raw) && is.null(raw$chains)
+      } else {
+        is.list(raw$chains) && length(raw$chains) == nchains &&
+          identical(names(raw$chains), paste0("chain", seq_len(nchains))) &&
+          all(vapply(seq_len(nchains), function(i) {
+            chain <- raw$chains[[i]]
+            is.list(chain) && identical(names(chain), c(
+              "chain", "seed", "marker", "trace", "variance", "pi",
+              "diagnostics")) &&
+              identical(as.integer(chain$chain), i) &&
+              identical(as.numeric(chain$seed), as.numeric(bed$chain_seeds[i])) &&
+              identical(names(chain$marker), c("bm", "dm", "b", "state")) &&
+              identical(names(chain$trace), c("vbs", "vgs", "ves")) &&
+              identical(names(chain$variance),
+                        c("covb", "covg", "cove", "vb", "vg", "ve")) &&
+              identical(names(chain$pi), c("final", "mean")) &&
+              identical(dim(chain$marker$bm), c(m, nt)) &&
+              identical(dim(chain$marker$dm), c(m, nt)) &&
+              identical(dim(chain$marker$b), c(m, nt)) &&
+              identical(dim(chain$marker$state), c(m, nt)) &&
+              identical(dim(chain$trace$vbs), c(ntr, nt)) &&
+              identical(dim(chain$trace$vgs), c(ntr, nt)) &&
+              identical(dim(chain$trace$ves), c(ntr, nt)) &&
+              all(vapply(chain$variance, function(x) {
+                identical(dim(x), c(nt, nt))
+              }, logical(1))) &&
+              length(chain$pi$final) == nm && length(chain$pi$mean) == nm
+          }, logical(1)))
+      }
+      if (!valid_stability || !valid_vectors || !valid_policies ||
+          !valid_counts || !valid_runtime || !valid_chains) {
+        stop("Invalid mtblr_raw multichain MT BED extension.", call. = FALSE)
+      }
+    }
   }
   raw
 }
@@ -338,6 +426,42 @@
   fit["rb"] <- list(if (sum(diag(fit$covb)) > 0) cov2cor(fit$covb) else NULL)
   fit["rg"] <- list(if (sum(diag(fit$covg)) > 0) cov2cor(fit$covg) else NULL)
   fit["re"] <- list(if (sum(diag(fit$cove)) > 0) cov2cor(fit$cove) else NULL)
+  stability <- c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")
+  if (all(stability %in% names(raw$marker))) {
+    for (field in stability) {
+      value <- raw$marker[[field]]
+      dimnames(value) <- dimnames_marker
+      fit[[field]] <- value
+    }
+  }
+  if (!is.null(raw$meta$nchains)) {
+    bed <- raw$diagnostics$mt_bed
+    fit$nchains <- as.integer(raw$meta$nchains)
+    fit$chain_seeds <- bed$chain_seeds
+    fit$chain_diagnostics <- bed[c(
+      "requested_cores", "used_workers", "openmp_available",
+      "chain_seconds", "seconds_mean", "seconds_max", "dispatch_seconds",
+      "primary_chain", "final_state_policy", "posterior_summary_policy",
+      "trace_policy", "chain_marker_cholesky_jitter_attempts",
+      "chain_marker_cholesky_max_increment", "chain_full_e_updates",
+      "chain_diagonal_e_updates"
+    )]
+    if (is.null(raw$chains)) {
+      fit["chains"] <- list(NULL)
+    } else {
+      formatted_chains <- lapply(raw$chains, function(chain) {
+        for (field in names(chain$marker))
+          dimnames(chain$marker[[field]]) <- dimnames_marker
+        for (field in names(chain$trace))
+          dimnames(chain$trace[[field]]) <- dimnames_trace
+        for (field in names(chain$variance))
+          dimnames(chain$variance[[field]]) <- list(trait_names, trait_names)
+        names(chain$pi$final) <- names(chain$pi$mean) <- model_names
+        chain
+      })
+      fit$chains <- formatted_chains
+    }
+  }
   class(fit) <- c("mtblr_fit", "list")
   fit
 }

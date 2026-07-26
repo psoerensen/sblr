@@ -573,3 +573,8 @@ The Phase 17O core is safe for independent concurrent calls after preparation
 is separated from its Rcpp binding: its shared inputs are immutable and each
 call owns state, residual, workspace, diagnostics, and RNG. Phase 17Q does not
 perform that refactor or add OpenMP.
+
+Phase 17R performs the narrow preparation refactor. The serial route and new
+internal chains route share one stationary packed owner and fresh immutable
+view. Each dispatched unchanged core owns its residual, workspace, RNG, and
+state; aggregation occurs only after deterministic failure inspection.

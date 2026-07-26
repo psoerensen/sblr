@@ -449,3 +449,7 @@ code.
 `mtblr_bed_chains_internal` is reserved as the proposed Phase 17R internal
 name. It is not registered or callable in Phase 17Q; backend naming remains
 `mt_bed_bayesc` and raw schema version remains 1.
+
+Phase 17R registers `mtblr_bed_chains_internal` as an internal maintenance
+route. Both serial and chains routes retain backend `mt_bed_bayesc`, data level
+`individual`, and `mtblr_raw` version 1; no public export is added.

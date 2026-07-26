@@ -244,3 +244,11 @@ parallel reductions while leaving the Phase 17O core unchanged.
 Add the four public controls, validate them in R, extend memory warnings and
 metadata, dispatch the Phase 17R route, format optional chains through the one
 formatter, document examples, and preserve `nchains=1` exactly.
+
+## Phase 17R implementation status
+
+The contract is now implemented internally. `mtblr_bed_chains_internal()`
+prepares one stationary owner/view, dispatches chain-only tasks through one
+static OpenMP loop when available, captures all errors, pools actual counts,
+averages traces, uses chain 1 final state, computes sample-SD stability, and
+optionally returns compact chains. Public activation remains Phase 17S.

@@ -400,3 +400,8 @@ Future multichain MT BED execution will keep one immutable packed owner and one
 prepared phenotype/marker representation. Only mutable chain state, residual,
 workspace, RNG, and result accumulators scale with live workers or chain count.
 Phase 17Q documents this representation but does not implement it.
+
+Phase 17R now implements it internally: packed bytes, Y, maps, X'Y, and order
+exist once; each live chain owns only mutable Gibbs state, residual, decoded
+marker workspace, RNG, traces, and accumulators. Compact retained records never
+duplicate shared preparation data.

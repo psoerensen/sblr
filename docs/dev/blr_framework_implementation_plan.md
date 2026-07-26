@@ -1582,3 +1582,10 @@ Phase 17Q audits scalar precedents and fixes the future joint-chain topology,
 seed, ownership, failure, aggregation, output, and memory contracts. Phase 17R
 may implement one internal prepared-data multichain dispatcher; Phase 17S may
 later activate public controls. Phase 17Q is audit-only.
+
+## Phase 17R
+
+Phase 17R implements the internal prepared-data multichain dispatcher with
+optional static OpenMP, deterministic uint32 seeds and failures, pooled counts,
+trace means, primary-chain final state, stability, and compact optional chains.
+Phase 17S may activate it publicly without changing the core.

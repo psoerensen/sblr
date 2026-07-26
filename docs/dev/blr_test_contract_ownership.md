@@ -101,3 +101,8 @@ raw/fit enrichment, public/internal equality, and exported API contract.
 `helper-mtblr-bed-multichain-contract.R` own the future MT chain topology,
 seed, aggregation, failure, stability, compact-chain, and memory oracles.
 Repository-only assertions own the guarantee that no implementation exists.
+
+`test-blr-framework-phase17r.R` and
+`helper-mtblr-bed-chains-internal.R` now own the internal execution reductions,
+seed sequence, worker equality, failure translation, stability, retained-chain,
+raw validation, formatting, and public serial-route protection.

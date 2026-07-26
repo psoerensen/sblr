@@ -718,3 +718,8 @@ Phase 17Q adds portable oracles for chain-only task enumeration, modulo-2^32
 seed resolution, unequal-retained-count pooling, iterationwise trace means,
 primary-chain final states, stability summaries, retained-chain shape, failure
 ordering, and shared/private memory scaling. No stochastic sampler test is added.
+
+Phase 17R owns full/diagonal single-chain exactness, two/four-chain serial
+reproducibility, serial/static-OpenMP equality, default/explicit seed paths,
+primary final state, pooled counts, trace means, compact records, deterministic
+failure ordering, and extended raw/formatter validation.

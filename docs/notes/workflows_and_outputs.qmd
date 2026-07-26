@@ -1041,3 +1041,8 @@ The current workflow is still one chain. The Phase 17Q future contract pools
 posterior retained samples, takes final mutable state from chain 1, reports
 marker stability across chain means, and optionally retains compact chain
 records without shared genotype, phenotype, or marker residual data.
+
+The Phase 17R internal chains workflow returns pooled posterior summaries,
+iterationwise mean traces, chain-1 final state, marker stability, diagnostics,
+and optional compact `chain1`, `chain2`, ... records. The public workflow remains
+serial until Phase 17S.
