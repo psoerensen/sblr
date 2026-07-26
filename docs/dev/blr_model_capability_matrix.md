@@ -438,3 +438,12 @@ supported; no convergence diagnostic or other model family is added.
 
 Formal convergence diagnostics are contract-only in Phase 17T. Current
 `bm_sd/dm_sd` remain chain-stability summaries rather than R-hat or ESS.
+## Phase 17U convergence capability
+
+| Route | Internal Tier 1 engine | Public diagnostics | Scope |
+|---|---:|---:|---|
+| MT packed BED multichain | yes | no | post-burn B/G/E diagonals |
+| MT CSR/block eigen | no | no | not applicable |
+
+Tier 2 covariance/probability and Tier 3 selected-marker traces remain
+unsupported.

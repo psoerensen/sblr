@@ -114,3 +114,9 @@ and public/internal numerical reductions. Phase 17R retains numerical ownership.
 
 Phase 17T owns convergence-contract oracles and source guards. Its portable
 statistical helpers run in installed checking; it owns no production engine.
+## Phase 17U ownership
+
+`test-blr-framework-phase17u.R` owns internal trace extraction, R-hat,
+bulk/tail/mean ESS, mean MCSE, statuses, partial availability, validation,
+memory, actual packed-BED equality, threading, and public protection.
+Phase 17T continues to own the statistical scope contract.

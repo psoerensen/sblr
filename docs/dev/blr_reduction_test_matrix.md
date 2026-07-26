@@ -730,3 +730,9 @@ alignment/initialization variants, memory scaling, and BLAS preservation.
 
 Phase 17T owns pure-R post-burn, split/rank, R-hat, ESS, MCSE, status,
 threshold, and diagnostic-memory contract oracles, not production reductions.
+## Phase 17U reductions
+
+Phase 17U owns exact ordinary-raw equality between the Phase 17R chains route
+and convergence-trace route after timing normalization, exact serial/OpenMP
+trace equality, `keep_chains` independence, update-disabled reductions, frozen
+statistical references, and optional `posterior` 1.6.1 comparisons.

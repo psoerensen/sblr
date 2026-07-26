@@ -70,3 +70,11 @@ native-hash, wrapper, namespace, and unrelated-API assertions are source-only.
 Phase 17T portable tests cover splitting, average ranks, R-hat,
 bulk/tail/mean ESS, mean MCSE, statuses, thresholds, and memory. Only repository
 source assertions proving no implementation/API change skip without checkout.
+## Phase 17U
+
+Portable installed tests cover bundle validation, post-burn extraction, R-hat,
+bulk/q05/q95/tail/mean ESS, mean MCSE, statuses, partial availability, frozen
+references, actual internal-route equality, `keep_chains` independence,
+serial/OpenMP equality, and memory estimates. Only source/hash architecture
+assertions skip narrowly when no checkout is present. Optional `posterior`
+comparisons skip when that development package is absent.

@@ -528,3 +528,8 @@ all chain counts. `ncores` controls package workers only; BLAS is not changed.
 Future convergence summaries diagnose post-burn chain traces independently of
 `keep_chains`. All-marker and full-model probability traces remain opt-in due
 to chain-by-iteration memory scaling.
+## MT BED convergence engine
+
+The internal Phase 17U route diagnoses post-burn per-chain B/G/E diagonal
+traces without rereading BED data or requiring `keep_chains=TRUE`. Public
+activation and convergence warnings remain deferred.

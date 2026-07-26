@@ -265,3 +265,10 @@ environment, stability, optional compact records, and multichain memory.
 Formal diagnostics require a separate typed post-burn trace bundle constructed
 before aggregation/discard. It is independent of compact-chain retention and
 initially contains only Tier 1 B/G/E diagonals.
+## Phase 17U diagnostic trace ownership
+
+Tier 1 convergence capture is independent of `keep_chains`. One immutable
+prepared dataset still feeds one core call per chain; post-burn diagonal traces
+are copied before aggregation, then diagnosed in dependency-free R code.
+Compact chains, aggregation, final-state policy, seeds, and OpenMP dispatch are
+unchanged.

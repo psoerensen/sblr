@@ -13,7 +13,7 @@ phase17t_split_chains <- function(chains) {
 
 phase17t_rank_normalize <- function(x) {
   ranks <- rank(as.vector(x), ties.method = "average")
-  stats::qnorm((ranks - 3 / 8) / (length(ranks) - 1 / 4))
+  stats::qnorm((ranks - 3 / 8) / (length(ranks) + 1 / 4))
 }
 
 phase17t_rhat_basic <- function(split) {
@@ -42,35 +42,52 @@ phase17t_rhat <- function(chains) {
 
 phase17t_autocovariance <- function(x) {
   n <- length(x)
-  size <- 2L^ceiling(log2(2L * n))
+  variance <- stats::var(x)
+  if (variance == 0) return(rep(0, n))
+  size <- 2L * stats::nextn(n)
   centered <- c(x - mean(x), rep(0, size - n))
   transformed <- fft(centered)
-  Re(fft(Mod(transformed)^2, inverse = TRUE))[seq_len(n)] / (size * n)
+  autocov <- Re(fft(Mod(transformed)^2, inverse = TRUE))[seq_len(n)]
+  autocov / autocov[1L] * variance * (n - 1) / n
 }
 
 phase17t_ess_split <- function(split) {
-  m <- nrow(split); n <- ncol(split)
-  if (m < 2L || n < 2L) return(NA_real_)
-  acov <- vapply(seq_len(m), function(i) phase17t_autocovariance(split[i, ]),
+  n <- ncol(split); m <- nrow(split)
+  if (m < 2L || n < 3L) return(NA_real_)
+  x <- t(split)
+  acov <- vapply(seq_len(m), function(i) phase17t_autocovariance(x[, i]),
                   numeric(n))
-  chain_var <- acov[1L, ] * n / (n - 1)
-  w <- mean(chain_var)
-  var_plus <- w * (n - 1) / n + stats::var(rowMeans(split))
+  acov_means <- rowMeans(acov)
+  w <- acov_means[1L] * n / (n - 1)
+  var_plus <- w * (n - 1) / n + stats::var(colMeans(x))
   if (!is.finite(var_plus) || var_plus <= 0) return(NA_real_)
-  rho <- 1 - (w - rowMeans(acov)) / var_plus
-  rho[1L] <- 1
-  pairs <- numeric()
-  at <- 1L
-  while (2L * at + 1L <= n) {
-    pair <- rho[2L * at] + rho[2L * at + 1L]
-    if (!is.finite(pair) || pair < 0) break
-    pairs <- c(pairs, pair)
-    at <- at + 1L
+  rho <- numeric(n); at <- 0L; even <- 1
+  rho[1L] <- even
+  odd <- 1 - (w - acov_means[2L]) / var_plus
+  rho[2L] <- odd
+  while (at < n - 5L && is.finite(even + odd) && even + odd > 0) {
+    at <- at + 2L
+    even <- 1 - (w - acov_means[at + 1L]) / var_plus
+    odd <- 1 - (w - acov_means[at + 2L]) / var_plus
+    if (is.finite(even + odd) && even + odd >= 0) {
+      rho[at + 1L] <- even
+      rho[at + 2L] <- odd
+    }
   }
-  if (length(pairs) > 1L) {
-    for (i in 2:length(pairs)) pairs[i] <- min(pairs[i - 1L], pairs[i])
+  max_at <- at
+  if (even > 0) rho[max_at + 1L] <- even
+  at <- 0L
+  while (at <= max_at - 4L) {
+    at <- at + 2L
+    if (rho[at + 1L] + rho[at + 2L] > rho[at - 1L] + rho[at]) {
+      rho[at + 1L] <- (rho[at - 1L] + rho[at]) / 2
+      rho[at + 2L] <- rho[at + 1L]
+    }
   }
-  tau <- -1 + 2 * (rho[1L] + sum(pairs))
+  retained <- if (max_at == 0L) rho[1L] else sum(rho[seq_len(max_at)])
+  tau <- -1 + 2 * retained + rho[max_at + 1L]
+  bound <- 1 / log10(m * n)
+  if (tau < bound) tau <- bound
   if (!is.finite(tau) || tau <= 0) return(NA_real_)
   m * n / tau
 }

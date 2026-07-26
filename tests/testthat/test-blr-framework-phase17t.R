@@ -8,7 +8,7 @@ test_that("Phase 17T fixes post-burn, split, and rank contracts", {
   expect_equal(dim(split), c(8, 4))
   expect_false(any(split == matrix(1:36, 4, 9)[, 5]))
   tied <- phase17t_rank_normalize(c(1, 1, 2, 3))
-  expected <- qnorm((c(1.5, 1.5, 3, 4) - 3 / 8) / (4 - 1 / 4))
+  expected <- qnorm((c(1.5, 1.5, 3, 4) - 3 / 8) / (4 + 1 / 4))
   expect_equal(tied, expected, tolerance = 1e-15)
 })
 
@@ -96,7 +96,7 @@ test_that("Phase 17T tiers and retention are explicitly separate", {
   expect_identical(scope$trace_retention, "independent_bundle")
 })
 
-test_that("Phase 17T leaves production and public contracts unchanged", {
+test_that("Phase 17T keeps the public contract unchanged after Tier 1 staging", {
   expect_false("convergence" %in% names(formals(mtblr_bed)))
   fit_formals <- names(formals(mtblr_bed))
   expect_identical(tail(fit_formals, 6),
@@ -109,7 +109,7 @@ test_that("Phase 17T leaves production and public contracts unchanged", {
   native <- paste(readLines(file.path(root, "src", "mtblr.cpp"), warn = FALSE),
                   collapse = "\n")
   expect_false(grepl("raw\\$diagnostics\\$convergence", source))
-  expect_false(grepl("MtBedConvergenceTraceBundle", native, fixed = TRUE))
+  expect_true(grepl("MtBedConvergenceTraceBundle", native, fixed = TRUE))
   expect_false(grepl("ess_bulk|rhat_folded|mcse_mean", source))
   expect_true(grepl("iterationwise_chain_mean", source, fixed = TRUE))
 })

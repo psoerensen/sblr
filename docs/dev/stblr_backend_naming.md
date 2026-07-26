@@ -460,3 +460,8 @@ Execution topology is represented by version-1 chain metadata, not a new name.
 Future diagnostic quantities use `B_diag[trait]`, `G_diag[trait]`,
 `E_diag[trait]`, trait-pair covariance names, probabilities, and
 `b/d[marker_id,trait]`, never exposed native zero-based indices.
+## Phase 17U convergence names
+
+Internal Tier 1 quantities use `B_diag[trait]`, `G_diag[trait]`, and
+`E_diag[trait]`. The binding symbol is
+`mtblr_bed_convergence_trace_internal` and remains unexported.

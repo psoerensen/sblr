@@ -234,3 +234,8 @@ peak RSS.
 Formal convergence diagnostics are not yet implemented. Future Tier 1 uses
 original per-chain post-burn B/G/E diagonal traces independently of
 `keep_chains`; pooled traces and marker stability are not R-hat or ESS inputs.
+## Phase 17U status
+
+An internal Tier 1 convergence engine exists, but public activation is deferred.
+`mtblr_bed()` has no convergence formals, does not call the trace route, emits
+no convergence warning, and returns no convergence fields in Phase 17U.

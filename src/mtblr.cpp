@@ -4019,6 +4019,7 @@ void sampleBetaCSt(int i,
 #include "blr_mt_bed_core_impl.h"
 #include "blr_mt_bed_chains_execution_impl.h"
 #include "blr_mt_bed_chains_aggregate_impl.h"
+#include "blr_mt_bed_convergence_trace_impl.h"
 #include "blr_mt_default_finalize_impl.h"
 #include "blr_mt_default_legacy_adapter.h"
 
@@ -5032,12 +5033,46 @@ Rcpp::List mt_bed_compact_chain_record(
    Rcpp::_["seconds"]=chain.seconds));
 }
 
+Rcpp::List mt_bed_convergence_trace_bundle_to_list(
+ const sblr::mt::MtBedConvergenceTraceBundle& bundle
+) {
+ const R_xlen_t quantity_count=
+  static_cast<R_xlen_t>(bundle.quantities.size());
+ Rcpp::IntegerVector quantity_index(quantity_count);
+ Rcpp::CharacterVector group(quantity_count);
+ Rcpp::IntegerVector trait_index(quantity_count);
+ Rcpp::LogicalVector updated(quantity_count);
+ for (R_xlen_t quantity=0; quantity<quantity_count; ++quantity) {
+  const sblr::mt::MtBedConvergenceQuantity& descriptor=
+   bundle.quantities[static_cast<std::size_t>(quantity)];
+  quantity_index[quantity]=static_cast<int>(quantity)+1;
+  group[quantity]=descriptor.group;
+  trait_index[quantity]=descriptor.trait+1;
+  updated[quantity]=descriptor.updated;
+ }
+ Rcpp::NumericVector values(
+  bundle.values.begin(), bundle.values.end());
+ values.attr("dim")=Rcpp::IntegerVector::create(
+  bundle.postburn_draws, bundle.nchains,
+  static_cast<int>(quantity_count));
+ return Rcpp::List::create(
+  Rcpp::_["schema"]=Rcpp::List::create(
+   Rcpp::_["class"]="mtblr_convergence_trace_bundle",
+   Rcpp::_["version"]=1),
+  Rcpp::_["scope"]="core",
+  Rcpp::_["nchains"]=bundle.nchains,
+  Rcpp::_["postburn_draws_per_chain"]=bundle.postburn_draws,
+  Rcpp::_["quantities"]=Rcpp::DataFrame::create(
+   Rcpp::_["quantity_index"]=quantity_index,
+   Rcpp::_["group"]=group,
+   Rcpp::_["trait_index"]=trait_index,
+   Rcpp::_["updated"]=updated),
+  Rcpp::_["values"]=values);
+}
+
 }  // namespace
 
-// Internal multichain individual-level multivariate BayesC route. It prepares
-// one immutable packed-BED dataset and dispatches one unchanged core per chain.
-// [[Rcpp::export]]
-Rcpp::List mtblr_bed_chains_internal(
+Rcpp::List mtblr_bed_chains_binding_impl(
  Rcpp::CharacterVector bed_files,
  int n_bed,
  Rcpp::List cls,
@@ -5068,7 +5103,8 @@ Rcpp::List mtblr_bed_chains_internal(
  int nchains,
  int ncores,
  std::vector<int> chain_seeds,
- bool keep_chains
+ bool keep_chains,
+ bool capture_convergence_traces
 ) {
  if (nchains<=0 || ncores<=0) {
   throw std::invalid_argument("nchains and ncores must be positive integers");
@@ -5125,12 +5161,20 @@ Rcpp::List mtblr_bed_chains_internal(
  bool any_failure=false;
  for (std::size_t chain=0; chain<results.size(); ++chain) {
   if (results[chain].failed) {
-   if (!any_failure) failures << "mtblr_bed_chains_internal failed:";
+   if (!any_failure) failures << (capture_convergence_traces ?
+    "mtblr_bed_convergence_trace_internal failed:" :
+    "mtblr_bed_chains_internal failed:");
    failures << "\nchain " << chain+1 << ": " << results[chain].error;
    any_failure=true;
   }
  }
  if (any_failure) throw std::runtime_error(failures.str());
+
+ sblr::mt::MtBedConvergenceTraceBundle convergence_bundle;
+ if (capture_convergence_traces) {
+  convergence_bundle=sblr::mt::build_mt_bed_convergence_trace_bundle(
+   results, nburn, nit, updateB, updateE);
+ }
 
  sblr::mt::MtBedChainsAggregateResult aggregate=
   sblr::mt::aggregate_mt_bed_chains(results, keep_chains);
@@ -5229,7 +5273,67 @@ Rcpp::List mtblr_bed_chains_internal(
  } else {
   raw["chains"]=R_NilValue;
  }
+ if (capture_convergence_traces) {
+  return Rcpp::List::create(
+   Rcpp::_["raw"]=raw,
+   Rcpp::_["trace_bundle"]=
+    mt_bed_convergence_trace_bundle_to_list(convergence_bundle));
+ }
  return raw;
+}
+
+// Internal multichain individual-level multivariate BayesC route. It prepares
+// one immutable packed-BED dataset and dispatches one unchanged core per chain.
+// [[Rcpp::export]]
+Rcpp::List mtblr_bed_chains_internal(
+ Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls,
+ Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af,
+ Rcpp::NumericMatrix Y, std::vector<std::vector<double>> beta_init,
+ std::vector<std::vector<double>> b_init,
+ std::vector<std::vector<int>> state_init,
+ const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models, std::vector<double> pi,
+ double nub, double nue, bool updateB, bool updateE, bool updatePi,
+ std::string residual_covariance, int nit, int nburn, int nthin,
+ int seed, int method, int nchains, int ncores,
+ std::vector<int> chain_seeds, bool keep_chains
+) {
+ return mtblr_bed_chains_binding_impl(
+  bed_files, n_bed, cls, rows, af, Y, std::move(beta_init),
+  std::move(b_init), std::move(state_init), sets, std::move(B),
+  std::move(E), std::move(ssb_prior), std::move(sse_prior),
+  std::move(models), std::move(pi), nub, nue, updateB, updateE,
+  updatePi, residual_covariance, nit, nburn, nthin, seed, method,
+  nchains, ncores, std::move(chain_seeds), keep_chains, false);
+}
+
+// Internal MT BED multichain route with a post-burn Tier 1 trace bundle.
+// It is deliberately not namespace-exported and computes no diagnostics.
+// [[Rcpp::export]]
+Rcpp::List mtblr_bed_convergence_trace_internal(
+ Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls,
+ Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af,
+ Rcpp::NumericMatrix Y, std::vector<std::vector<double>> beta_init,
+ std::vector<std::vector<double>> b_init,
+ std::vector<std::vector<int>> state_init,
+ const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models, std::vector<double> pi,
+ double nub, double nue, bool updateB, bool updateE, bool updatePi,
+ std::string residual_covariance, int nit, int nburn, int nthin,
+ int seed, int method, int nchains, int ncores,
+ std::vector<int> chain_seeds, bool keep_chains
+) {
+ return mtblr_bed_chains_binding_impl(
+  bed_files, n_bed, cls, rows, af, Y, std::move(beta_init),
+  std::move(b_init), std::move(state_init), sets, std::move(B),
+  std::move(E), std::move(ssb_prior), std::move(sse_prior),
+  std::move(models), std::move(pi), nub, nue, updateB, updateE,
+  updatePi, residual_covariance, nit, nburn, nthin, seed, method,
+  nchains, ncores, std::move(chain_seeds), keep_chains, true);
 }
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the

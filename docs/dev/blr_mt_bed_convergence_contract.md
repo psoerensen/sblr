@@ -2,9 +2,9 @@
 
 ## 1. Purpose
 
-This document specifies future formal convergence diagnostics for public
-individual-level MT BED multichain fits. It is an implementation contract, not
-an active diagnostic implementation.
+This document specifies formal convergence diagnostics for individual-level MT
+BED multichain fits. Phase 17U activates the internal Tier 1 engine; the public
+`mtblr_bed()` adapter does not call it until a later activation phase.
 
 ## 2. Current availability
 
@@ -13,6 +13,8 @@ length `nit + nburn`. They contain the diagonal of B when B is updated, the
 diagonal of derived G every iteration, and the diagonal of E when E is updated.
 Compact chains expose these traces only when `keep_chains=TRUE`; before
 aggregation the typed chain results contain them regardless of that choice.
+Phase 17U extracts exactly the post-burn portion into a binding-neutral Tier 1
+bundle independently of compact-chain retention.
 
 ## 3. Current limitations
 
@@ -52,7 +54,9 @@ chains of length `half`; never pad, recycle, or interpolate.
 
 Pool one scalar quantity across split chains, assign deterministic average
 ranks for ties, and transform rank r among S values by
-`qnorm((r - 3/8)/(S - 1/4))`. Ties and discrete values are never jittered.
+`qnorm((r - 3/8)/(S + 1/4))`. Ties and discrete values are never jittered.
+The plus sign is the audited `posterior` 1.6.1/Blom back-transformation
+`S - 2c + 1` with `c=3/8`; Phase 17T's minus sign was corrected in Phase 17U.
 
 ## 9. Rank R-hat
 
@@ -74,18 +78,13 @@ is forbidden.
 
 ## 12. Bulk ESS
 
-`ess_bulk` is the multichain ESS of rank-normalized split draws. Estimate
-the biased lag-t autocovariance in each split chain with denominator N. With W
-and `var_plus` as above, use
-`rho_t=1-(W-mean_chain(autocov_t))/var_plus`, with `rho_0=1`. Pair lags as
-`P_k=rho_(2k-1)+rho_(2k)`: retain the initial positive sequence, then replace
-each later retained pair by the minimum of itself and its predecessor (initial
-monotone sequence). Set `tau=1+2*sum(P_k)` and
-`ess_bulk=M*N/tau`; nonpositive/nonfinite tau is unavailable. Define
-`ess_bulk_per_chain=ess_bulk/nchains`. Antithetic ESS behavior follows this
-reference estimator and is not replaced by or arbitrarily capped at the
-nominal draw count. These are Geyer's initial positive sequence and initial
-monotone sequence rules.
+`ess_bulk` is the multichain ESS of rank-normalized split draws. Phase 17U
+reproduces `posterior` 1.6.1's FFT autocovariance normalization, mean
+within-chain variance, between-chain contribution, rho sequence, Geyer initial
+positive sequence, and initial monotone sequence. Its numerical-stability rule
+sets `tau >= 1/log10(M*N)`, so ESS is bounded above by
+`M*N*log10(M*N)` rather than by nominal draws. Whether that bound was applied
+is recorded per quantity. Define `ess_bulk_per_chain=ess_bulk/nchains`.
 
 ## 13. Tail ESS
 
@@ -130,8 +129,11 @@ three-chain result may be computed but uses
 ## 19. Insufficient draws
 
 Fewer than four post-burn draws per original chain receives
-`insufficient_draws`. Nonfinite values receive `nonfinite`. Other statuses are
-`computed` and the statuses above.
+`insufficient_draws`. Four or five draws permit split R-hat but leave ESS and
+MCSE unavailable, with status `computed_partial`. Six draws permit the selected
+ESS kernel because each split chain then has three draws. Metric-level
+availability fields preserve valid R-hat rather than discarding it. Nonfinite
+values receive `nonfinite`.
 
 ## 20. Thresholds
 
@@ -176,7 +178,7 @@ final states merely to diagnose Tier 1.
 
 ## 26. Diagnostic trace bundle
 
-Future binding-neutral `MtBedConvergenceTraceBundle` metadata contains chain
+Binding-neutral `MtBedConvergenceTraceBundle` metadata contains chain
 count, post-burn length, ordered quantity descriptors, and contiguous
 quantity-major values with chain then iteration varying within quantity. Tier
 1 contains only post-burn B/G/E diagonals. It is Rcpp-free, read-only during
@@ -184,8 +186,9 @@ diagnosis, independent of `keep_chains`, and discardable after summarization.
 
 ## 27. Output schema
 
-Additively retain raw version 1 at `raw$diagnostics$convergence` and formatted
-output at `fit$convergence`. Include version, requested/computed flags, scope,
+The internal helper additively retains raw version 1 at
+`raw$diagnostics$convergence`; future public activation formats it at
+`fit$convergence`. Include version, requested/computed flags, scope,
 overall status, chain/draw counts, thresholds, availability, summary, overview,
 warning messages, and trace-retention policy. Optional retained post-burn
 diagnostic traces belong at `fit$convergence_traces`, never `fit$chains`.
@@ -195,9 +198,10 @@ diagnostic traces belong at `fit$convergence_traces`, never `fit$chains`.
 One rectangular row per scalar contains `quantity`, `group`, `trait`, `trait2`,
 `marker_id`, `model_name`, `updated`, `status`, `rhat`, `rhat_rank`,
 `rhat_folded`, `ess_bulk`, `ess_bulk_per_chain`, `ess_tail`,
-`ess_tail_per_chain`, `ess_mean`, `posterior_sd`, `mcse_mean`,
+`ess_q05`, `ess_q95`, `ess_tail_per_chain`, `ess_mean`, `posterior_sd`, `mcse_mean`,
 `mcse_mean_over_sd`, `nchains`, `draws_per_chain`,
-`split_draws_per_chain`, and four threshold flags. Unused identities are NA.
+`split_draws_per_chain`, metric-level availability fields, the ESS-stability
+bound indicator, and four threshold flags. Unused identities are NA.
 
 ## 29. Overview
 
@@ -244,11 +248,12 @@ once if unavailable. Control defaults are `warn=TRUE`, `rhat_threshold=1.01`,
 runtime dependency; `posterior` is optional for development comparison only,
 and coda is not the target.
 
-## 33. Phase 17U plan
+## 33. Phase 17U implementation
 
-Capture typed post-burn per-chain B/G/E diagonal traces independently of
-`keep_chains`; implement rank/folded R-hat, bulk/tail/mean ESS, mean MCSE,
-statuses, summary, overview, and internal oracle tests without public formals.
+Phase 17U captures typed post-burn per-chain B/G/E diagonal traces independently
+of `keep_chains` and implements rank/folded R-hat, bulk/tail/mean ESS, mean
+MCSE, statuses, summary, overview, validation, memory estimates, and frozen plus
+optional `posterior` oracles without public formals.
 
 ## 34. Phase 17V plan
 

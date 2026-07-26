@@ -1599,3 +1599,9 @@ compact-chain, BLAS, and multichain-memory metadata.
 Phase 17T formalizes modern rank-normalized split/folded R-hat, bulk/tail/mean
 ESS, mean MCSE, tiers, trace ownership, output, and memory. Phase 17U should
 implement internal Tier 1; Phase 17V should activate public controls/warnings.
+## Phase 17U — internal Tier 1 convergence engine
+
+Implemented post-burn B/G/E diagonal capture, rank-normalized split and folded
+R-hat, reference-compatible bulk/tail/mean ESS, posterior SD, mean MCSE,
+metric-level availability, validation, optional internal traces, analytical
+memory, and one internal route. Public activation remains a later phase.

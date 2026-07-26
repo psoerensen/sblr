@@ -1054,3 +1054,8 @@ chain-1 final state, trace means, and stability retain distinct semantics.
 Phase 17T specifies future rank-normalized split/folded R-hat, bulk/tail ESS,
 and mean MCSE. Current stability SD/min/max are descriptive and not formal
 convergence diagnostics.
+## Convergence staging
+
+The internal MT BED Tier 1 diagnostic result is available for maintenance
+testing, but `mtblr_bed()` does not yet expose it. Existing public workflows and
+outputs therefore remain unchanged in Phase 17U.

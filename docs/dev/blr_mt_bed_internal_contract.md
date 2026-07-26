@@ -589,3 +589,10 @@ execution now uses the unchanged Phase 17R chains adapter for every chain count.
 The numerical core remains unchanged. Existing `vbs/vgs/ves` contain every
 iteration; future diagnostics select only `nburn+1` through `nburn+nit`, and
 `nthin` does not thin diagnostic traces.
+## Phase 17U internal convergence seam
+
+`mtblr_bed_convergence_trace_internal()` shares the Phase 17R preparation,
+dispatch, aggregation, finalizer, legacy adapter, and raw converter. Before
+typed chain results are discarded it extracts only post-burn B/G/E diagonal
+traces into an Rcpp-free bundle. It neither changes nor reruns the Phase 17O
+core, and the ordinary internal chains route remains numerically exact.
