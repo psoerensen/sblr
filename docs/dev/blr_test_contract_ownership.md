@@ -111,3 +111,6 @@ raw validation, formatting, and public serial-route protection.
 `helper-mtblr-bed-public-chains.R` own public chain controls, dispatch,
 multichain metadata/memory, default serial compatibility, BLAS preservation,
 and public/internal numerical reductions. Phase 17R retains numerical ownership.
+
+Phase 17T owns convergence-contract oracles and source guards. Its portable
+statistical helpers run in installed checking; it owns no production engine.

@@ -456,3 +456,7 @@ route. Both serial and chains routes retain backend `mt_bed_bayesc`, data level
 
 Phase 17S retains `mt_bed_bayesc` for both public single- and multichain calls.
 Execution topology is represented by version-1 chain metadata, not a new name.
+
+Future diagnostic quantities use `B_diag[trait]`, `G_diag[trait]`,
+`E_diag[trait]`, trait-pair covariance names, probabilities, and
+`b/d[marker_id,trait]`, never exposed native zero-based indices.

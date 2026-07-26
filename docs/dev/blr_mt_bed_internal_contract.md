@@ -583,3 +583,9 @@ state; aggregation occurs only after deterministic failure inspection.
 
 The Phase 17O serial function remains the exact maintenance reference. Public
 execution now uses the unchanged Phase 17R chains adapter for every chain count.
+
+## Phase 17T convergence seam
+
+The numerical core remains unchanged. Existing `vbs/vgs/ves` contain every
+iteration; future diagnostics select only `nburn+1` through `nburn+nit`, and
+`nthin` does not thin diagnostic traces.

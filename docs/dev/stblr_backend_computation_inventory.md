@@ -703,3 +703,7 @@ chain-level only; aggregation invokes the existing finalizer exactly once.
 Phase 17S adds no backend computation. The public adapter validates controls,
 estimates memory, calls `mtblr_bed_chains_internal()` once, enriches metadata,
 and delegates formatting to `.as_mtblr_fit()`.
+
+MT BED formal convergence diagnostics remain unavailable. Typed chains already
+hold B/G/E diagonal iteration traces; Phase 17U is reserved for their post-burn
+rank/folded R-hat and ESS/MCSE engine.

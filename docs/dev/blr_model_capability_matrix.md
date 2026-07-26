@@ -435,3 +435,6 @@ remains serial and one-chain; no new statistical capability is introduced.
 Phase 17S makes serial and static chain-level OpenMP multichain execution public
 for individual-level MT BayesC. Full and diagonal residual covariance remain
 supported; no convergence diagnostic or other model family is added.
+
+Formal convergence diagnostics are contract-only in Phase 17T. Current
+`bm_sd/dm_sd` remain chain-stability summaries rather than R-hat or ESS.

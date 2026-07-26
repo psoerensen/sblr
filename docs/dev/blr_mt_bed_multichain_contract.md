@@ -259,3 +259,9 @@ The four chain controls are now public. Every `mtblr_bed()` call executes the
 chains route once, including the default one-chain reduction. Public metadata
 reports requested/used workers, resolved seeds, aggregation policies, BLAS
 environment, stability, optional compact records, and multichain memory.
+
+## Phase 17T diagnostic trace ownership
+
+Formal diagnostics require a separate typed post-burn trace bundle constructed
+before aggregation/discard. It is independent of compact-chain retention and
+initially contains only Tier 1 B/G/E diagonals.

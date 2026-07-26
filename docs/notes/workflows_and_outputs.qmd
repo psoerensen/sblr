@@ -1050,3 +1050,7 @@ serial until Phase 17S.
 Phase 17S activates public serial or chain-parallel execution through
 `nchains`, `ncores`, `chain_seeds`, and `keep_chains`. Pooled summaries,
 chain-1 final state, trace means, and stability retain distinct semantics.
+
+Phase 17T specifies future rank-normalized split/folded R-hat, bulk/tail ESS,
+and mean MCSE. Current stability SD/min/max are descriptive and not formal
+convergence diagnostics.

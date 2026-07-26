@@ -228,3 +228,9 @@ The analytical memory estimate separates shared immutable bytes, private bytes
 per worker, results per chain, pooled output, and optional compact output per
 chain. It is an analytical upper-bound estimate, not measured RSS or measured
 peak RSS.
+
+## Phase 17T convergence boundary
+
+Formal convergence diagnostics are not yet implemented. Future Tier 1 uses
+original per-chain post-burn B/G/E diagonal traces independently of
+`keep_chains`; pooled traces and marker stability are not R-hat or ESS inputs.

@@ -1595,3 +1595,7 @@ Phase 17S may activate it publicly without changing the core.
 Public `mtblr_bed()` now exposes the four chain controls, dispatches the
 validated chains route once, and reports pooled, primary-chain, stability,
 compact-chain, BLAS, and multichain-memory metadata.
+
+Phase 17T formalizes modern rank-normalized split/folded R-hat, bulk/tail/mean
+ESS, mean MCSE, tiers, trace ownership, output, and memory. Phase 17U should
+implement internal Tier 1; Phase 17V should activate public controls/warnings.

@@ -408,3 +408,7 @@ duplicate shared preparation data.
 
 Phase 17S exposes compact chains on request. Public memory metadata continues
 to count packed bytes, phenotype, maps, marker X'Y, and order exactly once.
+
+Future formal diagnostics use a separate quantity-major, chain/iteration
+ordered post-burn trace bundle. It is not a compact chain object and contains
+no packed genotype data.

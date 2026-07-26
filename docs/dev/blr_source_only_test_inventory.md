@@ -66,3 +66,7 @@ Argument validation, default serial reduction, public/internal and OpenMP
 equality, seeds, retained records, memory formulas/warnings, BLAS preservation,
 formatting, and reproducibility run in installed checks. Only source dispatch,
 native-hash, wrapper, namespace, and unrelated-API assertions are source-only.
+
+Phase 17T portable tests cover splitting, average ranks, R-hat,
+bulk/tail/mean ESS, mean MCSE, statuses, thresholds, and memory. Only repository
+source assertions proving no implementation/API change skip without checkout.

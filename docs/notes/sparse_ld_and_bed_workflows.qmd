@@ -524,3 +524,7 @@ public `mtblr_bed()` route remains unchanged.
 
 Phase 17S routes public `mtblr_bed()` through that shared owner/view path for
 all chain counts. `ncores` controls package workers only; BLAS is not changed.
+
+Future convergence summaries diagnose post-burn chain traces independently of
+`keep_chains`. All-marker and full-model probability traces remain opt-in due
+to chain-by-iteration memory scaling.
