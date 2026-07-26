@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "blr_mt_ld_access.h"
+#include "blr_mt_covariance_rng.h"
 #include "st_csr_common.h"
 #include "st_block_eigen.h"
 #include "st_block_eigen_rcpp.h"
@@ -94,36 +95,7 @@ arma::mat shrink_B_from_Sb(const arma::mat& Sb,
 arma::mat rwishart(unsigned int df,
                    const arma::mat& V,
                    std::mt19937& gen) {
- const arma::uword p = V.n_rows;
-
- if (V.n_rows != V.n_cols) {
-  throw std::runtime_error("rwishart: V must be square.");
- }
- if (df <= p - 1) {
-  throw std::runtime_error("rwishart: df must be > p - 1.");
- }
-
- arma::mat C;
- bool ok = arma::chol(C, V, "lower");
- if (!ok) {
-  throw std::runtime_error("rwishart: V must be SPD.");
- }
-
- arma::mat A(p, p, arma::fill::zeros);
-
- for (arma::uword i = 0; i < p; ++i) {
-  std::chi_squared_distribution<double> rchisq(df - i);
-  A(i, i) = std::sqrt(rchisq(gen));
-
-  std::normal_distribution<double> rnorm(0.0, 1.0);
-  for (arma::uword j = 0; j < i; ++j) {
-   A(i, j) = rnorm(gen);
-  }
- }
-
- arma::mat W = C * A * A.t() * C.t();
- W = 0.5 * (W + W.t());
- return W;
+ return sblr::mt::draw_wishart(static_cast<double>(df), V, gen);
 }
 
 // Draw Sigma ~ InvWishart(df, S)
@@ -131,16 +103,8 @@ arma::mat rwishart(unsigned int df,
 arma::mat rinvwishart(unsigned int df,
                       const arma::mat& S,
                       std::mt19937& gen) {
- if (S.n_rows != S.n_cols) {
-  throw std::runtime_error("rinvwishart: S must be square.");
- }
-
- arma::mat S_inv = arma::inv_sympd(S);
- arma::mat W = rwishart(df, S_inv, gen);
- arma::mat Sigma = arma::inv_sympd(W);
-
- Sigma = 0.5 * (Sigma + Sigma.t());
- return Sigma;
+ return sblr::mt::draw_inverse_wishart(
+  static_cast<double>(df), S, gen);
 }
 
 // Proper Gibbs update for B under:
@@ -4048,6 +4012,7 @@ void sampleBetaCSt(int i,
 }
 
 #include "blr_mt_default_core_impl.h"
+#include "blr_mt_bed_core_impl.h"
 #include "blr_mt_default_finalize_impl.h"
 #include "blr_mt_default_legacy_adapter.h"
 
@@ -4462,6 +4427,7 @@ Rcpp::List mtblr_legacy_to_raw(
  const sblr::mt::MtDefaultLegacyResult& legacy,
  const std::vector<std::vector<int>>& models,
  const std::string& backend,
+ const std::string& data_level,
  int nit,
  int nburn,
  int nthin,
@@ -4498,7 +4464,7 @@ Rcpp::List mtblr_legacy_to_raw(
    Rcpp::_["class"]="mtblr_raw", Rcpp::_["version"]=1),
   Rcpp::_["meta"]=Rcpp::List::create(
    Rcpp::_["model"]="bayesc", Rcpp::_["backend"]=backend,
-   Rcpp::_["data_level"]="summary", Rcpp::_["m"]=m,
+   Rcpp::_["data_level"]=data_level, Rcpp::_["m"]=m,
    Rcpp::_["nt"]=nt, Rcpp::_["n_trace"]=nit+nburn,
    Rcpp::_["nit"]=nit, Rcpp::_["nburn"]=nburn,
    Rcpp::_["nthin"]=nthin, Rcpp::_["nmodels"]=nmodels),
@@ -4574,7 +4540,7 @@ Rcpp::List mtblr_csr_raw_internal(
   nub, nue, updateB, updateE, updatePi, std::move(n), nit, nburn,
   nthin, seed, method);
  return mtblr_legacy_to_raw(
-  legacy, models, "mt_csr_bayesc", nit, nburn, nthin,
+  legacy, models, "mt_csr_bayesc", "summary", nit, nburn, nthin,
  updateB, updateE, updatePi);
 }
 
@@ -4636,9 +4602,327 @@ Rcpp::List mtblr_block_eigen_raw_internal(
    "fully_shared_operator" : "trait_specific_operator",
   Rcpp::_["owners"]=owners);
  return mtblr_legacy_to_raw(
-  adapter.legacy, models, "mt_block_eigen_bayesc", nit, nburn, nthin,
+  adapter.legacy, models, "mt_block_eigen_bayesc", "summary",
+  nit, nburn, nthin,
   updateB, updateE, updatePi,
   Rcpp::List::create(Rcpp::_["block_eigen"]=block_diagnostics));
+}
+
+namespace {
+
+std::vector<std::string> mt_bed_character_vector(
+ const Rcpp::CharacterVector& values,
+ const char* label
+) {
+ if (values.size()==0) {
+  throw std::invalid_argument(std::string(label)+" must be nonempty");
+ }
+ std::vector<std::string> out;
+ out.reserve(values.size());
+ for (R_xlen_t i=0; i<values.size(); ++i) {
+  if (Rcpp::CharacterVector::is_na(values[i])) {
+   throw std::invalid_argument(std::string(label)+" must not contain NA");
+  }
+  const std::string value=Rcpp::as<std::string>(values[i]);
+  if (value.empty()) {
+   throw std::invalid_argument(std::string(label)+" must not contain empty values");
+  }
+  out.push_back(value);
+ }
+ return out;
+}
+
+void validate_mt_bed_trait_names(const Rcpp::NumericMatrix& phenotype) {
+ Rcpp::RObject dimnames=phenotype.attr("dimnames");
+ if (dimnames.isNULL()) {
+  throw std::invalid_argument(
+   "Y must have nonempty unique trait column names");
+ }
+ Rcpp::List names(dimnames);
+ if (names.size()!=2 || Rf_isNull(names[1])) {
+  throw std::invalid_argument(
+   "Y must have nonempty unique trait column names");
+ }
+ Rcpp::CharacterVector traits(names[1]);
+ if (traits.size()!=phenotype.ncol()) {
+  throw std::invalid_argument(
+   "Y trait-name count must equal its column count");
+ }
+ std::set<std::string> seen;
+ for (R_xlen_t trait=0; trait<traits.size(); ++trait) {
+  if (Rcpp::CharacterVector::is_na(traits[trait])) {
+   throw std::invalid_argument(
+    "Y trait names must be nonmissing, nonempty, and unique");
+  }
+  const std::string name=Rcpp::as<std::string>(traits[trait]);
+  if (name.empty() || !seen.insert(name).second) {
+   throw std::invalid_argument(
+    "Y trait names must be nonmissing, nonempty, and unique");
+  }
+ }
+}
+
+Rcpp::List mt_bed_marker_kernel_to_list(
+ const sblr::mt::MtBedMarkerKernelResult& kernel
+) {
+ const int nmodels=static_cast<int>(kernel.models.size());
+ Rcpp::List precision(nmodels);
+ Rcpp::List rhs(nmodels);
+ Rcpp::List mean(nmodels);
+ Rcpp::List covariance(nmodels);
+ for (int model=0; model<nmodels; ++model) {
+  precision[model]=kernel.models[model].precision;
+  rhs[model]=Rcpp::NumericVector(
+   kernel.models[model].rhs.begin(), kernel.models[model].rhs.end());
+  mean[model]=Rcpp::NumericVector(
+   kernel.models[model].mean.begin(), kernel.models[model].mean.end());
+  covariance[model]=kernel.models[model].covariance;
+ }
+ return Rcpp::List::create(
+  Rcpp::_["C"]=precision,
+  Rcpp::_["rhs"]=rhs,
+  Rcpp::_["mean"]=mean,
+  Rcpp::_["covariance"]=covariance,
+  Rcpp::_["log_weight"]=kernel.log_weight,
+  Rcpp::_["probability"]=kernel.probability);
+}
+
+}  // namespace
+
+// Deterministic maintenance seam for the production MT BED marker kernel.
+// It performs no random draw and does not execute an MCMC iteration.
+// [[Rcpp::export]]
+Rcpp::List mtblr_bed_marker_contract_internal(
+ Rcpp::NumericVector score,
+ double xx,
+ arma::mat B,
+ arma::mat E,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi
+) {
+ if (score.size()==0 || score.size()>64 || models.size()>4096) {
+  throw std::invalid_argument(
+   "marker inspection requires 1-64 traits and at most 4096 models");
+ }
+ const std::size_t nt=static_cast<std::size_t>(score.size());
+ sblr::mt::validate_mt_bed_spd(B, nt, "B");
+ sblr::mt::validate_mt_bed_spd(E, nt, "E");
+ if (models.empty() || models.size()!=pi.size()) {
+  throw std::invalid_argument(
+   "models and pi must be nonempty and have matching lengths");
+ }
+ double total=0.0;
+ for (double value : pi) {
+  if (!std::isfinite(value) || value<0.0) {
+   throw std::invalid_argument(
+    "pi must be finite and nonnegative");
+  }
+  total+=value;
+ }
+ if (!std::isfinite(total) || total<=0.0) {
+  throw std::invalid_argument("pi must have positive total mass");
+ }
+ for (double& value : pi) value/=total;
+ arma::vec score_vector=Rcpp::as<arma::vec>(score);
+ return mt_bed_marker_kernel_to_list(
+  sblr::mt::mt_bed_marker_kernel(
+   score_vector, xx, arma::inv(B), arma::inv(E),
+   models, pi));
+}
+
+// Internal serial one-chain individual-level multivariate BayesC route.
+// This maintenance interface is deliberately not namespace-exported.
+// [[Rcpp::export]]
+Rcpp::List mtblr_bed_internal(
+ Rcpp::CharacterVector bed_files,
+ int n_bed,
+ Rcpp::List cls,
+ Rcpp::Nullable<Rcpp::IntegerVector> rows,
+ Rcpp::NumericVector af,
+ Rcpp::NumericMatrix Y,
+ std::vector<std::vector<double>> beta_init,
+ std::vector<std::vector<double>> b_init,
+ std::vector<std::vector<int>> state_init,
+ const std::vector<std::vector<int>>& sets,
+ arma::mat B,
+ arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi,
+ double nub,
+ double nue,
+ bool updateB,
+ bool updateE,
+ bool updatePi,
+ std::string residual_covariance,
+ int nit,
+ int nburn,
+ int nthin,
+ int seed,
+ int method=4
+) {
+ const std::vector<std::string> bed_paths=
+  mt_bed_character_vector(bed_files, "bed_files");
+ if (n_bed<=1) {
+  throw std::invalid_argument("n_bed must be greater than one");
+ }
+ if (cls.size()!=bed_files.size()) {
+  throw std::invalid_argument(
+   "bed_files length must equal cls length");
+ }
+ std::vector<std::vector<int>> selected_columns(cls.size());
+ std::size_t marker_count=0;
+ for (R_xlen_t file=0; file<cls.size(); ++file) {
+  Rcpp::IntegerVector file_columns=cls[file];
+  if (file_columns.size()==0) {
+   throw std::invalid_argument("every cls entry must be nonempty");
+  }
+  selected_columns[file].reserve(file_columns.size());
+  for (int value : file_columns) {
+   if (value==NA_INTEGER || value<=0) {
+    throw std::invalid_argument(
+     "cls values must be positive one-based integers");
+   }
+   selected_columns[file].push_back(value);
+   ++marker_count;
+  }
+ }
+ if (af.size()!=static_cast<R_xlen_t>(marker_count)) {
+  throw std::invalid_argument(
+   "af length must equal the selected marker count");
+ }
+ std::vector<double> frequencies(af.size());
+ for (R_xlen_t marker=0; marker<af.size(); ++marker) {
+  const double value=af[marker];
+  if (!std::isfinite(value) || value<=0.0 || value>=1.0) {
+   throw std::invalid_argument("af values must be finite and in (0, 1)");
+  }
+  frequencies[marker]=value;
+ }
+
+ std::vector<int> rows0;
+ const int* row_pointer=nullptr;
+ int selected_sample_count=n_bed;
+ if (rows.isNotNull()) {
+  Rcpp::IntegerVector selected_rows(rows);
+  if (selected_rows.size()==0) {
+   throw std::invalid_argument("rows must be nonempty when supplied");
+  }
+  std::set<int> seen;
+  rows0.reserve(selected_rows.size());
+  for (int value : selected_rows) {
+   if (value==NA_INTEGER || value<=0 || value>n_bed) {
+    throw std::invalid_argument(
+     "rows must be one-based integers in [1, n_bed]");
+   }
+   if (!seen.insert(value).second) {
+    throw std::invalid_argument("rows must not contain duplicates");
+   }
+   rows0.push_back(value-1);
+  }
+  row_pointer=rows0.data();
+  selected_sample_count=static_cast<int>(rows0.size());
+ }
+ if (Y.nrow()!=selected_sample_count || Y.ncol()==0) {
+  throw std::invalid_argument(
+   "Y must have selected sample count rows and at least one trait");
+ }
+ validate_mt_bed_trait_names(Y);
+ for (double value : Y) {
+  if (!std::isfinite(value)) {
+   throw std::invalid_argument("Y must contain only finite values");
+  }
+ }
+ if (method!=4 || nit<=0 || nburn<0 || nthin<=0 ||
+     (residual_covariance!="full" &&
+      residual_covariance!="diagonal")) {
+  throw std::invalid_argument(
+   "invalid method, residual covariance, or MCMC controls");
+ }
+
+ PackedBedMatrix owner=read_bedfiles_to_packed_matrix(
+  bed_paths, n_bed, row_pointer, static_cast<int>(rows0.size()),
+  selected_columns);
+ sblr::core::BedPackedGenotypeView<PackedBedMatrix> genotype{
+  owner,
+  owner.data,
+  static_cast<std::size_t>(owner.m)*owner.stride,
+  static_cast<std::size_t>(owner.m),
+  static_cast<std::size_t>(owner.n),
+  owner.nbytes,
+  owner.stride
+ };
+ arma::vec workspace(owner.n, arma::fill::zeros);
+ std::vector<sblr::mt::MtBedMarkerMap> marker_maps=
+  sblr::mt::build_mt_bed_marker_maps(genotype, frequencies);
+ arma::mat phenotype=Rcpp::as<arma::mat>(Y);
+ arma::mat marker_wy=sblr::mt::compute_mt_bed_marker_wy(
+  genotype, marker_maps, phenotype, workspace);
+ std::vector<int> marker_order=
+  sblr::mt::compute_mt_bed_marker_order(marker_wy, marker_maps);
+ std::vector<std::vector<double>> wy_trait_major=
+  sblr::mt::mt_bed_trait_major(marker_wy);
+
+ double pi_total=0.0;
+ for (double value : pi) {
+  if (!std::isfinite(value) || value<0.0) {
+   throw std::invalid_argument(
+    "pi must be finite and nonnegative");
+  }
+  pi_total+=value;
+ }
+ if (!std::isfinite(pi_total) || pi_total<=0.0) {
+  throw std::invalid_argument("pi must have positive total mass");
+ }
+ for (double& value : pi) value/=pi_total;
+
+ sblr::mt::MtBedDataView<PackedBedMatrix> data{
+  genotype, marker_maps, phenotype, marker_wy, marker_order
+ };
+ sblr::mt::MtBedInitialState initial{
+  std::move(beta_init), std::move(b_init), std::move(state_init),
+  std::move(B), std::move(E), std::move(pi)
+ };
+ sblr::mt::MtBedExecutionSpec execution{
+  updateB, updateE, updatePi, residual_covariance,
+  nit, nburn, nthin, seed, method
+ };
+ sblr::mt::MtBedCoreResult core=sblr::mt::run_mt_bed_bayesc_core(
+  data, initial, sets, ssb_prior, sse_prior, models, nub, nue,
+  execution);
+ const sblr::mt::MtBedCoreDiagnostics diagnostics=core.diagnostics;
+ sblr::mt::MtDefaultFinalResult final_result=
+  sblr::mt::finalize_mt_default_result(std::move(core.posterior));
+ sblr::mt::MtDefaultLegacyResult legacy=
+  sblr::mt::make_mt_default_legacy_result(
+   final_result, wy_trait_major, nit, nburn);
+
+ Rcpp::List mt_bed_diagnostics=Rcpp::List::create(
+  Rcpp::_["residual_covariance"]=residual_covariance,
+  Rcpp::_["sample_count"]=owner.n,
+  Rcpp::_["marker_count"]=owner.m,
+  Rcpp::_["trait_count"]=Y.ncol(),
+  Rcpp::_["owner"]="PackedBedMatrix",
+  Rcpp::_["view"]="BedPackedGenotypeView",
+  Rcpp::_["genotype_scale"]="standardized_genotype",
+  Rcpp::_["marker_workspace"]="double",
+  Rcpp::_["marker_cholesky_jitter_attempts"]=
+   static_cast<double>(diagnostics.marker_cholesky_jitter_attempts),
+  Rcpp::_["marker_cholesky_max_increment"]=
+   diagnostics.marker_cholesky_max_increment,
+  Rcpp::_["full_e_updates"]=
+   static_cast<double>(diagnostics.full_e_updates),
+  Rcpp::_["diagonal_e_updates"]=
+   static_cast<double>(diagnostics.diagonal_e_updates),
+  Rcpp::_["sample_residual_returned"]=false,
+  Rcpp::_["genetic_values_returned"]=false,
+  Rcpp::_["cpo"]="unsupported",
+  Rcpp::_["le_ld"]="unsupported");
+ return mtblr_legacy_to_raw(
+  legacy, models, "mt_bed_bayesc", "individual",
+  nit, nburn, nthin, updateB, updateE, updatePi,
+  Rcpp::List::create(Rcpp::_["mt_bed"]=mt_bed_diagnostics));
 }
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the

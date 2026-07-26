@@ -85,3 +85,9 @@ transformed-summary metadata, diagnostics, and public/internal reductions.
 `helper-mtblr-bed-contract.R` own the implementation-plan BED decoder, dense-X
 algebra, sample-residual, covariance, conditional, memory, and forbidden-route
 contracts. Existing Phase 15 and 17 owners remain authoritative for production.
+
+`test-blr-framework-phase17o.R` and `helper-mtblr-bed-internal.R` uniquely own
+the internal execution binding, marker maps/decoding, sample-residual core,
+full-`E` kernel and update, diagonal reductions, initialization, final
+marker-space reconstruction, diagnostics, reproducibility, ownership, and
+no-public-route assertions.

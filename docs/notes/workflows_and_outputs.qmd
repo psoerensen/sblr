@@ -1023,8 +1023,10 @@ shared `mtblr_fit` formatter. Fits add `block_diagnostics` and
 `operator_metadata`; users should retain the original stats object externally
 if they need the unprojected `wy`.
 
-# Planned individual-level MT workflow
+# Internal individual-level MT workflow
 
-No `mtblr_bed()` workflow exists. The planned internal Phase 17O route uses
-complete centered pre-adjusted phenotypes and reconstructs marker-space
-`wy=X'Y` and `r=X'R_final` for the existing MT raw/fit semantics.
+No public `mtblr_bed()` workflow exists. Internal Phase 17O execution uses
+complete centered pre-adjusted phenotypes, full residual covariance by
+default-contract, and reconstructs marker-space `wy=X'Y` and `r=X'R_final`
+for existing `mtblr_raw` version 1 semantics. Sample residuals, genetic values,
+CPO, and LE/LD outputs are absent.

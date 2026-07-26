@@ -680,7 +680,8 @@ summary `ww` never enters the runtime operator.
 
 # Planned internal MT packed-BED computation (Phase 17N)
 
-Phase 17N adds no backend. The Phase 17O plan uses one `PackedBedMatrix`,
-`BedPackedGenotypeView`, a reusable decoded double marker, `arma::mat`
-sample residuals, full-`E` masked-latent marker algebra, and final `X'R`
-reconstruction into `mtblr_raw` version 1.
+Phase 17O adds internal backend `mt_bed_bayesc`. It uses one
+`PackedBedMatrix`, one `BedPackedGenotypeView`, a reusable decoded double
+marker, `arma::mat` sample residuals, full-`E` masked-latent marker algebra,
+and final `X'R` reconstruction into `mtblr_raw` version 1. It is not routed
+through any public function.

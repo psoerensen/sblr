@@ -2,16 +2,17 @@
 
 ## 1. Purpose
 
-This document is the implementation contract for a future internal,
-individual-level, serial multivariate BayesC route. It fixes the physical
-genotype representation, likelihood, state, covariance, ownership, memory,
-output, and reduction rules before numerical implementation begins.
+Phase 17N established this implementation contract. Phase 17O now implements
+the internal, individual-level, serial multivariate BayesC route without
+changing its physical genotype, likelihood, state, covariance, ownership,
+memory, output, or reduction decisions.
 
 ## 2. Public status
 
-No public individual-level MT route exists. Phase 17N adds no sampler and no
-`mtblr_bed()` export. Phase 17O is internal-only. A public route is deferred to
-Phase 17P.
+No public individual-level MT route exists and there is no `mtblr_bed()`
+export. Phase 17O provides only `mtblr_bed_internal()` and the deterministic
+`mtblr_bed_marker_contract_internal()` inspection seam. A public route is
+deferred to Phase 17P.
 
 ## 3. Existing scalar BED family
 
@@ -509,9 +510,9 @@ joint multivariate predictive density. Joint leave-one-individual-out CPO,
 traitwise marginal CPO, and conditional-trait CPO require distinct definitions
 and validation.
 
-## 33. Phase 17O target
+## 33. Phase 17O implementation
 
-The proposed internal binding is:
+The active internal binding is:
 
 ```cpp
 Rcpp::List mtblr_bed_internal(
@@ -561,5 +562,5 @@ validation, missingness policy, allele/frequency/scale provenance, initializatio
 defaults, full-versus-diagonal residual covariance controls, diagnostics,
 individual prediction outputs, memory warnings, and installed public examples.
 
-Phase 17N formalizes a future route; it implements no individual-level MT
-sampler.
+Phase 17N itself was audit-only and implemented no individual-level MT sampler.
+Phase 17O is the first implementation and remains internal-only.

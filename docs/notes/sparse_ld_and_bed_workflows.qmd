@@ -502,6 +502,7 @@ same selected BED genotypes used for `make_summary_stats()`. Explicit
 one-based block starts are mandatory. External GWAS summaries with a separate
 BED reference are rejected.
 
-Phase 17N separately formalizes a future individual-level MT BED route: one
-shared selected genotype matrix, complete same-individual phenotypes,
-sample-space residuals, full residual covariance, and no public interface.
+Phase 17O implements the Phase 17N individual-level MT BED contract internally:
+one shared selected genotype matrix, complete centered same-individual
+phenotypes, sample-space residuals, canonical full residual covariance, and an
+exact diagonal reduction mode. There remains no public interface.

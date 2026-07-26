@@ -276,6 +276,49 @@
       }
     }
   }
+  if (identical(raw$meta$backend, "mt_bed_bayesc")) {
+    bed <- raw$diagnostics$mt_bed
+    expected_updates <- if (isTRUE(raw$diagnostics$cove > 0)) {
+      raw$meta$nit + raw$meta$nburn
+    } else {
+      0
+    }
+    if (!identical(raw$meta$data_level, "individual") ||
+        !is.list(bed) ||
+        !bed$residual_covariance %in% c("full", "diagonal") ||
+        length(bed$sample_count) != 1L || !is.finite(bed$sample_count) ||
+        bed$sample_count <= 1 ||
+        !identical(as.integer(bed$marker_count), as.integer(m)) ||
+        !identical(as.integer(bed$trait_count), as.integer(nt)) ||
+        !identical(bed$owner, "PackedBedMatrix") ||
+        !identical(bed$view, "BedPackedGenotypeView") ||
+        !identical(bed$genotype_scale, "standardized_genotype") ||
+        !identical(bed$marker_workspace, "double") ||
+        length(bed$marker_cholesky_jitter_attempts) != 1L ||
+        !is.finite(bed$marker_cholesky_jitter_attempts) ||
+        bed$marker_cholesky_jitter_attempts < 0 ||
+        length(bed$marker_cholesky_max_increment) != 1L ||
+        !is.finite(bed$marker_cholesky_max_increment) ||
+        bed$marker_cholesky_max_increment < 0 ||
+        length(bed$full_e_updates) != 1L ||
+        !is.finite(bed$full_e_updates) || bed$full_e_updates < 0 ||
+        length(bed$diagonal_e_updates) != 1L ||
+        !is.finite(bed$diagonal_e_updates) ||
+        bed$diagonal_e_updates < 0 ||
+        (bed$residual_covariance == "full" &&
+         (bed$full_e_updates != expected_updates ||
+          bed$diagonal_e_updates != 0)) ||
+        (bed$residual_covariance == "diagonal" &&
+         (bed$diagonal_e_updates != expected_updates ||
+          bed$full_e_updates != 0)) ||
+        !identical(bed$sample_residual_returned, FALSE) ||
+        !identical(bed$genetic_values_returned, FALSE) ||
+        !identical(bed$cpo, "unsupported") ||
+        !identical(bed$le_ld, "unsupported")) {
+      stop("Invalid mtblr_raw individual-level MT BED diagnostics.",
+           call. = FALSE)
+    }
+  }
   raw
 }
 

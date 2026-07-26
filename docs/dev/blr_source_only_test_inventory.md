@@ -32,3 +32,9 @@ Phase 17N BED decoding, dense algebra, row/marker selection, sample-residual,
 marker-conditional, and contract-object tests are portable. Only production
 source inventory, no-MCMC-I/O, immutable-view, and forbidden sampler/export
 assertions use `blr_repo_path()` and skip narrowly without a source checkout.
+
+Phase 17O marker-kernel, BED execution, diagonal reduction, full-`E`
+identities, initialization, validation, raw schema, and reproducibility tests
+are portable and run in installed checks. Only counts/reuse/forbidden-feature
+assertions over C++ source and generated registration text use
+`blr_repo_path()` and skip narrowly when source is unavailable.

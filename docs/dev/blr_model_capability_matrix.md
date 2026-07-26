@@ -409,7 +409,8 @@ multichain execution remain unsupported.
 
 # Phase 17N planned capability
 
-No individual-level MT route exists. The Phase 17O internal target is serial,
-one-chain BayesC with one shared packed genotype matrix, complete finite
-pre-adjusted phenotypes, corrected joint patterns, canonical full residual
-covariance, and a diagonal reduction mode.
+An internal individual-level MT route now exists as `mtblr_bed_internal()`.
+It is serial, one-chain BayesC with one shared packed genotype matrix, complete
+finite centered pre-adjusted phenotypes, corrected joint patterns, canonical
+full residual covariance, and a diagonal reduction mode. It has no public
+adapter, missing-phenotype, covariate, CPO, LE/LD, OpenMP, or multichain support.

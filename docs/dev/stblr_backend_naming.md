@@ -437,8 +437,9 @@ The public function is `mtblr_block_eigen()` and its raw backend identifier is
 `mt_block_eigen_bayesc`. `mtblr_eigen()` remains an unsupported research
 symbol and is not an implementation component of the public route.
 
-# Phase 17N reserved internal naming
+# Phase 17O internal naming
 
-No symbol is added in Phase 17N. The future internal backend identifier is
-reserved as `mt_bed_bayesc`, with data level `individual`; `mtblr_bed()` is not
-reserved as a current public function.
+Phase 17O activates internal backend identifier `mt_bed_bayesc` with data
+level `individual`. The native execution and inspection symbols are
+`mtblr_bed_internal()` and `mtblr_bed_marker_contract_internal()`.
+`mtblr_bed()` is not a current public function or export.

@@ -699,3 +699,9 @@ Portable Phase 17N tests independently decode two-file packed BED data and own
 code/padding/order, standardization, `X'X`, `X'Y`, sample-residual, genetic
 covariance, residual-cross-product, and full/diagonal marker-conditional
 identities. Source-only blocks assert that no sampler or public route exists.
+
+Phase 17O portable tests compare its production marker kernel with those R
+oracles and reduce diagonal mode to corrected dense MT for fixed, B-only,
+E-only, pi-only, all-update, multi-set, three-trait, and one-trait cases.
+Full-`E` tests independently reconstruct `R`, `X'R`, and `U'U/n`. Phase 17O
+source-only assertions cover ownership and the absence of a public export.

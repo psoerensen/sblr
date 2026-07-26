@@ -1560,3 +1560,10 @@ MT BayesC route. It selects one `PackedBedMatrix` owner and the existing common
 borrowed view, complete centered pre-adjusted phenotypes, sample-space residuals,
 full residual covariance with a diagonal reduction, decoded-marker workspace,
 and `mtblr_raw` version 1 reconstruction.
+
+Phase 17O implements that contract as the internal-only
+`mtblr_bed_internal()` route. It adds one dedicated sample-space Gibbs core,
+keeps full residual covariance canonical, retains diagonal `E` as an exact
+summary-MT reduction mode, and reuses corrected B/pi, finalization, legacy, and
+raw-conversion paths. Phase 17P may add a public adapter without changing this
+numerical core.

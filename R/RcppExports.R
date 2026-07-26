@@ -85,6 +85,14 @@ mtblr_block_eigen_raw_internal <- function(wy, yy, b, operator_descriptors, sets
     .Call(`_sblr_mtblr_block_eigen_raw_internal`, wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }
 
+mtblr_bed_marker_contract_internal <- function(score, xx, B, E, models, pi) {
+    .Call(`_sblr_mtblr_bed_marker_contract_internal`, score, xx, B, E, models, pi)
+}
+
+mtblr_bed_internal <- function(bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method = 4L) {
+    .Call(`_sblr_mtblr_bed_internal`, bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method)
+}
+
 mtblr_eigen <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
     .Call(`_sblr_mtblr_eigen`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }

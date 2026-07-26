@@ -385,5 +385,6 @@ by the sampler.
 
 Phase 17N selects one move-only `PackedBedMatrix`, the existing immutable
 `BedPackedGenotypeView`, column-major `n x nt` phenotype/residual matrices, and
-one reusable decoded double marker. This is a contract only; no MT BED sampler
-exists yet.
+one reusable decoded double marker. Phase 17O implements that representation
+internally. Only marker-space `X'Y` and final `X'R` enter `mtblr_raw`; the
+sample residual and genetic-value matrices remain core-owned and unreturned.
