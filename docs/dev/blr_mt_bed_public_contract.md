@@ -173,3 +173,10 @@ BayesR/BayesRC, annotations, scheduling, and legacy eigen migration are absent.
 Adding these capabilities requires separate contracts for preprocessing and
 evidence, observation masks, prediction definitions, chain ownership/seeds,
 aggregation and diagnostics, retained-chain memory, and parallel dispatch.
+
+## Phase 17Q multichain boundary
+
+The public interface remains serial and unchanged. Phase 17Q specifies future
+chain-only tasks, deterministic seeds, pooled summaries, primary-chain final
+state, optional compact chains, and analytical worker-aware memory. These are
+contracts for Phase 17R/17S, not current capabilities.

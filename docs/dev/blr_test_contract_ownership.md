@@ -96,3 +96,8 @@ no-public-route assertions.
 Glist/BED alignment, complete phenotype and centering policy, public defaults,
 initialization, full/diagonal covariance inputs, memory estimates, metadata,
 raw/fit enrichment, public/internal equality, and exported API contract.
+
+`test-blr-framework-phase17q.R` and
+`helper-mtblr-bed-multichain-contract.R` own the future MT chain topology,
+seed, aggregation, failure, stability, compact-chain, and memory oracles.
+Repository-only assertions own the guarantee that no implementation exists.

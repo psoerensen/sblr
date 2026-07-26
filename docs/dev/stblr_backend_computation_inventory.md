@@ -691,3 +691,7 @@ through any public function.
 and centering, public prior/initialization preparation, analytical memory
 estimation, and metadata formatting in R. All individual-level MCMC computation
 remains solely in the unchanged Phase 17O `mtblr_bed_internal()` backend.
+
+Phase 17Q adds no backend computation. Its future plan prepares owner/view,
+phenotype, maps, `wy`, and order once, then invokes the unchanged Phase 17O core
+once per independent chain and aggregates only after every chain succeeds.

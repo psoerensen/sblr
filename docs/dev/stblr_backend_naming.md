@@ -445,3 +445,7 @@ level `individual`. The native execution and inspection symbols are
 Phase 17P exports `mtblr_bed()` as the public adapter for this backend. The
 native symbols remain internal and `mtblr_eigen()` remains unrelated research
 code.
+
+`mtblr_bed_chains_internal` is reserved as the proposed Phase 17R internal
+name. It is not registered or callable in Phase 17Q; backend naming remains
+`mt_bed_bayesc` and raw schema version remains 1.

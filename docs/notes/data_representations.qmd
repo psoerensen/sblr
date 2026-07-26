@@ -395,3 +395,8 @@ complete aligned phenotype matrix. Phenotypes are centered by default but not
 scaled; genotypes are standardized from required selected allele frequencies.
 Sample residuals and genetic-value matrices remain internal, while ordinary MT
 raw `wy` and `r` are marker-space `X'Y` and final `X'R`.
+
+Future multichain MT BED execution will keep one immutable packed owner and one
+prepared phenotype/marker representation. Only mutable chain state, residual,
+workspace, RNG, and result accumulators scale with live workers or chain count.
+Phase 17Q documents this representation but does not implement it.

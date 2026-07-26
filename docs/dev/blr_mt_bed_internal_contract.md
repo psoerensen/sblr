@@ -566,3 +566,10 @@ execution remain later work.
 
 Phase 17N itself was audit-only and implemented no individual-level MT sampler.
 Phase 17O is the first implementation and remains internal-only.
+
+## Phase 17Q concurrency seam
+
+The Phase 17O core is safe for independent concurrent calls after preparation
+is separated from its Rcpp binding: its shared inputs are immutable and each
+call owns state, residual, workspace, diagnostics, and RNG. Phase 17Q does not
+perform that refactor or add OpenMP.

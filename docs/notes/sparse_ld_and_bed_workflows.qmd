@@ -513,3 +513,7 @@ one joint MT BayesC likelihood. It requires standardized genotypes, finite
 selected frequencies, complete phenotypes, and one common sample set. It does
 not fit covariates or support missing phenotypes, CPO, LE/LD, predictions,
 OpenMP, or multiple chains.
+
+Phase 17Q formalizes later chain-level parallelism only. One task will be one
+complete joint MT chain sharing the prepared packed BED view; it will not split
+traits, markers, or sets. No multichain or OpenMP behavior is active yet.

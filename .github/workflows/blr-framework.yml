@@ -22,7 +22,7 @@ jobs:
       - name: Compile attributes and load native package
         run: Rscript -e "Rcpp::compileAttributes('.'); pkgload::load_all('.', compile=TRUE)"
       - name: Fast deterministic framework and schema tests
-        run: Rscript -e "pkgload::load_all('.', compile=FALSE, quiet=TRUE); devtools::test('.', filter='blr-framework-phase(3|4|6|8|9c|9e|9g|10d|11d|12a|13e|14e|15b|16a|17a|17b|17c|17d|17e|17f|17h|17i|17j|17j2|17k|17l|17m|17n|17o|17p)|mtblr-raw-schema|blr-test-contracts|raw-schema|backend-consistency|csr-interface|bed-interface')"
+        run: Rscript -e "pkgload::load_all('.', compile=FALSE, quiet=TRUE); devtools::test('.', filter='blr-framework-phase(3|4|6|8|9c|9e|9g|10d|11d|12a|13e|14e|15b|16a|17a|17b|17c|17d|17e|17f|17h|17i|17j|17j2|17k|17l|17m|17n|17o|17p|17q)|mtblr-raw-schema|blr-test-contracts|raw-schema|backend-consistency|csr-interface|bed-interface')"
       - name: Package check
         # R CMD check is run against the built source tarball by this driver.
         run: Rscript tools/check/check_package.R .

@@ -423,3 +423,7 @@ complete centered pre-adjusted phenotypes, full residual covariance by default,
 and an explicit diagonal reduction mode. It remains serial and one-chain, with
 no covariate fitting, missing phenotypes, CPO, LE/LD, predictions, OpenMP, or
 multichain execution.
+
+Phase 17Q does not change this capability matrix. It formalizes a future
+BayesC-only chain-parallel route: each chain remains a complete joint MT fit;
+no trait, marker, or set parallelism is specified.

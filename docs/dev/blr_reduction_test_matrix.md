@@ -713,3 +713,8 @@ calls for full/diagonal fixed and all-update cases, restrictive/full patterns,
 one/three traits, multiple sets, initialization, explicit/ID rows, multiple
 files, explicit columns, and both centering modes. Phase 17O retains ownership
 of numerical marker, covariance, residual, and reproducibility reductions.
+
+Phase 17Q adds portable oracles for chain-only task enumeration, modulo-2^32
+seed resolution, unequal-retained-count pooling, iterationwise trace means,
+primary-chain final states, stability summaries, retained-chain shape, failure
+ordering, and shared/private memory scaling. No stochastic sampler test is added.

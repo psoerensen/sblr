@@ -1575,3 +1575,10 @@ adapter over Phase 17O. It reuses scalar BED alignment and shared MT
 model/set/covariance/raw/formatter contracts, adds aligned phenotype centering,
 complete-data and initialization validation, full/diagonal covariance policy,
 metadata and analytical memory warnings, and leaves native numerics unchanged.
+
+## Phase 17Q: MT BED multichain contract
+
+Phase 17Q audits scalar precedents and fixes the future joint-chain topology,
+seed, ownership, failure, aggregation, output, and memory contracts. Phase 17R
+may implement one internal prepared-data multichain dispatcher; Phase 17S may
+later activate public controls. Phase 17Q is audit-only.

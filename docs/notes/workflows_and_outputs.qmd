@@ -1036,3 +1036,8 @@ Use `mtblr_bed()` for one joint multivariate likelihood over a shared selected
 individual set. Full residual covariance is the default; diagonal covariance is
 an explicit reduction model. The fit adds BED diagnostics, phenotype
 preprocessing evidence, and an analytical (not peak-RSS) memory estimate.
+
+The current workflow is still one chain. The Phase 17Q future contract pools
+posterior retained samples, takes final mutable state from chain 1, reports
+marker stability across chain means, and optionally retains compact chain
+records without shared genotype, phenotype, or marker residual data.

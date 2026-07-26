@@ -45,3 +45,10 @@ fit formatting, and public/internal equality tests are portable and run in
 installed checks. Only source-text assertions for singular helper/native-call
 reuse and forbidden routes use `blr_repo_path()` and skip narrowly without a
 source checkout.
+
+## Phase 17Q
+
+Seed, topology, aggregation, chain-stability, retained-chain, failure, and
+memory-scaling oracles are portable under installed checking. Only assertions
+about absent OpenMP/native/public routes and source singularity use
+`blr_repo_path()` and skip without a source checkout.
