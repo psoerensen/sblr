@@ -248,3 +248,9 @@ compute B/G/E-diagonal diagnostics; automatic single-chain fits report quiet
 unavailability; `none` disables capture. Optional post-burn traces are separate
 from compact chains. Memory and at most one advisory warning include requested
 diagnostic scope. Passing diagnostics does not prove convergence.
+
+## Phase 17W future extended diagnostics
+
+Current modes remain `auto`, `none`, and `core`. A future explicit `extended`
+mode will use nested failure-closed covariance, probability, and selected-marker
+controls; `auto` remains Tier 1 only. Phase 17W changes no public surface.

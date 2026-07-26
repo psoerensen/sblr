@@ -85,3 +85,10 @@ Portable owners cover mode/control validation, route selection, disabled and
 quiet results, computed diagnostics, warnings, memory, formatting, optional
 traces, reductions, OpenMP equality, and reproducibility. Only source/hash
 assertions skip without a checkout.
+
+## Phase 17W
+
+Strict-lower ordering, probability deduplication, pattern and marker selection,
+quantity naming, memory/safety formulas, binary applicability, future-control
+validation, and warning grouping are portable. Only static production-diff
+assertions skip without a source checkout.

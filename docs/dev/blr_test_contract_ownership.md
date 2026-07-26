@@ -124,3 +124,7 @@ Phase 17T continues to own the statistical scope contract.
 Phase 17V owns public modes/controls, one-route selection, disabled/unavailable
 objects, warnings, diagnostic memory, formatting, retained traces, and public
 reductions. Phase 17U continues to own all diagnostic mathematics.
+
+Phase 17W extended-contract arithmetic and selection semantics are owned by
+`helper-mtblr-bed-extended-convergence-contract.R` and
+`test-blr-framework-phase17w.R`; only production-diff guards require checkout.

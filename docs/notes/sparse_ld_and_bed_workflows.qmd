@@ -536,3 +536,7 @@ activation and convergence warnings remain deferred.
 
 Phase 17V selects one ordinary or trace-capable MT BED route based on public
 convergence controls. Summary-LD routes remain unchanged.
+
+The Phase 17W contract fixes future extended capture at one end-of-iteration
+checkpoint and resolves marker requests only after final public BED selection.
+It forbids all-marker default and posterior-dependent top-k traces.

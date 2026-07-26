@@ -420,3 +420,7 @@ B/G/E diagonals only and is independent of compact retained chains.
 
 Phase 17V optionally exposes that bundle as `fit$convergence_traces`; it remains
 separate from compact chains and contains only B/G/E diagonal traces.
+
+Phase 17W reserves a separate extended bundle with unchanged core fields and
+typed covariance/probability/double-b/int32-d sections. No extended bundle is
+currently produced.

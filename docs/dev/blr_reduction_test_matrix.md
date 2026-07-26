@@ -742,3 +742,9 @@ statistical references, and optional `posterior` 1.6.1 comparisons.
 Default/none ordinary output reduces to Phase 17S, and computed public output
 reduces to the Phase 17U native-plus-R engine. Chain/trace retention, worker
 count, seeds, and update modes are permanent equality owners.
+
+## Phase 17W contract reductions
+
+Portable oracles own strict-lower order, covariance update/structural states,
+probability deduplication, pattern/marker resolution, binary applicability,
+memory reuse, safety controls, and warning grouping. Production remains exact.

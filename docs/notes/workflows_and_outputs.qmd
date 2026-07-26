@@ -1062,3 +1062,7 @@ outputs therefore remain unchanged in Phase 17U.
 
 Public MT BED fits now contain `fit$convergence` and a stable
 `fit$convergence_traces` field. Diagnostics are advisory and Tier 1 only.
+
+Future extended diagnostics remain scalar marginals: covariance entries do not
+prove joint matrix convergence, pattern probabilities do not prove joint
+simplex convergence, and selected markers do not describe unselected markers.

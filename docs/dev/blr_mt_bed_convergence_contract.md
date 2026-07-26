@@ -274,3 +274,10 @@ zero-row not-requested object; automatic single-chain use returns quiet
 unavailability. Warnings are aggregated, advisory, and do not prove
 convergence. Diagnostics remain independent of `keep_chains`, use per-chain
 post-burn rather than pooled traces, and expose no Tier 2 or marker scope.
+
+## Phase 17W extended-scope boundary
+
+The implementation-ready Tier 2/Tier 3 ordering, deduplication, selection,
+safety, output, and staging rules are owned by the extended convergence
+contract. Tier 1 mathematics and public behavior remain unchanged, and no
+extended diagnostic is implemented in Phase 17W.

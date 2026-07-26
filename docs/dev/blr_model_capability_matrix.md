@@ -450,3 +450,6 @@ unsupported.
 
 Phase 17V makes Tier 1 B/G/E-diagonal diagnostics public for MT packed BED.
 Off-diagonal covariance, probability, and marker diagnostics remain unsupported.
+
+Phase 17W formalizes, but does not implement, Tier 2 raw strict-lower B/G/E and
+active/null/explicit-pattern diagnostics plus later Tier 3 selected-marker b/d.

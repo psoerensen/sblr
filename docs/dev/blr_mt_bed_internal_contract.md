@@ -600,3 +600,9 @@ core, and the ordinary internal chains route remains numerically exact.
 Phase 17V activates this unchanged route conditionally from public R. Native
 types, extraction, execution, aggregation, wrappers, and registration remain
 unchanged.
+
+## Phase 17W canonical future checkpoint
+
+Future Tier 2/Tier 3 capture occurs once per post-burn iteration after the
+marker sweep and all enabled pi/B/G/E updates, before posterior accumulators or
+the next iteration. Phase 17W adds no recorder or core operation.

@@ -468,3 +468,7 @@ Internal Tier 1 quantities use `B_diag[trait]`, `G_diag[trait]`, and
 
 Phase 17V exposes quantity names at `fit$convergence$summary` and reserves
 `fit$convergence_traces` for optional post-burn Tier 1 arrays.
+
+Phase 17W reserves future groups `B_cov`, `G_cov`, `E_cov`, `pi_mass`,
+`pi_pattern`, `marker_b`, and `marker_d`, preserving fitted trait/model/final
+marker order. These names are contractual and not yet public output.

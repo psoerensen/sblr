@@ -278,3 +278,9 @@ unchanged.
 The public adapter selects exactly one ordinary or trace-capable native route.
 It never reruns chains and never uses pooled or compact-chain data as formal
 diagnostic draws.
+
+## Phase 17W extended trace ownership
+
+Future extended recorders are chain-private and Rcpp-free. Workers never share
+mutable trace buffers; deterministic bundling follows logical chain order and
+remains independent of compact-chain and diagnostic-trace retention.

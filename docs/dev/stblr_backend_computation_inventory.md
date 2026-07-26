@@ -718,3 +718,9 @@ No diagnostic computation occurs in OpenMP workers.
 
 Public MT BED conditionally captures those traces and computes the unchanged
 engine. No scalar, CSR, or block-eigen backend gains convergence diagnostics.
+
+## Phase 17W extended inventory
+
+Off-diagonal covariance, pi, and selected-marker iteration traces are absent.
+Their future checkpoint follows all pi/B/G/E updates and uses chain-private
+optional buffers. Phase 17W adds no backend computation.

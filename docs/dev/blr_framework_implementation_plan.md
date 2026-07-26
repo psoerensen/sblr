@@ -1611,3 +1611,29 @@ memory, and one internal route. Public activation remains a later phase.
 Activated strict modes/controls, one-route dispatch, validated disabled and
 unavailable objects, additive formatting, advisory warnings, diagnostic memory,
 optional traces, documentation, and public reductions. Tier 2/3 remain future.
+
+## Phase 17W — extended convergence contract
+
+Phase 17W fixes the canonical checkpoint, strict-lower covariance and
+probability semantics, selected-marker contract, chain-private architecture,
+memory guard, and output compatibility. The earlier Phase 17X/17Y Tier 2
+sequence is superseded as the immediate roadmap; its detailed contracts remain
+future Phase 21 checkpoints.
+
+## Phase 18 — Unified STBLR/MTBLR alignment and cleanup
+
+Align STBLR and MTBLR across CSR, block-eigen, and packed-BED operators:
+coherent naming; common public argument semantics; logical-chain, seed, RNG,
+and OpenMP principles; one shared convergence engine and result structure;
+STBLR convergence integration; common trace ownership, output, aggregation,
+memory, and warning terminology; block-eigen public API organization; operator
+reduction tests; and removal of unnecessary aliases and compatibility-only
+naming because backward compatibility is not required.
+
+## Phases 19–21
+
+- Phase 19: MTBLR BayesR across supported operators.
+- Phase 20: MTBLR BayesRC and annotation-informed models.
+- Phase 21: extended diagnostics for both STBLR and MTBLR, using the Phase 17W
+  MT contract as an input. Preserve separate internal Tier 2, public Tier 2,
+  and selected-marker Tier 3 checkpoints within that phase.
