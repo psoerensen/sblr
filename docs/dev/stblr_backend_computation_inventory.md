@@ -685,3 +685,9 @@ Phase 17O adds internal backend `mt_bed_bayesc`. It uses one
 marker, `arma::mat` sample residuals, full-`E` masked-latent marker algebra,
 and final `X'R` reconstruction into `mtblr_raw` version 1. It is not routed
 through any public function.
+## Phase 17P public MT BED adapter
+
+`mtblr_bed()` performs Glist/BED/sample/marker alignment, phenotype validation
+and centering, public prior/initialization preparation, analytical memory
+estimation, and metadata formatting in R. All individual-level MCMC computation
+remains solely in the unchanged Phase 17O `mtblr_bed_internal()` backend.

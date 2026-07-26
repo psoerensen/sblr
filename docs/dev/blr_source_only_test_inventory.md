@@ -38,3 +38,10 @@ identities, initialization, validation, raw schema, and reproducibility tests
 are portable and run in installed checks. Only counts/reuse/forbidden-feature
 assertions over C++ source and generated registration text use
 `blr_repo_path()` and skip narrowly when source is unavailable.
+
+Phase 17P public execution, BED/Glist alignment, phenotype validation and
+centering, initialization, covariance policy, memory warnings, named raw,
+fit formatting, and public/internal equality tests are portable and run in
+installed checks. Only source-text assertions for singular helper/native-call
+reuse and forbidden routes use `blr_repo_path()` and skip narrowly without a
+source checkout.

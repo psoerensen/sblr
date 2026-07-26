@@ -118,8 +118,8 @@ test_that("Phase 17N source architecture remains audit-only", {
   expect_match(bayesr, "rows0\\[k\\]")
   expect_match(family, "const std::uint8_t\\* packed_markers")
   expect_match(family, "const PackedGenotype& storage")
-  expect_false(grepl("export\\(mtblr_bed\\)", public))
-  expect_false(exists("mtblr_bed", asNamespace("sblr"), inherits = FALSE))
+  expect_true(grepl("export\\(mtblr_bed\\)", public))
+  expect_true(exists("mtblr_bed", asNamespace("sblr"), inherits = FALSE))
   expect_match(contract, "Full-E marker conditional")
   expect_match(contract, "`mtblr_raw` version 1", fixed = TRUE)
   expect_match(contract, "complete finite")
@@ -130,5 +130,5 @@ test_that("Phase 17N source architecture remains audit-only", {
 test_that("current scalar BED interface remains trait-specific and rejects covariates", {
   expect_match(paste(deparse(body(stblr_bed)), collapse = "\n"),
                "covar is not currently supported")
-  expect_false("mtblr_bed" %in% getNamespaceExports("sblr"))
+  expect_true("mtblr_bed" %in% getNamespaceExports("sblr"))
 })

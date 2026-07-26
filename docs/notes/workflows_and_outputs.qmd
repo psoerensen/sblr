@@ -1030,3 +1030,9 @@ complete centered pre-adjusted phenotypes, full residual covariance by
 default-contract, and reconstructs marker-space `wy=X'Y` and `r=X'R_final`
 for existing `mtblr_raw` version 1 semantics. Sample residuals, genetic values,
 CPO, and LE/LD outputs are absent.
+## Joint individual-level MT BayesC
+
+Use `mtblr_bed()` for one joint multivariate likelihood over a shared selected
+individual set. Full residual covariance is the default; diagonal covariance is
+an explicit reduction model. The fit adds BED diagnostics, phenotype
+preprocessing evidence, and an analytical (not peak-RSS) memory estimate.

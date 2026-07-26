@@ -506,3 +506,10 @@ Phase 17O implements the Phase 17N individual-level MT BED contract internally:
 one shared selected genotype matrix, complete centered same-individual
 phenotypes, sample-space residuals, canonical full residual covariance, and an
 exact diagonal reduction mode. There remains no public interface.
+## Multivariate BED workflow
+
+`mtblr_bed()` reuses the established `stblr_bed()` Glist/BED alignment but fits
+one joint MT BayesC likelihood. It requires standardized genotypes, finite
+selected frequencies, complete phenotypes, and one common sample set. It does
+not fit covariates or support missing phenotypes, CPO, LE/LD, predictions,
+OpenMP, or multiple chains.

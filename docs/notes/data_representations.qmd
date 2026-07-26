@@ -388,3 +388,10 @@ Phase 17N selects one move-only `PackedBedMatrix`, the existing immutable
 one reusable decoded double marker. Phase 17O implements that representation
 internally. Only marker-space `X'Y` and final `X'R` enter `mtblr_raw`; the
 sample residual and genetic-value matrices remain core-owned and unreturned.
+## Public individual-level multivariate BED data
+
+`mtblr_bed()` uses one shared packed BED genotype owner internally and one
+complete aligned phenotype matrix. Phenotypes are centered by default but not
+scaled; genotypes are standardized from required selected allele frequencies.
+Sample residuals and genetic-value matrices remain internal, while ordinary MT
+raw `wy` and `r` are marker-space `X'Y` and final `X'R`.

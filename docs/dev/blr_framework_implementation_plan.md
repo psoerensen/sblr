@@ -1567,3 +1567,11 @@ keeps full residual covariance canonical, retains diagonal `E` as an exact
 summary-MT reduction mode, and reuses corrected B/pi, finalization, legacy, and
 raw-conversion paths. Phase 17P may add a public adapter without changing this
 numerical core.
+
+# Phase 17P
+
+Phase 17P exposes `mtblr_bed()` as the supported serial one-chain public
+adapter over Phase 17O. It reuses scalar BED alignment and shared MT
+model/set/covariance/raw/formatter contracts, adds aligned phenotype centering,
+complete-data and initialization validation, full/diagonal covariance policy,
+metadata and analytical memory warnings, and leaves native numerics unchanged.

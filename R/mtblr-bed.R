@@ -1,0 +1,482 @@
+.mtblr_bed_center_tolerance <- function(y) {
+  1e-10 * pmax(1, sqrt(colMeans(y^2)))
+}
+
+.mtblr_bed_matrix <- function(x, m, nt, name, mode = c("numeric", "state")) {
+  mode <- match.arg(mode)
+  if (is.list(x) && !is.data.frame(x)) {
+    if (length(x) != nt || any(lengths(x) != m)) {
+      stop(name, " must contain one length-m vector per trait.", call. = FALSE)
+    }
+    x <- do.call(cbind, x)
+  }
+  x <- as.matrix(x)
+  if (!identical(dim(x), c(m, nt))) {
+    stop(name, " must be an m by nt matrix or trait list.", call. = FALSE)
+  }
+  if (mode == "numeric") {
+    storage.mode(x) <- "double"
+    if (any(!is.finite(x))) stop(name, " must be finite.", call. = FALSE)
+  } else {
+    if (anyNA(x) || any(!x %in% 0:1)) {
+      stop("state must contain only binary values.", call. = FALSE)
+    }
+    storage.mode(x) <- "integer"
+  }
+  x
+}
+
+.mtblr_bed_initialization <- function(beta, b, state, models, m, nt) {
+  supplied <- c(beta = !is.null(beta), b = !is.null(b),
+                state = !is.null(state))
+  if (!is.null(beta)) beta <- .mtblr_bed_matrix(beta, m, nt, "beta")
+  if (!is.null(b)) b <- .mtblr_bed_matrix(b, m, nt, "b")
+  if (!is.null(state)) {
+    state <- .mtblr_bed_matrix(state, m, nt, "state", "state")
+  }
+  if (is.null(b)) b <- matrix(0, m, nt)
+  if (is.null(state)) state <- matrix(as.integer(b != 0), m, nt)
+  if (is.null(beta)) beta <- b
+  pattern_key <- function(x) apply(x, 1L, paste, collapse = "_")
+  if (any(!pattern_key(state) %in% pattern_key(models))) {
+    stop("Every state row must equal one supplied model pattern.",
+         call. = FALSE)
+  }
+  if (any(b[state == 0L] != 0)) {
+    stop("Effective effects must be exactly zero for inactive states.",
+         call. = FALSE)
+  }
+  active <- state == 1L
+  if (any(active) &&
+      !isTRUE(all.equal(unname(b[active]), unname(beta[active]),
+                       tolerance = 1e-12))) {
+    stop("Active effective effects must equal their latent effects.",
+         call. = FALSE)
+  }
+  policy <- if (!any(supplied)) "all_zero_defaults" else
+    paste0(names(supplied)[supplied], collapse = "_")
+  list(beta = beta, b = b, state = state, policy = policy)
+}
+
+.mtblr_bed_memory_estimate <- function(n, m, nt, nmodels, trace_length) {
+  bytes_per_marker <- ceiling(n / 4)
+  stride <- 64 * ceiling(bytes_per_marker / 64)
+  components <- c(
+    packed_genotype = m * stride,
+    phenotype = 8 * n * nt,
+    sample_residual = 8 * n * nt,
+    effective_effects = 8 * m * nt,
+    latent_effects = 8 * m * nt,
+    state = 4 * m * nt,
+    decoded_marker_workspace = 8 * n,
+    marker_maps = 5 * 8 * m,
+    marker_order_and_sets = 8 * m,
+    covariance_work = 6 * 8 * nt * nt,
+    model_work = 8 * nmodels * (nt * nt + 2 * nt + 2),
+    marker_wy = 8 * m * nt,
+    final_marker_r = 8 * m * nt,
+    traces = 8 * trace_length * 3 * nt
+  )
+  total <- sum(components)
+  list(
+    label = "analytical working-memory estimate",
+    measured_rss = FALSE,
+    measured_peak_rss = FALSE,
+    components_bytes = components,
+    estimated_total_bytes = total,
+    estimated_total_gib = total / 1024^3
+  )
+}
+
+.mtblr_bed_marker_metadata <- function(dat, Glist) {
+  marker_ids <- as.character(dat$variable_names)
+  metadata <- data.frame(
+    marker_id = marker_ids,
+    chromosome_or_file = rep(dat$chr, lengths(dat$cls)),
+    bed_column = unlist(dat$cls, use.names = FALSE),
+    allele_frequency = unlist(dat$af, use.names = FALSE),
+    stringsAsFactors = FALSE
+  )
+  explicit <- Glist$marker_metadata
+  if (is.list(explicit) && length(explicit) >= max(dat$chr) &&
+      all(vapply(dat$chr, function(cc) is.data.frame(explicit[[cc]]),
+                 logical(1)))) {
+    selected <- do.call(rbind, Map(function(cc, cl) {
+      explicit[[cc]][cl, , drop = FALSE]
+    }, dat$chr, dat$cls))
+    if (!is.null(selected$marker_id) &&
+        identical(as.character(selected$marker_id), marker_ids)) {
+      for (field in c("effect_allele", "other_allele")) {
+        if (!is.null(selected[[field]])) metadata[[field]] <- selected[[field]]
+      }
+    }
+  }
+  .mtblr_marker_metadata(marker_ids, metadata)
+}
+
+.mtblr_bed_trait_metadata <- function(metadata, trait_names, n,
+                                      preprocessing,
+                                      residual_covariance) {
+  out <- if (is.null(metadata)) {
+    data.frame(trait_id = trait_names, stringsAsFactors = FALSE)
+  } else as.data.frame(metadata, stringsAsFactors = FALSE)
+  if (is.null(out$trait_id)) out$trait_id <- trait_names
+  if (nrow(out) != length(trait_names) ||
+      !identical(as.character(out$trait_id), trait_names) ||
+      anyNA(out$trait_id) || any(!nzchar(out$trait_id)) ||
+      anyDuplicated(out$trait_id)) {
+    stop("trait_metadata trait_id must uniquely match trait order.",
+         call. = FALSE)
+  }
+  out$sample_size <- rep.int(n, length(trait_names))
+  out$phenotype_mean_before <- preprocessing$mean_before
+  out$phenotype_mean_after <- preprocessing$mean_after
+  out$phenotype_variance <- preprocessing$variance_after
+  out$phenotype_centering <- preprocessing$centering_status
+  out$residual_covariance <- residual_covariance
+  out$data_level <- "individual"
+  out
+}
+
+.mtblr_bed_logical <- function(x, name) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop(name, " must be TRUE or FALSE.", call. = FALSE)
+  }
+  x
+}
+
+#' Fit joint multivariate BayesC models directly from PLINK BED genotypes
+#'
+#' Fits one joint individual-level multivariate BayesC likelihood using a
+#' shared set of individuals and standardized genotypes from one BED-backed
+#' genotype list. Unlike [stblr_bed()], which currently fits traits as separate
+#' scalar likelihoods, `mtblr_bed()` uses joint inclusion patterns and a joint
+#' marker-effect covariance. Full residual covariance is the default;
+#' diagonal covariance is an explicit reduction model.
+#'
+#' Phenotypes are centered by default but never scaled. Covariates are not
+#' fitted, and the complete aligned phenotype matrix must be finite. The
+#' returned memory estimate is analytical working memory, not measured RSS or
+#' measured peak RSS.
+#'
+#' @param y Numeric phenotype vector, matrix, or numeric data frame.
+#' @param Glist One BED-backed genotype list.
+#' @param covar Must be `NULL`; pass pre-adjusted phenotypes when required.
+#' @param chr Optional BED file/chromosome indices.
+#' @param cls Optional one-based marker columns, one vector per selected file.
+#' @param rows Optional one-based BED rows in phenotype order.
+#' @param scale Must be `TRUE`; genotypes are standardized with supplied
+#'   selected allele frequencies.
+#' @param center Center aligned phenotype columns in R. If `FALSE`, columns
+#'   must already satisfy the native centering tolerance.
+#' @param residual_covariance Either `"full"` or `"diagonal"`.
+#' @param method Must be `"bayesC"`.
+#' @param trait_metadata Optional data frame with one row per trait.
+#' @param sets Optional disjoint complete list of one-based marker sets.
+#' @param block_size Block size used for default sets within one BED file.
+#' @param beta,b,state Optional latent effects, effective effects, and binary
+#'   inclusion states as marker-by-trait matrices or trait lists.
+#' @param h2 Heritability scalar or one value per trait, strictly in `(0,1)`.
+#' @param pi Initial non-null probability or full pattern-probability vector.
+#' @param models,pimodels Joint model patterns and probabilities.
+#' @param vg,vb,ve Initial genetic, marker-effect, and residual covariance.
+#' @param ssb_prior,sse_prior Covariance prior scale matrices.
+#' @param updateB,updateE,updatePi Scalar logical update controls.
+#' @param nub,nue Covariance prior degrees of freedom.
+#' @param nit,nburn,nthin MCMC controls for one serial chain.
+#' @param seed Explicit fit-local native RNG seed.
+#' @param memory_warning_gb Positive warning threshold in GiB, or `Inf`.
+#' @param verbose Print resolved execution metadata.
+#' @return An object of class `mtblr_fit` with BED diagnostics, phenotype
+#'   preprocessing, alignment provenance, and an analytical memory estimate.
+#' @export
+mtblr_bed <- function(
+  y, Glist, covar = NULL, chr = NULL, cls = NULL, rows = NULL,
+  scale = TRUE, center = TRUE,
+  residual_covariance = c("full", "diagonal"), method = "bayesC",
+  trait_metadata = NULL, sets = NULL, block_size = 1000,
+  beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
+  models = NULL, pimodels = NULL, vg = NULL, vb = NULL, ve = NULL,
+  ssb_prior = NULL, sse_prior = NULL,
+  updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
+  nit = 1000, nburn = 500, nthin = 1, seed = 1,
+  memory_warning_gb = 8, verbose = FALSE
+) {
+  if (missing(Glist) || is.null(Glist)) {
+    stop("One BED-backed Glist is required by mtblr_bed().", call. = FALSE)
+  }
+  if (is.list(Glist) && is.null(Glist$bedfiles) && length(Glist) &&
+      all(vapply(Glist, function(x) is.list(x) && !is.null(x$bedfiles),
+                 logical(1)))) {
+    stop("mtblr_bed() accepts one Glist, not one Glist per trait.",
+         call. = FALSE)
+  }
+  if (!is.list(Glist) || is.null(Glist$bedfiles)) {
+    stop("Glist must contain BED file information in Glist$bedfiles.",
+         call. = FALSE)
+  }
+  if (!is.null(covar)) {
+    stop(paste(
+      "mtblr_bed() does not currently fit or project covariates.",
+      "Pass phenotypes that have already been adjusted for the desired covariates."),
+      call. = FALSE)
+  }
+  if (!isTRUE(scale) || length(scale) != 1L) {
+    stop("mtblr_bed() requires scale = TRUE for standardized genotypes.",
+         call. = FALSE)
+  }
+  center <- .mtblr_bed_logical(center, "center")
+  residual_covariance <- match.arg(residual_covariance)
+  if (!identical(method, "bayesC")) {
+    stop("Only method = 'bayesC' is supported.", call. = FALSE)
+  }
+  if (!is.numeric(block_size) || length(block_size) != 1L ||
+      !is.finite(block_size) || block_size <= 0 ||
+      block_size != as.integer(block_size)) {
+    stop("block_size must be a positive integer-compatible scalar.",
+         call. = FALSE)
+  }
+  if (is.data.frame(y) && !all(vapply(y, is.numeric, logical(1)))) {
+    stop("A phenotype data frame must contain only numeric columns.",
+         call. = FALSE)
+  }
+  numeric_y <- if (is.data.frame(y)) {
+    all(vapply(y, is.numeric, logical(1)))
+  } else {
+    is.numeric(y)
+  }
+  if (!numeric_y || (length(y) == 0L && is.null(dim(y)))) {
+    stop("y must be a nonempty numeric vector, matrix, or data frame.",
+         call. = FALSE)
+  }
+  input_ids <- if (is.null(dim(y))) names(y) else rownames(y)
+  input_sample_count <- if (is.null(dim(y))) length(y) else nrow(y)
+  explicit_rows <- !is.null(rows)
+  explicit_cls <- !is.null(cls)
+  dat <- .make_bed_marker_data(
+    Glist = Glist, y = y, chr = chr, cls = cls,
+    block_size = as.integer(block_size), rows = rows)
+  Y <- as.matrix(dat$y)
+  if (nrow(Y) <= 1L || ncol(Y) <= 0L || any(!is.finite(Y))) {
+    stop("The aligned phenotype must be a complete finite matrix with more than one row.",
+         call. = FALSE)
+  }
+  trait_names <- colnames(Y)
+  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(ncol(Y)))
+  if (anyNA(trait_names) || any(!nzchar(trait_names)) ||
+      anyDuplicated(trait_names)) {
+    stop("Trait names must be unique, nonempty, and non-missing.",
+         call. = FALSE)
+  }
+  colnames(Y) <- trait_names
+  mean_before <- colMeans(Y)
+  if (center) Y <- sweep(Y, 2L, mean_before, "-")
+  mean_after <- colMeans(Y)
+  tolerance <- .mtblr_bed_center_tolerance(Y)
+  if (any(abs(mean_after) > tolerance)) {
+    stop("center = FALSE requires phenotype columns already centered to the Phase 17O tolerance.",
+         call. = FALSE)
+  }
+  variance_after <- apply(Y, 2L, stats::var)
+  if (any(!is.finite(variance_after)) || any(variance_after <= 0)) {
+    stop("Every aligned phenotype trait must have positive finite variance.",
+         call. = FALSE)
+  }
+  centering_status <- if (center) "centered_by_adapter" else
+    "verified_precentered"
+  preprocessing <- list(
+    mean_before = unname(mean_before), mean_after = unname(mean_after),
+    variance_after = unname(variance_after), center_requested = center,
+    center_applied = center, centering_tolerance = unname(tolerance),
+    centering_status = rep(centering_status, dat$nt),
+    phenotype_scaling = "not_performed",
+    missing_phenotype_policy = "complete_matrix_required")
+
+  frequencies <- unlist(dat$af, use.names = FALSE)
+  if (length(frequencies) != dat$m || any(!is.finite(frequencies)) ||
+      any(frequencies <= 0 | frequencies >= 1)) {
+    stop("Selected Glist allele frequencies must be finite and strictly inside (0, 1).",
+         call. = FALSE)
+  }
+  marker_metadata <- .mtblr_bed_marker_metadata(dat, Glist)
+  model_spec <- .mtblr_models(models, pimodels, pi, dat$nt)
+  null_index <- which(rowSums(model_spec$matrix) == 0L)
+  p_active <- 1 - sum(model_spec$probabilities[null_index])
+  if (!is.finite(p_active) || p_active <= 0) {
+    stop("Model probabilities must assign positive mass to non-null patterns.",
+         call. = FALSE)
+  }
+  if (is.null(sets)) {
+    labels <- unique(dat$sets)
+    default_sets <- lapply(labels, function(label) which(dat$sets == label))
+    set_spec <- .mtblr_sets(default_sets, dat$m)
+    set_source <- if (length(dat$chr) > 1L) "chromosome_or_file" else
+      "block_size"
+  } else {
+    set_spec <- .mtblr_sets(sets, dat$m)
+    set_source <- "explicit_sets"
+  }
+  h2 <- as.numeric(h2)
+  if (!(length(h2) %in% c(1L, dat$nt)) || any(!is.finite(h2)) ||
+      any(h2 <= 0 | h2 >= 1)) {
+    stop("h2 must be a finite scalar or length-nt vector in (0, 1).",
+         call. = FALSE)
+  }
+  if (length(h2) == 1L) h2 <- rep(h2, dat$nt)
+  for (name in c("nub", "nue")) {
+    value <- get(name)
+    if (!is.numeric(value) || length(value) != 1L || !is.finite(value) ||
+        value <= max(2, dat$nt - 1L)) {
+      stop(name, " must be finite and greater than max(2, nt - 1).",
+           call. = FALSE)
+    }
+  }
+  vy <- colSums(Y^2) / (nrow(Y) - 1)
+  vg0 <- diag(vy * h2, dat$nt)
+  ve0 <- diag(vy * (1 - h2), dat$nt)
+  vb0 <- vg0 / (dat$m * p_active)
+  vg <- .mtblr_cov(vg, vg0, "vg", dat$nt)
+  vb <- .mtblr_cov(vb, vb0, "vb", dat$nt)
+  if (residual_covariance == "diagonal" && !is.null(ve) &&
+      any(as.matrix(ve)[row(as.matrix(ve)) != col(as.matrix(ve))] != 0)) {
+    stop("ve must be exactly diagonal when residual_covariance = 'diagonal'.",
+         call. = FALSE)
+  }
+  ve <- .mtblr_cov(ve, ve0, "ve", dat$nt)
+  ssb0 <- ((nub - 2) / nub) * vg / (dat$m * p_active)
+  ssb_prior <- .mtblr_cov(ssb_prior, ssb0, "ssb_prior", dat$nt)
+  if (residual_covariance == "diagonal" && !is.null(sse_prior) &&
+      any(as.matrix(sse_prior)[row(as.matrix(sse_prior)) !=
+                               col(as.matrix(sse_prior))] != 0)) {
+    stop("sse_prior must be exactly diagonal when residual_covariance = 'diagonal'.",
+         call. = FALSE)
+  }
+  sse0 <- ((nue - 2) / nue) * ve
+  sse_prior <- .mtblr_cov(sse_prior, sse0, "sse_prior", dat$nt)
+  initialization <- .mtblr_bed_initialization(
+    beta, b, state, model_spec$matrix, dat$m, dat$nt)
+  updateB <- .mtblr_bed_logical(updateB, "updateB")
+  updateE <- .mtblr_bed_logical(updateE, "updateE")
+  updatePi <- .mtblr_bed_logical(updatePi, "updatePi")
+  for (name in c("nit", "nburn", "nthin", "seed")) {
+    value <- get(name)
+    if (!is.numeric(value) || length(value) != 1L || !is.finite(value) ||
+        value != as.integer(value) ||
+        (name == "nburn" && value < 0) ||
+        (name != "nburn" && value <= 0)) {
+      stop(name, " must be an integer-compatible scalar in its valid range.",
+           call. = FALSE)
+    }
+  }
+  if (!is.numeric(memory_warning_gb) || length(memory_warning_gb) != 1L ||
+      is.na(memory_warning_gb) || memory_warning_gb <= 0) {
+    stop("memory_warning_gb must be a positive finite scalar or Inf.",
+         call. = FALSE)
+  }
+  memory <- .mtblr_bed_memory_estimate(
+    nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn)
+  if (memory$estimated_total_gib > memory_warning_gb) {
+    warning(sprintf(
+      paste0("mtblr_bed analytical working-memory estimate (not measured peak RSS): ",
+             "n=%d, m=%d, nt=%d, models=%d, estimated %.6f GiB exceeds threshold %.6f GiB."),
+      nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix),
+      memory$estimated_total_gib, memory_warning_gb), call. = FALSE)
+  }
+  normalized_bed_files <- normalizePath(
+    dat$bed_files, winslash = "/", mustWork = TRUE)
+  unmatched <- if (!is.null(input_ids)) {
+    setdiff(as.character(input_ids), rownames(Y) %||% character())
+  } else character()
+  row_status <- if (explicit_rows) "explicit_rows" else if (!is.null(input_ids))
+    "matched_by_id" else "all_glist_rows"
+  selected_rows <- if (is.null(dat$rows)) seq_len(dat$n_total) else dat$rows
+  alignment <- list(
+    individual_policy = "shared_individual_level",
+    input_sample_count = input_sample_count,
+    selected_sample_count = dat$n_used,
+    row_selection_status = row_status,
+    selected_rows = selected_rows,
+    sample_order_status = "phenotype_order_preserved",
+    unmatched_input_ids = unmatched,
+    unmatched_input_count = length(unmatched),
+    duplicate_policy = "error",
+    phenotype_missingness_status = "complete",
+    phenotype_centering_status = centering_status,
+    marker_selection_status = if (explicit_cls) "explicit_cls" else
+      "default_rsidsLD",
+    marker_order_status = "selected_glist_order_preserved",
+    genotype_orientation_status = "by_construction_same_glist",
+    genotype_scale_status = "standardized_genotype",
+    covariate_policy = "pre_adjusted_or_unadjusted_as_supplied")
+  trait_metadata <- .mtblr_bed_trait_metadata(
+    trait_metadata, trait_names, dat$n_used, preprocessing,
+    residual_covariance)
+
+  raw <- mtblr_bed_internal(
+    bed_files = dat$bed_files, n_bed = dat$n_total, cls = dat$cls,
+    rows = dat$rows, af = frequencies, Y = Y,
+    beta_init = lapply(seq_len(dat$nt), function(t) initialization$beta[, t]),
+    b_init = lapply(seq_len(dat$nt), function(t) initialization$b[, t]),
+    state_init = lapply(seq_len(dat$nt), function(t) initialization$state[, t]),
+    sets = set_spec$native, B = vb, E = ve,
+    ssb_prior = lapply(seq_len(dat$nt), function(t) ssb_prior[t, ]),
+    sse_prior = lapply(seq_len(dat$nt), function(t) sse_prior[t, ]),
+    models = model_spec$native, pi = model_spec$probabilities,
+    nub = nub, nue = nue, updateB = updateB, updateE = updateE,
+    updatePi = updatePi, residual_covariance = residual_covariance,
+    nit = as.integer(nit), nburn = as.integer(nburn),
+    nthin = as.integer(nthin), seed = as.integer(seed), method = 4L)
+  raw <- .validate_mtblr_raw(raw)
+  raw$model$names <- model_spec$names
+  raw$pi$names <- model_spec$names
+  raw$data <- list(
+    marker_metadata = marker_metadata, trait_metadata = trait_metadata,
+    n_total = dat$n_total, n_used = dat$n_used, m = dat$m, nt = dat$nt,
+    bed_files = normalized_bed_files, chr = dat$chr, cls = dat$cls,
+    selected_rows = selected_rows, allele_frequencies = frequencies,
+    genotype_scale = "standardized_genotype",
+    missing_genotype_policy = "mean_imputed_after_centering",
+    phenotype_centering = preprocessing,
+    phenotype_units = "retained_not_scaled",
+    residual_covariance = residual_covariance,
+    sets = set_spec$public, set_source = set_source,
+    memory_estimate = memory)
+  raw$alignment <- alignment
+  input <- list(
+    method = "bayesc", model = "bayesc", backend = "mt_bed_bayesc",
+    data_level = "individual", residual_covariance = residual_covariance,
+    genotype_scale = "standardized_genotype",
+    phenotype_centering = centering_status,
+    phenotype_scaling = "not_performed",
+    covariate_policy = "pre_adjusted_or_unadjusted_as_supplied",
+    covariates_fitted = FALSE,
+    missing_phenotype_policy = "complete_matrix_required",
+    cpo = "unsupported", le_ld = "unsupported",
+    sample_residual_returned = FALSE, genetic_values_returned = FALSE,
+    n = dat$n_used, n_total = dat$n_total, n_used = dat$n_used,
+    m = dat$m, nt = dat$nt, chr = dat$chr, cls = dat$cls,
+    rows = selected_rows, block_size = as.integer(block_size),
+    sets = set_spec$public, set_source = set_source, h2 = h2, vy = vy,
+    vg = vg, vb = vb, ve = ve, ssb_prior = ssb_prior,
+    sse_prior = sse_prior, nub = nub, nue = nue,
+    models = model_spec$matrix, model_names = model_spec$names,
+    pimodels = model_spec$probabilities,
+    initialization_policy = initialization$policy,
+    updateB = updateB, updateE = updateE, updatePi = updatePi,
+    nit = as.integer(nit), nburn = as.integer(nburn),
+    nthin = as.integer(nthin), seed = as.integer(seed),
+    trait_metadata = trait_metadata, marker_metadata = marker_metadata,
+    alignment = alignment, memory_estimate = memory,
+    memory_warning_gb = memory_warning_gb)
+  if (isTRUE(verbose)) {
+    print(input[c("backend", "n_used", "m", "nt",
+                  "residual_covariance", "seed")])
+  }
+  fit <- .as_mtblr_fit(
+    raw, marker_metadata$marker_id, trait_names, marker_metadata,
+    trait_metadata, alignment, input)
+  fit$bed_diagnostics <- raw$diagnostics$mt_bed
+  fit$phenotype_preprocessing <- preprocessing
+  fit$memory_estimate <- memory
+  fit
+}

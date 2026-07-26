@@ -9,10 +9,10 @@ memory, output, or reduction decisions.
 
 ## 2. Public status
 
-No public individual-level MT route exists and there is no `mtblr_bed()`
-export. Phase 17O provides only `mtblr_bed_internal()` and the deterministic
-`mtblr_bed_marker_contract_internal()` inspection seam. A public route is
-deferred to Phase 17P.
+Phase 17P exposes `mtblr_bed()` as the supported public adapter. It prepares
+and validates public Glist/phenotype inputs and invokes the unchanged Phase 17O
+`mtblr_bed_internal()` exactly once. The deterministic
+`mtblr_bed_marker_contract_internal()` remains internal.
 
 ## 3. Existing scalar BED family
 
@@ -552,15 +552,17 @@ one-chain execution, and explicit models/sets are accepted. The implementation
 uses one `PackedBedMatrix`, one existing borrowed view, one decoded-marker
 workspace, sample-space residuals, the verified full-`E` conditional, corrected
 MT B/pi/retention semantics, `MtDefaultCoreResult`-compatible finalization, and
-`mtblr_raw` version 1. There is no public route.
+`mtblr_raw` version 1. Phase 17P adds only public R metadata and formatting.
 
-## 34. Later public Phase 17P requirements
+## 34. Phase 17P public adapter and later requirements
 
-Before a public interface, Phase 17P must define Glist/phenotype ID alignment,
+Phase 17P defines Glist/phenotype ID alignment,
 centering evidence and metadata, covariate policy, duplicate/constant/nonfinite
 validation, missingness policy, allele/frequency/scale provenance, initialization
 defaults, full-versus-diagonal residual covariance controls, diagnostics,
 individual prediction outputs, memory warnings, and installed public examples.
+Covariates, missingness, predictions, CPO, LE/LD, parallelism, and multichain
+execution remain later work.
 
 Phase 17N itself was audit-only and implemented no individual-level MT sampler.
 Phase 17O is the first implementation and remains internal-only.

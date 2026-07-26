@@ -3256,6 +3256,16 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
 
 .make_bed_marker_data <- function(Glist, y, chr, cls, block_size,
                                   rows = NULL) {
+  if (is.null(chr)) {
+    if (is.null(Glist$bedfiles)) {
+      stop("Glist$bedfiles is missing.")
+    }
+    bedfiles <- as.character(Glist$bedfiles)
+    chr <- which(!is.na(bedfiles) & nzchar(bedfiles))
+    if (length(chr) < 1L) {
+      stop("No available BED files found in Glist$bedfiles.")
+    }
+  }
   chr <- as.integer(chr)
   if (length(chr) < 1 || anyNA(chr)) {
     stop("chr must contain valid chromosome indices.")

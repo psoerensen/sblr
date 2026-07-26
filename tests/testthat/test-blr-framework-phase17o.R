@@ -217,10 +217,12 @@ test_that("Phase 17O is reproducible in a fresh process", {
   expect_identical(observed, expected)
 })
 
-test_that("Phase 17O architecture has two internal routes and no public API", {
-  expect_false("mtblr_bed" %in% getNamespaceExports("sblr"))
-  expect_false(exists("mtblr_bed", envir = asNamespace("sblr"),
-                      inherits = FALSE))
+test_that("Phase 17O architecture retains exactly two internal routes", {
+  # Phase 17P adds only the public R adapter; these Phase 17O native routes
+  # remain internal and singular.
+  expect_true("mtblr_bed" %in% getNamespaceExports("sblr"))
+  expect_true(exists("mtblr_bed", envir = asNamespace("sblr"),
+                     inherits = FALSE))
   root <- blr_repo_path()
   skip_if(is.null(root), "source architecture requires repository source")
   mtblr <- readLines(file.path(root, "src", "mtblr.cpp"), warn = FALSE)
@@ -236,7 +238,7 @@ test_that("Phase 17O architecture has two internal routes and no public API", {
   expect_equal(sum(grepl("mtblr_bed_internal", exports, fixed = TRUE)), 5L)
   expect_equal(sum(grepl("mtblr_bed_marker_contract_internal", exports,
                          fixed = TRUE)), 5L)
-  expect_false(any(grepl("export\\(mtblr_bed\\)", namespace)))
+  expect_equal(sum(grepl("export\\(mtblr_bed\\)", namespace)), 1L)
   expect_false(any(grepl("mtblr_eigen\\(", core)))
   expect_false(any(grepl("omp|OpenMP", core, ignore.case = TRUE)))
 })

@@ -442,4 +442,6 @@ symbol and is not an implementation component of the public route.
 Phase 17O activates internal backend identifier `mt_bed_bayesc` with data
 level `individual`. The native execution and inspection symbols are
 `mtblr_bed_internal()` and `mtblr_bed_marker_contract_internal()`.
-`mtblr_bed()` is not a current public function or export.
+Phase 17P exports `mtblr_bed()` as the public adapter for this backend. The
+native symbols remain internal and `mtblr_eigen()` remains unrelated research
+code.

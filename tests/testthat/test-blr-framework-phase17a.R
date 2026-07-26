@@ -76,7 +76,7 @@ test_that("canonical scalar and block-eigen sources remain protected", {
     "src/st_cpg_omp_csr_prior.cpp"="cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_group.cpp"="87e923f7f8ee6420e39d9f041263d11b",
     "src/st_cpg_omp_csr_annot.cpp"="59bd49f048d116d0fe61d73d79bd4693",
-    "NAMESPACE"="1aae574d7dc2a324d4460e3477639f9a")
+    "NAMESPACE"="7519d0b7f23694a1ac78c1110bbf6e0b")
   actual <- unname(tools::md5sum(vapply(names(protected), blr_repo_path, character(1))))
   expect_identical(actual, unname(protected))
 })

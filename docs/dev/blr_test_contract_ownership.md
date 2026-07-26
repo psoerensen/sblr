@@ -91,3 +91,8 @@ the internal execution binding, marker maps/decoding, sample-residual core,
 full-`E` kernel and update, diagonal reductions, initialization, final
 marker-space reconstruction, diagnostics, reproducibility, ownership, and
 no-public-route assertions.
+
+`test-blr-framework-phase17p.R` and `helper-mtblr-bed-public.R` own the public
+Glist/BED alignment, complete phenotype and centering policy, public defaults,
+initialization, full/diagonal covariance inputs, memory estimates, metadata,
+raw/fit enrichment, public/internal equality, and exported API contract.

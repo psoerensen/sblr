@@ -79,7 +79,7 @@ test_that("protected canonical numerical sources are unchanged", {
     "src/blr_bed_scheduled_bayesc_core_impl.h" = "723cee003504c1fdcd075b965cb63d83",
     "src/blr_bed_bayesr_core_impl.h" = "afe77e26d2cf2b8e3d64088221b33e14",
     "src/blr_bed_bayesrc_core_impl.h" = "82365cf3f1f5306c57b980f59b4d83d3",
-    "NAMESPACE" = "1aae574d7dc2a324d4460e3477639f9a")
+    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b")
   expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path,
     character(1)))), unname(protected))
 })

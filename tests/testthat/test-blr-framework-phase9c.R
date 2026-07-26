@@ -79,7 +79,7 @@ test_that("Phase 9C protects canonical and adjacent implementations", {
   protected <- c(
     "src/blr_csr_bayesc_types.h" = "4d0eb5380007195a8d34e7b2e081dec4",
     "src/blr_csr_bayesc_core_impl.h" = "c548157cc9e5804272e714983bdcb798",
-    "NAMESPACE" = "1aae574d7dc2a324d4460e3477639f9a"
+    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9c_path, character(1))))
   expect_identical(actual, unname(protected))

@@ -414,3 +414,12 @@ It is serial, one-chain BayesC with one shared packed genotype matrix, complete
 finite centered pre-adjusted phenotypes, corrected joint patterns, canonical
 full residual covariance, and a diagonal reduction mode. It has no public
 adapter, missing-phenotype, covariate, CPO, LE/LD, OpenMP, or multichain support.
+
+# Phase 17P public capability
+
+`mtblr_bed()` is the supported public joint individual-level BayesC route. It
+uses one BED-backed Glist and one shared individual set, standardized genotypes,
+complete centered pre-adjusted phenotypes, full residual covariance by default,
+and an explicit diagonal reduction mode. It remains serial and one-chain, with
+no covariate fitting, missing phenotypes, CPO, LE/LD, predictions, OpenMP, or
+multichain execution.
