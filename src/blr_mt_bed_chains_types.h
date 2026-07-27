@@ -32,6 +32,8 @@ struct MtBedChainSummary {
  std::vector<std::vector<double>> dm;
  std::vector<std::vector<double>> b;
  std::vector<std::vector<int>> state;
+ std::vector<int> component_final;
+ std::vector<std::vector<double>> component_probabilities;
  std::vector<std::vector<double>> vbs;
  std::vector<std::vector<double>> vgs;
  std::vector<std::vector<double>> ves;
@@ -45,6 +47,7 @@ struct MtBedChainSummary {
  arma::mat E;
  std::vector<double> pi_final;
  std::vector<double> pi_mean;
+ std::vector<std::vector<double>> pi_trace;
  MtBedCoreDiagnostics diagnostics;
 };
 

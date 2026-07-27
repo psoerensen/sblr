@@ -1,6 +1,6 @@
 test_that("Phase 17V exposes exact convergence formals and controls", {
   f <- formals(mtblr_bed)
-  expect_identical(names(f)[39:42], c(
+  expect_identical(tail(names(f), 4L), c(
     "convergence", "convergence_control", "memory_warning_gb", "verbose"))
   expect_identical(f$convergence, quote(c("auto", "none", "core")))
   expect_null(f$convergence_control)

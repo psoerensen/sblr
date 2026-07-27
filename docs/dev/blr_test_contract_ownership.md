@@ -145,3 +145,16 @@ Phase 17W extended-contract arithmetic and selection semantics are owned by
 
 Historical phase owners continue to protect scientific kernels and raw schema;
 they are not copied into another Phase 18 behavioral matrix.
+
+## Phase 19 permanent owners
+
+- `test-mtblr-bayesr-model.R`: joint-state specification, validation, fixed
+  MAF-S scaling, initialization, and independent marker-kernel oracle.
+- `test-mtblr-bayesr-operators.R`: three-operator execution, exact
+  CSR/block-eigen and S=-1 reductions, component output, multichain convergence,
+  update controls, and mixture-memory ownership.
+- Phase 18 unified convergence, raw-schema, public-contract, reproducibility,
+  and operator-reduction owners continue to protect shared infrastructure.
+- `test-blr-model-semantics.R` owns the S-prefix data-level convention,
+  independent selection-S activation, operator/model rejection,
+  selection-MAF provenance, and model-semantics version 2.

@@ -74,7 +74,7 @@ expect_annotation_interface_core <- function(fit, stats, backend, method, annota
   expect_equal(fit$input$method, method)
   expect_equal(fit$input$model, method)
   expect_equal(fit$input$backend, backend)
-  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$data_level, "summary_statistics")
   expect_equal(fit$input$annotation_model, annotation_model)
   expect_true(isTRUE(fit$input$annotations))
   expect_equal(fit$input$nchains, 1L)
@@ -288,7 +288,7 @@ test_that("stblr_csr_annot dispatches fixed-prior BayesC annotations", {
   )
 
   expect_annotation_interface_core(
-    fit, stats, "csr_prior_bayesc", "bayesc", "prior"
+    fit, stats, "csr_prior_bayesc", "sbayesc", "prior"
   )
   expect_true(is.list(fit$annotation_prior))
   expect_true(is.data.frame(fit$annotation_summary))
@@ -326,7 +326,7 @@ test_that("stblr_csr_annot dispatches learned BayesC annotations", {
   )
 
   expect_annotation_interface_core(
-    fit, stats, "csr_annot_bayesc", "bayesc", "learned"
+    fit, stats, "csr_annot_bayesc", "sbayesc", "learned"
   )
   expect_identical(fit$annotation_effects$pi, fit$eta_pi)
   expect_identical(fit$annotation_effects$variance, fit$eta_vb)
@@ -366,7 +366,7 @@ test_that("stblr_csr_annot dispatches group BayesC annotations", {
   )
 
   expect_annotation_interface_core(
-    fit, stats, "csr_group_bayesc", "bayesc", "group"
+    fit, stats, "csr_group_bayesc", "sbayesc", "group"
   )
   expect_identical(fit$annotation_pi, fit$group_pi)
   expect_identical(fit$annotation_variance, fit$group_vb_multiplier)

@@ -132,7 +132,7 @@ phase2_reference_formatted <- function(config, prefix, inputs) {
     stats = inputs$stats,
     Glist = inputs$glist,
     ld_prefix = prefix,
-    method = if (is.null(config$selection_s)) "bayesc" else "sbayesc",
+    method = "sbayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -150,7 +150,10 @@ phase2_reference_formatted <- function(config, prefix, inputs) {
     updateLDswap = FALSE,
     scheduled = FALSE
   )
-  if (!is.null(config$selection_s)) args$selection_s <- config$selection_s
+  if (!is.null(config$selection_s)) {
+    args$selection_s <- config$selection_s
+    args$allow_reference_maf_for_selection_s <- TRUE
+  }
   do.call(stblr_csr, args)
 }
 

@@ -2,6 +2,7 @@
 #define SBLR_BLR_MT_BED_CORE_IMPL_H
 
 #include "blr_mt_bed_access.h"
+#include "blr_mt_bayesr_kernel_impl.h"
 #include "blr_mt_covariance_rng.h"
 
 #include <armadillo>
@@ -173,7 +174,7 @@ inline void validate_mt_bed_problem(
       is_null = is_null && value == 0;
     }
     has_null = has_null || is_null;
-    if (!unique_models.insert(model).second) {
+    if (!unique_models.insert(model).second && execution.method==4) {
       throw std::invalid_argument("model patterns must be unique");
     }
   }
@@ -288,8 +289,8 @@ inline void validate_mt_bed_problem(
     }
   }
 
-  if (execution.method != 4) {
-    throw std::invalid_argument("mtblr_bed_internal supports method = 4 only");
+  if (execution.method != 4 && execution.method != 5) {
+    throw std::invalid_argument("mtblr_bed_internal supports methods 4 and 5 only");
   }
   if (execution.nit <= 0 || execution.nburn < 0 || execution.nthin <= 0) {
     throw std::invalid_argument(
@@ -433,7 +434,10 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
     const std::vector<std::vector<int>>& models,
     const double nub,
     const double nue,
-    const MtBedExecutionSpec& execution) {
+    const MtBedExecutionSpec& execution,
+    const MtJointStateSpec* joint = nullptr,
+    const std::vector<double>* marker_scale = nullptr,
+    const std::vector<double>* pi_prior = nullptr) {
   validate_mt_bed_problem(
     data, initial, sets, ssb_prior, sse_prior, models,
     execution, nub, nue);
@@ -453,6 +457,8 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
   result.r.assign(nt, std::vector<double>(m, 0.0));
   result.b = initial.b;
   result.d = initial.state;
+  result.component = initial.component.empty() ?
+    std::vector<int>(m, 0) : initial.component;
   result.order = data.marker_order;
   result.vbs.assign(nt, std::vector<double>(total_iterations, 0.0));
   result.vgs.assign(nt, std::vector<double>(total_iterations, 0.0));
@@ -460,6 +466,8 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
   result.vle.assign(nt, std::vector<double>(total_iterations, 0.0));
   result.vld.assign(nt, std::vector<double>(total_iterations, 0.0));
   result.pis.assign(nmodels, 0.0);
+  result.pi_trace.assign(
+    nmodels, std::vector<double>(total_iterations, 0.0));
   result.cvbm.assign(nt, std::vector<double>(nt, 0.0));
   result.cvgm.assign(nt, std::vector<double>(nt, 0.0));
   result.cvem.assign(nt, std::vector<double>(nt, 0.0));
@@ -468,6 +476,26 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
   result.pi = initial.pi;
   result.pistrait.assign(nt, std::vector<double>(4, 0.0));
   result.pismarker.assign(2, 0.0);
+
+  int component_count=0;
+  if (execution.method==5) {
+    if (joint==nullptr || marker_scale==nullptr)
+      throw std::invalid_argument("MT BED BayesR requires joint states and marker scales");
+    validate_mt_joint_state_spec(*joint,nt);
+    if (joint->patterns.size()!=nmodels || marker_scale->size()!=m ||
+        result.component.size()!=m)
+      throw std::invalid_argument("MT BED BayesR state dimensions differ");
+    component_count=joint->component_count;
+    if (pi_prior!=nullptr) {
+      if (pi_prior->size()!=nmodels)
+        throw std::invalid_argument("MT BED BayesR pi prior length differs");
+      for (double value:*pi_prior)
+        if (!std::isfinite(value) || value<=0.0)
+          throw std::invalid_argument("MT BED BayesR pi prior must be positive");
+    }
+  }
+  result.component_counts.assign(
+    m, std::vector<double>(static_cast<std::size_t>(component_count),0.0));
 
   std::vector<std::vector<double>> beta = initial.beta;
   arma::mat residual = data.phenotype;
@@ -494,16 +522,28 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
     mt_bed_genetic_covariance(data.phenotype, residual);
 
   for (int iteration = 0; iteration < total_iterations; ++iteration) {
-    std::vector<double> cmodel(nmodels, 1.0);
+    std::vector<double> cmodel=pi_prior==nullptr ?
+      std::vector<double>(nmodels,1.0) : *pi_prior;
     for (const auto& set : sets) {
       if (execution.updateB) {
-        sampleBset(
-          static_cast<int>(nt), static_cast<int>(m),
-          static_cast<int>(nub), result.B, result.d, result.b,
-          ssb_prior, set, rng);
-        sampleB_latent(
-          static_cast<int>(nt), static_cast<int>(m),
-          static_cast<int>(nub), result.B, beta, ssb_prior, rng);
+        if (execution.method==4) {
+          sampleBset(
+            static_cast<int>(nt), static_cast<int>(m),
+            static_cast<int>(nub), result.B, result.d, result.b,
+            ssb_prior, set, rng);
+          sampleB_latent(
+            static_cast<int>(nt), static_cast<int>(m),
+            static_cast<int>(nub), result.B, beta, ssb_prior, rng);
+        } else {
+          const auto base=mt_bayesr_base_effects(
+            result.b,result.component,*joint,*marker_scale);
+          const auto base_beta=mt_bayesr_base_effects(
+            beta,result.component,*joint,*marker_scale);
+          sampleBset(static_cast<int>(nt),static_cast<int>(m),
+            static_cast<int>(nub),result.B,result.d,base,ssb_prior,set,rng);
+          sampleB_latent(static_cast<int>(nt),static_cast<int>(m),
+            static_cast<int>(nub),result.B,base_beta,ssb_prior,rng);
+        }
       }
       B_inverse = arma::inv(result.B);
 
@@ -524,23 +564,30 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
           score[trait] = static_cast<double>(dot) +
             data.marker_maps[marker].xx * result.b[trait][marker];
         }
-        MtBedMarkerKernelResult kernel = mt_bed_marker_kernel(
-          score, data.marker_maps[marker].xx, B_inverse, E_inverse,
-          models, result.pi, &output.diagnostics);
-        const std::size_t selected =
-          mt_bed_draw_model(kernel.probability, rng);
-        cmodel[selected] += 1.0;
-
-        arma::vec standard_normal(nt);
-        std::normal_distribution<double> normal(0.0, 1.0);
-        for (std::size_t trait = 0; trait < nt; ++trait) {
-          standard_normal[trait] = normal(rng);
+        std::size_t selected=0;
+        arma::vec beta_new(nt,arma::fill::zeros);
+        if (execution.method==4) {
+          MtBedMarkerKernelResult kernel = mt_bed_marker_kernel(
+            score, data.marker_maps[marker].xx, B_inverse, E_inverse,
+            models, result.pi, &output.diagnostics);
+          selected=mt_bed_draw_model(kernel.probability,rng);
+          arma::vec standard_normal(nt);
+          std::normal_distribution<double> normal(0.0, 1.0);
+          for (std::size_t trait = 0; trait < nt; ++trait)
+            standard_normal[trait] = normal(rng);
+          const MtBedMarkerKernelModel& selected_model=kernel.models[selected];
+          beta_new=selected_model.mean+arma::solve(
+            arma::trimatu(selected_model.lower.t()),standard_normal);
+        } else {
+          arma::vec diagonal(nt); diagonal.fill(data.marker_maps[marker].xx);
+          const auto kernel=mt_joint_marker_kernel(
+            score,diagonal,B_inverse,E_inverse,*joint,result.pi,
+            (*marker_scale)[marker]);
+          selected=mt_joint_draw_state(kernel.probability,rng);
+          if (selected>0)
+            beta_new=mt_joint_draw_beta(kernel.states[selected],nt,rng);
         }
-        const MtBedMarkerKernelModel& selected_model =
-          kernel.models[selected];
-        arma::vec beta_new = selected_model.mean +
-          arma::solve(
-            arma::trimatu(selected_model.lower.t()), standard_normal);
+        cmodel[selected] += 1.0;
         arma::vec delta(nt, arma::fill::zeros);
         for (std::size_t trait = 0; trait < nt; ++trait) {
           const double effective =
@@ -550,6 +597,8 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
           result.b[trait][marker] = effective;
           result.d[trait][marker] = models[selected][trait];
         }
+        if (execution.method==5)
+          result.component[marker]=selected>0 ? joint->component[selected] : 0;
         for (std::size_t trait = 0; trait < nt; ++trait) {
           if (delta[trait] != 0.0) {
             residual.col(trait) -= marker_workspace * delta[trait];
@@ -570,20 +619,31 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
         }
       }
       ++result.marker_retained_count;
+      if (execution.method==5)
+        for (std::size_t marker=0;marker<m;++marker)
+          result.component_counts[marker][result.component[marker]]+=1.0;
     }
 
     if (execution.updatePi) {
       samplePi(cmodel, result.pi, rng);
     }
     if (execution.updateB) {
-      sampleB(
-        static_cast<int>(nt), static_cast<int>(m),
-        static_cast<int>(nub), result.B, result.d, result.b,
-        ssb_prior, rng);
+      if (execution.method==4) sampleB(
+          static_cast<int>(nt), static_cast<int>(m),
+          static_cast<int>(nub), result.B, result.d, result.b,
+          ssb_prior, rng);
+      else {
+        const auto base=mt_bayesr_base_effects(
+          result.b,result.component,*joint,*marker_scale);
+        sampleB(static_cast<int>(nt),static_cast<int>(m),
+          static_cast<int>(nub),result.B,result.d,base,ssb_prior,rng);
+      }
       for (std::size_t trait = 0; trait < nt; ++trait) {
         result.vbs[trait][iteration] = result.B(trait, trait);
       }
     }
+    for (std::size_t state=0;state<nmodels;++state)
+      result.pi_trace[state][iteration]=result.pi[state];
 
     genetic_covariance =
       mt_bed_genetic_covariance(data.phenotype, residual);
@@ -661,6 +721,10 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
         for (std::size_t k = 0; k < nmodels; ++k) {
           result.pis[k] += result.pi[k];
         }
+        ++result.pi_retained_count;
+      }
+      if (execution.method==5 && !execution.updatePi) {
+        for (std::size_t k=0;k<nmodels;++k) result.pis[k]+=result.pi[k];
         ++result.pi_retained_count;
       }
     }

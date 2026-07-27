@@ -136,10 +136,10 @@ test_that("CSR sampler exposes ld_swap as present-but-NULL when LD-swap is disab
   )
 
   expect_null(fit$diagnostics$ld_swap)
-  expect_equal(fit$input$method, "bayesc")
-  expect_equal(fit$input$model, "bayesc")
+  expect_equal(fit$input$method, "sbayesc")
+  expect_equal(fit$input$model, "sbayesc")
   expect_equal(fit$input$backend, "csr_bayesc")
-  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$data_level, "summary_statistics")
   expect_equal(fit$input$scheduled, FALSE)
   expect_equal(fit$input$nchains, 1L)
 })
@@ -160,16 +160,16 @@ test_that("CSR method defaults to BayesC and explicit BayesC preserves metadata"
   )
 
   fit_default <- do.call(stblr_csr, args)
-  fit_method <- do.call(stblr_csr, c(args, list(method = "bayesc")))
+  fit_method <- do.call(stblr_csr, c(args, list(method = "sbayesc")))
 
   expect_equal(class(fit_method), class(fit_default))
   expect_equal(names(fit_method), names(fit_default))
   expect_equal(dim(fit_method$dm), dim(fit_default$dm))
-  expect_equal(fit_default$input$method, "bayesc")
-  expect_equal(fit_method$input$method, "bayesc")
-  expect_equal(fit_method$input$model, "bayesc")
+  expect_equal(fit_default$input$method, "sbayesc")
+  expect_equal(fit_method$input$method, "sbayesc")
+  expect_equal(fit_method$input$model, "sbayesc")
   expect_equal(fit_method$input$backend, "csr_bayesc")
-  expect_equal(fit_method$input$data_level, "summary")
+  expect_equal(fit_method$input$data_level, "summary_statistics")
 })
 
 test_that("CSR sampler runs with LD-swap enabled on tiny CSR LD", {
@@ -241,7 +241,7 @@ test_that("scheduled CSR returns one-chain posterior summaries", {
 
   expect_equal(fit$input$nchains, 1L)
   expect_equal(fit$input$backend, "csr_scheduled_bayesc")
-  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$data_level, "summary_statistics")
   expect_equal(fit$input$scheduled, TRUE)
   expect_true("pi_trace" %in% names(fit))
   expect_csr_chain_summary_shape(fit)
@@ -275,7 +275,7 @@ test_that("scheduled CSR returns multi-chain posterior summaries", {
 
   expect_equal(fit$input$nchains, 2L)
   expect_equal(fit$input$backend, "csr_scheduled_bayesc")
-  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$data_level, "summary_statistics")
   expect_equal(fit$input$scheduled, TRUE)
   expect_true("pi_trace" %in% names(fit))
   expect_csr_chain_summary_shape(fit)

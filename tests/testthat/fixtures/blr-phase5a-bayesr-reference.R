@@ -51,7 +51,7 @@ phase5a_bayesr_run <- function(config, raw=FALSE) {
     pi=pi,alpha=alpha,h2=.4,adjE=.9,nit=14L,nburn=4L,nthin=1L,ncores=config$ncores,
     seed=31L,nchains=config$nchains,keep_chains=config$keep,chain_seeds=config$seeds,
     updateB=TRUE,updateE=FALSE,updatePi=config$update_pi,updateLDswap=FALSE,
-    method="bayesr",convergence="none")
+    method="sbayesr",convergence="none")
   fit <- do.call(stblr_csr,args)
   if (!raw) return(fit)
   nt <- config$traits; m <- 4L; vy <- rep(1,nt); active <- sum(pi[-1])

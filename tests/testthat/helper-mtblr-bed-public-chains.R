@@ -17,6 +17,13 @@ phase17s_internal_args <- function(public_args) {
   seeds <- phase17p_or(public_args$chain_seeds, NULL)
   args$chain_seeds <- if (is.null(seeds)) integer() else seeds
   args$keep_chains <- phase17p_or(public_args$keep_chains, FALSE)
+  args$joint_component <- integer()
+  args$joint_multiplier <- numeric()
+  args$joint_names <- character()
+  args$component_count <- 0L
+  args$marker_scale <- numeric()
+  args$pi_prior <- numeric()
+  args$component_init <- integer()
   args
 }
 

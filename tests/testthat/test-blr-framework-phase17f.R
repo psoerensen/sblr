@@ -18,8 +18,10 @@ test_that("Phase 17F owns posterior arithmetic and positional separation", {
   finalizer <- blr_source_text("src/blr_mt_default_finalize_impl.h")
   adapter <- blr_mt_public_source()
   legacy <- blr_source_text("src/blr_mt_default_legacy_adapter.h")
+  # Phase 19 adds component posterior normalization to the six Phase 17F
+  # retained-count divisions without changing their ownership.
   expect_identical(sum(grepl("/.*retained_count",
-    strsplit(finalizer, "\n")[[1]])), 6L)
+    strsplit(finalizer, "\n")[[1]])), 7L)
   expect_source_count("MtDefaultLegacyResult result(22);", legacy, 1L)
   expect_source_forbidden(adapter, c("/marker_retained_count",
     "covb_retained_count >", "covg_retained_count >",

@@ -241,9 +241,9 @@
     logical(1)))
 }
 
-#' Trait-specific multivariate BayesC with block-filtered BED cross-products
+#' Joint multivariate BayesC, BayesR, and SBayesR with block-eigen operators
 #'
-#' Fits the corrected serial multivariate BayesC model using canonical
+#' Fits the aligned joint multivariate mixture model using canonical
 #' block-filtered operators built from PLINK BED data. The function currently
 #' requires sufficient statistics produced from the same selected BED
 #' genotypes used to construct the operator. External GWAS/reference-panel
@@ -275,8 +275,13 @@ mtblr_block_eigen <- function(
   eigen_filter = "hard_truncate", eigen_tau = 0.01, eigen_eta = 0,
   summary_reference = "same_bed_by_construction", trait_metadata = NULL,
   marker_policy = c("strict", "reorder_stats"),
-  sample_overlap = "not_modeled", method = "bayesc", n = NULL, sets = NULL,
-  b = NULL, h2 = 0.5, pi = 0.001, models = NULL, pimodels = NULL,
+  sample_overlap = "not_modeled", method = "sbayesc", n = NULL, sets = NULL,
+  beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
+  models = NULL, pimodels = NULL, mixture_var = NULL, joint_pi = NULL,
+  joint_pi_prior = NULL, component = NULL, selection_s = NULL,
+  selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
+  estimate_selection_s = FALSE, selection_s_init = NULL,
+  selection_s_prior = NULL, selection_s_proposal_sd = NULL,
   vg = NULL, vb = NULL, ve = NULL, ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
@@ -284,6 +289,7 @@ mtblr_block_eigen <- function(
   keep_chains = FALSE, convergence = c("auto", "none", "core"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
+  semantics <- .mtblr_resolve_public_method(method, "block_eigen")
   if (missing(Glist) || is.null(Glist)) {
     stop("Glist is mandatory for mtblr_block_eigen().", call. = FALSE)
   }
@@ -302,9 +308,6 @@ mtblr_block_eigen <- function(
   }
   if (!identical(sample_overlap, "not_modeled")) {
     stop("sample_overlap must be exactly 'not_modeled'.", call. = FALSE)
-  }
-  if (!identical(method, "bayesc")) {
-    stop("Only method = 'bayesc' is supported.", call. = FALSE)
   }
   st <- .mtblr_normalize_stats(stats)
   if (!is.null(n) &&
@@ -366,7 +369,19 @@ mtblr_block_eigen <- function(
   } else descriptor_for_trait
   owner_count <- length(operator_descriptors)
   trait_owner <- if (owner_count == 1L) rep(1L, st$nt) else seq_len(st$nt)
-  mod <- .mtblr_models(models, pimodels, pi, st$nt)
+  pattern_spec <- .mtblr_models(models, pimodels, pi, st$nt)
+  maf_info <- .mtblr_resolve_selection_maf(
+    selection_maf, !is.null(selection_s) || isTRUE(estimate_selection_s),
+    st$m, summary_marker_metadata = aligned$marker_metadata,
+    reference_marker_metadata = references[[1L]]$marker_metadata,
+    allow_reference_maf_for_selection_s =
+      allow_reference_maf_for_selection_s)
+  mixture <- .mtblr_bayesr_spec(
+    semantics$prior_kernel, pattern_spec, maf_info$values,
+    st$m, mixture_var, joint_pi, joint_pi_prior, component, selection_s,
+    estimate_selection_s, selection_s_init, selection_s_prior,
+    selection_s_proposal_sd)
+  mod <- mixture$patterns
   set_spec <- .mtblr_sets(sets, st$m)
   h2 <- rep(h2, length.out = st$nt)
   if (any(!is.finite(h2)) || any(h2 <= 0 | h2 >= 1)) {
@@ -387,12 +402,10 @@ mtblr_block_eigen <- function(
   sse_prior <- .mtblr_cov(
     sse_prior, ((nue - 2) / nue) * ve,
     "sse_prior", st$nt, TRUE)
-  if (is.null(b)) b <- matrix(0, st$m, st$nt)
-  if (is.list(b)) b <- do.call(cbind, b)
-  b <- as.matrix(b)
-  if (!identical(dim(b), c(st$m, st$nt)) || any(!is.finite(b))) {
-    stop("b must be a finite m by nt matrix or trait list.", call. = FALSE)
-  }
+  initialization <- .mtblr_bayesr_initialization(
+    beta,b,state,mixture$component_init,pattern_spec$matrix,st$m,st$nt,
+    semantics$prior_kernel)
+  b <- initialization$b
   trait_metadata <- if (is.null(trait_metadata)) {
     data.frame(trait_id = st$trait_names)
   } else as.data.frame(trait_metadata, stringsAsFactors = FALSE)
@@ -416,6 +429,9 @@ mtblr_block_eigen <- function(
     convergence_quantities = if (conv$compute || conv$keep_traces) 5L * st$nt else 0L,
     keep_traces = conv$keep_traces,
     operator_bytes = 8 * st$m * st$m * owner_count)
+  memory <- .mtblr_bayesr_memory(
+    memory,method,st$m,chain$nchains,chain$ncores,chain$nit+chain$nburn,
+    nrow(mod$matrix),mixture$component_count)
   .blr_memory_warning(memory, memory_warning_gb, conv$mode,
                       conv$compute || conv$keep_traces, conv$keep_traces)
   native_execution <- mtblr_block_eigen_chains_raw_internal(
@@ -425,11 +441,15 @@ mtblr_block_eigen <- function(
     lapply(seq_len(st$nt), function(i) sse_prior[, i]),
     mod$native, mod$probabilities, nub, nue, updateB, updateE, updatePi,
     st$n, chain$nit, chain$nburn, chain$nthin,
-    chain$seed, 4L, chain$nchains, chain$ncores,
-    chain$chain_seeds_native)
+    chain$seed, mixture$method_code, chain$nchains, chain$ncores,
+    chain$chain_seeds_native,mixture$joint_component,
+    mixture$joint_multiplier,mixture$joint_names,mixture$component_count,
+    mixture$marker_scale,initialization$component,mixture$pi_prior,
+    lapply(seq_len(st$nt), function(t) initialization$beta[,t]),
+    lapply(seq_len(st$nt), function(t) initialization$state[,t]))
   execution <- .mtblr_summary_multichain(
-    native_execution, chain, conv, st$trait_names, "bayesc", "block_eigen",
-    updateB, updateE)
+    native_execution, chain, conv, st$trait_names, method, "block_eigen",
+    updateB, updateE, mixture$model_parameters)
   raw <- execution$raw
   raw$diagnostics$block_eigen$sharing_mode <- sharing_mode
   raw$model$names <- mod$names
@@ -451,6 +471,11 @@ mtblr_block_eigen <- function(
     selected_row_count = vapply(references, `[[`, integer(1),
                                 "selected_row_count"),
     operator_sharing_mode = sharing_mode,
+    data_level = "summary_statistics",
+    selection_maf_source = maf_info$selection_maf_source,
+    selection_maf_population = maf_info$selection_maf_population,
+    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
+    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
     trait_owner = trait_owner,
     scale = "standardized_genotype",
     summary_reference = summary_reference,
@@ -473,8 +498,15 @@ mtblr_block_eigen <- function(
     allele_frequency_provenance_status = rep("exact", st$nt),
     wy_transformation_status = unname(wy_status))
   input <- list(
-    method = "bayesc", model = "bayesc",
-    backend = "mt_block_eigen_bayesc", data_level = "summary",
+    method = method, model = method,
+    backend = paste0("mt_block_eigen_", semantics$prior_kernel),
+    prior_kernel = semantics$prior_kernel,
+    data_level = "summary_statistics",
+    effect_scale_policy = if (!is.null(selection_s))
+      if (semantics$prior_kernel == "bayesr") "component_maf_s" else "maf_s"
+      else if (semantics$prior_kernel == "bayesr") "component" else "unit",
+    model_semantics_version = 2L,
+    model_semantics = "s_prefix_means_summary_statistics",
     summary_reference = summary_reference,
     sample_overlap = "not_modeled",
     phenotype_crossproduct_policy = "marginal_yy_only",
@@ -492,7 +524,14 @@ mtblr_block_eigen <- function(
       "keep_traces")], memory_warning_gb = memory_warning_gb,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     models = mod$matrix, model_names = mod$names,
-    pimodels = mod$probabilities, sets = set_spec$public,
+    pimodels = mod$probabilities, mixture_var = mixture$mixture_var,
+    joint_pi_prior = mixture$pi_prior, selection_s = mixture$selection_s,
+    estimate_selection_s = estimate_selection_s,
+    selection_maf_source = maf_info$selection_maf_source,
+    selection_maf_population = maf_info$selection_maf_population,
+    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
+    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    sets = set_spec$public,
     operator_sharing_mode = sharing_mode, trait_owner = trait_owner,
     block_start = blocks$values, eigen_filter = filters$values,
     eigen_tau = taus$values, eigen_eta = etas$values, mu_floor = 0.01,
@@ -530,6 +569,7 @@ mtblr_block_eigen <- function(
   fit$convergence <- execution$convergence
   fit["convergence_traces"] <- list(execution$convergence_traces)
   fit$input$memory_estimate <- memory
+  fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
   messages <- .blr_convergence_warning_messages(
     fit$convergence, if (conv$mode == "core") "core" else "auto",
     "mtblr", "block_eigen")
@@ -538,7 +578,7 @@ mtblr_block_eigen <- function(
     warning(messages[[1L]], call. = FALSE)
   }
   .blr_finalize_fit(
-    fit, "mtblr", "bayesc", "block_eigen", data = raw$data,
+    fit, "mtblr", method, "block_eigen", data = raw$data,
     diagnostics = c(raw$diagnostics, list(
       block_eigen_public = diagnostics,
       operator_metadata = fit$operator_metadata)),

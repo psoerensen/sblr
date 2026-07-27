@@ -8,7 +8,9 @@ stblr_block_eigen(
   stats,
   Glist,
   block_start,
-  method = c("bayesc", "sbayesc", "bayesr", "sbayesr", "sbayesrc"),
+  method = c("sbayesc", "sbayesr", "sbayesrc"),
+  selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE,
   annotation = NULL,
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01,
@@ -35,8 +37,15 @@ stblr_block_eigen(
 
 \item{block_start}{One-based public block starts.}
 
-\item{method}{One of `"bayesc"`, `"sbayesc"`, `"bayesr"`,
-`"sbayesr"`, or `"sbayesrc"`.}
+\item{method}{One of `"sbayesc"`, `"sbayesr"`, or `"sbayesrc"`;
+the `s` prefix denotes summary-statistics data.}
+
+\item{selection_maf}{Optional marker-aligned allele frequencies used only
+when the independent `selection_s` variance-scaling option is active.}
+
+\item{allow_reference_maf_for_selection_s}{Whether aligned reference-panel
+frequencies may be used explicitly when summary-population frequencies
+are unavailable. The default is `FALSE`.}
 
 \item{annotation}{Annotation matrix required for `"sbayesrc"`.}
 

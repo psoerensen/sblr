@@ -1,10 +1,10 @@
 # selection_s implementation status
 
-Phase 18 names the explicit S-model compositions `sbayesc`, `sbayesr`, and
-`sbayesrc`. They reuse BayesC or BayesR-like kernels with `maf_s`; the non-S
-models `bayesc`, `bayesr`, and `bayesrc` use unit/component scales and reject
-S-only controls. The established `selection_s`, `estimate_selection_s`,
-`selection_s_prior`, and `selection_s_proposal_sd` controls remain authoritative.
+The `s` prefix identifies summary-statistics models; it does not request MAF
+scaling. `selection_s` and `estimate_selection_s` independently control the
+MAF-dependent variance policy for any route that explicitly supports it.
+Without that option BayesC uses `unit` and BayesR/BayesRC use `component`;
+with it they use `maf_s` and `component_maf_s`, respectively.
 
 The package argument is `selection_s`. It corresponds to the BayesS-style
 MAF architecture parameter `S`, applied as marker-specific prior variance
@@ -26,17 +26,20 @@ allele-scale effects.
 
 ## Backend support
 
-| Backend | Fixed `selection_s` | Sampled `selection_s` |
+| Public route and model | Fixed `selection_s` | Sampled `selection_s` |
 |---|---:|---:|
-| `csr_bayesc` | yes | yes |
-| `csr_bayesr` | yes | yes |
-| `csr_sbayesrc` | yes | yes |
-| `csr_scheduled_bayesc` | no | no |
-| `csr_prior_bayesc` | no | no |
-| `csr_annot_bayesc` | no | no |
-| `csr_group_bayesc` | no | no |
-| `bed_bayesc` | no | no |
-| `bed_bayesr` | no | no |
+| `stblr_csr(sbayesc)` | yes | yes |
+| `stblr_csr(sbayesr)` | yes | yes |
+| `stblr_block_eigen(sbayesc)` | yes | yes |
+| `stblr_block_eigen(sbayesr)` | yes | yes |
+| `stblr_block_eigen(sbayesrc)` | yes | yes |
+| `stblr_csr_annot(sbayesrc, annotation_probit_stick)` | yes | yes |
+| `stblr_csr_annot(sbayesc, fixed_marker/group/learned_logistic)` | no | no |
+| `stblr_bed(bayesc/bayesr/bayesrc)` | no | no |
+| `mtblr_bed(bayesr)` | yes | no |
+| `mtblr_csr(sbayesr)` | yes | no |
+| `mtblr_block_eigen(sbayesr)` | yes | no |
+| MT BayesC routes | no | no |
 
 ## User-facing modes
 
@@ -150,7 +153,7 @@ fitC <- stblr_csr(
 fitR <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesr",
+  method = "sbayesr",
   estimate_selection_s = TRUE
 )
 
@@ -165,3 +168,10 @@ fitS <- stblr_csr_annot(
 
 Unsupported examples include sampled `selection_s` with
 `annotation_model = "prior"`, `"learned"`, or `"group"`, and all BED backends.
+
+## MTBLR Phase 19 status
+
+MT SBayesR supports one fixed scalar `selection_s` shared by the joint model.
+The default is zero and `selection_s = -1` gives exactly unit marker scale.
+`estimate_selection_s = TRUE` fails explicitly because a validated joint-MT
+Metropolis-Hastings update is not yet part of the retained prior contract.

@@ -300,7 +300,7 @@ test_that("default stblr_csr BayesC remains on sparse CSR path", {
   fit <- stblr_csr(
     stats = fixture$stats,
     ld_prefix = make_stblr_block_eigen_csr_prefix(m = fixture$stats$m),
-    method = "bayesc",
+    method = "sbayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -446,7 +446,7 @@ test_that("default stblr_csr BayesR remains on sparse CSR path", {
   fit <- stblr_csr(
     stats = fixture$stats,
     ld_prefix = make_stblr_block_eigen_csr_prefix(m = fixture$stats$m),
-    method = "bayesr",
+    method = "sbayesr",
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,

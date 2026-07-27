@@ -21,7 +21,7 @@ test_that("ST CSR and unfiltered block eigen execute BayesC reduction", {
   prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
   on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
   common <- c(.blr_reduction_st_common(), list(
-    method = "bayesc", pi_init = .5, pi_prior_mean = .5,
+    method = "sbayesc", pi_init = .5, pi_prior_mean = .5,
     pi_prior_strength = 2))
   csr <- do.call(stblr_csr, c(list(stats = fixture$stats,
                                     ld_prefix = prefix), common))
@@ -56,7 +56,7 @@ test_that("ST CSR and unfiltered block eigen execute BayesR reduction", {
   prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
   on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
   common <- c(.blr_reduction_st_common(), list(
-    method = "bayesr", mixture_var = c(0, .01, .1),
+    method = "sbayesr", mixture_var = c(0, .01, .1),
     pi = c(.7, .2, .1), alpha = c(1, 1, 1)))
   csr <- do.call(stblr_csr, c(list(stats = fixture$stats,
                                     ld_prefix = prefix), common))
@@ -146,13 +146,15 @@ test_that("BED and summary BayesC execute a valid null-state reduction", {
   prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
   on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
   common <- list(
-    method = "bayesc", pi_init = .001, updateB = FALSE,
+    method = "sbayesc", pi_init = .001, updateB = FALSE,
     updateE = FALSE, updatePi = FALSE, nit = 8L, nburn = 2L,
     nthin = 1L, seed = 42L, convergence = "none")
   csr <- do.call(stblr_csr, c(list(stats = fixture$stats,
                                     ld_prefix = prefix), common))
+  bed_common <- common
+  bed_common$method <- "bayesc"
   bed <- do.call(stblr_bed, c(list(y = fixture$y,
-                                    Glist = fixture$Glist), common))
+                                    Glist = fixture$Glist), bed_common))
   for (field in c("bm", "dm", "vbs", "vgs", "ves", "vle", "vld",
                   "pi_final")) {
     expect_equal(bed[[field]], csr[[field]], tolerance = 1e-12,
@@ -166,7 +168,7 @@ test_that("one-trait MT and ST BayesC execute matched null-state reduction", {
   prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
   on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
   st <- stblr_csr(
-    fixture$stats, ld_prefix = prefix, method = "bayesc", pi_init = .001,
+    fixture$stats, ld_prefix = prefix, method = "sbayesc", pi_init = .001,
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,
     nit = 8L, nburn = 2L, seed = 42L, convergence = "none")
   inputs <- .blr_reduction_mt_inputs(fixture, prefix)

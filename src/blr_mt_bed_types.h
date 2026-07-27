@@ -32,6 +32,7 @@ struct MtBedInitialState {
  std::vector<std::vector<double>> beta;
  std::vector<std::vector<double>> b;
  std::vector<std::vector<int>> state;
+ std::vector<int> component;
  arma::mat B;
  arma::mat E;
  std::vector<double> pi;

@@ -424,3 +424,15 @@ separate from compact chains and contains only B/G/E diagonal traces.
 Phase 17W reserves a separate extended bundle with unchanged core fields and
 typed covariance/probability/double-b/int32-d sections. No extended bundle is
 currently produced.
+
+MT BayesR adds chain-private integer component states, one global joint-state
+probability vector, and marker-by-component posterior accumulators. It does not
+materialize marker-by-joint-state probabilities. CSR and block-eigen operators
+remain prepared once and shared immutably across chains; packed BED remains one
+shared packed matrix per fit.
+
+Public model names encode data level: packed-BED individual data use
+`bayesc`/`bayesr`/`bayesrc`, while CSR and block-eigen summary data use
+`sbayesc`/`sbayesr`/`sbayesrc`. This is independent of optional `selection_s`
+MAF scaling. Fits record both `data_level` and `prior_kernel`, so reductions
+compare the shared kernel without requiring equal public model names.

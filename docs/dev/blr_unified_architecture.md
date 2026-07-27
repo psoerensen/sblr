@@ -17,23 +17,24 @@ not one numerical sampler.
 
 ## Canonical scientific-model and policy matrix
 
-The six scientific models are compositional policies over the existing BayesC
-and BayesR-like kernels. `sbayesc` reuses BayesC with `maf_s`; `sbayesr`
-reuses BayesR with `component_maf_s`; `sbayesrc` reuses the annotation-aware
-mixture kernel with `component_maf_s`. No S-model numerical kernel is copied.
+The six public models combine prior kernel and data level. Non-S names are
+individual-level packed-BED models; S names are summary-statistics CSR or
+block-eigen models. `selection_s` is a separate optional effect-scale policy,
+so no summary model implicitly enables MAF scaling and no numerical kernel is
+copied for the public prefix.
 
 | family | model | CSR | block eigen | packed BED | probability policy | effect scale |
 |---|---|---|---|---|---|---|
-| stblr | `bayesc` | public_canonical | public_canonical | public_canonical | `global` | `unit` |
-| stblr | `sbayesc` | public_supported | public_supported | unsupported | `global` | `maf_s` |
-| stblr | `bayesr` | public_canonical | public_canonical | public_canonical | `global` | `component` |
-| stblr | `sbayesr` | public_supported | public_supported | unsupported | `global` | `component_maf_s` |
+| stblr | `bayesc` | unsupported | unsupported | public_canonical | `global` | `unit` or `maf_s` when supported/requested |
+| stblr | `sbayesc` | public_canonical | public_canonical | unsupported | `global` | `unit` or `maf_s` when supported/requested |
+| stblr | `bayesr` | unsupported | unsupported | public_canonical | `global` | `component` or `component_maf_s` when supported/requested |
+| stblr | `sbayesr` | public_canonical | public_canonical | unsupported | `global` | `component` or `component_maf_s` when supported/requested |
 | stblr | `bayesrc` | unsupported | unsupported | public_canonical | `annotation_probit_stick` | `component` |
-| stblr | `sbayesrc` | public_supported | public_canonical | unsupported | `annotation_probit_stick` | `component_maf_s` |
-| mtblr | `bayesc` | public_canonical | public_canonical | public_canonical | `global` | `unit` |
-| mtblr | `sbayesc` | unsupported | unsupported | unsupported | `global` | `maf_s` |
-| mtblr | `bayesr` | unsupported | unsupported | unsupported | `global` | `component` |
-| mtblr | `sbayesr` | unsupported | unsupported | unsupported | `global` | `component_maf_s` |
+| stblr | `sbayesrc` | public_supported | public_canonical | unsupported | `annotation_probit_stick` | `component` or `component_maf_s` when supported/requested |
+| mtblr | `bayesc` | unsupported | unsupported | public_canonical | `global` | `unit` |
+| mtblr | `sbayesc` | public_canonical | public_canonical | unsupported | `global` | `unit` |
+| mtblr | `bayesr` | unsupported | unsupported | public_canonical | `global` | `component` or `component_maf_s` when requested |
+| mtblr | `sbayesr` | public_canonical | public_canonical | unsupported | `global` | `component` or `component_maf_s` when requested |
 | mtblr | `bayesrc` | unsupported | unsupported | unsupported | `annotation_probit_stick` | `component` |
 | mtblr | `sbayesrc` | unsupported | unsupported | unsupported | `annotation_probit_stick` | `component_maf_s` |
 
@@ -42,9 +43,9 @@ three extra scientific models:
 
 | model | probability policy | CSR | block eigen | packed BED |
 |---|---|---|---|---|
-| `bayesc` | `fixed_marker` | public_supported | unsupported | unsupported |
-| `bayesc` | `learned_logistic` | public_supported | unsupported | unsupported |
-| `bayesc` | `group` | public_supported | unsupported | unsupported |
+| `sbayesc` | `fixed_marker` | public_supported | unsupported | unsupported |
+| `sbayesc` | `learned_logistic` | public_supported | unsupported | unsupported |
+| `sbayesc` | `group` | public_supported | unsupported | unsupported |
 
 `bayesrc` and `sbayesrc` use `annotation_probit_stick`. Unsupported matrix
 cells fail during public validation before numerical execution; they never
@@ -141,3 +142,19 @@ main-thread aggregated advisory and no per-quantity warning flood.
 
 Block-eigen runtime storage is float-packed reconstructed dense blocks. It is
 not low-rank storage, even when filtering removes eigen-directions.
+
+## Phase 19 MT pattern-by-component layer
+
+All MT operators accept `bayesc`, `bayesr`, and `sbayesr`. The latter two use
+one binding-neutral joint-state descriptor: one null state followed by each
+supplied non-null trait pattern and its ascending positive mixture components.
+CSR and block eigen share the summary core; packed BED retains the sample-space
+core. The descriptor, probability normalization, scale removal for base-B
+updates, chain dispatch, aggregation, convergence, and output contracts are
+shared without a runtime-polymorphic operator hierarchy.
+
+Each operator is prepared once per fit. Logical chains own component states,
+joint probabilities, RNG, effects, residuals, accumulators, and core variance
+traces. `keep_chains` controls compact records, while convergence trace capture
+and retention remain independent. BayesR/SBayesR retain the common iteration ×
+trait `vbs`, `vgs`, `ves`, `vle`, and `vld` traces.

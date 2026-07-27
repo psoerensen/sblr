@@ -2,6 +2,7 @@
 #define SBLR_BLR_MT_DEFAULT_TYPES_H
 
 #include <armadillo>
+#include "blr_mt_bayesr_types.h"
 #include <utility>
 #include <vector>
 
@@ -21,6 +22,9 @@ struct MtDefaultModelSpec {
  const std::vector<std::vector<int>>& models;
  const std::vector<std::vector<int>>& sets;
  int method;
+ const MtJointStateSpec* joint=nullptr;
+ const std::vector<double>* marker_scale=nullptr;
+ const std::vector<double>* pi_prior=nullptr;
 };
 
 struct MtDefaultCovariancePriorView {
@@ -45,6 +49,9 @@ struct MtDefaultInitialState {
  arma::mat B;
  arma::mat E;
  std::vector<double> pi;
+ std::vector<int> component;
+ std::vector<std::vector<double>> beta;
+ std::vector<std::vector<int>> state;
 };
 
 struct MtDefaultCoreResult {
@@ -63,6 +70,8 @@ struct MtDefaultCoreResult {
  std::vector<std::vector<double>> r;
  std::vector<std::vector<double>> b;
  std::vector<std::vector<int>> d;
+ std::vector<int> component;
+ std::vector<std::vector<double>> component_counts;
  std::vector<int> order;
 
  std::vector<std::vector<double>> vbs;
@@ -80,6 +89,7 @@ struct MtDefaultCoreResult {
  arma::mat E;
  std::vector<double> pi;
  std::vector<double> pis;
+ std::vector<std::vector<double>> pi_trace;
 
  std::vector<std::vector<double>> pistrait;
  std::vector<double> pismarker;
@@ -101,6 +111,8 @@ struct MtDefaultFinalResult {
  std::vector<std::vector<double>> r;
  std::vector<std::vector<double>> b;
  std::vector<std::vector<int>> d;
+ std::vector<int> component;
+ std::vector<std::vector<double>> component_probabilities;
  std::vector<int> marker_order;
 
  std::vector<std::vector<double>> vbs;
@@ -118,6 +130,7 @@ struct MtDefaultFinalResult {
  arma::mat ve;
  std::vector<double> pi_final;
  std::vector<double> pi_mean;
+ std::vector<std::vector<double>> pi_trace;
 
  std::vector<std::vector<double>> pitrait;
  std::vector<double> pimarker;

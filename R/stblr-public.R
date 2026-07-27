@@ -3,7 +3,8 @@
 #' @param stats Scalar-trait summary statistics.
 #' @param Glist Optional genotype/provenance list.
 #' @param ld_prefix Optional CSR prefix.
-#' @param method `"bayesc"`, `"sbayesc"`, `"bayesr"`, or `"sbayesr"`.
+#' @param method `"sbayesc"` or `"sbayesr"`; the `s` prefix denotes
+#'   summary-statistics data, not MAF scaling.
 #' @param nit,nburn,nthin MCMC controls.
 #' @param seed Fit-local base seed.
 #' @param nchains Number of logical chains per trait.
@@ -14,12 +15,17 @@
 #' @param convergence_control Named convergence controls.
 #' @param memory_warning_gb Analytical warning threshold.
 #' @param verbose Print resolved controls.
+#' @param selection_maf Optional MAF aligned to the final summary-marker order
+#'   for the independent `selection_s` policy.
+#' @param allow_reference_maf_for_selection_s Allow explicit reference-panel
+#'   MAF fallback when GWAS-summary or by-construction analysis MAF is absent.
 #' @param ... Model-specific controls accepted by the canonical implementation.
 #' @return A `stblr_fit` and `blr_fit` object.
 #' @export
 stblr_csr <- function(
   stats, Glist = NULL, ld_prefix = NULL,
-  method = c("bayesc", "sbayesc", "bayesr", "sbayesr"), ...,
+  method = c("sbayesc", "sbayesr"), selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE, ...,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
   keep_chains = FALSE, convergence = c("auto", "none", "core"),
@@ -27,9 +33,13 @@ stblr_csr <- function(
 ) {
   dots <- list(...)
   resolved_model <- .blr_resolve_st_model(
-    method, dots, c("bayesc", "sbayesc", "bayesr", "sbayesr"))
+    method, dots, c("sbayesc", "sbayesr"), "csr")
   method <- resolved_model$model
   dots <- resolved_model$dots
+  maf_info <- .blr_resolve_st_selection_maf(
+    selection_maf, allow_reference_maf_for_selection_s,
+    resolved_model$selection_s_active, stats, Glist)
+  Glist <- maf_info$Glist
   chain <- .blr_chain_controls(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
@@ -54,7 +64,20 @@ stblr_csr <- function(
   fit <- .blr_finalize_st_public(
     fit, method, "csr", chain, conv, memory_warning_gb, verbose, memory)
   fit$input$effect_scale <- resolved_model$effect_scale
+  fit$input$prior_kernel <- resolved_model$prior_kernel
   fit$input$probability_policy <- resolved_model$probability_policy
+  fit$input$selection_maf_source <- maf_info$selection_maf_source
+  fit$input$selection_maf_population <- maf_info$selection_maf_population
+  fit$input$selection_maf_alignment_status <-
+    maf_info$selection_maf_alignment_status
+  fit$input$selection_maf_fallback_used <-
+    maf_info$selection_maf_fallback_used
+  fit$data$effect_scale <- resolved_model$effect_scale
+  fit$data$selection_maf_source <- maf_info$selection_maf_source
+  fit$data$selection_maf_population <- maf_info$selection_maf_population
+  fit$data$selection_maf_alignment_status <-
+    maf_info$selection_maf_alignment_status
+  fit$data$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
   fit
 }
 
@@ -73,7 +96,13 @@ stblr_bed <- function(
   keep_chains = FALSE, convergence = c("auto", "none", "core"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
-  method <- match.arg(method)
+  dots <- list(...)
+  if (length(method) > 1L) method <- method[[1L]]
+  if (!is.character(method) || length(method) != 1L || is.na(method) ||
+      !method %in% c("bayesc", "bayesr", "bayesrc")) {
+    .blr_public_model_error(
+      method, "packed_bed", c("bayesc", "bayesr", "bayesrc"))
+  }
   chain <- .blr_chain_controls(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
@@ -81,7 +110,6 @@ stblr_bed <- function(
   memory <- .blr_st_preflight_memory(
     y = y, Glist = Glist, operator = "packed_bed", chain = chain,
     conv = conv, memory_warning_gb = memory_warning_gb)
-  dots <- list(...)
   forbidden <- intersect(names(dots), c(
     "nit", "nburn", "nthin", "seed", "nchains", "ncores",
     "chain_seeds", "keep_chains", "method"))
@@ -100,6 +128,7 @@ stblr_bed <- function(
     memory)
   fit$input$effect_scale <- if (method %in% c("bayesr", "bayesrc"))
     "component" else "unit"
+  fit$input$prior_kernel <- method
   fit$input$probability_policy <- if (method == "bayesrc")
     "annotation_probit_stick" else "global"
   fit$data$effect_scale <- fit$input$effect_scale

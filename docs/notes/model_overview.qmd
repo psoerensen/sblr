@@ -291,8 +291,8 @@ The current support matrix is:
 
 | Backend | Fixed global `selection_s` | Sampled trait-specific `selection_s` |
 |---|---:|---:|
-| `stblr_csr(method = "bayesc")` | yes | yes |
-| `stblr_csr(method = "bayesr")` | yes | yes |
+| `stblr_csr(method = "sbayesc")` | yes | yes |
+| `stblr_csr(method = "sbayesr")` | yes | yes |
 | `stblr_csr_annot(annotation_model = "sbayesrc")` | yes | yes |
 | scheduled CSR BayesC | no | no |
 | `stblr_csr_annot(annotation_model = "prior")` | no | no |
@@ -460,8 +460,8 @@ hold in real data.
 
 | Model/API | Fixed `selection_s` | Sampled `selection_s` | Annotation-aware | Component probabilities | Annotation outputs | LD-swap/fine-mapping diagnostics |
 |---|---:|---:|---:|---:|---:|---:|
-| `stblr_csr(method = "bayesc")` | yes | yes | no | no | no | yes, regular CSR where enabled |
-| `stblr_csr(method = "bayesr")` | yes | yes | no | yes | no | yes, regular CSR where enabled |
+| `stblr_csr(method = "sbayesc")` | yes | yes | no | no | no | yes, regular CSR where enabled |
+| `stblr_csr(method = "sbayesr")` | yes | yes | no | yes | no | yes, regular CSR where enabled |
 | `stblr_bed(method = "bayesc")` | no | no | no | no | no | no core LD-swap output |
 | `stblr_bed(method = "bayesr")` | no | no | no | yes | no | no core LD-swap output |
 | `stblr_csr_annot(annotation_model = "prior")` | no | no | yes | no | yes | backend-specific diagnostics only |
@@ -535,3 +535,13 @@ appendices:
 - [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd)
 - [Technical annotation priors](technical_annotation_priors.qmd)
 - [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd)
+
+## Multivariate BayesR and SBayesR
+
+MTBLR BayesR combines each supplied non-null trait pattern with each positive
+mixture multiplier and uses one unique null state. Packed BED uses public name
+`bayesr`; summary CSR/block eigen use `sbayesr`; both share prior kernel
+`bayesr`. Optional `selection_s` independently applies marker scale
+`[2p(1-p)]^(S+1)`; fixed `S = -1` is the unit-scale reduction. The global
+probability vector is over joint states, while marker component probabilities
+marginalize over trait patterns.

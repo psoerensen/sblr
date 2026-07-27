@@ -71,8 +71,8 @@ format_bayesr_csr_test_fit <- function(raw, nchains) {
     n_components = 3L
   )
   fit$input <- list(
-    method = "bayesr",
-    model = "bayesr",
+    method = "sbayesr",
+    model = "sbayesr",
     backend = "csr_bayesr",
     data_level = "summary",
     scheduled = FALSE,
@@ -81,9 +81,9 @@ format_bayesr_csr_test_fit <- function(raw, nchains) {
     nchains = nchains
   )
   fit$chains <- sblr:::.blr_flatten_st_chains(
-    fit$chains, "D1", "bayesr", "csr")
+    fit$chains, "D1", "sbayesr", "csr")
   sblr:::.blr_finalize_fit(
-    fit, "stblr", "bayesr", "csr",
+    fit, "stblr", "sbayesr", "csr",
     data = list(marker_ids = paste0("m", 1:3), trait_names = "D1"),
     diagnostics = list(native = fit$diagnostics))
 }
@@ -174,30 +174,30 @@ test_that("CSR BayesR formatted fit is compatible with fine-mapping extractor", 
 test_that("public CSR BayesR API exists and rejects unsupported modes early", {
   expect_true(is.function(stblr_csr_bayesr))
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", scheduled = TRUE),
+    stblr_csr(stats = list(), method = "sbayesr", scheduled = TRUE),
     "scheduled CSR BayesR"
   )
 })
 
 test_that("CSR BayesR LD-swap arguments are validated", {
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", updateLDswap = NA),
+    stblr_csr(stats = list(), method = "sbayesr", updateLDswap = NA),
     "updateLDswap"
   )
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", ld_swap_prob = 2),
+    stblr_csr(stats = list(), method = "sbayesr", ld_swap_prob = 2),
     "ld_swap_prob"
   )
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", ld_swap_r2 = -0.1),
+    stblr_csr(stats = list(), method = "sbayesr", ld_swap_r2 = -0.1),
     "ld_swap_r2"
   )
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", ld_swap_max_friends = 0),
+    stblr_csr(stats = list(), method = "sbayesr", ld_swap_max_friends = 0),
     "ld_swap_max_friends"
   )
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", ld_swap_moves = -1),
+    stblr_csr(stats = list(), method = "sbayesr", ld_swap_moves = -1),
     "ld_swap_moves"
   )
 })
@@ -363,13 +363,13 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
   direct_common <- common
   direct_common$convergence <- NULL
   fit_direct <- do.call(stblr_csr_bayesr, direct_common)
-  fit_bridge <- do.call(stblr_csr, c(common, list(method = "bayesr")))
+  fit_bridge <- do.call(stblr_csr, c(common, list(method = "sbayesr")))
 
   expect_bayesr_csr_conventions(fit_bridge)
-  expect_equal(fit_bridge$input$method, "bayesr")
-  expect_equal(fit_bridge$input$model, "bayesr")
+  expect_equal(fit_bridge$input$method, "sbayesr")
+  expect_equal(fit_bridge$input$model, "sbayesr")
   expect_equal(fit_bridge$input$backend, "csr_bayesr")
-  expect_equal(fit_bridge$input$data_level, "summary")
+  expect_equal(fit_bridge$input$data_level, "summary_statistics")
   expect_equal(fit_bridge$input$scheduled, FALSE)
   expect_equal(dim(fit_bridge$dm), dim(fit_direct$dm))
   expect_equal(dim(fit_bridge$bm), dim(fit_direct$bm))
@@ -389,7 +389,7 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
   keep_args <- common
   keep_args$nchains <- 2
   keep_args$keep_chains <- TRUE
-  fit_keep <- do.call(stblr_csr, c(keep_args, list(method = "bayesr")))
+  fit_keep <- do.call(stblr_csr, c(keep_args, list(method = "sbayesr")))
   expect_bayesr_csr_conventions(fit_keep)
   expect_bayesr_csr_chain_aggregation(fit_keep)
   expect_true("chains" %in% names(fit_keep))
@@ -397,15 +397,15 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
 
 test_that("stblr_csr method BayesR rejects unsupported high-level combinations", {
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", scheduled = TRUE),
+    stblr_csr(stats = list(), method = "sbayesr", scheduled = TRUE),
     "scheduled CSR BayesR is not currently implemented"
   )
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", pi_init = 0.5),
+    stblr_csr(stats = list(), method = "sbayesr", pi_init = 0.5),
     "BayesC-specific"
   )
   expect_error(
-    stblr_csr(stats = list(), method = "bayesr", pi_prior_a = 1),
+    stblr_csr(stats = list(), method = "sbayesr", pi_prior_a = 1),
     "BayesC-specific"
   )
 })
@@ -473,7 +473,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
   fit_noE <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -495,15 +495,15 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   )
   expect_equal(fit_noE$input$updateE_start, 0L)
   expect_equal(fit_noE$input$updateE_every, 1L)
-  expect_equal(fit_noE$input$model, "bayesr")
+  expect_equal(fit_noE$input$model, "sbayesr")
   expect_equal(fit_noE$input$backend, "csr_bayesr")
-  expect_equal(fit_noE$input$data_level, "summary")
+  expect_equal(fit_noE$input$data_level, "summary_statistics")
   expect_equal(fit_noE$input$scheduled, FALSE)
   expect_equal(fit_noE$input$keep_chains, FALSE)
   expect_equal(fit_noE$input$updateLDswap, FALSE)
 
   fit_E <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -530,7 +530,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_true(all(fit_E$updateE_diagnostics[, "min_sse_iter"] >= 0))
 
   fit_E_two_chain <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -547,7 +547,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_equal(nrow(fit_E_two_chain$updateE_diagnostics), 2L)
 
   fit_E_keep <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -566,7 +566,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_bayesr_csr_chain_aggregation(fit_E_keep)
 
   fit_E_delayed <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -591,7 +591,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
 
   expect_error(
     stblr_csr(
-      method = "bayesr",
+      method = "sbayesr",
       stats = fixture$stats,
       Glist = fixture$Glist,
       h2 = 0.3,
@@ -624,7 +624,7 @@ test_that("CSR BayesR LD-swap runs and returns diagnostics", {
   write_high_ld_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
   fit <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -654,7 +654,7 @@ test_that("CSR BayesR LD-swap runs and returns diagnostics", {
   fit_bridge <- stblr_csr(
     stats = fixture$stats,
     Glist = fixture$Glist,
-    method = "bayesr",
+    method = "sbayesr",
     h2 = 0.3,
     adjE = 0.9,
     pi = c(0.5, 0.5, 0, 0),
@@ -675,7 +675,7 @@ test_that("CSR BayesR LD-swap runs and returns diagnostics", {
   )
   expect_bayesr_csr_conventions(fit_bridge)
   expect_bayesr_ld_swap_diagnostics(fit_bridge)
-  expect_equal(fit_bridge$input$method, "bayesr")
+  expect_equal(fit_bridge$input$method, "sbayesr")
 })
 
 test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {
@@ -688,7 +688,7 @@ test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {
   write_high_ld_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
   fit <- stblr_csr(
-    method = "bayesr",
+    method = "sbayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,

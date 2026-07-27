@@ -29,6 +29,8 @@ stblr_csr_annot(
   updatePi = TRUE,
   updateLDswap = FALSE,
   selection_s = NULL,
+  selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE,
   estimate_selection_s = FALSE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -91,7 +93,12 @@ is used by the BayesC-like annotation models and ignored by SBayesRC.}
 \item{updateLDswap}{Logical; request optional LD-swap/MH. This is supported
 for the current annotation-aware CSR models, including SBayesRC.}
 
-\item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter.
+\item{selection_s}{Optional fixed global BayesS-style MAF-scaling parameter.}
+
+\item{selection_maf}{Optional MAF aligned to the final summary-marker order.}
+
+\item{allow_reference_maf_for_selection_s}{Allow explicit reference-panel
+MAF fallback when no GWAS-summary or by-construction analysis MAF exists.
 Currently supported only for `annotation_model = "sbayesrc"` in this
 unified annotation interface. The default `selection_s = NULL` with
 `estimate_selection_s = FALSE` fits the ordinary model. A finite numeric

@@ -64,7 +64,10 @@ values <- c(
     strsplit(read("R/blr-unified.R"), "[^A-Za-z0-9_]+")[[1]]),
   operator_reduction_owners = file.exists(file.path(root,
     "tests/testthat/test-blr-operator-reductions.R")),
-  raw_schema_versions = !grepl('version[^\n]*=[^\n]*2', source_text),
+  raw_schema_versions = grepl(
+    '.is_mtblr_raw <- function(raw)', source_text, fixed = TRUE) &&
+    grepl('identical(as.integer(raw$schema$version), 1L)', source_text,
+          fixed = TRUE),
   mt_csr_prepares_operator_once =
     lengths(regmatches(csr_dispatch, gregexpr("read_and_build_st_ld_csr(",
       csr_dispatch, fixed = TRUE))) == 1L &&
@@ -156,7 +159,21 @@ values <- c(
     strsplit(unified_r, "[^A-Za-z0-9_]+")[[1]]),
   retention_independence = grepl(
     "convergence_control$keep_traces", read("docs/dev/blr_naming_conventions.md"),
-    fixed = TRUE))
+    fixed = TRUE),
+  s_prefix_is_data_level = grepl(
+    "s_prefix_means_summary_statistics", unified_r, fixed = TRUE),
+  selection_s_independent = grepl(
+    "selection_s_active <- !is.null(selection_s)", unified_r, fixed = TRUE) &&
+    !grepl('sbayesr = 0|sbayesc = 0|sbayesrc = 0', unified_r),
+  semantic_version_two = grepl(
+    "model_semantics_version = 2L", unified_r, fixed = TRUE),
+  explicit_data_and_prior_dimensions = all(c(
+    "prior_kernel", "data_level", "effect_scale_policy") %in%
+    strsplit(unified_r, "[^A-Za-z0-9_]+")[[1]]),
+  selection_maf_provenance = all(c(
+    "selection_maf_source", "selection_maf_alignment_status",
+    "selection_maf_fallback_used") %in%
+    strsplit(unified_r, "[^A-Za-z0-9_]+")[[1]]))
 for (name in names(values)) cat(name, "=", values[[name]], "\n", sep = "")
 guards <- c(values[["canonical_public_fitting_exports"]] == length(canonical),
             values[["redundant_wrapper_count"]] == 0,

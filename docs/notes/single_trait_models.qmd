@@ -252,14 +252,14 @@ Sampled trait-specific `selection_s` is requested with:
 fitC <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesc",
+  method = "sbayesc",
   estimate_selection_s = TRUE
 )
 
 fitR <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesr",
+  method = "sbayesr",
   estimate_selection_s = TRUE
 )
 ```

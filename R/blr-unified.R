@@ -125,34 +125,146 @@
     quantities = quantities, values = values)
 }
 
-.blr_resolve_st_model <- function(method, dots, supported) {
-  method <- match.arg(method, supported)
-  scaled <- method %in% c("sbayesc", "sbayesr", "sbayesrc")
-  kernel <- switch(method, sbayesc = "bayesc", sbayesr = "bayesr",
-                   sbayesrc = "sbayesrc", method)
-  selection_controls <- c(
-    "selection_s", "estimate_selection_s", "selection_s_init",
-    "selection_s_prior", "selection_s_proposal_sd")
-  supplied <- intersect(names(dots), selection_controls)
-  estimate <- isTRUE(dots$estimate_selection_s %||% FALSE)
-  if (!scaled && length(supplied)) {
-    stop("maf_s controls require an S model: sbayesc, sbayesr, or sbayesrc.",
-         call. = FALSE)
-  }
-  if (scaled && is.null(dots$selection_s) && !estimate) {
-    dots$selection_s <- 0
+.blr_public_model_error <- function(method, operator, valid) {
+  data_level <- if (operator == "packed_bed") "individual" else
+    "summary_statistics"
+  stop(sprintf(
+    paste0("method = '%s' is invalid for operator = '%s' and data_level = ",
+           "'%s'. Valid method values: %s. The 's' prefix denotes summary ",
+           "statistics; it does not activate selection_s scaling."),
+    paste(method, collapse = ","), operator, data_level,
+    paste(sprintf("'%s'", valid), collapse = ", ")), call. = FALSE)
+}
+
+.blr_model_semantics <- function(method, operator, selection_s = NULL,
+                                 estimate_selection_s = FALSE,
+                                 probability_policy = NULL) {
+  stopifnot(length(method) == 1L, length(operator) == 1L)
+  data_level <- if (operator == "packed_bed") "individual" else
+    "summary_statistics"
+  prior_kernel <- switch(method,
+    bayesc = "bayesc", sbayesc = "bayesc",
+    bayesr = "bayesr", sbayesr = "bayesr",
+    bayesrc = "bayesrc", sbayesrc = "bayesrc")
+  selection_s_active <- !is.null(selection_s) || isTRUE(estimate_selection_s)
+  effect_scale_policy <- if (prior_kernel == "bayesc") {
+    if (selection_s_active) "maf_s" else "unit"
+  } else {
+    if (selection_s_active) "component_maf_s" else "component"
   }
   list(
-    model = method, kernel = kernel, dots = dots,
-    effect_scale = switch(
-      method, bayesc = "unit", sbayesc = "maf_s",
-      bayesr = "component", sbayesr = "component_maf_s",
-      bayesrc = "component", sbayesrc = "component_maf_s"),
-    probability_policy = switch(
-      method, bayesc = "global", sbayesc = "global",
-      bayesr = "global", sbayesr = "global",
-      bayesrc = "annotation_probit_stick",
-      sbayesrc = "annotation_probit_stick"))
+    model = method, prior_kernel = prior_kernel, data_level = data_level,
+    effect_scale_policy = effect_scale_policy,
+    selection_s_active = selection_s_active,
+    probability_policy = probability_policy %||%
+      if (prior_kernel == "bayesrc") "annotation_probit_stick" else "global",
+    model_semantics_version = 2L,
+    model_semantics = "s_prefix_means_summary_statistics")
+}
+
+.blr_resolve_st_model <- function(method, dots, supported, operator) {
+  if (length(method) > 1L) method <- method[[1L]]
+  if (!is.character(method) || length(method) != 1L || is.na(method) ||
+      !method %in% supported) {
+    .blr_public_model_error(method, operator, supported)
+  }
+  if (!is.null(dots$selection_s) &&
+      (!is.numeric(dots$selection_s) || length(dots$selection_s) != 1L ||
+       !is.finite(dots$selection_s))) {
+    stop("selection_s must be NULL or a finite numeric scalar.", call. = FALSE)
+  }
+  estimate <- isTRUE(dots$estimate_selection_s %||% FALSE)
+  semantics <- .blr_model_semantics(
+    method, operator, dots$selection_s, estimate)
+  internal_kernel <- switch(method,
+    sbayesc = "bayesc", sbayesr = "bayesr", sbayesrc = "sbayesrc", method)
+  c(semantics, list(kernel = internal_kernel, dots = dots,
+                    effect_scale = semantics$effect_scale_policy))
+}
+
+.blr_resolve_st_selection_maf <- function(
+    selection_maf, allow_reference_maf_for_selection_s,
+    selection_s_active, stats, Glist) {
+  if (!is.logical(allow_reference_maf_for_selection_s) ||
+      length(allow_reference_maf_for_selection_s) != 1L ||
+      is.na(allow_reference_maf_for_selection_s)) {
+    stop("allow_reference_maf_for_selection_s must be TRUE or FALSE.",
+         call. = FALSE)
+  }
+  ids <- unlist(Glist$rsidsLD %||% list(), use.names = FALSE)
+  validate <- function(x, source) {
+    x <- as.numeric(x)
+    if (!length(ids) || length(x) != length(ids) || any(!is.finite(x)) ||
+        any(x <= 0 | x > 0.5)) {
+      stop(source, " selection_maf must be aligned to the final LD order and lie in (0, 0.5].",
+           call. = FALSE)
+    }
+    x
+  }
+  apply_to_glist <- function(x) {
+    offset <- 0L
+    for (chr in seq_along(Glist$rsidsLD)) {
+      count <- length(Glist$rsidsLD[[chr]])
+      values <- x[seq.int(offset + 1L, offset + count)]
+      idx <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
+      if (anyNA(idx)) stop("Could not align selection_maf to Glist$rsids.", call. = FALSE)
+      target <- Glist$maf[[chr]] %||% rep(NA_real_, length(Glist$rsids[[chr]]))
+      target[idx] <- values
+      Glist$maf[[chr]] <- target
+      offset <- offset + count
+    }
+    Glist
+  }
+  result <- list(
+    Glist = Glist, selection_maf_source = "not_requested",
+    selection_maf_population = "not_applicable",
+    selection_maf_alignment_status = "not_requested",
+    selection_maf_fallback_used = FALSE)
+  if (!isTRUE(selection_s_active) && is.null(selection_maf)) return(result)
+  summary_maf <- NULL
+  metadata <- stats$marker_metadata
+  if (is.data.frame(metadata) && "allele_frequency" %in% names(metadata)) {
+    summary_maf <- pmin(metadata$allele_frequency,
+                        1 - metadata$allele_frequency)
+  }
+  if (!is.null(selection_maf)) {
+    value <- validate(selection_maf, "Explicit")
+    result$selection_maf_source <- "explicit_selection_maf"
+    result$selection_maf_population <- "user_declared"
+  } else if (!is.null(summary_maf) && all(is.finite(summary_maf))) {
+    value <- validate(summary_maf, "GWAS-summary")
+    result$selection_maf_source <- "gwas_summary_allele_frequency"
+    result$selection_maf_population <- "gwas_summary_population"
+  } else if (identical(stats$source %||% NULL, "make_summary_stats")) {
+    result$selection_maf_source <- "analysis_genotype_frequency"
+    result$selection_maf_population <- "analysis_sample"
+    result$selection_maf_alignment_status <- "by_construction"
+    return(result)
+  } else if (isTRUE(allow_reference_maf_for_selection_s)) {
+    result$selection_maf_source <- "reference_panel_frequency"
+    result$selection_maf_population <- "reference_panel"
+    result$selection_maf_alignment_status <- "aligned_to_final_marker_order"
+    result$selection_maf_fallback_used <- TRUE
+    return(result)
+  } else {
+    stop(paste0(
+      "selection_s requires explicit selection_maf or aligned GWAS-summary ",
+      "MAF. Reference-panel fallback requires ",
+      "allow_reference_maf_for_selection_s = TRUE."), call. = FALSE)
+  }
+  result$Glist <- apply_to_glist(value)
+  result$selection_maf_alignment_status <- "aligned_to_final_marker_order"
+  result
+}
+
+.blr_validate_fit_model_semantics <- function(fit) {
+  if (!identical(fit$input$model_semantics_version, 2L) ||
+      !identical(fit$input$model_semantics,
+                 "s_prefix_means_summary_statistics")) {
+    stop("The fit lacks model-semantics version 2 and cannot be silently reinterpreted.",
+         call. = FALSE)
+  }
+  invisible(fit)
 }
 
 .blr_model_capability_matrix <- function() {
@@ -168,28 +280,31 @@
   base$status <- "unsupported"
   supported <- list(
     stblr = list(
-      csr = c("bayesc", "sbayesc", "bayesr", "sbayesr", "sbayesrc"),
-      block_eigen = c("bayesc", "sbayesc", "bayesr", "sbayesr",
-                      "sbayesrc"),
+      csr = c("sbayesc", "sbayesr"),
+      block_eigen = c("sbayesc", "sbayesr", "sbayesrc"),
       packed_bed = c("bayesc", "bayesr", "bayesrc")),
     mtblr = list(
-      csr = "bayesc", block_eigen = "bayesc", packed_bed = "bayesc"))
+      csr = c("sbayesc", "sbayesr"),
+      block_eigen = c("sbayesc", "sbayesr"),
+      packed_bed = c("bayesc", "bayesr")))
   for (family in names(supported)) {
     for (operator in names(supported[[family]])) {
       hit <- base$family == family & base$operator == operator &
         base$model %in% supported[[family]][[operator]]
-      base$status[hit] <- ifelse(
-        base$model[hit] %in% c("sbayesc", "sbayesr", "sbayesrc"),
-        "public_supported", "public_canonical")
+      base$status[hit] <- "public_canonical"
     }
   }
   annotation <- expand.grid(
-    family = "stblr", model = "bayesc", operator = operators,
+    family = "stblr", model = "sbayesc", operator = operators,
     annotation_policy = c("fixed_marker", "group", "learned_logistic"),
     stringsAsFactors = FALSE)
   annotation$status <- ifelse(
     annotation$operator == "csr", "public_supported", "unsupported")
-  rbind(base, annotation)
+  annotation_rc <- data.frame(
+    family = "stblr", model = "sbayesrc", operator = "csr",
+    annotation_policy = "annotation_probit_stick",
+    status = "public_canonical", stringsAsFactors = FALSE)
+  rbind(base, annotation, annotation_rc)
 }
 
 .blr_memory_estimate <- function(family, operator, m, nt, nchains, ncores,
@@ -393,7 +508,8 @@
 .blr_operator_reduction_policy <- function(
     family, model, operator_a, operator_b, filtered = FALSE,
     residual = "diagonal") {
-  stopifnot(family %in% c("stblr", "mtblr"), model == "bayesc")
+  stopifnot(family %in% c("stblr", "mtblr"),
+            model %in% c("bayesc", "sbayesc", "bayesr", "sbayesr"))
   operators <- sort(c(operator_a, operator_b))
   if (identical(operators, sort(c("csr", "block_eigen")))) {
     return(if (isTRUE(filtered)) "approximate_filtered_operator" else
@@ -421,8 +537,19 @@
   fit$operator <- operator
   if (is.null(fit$input)) fit$input <- list()
   fit$input$family <- family
+  fit$input$method <- model
   fit$input$model <- model
   fit$input$operator <- operator
+  semantics <- .blr_model_semantics(
+    model, operator, fit$input$selection_s %||% NULL,
+    fit$input$estimate_selection_s %||% FALSE,
+    fit$input$probability_policy %||% NULL)
+  fit$input$prior_kernel <- semantics$prior_kernel
+  fit$input$data_level <- semantics$data_level
+  fit$input$effect_scale_policy <- semantics$effect_scale_policy
+  fit$input$effect_scale <- semantics$effect_scale_policy
+  fit$input$model_semantics_version <- semantics$model_semantics_version
+  fit$input$model_semantics <- semantics$model_semantics
   fit$data <- data %||% fit$data %||% list()
   if (is.null(fit$data$alignment) && !is.null(fit$alignment)) {
     fit$data$alignment <- fit$alignment
@@ -447,10 +574,18 @@
   fit$data$genotype_scale <- fit$data$genotype_scale %||%
     fit$input$genotype_scale %||% fit$data$scale %||%
     "standardized_genotype"
-  fit$data$effect_scale <- fit$input$effect_scale %||%
-    switch(model, sbayesc = "maf_s", sbayesr = "component_maf_s",
-           sbayesrc = "component_maf_s", bayesr = "component",
-           bayesrc = "component", "unit")
+  fit$data$data_level <- semantics$data_level
+  fit$data$effect_scale <- semantics$effect_scale_policy
+  fit$data$model_semantics_version <- semantics$model_semantics_version
+  fit$data$model_semantics <- semantics$model_semantics
+  fit$data$selection_maf_source <- fit$data$selection_maf_source %||%
+    fit$input$selection_maf_source %||% "not_requested"
+  fit$data$selection_maf_alignment_status <-
+    fit$data$selection_maf_alignment_status %||%
+    fit$input$selection_maf_alignment_status %||% "not_requested"
+  fit$data$selection_maf_fallback_used <- isTRUE(
+    fit$data$selection_maf_fallback_used %||%
+      fit$input$selection_maf_fallback_used %||% FALSE)
   fit$data$phenotype_scale <- fit$data$phenotype_scale %||%
     if (operator == "packed_bed") "centered_unscaled" else
       "summary_crossproduct"

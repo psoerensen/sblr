@@ -13,7 +13,9 @@
     trait_index = NA_integer_, trait_name = NA_character_,
     chain_index = as.integer(chain), seed = seed,
     retained_draw_count = as.integer(raw$diagnostics$marker),
-    marker = raw$marker[c("bm", "dm", "b", "state")],
+    marker = raw$marker[intersect(
+      c("bm", "dm", "b", "state", "component_final",
+        "component_probabilities"), names(raw$marker))],
     trace = raw$trace[c("vbs", "vgs", "ves", "vle", "vld")],
     variance = list(
       cov_b_mean = raw$variance$covb,
@@ -22,10 +24,12 @@
       cov_b_final = raw$variance$vb,
       cov_g_final = raw$variance$vg,
       cov_e_final = raw$variance$ve),
-    pi = list(pi_final = raw$pi$final, pi_mean = raw$pi$mean))
+    pi = c(list(pi_final = raw$pi$final, pi_mean = raw$pi$mean),
+           if (!is.null(raw$pi$trace)) list(pi_trace = raw$pi$trace)))
 }
 
-.mtblr_summary_pool_raw <- function(raws, keep_chains, seeds, operator) {
+.mtblr_summary_pool_raw <- function(raws, keep_chains, seeds, operator,
+                                    model) {
   if (!length(raws)) stop("At least one MTBLR chain is required.", call. = FALSE)
   raws <- lapply(raws, .validate_mtblr_raw)
   out <- raws[[1L]]
@@ -47,6 +51,10 @@
   }
   out$marker$bm <- weighted_matrix(c("marker", "bm"))
   out$marker$dm <- weighted_matrix(c("marker", "dm"))
+  if (!is.null(out$marker$component_probabilities)) {
+    out$marker$component_probabilities <- weighted_matrix(
+      c("marker", "component_probabilities"))
+  }
   for (name in c("vbs", "vgs", "ves", "vle", "vld")) {
     out$trace[[name]] <- simple_mean(c("trace", name))
   }
@@ -57,6 +65,7 @@
   }
   pi_count <- vapply(raws, function(x) as.numeric(x$diagnostics$pi), numeric(1))
   out$pi$mean <- weighted_matrix(c("pi", "mean"), pi_count)
+  if (!is.null(out$pi$trace)) out$pi$trace <- simple_mean(c("pi", "trace"))
 
   bm <- simplify2array(lapply(raws, function(x) x$marker$bm))
   dm <- simplify2array(lapply(raws, function(x) x$marker$dm))
@@ -82,7 +91,7 @@
     implementation = "serial_R_orchestration_over_validated_native_chain")
   out$chains <- NULL
   records <- if (keep_chains) lapply(seq_along(raws), function(i) {
-    .mtblr_summary_chain_record(raws[[i]], i, seeds[[i]], "bayesc", operator)
+    .mtblr_summary_chain_record(raws[[i]], i, seeds[[i]], model, operator)
   }) else NULL
   if (!is.null(records)) names(records) <- paste0("chain", seq_along(records))
   list(raw = out, chains = records)
@@ -112,7 +121,8 @@
 
 .mtblr_summary_multichain <- function(native_execution, chain, conv,
                                       trait_names, model, operator,
-                                      updateB, updateE) {
+                                      updateB, updateE,
+                                      model_parameters = NULL) {
   if (!is.list(native_execution) ||
       length(native_execution$raws) != chain$nchains ||
       !identical(as.integer(native_execution$operator_preparations), 1L)) {
@@ -120,8 +130,10 @@
          call. = FALSE)
   }
   seeds <- as.numeric(native_execution$chain_seeds)
-  raws <- native_execution$raws
-  pooled <- .mtblr_summary_pool_raw(raws, chain$keep_chains, seeds, operator)
+  raws <- lapply(native_execution$raws, .mtblr_bayesr_enrich_raw,
+                 method = model, model_parameters = model_parameters)
+  pooled <- .mtblr_summary_pool_raw(
+    raws, chain$keep_chains, seeds, operator, model)
   pooled$raw$diagnostics$multichain$requested_cores <- chain$ncores
   pooled$raw$diagnostics$multichain$used_workers <-
     as.integer(native_execution$used_workers)

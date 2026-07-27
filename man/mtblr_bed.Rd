@@ -25,6 +25,17 @@ mtblr_bed(
   pi = 0.001,
   models = NULL,
   pimodels = NULL,
+  mixture_var = NULL,
+  joint_pi = NULL,
+  joint_pi_prior = NULL,
+  component = NULL,
+  selection_s = NULL,
+  selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE,
+  estimate_selection_s = FALSE,
+  selection_s_init = NULL,
+  selection_s_prior = NULL,
+  selection_s_proposal_sd = NULL,
   vg = NULL,
   vb = NULL,
   ve = NULL,
@@ -70,7 +81,8 @@ must already satisfy the native centering tolerance.}
 
 \item{residual_covariance}{Either `"full"` or `"diagonal"`.}
 
-\item{method}{Must be `"bayesc"`.}
+\item{method}{One of `"bayesc"` or `"bayesr"`; packed BED is individual
+level and therefore rejects summary-statistics `s` model names.}
 
 \item{trait_metadata}{Optional data frame with one row per trait.}
 
@@ -86,6 +98,31 @@ inclusion states as marker-by-trait matrices or trait lists.}
 \item{pi}{Initial non-null probability or full pattern-probability vector.}
 
 \item{models, pimodels}{Joint model patterns and probabilities.}
+
+\item{mixture_var}{Fixed BayesR component-variance multipliers: one leading
+zero followed by unique, strictly increasing positive values.}
+
+\item{joint_pi}{Optional initial probability vector over the deterministic
+joint pattern-by-component states.}
+
+\item{joint_pi_prior}{Optional positive Dirichlet prior over joint states.}
+
+\item{component}{Optional zero-based component initialization, one value per
+marker and consistent with `state`.}
+
+\item{selection_s}{Optional fixed scalar MAF-S exponent for BayesR; the BED
+model name remains `bayesr` because the data are individual-level.}
+
+\item{selection_maf}{Optional allele frequencies aligned to the selected
+marker order for the independent `selection_s` scale policy.}
+
+\item{allow_reference_maf_for_selection_s}{Logical fallback control. Packed
+BED uses analysis-genotype frequencies by construction when this is NULL.}
+
+\item{estimate_selection_s}{Logical; sampled MT S is currently unsupported.}
+
+\item{selection_s_init, selection_s_prior, selection_s_proposal_sd}{Reserved
+sampled-S controls, rejected while `estimate_selection_s` is unsupported.}
 
 \item{vg, vb, ve}{Initial genetic, marker-effect, and residual covariance.}
 
@@ -166,8 +203,8 @@ workers to avoid oversubscription.
 
 \section{Convergence diagnostics}{
 
-Tier 1 diagnostics use post-burn, unthinned per-chain diagonal traces for
-`B`, `G`, and `E`. They report rank-normalized split and folded R-hat (using
+Core diagnostics use post-burn, unthinned per-chain `vbs`, `vgs`, `ves`,
+`vle`, and `vld` traces. They report rank-normalized split and folded R-hat (using
 their maximum), bulk and two-tail ESS, mean ESS, posterior SD, and mean
 MCSE. R-hat requires at least two chains and four post-burn draws; ESS and
 MCSE require at least six draws. Two or three chains carry an advisory that
@@ -175,7 +212,7 @@ four chains are generally recommended. Fixed `B` or `E` quantities are
 marked `not_updated` rather than diagnosed.
 
 Diagnostics are independent of `keep_chains`. Optional convergence traces
-contain only post-burn B/G/E diagonals, use no extra thinning, and increase
+contain only these post-burn trait-level traces, use no extra thinning, and increase
 the analytical memory estimate. Threshold warnings are advisory and are
 aggregated at most once per fit; multiple chains or passing thresholds do
 not prove convergence. Marker, covariance off-diagonal, model-probability,

@@ -98,3 +98,11 @@ The unified public contract, convergence mathematics, scalar and scheduled
 task-trace adapters, seed policy, and executable operator reductions are
 portable installed tests. Only namespace/source architecture and mutation
 guards require a source checkout.
+
+## Phase 19 portable coverage
+
+Installed tests execute the MT BayesR state oracle, component validation,
+MAF-S unit-scale reduction, CSR/block-eigen numerical reduction, packed-BED
+component output, multichain core convergence, update controls, and analytical
+mixture-memory assertions. Only repository-source architecture and mutation
+audits require a checkout.

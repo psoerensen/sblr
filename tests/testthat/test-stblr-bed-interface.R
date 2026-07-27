@@ -155,8 +155,10 @@ test_that("stblr_bed rejects noncanonical method case", {
   expect_equal(fit_c$input$method, "bayesc")
   expect_equal(fit_r$input$method, "bayesr")
   expect_stblr_bed_bayesr_convention(fit_r)
-  expect_error(do.call(stblr_bed, c(common, list(method = "BayesC"))), "arg")
-  expect_error(do.call(stblr_bed, c(common, list(method = "bayesR"))), "arg")
+  expect_error(do.call(stblr_bed, c(common, list(method = "BayesC"))),
+               "invalid.*Valid method values")
+  expect_error(do.call(stblr_bed, c(common, list(method = "bayesR"))),
+               "invalid.*Valid method values")
 })
 
 test_that("stblr_bed rejects invalid method and prior misuse clearly", {
@@ -165,7 +167,7 @@ test_that("stblr_bed rejects invalid method and prior misuse clearly", {
 
   expect_error(
     stblr_bed(y = fixture$y, Glist = fixture$Glist, method = "bad"),
-    "arg.*one of"
+    "invalid.*Valid method values"
   )
   expect_error(
     stblr_bed(y = fixture$y, Glist = fixture$Glist, method = "bayesr", pi_init = 0.5),
@@ -229,7 +231,7 @@ test_that("stblr_bed accepts only the canonical lowercase BayesRC spelling", {
   expect_error(stblr_bed(y = fixture$y, Glist = fixture$Glist,
                          method = "bayesrc"), "annotation is required")
   expect_error(stblr_bed(y = fixture$y, Glist = fixture$Glist,
-                         method = "BAYESRC"), "arg")
+                         method = "BAYESRC"), "invalid.*Valid method values")
   expect_identical(formals(stblr_bed)$method[[2L]], "bayesc")
 })
 

@@ -240,5 +240,6 @@ test_that("Phase 17O architecture retains exactly two internal routes", {
                          fixed = TRUE)), 5L)
   expect_equal(sum(grepl("export\\(mtblr_bed\\)", namespace)), 1L)
   expect_false(any(grepl("mtblr_eigen\\(", core)))
-  expect_false(any(grepl("omp|OpenMP", core, ignore.case = TRUE)))
+  expect_false(any(grepl("#pragma omp|omp_get|OpenMP", core,
+                         ignore.case = TRUE)))
 })

@@ -765,3 +765,16 @@ floating-point equivalence for ST BayesC, BayesR, SBayesRC and MT BayesC.
 BED/summary and one-trait ST/MT comparisons are asserted only when scaling,
 likelihood, residual, prior, and update contracts coincide. Filtering and full
 MT residual covariance are explicitly classified rather than forced equal.
+
+## Phase 19 reductions
+
+The permanent MT BayesR owners independently check the scalar joint-state
+kernel, exact CSR/block-eigen reconstruction, the unique-null component output,
+and exact `selection_s = -1` reduction to the unit scale for CSR, block eigen,
+and packed BED. Cross-data-level reductions compare shared `prior_kernel`
+rather than requiring equal public model names. BayesC is protected by its existing scientific reference and
+Phase 18 operator owners. One-trait ST/MT comparisons classify differences in
+the scalar and joint covariance-prior updates explicitly; the conditional
+mixture scale and LE/LD definitions remain common. BED/summary posterior paths
+are compared only where their likelihood and residual-covariance contracts
+coincide.

@@ -472,9 +472,17 @@ Phase 17V exposes quantity names at `fit$convergence$summary` and reserves
 Phase 17W reserves future groups `B_cov`, `G_cov`, `E_cov`, `pi_mass`,
 `pi_pattern`, `marker_b`, and `marker_d`, preserving fitted trait/model/final
 marker order. These names are contractual and not yet public output.
-## Phase 18 canonical names
+## Phase 18/19 canonical names
 
-Public models use only `bayesc`, `bayesr`, `bayesrc`, and `sbayesrc`; `cpg`
-remains an internal historical kernel term. Public operators use `csr`,
+Public models are `bayesc`, `sbayesc`, `bayesr`, `sbayesr`, `bayesrc`, and
+`sbayesrc`; the prefix means summary-statistics data. `cpg` remains an internal
+historical kernel term. Public operators use `csr`,
 `block_eigen`, and `packed_bed`. Deprecated case and wrapper aliases are not
 retained.
+
+Phase 19 keeps `mixture_var`, `component_final`,
+`component_probabilities`, and the `selection_s` control family aligned between
+STBLR and MTBLR. MT joint-state probability names are model-specific and do
+not change ST global mixture-probability semantics.
+MAF-dependent scaling is represented only by explicit `selection_s` metadata
+and the `maf_s`/`component_maf_s` effect-scale policy.

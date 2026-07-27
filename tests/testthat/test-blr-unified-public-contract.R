@@ -17,12 +17,11 @@ test_that("unified public fitting routes and identifiers are canonical", {
                       "memory_warning_gb", "verbose") %in% args))
   }
   expect_identical(eval(formals(stblr_csr)$method),
-                   c("bayesc", "sbayesc", "bayesr", "sbayesr"))
+                   c("sbayesc", "sbayesr"))
   expect_identical(eval(formals(stblr_bed)$method),
                    c("bayesc", "bayesr", "bayesrc"))
   expect_identical(eval(formals(stblr_block_eigen)$method),
-                   c("bayesc", "sbayesc", "bayesr", "sbayesr",
-                     "sbayesrc"))
+                   c("sbayesc", "sbayesr", "sbayesrc"))
 })
 
 test_that("scientific models are compositional and capability-checked", {
@@ -33,11 +32,11 @@ test_that("scientific models are compositional and capability-checked", {
   expect_setequal(unique(matrix$annotation_policy), c(
     "global", "fixed_marker", "group", "learned_logistic",
     "annotation_probit_stick"))
-  expect_identical(nrow(matrix), 45L)
+  expect_identical(nrow(matrix), 46L)
   expect_true(all(matrix$status %in% c(
     "public_canonical", "public_supported", "unsupported")))
   expect_true(all(matrix$status[
-    matrix$family == "mtblr" & matrix$model != "bayesc"] ==
+    matrix$family == "mtblr" & matrix$model %in% c("bayesrc", "sbayesrc")] ==
       "unsupported"))
   expect_true(all(matrix$status[
     matrix$annotation_policy %in% c(
@@ -45,18 +44,19 @@ test_that("scientific models are compositional and capability-checked", {
       matrix$operator != "csr"] == "unsupported"))
 
   sbayesc <- sblr:::.blr_resolve_st_model(
-    "sbayesc", list(), c("bayesc", "sbayesc"))
+    "sbayesc", list(), "sbayesc", operator = "csr")
   sbayesr <- sblr:::.blr_resolve_st_model(
-    "sbayesr", list(selection_s = -.25), c("bayesr", "sbayesr"))
+    "sbayesr", list(selection_s = -.25), "sbayesr",
+    operator = "csr")
   expect_identical(sbayesc$kernel, "bayesc")
-  expect_identical(sbayesc$dots$selection_s, 0)
-  expect_identical(sbayesc$effect_scale, "maf_s")
+  expect_null(sbayesc$dots$selection_s)
+  expect_identical(sbayesc$effect_scale, "unit")
   expect_identical(sbayesr$kernel, "bayesr")
   expect_identical(sbayesr$dots$selection_s, -.25)
   expect_identical(sbayesr$effect_scale, "component_maf_s")
   expect_error(sblr:::.blr_resolve_st_model(
-    "bayesc", list(selection_s = 0), c("bayesc", "sbayesc")),
-    "require an S model")
+    "bayesc", list(selection_s = 0), "sbayesc", operator = "csr"),
+    "summary statistics")
 })
 
 test_that("unsupported scientific model/operator combinations fail early", {
@@ -65,11 +65,11 @@ test_that("unsupported scientific model/operator combinations fail early", {
   expect_error(stblr_bed(
     fixture$y, fixture$Glist, method = "sbayesc",
     nit = 1L, nburn = 0L, convergence = "none"),
-    "arg")
+    "s.*prefix denotes summary statistics")
   expect_error(mtblr_csr(
-    fixture$stats, Glist = fixture$Glist, method = "bayesr",
+    fixture$stats, Glist = fixture$Glist, method = "bayesrc",
     nit = 1L, nburn = 0L, convergence = "none"),
-    "bayesc")
+    "sbayesc.*sbayesr")
 })
 
 test_that("unified fit finalizer owns explicit names without aliases", {

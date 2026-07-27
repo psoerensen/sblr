@@ -744,3 +744,19 @@ Scalar kernels remain model-specific, but public routes are organized by
 operator: `stblr_csr()`, `stblr_block_eigen()`, and `stblr_bed()`, plus the one
 specialized annotation CSR entry. Logical work is trait × chain, and supported
 routes expose unpooled post-burn low-dimensional traces to the shared R engine.
+
+## Phase 19 relationship to MT mixture models
+
+MTBLR reuses STBLR's canonical `mixture_var` ordering and MAF-S definition,
+but its joint pattern-by-component kernel and base covariance update are
+multivariate. No ST numerical kernel was copied or changed. One-trait
+reductions therefore match the conditional scale/state contract, while any
+documented scalar-versus-joint covariance-prior differences remain explicit.
+
+## Final public semantic mapping
+
+CSR and block-eigen ST routes use `sbayesc`, `sbayesr`, and (where supported)
+`sbayesrc` because they consume summary statistics. Packed-BED routes use
+`bayesc`, `bayesr`, and `bayesrc`. Internal backend identifiers and numerical
+kernels remain implementation-oriented. `selection_s` independently activates
+MAF scaling and is never inferred from the public model name.

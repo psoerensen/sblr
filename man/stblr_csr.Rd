@@ -8,7 +8,9 @@ stblr_csr(
   stats,
   Glist = NULL,
   ld_prefix = NULL,
-  method = c("bayesc", "sbayesc", "bayesr", "sbayesr"),
+  method = c("sbayesc", "sbayesr"),
+  selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE,
   ...,
   nit = 1000,
   nburn = 500,
@@ -31,7 +33,14 @@ stblr_csr(
 
 \item{ld_prefix}{Optional CSR prefix.}
 
-\item{method}{`"bayesc"`, `"sbayesc"`, `"bayesr"`, or `"sbayesr"`.}
+\item{method}{`"sbayesc"` or `"sbayesr"`; the `s` prefix denotes
+summary-statistics data, not MAF scaling.}
+
+\item{selection_maf}{Optional MAF aligned to the final summary-marker order
+for the independent `selection_s` policy.}
+
+\item{allow_reference_maf_for_selection_s}{Allow explicit reference-panel
+MAF fallback when GWAS-summary or by-construction analysis MAF is absent.}
 
 \item{...}{Model-specific controls accepted by the canonical implementation.}
 

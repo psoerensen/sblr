@@ -61,8 +61,8 @@ base_args <- list(
 ## 1. BayesC fixed selection_s sanity checks
 ## -------------------------------------------------------------------------
 
-fit_c_null <- do.call(stblr_csr, c(base_args, list(method = "bayesc", selection_s = NULL)))
-fit_c_minus1 <- do.call(stblr_csr, c(base_args, list(method = "bayesc", selection_s = -1)))
+fit_c_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = NULL)))
+fit_c_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = -1)))
 
 ## selection_s = -1 should reproduce the ordinary model because exponent = 0.
 max(abs(fit_c_null$dm - fit_c_minus1$dm))
@@ -70,16 +70,16 @@ max(abs(fit_c_null$bm - fit_c_minus1$bm))
 max(abs(fit_c_null$vle - fit_c_minus1$vle))
 max(abs(fit_c_null$vld - fit_c_minus1$vld))
 
-fit_c_s0 <- do.call(stblr_csr, c(base_args, list(method = "bayesc", selection_s = 0)))
-fit_c_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "bayesc", selection_s = -0.5)))
-fit_c_spos1 <- do.call(stblr_csr, c(base_args, list(method = "bayesc", selection_s = 1)))
+fit_c_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = 0)))
+fit_c_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = -0.5)))
+fit_c_spos1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = 1)))
 
 ## -------------------------------------------------------------------------
 ## 2. BayesR fixed selection_s sanity checks
 ## -------------------------------------------------------------------------
 
-fit_r_null <- do.call(stblr_csr, c(base_args, list(method = "bayesr", selection_s = NULL)))
-fit_r_minus1 <- do.call(stblr_csr, c(base_args, list(method = "bayesr", selection_s = -1)))
+fit_r_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = NULL)))
+fit_r_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = -1)))
 
 max(abs(fit_r_null$dm - fit_r_minus1$dm))
 max(abs(fit_r_null$bm - fit_r_minus1$bm))
@@ -87,8 +87,8 @@ max(abs(fit_r_null$vle - fit_r_minus1$vle))
 max(abs(fit_r_null$vld - fit_r_minus1$vld))
 max(abs(fit_r_null$dm_component_mean - fit_r_minus1$dm_component_mean))
 
-fit_r_s0 <- do.call(stblr_csr, c(base_args, list(method = "bayesr", selection_s = 0)))
-fit_r_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "bayesr", selection_s = -0.5)))
+fit_r_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = 0)))
+fit_r_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = -0.5)))
 
 ## -------------------------------------------------------------------------
 ## 3. Sampled selection_s for CSR BayesC
@@ -99,7 +99,7 @@ fit_c_sampled_s <- do.call(
   c(
     base_args,
     list(
-      method = "bayesc",
+      method = "sbayesc",
       estimate_selection_s = TRUE,
       selection_s_init = 0,
       selection_s_prior = c(-3, 2),

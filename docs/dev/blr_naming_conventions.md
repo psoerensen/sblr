@@ -14,11 +14,19 @@ different inputs.
 Methods accept one exact lowercase spelling. Case conversion and mixed-case
 aliases are forbidden.
 
-S models are scale policies, not copied kernels: `sbayesc` is BayesC plus
-`maf_s`, `sbayesr` is BayesR plus `component_maf_s`, and `sbayesrc` is the
-annotation-probit-stick mixture plus `component_maf_s`. The probability-policy
-identifiers are `global`, `fixed_marker`, `group`, `learned_logistic`, and
+The `s` prefix denotes the summary-statistics data level. Thus `bayesc`,
+`bayesr`, and `bayesrc` are individual-level models, while `sbayesc`,
+`sbayesr`, and `sbayesrc` are their summary-statistics counterparts. The
+paired names reuse the same prior kernel; the prefix never activates MAF
+scaling. `selection_s` independently selects `maf_s` for BayesC or
+`component_maf_s` for BayesR/BayesRC. The probability-policy identifiers are
+`global`, `fixed_marker`, `group`, `learned_logistic`, and
 `annotation_probit_stick`.
+
+New fits record `model_semantics_version = 2` and
+`model_semantics = "s_prefix_means_summary_statistics"`, plus separate
+`prior_kernel`, `data_level`, and `effect_scale_policy` fields. Objects lacking
+that marker are not silently reinterpreted.
 
 ## Controls
 
@@ -57,5 +65,16 @@ five traces.
 
 Every fit data object owns explicit `genotype_scale`, `effect_scale`,
 `phenotype_scale`, `ld_scale`, `n_total`, `n_used`, and `n_by_trait` metadata.
+When MAF scaling is requested it also records `selection_maf_source`,
+`selection_maf_alignment_status`, and `selection_maf_fallback_used`.
 `keep_chains` retains compact logical-chain records;
 `convergence_control$keep_traces` independently retains convergence arrays.
+
+## MT BayesR state names
+
+`mixture_var` is the one public component-multiplier control for STBLR and
+MTBLR. MT joint states are named `null` and
+`<trait-pattern>__component_<positive-index>`. `component_final` is zero-based
+with zero reserved for null; `component_probabilities` includes component zero.
+`pi_final`, `pi_mean`, and `pi_trace` name the joint-state probability vector.
+No `pi`, `pim`, `pis`, `comp_prob`, or case-variant method aliases are added.

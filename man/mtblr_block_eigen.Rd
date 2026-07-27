@@ -2,7 +2,7 @@
 % Please edit documentation in R/mtblr-block-eigen.R
 \name{mtblr_block_eigen}
 \alias{mtblr_block_eigen}
-\title{Trait-specific multivariate BayesC with block-filtered BED cross-products}
+\title{Joint multivariate BayesC, BayesR, and SBayesR with block-eigen operators}
 \usage{
 mtblr_block_eigen(
   stats,
@@ -16,14 +16,27 @@ mtblr_block_eigen(
   trait_metadata = NULL,
   marker_policy = c("strict", "reorder_stats"),
   sample_overlap = "not_modeled",
-  method = "bayesc",
+  method = "sbayesc",
   n = NULL,
   sets = NULL,
+  beta = NULL,
   b = NULL,
+  state = NULL,
   h2 = 0.5,
   pi = 0.001,
   models = NULL,
   pimodels = NULL,
+  mixture_var = NULL,
+  joint_pi = NULL,
+  joint_pi_prior = NULL,
+  component = NULL,
+  selection_s = NULL,
+  selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE,
+  estimate_selection_s = FALSE,
+  selection_s_init = NULL,
+  selection_s_prior = NULL,
+  selection_s_proposal_sd = NULL,
   vg = NULL,
   vb = NULL,
   ve = NULL,
@@ -75,19 +88,45 @@ trait-specific.}
 
 \item{sample_overlap}{Must be `"not_modeled"`.}
 
-\item{method}{Must be `"bayesc"`.}
+\item{method}{Exactly `"sbayesc"` or `"sbayesr"`; the `s` prefix denotes
+summary-statistics data and does not activate MAF scaling.}
 
 \item{n}{Optional sample sizes overriding identical values only.}
 
 \item{sets}{Optional disjoint complete marker partition (1-based).}
 
-\item{b}{Optional initial marker-by-trait effects.}
+\item{beta, b, state}{Optional BayesR latent effects, effective effects, and
+binary trait-pattern states. BayesC accepts `b` only.}
 
 \item{h2}{Heritability scalar or one value per trait.}
 
 \item{pi}{Initial non-null probability or complete pattern probabilities.}
 
 \item{models, pimodels}{Pattern matrix and probabilities.}
+
+\item{mixture_var}{Fixed BayesR component-variance multipliers: one leading
+zero followed by unique ascending positive values.}
+
+\item{joint_pi}{Optional initial probability vector over the deterministic
+joint pattern-by-component states.}
+
+\item{joint_pi_prior}{Optional positive Dirichlet prior over joint states.}
+
+\item{component}{Optional zero-based component initialization per marker.}
+
+\item{selection_s}{Optional fixed scalar MAF-S exponent, independent of the
+summary-statistics `sbayesr` model name.}
+
+\item{selection_maf}{Optional allele frequencies aligned to the final marker
+order for the independent `selection_s` scale policy.}
+
+\item{allow_reference_maf_for_selection_s}{Allow explicit fallback to
+reference-panel MAF when GWAS-summary MAF is unavailable.}
+
+\item{estimate_selection_s}{Logical; sampled MT S is currently unsupported.}
+
+\item{selection_s_init, selection_s_prior, selection_s_proposal_sd}{Reserved
+sampled-S controls, rejected while `estimate_selection_s` is unsupported.}
 
 \item{vg, vb, ve}{Initial covariance matrices.}
 
@@ -122,7 +161,7 @@ An object of class `mtblr_fit` with block diagnostics and operator
   metadata.
 }
 \description{
-Fits the corrected serial multivariate BayesC model using canonical
+Fits the aligned joint multivariate mixture model using canonical
 block-filtered operators built from PLINK BED data. The function currently
 requires sufficient statistics produced from the same selected BED
 genotypes used to construct the operator. External GWAS/reference-panel

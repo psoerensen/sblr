@@ -325,7 +325,8 @@
 #' @param center Center aligned phenotype columns in R. If `FALSE`, columns
 #'   must already satisfy the native centering tolerance.
 #' @param residual_covariance Either `"full"` or `"diagonal"`.
-#' @param method Must be `"bayesc"`.
+#' @param method One of `"bayesc"` or `"bayesr"`; packed BED is individual
+#'   level and therefore rejects summary-statistics `s` model names.
 #' @param trait_metadata Optional data frame with one row per trait.
 #' @param sets Optional disjoint complete list of one-based marker sets.
 #' @param block_size Block size used for default sets within one BED file.
@@ -334,6 +335,22 @@
 #' @param h2 Heritability scalar or one value per trait, strictly in `(0,1)`.
 #' @param pi Initial non-null probability or full pattern-probability vector.
 #' @param models,pimodels Joint model patterns and probabilities.
+#' @param mixture_var Fixed BayesR component-variance multipliers: one leading
+#'   zero followed by unique, strictly increasing positive values.
+#' @param joint_pi Optional initial probability vector over the deterministic
+#'   joint pattern-by-component states.
+#' @param joint_pi_prior Optional positive Dirichlet prior over joint states.
+#' @param component Optional zero-based component initialization, one value per
+#'   marker and consistent with `state`.
+#' @param selection_s Optional fixed scalar MAF-S exponent for BayesR; the BED
+#'   model name remains `bayesr` because the data are individual-level.
+#' @param selection_maf Optional allele frequencies aligned to the selected
+#'   marker order for the independent `selection_s` scale policy.
+#' @param allow_reference_maf_for_selection_s Logical fallback control. Packed
+#'   BED uses analysis-genotype frequencies by construction when this is NULL.
+#' @param estimate_selection_s Logical; sampled MT S is currently unsupported.
+#' @param selection_s_init,selection_s_prior,selection_s_proposal_sd Reserved
+#'   sampled-S controls, rejected while `estimate_selection_s` is unsupported.
 #' @param vg,vb,ve Initial genetic, marker-effect, and residual covariance.
 #' @param ssb_prior,sse_prior Covariance prior scale matrices.
 #' @param updateB,updateE,updatePi Scalar logical update controls.
@@ -381,8 +398,8 @@
 #' workers to avoid oversubscription.
 #'
 #' @section Convergence diagnostics:
-#' Tier 1 diagnostics use post-burn, unthinned per-chain diagonal traces for
-#' `B`, `G`, and `E`. They report rank-normalized split and folded R-hat (using
+#' Core diagnostics use post-burn, unthinned per-chain `vbs`, `vgs`, `ves`,
+#' `vle`, and `vld` traces. They report rank-normalized split and folded R-hat (using
 #' their maximum), bulk and two-tail ESS, mean ESS, posterior SD, and mean
 #' MCSE. R-hat requires at least two chains and four post-burn draws; ESS and
 #' MCSE require at least six draws. Two or three chains carry an advisory that
@@ -390,7 +407,7 @@
 #' marked `not_updated` rather than diagnosed.
 #'
 #' Diagnostics are independent of `keep_chains`. Optional convergence traces
-#' contain only post-burn B/G/E diagonals, use no extra thinning, and increase
+#' contain only these post-burn trait-level traces, use no extra thinning, and increase
 #' the analytical memory estimate. Threshold warnings are advisory and are
 #' aggregated at most once per fit; multiple chains or passing thresholds do
 #' not prove convergence. Marker, covariance off-diagonal, model-probability,
@@ -402,7 +419,12 @@ mtblr_bed <- function(
   residual_covariance = c("full", "diagonal"), method = "bayesc",
   trait_metadata = NULL, sets = NULL, block_size = 1000,
   beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
-  models = NULL, pimodels = NULL, vg = NULL, vb = NULL, ve = NULL,
+  models = NULL, pimodels = NULL, mixture_var = NULL, joint_pi = NULL,
+  joint_pi_prior = NULL, component = NULL, selection_s = NULL,
+  selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
+  estimate_selection_s = FALSE, selection_s_init = NULL,
+  selection_s_prior = NULL, selection_s_proposal_sd = NULL,
+  vg = NULL, vb = NULL, ve = NULL,
   ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
@@ -410,6 +432,7 @@ mtblr_bed <- function(
   convergence = c("auto", "none", "core"), convergence_control = NULL,
   memory_warning_gb = 8, verbose = FALSE
 ) {
+  semantics <- .mtblr_resolve_public_method(method, "packed_bed")
   if (missing(Glist) || is.null(Glist)) {
     stop("One BED-backed Glist is required by mtblr_bed().", call. = FALSE)
   }
@@ -436,9 +459,6 @@ mtblr_bed <- function(
   center <- .mtblr_bed_logical(center, "center")
   residual_covariance <- match.arg(residual_covariance)
   convergence <- match.arg(convergence)
-  if (!identical(method, "bayesc")) {
-    stop("Only method = 'bayesc' is supported.", call. = FALSE)
-  }
   if (!is.numeric(block_size) || length(block_size) != 1L ||
       !is.finite(block_size) || block_size <= 0 ||
       block_size != as.integer(block_size)) {
@@ -508,7 +528,17 @@ mtblr_bed <- function(
          call. = FALSE)
   }
   marker_metadata <- .mtblr_bed_marker_metadata(dat, Glist)
-  model_spec <- .mtblr_models(models, pimodels, pi, dat$nt)
+  pattern_spec <- .mtblr_models(models, pimodels, pi, dat$nt)
+  maf_info <- .mtblr_resolve_selection_maf(
+    selection_maf, !is.null(selection_s) || isTRUE(estimate_selection_s),
+    dat$m, analysis_frequency = frequencies,
+    allow_reference_maf_for_selection_s =
+      allow_reference_maf_for_selection_s)
+  mixture <- .mtblr_bayesr_spec(
+    semantics$prior_kernel,pattern_spec,maf_info$values,dat$m,mixture_var,joint_pi,
+    joint_pi_prior,component,selection_s,estimate_selection_s,
+    selection_s_init,selection_s_prior,selection_s_proposal_sd)
+  model_spec <- mixture$patterns
   null_index <- which(rowSums(model_spec$matrix) == 0L)
   p_active <- 1 - sum(model_spec$probabilities[null_index])
   if (!is.finite(p_active) || p_active <= 0) {
@@ -562,8 +592,13 @@ mtblr_bed <- function(
   }
   sse0 <- ((nue - 2) / nue) * ve
   sse_prior <- .mtblr_cov(sse_prior, sse0, "sse_prior", dat$nt)
-  initialization <- .mtblr_bed_initialization(
-    beta, b, state, model_spec$matrix, dat$m, dat$nt)
+  initialization <- if (semantics$prior_kernel == "bayesc") {
+    .mtblr_bed_initialization(beta,b,state,model_spec$matrix,dat$m,dat$nt)
+  } else {
+    .mtblr_bayesr_initialization(
+      beta,b,state,mixture$component_init,pattern_spec$matrix,dat$m,dat$nt,
+      semantics$prior_kernel)
+  }
   updateB <- .mtblr_bed_logical(updateB, "updateB")
   updateE <- .mtblr_bed_logical(updateE, "updateE")
   updatePi <- .mtblr_bed_logical(updatePi, "updatePi")
@@ -596,6 +631,9 @@ mtblr_bed <- function(
     nrow(Y), dat$m, dat$nt, nrow(model_spec$matrix), nit + nburn,
     nchains, ncores, keep_chains,
     convergence_memory = convergence_memory)
+  memory <- .mtblr_bayesr_memory(
+    memory,method,dat$m,nchains,ncores,nit+nburn,nrow(model_spec$matrix),
+    mixture$component_count)
   if (memory$estimated_total_gib > memory_warning_gb) {
     warning(sprintf(
       paste0("mtblr_bed analytical upper-bound estimate (not measured RSS; ",
@@ -656,15 +694,30 @@ mtblr_bed <- function(
     nub = nub, nue = nue, updateB = updateB, updateE = updateE,
     updatePi = updatePi, residual_covariance = residual_covariance,
     nit = as.integer(nit), nburn = as.integer(nburn),
-    nthin = as.integer(nthin), seed = as.integer(seed), method = 4L,
+    nthin = as.integer(nthin), seed = as.integer(seed),
+    method = mixture$method_code,
     nchains = nchains, ncores = ncores,
-    chain_seeds = native_chain_seeds, keep_chains = keep_chains)
+    chain_seeds = native_chain_seeds, keep_chains = keep_chains,
+    joint_component = mixture$joint_component,
+    joint_multiplier = mixture$joint_multiplier,
+    joint_names = mixture$joint_names,
+    component_count = mixture$component_count,
+    marker_scale = mixture$marker_scale,
+    pi_prior = mixture$pi_prior,
+    component_init = initialization$component %||% integer())
   native_route <- if (isTRUE(convergence_controls$trace_route_required)) {
     mtblr_bed_convergence_trace_internal
   } else {
     mtblr_bed_chains_internal
   }
   native_result <- do.call(native_route, native_arguments)
+  if (isTRUE(convergence_controls$trace_route_required)) {
+    native_result$raw <- .mtblr_bayesr_enrich_raw(
+      native_result$raw, method, mixture$model_parameters)
+  } else {
+    native_result <- .mtblr_bayesr_enrich_raw(
+      native_result, method, mixture$model_parameters)
+  }
   convergence_traces <- NULL
   if (isTRUE(convergence_controls$trace_route_required)) {
     diagnostic_result <- .mtblr_bed_convergence_internal(
@@ -710,6 +763,9 @@ mtblr_bed <- function(
     nchains, ncores, keep_chains,
     used_workers = as.integer(bed_diagnostics$used_workers),
     convergence_memory = convergence_memory)
+  memory <- .mtblr_bayesr_memory(
+    memory,method,dat$m,nchains,ncores,nit+nburn,nrow(model_spec$matrix),
+    mixture$component_count)
   raw$model$names <- model_spec$names
   raw$pi$names <- model_spec$names
   raw$data <- list(
@@ -718,6 +774,11 @@ mtblr_bed <- function(
     bed_files = normalized_bed_files, chr = dat$chr, cls = dat$cls,
     selected_rows = selected_rows, allele_frequencies = frequencies,
     genotype_scale = "standardized_genotype",
+    data_level = "individual",
+    selection_maf_source = maf_info$selection_maf_source,
+    selection_maf_population = maf_info$selection_maf_population,
+    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
+    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
     missing_genotype_policy = "mean_imputed_after_centering",
     phenotype_centering = preprocessing,
     phenotype_units = "retained_not_scaled",
@@ -737,8 +798,16 @@ mtblr_bed <- function(
     convergence_memory_estimate = convergence_memory)
   raw$alignment <- alignment
   input <- list(
-    method = "bayesc", model = "bayesc", backend = "mt_bed_bayesc",
-    data_level = "individual", residual_covariance = residual_covariance,
+    method = method, model = method,
+    backend = paste0("mt_bed_", semantics$prior_kernel),
+    prior_kernel = semantics$prior_kernel,
+    data_level = "individual",
+    effect_scale_policy = if (!is.null(selection_s))
+      if (semantics$prior_kernel == "bayesr") "component_maf_s" else "maf_s"
+      else if (semantics$prior_kernel == "bayesr") "component" else "unit",
+    model_semantics_version = 2L,
+    model_semantics = "s_prefix_means_summary_statistics",
+    residual_covariance = residual_covariance,
     genotype_scale = "standardized_genotype",
     phenotype_centering = centering_status,
     phenotype_scaling = "not_performed",
@@ -754,7 +823,13 @@ mtblr_bed <- function(
     vg = vg, vb = vb, ve = ve, ssb_prior = ssb_prior,
     sse_prior = sse_prior, nub = nub, nue = nue,
     models = model_spec$matrix, model_names = model_spec$names,
-    pimodels = model_spec$probabilities,
+    pimodels = model_spec$probabilities, mixture_var = mixture$mixture_var,
+    joint_pi_prior = mixture$pi_prior, selection_s = mixture$selection_s,
+    estimate_selection_s = estimate_selection_s,
+    selection_maf_source = maf_info$selection_maf_source,
+    selection_maf_population = maf_info$selection_maf_population,
+    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
+    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
     initialization_policy = initialization$policy,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     nit = as.integer(nit), nburn = as.integer(nburn),
@@ -800,11 +875,12 @@ mtblr_bed <- function(
   fit$bed_diagnostics <- raw$diagnostics$mt_bed
   fit$phenotype_preprocessing <- preprocessing
   fit$memory_estimate <- memory
+  fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
   fit["convergence_traces"] <- list(convergence_traces)
   if (isTRUE(input$convergence_warning_emitted)) {
     warning(raw$diagnostics$convergence$warning_messages[1L], call. = FALSE)
   }
   .blr_finalize_fit(
-    fit, "mtblr", "bayesc", "packed_bed", data = raw$data,
+    fit, "mtblr", method, "packed_bed", data = raw$data,
     diagnostics = raw$diagnostics, memory_estimate = memory)
 }

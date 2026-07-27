@@ -73,6 +73,7 @@ make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
     ld_prefix = make_selection_s_csr_prefix(),
     method = "sbayesc",
     selection_s = selection_s,
+    allow_reference_maf_for_selection_s = TRUE,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
     ld_swap_r2 = 0.01,
@@ -102,6 +103,7 @@ make_selection_s_csr_bayesr_fit <- function(selection_s = NULL,
     ld_prefix = make_selection_s_csr_prefix(),
     method = "sbayesr",
     selection_s = selection_s,
+    allow_reference_maf_for_selection_s = TRUE,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
     ld_swap_r2 = 0.01,
@@ -161,6 +163,7 @@ make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
     annotations = selection_s_sbayesrc_annotations(),
     annotation_model = "sbayesrc",
     selection_s = selection_s,
+    allow_reference_maf_for_selection_s = TRUE,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
     ld_swap_r2 = 0.01,
@@ -243,7 +246,7 @@ expect_selection_s_sbayesrc_component_consistency <- function(fit,
   }
 }
 
-test_that("SBayesC selection_s zero reduces to CSR BayesC", {
+test_that("summary BayesC selection_s -1 gives the unit-scale reduction", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
@@ -253,7 +256,7 @@ test_that("SBayesC selection_s zero reduces to CSR BayesC", {
     Glist = selection_s_csr_glist(),
     stats = selection_s_csr_stats(),
     ld_prefix = make_selection_s_csr_prefix(),
-    method = "bayesc",
+    method = "sbayesc",
     nit = 8,
     nburn = 2,
     nthin = 1,
@@ -266,10 +269,9 @@ test_that("SBayesC selection_s zero reduces to CSR BayesC", {
     updateE = FALSE,
     updatePi = FALSE
   )
-  s_args <- args
-  s_args$method <- "sbayesc"
-  fit_omitted <- do.call(stblr_csr, s_args)
-  fit_null <- do.call(stblr_csr, c(s_args, list(selection_s = 0)))
+  fit_omitted <- do.call(stblr_csr, args)
+  fit_null <- do.call(stblr_csr, c(args, list(
+    selection_s = -1, allow_reference_maf_for_selection_s = TRUE)))
 
   expect_equal(fit_null$dm, fit_omitted$dm)
   expect_equal(fit_null$bm, fit_omitted$bm)
@@ -278,7 +280,7 @@ test_that("SBayesC selection_s zero reduces to CSR BayesC", {
   expect_equal(fit_null$ves, fit_omitted$ves)
   expect_identical(fit_null$model, "sbayesc")
   expect_identical(fit_null$input$effect_scale, "maf_s")
-  expect_identical(fit_null$input$selection_s, 0)
+  expect_identical(fit_null$input$selection_s, -1)
 })
 
 test_that("fixed selection_s CSR BayesC fits return finite outputs and metadata", {
@@ -317,7 +319,7 @@ test_that("SBayesC selection_s = -1 records unit prior scale", {
   expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
 })
 
-test_that("SBayesR omitted selection_s resolves to the maf_s default", {
+test_that("summary BayesR omitted selection_s leaves MAF scaling inactive", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
@@ -333,11 +335,10 @@ test_that("SBayesR omitted selection_s resolves to the maf_s default", {
   expect_equal(fit_null$vld, fit_omitted$vld)
   expect_equal(fit_null$component_probabilities, fit_omitted$component_probabilities)
   expect_identical(fit_null$model, "sbayesr")
-  expect_identical(fit_null$input$effect_scale, "component_maf_s")
-  expect_equal(fit_null$input$selection_s, 0)
-  expect_true(fit_null$input$selection_s_fixed)
-  expect_equal(fit_null$input$selection_s_exponent, 1)
-  expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
+  expect_identical(fit_null$input$effect_scale, "component")
+  expect_null(fit_null$input$selection_s)
+  expect_false(fit_null$input$selection_s_fixed)
+  expect_null(fit_null$input$selection_s_exponent)
 })
 
 test_that("SBayesR selection_s = -1 records unit prior scale", {
@@ -419,6 +420,7 @@ test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
       method = "sbayesc",
       scheduled = TRUE,
       selection_s = 0,
+      allow_reference_maf_for_selection_s = TRUE,
       nit = 2,
       nburn = 0
     ),
@@ -436,6 +438,7 @@ test_that("selection_s validates MAF alignment to CSR LD marker order", {
       ld_prefix = make_selection_s_csr_prefix(),
       method = "sbayesc",
       selection_s = 0,
+      allow_reference_maf_for_selection_s = TRUE,
       nit = 2,
       nburn = 0
     ),
@@ -645,6 +648,7 @@ test_that("sampled selection_s validates inputs and unsupported combinations", {
       method = "sbayesc",
       scheduled = TRUE,
       estimate_selection_s = TRUE,
+      allow_reference_maf_for_selection_s = TRUE,
       nit = 2,
       nburn = 0
     ),
@@ -724,7 +728,7 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
   expect_true(all(chk$checks$ok))
 })
 
-test_that("SBayesRC omitted selection_s resolves to the maf_s default", {
+test_that("summary BayesRC omitted selection_s leaves MAF scaling inactive", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
@@ -739,10 +743,9 @@ test_that("SBayesRC omitted selection_s resolves to the maf_s default", {
   expect_equal(fit_null$vle, fit_omitted$vle)
   expect_equal(fit_null$vld, fit_omitted$vld)
   expect_equal(fit_null$component_probabilities, fit_omitted$component_probabilities)
-  expect_equal(fit_null$input$selection_s, 0)
-  expect_true(fit_null$input$selection_s_fixed)
-  expect_equal(fit_null$input$selection_s_exponent, 1)
-  expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
+  expect_null(fit_null$input$selection_s)
+  expect_false(fit_null$input$selection_s_fixed)
+  expect_null(fit_null$input$selection_s_exponent)
 })
 
 test_that("SBayesRC selection_s = -1 records unit prior scale", {
@@ -859,7 +862,7 @@ test_that("multi-chain CSR SBayesRC selection_s metadata and chains are stable",
     chain_seeds = seeds
   )
 
-  expect_equal(fit_default$input$selection_s, 0)
+  expect_null(fit_default$input$selection_s)
   expect_equal(fit_s_minus_one$input$selection_s, -1)
   expect_true(all(is.finite(fit_s_minus_one$dm)))
 

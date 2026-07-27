@@ -40,6 +40,9 @@
 #' @param updateLDswap Logical; request optional LD-swap/MH. This is supported
 #'   for the current annotation-aware CSR models, including SBayesRC.
 #' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
+#' @param selection_maf Optional MAF aligned to the final summary-marker order.
+#' @param allow_reference_maf_for_selection_s Allow explicit reference-panel
+#'   MAF fallback when no GWAS-summary or by-construction analysis MAF exists.
 #'   Currently supported only for `annotation_model = "sbayesrc"` in this
 #'   unified annotation interface. The default `selection_s = NULL` with
 #'   `estimate_selection_s = FALSE` fits the ordinary model. A finite numeric
@@ -191,6 +194,8 @@ stblr_csr_annot <- function(
   updatePi = TRUE,
   updateLDswap = FALSE,
   selection_s = NULL,
+  selection_maf = NULL,
+  allow_reference_maf_for_selection_s = FALSE,
   estimate_selection_s = FALSE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -215,16 +220,32 @@ stblr_csr_annot <- function(
   stats = stats, operator = "csr", chain = chain, conv = conv,
   memory_warning_gb = memory_warning_gb)
  .stblr_check_annotation_method(method, annotation_model)
- .stblr_check_annotation_chains(annotation_model, nchains, keep_chains, chain_seeds)
- .validate_ld_swap_args(
-  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
- )
+ if (annotation_model %in% c("prior", "learned", "group")) {
+  if (isTRUE(estimate_selection_s)) {
+   stop(
+    "estimate_selection_s is currently supported only for annotation_model = \"sbayesrc\".",
+    call. = FALSE)
+  }
+  if (!is.null(selection_s)) {
+   stop(
+    "selection_s is currently supported only for annotation_model = \"sbayesrc\".",
+    call. = FALSE)
+  }
+ }
  .stblr_validate_sampled_selection_s(
   estimate_selection_s = estimate_selection_s,
   selection_s = selection_s,
   selection_s_init = selection_s_init,
   selection_s_prior = selection_s_prior,
   selection_s_proposal_sd = selection_s_proposal_sd
+ )
+ maf_info <- .blr_resolve_st_selection_maf(
+  selection_maf, allow_reference_maf_for_selection_s,
+  !is.null(selection_s) || isTRUE(estimate_selection_s), stats, Glist)
+ Glist <- maf_info$Glist
+ .stblr_check_annotation_chains(annotation_model, nchains, keep_chains, chain_seeds)
+ .validate_ld_swap_args(
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(
   Glist = Glist,
@@ -252,12 +273,28 @@ stblr_csr_annot <- function(
   annotation_model, prior = "fixed_marker", learned = "learned_logistic",
   group = "group", sbayesrc = "annotation_probit_stick")
  finish <- function(fit) {
-  model <- if (annotation_model == "sbayesrc") "sbayesrc" else "bayesc"
+  model <- if (annotation_model == "sbayesrc") "sbayesrc" else "sbayesc"
   out <- .blr_finalize_st_public(
    fit, model, "csr", chain, conv, memory_warning_gb, verbose, memory)
   out$input$annotation_policy <- probability_policy
   out$input$probability_policy <- probability_policy
-  out$input$effect_scale <- if (model == "sbayesrc") "component_maf_s" else "unit"
+  active_s <- !is.null(selection_s) || isTRUE(estimate_selection_s)
+  out$input$prior_kernel <- if (model == "sbayesrc") "bayesrc" else "bayesc"
+  out$input$effect_scale <- if (model == "sbayesrc") {
+    if (active_s) "component_maf_s" else "component"
+  } else "unit"
+  out$input$effect_scale_policy <- out$input$effect_scale
+  out$input$selection_maf_source <- maf_info$selection_maf_source
+  out$input$selection_maf_population <- maf_info$selection_maf_population
+  out$input$selection_maf_alignment_status <-
+   maf_info$selection_maf_alignment_status
+  out$input$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
+  out$data$effect_scale <- out$input$effect_scale
+  out$data$selection_maf_source <- maf_info$selection_maf_source
+  out$data$selection_maf_population <- maf_info$selection_maf_population
+  out$data$selection_maf_alignment_status <-
+   maf_info$selection_maf_alignment_status
+  out$data$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
   out
  }
  extra <- list(...)
@@ -269,18 +306,6 @@ stblr_csr_annot <- function(
  common$ld_swap_moves <- ld_swap_moves
 
  if (annotation_model %in% c("prior", "learned", "group")) {
-  if (isTRUE(estimate_selection_s)) {
-   stop(
-    "estimate_selection_s is currently supported only for annotation_model = \"sbayesrc\".",
-    call. = FALSE
-   )
-  }
-  if (!is.null(selection_s)) {
-   stop(
-    "selection_s is currently supported only for annotation_model = \"sbayesrc\".",
-    call. = FALSE
-   )
-  }
   common$updatePi <- updatePi
  }
 
@@ -309,7 +334,6 @@ stblr_csr_annot <- function(
  if ("A" %in% names(extra)) {
   stop("Supply SBayesRC annotations through annotations, not both annotations and A.")
  }
- if (is.null(selection_s) && !isTRUE(estimate_selection_s)) selection_s <- 0
  args <- c(
   common,
   list(
@@ -351,9 +375,9 @@ stblr_csr_annot <- function(
  method <- tolower(gsub("-", "", method))
 
  if (annotation_model %in% c("prior", "learned", "group")) {
-  if (!method %in% c("bayesc", "bayescsr")) {
+  if (!method %in% "sbayesc") {
    stop(
-    "BayesC-like annotation models require method = NULL or \"bayesc\".",
+    "Summary-statistics BayesC annotation models require method = NULL or \"sbayesc\".",
     call. = FALSE
    )
   }
@@ -450,9 +474,9 @@ stblr_csr_annot <- function(
 
  meta <- switch(
   annotation_model,
-  prior = list(method = "bayesc", model = "bayesc", backend = "csr_prior_bayesc"),
-  learned = list(method = "bayesc", model = "bayesc", backend = "csr_annot_bayesc"),
-  group = list(method = "bayesc", model = "bayesc", backend = "csr_group_bayesc"),
+  prior = list(method = "sbayesc", model = "sbayesc", backend = "csr_prior_bayesc"),
+  learned = list(method = "sbayesc", model = "sbayesc", backend = "csr_annot_bayesc"),
+  group = list(method = "sbayesc", model = "sbayesc", backend = "csr_group_bayesc"),
   sbayesrc = list(method = "sbayesrc", model = "sbayesrc", backend = "csr_sbayesrc")
  )
 

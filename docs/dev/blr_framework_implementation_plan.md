@@ -1641,7 +1641,9 @@ internal scientific references.
 
 ## Phases 19–21
 
-- Phase 19: MTBLR BayesR across supported operators.
+- Phase 19: MTBLR BayesR and SBayesR are implemented across CSR,
+  block-eigen, and packed-BED operators using one pattern-by-component state
+  contract, shared chain/convergence infrastructure, and fixed MAF-S scaling.
 - Phase 20: MTBLR BayesRC and annotation-informed models.
 - Phase 21: extended diagnostics for both STBLR and MTBLR, using the Phase 17W
   MT contract as an input. Preserve separate internal Tier 2, public Tier 2,

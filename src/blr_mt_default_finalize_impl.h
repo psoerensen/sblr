@@ -31,6 +31,10 @@ inline MtDefaultFinalResult finalize_mt_default_result(
  result.r=std::move(core_result.r);
  result.b=std::move(core_result.b);
  result.d=std::move(core_result.d);
+ result.component=std::move(core_result.component);
+ result.component_probabilities=std::move(core_result.component_counts);
+ for (auto& marker:result.component_probabilities)
+  for (double& value:marker) value/=result.marker_retained_count;
  result.marker_order=std::move(core_result.order);
  result.vbs=std::move(core_result.vbs);
  result.vgs=std::move(core_result.vgs);
@@ -61,6 +65,7 @@ inline MtDefaultFinalResult finalize_mt_default_result(
   result.pi_mean[i] = result.pi_retained_count > 0.0 ?
    core_result.pis[i] / result.pi_retained_count : 0.0;
  }
+ result.pi_trace=std::move(core_result.pi_trace);
 
  // These legacy fields are unsupported by the authoritative method and their
  // core accumulators remain zero. Moving them preserves their zero semantics.

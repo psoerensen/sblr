@@ -4571,12 +4571,19 @@ std::vector<int> mt_summary_resolve_chain_seeds(
  return resolved;
 }
 
+struct MtSummaryChainResult {
+ sblr::mt::MtDefaultLegacyResult legacy;
+ std::vector<int> component;
+ std::vector<std::vector<double>> component_probabilities;
+ std::vector<std::vector<double>> pi_trace;
+};
+
 template <class Runner>
-std::vector<sblr::mt::MtDefaultLegacyResult> mt_summary_dispatch_chains(
+std::vector<MtSummaryChainResult> mt_summary_dispatch_chains(
  int nchains, int ncores, const Runner& runner,
  std::vector<std::string>& errors, int& used_workers) {
  if (ncores<1) throw std::invalid_argument("ncores must be positive");
- std::vector<sblr::mt::MtDefaultLegacyResult> results(
+ std::vector<MtSummaryChainResult> results(
   static_cast<std::size_t>(nchains));
  std::vector<int> failed(static_cast<std::size_t>(nchains),0);
  errors.assign(static_cast<std::size_t>(nchains),std::string());
@@ -4603,16 +4610,41 @@ std::vector<sblr::mt::MtDefaultLegacyResult> mt_summary_dispatch_chains(
 }
 
 Rcpp::List mt_summary_raw_list(
- const std::vector<sblr::mt::MtDefaultLegacyResult>& chains,
+ const std::vector<MtSummaryChainResult>& chains,
  const std::vector<std::vector<int>>& models, const std::string& backend,
  int nit, int nburn, int nthin, bool updateB, bool updateE, bool updatePi,
  const std::vector<int>& seeds, int requested_workers, int used_workers,
  Rcpp::Nullable<Rcpp::List> extra=R_NilValue) {
  Rcpp::List raws(static_cast<R_xlen_t>(chains.size()));
  for (std::size_t chain=0;chain<chains.size();++chain)
-  raws[static_cast<R_xlen_t>(chain)]=mtblr_legacy_to_raw(
-   chains[chain],models,backend,"summary",nit,nburn,nthin,
-   updateB,updateE,updatePi,extra);
+  {
+   Rcpp::List raw=mtblr_legacy_to_raw(
+    chains[chain].legacy,models,backend,"summary",nit,nburn,nthin,
+    updateB,updateE,updatePi,extra);
+   if (!chains[chain].component.empty()) {
+    Rcpp::List marker=raw["marker"];
+    marker["component_final"]=Rcpp::wrap(chains[chain].component);
+    const std::size_t m=chains[chain].component_probabilities.size();
+    const std::size_t k=m==0 ? 0 : chains[chain].component_probabilities[0].size();
+    Rcpp::NumericMatrix probabilities(static_cast<int>(m),static_cast<int>(k));
+    for (std::size_t row=0;row<m;++row)
+     for (std::size_t col=0;col<k;++col)
+      probabilities(static_cast<int>(row),static_cast<int>(col))=
+       chains[chain].component_probabilities[row][col];
+    marker["component_probabilities"]=probabilities;
+    raw["marker"]=marker;
+    Rcpp::List pi_namespace=raw["pi"];
+    const std::size_t states=chains[chain].pi_trace.size();
+    const std::size_t iterations=states==0 ? 0 : chains[chain].pi_trace[0].size();
+    Rcpp::NumericMatrix trace(static_cast<int>(iterations),static_cast<int>(states));
+    for (std::size_t state=0;state<states;++state)
+     for (std::size_t iteration=0;iteration<iterations;++iteration)
+      trace(static_cast<int>(iteration),static_cast<int>(state))=
+       chains[chain].pi_trace[state][iteration];
+    pi_namespace["trace"]=trace; raw["pi"]=pi_namespace;
+   }
+   raws[static_cast<R_xlen_t>(chain)]=raw;
+  }
  return Rcpp::List::create(
   Rcpp::_ ["raws"]=raws,
   Rcpp::_ ["chain_seeds"]=Rcpp::wrap(seeds),
@@ -4639,7 +4671,16 @@ Rcpp::List mtblr_csr_chains_raw_internal(
  std::vector<double> pi, double nub, double nue,
  bool updateB, bool updateE, bool updatePi,
  std::vector<int> n, int nit, int nburn, int nthin, int seed, int method,
- int nchains, int ncores, std::vector<int> chain_seeds) {
+  int nchains, int ncores, std::vector<int> chain_seeds,
+  std::vector<int> joint_component,
+  std::vector<double> joint_multiplier,
+  std::vector<std::string> joint_names,
+  int component_count,
+  std::vector<double> marker_scale,
+  std::vector<int> component_init,
+  std::vector<double> pi_prior,
+  std::vector<std::vector<double>> beta_init,
+  std::vector<std::vector<int>> state_init) {
  const std::size_t nt=wy.size();
  if (nt==0 || ww.size()!=nt || yy.size()!=nt || n.size()!=nt)
   throw std::invalid_argument("mtblr_csr_chains_raw_internal: inconsistent trait dimensions");
@@ -4681,7 +4722,15 @@ Rcpp::List mtblr_csr_chains_raw_internal(
  }
  const sblr::mt::MtCsrDataView data{
   wy,yy,n,sblr::mt::MtSparseLdBundleView{m,std::move(views)}};
- const sblr::mt::MtDefaultModelSpec model{models,sets,method};
+ sblr::mt::MtJointStateSpec joint;
+ if (method==5) {
+  joint.patterns=models; joint.component=std::move(joint_component);
+  joint.multiplier=std::move(joint_multiplier); joint.names=std::move(joint_names);
+  joint.component_count=component_count; joint.scaled=true;
+ }
+ const sblr::mt::MtDefaultModelSpec model{
+  models,sets,method,method==5?&joint:nullptr,method==5?&marker_scale:nullptr,
+  method==5?&pi_prior:nullptr};
  const sblr::mt::MtDefaultCovariancePriorView prior{
   ssb_prior,sse_prior,nub,nue};
  const std::vector<int> seeds=mt_summary_resolve_chain_seeds(
@@ -4691,14 +4740,21 @@ Rcpp::List mtblr_csr_chains_raw_internal(
   const sblr::mt::MtDefaultExecutionSpec execution{
    updateB,updateE,updatePi,nit,nburn,nthin,
    seeds[static_cast<std::size_t>(chain)]};
-  sblr::mt::MtDefaultInitialState initial{b,B,E,pi};
+  sblr::mt::MtDefaultInitialState initial{
+   b,B,E,pi,component_init,beta_init,state_init};
   auto core=sblr::mt::run_mt_csr_core(data,model,prior,execution,std::move(initial));
   auto final=sblr::mt::finalize_mt_default_result(std::move(core));
-  return sblr::mt::make_mt_default_legacy_result(final,wy,nit,nburn);
+  MtSummaryChainResult out;
+  out.component=final.component;
+  out.component_probabilities=final.component_probabilities;
+  out.pi_trace=final.pi_trace;
+  out.legacy=sblr::mt::make_mt_default_legacy_result(final,wy,nit,nburn);
+  return out;
  };
  const auto results=mt_summary_dispatch_chains(
   nchains,ncores,runner,errors,used_workers);
- return mt_summary_raw_list(results,models,"mt_csr_bayesc",nit,nburn,nthin,
+  return mt_summary_raw_list(results,models,
+   method==5?"mt_csr_bayesr":"mt_csr_bayesc",nit,nburn,nthin,
   updateB,updateE,updatePi,seeds,ncores,used_workers);
 }
 
@@ -4777,9 +4833,18 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
  std::vector<std::vector<int>> models, std::vector<double> pi,
  double nub, double nue, bool updateB, bool updateE, bool updatePi,
  std::vector<int> n, int nit, int nburn, int nthin, int seed, int method,
- int nchains, int ncores, std::vector<int> chain_seeds) {
- if (method!=4) throw std::invalid_argument(
-  "mtblr_block_eigen_chains_raw_internal supports method = 4 only");
+  int nchains, int ncores, std::vector<int> chain_seeds,
+  std::vector<int> joint_component,
+  std::vector<double> joint_multiplier,
+  std::vector<std::string> joint_names,
+  int component_count,
+  std::vector<double> marker_scale,
+  std::vector<int> component_init,
+  std::vector<double> pi_prior,
+  std::vector<std::vector<double>> beta_init,
+  std::vector<std::vector<int>> state_init) {
+ if (method!=4 && method!=5) throw std::invalid_argument(
+  "mtblr_block_eigen_chains_raw_internal supports methods 4 and 5 only");
  const std::size_t nt=wy.size();
  if (nt==0 || yy.size()!=nt || n.size()!=nt || b.size()!=nt)
   throw std::invalid_argument("MT block-eigen chain trait dimensions are inconsistent");
@@ -4832,18 +4897,33 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   views.push_back(storage_owners[shared?0:trait].view());
  const sblr::mt::MtBlockEigenDataView data{
   transformed_wy,yy,n,sblr::mt::MtBlockEigenBundleView{m,std::move(views)}};
- const sblr::mt::MtDefaultModelSpec model{models,sets,method};
+ sblr::mt::MtJointStateSpec joint;
+ if (method==5) {
+  joint.patterns=models; joint.component=std::move(joint_component);
+  joint.multiplier=std::move(joint_multiplier); joint.names=std::move(joint_names);
+  joint.component_count=component_count; joint.scaled=true;
+ }
+ const sblr::mt::MtDefaultModelSpec model{
+  models,sets,method,method==5?&joint:nullptr,method==5?&marker_scale:nullptr,
+  method==5?&pi_prior:nullptr};
  const sblr::mt::MtDefaultCovariancePriorView prior{ssb_prior,sse_prior,nub,nue};
  const std::vector<int> seeds=mt_summary_resolve_chain_seeds(seed,nchains,chain_seeds);
  std::vector<std::string> errors; int used_workers=1;
  auto runner=[&](int chain) {
   const sblr::mt::MtDefaultExecutionSpec execution{
    updateB,updateE,updatePi,nit,nburn,nthin,seeds[static_cast<std::size_t>(chain)]};
-  sblr::mt::MtDefaultInitialState initial{b,B,E,pi};
+  sblr::mt::MtDefaultInitialState initial{
+   b,B,E,pi,component_init,beta_init,state_init};
   auto core=sblr::mt::run_mt_block_eigen_core(
    data,model,prior,execution,std::move(initial));
   auto final=sblr::mt::finalize_mt_default_result(std::move(core));
-  return sblr::mt::make_mt_default_legacy_result(final,transformed_wy,nit,nburn);
+  MtSummaryChainResult out;
+  out.component=final.component;
+  out.component_probabilities=final.component_probabilities;
+  out.pi_trace=final.pi_trace;
+  out.legacy=sblr::mt::make_mt_default_legacy_result(
+   final,transformed_wy,nit,nburn);
+  return out;
  };
  const auto results=mt_summary_dispatch_chains(
   nchains,ncores,runner,errors,used_workers);
@@ -4867,7 +4947,8 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   Rcpp::_["trait_owner"]=trait_owner,
   Rcpp::_["sharing_mode"]=shared?"fully_shared_operator":"trait_specific_operator",
   Rcpp::_["owners"]=owners);
- return mt_summary_raw_list(results,models,"mt_block_eigen_bayesc",
+  return mt_summary_raw_list(results,models,
+   method==5?"mt_block_eigen_bayesr":"mt_block_eigen_bayesc",
   nit,nburn,nthin,updateB,updateE,updatePi,seeds,ncores,used_workers,
   Rcpp::List::create(Rcpp::_["block_eigen"]=block_diagnostics));
 }
@@ -5028,7 +5109,7 @@ MtBedPreparedAdapter prepare_mt_bed_adapter(
    throw std::invalid_argument("Y must contain only finite values");
   }
  }
- if (method!=4 || nit<=0 || nburn<0 || nthin<=0 ||
+ if ((method!=4 && method!=5) || nit<=0 || nburn<0 || nthin<=0 ||
      (residual_covariance!="full" && residual_covariance!="diagonal")) {
   throw std::invalid_argument(
    "invalid method, residual covariance, or MCMC controls");
@@ -5134,6 +5215,35 @@ Rcpp::List mtblr_bed_marker_contract_internal(
    models, pi));
 }
 
+// Deterministic development oracle for the shared MT BayesR joint-state
+// conditional. No sampling or operator access occurs here.
+// [[Rcpp::export]]
+Rcpp::List mtblr_bayesr_marker_contract_internal(
+ Rcpp::NumericVector score, Rcpp::NumericVector diagonal,
+ arma::mat B, arma::mat E, std::vector<std::vector<int>> patterns,
+ std::vector<int> component, std::vector<double> multiplier,
+ std::vector<std::string> state_names, int component_count,
+ std::vector<double> pi, double marker_scale
+) {
+ sblr::mt::MtJointStateSpec spec{
+  std::move(patterns),std::move(component),std::move(multiplier),
+  std::move(state_names),component_count,true};
+ const auto kernel=sblr::mt::mt_joint_marker_kernel(
+  Rcpp::as<arma::vec>(score),Rcpp::as<arma::vec>(diagonal),
+  arma::inv(B),arma::inv(E),spec,pi,marker_scale);
+ Rcpp::List means(kernel.states.size()),covariances(kernel.states.size()),
+  precisions(kernel.states.size());
+ for (std::size_t state=1;state<kernel.states.size();++state) {
+  means[state]=Rcpp::wrap(kernel.states[state].mean);
+  precisions[state]=Rcpp::wrap(kernel.states[state].precision);
+  covariances[state]=Rcpp::wrap(arma::inv(kernel.states[state].precision));
+ }
+ return Rcpp::List::create(
+  Rcpp::_["probability"]=kernel.probability,
+  Rcpp::_["mean"]=means,Rcpp::_["covariance"]=covariances,
+  Rcpp::_["precision"]=precisions);
+}
+
 // Internal serial one-chain individual-level multivariate BayesC route.
 // This maintenance interface is deliberately not namespace-exported.
 // [[Rcpp::export]]
@@ -5177,7 +5287,7 @@ Rcpp::List mtblr_bed_internal(
  };
  sblr::mt::MtBedInitialState initial{
   std::move(beta_init), std::move(b_init), std::move(state_init),
-  std::move(B), std::move(E), std::move(pi)
+  {}, std::move(B), std::move(E), std::move(pi)
  };
  sblr::mt::MtBedExecutionSpec execution{
   updateB, updateE, updatePi, residual_covariance,
@@ -5244,6 +5354,17 @@ Rcpp::IntegerMatrix mt_bed_state_matrix(
  return out;
 }
 
+Rcpp::NumericMatrix mt_bed_row_matrix(
+ const std::vector<std::vector<double>>& value
+) {
+ const int nr=static_cast<int>(value.size());
+ const int nc=nr==0 ? 0 : static_cast<int>(value[0].size());
+ Rcpp::NumericMatrix out(nr,nc);
+ for (int row=0;row<nr;++row)
+  for (int col=0;col<nc;++col) out(row,col)=value[row][col];
+ return out;
+}
+
 Rcpp::NumericVector mt_bed_uint32_vector(
  const std::vector<sblr::mt::MtBedChainTask>& tasks
 ) {
@@ -5256,14 +5377,25 @@ Rcpp::NumericVector mt_bed_uint32_vector(
 Rcpp::List mt_bed_compact_chain_record(
  const sblr::mt::MtBedChainSummary& chain
 ) {
+ Rcpp::List marker=Rcpp::List::create(
+  Rcpp::_["bm"]=mt_bed_trait_matrix(chain.bm),
+  Rcpp::_["dm"]=mt_bed_trait_matrix(chain.dm),
+  Rcpp::_["b"]=mt_bed_trait_matrix(chain.b),
+  Rcpp::_["state"]=mt_bed_state_matrix(chain.state));
+ Rcpp::List pi=Rcpp::List::create(
+  Rcpp::_["final"]=chain.pi_final,
+  Rcpp::_["mean"]=chain.pi_mean);
+ if (!chain.component_probabilities.empty() &&
+     !chain.component_probabilities.front().empty()) {
+  marker["component_final"]=Rcpp::wrap(chain.component_final);
+  marker["component_probabilities"]=mt_bed_row_matrix(
+   chain.component_probabilities);
+  pi["trace"]=mt_bed_trait_matrix(chain.pi_trace);
+ }
  return Rcpp::List::create(
   Rcpp::_["chain"]=chain.chain+1,
   Rcpp::_["seed"]=static_cast<double>(chain.seed),
-  Rcpp::_["marker"]=Rcpp::List::create(
-   Rcpp::_["bm"]=mt_bed_trait_matrix(chain.bm),
-   Rcpp::_["dm"]=mt_bed_trait_matrix(chain.dm),
-   Rcpp::_["b"]=mt_bed_trait_matrix(chain.b),
-   Rcpp::_["state"]=mt_bed_state_matrix(chain.state)),
+  Rcpp::_["marker"]=marker,
   Rcpp::_["trace"]=Rcpp::List::create(
    Rcpp::_["vbs"]=mt_bed_trait_matrix(chain.vbs),
    Rcpp::_["vgs"]=mt_bed_trait_matrix(chain.vgs),
@@ -5277,9 +5409,7 @@ Rcpp::List mt_bed_compact_chain_record(
    Rcpp::_["vb"]=chain.B,
    Rcpp::_["vg"]=chain.G,
    Rcpp::_["ve"]=chain.E),
-  Rcpp::_["pi"]=Rcpp::List::create(
-   Rcpp::_["final"]=chain.pi_final,
-   Rcpp::_["mean"]=chain.pi_mean),
+  Rcpp::_["pi"]=pi,
   Rcpp::_["diagnostics"]=Rcpp::List::create(
    Rcpp::_["marker_cholesky_jitter_attempts"]=static_cast<double>(
     chain.diagnostics.marker_cholesky_jitter_attempts),
@@ -5363,7 +5493,14 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  int ncores,
  std::vector<int> chain_seeds,
  bool keep_chains,
- bool capture_convergence_traces
+ bool capture_convergence_traces,
+ std::vector<int> joint_component,
+ std::vector<double> joint_multiplier,
+ std::vector<std::string> joint_names,
+ int component_count,
+ std::vector<double> marker_scale,
+ std::vector<double> pi_prior,
+ std::vector<int> component_init
 ) {
  if (nchains<=0 || ncores<=0) {
   throw std::invalid_argument("nchains and ncores must be positive integers");
@@ -5382,8 +5519,17 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  };
  const sblr::mt::MtBedInitialState initial{
   std::move(beta_init), std::move(b_init), std::move(state_init),
-  std::move(B), std::move(E), std::move(pi)
+  std::move(component_init), std::move(B), std::move(E), std::move(pi)
  };
+ sblr::mt::MtJointStateSpec joint;
+ if (method==5) {
+  joint.patterns=models;
+  joint.component=std::move(joint_component);
+  joint.multiplier=std::move(joint_multiplier);
+  joint.names=std::move(joint_names);
+  joint.component_count=component_count;
+  joint.scaled=true;
+ }
  sblr::mt::MtBedExecutionSpec execution{
   updateB, updateE, updatePi, residual_covariance,
   nit, nburn, nthin, static_cast<std::uint32_t>(seed), method
@@ -5412,7 +5558,8 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  std::vector<sblr::mt::MtBedChainExecutionResult> results=
   sblr::mt::dispatch_mt_bed_chain_tasks(
    tasks, used_workers, data, initial, sets, ssb_prior, sse_prior,
-   models, nub, nue, execution);
+   models, nub, nue, execution, method==5?&joint:nullptr,
+   method==5?&marker_scale:nullptr,method==5?&pi_prior:nullptr);
  const double dispatch_seconds=std::chrono::duration<double>(
   std::chrono::steady_clock::now()-dispatch_start).count();
 
@@ -5444,6 +5591,10 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  const double pi_count=aggregate.pooled.pi_retained_count;
  sblr::mt::MtDefaultFinalResult final_result=
   sblr::mt::finalize_mt_bed_chains_result(std::move(aggregate.pooled));
+ const std::vector<int> component_final=final_result.component;
+ const std::vector<std::vector<double>> component_probabilities=
+  final_result.component_probabilities;
+ const std::vector<std::vector<double>> pi_trace=final_result.pi_trace;
  sblr::mt::MtDefaultLegacyResult legacy=
   sblr::mt::make_mt_default_legacy_result(
    final_result, prepared.wy_trait_major, nit, nburn);
@@ -5497,7 +5648,7 @@ Rcpp::List mtblr_bed_chains_binding_impl(
   Rcpp::_["chain_diagonal_e_updates"]=
    diagnostics.chain_diagonal_e_updates);
  Rcpp::List raw=mtblr_legacy_to_raw(
-  legacy, models, "mt_bed_bayesc", "individual",
+  legacy, models, method==5?"mt_bed_bayesr":"mt_bed_bayesc", "individual",
   nit, nburn, nthin, updateB, updateE, updatePi,
   Rcpp::List::create(Rcpp::_["mt_bed"]=mt_bed_diagnostics));
  Rcpp::List meta=raw["meta"];
@@ -5511,6 +5662,14 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  marker["dm_sd"]=mt_bed_trait_matrix(aggregate.dm_sd);
  marker["dm_min"]=mt_bed_trait_matrix(aggregate.dm_min);
  marker["dm_max"]=mt_bed_trait_matrix(aggregate.dm_max);
+ if (method==5) {
+  marker["component_final"]=Rcpp::wrap(component_final);
+  marker["component_probabilities"]=mt_bed_row_matrix(
+   component_probabilities);
+  Rcpp::List pi_namespace=raw["pi"];
+  pi_namespace["trace"]=mt_bed_trait_matrix(pi_trace);
+  raw["pi"]=pi_namespace;
+ }
  raw["marker"]=marker;
  Rcpp::List raw_diagnostics=raw["diagnostics"];
  raw_diagnostics["marker"]=static_cast<int>(marker_count);
@@ -5557,7 +5716,14 @@ Rcpp::List mtblr_bed_chains_internal(
  double nub, double nue, bool updateB, bool updateE, bool updatePi,
  std::string residual_covariance, int nit, int nburn, int nthin,
  int seed, int method, int nchains, int ncores,
- std::vector<int> chain_seeds, bool keep_chains
+ std::vector<int> chain_seeds, bool keep_chains,
+ std::vector<int> joint_component,
+ std::vector<double> joint_multiplier,
+ std::vector<std::string> joint_names,
+ int component_count,
+ std::vector<double> marker_scale,
+ std::vector<double> pi_prior,
+ std::vector<int> component_init
 ) {
  return mtblr_bed_chains_binding_impl(
   bed_files, n_bed, cls, rows, af, Y, std::move(beta_init),
@@ -5565,7 +5731,10 @@ Rcpp::List mtblr_bed_chains_internal(
   std::move(E), std::move(ssb_prior), std::move(sse_prior),
   std::move(models), std::move(pi), nub, nue, updateB, updateE,
   updatePi, residual_covariance, nit, nburn, nthin, seed, method,
-  nchains, ncores, std::move(chain_seeds), keep_chains, false);
+  nchains, ncores, std::move(chain_seeds), keep_chains, false,
+  std::move(joint_component),std::move(joint_multiplier),
+  std::move(joint_names),component_count,std::move(marker_scale),
+  std::move(pi_prior),std::move(component_init));
 }
 
 // Internal MT BED multichain route with a post-burn Tier 1 trace bundle.
@@ -5584,7 +5753,14 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
  double nub, double nue, bool updateB, bool updateE, bool updatePi,
  std::string residual_covariance, int nit, int nburn, int nthin,
  int seed, int method, int nchains, int ncores,
- std::vector<int> chain_seeds, bool keep_chains
+ std::vector<int> chain_seeds, bool keep_chains,
+ std::vector<int> joint_component,
+ std::vector<double> joint_multiplier,
+ std::vector<std::string> joint_names,
+ int component_count,
+ std::vector<double> marker_scale,
+ std::vector<double> pi_prior,
+ std::vector<int> component_init
 ) {
  return mtblr_bed_chains_binding_impl(
   bed_files, n_bed, cls, rows, af, Y, std::move(beta_init),
@@ -5592,7 +5768,10 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
   std::move(E), std::move(ssb_prior), std::move(sse_prior),
   std::move(models), std::move(pi), nub, nue, updateB, updateE,
   updatePi, residual_covariance, nit, nburn, nthin, seed, method,
-  nchains, ncores, std::move(chain_seeds), keep_chains, true);
+  nchains, ncores, std::move(chain_seeds), keep_chains, true,
+  std::move(joint_component),std::move(joint_multiplier),
+  std::move(joint_names),component_count,std::move(marker_scale),
+  std::move(pi_prior),std::move(component_init));
 }
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the

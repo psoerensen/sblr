@@ -177,7 +177,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   res_c <- capture_stblr_raw(sblr::stblr_csr(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
-    method = "bayesc",
+    method = "sbayesc",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -197,7 +197,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   ))
   fit_c <- res_c$fit
   expect_field_inventory_raw(res_c$raw, "csr_bayesc")
-  expect_field_inventory_core(fit_c, "csr_bayesc", "summary", FALSE)
+  expect_field_inventory_core(fit_c, "csr_bayesc", "summary_statistics", FALSE)
   expect_field_inventory_csr_variance(fit_c)
   expect_field_inventory_chain_summaries(fit_c)
   expect_field_inventory_chains(fit_c)
@@ -207,7 +207,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   res_r <- capture_stblr_raw(sblr::stblr_csr(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
-    method = "bayesr",
+    method = "sbayesr",
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
@@ -219,7 +219,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   ))
   fit_r <- res_r$fit
   expect_field_inventory_raw(res_r$raw, "csr_bayesr")
-  expect_field_inventory_core(fit_r, "csr_bayesr", "summary", FALSE)
+  expect_field_inventory_core(fit_r, "csr_bayesr", "summary_statistics", FALSE)
   expect_field_inventory_csr_variance(fit_r)
   expect_field_inventory_bayesr(fit_r)
 })
@@ -255,7 +255,8 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   ))
   fit_prior <- res_prior$fit
   expect_field_inventory_raw(res_prior$raw, "csr_prior_bayesc")
-  expect_field_inventory_core(fit_prior, "csr_prior_bayesc", "summary", TRUE)
+  expect_field_inventory_core(
+    fit_prior, "csr_prior_bayesc", "summary_statistics", TRUE)
   expect_field_inventory_csr_variance(fit_prior)
   expect_field_inventory_chain_summaries(fit_prior)
   expect_field_inventory_chains(fit_prior)
@@ -285,7 +286,8 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   ))
   fit_learned <- res_learned$fit
   expect_field_inventory_raw(res_learned$raw, "csr_annot_bayesc")
-  expect_field_inventory_core(fit_learned, "csr_annot_bayesc", "summary", TRUE)
+  expect_field_inventory_core(
+    fit_learned, "csr_annot_bayesc", "summary_statistics", TRUE)
   expect_field_inventory_csr_variance(fit_learned)
   expect_true(all(c("annotation_effects", "eta_pi", "eta_vb") %in% names(fit_learned)))
 
@@ -318,7 +320,8 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   ))
   fit_group <- res_group$fit
   expect_field_inventory_raw(res_group$raw, "csr_group_bayesc")
-  expect_field_inventory_core(fit_group, "csr_group_bayesc", "summary", TRUE)
+  expect_field_inventory_core(
+    fit_group, "csr_group_bayesc", "summary_statistics", TRUE)
   expect_field_inventory_csr_variance(fit_group)
   expect_true("ld_swap" %in% names(fit_group$diagnostics))
   expect_true(all(c(
@@ -352,7 +355,8 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   ))
   fit_sbayesrc <- res_sbayesrc$fit
   expect_field_inventory_raw(res_sbayesrc$raw, "csr_sbayesrc")
-  expect_field_inventory_core(fit_sbayesrc, "csr_sbayesrc", "summary", TRUE)
+  expect_field_inventory_core(
+    fit_sbayesrc, "csr_sbayesrc", "summary_statistics", TRUE)
   expect_field_inventory_csr_variance(fit_sbayesrc)
   expect_field_inventory_bayesr(fit_sbayesrc)
   expect_true(all(c(

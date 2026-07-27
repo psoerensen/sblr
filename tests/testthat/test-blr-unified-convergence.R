@@ -33,7 +33,7 @@ test_that("scheduled ST CSR convergence uses task-private post-burn traces", {
   call <- function(nthin, keep_chains, ncores = 1L) {
     stblr_csr(
       stats = fixture$stats, ld_prefix = fixture$prefix,
-      method = "bayesc", scheduled = TRUE,
+      method = "sbayesc", scheduled = TRUE,
       pi_init = .35, pi_prior_mean = .35, pi_prior_strength = 3,
       updateB = FALSE, updateE = FALSE, updatePi = FALSE,
       nit = 8L, nburn = 2L, nthin = nthin, seed = 1001L,

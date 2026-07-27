@@ -698,6 +698,13 @@ only execution examples. Real analyses need longer chains, convergence and
 proposal diagnostics, sensitivity analysis, posterior predictive checks, and
 clear documentation of annotation preprocessing and prior construction.
 
+In the canonical vocabulary, CSR annotation routes are summary-statistics
+models: BayesC policies are `sbayesc` plus `fixed_marker`, `group`, or
+`learned_logistic`; the probit-stick mixture is `sbayesrc`. The prefix does not
+activate MAF scaling. If MAF also appears as an annotation while `selection_s`
+is active, metadata records both roles because overlap or confounding is a
+scientific interpretation issue rather than an automatic validation error.
+
 ## Related Notes and Sources
 
 - [Model overview](model_overview.qmd)

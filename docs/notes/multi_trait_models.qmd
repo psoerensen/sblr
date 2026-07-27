@@ -388,3 +388,14 @@ extensions remain research-stage.
 This note draws on the archived `sblr_theory.qmd` draft, the completed
 technical appendices, the canonical MTBLR and simulation interfaces, and
 the current experimental multi-trait sampler implementations.
+
+## BayesR mixture states
+
+`mtblr_csr()` and `mtblr_block_eigen()` support summary model `sbayesr`;
+`mtblr_bed()` supports individual-level `bayesr`. All dispatch prior kernel
+`bayesr`. Use `mixture_var` for the leading null and ascending positive
+multipliers, `models` for trait patterns, and optional
+`joint_pi`/`joint_pi_prior` for the joint probability state. Returned
+`component_final` uses zero for null and `component_probabilities` includes the
+null column. Fixed `selection_s` is independent of the public model name;
+sampled MT selection-S is deliberately unsupported in Phase 19.

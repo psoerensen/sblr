@@ -293,6 +293,13 @@ process-pipe and temporary-installation failures were execution-environment
 limitations; the definitive unrestricted built-tarball check passed. No
 implementation blocker remains.
 
+Before Phase 19 was committed, the temporary Phase 18 interpretation of the
+`s` prefix as a MAF-S scale marker was corrected. The final convention uses
+the prefix exclusively for summary-statistics data; `selection_s` independently
+controls MAF scaling. Existing numerical kernels were reused unchanged, and
+new fits record semantic version 2, prior kernel, data level, and effect-scale
+policy separately.
+
 ## 41. Recommended next phase
 
 > implement MTBLR BayesR as one coherent pattern-by-mixture model across the aligned CSR, block-eigen, and packed-BED operators, reusing the Phase 18 chain, convergence, output, naming, memory, and warning infrastructure.

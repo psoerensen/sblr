@@ -94,7 +94,7 @@ separates data representation, trait structure, and prior structure.
 | Fit from summary statistics and sparse LD | `stats` and sparse-LD metadata in `Glist` | `stblr_csr()` | CSR ST-BLR fit |
 | Fit directly from individual-level PLINK genotypes | BED-backed `Glist`, phenotype matrix, aligned marker columns | `stblr_bed()` | BED ST-BLR fit |
 | Prepare reusable summary-statistics inputs from BED | BED-backed `Glist`, phenotypes, marker IDs, allele frequencies | `make_summary_stats()` and `make_sparse_ld()` | `stats` and updated `Glist$sparseLD` |
-| Compare BayesC and BayesR priors | Same `stats`, `Glist`, traits, and MCMC settings | `stblr_csr(method = "bayesc")` and `stblr_csr(method = "bayesr")` | Comparable CSR fits |
+| Compare BayesC and BayesR priors | Same `stats`, `Glist`, traits, and MCMC settings | `stblr_csr(method = "sbayesc")` and `stblr_csr(method = "sbayesr")` | Comparable summary-statistics CSR fits |
 | Fit BayesS-style MAF-scaled CSR models | `stats`, `Glist`, CSR LD metadata, and marker-aligned MAF | `stblr_csr(..., selection_s = ...)` or `stblr_csr(..., estimate_selection_s = TRUE)` | CSR BayesC/BayesR fit with fixed global or sampled trait-specific `selection_s` |
 | Compare annotation prior families | `stats`, sparse-LD metadata in `Glist`, aligned annotations or groups | `stblr_csr_annot()` or `03_annotation_models_workflow.R` | Fixed, learned, group, and SBayesRC-style fits |
 | Fit individual-level annotation-dependent components | BED-backed `Glist`, phenotypes, marker-ID-keyed annotations | `stblr_bed(method = "bayesrc")` and `annotation_based_models.R` | BED BayesRC component and annotation summaries |
@@ -210,7 +210,7 @@ BayesR can be fitted through the same wrapper by changing `method`:
 fit_csr_bayesr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesr",
+  method = "sbayesr",
   nit = 1000,
   nburn = 500,
   seed = 1
@@ -507,7 +507,7 @@ available or not applicable, these fields should be present with `NULL` values.
 fit_csr_ldswap <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesr",
+  method = "sbayesr",
   nit = 1000,
   nburn = 100,
   ncores = 4,
@@ -1074,3 +1074,9 @@ Public MT BED fits now contain `fit$convergence` and a stable
 Future extended diagnostics remain scalar marginals: covariance entries do not
 prove joint matrix convergence, pattern probabilities do not prove joint
 simplex convergence, and selected markers do not describe unselected markers.
+
+For MT BayesR/SBayesR, inspect `component_final`,
+`component_probabilities`, the named joint `pi_final`/`pi_mean`/`pi_trace`, and
+`model_parameters$mixture`. Core convergence still covers only `vbs`, `vgs`,
+`ves`, `vle`, and `vld`; probability, component, S, and marker diagnostics are
+deferred.

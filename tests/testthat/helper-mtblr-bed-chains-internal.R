@@ -7,7 +7,11 @@ phase17r_args <- function(case, nchains = 1L, ncores = 1L,
                           chain_seeds = integer(), keep_chains = FALSE) {
   c(phase17o_args(case), list(
     nchains = as.integer(nchains), ncores = as.integer(ncores),
-    chain_seeds = as.integer(chain_seeds), keep_chains = keep_chains
+    chain_seeds = as.integer(chain_seeds), keep_chains = keep_chains,
+    joint_component = integer(), joint_multiplier = numeric(),
+    joint_names = character(), component_count = 0L,
+    marker_scale = numeric(), pi_prior = numeric(),
+    component_init = integer()
   ))
 }
 

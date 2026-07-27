@@ -396,7 +396,7 @@ test_that("stblr_csr fits BayesC through public method interface", {
   fit <- stblr_csr(
     stats = make_stblr_csr_interface_stats(),
     ld_prefix = make_stblr_csr_interface_prefix(),
-    method = "bayesc",
+    method = "sbayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -425,10 +425,10 @@ test_that("stblr_csr fits BayesC through public method interface", {
   for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pi_trace")) {
     expect_equal(dim(fit[[nm]]), c(2L, 1L))
   }
-  expect_equal(fit$input$method, "bayesc")
-  expect_equal(fit$input$model, "bayesc")
+  expect_equal(fit$input$method, "sbayesc")
+  expect_equal(fit$input$model, "sbayesc")
   expect_equal(fit$input$backend, "csr_bayesc")
-  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$data_level, "summary_statistics")
   expect_equal(fit$input$scheduled, FALSE)
   expect_equal(fit$input$nchains, 1L)
   expect_null(fit$chains)
@@ -444,7 +444,7 @@ test_that("stblr_csr BayesC no-chain formatting keeps LD-swap diagnostics", {
   fit <- stblr_csr(
     stats = make_stblr_csr_interface_stats(),
     ld_prefix = make_stblr_csr_interface_prefix(),
-    method = "bayesc",
+    method = "sbayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -480,7 +480,7 @@ test_that("stblr_csr fits BayesR through public method interface", {
   fit <- stblr_csr(
     stats = make_stblr_csr_interface_stats(),
     ld_prefix = make_stblr_csr_interface_prefix(),
-    method = "bayesr",
+    method = "sbayesr",
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
@@ -501,10 +501,10 @@ test_that("stblr_csr fits BayesR through public method interface", {
   for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pi_trace")) {
     expect_equal(dim(fit[[nm]]), c(2L, 1L))
   }
-  expect_equal(fit$input$method, "bayesr")
-  expect_equal(fit$input$model, "bayesr")
+  expect_equal(fit$input$method, "sbayesr")
+  expect_equal(fit$input$model, "sbayesr")
   expect_equal(fit$input$backend, "csr_bayesr")
-  expect_equal(fit$input$data_level, "summary")
+  expect_equal(fit$input$data_level, "summary_statistics")
   expect_equal(fit$input$scheduled, FALSE)
   expect_equal(fit$input$nchains, 1L)
   expect_equal(

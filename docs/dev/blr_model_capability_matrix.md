@@ -8,12 +8,16 @@
 
 Phase 18 supersedes the older model spelling in the historical sections below.
 The canonical scientific identifiers are `bayesc`, `sbayesc`, `bayesr`,
-`sbayesr`, `bayesrc`, and `sbayesrc`. S models reuse existing kernels through
-the `maf_s` effect-scale policy; no S kernel is duplicated. The executable
+`sbayesr`, `bayesrc`, and `sbayesrc`. The `s` prefix identifies
+summary-statistics data; it never activates the independent `selection_s`
+MAF-scaling policy. S and non-S public models with the same prior kernel reuse
+that kernel, and optional fixed or sampled `selection_s` support is classified
+separately. The executable
 authoritative support matrix is `.blr_model_capability_matrix()` and is
-summarized in `blr_unified_architecture.md`. MTBLR supports only `bayesc` in
-Phase 18. STBLR supports `bayesc`/`sbayesc`/`bayesr`/`sbayesr` on CSR and block
-eigen, `sbayesrc` through annotation CSR and block eigen, and
+summarized in `blr_unified_architecture.md`. Phase 19 adds MTBLR `bayesr` on
+packed BED and `sbayesr` on CSR and block eigen while retaining MTBLR
+`bayesc`/`sbayesc`. STBLR exposes `sbayesc`/`sbayesr` on CSR and block eigen,
+`sbayesrc` through annotation CSR and block eigen, and
 `bayesc`/`bayesr`/`bayesrc` on packed BED. All other cells are `unsupported`.
 
 Annotation-aware BayesC policies are `fixed_marker`, `learned_logistic`, and
@@ -477,3 +481,22 @@ active/null/explicit-pattern diagnostics plus later Tier 3 selected-marker b/d.
 
 Only lowercase model identifiers are public. MTBLR BayesR/BayesRC and extended
 convergence diagnostics are not Phase 18 capabilities.
+
+## Phase 19 MT mixture capability
+
+| family | model | csr | block_eigen | packed_bed |
+|---|---|---:|---:|---:|
+| MTBLR | BayesC | public canonical | public canonical | public canonical |
+| MTBLR | BayesR | public canonical | public canonical | public canonical |
+| MTBLR | SBayesR (fixed scalar S) | public canonical | public canonical | public canonical |
+| MTBLR | SBayesR (sampled S) | unsupported | unsupported | unsupported |
+| MTBLR | BayesRC/SBayesRC | unsupported | unsupported | unsupported |
+
+BayesR and SBayesR share the same unique-null pattern-by-component state
+space and `bayesr` prior kernel. The names distinguish data level: packed BED
+uses `bayesr`, while CSR/block eigen use `sbayesr`. Optional fixed
+`selection_s` supplies marker-specific MAF-S scale independently. Annotation
+policies remain unsupported for MTBLR in Phase 19 and fail before execution.
+
+The analogous BayesC mapping is packed-BED `bayesc` versus summary
+`sbayesc`. Model semantics version 2 records this mapping explicitly.

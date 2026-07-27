@@ -7,8 +7,13 @@
 #' @param stats Scalar-trait summary statistics.
 #' @param Glist Genotype/BED provenance used to construct the operator.
 #' @param block_start One-based public block starts.
-#' @param method One of `"bayesc"`, `"sbayesc"`, `"bayesr"`,
-#'   `"sbayesr"`, or `"sbayesrc"`.
+#' @param method One of `"sbayesc"`, `"sbayesr"`, or `"sbayesrc"`;
+#'   the `s` prefix denotes summary-statistics data.
+#' @param selection_maf Optional marker-aligned allele frequencies used only
+#'   when the independent `selection_s` variance-scaling option is active.
+#' @param allow_reference_maf_for_selection_s Whether aligned reference-panel
+#'   frequencies may be used explicitly when summary-population frequencies
+#'   are unavailable. The default is `FALSE`.
 #' @param annotation Annotation matrix required for `"sbayesrc"`.
 #' @param eigen_filter Block filter: hard truncation, fixed ridge, or LW ridge.
 #' @param eigen_tau,eigen_eta Nonnegative filter controls.
@@ -27,7 +32,8 @@
 #' @export
 stblr_block_eigen <- function(
   stats, Glist, block_start,
-  method = c("bayesc", "sbayesc", "bayesr", "sbayesr", "sbayesrc"),
+  method = c("sbayesc", "sbayesr", "sbayesrc"),
+  selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
   annotation = NULL,
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01, eigen_eta = 0,
@@ -39,10 +45,13 @@ stblr_block_eigen <- function(
 ) {
   dots <- list(...)
   resolved_model <- .blr_resolve_st_model(
-    method, dots,
-    c("bayesc", "sbayesc", "bayesr", "sbayesr", "sbayesrc"))
+    method, dots, c("sbayesc", "sbayesr", "sbayesrc"), "block_eigen")
   method <- resolved_model$model
   dots <- resolved_model$dots
+  maf_info <- .blr_resolve_st_selection_maf(
+    selection_maf, allow_reference_maf_for_selection_s,
+    resolved_model$selection_s_active, stats, Glist)
+  Glist <- maf_info$Glist
   eigen_filter <- match.arg(eigen_filter)
   chain <- .blr_chain_controls(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
@@ -61,9 +70,7 @@ stblr_block_eigen <- function(
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces)
   fit <- switch(
     method,
-    bayesc = do.call(.stblr_csr_bayesc_block_eigen, c(common, dots)),
     sbayesc = do.call(.stblr_csr_bayesc_block_eigen, c(common, dots)),
-    bayesr = do.call(.stblr_csr_bayesr_block_eigen, c(common, dots)),
     sbayesr = do.call(.stblr_csr_bayesr_block_eigen, c(common, dots)),
     sbayesrc = {
       if (is.null(annotation)) {
@@ -84,6 +91,17 @@ stblr_block_eigen <- function(
   fit$diagnostics$block_eigen <-
     fit$input$eigen_diagnostics %||% fit$diagnostics$block_eigen %||% NULL
   fit$input$effect_scale <- resolved_model$effect_scale
+  fit$input$prior_kernel <- resolved_model$prior_kernel
   fit$input$probability_policy <- resolved_model$probability_policy
+  fit$input$selection_maf_source <- maf_info$selection_maf_source
+  fit$input$selection_maf_population <- maf_info$selection_maf_population
+  fit$input$selection_maf_alignment_status <-
+    maf_info$selection_maf_alignment_status
+  fit$input$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
+  fit$data$selection_maf_source <- maf_info$selection_maf_source
+  fit$data$selection_maf_population <- maf_info$selection_maf_population
+  fit$data$selection_maf_alignment_status <-
+    maf_info$selection_maf_alignment_status
+  fit$data$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
   fit
 }
