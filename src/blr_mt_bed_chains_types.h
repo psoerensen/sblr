@@ -48,6 +48,16 @@ struct MtBedChainSummary {
  std::vector<double> pi_final;
  std::vector<double> pi_mean;
  std::vector<std::vector<double>> pi_trace;
+ arma::mat annotation_alpha_final;
+ arma::mat annotation_alpha_mean;
+ arma::vec annotation_sigma_final;
+ arma::vec annotation_sigma_mean;
+ std::vector<double> pattern_pi_final;
+ std::vector<double> pattern_pi_mean;
+ std::vector<std::vector<double>> pattern_pi_trace;
+ arma::mat prior_component_probabilities;
+ int annotation_updates_attempted=0;
+ int annotation_updates_completed=0;
  MtBedCoreDiagnostics diagnostics;
 };
 

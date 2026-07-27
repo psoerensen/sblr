@@ -1648,3 +1648,12 @@ internal scientific references.
 - Phase 21: extended diagnostics for both STBLR and MTBLR, using the Phase 17W
   MT contract as an input. Preserve separate internal Tier 2, public Tier 2,
   and selected-marker Tier 3 checkpoints within that phase.
+## Phase 20 — MT BayesRC/SBayesRC annotation priors
+
+Phase 20 activates `bayesrc` for individual-level packed BED and `sbayesrc`
+for summary-statistics CSR and block-eigen MTBLR. It factorizes one
+annotation-dependent probit-stick component distribution from one global
+conditional non-null trait-pattern distribution while retaining the Phase 19
+state descriptor and base-covariance kernel. The raw schema stays at version 1
+and model semantics at version 2. Extended annotation/probability diagnostics
+remain the next phase.

@@ -158,3 +158,13 @@ they are not copied into another Phase 18 behavioral matrix.
 - `test-blr-model-semantics.R` owns the S-prefix data-level convention,
   independent selection-S activation, operator/model rejection,
   selection-MAF provenance, and model-semantics version 2.
+## Phase 20 owners
+
+- `test-mtblr-bayesrc-model.R`: probability factorization, BayesR reduction,
+  and independent selection-S semantics.
+- `test-mtblr-bayesrc-operators.R`: exact operator reduction, BED residual
+  policies, multichain/reproducibility, and variance/convergence protection.
+- `test-mtblr-bayesrc-annotations.R`: alignment, method matrix, preprocessing,
+  and MAF-overlap warning policy.
+- `blr_phase20_mt_bayesrc_architecture_audit.R` and
+  `blr_phase20_mutation_sensitivity.R`: source architecture and mutation guards.

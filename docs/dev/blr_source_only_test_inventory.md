@@ -106,3 +106,9 @@ MAF-S unit-scale reduction, CSR/block-eigen numerical reduction, packed-BED
 component output, multichain core convergence, update controls, and analytical
 mixture-memory assertions. Only repository-source architecture and mutation
 audits require a checkout.
+## Phase 20 source-only additions
+
+Installed tests retain portable probability-oracle, annotation-validation,
+small operator-reduction, raw-schema, fit-output, and convergence protections.
+Only native-source ownership and workflow-text assertions may skip without a
+source checkout. The benchmark and mutation matrix remain extended/source-only.

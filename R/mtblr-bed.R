@@ -300,7 +300,7 @@
   estimate
 }
 
-#' Fit joint multivariate BayesC models directly from PLINK BED genotypes
+#' Fit joint multivariate BayesC, BayesR, and BayesRC models from PLINK BED
 #'
 #' Fits one joint individual-level multivariate BayesC likelihood using a
 #' shared set of individuals and standardized genotypes from one BED-backed
@@ -325,7 +325,7 @@
 #' @param center Center aligned phenotype columns in R. If `FALSE`, columns
 #'   must already satisfy the native centering tolerance.
 #' @param residual_covariance Either `"full"` or `"diagonal"`.
-#' @param method One of `"bayesc"` or `"bayesr"`; packed BED is individual
+#' @param method One of `"bayesc"`, `"bayesr"`, or `"bayesrc"`; packed BED is individual
 #'   level and therefore rejects summary-statistics `s` model names.
 #' @param trait_metadata Optional data frame with one row per trait.
 #' @param sets Optional disjoint complete list of one-based marker sets.
@@ -342,6 +342,21 @@
 #' @param joint_pi_prior Optional positive Dirichlet prior over joint states.
 #' @param component Optional zero-based component initialization, one value per
 #'   marker and consistent with `state`.
+#' @param annotations Required marker-by-annotation numeric matrix or data
+#'   frame for `"bayesrc"`. Explicit unique marker IDs are matched to selected
+#'   BED markers.
+#' @param add_intercept Add one intercept when none is supplied.
+#' @param standardize_annotations Standardize eligible non-intercept columns.
+#' @param center_binary_annotations Center and scale binary annotations when
+#'   standardization is enabled.
+#' @param alpha_init Optional processed-annotation-by-stick coefficient matrix.
+#' @param sigmaSqAlpha_init Optional positive variance initialization per stick.
+#' @param intercept_flat Use a flat prior for the first intercept coefficient.
+#' @param sigmaSqAlpha_a,sigmaSqAlpha_b Positive annotation-variance prior
+#'   hyperparameters.
+#' @param pi_floor Probability floor used by probit stick-breaking.
+#' @param alpha_update_every Positive iteration interval for coefficient updates.
+#' @param updateAlpha Update annotation coefficients and their variances.
 #' @param selection_s Optional fixed scalar MAF-S exponent for BayesR; the BED
 #'   model name remains `bayesr` because the data are individual-level.
 #' @param selection_maf Optional allele frequencies aligned to the selected
@@ -420,7 +435,12 @@ mtblr_bed <- function(
   trait_metadata = NULL, sets = NULL, block_size = 1000,
   beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
   models = NULL, pimodels = NULL, mixture_var = NULL, joint_pi = NULL,
-  joint_pi_prior = NULL, component = NULL, selection_s = NULL,
+  joint_pi_prior = NULL, component = NULL,
+  annotations = NULL, add_intercept = TRUE,
+  standardize_annotations = TRUE, center_binary_annotations = FALSE,
+  alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
+  alpha_update_every = 1L, updateAlpha = TRUE, selection_s = NULL,
   selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
   estimate_selection_s = FALSE, selection_s_init = NULL,
   selection_s_prior = NULL, selection_s_proposal_sd = NULL,
@@ -538,6 +558,17 @@ mtblr_bed <- function(
     semantics$prior_kernel,pattern_spec,maf_info$values,dat$m,mixture_var,joint_pi,
     joint_pi_prior,component,selection_s,estimate_selection_s,
     selection_s_init,selection_s_prior,selection_s_proposal_sd)
+  if (identical(semantics$prior_kernel, "bayesrc")) {
+    if (!is.null(joint_pi) || !is.null(joint_pi_prior))
+      stop("joint_pi and joint_pi_prior are not BayesRC controls; use pimodels for conditional pattern initialization.", call. = FALSE)
+    mixture$method_code <- 6L
+  }
+  bayesrc <- .mtblr_bayesrc_controls(
+    semantics$prior_kernel, annotations, marker_metadata$marker_id,
+    pattern_spec, mixture, add_intercept, standardize_annotations,
+    center_binary_annotations, alpha_init, sigmaSqAlpha_init,
+    intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor,
+    alpha_update_every, updateAlpha)
   model_spec <- mixture$patterns
   null_index <- which(rowSums(model_spec$matrix) == 0L)
   p_active <- 1 - sum(model_spec$probabilities[null_index])
@@ -634,6 +665,8 @@ mtblr_bed <- function(
   memory <- .mtblr_bayesr_memory(
     memory,method,dat$m,nchains,ncores,nit+nburn,nrow(model_spec$matrix),
     mixture$component_count)
+  memory <- .mtblr_bayesrc_memory(
+    memory,bayesrc,dat$m,nchains,ncores,nit+nburn)
   if (memory$estimated_total_gib > memory_warning_gb) {
     warning(sprintf(
       paste0("mtblr_bed analytical upper-bound estimate (not measured RSS; ",
@@ -704,13 +737,30 @@ mtblr_bed <- function(
     component_count = mixture$component_count,
     marker_scale = mixture$marker_scale,
     pi_prior = mixture$pi_prior,
-    component_init = initialization$component %||% integer())
+    component_init = initialization$component %||% integer(),
+    annotations = bayesrc$annotations, alpha_init = bayesrc$alpha_init,
+    sigma_alpha_init = bayesrc$sigma_alpha_init,
+    pattern_pi_init = bayesrc$pattern_pi_init,
+    pattern_pi_prior = bayesrc$pattern_pi_prior,
+    updateAlpha = bayesrc$updateAlpha,
+    intercept_flat = bayesrc$intercept_flat,
+    sigma_alpha_a = bayesrc$sigma_alpha_a,
+    sigma_alpha_b = bayesrc$sigma_alpha_b,
+    pi_floor = bayesrc$pi_floor,
+    alpha_update_every = bayesrc$alpha_update_every)
   native_route <- if (isTRUE(convergence_controls$trace_route_required)) {
     mtblr_bed_convergence_trace_internal
   } else {
     mtblr_bed_chains_internal
   }
   native_result <- do.call(native_route, native_arguments)
+  if (!is.null(bayesrc$model_parameters)) {
+    if (isTRUE(convergence_controls$trace_route_required))
+      native_result$raw <- .mtblr_bayesrc_enrich_raw(
+        native_result$raw, bayesrc, method, updatePi)
+    else native_result <- .mtblr_bayesrc_enrich_raw(
+      native_result, bayesrc, method, updatePi)
+  }
   if (isTRUE(convergence_controls$trace_route_required)) {
     native_result$raw <- .mtblr_bayesr_enrich_raw(
       native_result$raw, method, mixture$model_parameters)
@@ -766,6 +816,8 @@ mtblr_bed <- function(
   memory <- .mtblr_bayesr_memory(
     memory,method,dat$m,nchains,ncores,nit+nburn,nrow(model_spec$matrix),
     mixture$component_count)
+  memory <- .mtblr_bayesrc_memory(
+    memory,bayesrc,dat$m,nchains,ncores,nit+nburn)
   raw$model$names <- model_spec$names
   raw$pi$names <- model_spec$names
   raw$data <- list(
@@ -779,6 +831,9 @@ mtblr_bed <- function(
     selection_maf_population = maf_info$selection_maf_population,
     selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
     selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    annotation_source = bayesrc$metadata$annotation_source %||% "not_applicable",
+    annotation_marker_alignment_status =
+      bayesrc$metadata$annotation_marker_alignment_status %||% "not_applicable",
     missing_genotype_policy = "mean_imputed_after_centering",
     phenotype_centering = preprocessing,
     phenotype_units = "retained_not_scaled",
@@ -803,8 +858,8 @@ mtblr_bed <- function(
     prior_kernel = semantics$prior_kernel,
     data_level = "individual",
     effect_scale_policy = if (!is.null(selection_s))
-      if (semantics$prior_kernel == "bayesr") "component_maf_s" else "maf_s"
-      else if (semantics$prior_kernel == "bayesr") "component" else "unit",
+      if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component_maf_s" else "maf_s"
+      else if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component" else "unit",
     model_semantics_version = 2L,
     model_semantics = "s_prefix_means_summary_statistics",
     residual_covariance = residual_covariance,
@@ -832,6 +887,9 @@ mtblr_bed <- function(
     selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
     initialization_policy = initialization$policy,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
+    updateAlpha = bayesrc$updateAlpha,
+    annotation_policy = if (is.null(bayesrc$model_parameters)) "global" else
+      "annotation_probit_stick",
     nit = as.integer(nit), nburn = as.integer(nburn),
     nthin = as.integer(nthin), seed = as.integer(seed),
     nchains = nchains, ncores = ncores, ncores_requested = ncores,
@@ -876,6 +934,9 @@ mtblr_bed <- function(
   fit$phenotype_preprocessing <- preprocessing
   fit$memory_estimate <- memory
   fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
+  fit <- .mtblr_bayesrc_format_fit(fit, raw$annotations, bayesrc)
+  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(selection_s))
+    warning("MAF-derived annotations and selection_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
   fit["convergence_traces"] <- list(convergence_traces)
   if (isTRUE(input$convergence_warning_emitted)) {
     warning(raw$diagnostics$convergence$warning_messages[1L], call. = FALSE)

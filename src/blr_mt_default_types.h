@@ -3,6 +3,7 @@
 
 #include <armadillo>
 #include "blr_mt_bayesr_types.h"
+#include "blr_mt_bayesrc_types.h"
 #include <utility>
 #include <vector>
 
@@ -25,6 +26,7 @@ struct MtDefaultModelSpec {
  const MtJointStateSpec* joint=nullptr;
  const std::vector<double>* marker_scale=nullptr;
  const std::vector<double>* pi_prior=nullptr;
+ const MtBayesRCSpec* bayesrc=nullptr;
 };
 
 struct MtDefaultCovariancePriorView {
@@ -52,6 +54,9 @@ struct MtDefaultInitialState {
  std::vector<int> component;
  std::vector<std::vector<double>> beta;
  std::vector<std::vector<int>> state;
+ arma::mat annotation_alpha;
+ arma::vec annotation_sigma;
+ std::vector<double> pattern_pi;
 };
 
 struct MtDefaultCoreResult {
@@ -93,6 +98,17 @@ struct MtDefaultCoreResult {
 
  std::vector<std::vector<double>> pistrait;
  std::vector<double> pismarker;
+
+ arma::mat annotation_alpha_final;
+ arma::mat annotation_alpha_mean;
+ arma::vec annotation_sigma_final;
+ arma::vec annotation_sigma_mean;
+ std::vector<double> pattern_pi_final;
+ std::vector<double> pattern_pi_mean;
+ std::vector<std::vector<double>> pattern_pi_trace;
+ arma::mat prior_component_probabilities;
+ int annotation_updates_attempted=0;
+ int annotation_updates_completed=0;
 };
 
 struct MtDefaultFinalResult {
@@ -134,6 +150,17 @@ struct MtDefaultFinalResult {
 
  std::vector<std::vector<double>> pitrait;
  std::vector<double> pimarker;
+
+ arma::mat annotation_alpha_final;
+ arma::mat annotation_alpha_mean;
+ arma::vec annotation_sigma_final;
+ arma::vec annotation_sigma_mean;
+ std::vector<double> pattern_pi_final;
+ std::vector<double> pattern_pi_mean;
+ std::vector<std::vector<double>> pattern_pi_trace;
+ arma::mat prior_component_probabilities;
+ int annotation_updates_attempted=0;
+ int annotation_updates_completed=0;
 };
 
 }  // namespace mt

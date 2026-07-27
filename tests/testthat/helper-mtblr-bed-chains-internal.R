@@ -11,7 +11,13 @@ phase17r_args <- function(case, nchains = 1L, ncores = 1L,
     joint_component = integer(), joint_multiplier = numeric(),
     joint_names = character(), component_count = 0L,
     marker_scale = numeric(), pi_prior = numeric(),
-    component_init = integer()
+    component_init = integer(),
+    annotations = matrix(numeric(), 0L, 0L),
+    alpha_init = matrix(numeric(), 0L, 0L),
+    sigma_alpha_init = numeric(), pattern_pi_init = numeric(),
+    pattern_pi_prior = numeric(), updateAlpha = FALSE,
+    intercept_flat = TRUE, sigma_alpha_a = 2, sigma_alpha_b = 2,
+    pi_floor = 1e-12, alpha_update_every = 1L
   ))
 }
 

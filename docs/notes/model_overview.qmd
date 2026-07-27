@@ -545,3 +545,9 @@ mixture multiplier and uses one unique null state. Packed BED uses public name
 `[2p(1-p)]^(S+1)`; fixed `S = -1` is the unit-scale reduction. The global
 probability vector is over joint states, while marker component probabilities
 marginalize over trait patterns.
+## MT annotation-informed mixture models
+
+Phase 20 adds MT BayesRC for packed BED and MT SBayesRC for CSR/block eigen.
+Annotations change component probabilities through ordered probit sticks;
+trait-pattern probabilities remain global conditional on a non-null component.
+The covariance prior and optional `selection_s` scaling remain separate.

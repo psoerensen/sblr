@@ -36,6 +36,9 @@ struct MtBedInitialState {
  arma::mat B;
  arma::mat E;
  std::vector<double> pi;
+ arma::mat annotation_alpha;
+ arma::vec annotation_sigma;
+ std::vector<double> pattern_pi;
 };
 
 struct MtBedExecutionSpec {

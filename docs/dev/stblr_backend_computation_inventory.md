@@ -760,3 +760,10 @@ CSR and block-eigen ST routes use `sbayesc`, `sbayesr`, and (where supported)
 `bayesc`, `bayesr`, and `bayesrc`. Internal backend identifiers and numerical
 kernels remain implementation-oriented. `selection_s` independently activates
 MAF scaling and is never inferred from the public model name.
+## Phase 20 reuse by MTBLR
+
+MT BayesRC reuses the established ST SBayesRC probit-stick category ordering,
+safe normal probability utilities, reached-stick augmentation, coefficient
+prior, intercept-flat convention, and variance update. This is shared
+scientific infrastructure, not a change to the validated ST kernels. MT adds
+one shared coefficient state per joint chain rather than one per trait.

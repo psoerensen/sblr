@@ -241,7 +241,7 @@
     logical(1)))
 }
 
-#' Joint multivariate BayesC, BayesR, and SBayesR with block-eigen operators
+#' Joint multivariate SBayesC, SBayesR, and SBayesRC with block-eigen operators
 #'
 #' Fits the aligned joint multivariate mixture model using canonical
 #' block-filtered operators built from PLINK BED data. The function currently
@@ -278,7 +278,12 @@ mtblr_block_eigen <- function(
   sample_overlap = "not_modeled", method = "sbayesc", n = NULL, sets = NULL,
   beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
   models = NULL, pimodels = NULL, mixture_var = NULL, joint_pi = NULL,
-  joint_pi_prior = NULL, component = NULL, selection_s = NULL,
+  joint_pi_prior = NULL, component = NULL,
+  annotations = NULL, add_intercept = TRUE,
+  standardize_annotations = TRUE, center_binary_annotations = FALSE,
+  alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
+  alpha_update_every = 1L, updateAlpha = TRUE, selection_s = NULL,
   selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
   estimate_selection_s = FALSE, selection_s_init = NULL,
   selection_s_prior = NULL, selection_s_proposal_sd = NULL,
@@ -381,6 +386,17 @@ mtblr_block_eigen <- function(
     st$m, mixture_var, joint_pi, joint_pi_prior, component, selection_s,
     estimate_selection_s, selection_s_init, selection_s_prior,
     selection_s_proposal_sd)
+  if (identical(semantics$prior_kernel, "bayesrc")) {
+    if (!is.null(joint_pi) || !is.null(joint_pi_prior))
+      stop("joint_pi and joint_pi_prior are not BayesRC controls; use pimodels for conditional pattern initialization.", call. = FALSE)
+    mixture$method_code <- 6L
+  }
+  bayesrc <- .mtblr_bayesrc_controls(
+    semantics$prior_kernel, annotations, aligned$marker_ids, pattern_spec,
+    mixture, add_intercept, standardize_annotations,
+    center_binary_annotations, alpha_init, sigmaSqAlpha_init,
+    intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor,
+    alpha_update_every, updateAlpha)
   mod <- mixture$patterns
   set_spec <- .mtblr_sets(sets, st$m)
   h2 <- rep(h2, length.out = st$nt)
@@ -432,6 +448,9 @@ mtblr_block_eigen <- function(
   memory <- .mtblr_bayesr_memory(
     memory,method,st$m,chain$nchains,chain$ncores,chain$nit+chain$nburn,
     nrow(mod$matrix),mixture$component_count)
+  memory <- .mtblr_bayesrc_memory(
+    memory,bayesrc,st$m,chain$nchains,chain$ncores,
+    chain$nit+chain$nburn)
   .blr_memory_warning(memory, memory_warning_gb, conv$mode,
                       conv$compute || conv$keep_traces, conv$keep_traces)
   native_execution <- mtblr_block_eigen_chains_raw_internal(
@@ -446,7 +465,15 @@ mtblr_block_eigen <- function(
     mixture$joint_multiplier,mixture$joint_names,mixture$component_count,
     mixture$marker_scale,initialization$component,mixture$pi_prior,
     lapply(seq_len(st$nt), function(t) initialization$beta[,t]),
-    lapply(seq_len(st$nt), function(t) initialization$state[,t]))
+    lapply(seq_len(st$nt), function(t) initialization$state[,t]),
+    bayesrc$annotations,bayesrc$alpha_init,bayesrc$sigma_alpha_init,
+    bayesrc$pattern_pi_init,bayesrc$pattern_pi_prior,bayesrc$updateAlpha,
+    bayesrc$intercept_flat,bayesrc$sigma_alpha_a,bayesrc$sigma_alpha_b,
+    bayesrc$pi_floor,bayesrc$alpha_update_every)
+  if (!is.null(bayesrc$model_parameters))
+    native_execution$raws <- lapply(native_execution$raws,
+      .mtblr_bayesrc_enrich_raw, bayesrc = bayesrc, method = method,
+      updatePi = updatePi)
   execution <- .mtblr_summary_multichain(
     native_execution, chain, conv, st$trait_names, method, "block_eigen",
     updateB, updateE, mixture$model_parameters)
@@ -476,6 +503,9 @@ mtblr_block_eigen <- function(
     selection_maf_population = maf_info$selection_maf_population,
     selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
     selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    annotation_source = bayesrc$metadata$annotation_source %||% "not_applicable",
+    annotation_marker_alignment_status =
+      bayesrc$metadata$annotation_marker_alignment_status %||% "not_applicable",
     trait_owner = trait_owner,
     scale = "standardized_genotype",
     summary_reference = summary_reference,
@@ -503,8 +533,8 @@ mtblr_block_eigen <- function(
     prior_kernel = semantics$prior_kernel,
     data_level = "summary_statistics",
     effect_scale_policy = if (!is.null(selection_s))
-      if (semantics$prior_kernel == "bayesr") "component_maf_s" else "maf_s"
-      else if (semantics$prior_kernel == "bayesr") "component" else "unit",
+      if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component_maf_s" else "maf_s"
+      else if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component" else "unit",
     model_semantics_version = 2L,
     model_semantics = "s_prefix_means_summary_statistics",
     summary_reference = summary_reference,
@@ -523,6 +553,9 @@ mtblr_block_eigen <- function(
       "ess_per_chain_threshold", "mcse_mean_over_sd_threshold",
       "keep_traces")], memory_warning_gb = memory_warning_gb,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
+    updateAlpha = bayesrc$updateAlpha,
+    annotation_policy = if (is.null(bayesrc$model_parameters)) "global" else
+      "annotation_probit_stick",
     models = mod$matrix, model_names = mod$names,
     pimodels = mod$probabilities, mixture_var = mixture$mixture_var,
     joint_pi_prior = mixture$pi_prior, selection_s = mixture$selection_s,
@@ -570,6 +603,9 @@ mtblr_block_eigen <- function(
   fit["convergence_traces"] <- list(execution$convergence_traces)
   fit$input$memory_estimate <- memory
   fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
+  fit <- .mtblr_bayesrc_format_fit(fit, raw$annotations, bayesrc)
+  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(selection_s))
+    warning("MAF-derived annotations and selection_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
   messages <- .blr_convergence_warning_messages(
     fit$convergence, if (conv$mode == "core") "core" else "auto",
     "mtblr", "block_eigen")

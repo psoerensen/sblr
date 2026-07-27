@@ -500,3 +500,14 @@ policies remain unsupported for MTBLR in Phase 19 and fail before execution.
 
 The analogous BayesC mapping is packed-BED `bayesc` versus summary
 `sbayesc`. Model semantics version 2 records this mapping explicitly.
+## Phase 20 MT BayesRC capability
+
+| Family | Operator | Public model | Annotation policy | Fixed selection-S | Sampled selection-S | Status |
+|---|---|---|---|---|---|---|
+| mtblr | packed_bed | bayesrc | annotation_probit_stick | supported | unsupported | public_canonical |
+| mtblr | csr | sbayesrc | annotation_probit_stick | supported | unsupported | public_canonical |
+| mtblr | block_eigen | sbayesrc | annotation_probit_stick | supported | unsupported | public_canonical |
+
+Annotations are mandatory and explicitly marker aligned. MT fixed-marker,
+group, learned-logistic BayesC policies and annotation-dependent trait-pattern
+probabilities remain unsupported.

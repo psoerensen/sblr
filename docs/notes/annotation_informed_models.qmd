@@ -715,3 +715,10 @@ scientific interpretation issue rather than an automatic validation error.
 - [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd)
 - [Complete annotation workflow](../../examples/workflows/annotation_based_models.R)
 - [Archived annotation-prior draft](drafts/annotation_informed_priors_stblr_mtblr.qmd)
+## MT BayesRC/SBayesRC
+
+MT annotations require explicit marker IDs and are processed once. The public
+output distinguishes posterior marker component probabilities from posterior
+mean annotation-driven prior probabilities. MAF-derived annotations may be
+combined with fixed `selection_s`, but the fit records the overlap and warns
+once because MAF then enters both probability and effect-scale policies.

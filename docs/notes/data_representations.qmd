@@ -436,3 +436,10 @@ Public model names encode data level: packed-BED individual data use
 `sbayesc`/`sbayesr`/`sbayesrc`. This is independent of optional `selection_s`
 MAF scaling. Fits record both `data_level` and `prior_kernel`, so reductions
 compare the shared kernel without requiring equal public model names.
+## MT annotation representation
+
+BayesRC annotations are a shared immutable marker-by-annotation matrix aligned
+by explicit marker ID before native dispatch. Coefficients, variances, latent
+probit workspace, and accumulators are chain private. Public prior component
+probabilities are marker by component; no full marker-by-joint-state array is
+returned by default.

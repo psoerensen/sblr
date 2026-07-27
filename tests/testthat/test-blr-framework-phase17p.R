@@ -195,7 +195,7 @@ test_that("Phase 17P rejects unsupported or malformed public input", {
   expect_error(mtblr_bed(case$Y, list(case$Glist, case$Glist)), "one Glist")
   expect_error(call(covar = matrix(1, nrow(case$Y), 1L)), "does not currently")
   expect_error(call(scale = FALSE), "scale = TRUE")
-  expect_error(call(method = "bayesrc"), "bayesc.*bayesr")
+  expect_error(call(method = "bayesrc"), "annotations is required")
   bad <- case; bad$Y[1L, 1L] <- NA_real_
   expect_error(do.call(mtblr_bed, phase17p_public_args(
     bad, "full", FALSE)), "complete finite")
@@ -240,7 +240,11 @@ test_that("Phase 17P public architecture is singular and protected", {
     "residual_covariance", "method", "trait_metadata", "sets",
     "block_size", "beta", "b", "state", "h2", "pi", "models",
     "pimodels", "mixture_var", "joint_pi", "joint_pi_prior",
-    "component", "selection_s", "selection_maf",
+    "component", "annotations", "add_intercept",
+    "standardize_annotations", "center_binary_annotations", "alpha_init",
+    "sigmaSqAlpha_init", "intercept_flat", "sigmaSqAlpha_a",
+    "sigmaSqAlpha_b", "pi_floor", "alpha_update_every", "updateAlpha",
+    "selection_s", "selection_maf",
     "allow_reference_maf_for_selection_s", "estimate_selection_s",
     "selection_s_init", "selection_s_prior", "selection_s_proposal_sd",
     "vg", "vb", "ve", "ssb_prior", "sse_prior",

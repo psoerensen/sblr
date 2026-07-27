@@ -144,6 +144,16 @@ inline MtBedChainSummary summarize_mt_bed_chain(
  summary.pi_final=core.pi;
  summary.pi_mean=mt_bed_mean_vector(core.pis, core.pi_retained_count);
  summary.pi_trace=core.pi_trace;
+ summary.annotation_alpha_final=core.annotation_alpha_final;
+ summary.annotation_alpha_mean=core.annotation_alpha_mean;
+ summary.annotation_sigma_final=core.annotation_sigma_final;
+ summary.annotation_sigma_mean=core.annotation_sigma_mean;
+ summary.pattern_pi_final=core.pattern_pi_final;
+ summary.pattern_pi_mean=core.pattern_pi_mean;
+ summary.pattern_pi_trace=core.pattern_pi_trace;
+ summary.prior_component_probabilities=core.prior_component_probabilities;
+ summary.annotation_updates_attempted=core.annotation_updates_attempted;
+ summary.annotation_updates_completed=core.annotation_updates_completed;
  summary.diagnostics=result.core.diagnostics;
  return summary;
 }
@@ -184,6 +194,15 @@ inline MtBedChainsAggregateResult aggregate_mt_bed_chains(
   std::fill(row.begin(),row.end(),0.0);
  for (std::vector<double>& row : pooled.pi_trace)
   std::fill(row.begin(),row.end(),0.0);
+ if (pooled.annotation_alpha_mean.n_elem>0) pooled.annotation_alpha_mean.zeros();
+ if (pooled.annotation_sigma_mean.n_elem>0) pooled.annotation_sigma_mean.zeros();
+ if (pooled.prior_component_probabilities.n_elem>0)
+  pooled.prior_component_probabilities.zeros();
+ std::fill(pooled.pattern_pi_mean.begin(),pooled.pattern_pi_mean.end(),0.0);
+ for (std::vector<double>& row:pooled.pattern_pi_trace)
+  std::fill(row.begin(),row.end(),0.0);
+ pooled.annotation_updates_attempted=0;
+ pooled.annotation_updates_completed=0;
  std::fill(pooled.pis.begin(), pooled.pis.end(), 0.0);
  pooled.marker_retained_count=0.0;
  pooled.covb_retained_count=0.0;
@@ -207,6 +226,17 @@ inline MtBedChainsAggregateResult aggregate_mt_bed_chains(
   mt_bed_add_nested(pooled.vld, core.vld);
   mt_bed_add_nested(pooled.component_counts,core.component_counts);
   mt_bed_add_nested(pooled.pi_trace,core.pi_trace);
+  if (pooled.annotation_alpha_mean.n_elem>0)
+   pooled.annotation_alpha_mean+=core.annotation_alpha_mean;
+  if (pooled.annotation_sigma_mean.n_elem>0)
+   pooled.annotation_sigma_mean+=core.annotation_sigma_mean;
+  if (pooled.prior_component_probabilities.n_elem>0)
+   pooled.prior_component_probabilities+=core.prior_component_probabilities;
+  for (std::size_t p=0;p<pooled.pattern_pi_mean.size();++p)
+   pooled.pattern_pi_mean[p]+=core.pattern_pi_mean[p];
+  mt_bed_add_nested(pooled.pattern_pi_trace,core.pattern_pi_trace);
+  pooled.annotation_updates_attempted+=core.annotation_updates_attempted;
+  pooled.annotation_updates_completed+=core.annotation_updates_completed;
   for (std::size_t model=0; model<pooled.pis.size(); ++model) {
    pooled.pis[model]+=core.pis[model];
   }
@@ -240,6 +270,15 @@ inline MtBedChainsAggregateResult aggregate_mt_bed_chains(
  mt_bed_scale_nested(pooled.vle, static_cast<double>(results.size()));
  mt_bed_scale_nested(pooled.vld, static_cast<double>(results.size()));
  mt_bed_scale_nested(pooled.pi_trace,static_cast<double>(results.size()));
+ if (pooled.annotation_alpha_mean.n_elem>0)
+  pooled.annotation_alpha_mean/=static_cast<double>(results.size());
+ if (pooled.annotation_sigma_mean.n_elem>0)
+  pooled.annotation_sigma_mean/=static_cast<double>(results.size());
+ if (pooled.prior_component_probabilities.n_elem>0)
+  pooled.prior_component_probabilities/=static_cast<double>(results.size());
+ for (double& value:pooled.pattern_pi_mean)
+  value/=static_cast<double>(results.size());
+ mt_bed_scale_nested(pooled.pattern_pi_trace,static_cast<double>(results.size()));
 
  const std::size_t nt=reference.bm.size();
  const std::size_t m=nt==0 ? 0 : reference.bm[0].size();

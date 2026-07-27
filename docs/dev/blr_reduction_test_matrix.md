@@ -778,3 +778,10 @@ the scalar and joint covariance-prior updates explicitly; the conditional
 mixture scale and LE/LD definitions remain common. BED/summary posterior paths
 are compared only where their likelihood and residual-covariance contracts
 coincide.
+## Phase 20 annotation-prior reductions
+
+Permanent owners cover the independent probit-stick oracle, exact fixed-alpha
+BayesR reduction, exact/unfiltered CSR-to-block-eigen SBayesRC reduction,
+individual/summary prior-contract equality, selection-S unit-scale reduction,
+and marker-ID permutation invariance. Posterior BED/summary equality is not
+claimed when their likelihood or residual-covariance contracts differ.

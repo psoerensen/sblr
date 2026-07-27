@@ -24,6 +24,17 @@ phase17s_internal_args <- function(public_args) {
   args$marker_scale <- numeric()
   args$pi_prior <- numeric()
   args$component_init <- integer()
+  args$annotations <- matrix(numeric(), 0L, 0L)
+  args$alpha_init <- matrix(numeric(), 0L, 0L)
+  args$sigma_alpha_init <- numeric()
+  args$pattern_pi_init <- numeric()
+  args$pattern_pi_prior <- numeric()
+  args$updateAlpha <- FALSE
+  args$intercept_flat <- TRUE
+  args$sigma_alpha_a <- 2
+  args$sigma_alpha_b <- 2
+  args$pi_floor <- 1e-12
+  args$alpha_update_every <- 1L
   args
 }
 

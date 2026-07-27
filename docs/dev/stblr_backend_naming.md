@@ -486,3 +486,9 @@ STBLR and MTBLR. MT joint-state probability names are model-specific and do
 not change ST global mixture-probability semantics.
 MAF-dependent scaling is represented only by explicit `selection_s` metadata
 and the `maf_s`/`component_maf_s` effect-scale policy.
+## Cross-family BayesRC naming after Phase 20
+
+STBLR and MTBLR use `bayesrc` for individual-level and `sbayesrc` for summary
+statistics. Both names identify the BayesRC prior kernel and data level;
+neither name activates `selection_s`. Annotation policy remains the independent
+machine identifier `annotation_probit_stick`.

@@ -42,7 +42,8 @@ MtBedChainExecutionResult run_mt_bed_chain_task(
     const MtBedExecutionSpec& base_execution,
     const MtJointStateSpec* joint=nullptr,
     const std::vector<double>* marker_scale=nullptr,
-    const std::vector<double>* pi_prior=nullptr) {
+    const std::vector<double>* pi_prior=nullptr,
+    const MtBayesRCSpec* bayesrc=nullptr) {
  MtBedChainExecutionResult result;
  result.chain=task.chain;
  result.seed=task.seed;
@@ -52,7 +53,7 @@ MtBedChainExecutionResult run_mt_bed_chain_task(
   execution.seed=task.seed;
   result.core=run_mt_bed_bayesc_core(
    data, initial, sets, ssb_prior, sse_prior, models, nub, nue,
-   execution,joint,marker_scale,pi_prior);
+   execution,joint,marker_scale,pi_prior,bayesrc);
   result.failed=false;
   result.error.clear();
  } catch (const std::exception& error) {
@@ -82,7 +83,8 @@ std::vector<MtBedChainExecutionResult> dispatch_mt_bed_chain_tasks(
     const MtBedExecutionSpec& base_execution,
     const MtJointStateSpec* joint=nullptr,
     const std::vector<double>* marker_scale=nullptr,
-    const std::vector<double>* pi_prior=nullptr) {
+    const std::vector<double>* pi_prior=nullptr,
+    const MtBayesRCSpec* bayesrc=nullptr) {
  std::vector<MtBedChainExecutionResult> results(tasks.size());
  for (std::size_t chain=0; chain<tasks.size(); ++chain) {
   results[chain].chain=tasks[chain].chain;
@@ -92,7 +94,7 @@ std::vector<MtBedChainExecutionResult> dispatch_mt_bed_chain_tasks(
   for (std::size_t chain=0; chain<tasks.size(); ++chain) {
    results[chain]=run_mt_bed_chain_task(
     tasks[chain], data, initial, sets, ssb_prior, sse_prior,
-    models, nub, nue, base_execution,joint,marker_scale,pi_prior);
+    models, nub, nue, base_execution,joint,marker_scale,pi_prior,bayesrc);
   }
   return results;
  }
@@ -102,13 +104,13 @@ std::vector<MtBedChainExecutionResult> dispatch_mt_bed_chain_tasks(
   results[static_cast<std::size_t>(chain)]=run_mt_bed_chain_task(
    tasks[static_cast<std::size_t>(chain)], data, initial, sets,
    ssb_prior, sse_prior, models, nub, nue, base_execution,
-   joint,marker_scale,pi_prior);
+   joint,marker_scale,pi_prior,bayesrc);
  }
 #else
  for (std::size_t chain=0; chain<tasks.size(); ++chain) {
   results[chain]=run_mt_bed_chain_task(
    tasks[chain], data, initial, sets, ssb_prior, sse_prior,
-   models, nub, nue, base_execution,joint,marker_scale,pi_prior);
+   models, nub, nue, base_execution,joint,marker_scale,pi_prior,bayesrc);
  }
 #endif
  return results;

@@ -26,6 +26,18 @@ mtblr_csr(
   joint_pi = NULL,
   joint_pi_prior = NULL,
   component = NULL,
+  annotations = NULL,
+  add_intercept = TRUE,
+  standardize_annotations = TRUE,
+  center_binary_annotations = FALSE,
+  alpha_init = NULL,
+  sigmaSqAlpha_init = NULL,
+  intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2,
+  sigmaSqAlpha_b = 2,
+  pi_floor = 1e-12,
+  alpha_update_every = 1L,
+  updateAlpha = TRUE,
   selection_s = NULL,
   selection_maf = NULL,
   allow_reference_maf_for_selection_s = FALSE,
@@ -73,7 +85,7 @@ single-trait objects containing `wy`, `ww`, `yy`, `n`, and marker IDs.}
 
 \item{sample_overlap}{Must be `"not_modeled"`.}
 
-\item{method}{Exactly `"sbayesc"` or `"sbayesr"`; the `s` prefix denotes
+\item{method}{Exactly `"sbayesc"`, `"sbayesr"`, or `"sbayesrc"`; the `s` prefix denotes
 summary-statistics data and does not activate MAF scaling.}
 
 \item{n}{Optional sample sizes overriding identical values only.}
@@ -98,6 +110,32 @@ joint pattern-by-component states.}
 \item{joint_pi_prior}{Optional positive Dirichlet prior over joint states.}
 
 \item{component}{Optional zero-based component initialization per marker.}
+
+\item{annotations}{Required marker-by-annotation numeric matrix or data
+frame for `"sbayesrc"`. Explicit unique marker IDs are required and are
+matched to the final marker order.}
+
+\item{add_intercept}{Add one intercept when none is supplied.}
+
+\item{standardize_annotations}{Standardize eligible non-intercept columns.}
+
+\item{center_binary_annotations}{Center and scale binary annotations when
+standardization is enabled.}
+
+\item{alpha_init}{Optional processed-annotation-by-stick coefficient matrix.}
+
+\item{sigmaSqAlpha_init}{Optional positive variance initialization per stick.}
+
+\item{intercept_flat}{Use a flat prior for the first intercept coefficient.}
+
+\item{sigmaSqAlpha_a, sigmaSqAlpha_b}{Positive annotation-variance prior
+hyperparameters.}
+
+\item{pi_floor}{Probability floor used by probit stick-breaking.}
+
+\item{alpha_update_every}{Positive iteration interval for coefficient updates.}
+
+\item{updateAlpha}{Update annotation coefficients and their variances.}
 
 \item{selection_s}{Optional fixed scalar MAF-S exponent, independent of the
 summary-statistics `sbayesr` model name.}

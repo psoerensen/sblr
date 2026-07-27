@@ -2,7 +2,7 @@
 % Please edit documentation in R/mtblr-bed.R
 \name{mtblr_bed}
 \alias{mtblr_bed}
-\title{Fit joint multivariate BayesC models directly from PLINK BED genotypes}
+\title{Fit joint multivariate BayesC, BayesR, and BayesRC models from PLINK BED}
 \usage{
 mtblr_bed(
   y,
@@ -29,6 +29,18 @@ mtblr_bed(
   joint_pi = NULL,
   joint_pi_prior = NULL,
   component = NULL,
+  annotations = NULL,
+  add_intercept = TRUE,
+  standardize_annotations = TRUE,
+  center_binary_annotations = FALSE,
+  alpha_init = NULL,
+  sigmaSqAlpha_init = NULL,
+  intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2,
+  sigmaSqAlpha_b = 2,
+  pi_floor = 1e-12,
+  alpha_update_every = 1L,
+  updateAlpha = TRUE,
   selection_s = NULL,
   selection_maf = NULL,
   allow_reference_maf_for_selection_s = FALSE,
@@ -81,7 +93,7 @@ must already satisfy the native centering tolerance.}
 
 \item{residual_covariance}{Either `"full"` or `"diagonal"`.}
 
-\item{method}{One of `"bayesc"` or `"bayesr"`; packed BED is individual
+\item{method}{One of `"bayesc"`, `"bayesr"`, or `"bayesrc"`; packed BED is individual
 level and therefore rejects summary-statistics `s` model names.}
 
 \item{trait_metadata}{Optional data frame with one row per trait.}
@@ -109,6 +121,32 @@ joint pattern-by-component states.}
 
 \item{component}{Optional zero-based component initialization, one value per
 marker and consistent with `state`.}
+
+\item{annotations}{Required marker-by-annotation numeric matrix or data
+frame for `"bayesrc"`. Explicit unique marker IDs are matched to selected
+BED markers.}
+
+\item{add_intercept}{Add one intercept when none is supplied.}
+
+\item{standardize_annotations}{Standardize eligible non-intercept columns.}
+
+\item{center_binary_annotations}{Center and scale binary annotations when
+standardization is enabled.}
+
+\item{alpha_init}{Optional processed-annotation-by-stick coefficient matrix.}
+
+\item{sigmaSqAlpha_init}{Optional positive variance initialization per stick.}
+
+\item{intercept_flat}{Use a flat prior for the first intercept coefficient.}
+
+\item{sigmaSqAlpha_a, sigmaSqAlpha_b}{Positive annotation-variance prior
+hyperparameters.}
+
+\item{pi_floor}{Probability floor used by probit stick-breaking.}
+
+\item{alpha_update_every}{Positive iteration interval for coefficient updates.}
+
+\item{updateAlpha}{Update annotation coefficients and their variances.}
 
 \item{selection_s}{Optional fixed scalar MAF-S exponent for BayesR; the BED
 model name remains `bayesr` because the data are individual-level.}

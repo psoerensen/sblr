@@ -9,7 +9,7 @@ namespace sblr {
 namespace mt {
 
 template <class DataView>
-inline void sample_mt_bayesr_marker(
+inline std::size_t sample_mt_bayesr_marker(
  int marker, int nt, const DataView& data, const MtJointStateSpec& joint,
  const std::vector<double>& marker_scale, std::vector<double>& counts,
  const std::vector<double>& pi, const arma::mat& Ei, const arma::mat& Bi,
@@ -41,6 +41,7 @@ inline void sample_mt_bayesr_marker(
   d[trait][marker]=selected>0 ? joint.patterns[selected][trait] : 0;
  }
  component[marker]=selected>0 ? joint.component[selected] : 0;
+ return selected;
 }
 
 template <class DataView>
@@ -86,8 +87,8 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  std::vector<std::vector<double>> beta=initial_state.beta.empty() ?
   std::vector<std::vector<double>>(nt,std::vector<double>(m,0.0)) :
   std::move(initial_state.beta);
- if (method==5 && component.empty()) component.assign(m,0);
- if (method==5 && component.size()!=static_cast<std::size_t>(m))
+ if ((method==5 || method==6) && component.empty()) component.assign(m,0);
+ if ((method==5 || method==6) && component.size()!=static_cast<std::size_t>(m))
   throw std::invalid_argument("MT component initialization must have length m");
 
  std::vector<double> mu(nt), rhs(nt), conv(nt);
@@ -96,7 +97,7 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  std::vector<std::vector<double>> pi_trace(
   nmodels,std::vector<double>(execution.nit+execution.nburn,0.0));
  int component_count=0;
- if (method==5) {
+ if (method==5 || method==6) {
   if (model.joint==nullptr || model.marker_scale==nullptr)
    throw std::invalid_argument("MT BayesR requires joint states and marker scales");
   validate_mt_joint_state_spec(*model.joint,static_cast<std::size_t>(nt));
@@ -118,6 +119,49 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
     if (!std::isfinite(value) || value<=0.0)
      throw std::invalid_argument("MT BayesR pi prior must be finite and positive");
   }
+ }
+ arma::mat annotation_alpha=std::move(initial_state.annotation_alpha);
+ arma::vec annotation_sigma=std::move(initial_state.annotation_sigma);
+ std::vector<double> pattern_pi=std::move(initial_state.pattern_pi);
+ arma::mat annotation_alpha_sum;
+ arma::vec annotation_sigma_sum;
+ arma::mat prior_component_sum;
+ arma::mat marker_component_prior;
+ std::vector<double> pattern_pi_sum;
+ std::vector<std::vector<double>> pattern_pi_trace;
+ int annotation_updates_attempted=0;
+ int annotation_updates_completed=0;
+ double annotation_retained_count=0.0;
+ if (method==6) {
+  if (model.bayesrc==nullptr)
+   throw std::invalid_argument("MT BayesRC requires an annotation specification");
+  validate_mt_bayesrc_spec(*model.bayesrc,*model.joint,
+   static_cast<std::size_t>(m));
+  const std::size_t nstep=static_cast<std::size_t>(component_count-1);
+  const std::size_t q=model.bayesrc->annotations->n_cols;
+  const std::size_t npattern=mt_bayesrc_pattern_count(*model.joint);
+  if (annotation_alpha.n_rows!=q || annotation_alpha.n_cols!=nstep ||
+      annotation_sigma.n_elem!=nstep || !annotation_alpha.is_finite() ||
+      !annotation_sigma.is_finite() || arma::any(annotation_sigma<=0.0) ||
+      pattern_pi.size()!=npattern)
+   throw std::invalid_argument("MT BayesRC annotation initialization dimensions differ");
+  double omega_total=0.0;
+  for (double value:pattern_pi) {
+   if (!std::isfinite(value) || value<0.0)
+    throw std::invalid_argument("MT BayesRC pattern probabilities must be nonnegative");
+   omega_total+=value;
+  }
+  if (!std::isfinite(omega_total) || omega_total<=0.0)
+   throw std::invalid_argument("MT BayesRC pattern probabilities cannot be normalized");
+  for (double& value:pattern_pi) value/=omega_total;
+  marker_component_prior=st_bayesrc_compute_snp_pi(
+   *model.bayesrc->annotations,annotation_alpha,model.bayesrc->pi_floor);
+  annotation_alpha_sum.zeros(q,nstep);
+  annotation_sigma_sum.zeros(nstep);
+  prior_component_sum.zeros(static_cast<arma::uword>(m),component_count);
+  pattern_pi_sum.assign(npattern,0.0);
+  pattern_pi_trace.assign(npattern,
+   std::vector<double>(execution.nit+execution.nburn,0.0));
  }
  std::vector<std::vector<double>> component_counts(
   static_cast<std::size_t>(m),std::vector<double>(component_count,0.0));
@@ -155,7 +199,7 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
   pitrait[t][0] = 1.0-pi[0];
   pitrait[t][1] = pi[0];
  }
- if(method==5){
+ if(method==5 || method==6){
   for (int t = 0; t < nt; t++) {
    pitrait[t][0] = 0.95;
    pitrait[t][1] = 0.02;
@@ -265,9 +309,11 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
     }
    }
   }
-  if (method==5) {
+  if (method==5 || method==6) {
    const auto& joint=*model.joint;
    const auto& scales=*model.marker_scale;
+   std::vector<double> pattern_counts;
+   if (method==6) pattern_counts=model.bayesrc->pattern_prior;
    for (size_t s=0;s<sets.size();++s) {
     const auto& set=sets[s];
     if (execution.updateB) {
@@ -281,8 +327,30 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
     for (int isort=0;isort<m;++isort) {
      const int marker=order[isort];
      if (current_set.find(marker)!=current_set.end())
-      sample_mt_bayesr_marker(marker,nt,data,joint,scales,cmodel,pi,Ei,Bi,
-       r,beta,b,d,component,gen);
+      {
+       const std::vector<double> marker_prior=method==6 ?
+        mt_bayesrc_marker_prior(marker_component_prior.row(marker),pattern_pi,joint) : pi;
+       const std::size_t selected=sample_mt_bayesr_marker(
+        marker,nt,data,joint,scales,cmodel,marker_prior,Ei,Bi,
+        r,beta,b,d,component,gen);
+       if (method==6 && selected>0)
+        pattern_counts[mt_bayesrc_pattern_index(selected,joint)]+=1.0;
+      }
+    }
+   }
+   if (method==6) {
+    if (execution.updatePi) samplePi(pattern_counts,pattern_pi,gen);
+    if (model.bayesrc->update_alpha &&
+        ((it+1)%model.bayesrc->alpha_update_every==0)) {
+     ++annotation_updates_attempted;
+     arma::Row<int> component_row(component);
+     st_bayesrc_update_annotation_prior(
+      *model.bayesrc->annotations,component_row,annotation_alpha,
+      annotation_sigma,model.bayesrc->intercept_flat,
+      model.bayesrc->sigma_alpha_a,model.bayesrc->sigma_alpha_b,gen);
+     marker_component_prior=st_bayesrc_compute_snp_pi(
+      *model.bayesrc->annotations,annotation_alpha,model.bayesrc->pi_floor);
+     ++annotation_updates_completed;
     }
    }
   }
@@ -298,7 +366,7 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
     }
    }
   }
-  if (method==5 && it>=execution.nburn &&
+  if ((method==5 || method==6) && it>=execution.nburn &&
       ((it-execution.nburn)%execution.nthin==0))
    for (int marker=0;marker<m;++marker)
     component_counts[marker][component[marker]]+=1.0;
@@ -315,10 +383,23 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
    for (int k=0;k<nmodels;++k) pis[k]+=pi[k];
    pi_retained_count+=1.0;
   }
-  for (int state=0;state<nmodels;++state) pi_trace[state][it]=pi[state];
+  if (method!=6)
+   for (int state=0;state<nmodels;++state) pi_trace[state][it]=pi[state];
+  else {
+   for (std::size_t p=0;p<pattern_pi.size();++p)
+    pattern_pi_trace[p][it]=pattern_pi[p];
+   if (it>=execution.nburn) {
+    annotation_alpha_sum+=annotation_alpha;
+    annotation_sigma_sum+=annotation_sigma;
+    prior_component_sum+=marker_component_prior;
+    for (std::size_t p=0;p<pattern_pi.size();++p)
+     pattern_pi_sum[p]+=pattern_pi[p];
+    annotation_retained_count+=1.0;
+   }
+  }
 
   // Sample marker variance
-  if(execution.updateB && (method==4 || method==5)) {
+  if(execution.updateB && (method==4 || method==5 || method==6)) {
    if (method==4) sampleB(nt,m,nub,B,d,b,ssb_prior,gen);
    else {
     const auto base=mt_bayesr_base_effects(
@@ -414,6 +495,22 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  result.pi_trace=std::move(pi_trace);
  result.pistrait=std::move(pistrait);
  result.pismarker=std::move(pismarker);
+ if (method==6) {
+  result.annotation_alpha_final=annotation_alpha;
+  result.annotation_sigma_final=annotation_sigma;
+  result.pattern_pi_final=pattern_pi;
+  result.pattern_pi_trace=std::move(pattern_pi_trace);
+  result.annotation_updates_attempted=annotation_updates_attempted;
+  result.annotation_updates_completed=annotation_updates_completed;
+  if (annotation_retained_count<=0.0)
+   throw std::runtime_error("MT BayesRC has no retained annotation samples");
+  result.annotation_alpha_mean=annotation_alpha_sum/annotation_retained_count;
+  result.annotation_sigma_mean=annotation_sigma_sum/annotation_retained_count;
+  result.prior_component_probabilities=
+   prior_component_sum/annotation_retained_count;
+  result.pattern_pi_mean=pattern_pi_sum;
+  for (double& value:result.pattern_pi_mean) value/=annotation_retained_count;
+ }
  return result;
 }
 

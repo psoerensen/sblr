@@ -71,6 +71,17 @@ inline MtDefaultFinalResult finalize_mt_default_result(
  // core accumulators remain zero. Moving them preserves their zero semantics.
  result.pitrait=std::move(core_result.pistrait);
  result.pimarker=std::move(core_result.pismarker);
+ result.annotation_alpha_final=std::move(core_result.annotation_alpha_final);
+ result.annotation_alpha_mean=std::move(core_result.annotation_alpha_mean);
+ result.annotation_sigma_final=std::move(core_result.annotation_sigma_final);
+ result.annotation_sigma_mean=std::move(core_result.annotation_sigma_mean);
+ result.pattern_pi_final=std::move(core_result.pattern_pi_final);
+ result.pattern_pi_mean=std::move(core_result.pattern_pi_mean);
+ result.pattern_pi_trace=std::move(core_result.pattern_pi_trace);
+ result.prior_component_probabilities=
+  std::move(core_result.prior_component_probabilities);
+ result.annotation_updates_attempted=core_result.annotation_updates_attempted;
+ result.annotation_updates_completed=core_result.annotation_updates_completed;
  return result;
 }
 

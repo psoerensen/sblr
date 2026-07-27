@@ -158,3 +158,11 @@ joint probabilities, RNG, effects, residuals, accumulators, and core variance
 traces. `keep_chains` controls compact records, while convergence trace capture
 and retention remain independent. BayesR/SBayesR retain the common iteration ×
 trait `vbs`, `vgs`, `ves`, `vle`, and `vld` traces.
+## Phase 20 MT annotation-informed routes
+
+The canonical MT matrix now includes `mtblr_bed(method="bayesrc")` and
+`mtblr_csr()`/`mtblr_block_eigen(method="sbayesrc")`. All three routes share
+`prior_kernel="bayesrc"`, `annotation_policy="annotation_probit_stick"`, one
+Phase 19 joint-state descriptor, one base B, and the same chain/convergence
+infrastructure. Annotation preprocessing and operator preparation each occur
+once per fit; chain-private coefficient states never cross worker boundaries.

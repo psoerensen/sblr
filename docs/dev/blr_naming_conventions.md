@@ -78,3 +78,12 @@ MTBLR. MT joint states are named `null` and
 with zero reserved for null; `component_probabilities` includes component zero.
 `pi_final`, `pi_mean`, and `pi_trace` name the joint-state probability vector.
 No `pi`, `pim`, `pis`, `comp_prob`, or case-variant method aliases are added.
+## Annotation-informed MT names
+
+`bayesrc` denotes individual-level annotation-informed BayesR and `sbayesrc`
+denotes its summary-statistics data-level counterpart. `selection_s` is an
+independent optional scale policy. `prior_component_probabilities` is the
+posterior mean annotation-driven prior; `component_probabilities` is the
+posterior marker-state distribution; global conditional pattern probabilities
+use the `pattern_pi_*` prefix. Phase 19 joint `pi_*` fields are present but NULL
+for BayesRC/SBayesRC and are never redefined as marker averages.

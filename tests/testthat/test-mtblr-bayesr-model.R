@@ -86,10 +86,16 @@ test_that("one unit positive component reduces to the BayesC marker kernel", {
 })
 
 test_that("MT BayesR public controls are aligned and failure-closed", {
-  controls <- c("mixture_var", "joint_pi", "joint_pi_prior", "component",
+  bayesr_controls <- c("mixture_var", "joint_pi", "joint_pi_prior", "component")
+  bayesrc_controls <- c("annotations", "add_intercept",
+    "standardize_annotations", "center_binary_annotations", "alpha_init",
+    "sigmaSqAlpha_init", "intercept_flat", "sigmaSqAlpha_a",
+    "sigmaSqAlpha_b", "pi_floor", "alpha_update_every", "updateAlpha")
+  selection_controls <- c(
     "selection_s", "selection_maf", "allow_reference_maf_for_selection_s",
     "estimate_selection_s", "selection_s_init",
     "selection_s_prior", "selection_s_proposal_sd")
+  controls <- c(bayesr_controls, bayesrc_controls, selection_controls)
   for (fun in list(mtblr_csr, mtblr_block_eigen, mtblr_bed)) {
     form <- names(formals(fun))
     start <- match("mixture_var", form)

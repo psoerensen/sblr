@@ -571,3 +571,9 @@ The implementation contracts described here are based on the public wrapper,
 deterministic diagnostic helpers, helper tests, and native CSR sampler. The
 archived annotation draft supplies the broader motivation for direct
 annotation-dependent mixture priors.
+## Shared MT extension
+
+Phase 20 reuses the ST probit-stick order and coefficient-prior update for one
+joint MT component state. It does not create trait-, pattern-, operator-, or
+component-covariance-specific coefficient matrices. Global non-null pattern
+probabilities form the second factor of the marker-state prior.

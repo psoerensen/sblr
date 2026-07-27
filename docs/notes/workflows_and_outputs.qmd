@@ -1080,3 +1080,11 @@ For MT BayesR/SBayesR, inspect `component_final`,
 `model_parameters$mixture`. Core convergence still covers only `vbs`, `vgs`,
 `ves`, `vle`, and `vld`; probability, component, S, and marker diagnostics are
 deferred.
+## MT BayesRC outputs
+
+Use `mtblr_bed(method="bayesrc")` for individual data and
+`mtblr_csr()`/`mtblr_block_eigen(method="sbayesrc")` for summary data.
+`fit$component_probabilities` is posterior marker state probability, while
+`fit$model_parameters$annotations$prior_component_probabilities` is the
+posterior mean annotation-driven prior. Conditional pattern results use
+`pattern_pi_*`; general joint-state `pi_*` fields are NULL for this model.

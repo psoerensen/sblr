@@ -1,8 +1,8 @@
 .mtblr_resolve_public_method <- function(method, operator) {
   valid <- switch(operator,
-    packed_bed = c("bayesc", "bayesr"),
-    csr = c("sbayesc", "sbayesr"),
-    block_eigen = c("sbayesc", "sbayesr"))
+    packed_bed = c("bayesc", "bayesr", "bayesrc"),
+    csr = c("sbayesc", "sbayesr", "sbayesrc"),
+    block_eigen = c("sbayesc", "sbayesr", "sbayesrc"))
   if (!is.character(method) || length(method) != 1L || is.na(method) ||
       !method %in% valid) {
     .blr_public_model_error(method, operator, valid)
@@ -19,8 +19,8 @@
                                selection_s_prior = NULL,
                                selection_s_proposal_sd = NULL) {
   if (!is.character(prior_kernel) || length(prior_kernel) != 1L ||
-      is.na(prior_kernel) || !prior_kernel %in% c("bayesc", "bayesr")) {
-    stop("prior_kernel must be exactly 'bayesc' or 'bayesr'.",
+      is.na(prior_kernel) || !prior_kernel %in% c("bayesc", "bayesr", "bayesrc")) {
+    stop("prior_kernel must be exactly 'bayesc', 'bayesr', or 'bayesrc'.",
          call. = FALSE)
   }
   if (prior_kernel == "bayesc") {
@@ -152,6 +152,11 @@
   component_count <- length(component_names)
   pi_final <- fit$pi_final %||% fit$pi
   pi_mean <- fit$pi_mean %||% fit$pim
+  if (is.null(pi_final) || is.null(pi_mean)) {
+    model_parameters$mixture <- mixture
+    fit$model_parameters <- model_parameters
+    return(fit)
+  }
   marginal <- function(probability, index, count) {
     out <- numeric(count)
     for (i in seq_along(probability)) out[index[[i]]] <-
@@ -177,7 +182,8 @@
   raw$meta$model <- method
   raw$meta$prior_kernel <- switch(
     method, bayesc = "bayesc", sbayesc = "bayesc",
-    bayesr = "bayesr", sbayesr = "bayesr")
+    bayesr = "bayesr", sbayesr = "bayesr",
+    bayesrc = "bayesrc", sbayesrc = "bayesrc")
   raw$meta$model_semantics_version <- 2L
   raw$meta$model_semantics <- "s_prefix_means_summary_statistics"
   if (!is.null(model_parameters)) raw$model$mixture <- model_parameters$mixture

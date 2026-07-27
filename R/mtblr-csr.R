@@ -245,10 +245,15 @@
   for (x in c("bm", "dm", "wy", "r", "b", "state")) if (!identical(dim(raw$marker[[x]]), c(m, nt))) stop("Invalid mtblr_raw marker dimensions.", call. = FALSE)
   for (x in c("vbs", "vgs", "ves", "vle", "vld")) if (!identical(dim(raw$trace[[x]]), c(ntr, nt))) stop("Invalid mtblr_raw trace dimensions.", call. = FALSE)
   for (x in c("covb", "covg", "cove", "vb", "vg", "ve")) if (!identical(dim(raw$variance[[x]]), c(nt, nt))) stop("Invalid mtblr_raw covariance dimensions.", call. = FALSE)
-  if (length(raw$pi$final) != nm || length(raw$pi$mean) != nm || !identical(dim(raw$model$patterns), c(nm, nt))) stop("Invalid mtblr_raw probability/model dimensions.", call. = FALSE)
+  is_bayesrc <- raw$meta$model %in% c("bayesrc", "sbayesrc")
+  valid_pi <- if (is_bayesrc) {
+    is.null(raw$pi$final) && is.null(raw$pi$mean) && is.null(raw$pi$trace)
+  } else length(raw$pi$final) == nm && length(raw$pi$mean) == nm
+  if (!valid_pi || !identical(dim(raw$model$patterns), c(nm, nt)))
+    stop("Invalid mtblr_raw probability/model dimensions.", call. = FALSE)
   has_components <- !is.null(raw$marker$component_final) ||
     !is.null(raw$marker$component_probabilities)
-  if (raw$meta$model %in% c("bayesr", "sbayesr") && !has_components)
+  if (raw$meta$model %in% c("bayesr", "sbayesr", "bayesrc", "sbayesrc") && !has_components)
     stop("BayesR mtblr_raw objects require component fields.", call. = FALSE)
   if (raw$meta$model %in% c("bayesc", "sbayesc") && has_components)
     stop("BayesC mtblr_raw objects must not contain component fields.", call. = FALSE)
@@ -264,15 +269,39 @@
         !identical(nrow(raw$marker$component_probabilities), m) ||
         any(!is.finite(raw$marker$component_probabilities)) ||
         any(abs(rowSums(raw$marker$component_probabilities) - 1) > 1e-10) ||
-        is.null(raw$pi$trace) || is.null(raw$model$mixture) ||
+        (!is_bayesrc && is.null(raw$pi$trace)) || is.null(raw$model$mixture) ||
         length(raw$model$mixture$joint_state_names) != nm ||
         length(raw$model$mixture$joint_component_index) != nm ||
-        !identical(dim(raw$pi$trace), c(ntr, nm))) {
+        (!is_bayesrc && !identical(dim(raw$pi$trace), c(ntr, nm)))) {
       stop("Invalid mtblr_raw BayesR component fields.", call. = FALSE)
     }
   }
+  if (is_bayesrc) {
+    ann <- raw$annotations
+    component_count <- ncol(raw$marker$component_probabilities)
+    if (!is.list(ann) || !identical(ann$policy, "annotation_probit_stick") ||
+        !identical(dim(ann$annotation_coefficients_final),
+                   c(length(ann$metadata$processed_annotation_names),
+                     component_count - 1L)) ||
+        !identical(dim(ann$annotation_coefficients_mean),
+                   dim(ann$annotation_coefficients_final)) ||
+        length(ann$annotation_variances_final) != component_count - 1L ||
+        length(ann$annotation_variances_mean) != component_count - 1L ||
+        !identical(nrow(ann$prior_component_probabilities), m) ||
+        !identical(ncol(ann$prior_component_probabilities), component_count) ||
+        any(!is.finite(ann$prior_component_probabilities)) ||
+        any(abs(rowSums(ann$prior_component_probabilities) - 1) > 1e-10) ||
+        any(!is.finite(ann$pattern_pi_final)) ||
+        abs(sum(ann$pattern_pi_final) - 1) > 1e-10) {
+      stop("Invalid mtblr_raw BayesRC annotation fields.", call. = FALSE)
+    }
+  } else if (!is.null(raw$annotations)) {
+    stop("BayesC/BayesR mtblr_raw objects must not contain BayesRC annotations.",
+         call. = FALSE)
+  }
   if (any(!raw$model$patterns %in% 0:1) || length(raw$marker$order) != m) stop("Invalid mtblr_raw patterns or marker order.", call. = FALSE)
-  if (raw$meta$backend %in% c("mt_block_eigen_bayesc", "mt_block_eigen_bayesr")) {
+  if (raw$meta$backend %in% c("mt_block_eigen_bayesc", "mt_block_eigen_bayesr",
+                              "mt_block_eigen_bayesrc")) {
     block <- raw$diagnostics$block_eigen
     if (!is.list(block) || length(block$owner_count) != 1L ||
         !is.finite(block$owner_count) || block$owner_count < 1L) {
@@ -301,7 +330,8 @@
       }
     }
   }
-  if (identical(raw$meta$backend, "mt_bed_bayesc")) {
+  if (raw$meta$backend %in% c("mt_bed_bayesc", "mt_bed_bayesr",
+                              "mt_bed_bayesrc")) {
     bed <- raw$diagnostics$mt_bed
     nchains <- if (is.null(raw$meta$nchains)) 1L else as.integer(raw$meta$nchains)
     expected_updates <- if (isTRUE(raw$diagnostics$cove > 0)) {
@@ -407,9 +437,11 @@
               c("component_final", "component_probabilities") else character()
             pi_fields <- if (has_components) c("final", "mean", "trace") else
               c("final", "mean")
+            chain_names <- c("chain", "seed", "marker", "trace", "variance",
+                             "pi", "diagnostics",
+                             if (is_bayesrc) "model_parameters")
             is.list(chain) && identical(names(chain), c(
-              "chain", "seed", "marker", "trace", "variance", "pi",
-              "diagnostics")) &&
+              chain_names)) &&
               identical(as.integer(chain$chain), i) &&
               identical(as.numeric(chain$seed), as.numeric(bed$chain_seeds[i])) &&
               identical(names(chain$marker),
@@ -425,14 +457,15 @@
               (!has_components ||
                  (length(chain$marker$component_final) == m &&
                   identical(nrow(chain$marker$component_probabilities), m) &&
-                  identical(dim(chain$pi$trace), c(ntr, nm)))) &&
+                  (is_bayesrc || identical(dim(chain$pi$trace), c(ntr, nm))))) &&
               identical(dim(chain$trace$vbs), c(ntr, nt)) &&
               identical(dim(chain$trace$vgs), c(ntr, nt)) &&
               identical(dim(chain$trace$ves), c(ntr, nt)) &&
               all(vapply(chain$variance, function(x) {
                 identical(dim(x), c(nt, nt))
               }, logical(1))) &&
-              length(chain$pi$final) == nm && length(chain$pi$mean) == nm
+              (is_bayesrc ||
+                 (length(chain$pi$final) == nm && length(chain$pi$mean) == nm))
           }, logical(1)))
       }
       if (!valid_stability || !valid_vectors || !valid_policies ||
@@ -454,7 +487,9 @@
   marker <- lapply(raw$marker[c("bm", "dm", "wy", "r", "b", "state")], function(x) { dimnames(x) <- dimnames_marker; x })
   trace <- lapply(raw$trace, function(x) { dimnames(x) <- dimnames_trace; x })
   variance <- lapply(raw$variance, function(x) { dimnames(x) <- list(trait_names, trait_names); x })
-  model_names <- raw$model$names; names(raw$pi$final) <- names(raw$pi$mean) <- model_names
+  model_names <- raw$model$names
+  if (!is.null(raw$pi$final)) names(raw$pi$final) <- model_names
+  if (!is.null(raw$pi$mean)) names(raw$pi$mean) <- model_names
   if (!is.null(raw$pi$trace)) colnames(raw$pi$trace) <- model_names
   o <- matrix(raw$marker$order, nrow = length(marker_ids), ncol = length(trait_names), dimnames = dimnames_marker)
   fit <- c(marker[c("bm", "dm", "wy", "r", "b")], list(d = marker$state, o = o), trace, variance,
@@ -507,7 +542,8 @@
           dimnames(chain$trace[[field]]) <- dimnames_trace
         for (field in names(chain$variance))
           dimnames(chain$variance[[field]]) <- list(trait_names, trait_names)
-        names(chain$pi$final) <- names(chain$pi$mean) <- model_names
+        if (!is.null(chain$pi$final)) names(chain$pi$final) <- model_names
+        if (!is.null(chain$pi$mean)) names(chain$pi$mean) <- model_names
         if (!is.null(chain$pi$trace)) colnames(chain$pi$trace) <- model_names
         chain
       })
@@ -537,7 +573,7 @@
 #' @param trait_metadata Optional data frame with trait/study provenance.
 #' @param marker_policy Either strict order matching or R-side stats reordering.
 #' @param sample_overlap Must be `"not_modeled"`.
-#' @param method Exactly `"sbayesc"` or `"sbayesr"`; the `s` prefix denotes
+#' @param method Exactly `"sbayesc"`, `"sbayesr"`, or `"sbayesrc"`; the `s` prefix denotes
 #'   summary-statistics data and does not activate MAF scaling.
 #' @param n Optional sample sizes overriding identical values only.
 #' @param sets Optional disjoint complete marker partition (1-based).
@@ -552,6 +588,21 @@
 #'   joint pattern-by-component states.
 #' @param joint_pi_prior Optional positive Dirichlet prior over joint states.
 #' @param component Optional zero-based component initialization per marker.
+#' @param annotations Required marker-by-annotation numeric matrix or data
+#'   frame for `"sbayesrc"`. Explicit unique marker IDs are required and are
+#'   matched to the final marker order.
+#' @param add_intercept Add one intercept when none is supplied.
+#' @param standardize_annotations Standardize eligible non-intercept columns.
+#' @param center_binary_annotations Center and scale binary annotations when
+#'   standardization is enabled.
+#' @param alpha_init Optional processed-annotation-by-stick coefficient matrix.
+#' @param sigmaSqAlpha_init Optional positive variance initialization per stick.
+#' @param intercept_flat Use a flat prior for the first intercept coefficient.
+#' @param sigmaSqAlpha_a,sigmaSqAlpha_b Positive annotation-variance prior
+#'   hyperparameters.
+#' @param pi_floor Probability floor used by probit stick-breaking.
+#' @param alpha_update_every Positive iteration interval for coefficient updates.
+#' @param updateAlpha Update annotation coefficients and their variances.
 #' @param selection_s Optional fixed scalar MAF-S exponent, independent of the
 #'   summary-statistics `sbayesr` model name.
 #' @param selection_maf Optional allele frequencies aligned to the final marker
@@ -582,7 +633,12 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   sample_overlap = "not_modeled", method = "sbayesc", n = NULL, sets = NULL,
   beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
   models = NULL, pimodels = NULL, mixture_var = NULL, joint_pi = NULL,
-  joint_pi_prior = NULL, component = NULL, selection_s = NULL,
+  joint_pi_prior = NULL, component = NULL,
+  annotations = NULL, add_intercept = TRUE,
+  standardize_annotations = TRUE, center_binary_annotations = FALSE,
+  alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
+  alpha_update_every = 1L, updateAlpha = TRUE, selection_s = NULL,
   selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
   estimate_selection_s = FALSE, selection_s_init = NULL,
   selection_s_prior = NULL, selection_s_proposal_sd = NULL,
@@ -617,6 +673,17 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     st$m, mixture_var, joint_pi, joint_pi_prior, component, selection_s,
     estimate_selection_s, selection_s_init, selection_s_prior,
     selection_s_proposal_sd)
+  if (identical(semantics$prior_kernel, "bayesrc")) {
+    if (!is.null(joint_pi) || !is.null(joint_pi_prior))
+      stop("joint_pi and joint_pi_prior are not BayesRC controls; use pimodels for conditional pattern initialization.", call. = FALSE)
+    mixture$method_code <- 6L
+  }
+  bayesrc <- .mtblr_bayesrc_controls(
+    semantics$prior_kernel, annotations, aligned$marker_ids, pattern_spec,
+    mixture, add_intercept, standardize_annotations,
+    center_binary_annotations, alpha_init, sigmaSqAlpha_init,
+    intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor,
+    alpha_update_every, updateAlpha)
   mod <- mixture$patterns
   set_spec <- .mtblr_sets(sets, st$m)
   h2 <- rep(h2, length.out = st$nt); if (any(!is.finite(h2)) || any(h2 <= 0 | h2 >= 1)) stop("h2 must be in (0, 1).", call. = FALSE)
@@ -646,6 +713,9 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   memory <- .mtblr_bayesr_memory(
     memory,method,st$m,chain$nchains,chain$ncores,chain$nit+chain$nburn,
     nrow(mod$matrix),mixture$component_count)
+  memory <- .mtblr_bayesrc_memory(
+    memory,bayesrc,st$m,chain$nchains,chain$ncores,
+    chain$nit+chain$nburn)
   .blr_memory_warning(memory, memory_warning_gb, conv$mode,
                       conv$compute || conv$keep_traces, conv$keep_traces)
   native_execution <- mtblr_csr_chains_raw_internal(
@@ -661,7 +731,15 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     mixture$component_count,mixture$marker_scale,initialization$component,
     mixture$pi_prior,
     lapply(seq_len(st$nt), function(t) initialization$beta[,t]),
-    lapply(seq_len(st$nt), function(t) initialization$state[,t]))
+    lapply(seq_len(st$nt), function(t) initialization$state[,t]),
+    bayesrc$annotations,bayesrc$alpha_init,bayesrc$sigma_alpha_init,
+    bayesrc$pattern_pi_init,bayesrc$pattern_pi_prior,bayesrc$updateAlpha,
+    bayesrc$intercept_flat,bayesrc$sigma_alpha_a,bayesrc$sigma_alpha_b,
+    bayesrc$pi_floor,bayesrc$alpha_update_every)
+  if (!is.null(bayesrc$model_parameters))
+    native_execution$raws <- lapply(native_execution$raws,
+      .mtblr_bayesrc_enrich_raw, bayesrc = bayesrc, method = method,
+      updatePi = updatePi)
   execution <- .mtblr_summary_multichain(
     native_execution, chain, conv, st$trait_names, method, "csr",
     updateB, updateE, mixture$model_parameters)
@@ -673,7 +751,10 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     selection_maf_source = maf_info$selection_maf_source,
     selection_maf_population = maf_info$selection_maf_population,
     selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
-    selection_maf_fallback_used = maf_info$selection_maf_fallback_used)
+    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    annotation_source = bayesrc$metadata$annotation_source %||% "not_applicable",
+    annotation_marker_alignment_status =
+      bayesrc$metadata$annotation_marker_alignment_status %||% "not_applicable")
   raw$alignment <- list(marker_policy = marker_policy, intersection_policy = "error", per_trait = aligned$report,
     orientation_status = aligned$report$allele_status)
   input <- list(method = method, model = method,
@@ -681,8 +762,8 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     prior_kernel = semantics$prior_kernel,
     data_level = "summary_statistics",
     effect_scale_policy = if (!is.null(selection_s))
-      if (semantics$prior_kernel == "bayesr") "component_maf_s" else "maf_s"
-      else if (semantics$prior_kernel == "bayesr") "component" else "unit",
+      if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component_maf_s" else "maf_s"
+      else if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component" else "unit",
     model_semantics_version = 2L,
     model_semantics = "s_prefix_means_summary_statistics",
     m = st$m, nt = st$nt, n = st$n, h2 = h2, nub = nub, nue = nue,
@@ -695,6 +776,9 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
       "ess_per_chain_threshold", "mcse_mean_over_sd_threshold",
       "keep_traces")], memory_warning_gb = memory_warning_gb,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
+    updateAlpha = bayesrc$updateAlpha,
+    annotation_policy = if (is.null(bayesrc$model_parameters)) "global" else
+      "annotation_probit_stick",
     models = mod$matrix, model_names = mod$names, pimodels = mod$probabilities,
     mixture_var = mixture$mixture_var, joint_pi_prior = mixture$pi_prior,
     selection_s = mixture$selection_s,
@@ -717,6 +801,9 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   fit["convergence_traces"] <- list(execution$convergence_traces)
   fit$input$memory_estimate <- memory
   fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
+  fit <- .mtblr_bayesrc_format_fit(fit, raw$annotations, bayesrc)
+  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(selection_s))
+    warning("MAF-derived annotations and selection_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
   messages <- .blr_convergence_warning_messages(
     fit$convergence, if (conv$mode == "core") "core" else "auto",
     "mtblr", "csr")

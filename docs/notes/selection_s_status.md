@@ -175,3 +175,9 @@ MT SBayesR supports one fixed scalar `selection_s` shared by the joint model.
 The default is zero and `selection_s = -1` gives exactly unit marker scale.
 `estimate_selection_s = TRUE` fails explicitly because a validated joint-MT
 Metropolis-Hastings update is not yet part of the retained prior contract.
+## Phase 20 annotation models
+
+Fixed `selection_s` is supported independently for MT BayesRC/SBayesRC on all
+three operators. `NULL` means no MAF scale; `-1` explicitly requests the
+unit-scale reduction. Sampled MT S remains unsupported. MAF-named annotations
+plus selection-S are allowed with explicit overlap metadata and one advisory.

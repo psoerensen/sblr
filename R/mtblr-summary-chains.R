@@ -25,7 +25,8 @@
       cov_g_final = raw$variance$vg,
       cov_e_final = raw$variance$ve),
     pi = c(list(pi_final = raw$pi$final, pi_mean = raw$pi$mean),
-           if (!is.null(raw$pi$trace)) list(pi_trace = raw$pi$trace)))
+           if (!is.null(raw$pi$trace)) list(pi_trace = raw$pi$trace)),
+    model_parameters = raw$annotations %||% NULL)
 }
 
 .mtblr_summary_pool_raw <- function(raws, keep_chains, seeds, operator,
@@ -63,9 +64,23 @@
                     numeric(1))
     out$variance[[name]] <- weighted_matrix(c("variance", name), count)
   }
-  pi_count <- vapply(raws, function(x) as.numeric(x$diagnostics$pi), numeric(1))
-  out$pi$mean <- weighted_matrix(c("pi", "mean"), pi_count)
-  if (!is.null(out$pi$trace)) out$pi$trace <- simple_mean(c("pi", "trace"))
+  if (!is.null(out$pi$mean)) {
+    pi_count <- vapply(raws, function(x) as.numeric(x$diagnostics$pi), numeric(1))
+    out$pi$mean <- weighted_matrix(c("pi", "mean"), pi_count)
+    if (!is.null(out$pi$trace)) out$pi$trace <- simple_mean(c("pi", "trace"))
+  }
+  if (!is.null(out$annotations)) {
+    mean_annotation <- function(name) Reduce(`+`, lapply(
+      raws, function(x) x$annotations[[name]])) / nchains
+    for (name in c("annotation_coefficients_mean",
+                   "annotation_variances_mean", "pattern_pi_mean",
+                   "pattern_pi_trace", "prior_component_probabilities"))
+      out$annotations[[name]] <- mean_annotation(name)
+    out$annotations$annotation_updates_attempted <- sum(vapply(
+      raws, function(x) x$annotations$annotation_updates_attempted, numeric(1)))
+    out$annotations$annotation_updates_completed <- sum(vapply(
+      raws, function(x) x$annotations$annotation_updates_completed, numeric(1)))
+  }
 
   bm <- simplify2array(lapply(raws, function(x) x$marker$bm))
   dm <- simplify2array(lapply(raws, function(x) x$marker$dm))

@@ -87,8 +87,9 @@ guards <- c(
   has(semantics_tests, "cannot be silently reinterpreted"),
   has(semantics_tests, "prior_kernel", "data_level"),
   has(semantics_tests, "selection_s = -1", "selection_s_active"),
-  !grepl('method = c("bayesrc"', paste(csr_r, block_r, bed_r), fixed = TRUE),
-  !grepl('method = c("sbayesrc"', paste(csr_r, block_r, bed_r), fixed = TRUE))
+  has(read("R/mtblr-bayesrc.R"), ".mtblr_bayesrc_controls <- function"),
+  has(summary_core, "method==5 || method==6") &&
+    has(bed_core, "execution.method==5 || execution.method==6"))
 for (i in seq_along(guards)) cat(sprintf("MUTATION_%02d_DETECTED=%s\n", i,
                                          guards[[i]]))
 if (length(guards) != 49L || !all(guards))
