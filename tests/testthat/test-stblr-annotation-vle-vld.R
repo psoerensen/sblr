@@ -133,6 +133,11 @@ fit_tiny_annotation_vle_vld <- function(annotation_model,
     common$updatePi <- FALSE
     common$updateGroupVb <- FALSE
   } else if (annotation_model == "sbayesrc") {
+    common$Glist <- list(
+      rsidsLD = list(stats$marker_names),
+      rsids = list(stats$marker_names),
+      maf = list(rep(0.2, stats$m))
+    )
     common$gamma <- c(0, 0.1, 1)
     common$updateAlpha <- FALSE
   }

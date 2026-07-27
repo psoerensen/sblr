@@ -2,6 +2,15 @@
 title: "Multi-Trait Models"
 ---
 
+## Common trait-level variance decomposition
+
+MTBLR exposes `vbs = diag(B)`, `vgs = diag(G)`, `ves = diag(E)`, the
+operator-diagonal effective-effect contribution `vle`, and
+`vld = vgs - vle`, all as iteration × trait traces. CSR, block eigen, and
+packed BED capture these values per chain at the completed-iteration checkpoint.
+Full posterior covariance matrices remain separately named `cov_*_mean` and
+`cov_*_final`; no off-diagonal LE/LD decomposition is implied.
+
 Multi-trait Bayesian linear regression (MT-BLR) models several traits jointly
 so that evidence can be shared through marker-effect patterns and covariance
 structures. This note introduces the main model ideas and explains how they
@@ -118,7 +127,8 @@ As the number of traits increases, the full $2^t$ model space grows quickly.
 Restricting or regularizing the sharing patterns can therefore be both a
 scientific choice and a computational necessity.
 
-The documented `sblr()` interface exposes sharing-model inputs such as
+The canonical `mtblr_csr()`, `mtblr_block_eigen()`, and `mtblr_bed()`
+interfaces expose sharing-model inputs such as
 `models` and `pimodels`. These describe the permitted patterns and their prior
 probabilities. Exact argument support and behavior should be checked for the
 selected experimental algorithm before a production analysis.
@@ -264,10 +274,10 @@ sampler:
 - `d` or `o`: current inclusion or sharing-model states, when returned;
 - `vbs`, `vgs`, and `ves`: sampled effect, genetic, and residual variance
   summaries;
-- `covb`, `covg`, and `cove`: posterior effect, genetic, and residual
+- `cov_b_mean`, `cov_g_mean`, and `cov_e_mean`: posterior effect, genetic, and residual
   covariance summaries;
 - `rb`, `rg`, and `re`: corresponding correlation summaries, when returned;
-- `pi` or `pim`: posterior inclusion or sharing-model probability summaries.
+- `pi` or `pi_mean`: posterior inclusion or sharing-model probability summaries.
 
 Useful reporting separates trait-specific and cross-trait evidence:
 
@@ -338,13 +348,13 @@ Weak or unstable covariance estimates can lead to misleading borrowing across
 traits. Short demonstration chains are useful for integration testing, not for
 final scientific conclusions.
 
-## Current Status in `sblr`
+## Current MTBLR status
 
 The package contains a conceptual and implementation foundation for MT-BLR:
 
-- `sblr()` is the documented high-level interface for several experimental
-  summary-statistics algorithms and exposes sharing-model and covariance
-  inputs;
+- `mtblr_csr()`, `mtblr_block_eigen()`, and `mtblr_bed()` are the canonical
+  joint small-T BayesC interfaces and share chain, convergence, output,
+  memory, and warning semantics;
 - native multi-trait implementations explore dense, Armadillo-based,
   OpenMP, and CSR computations;
 - the CSR multi-trait kernel supports cross-trait phenotype information and
@@ -352,11 +362,9 @@ The package contains a conceptual and implementation foundation for MT-BLR:
   assumptions;
 - `mtsim()` and `mtsim_annotation()` support development and model checking.
 
-The most complete current workflow examples focus on BED and CSR single-trait
-models, including annotation-informed extensions. There is not yet an equally
-polished, general, end-to-end public workflow for joint MTBLR with arbitrary
-sample overlap. Algorithm-specific argument contracts and returned objects
-should be validated before relying on an experimental MTBLR path.
+Arbitrary sample overlap remains unsupported in the summary-statistics routes.
+The dense implementation remains an internal scientific reference rather than
+an overlapping public dispatcher.
 
 This status distinction matters: the package contains real multi-trait model
 and sampler components, but some interfaces and broader overlap or annotation
@@ -378,5 +386,5 @@ extensions remain research-stage.
   summaries and reporting.
 
 This note draws on the archived `sblr_theory.qmd` draft, the completed
-technical appendices, the documented `sblr()` and simulation interfaces, and
+technical appendices, the canonical MTBLR and simulation interfaces, and
 the current experimental multi-trait sampler implementations.

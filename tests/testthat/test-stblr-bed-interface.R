@@ -41,7 +41,7 @@ make_stblr_bed_interface_fixture <- function() {
 }
 
 expect_stblr_bed_chain_fields <- function(fit) {
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+  for (nm in c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max", "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")) {
     expect_true(nm %in% names(fit))
     expect_equal(dim(fit[[nm]]), dim(fit$dm))
     expect_identical(rownames(fit[[nm]]), rownames(fit$dm))
@@ -51,12 +51,12 @@ expect_stblr_bed_chain_fields <- function(fit) {
 }
 
 expect_stblr_bed_bayesr_convention <- function(fit) {
-  expect_named(fit$comp_prob, colnames(fit$dm))
+  expect_named(fit$component_probabilities, colnames(fit$dm))
   for (trait in colnames(fit$dm)) {
-    expect_true("component_0" %in% colnames(fit$comp_prob[[trait]]))
+    expect_true("component_0" %in% colnames(fit$component_probabilities[[trait]]))
     expect_equal(
       unname(as.numeric(fit$dm[, trait])),
-      unname(1 - fit$comp_prob[[trait]][, "component_0"]),
+      unname(1 - fit$component_probabilities[[trait]][, "component_0"]),
       tolerance = 1e-8
     )
   }
@@ -78,7 +78,7 @@ test_that("stblr_bed fits BayesC BED scheduled chains", {
   fit <- stblr_bed(
     y = fixture$y,
     Glist = fixture$Glist,
-    method = "bayesC",
+    method = "bayesc",
     nit = 2L,
     nburn = 0L,
     full_sweep_every = 1L,
@@ -87,9 +87,9 @@ test_that("stblr_bed fits BayesC BED scheduled chains", {
     ncores = 1L
   )
 
-  expect_true(all(c(
-    "dm", "bm", "log_cpo", "mean_log_cpo", "final_pi", "mean_pi"
-  ) %in% names(fit)))
+  expect_true(all(c("dm", "bm", "pi_final", "pi_mean") %in% names(fit)))
+  expect_true(all(c("log_cpo", "mean_log_cpo") %in%
+                    names(fit$diagnostics)))
   expect_stblr_bed_chain_fields(fit)
   expect_equal(fit$input$method, "bayesc")
   expect_equal(fit$input$model, "bayesc")
@@ -110,7 +110,7 @@ test_that("stblr_bed fits BayesR BED scheduled chains", {
   fit <- stblr_bed(
     y = fixture$y,
     Glist = fixture$Glist,
-    method = "bayesR",
+    method = "bayesr",
     nit = 2L,
     nburn = 0L,
     full_sweep_every = 1L,
@@ -121,9 +121,11 @@ test_that("stblr_bed fits BayesR BED scheduled chains", {
   )
 
   expect_true(all(c(
-    "dm", "bm", "comp_prob", "dm_component_mean",
-    "log_cpo", "mean_log_cpo", "final_pi", "mean_pi"
+    "dm", "bm", "component_probabilities", "dm_component_mean",
+    "pi_final", "pi_mean"
   ) %in% names(fit)))
+  expect_true(all(c("log_cpo", "mean_log_cpo") %in%
+                    names(fit$diagnostics)))
   expect_stblr_bed_chain_fields(fit)
   expect_stblr_bed_bayesr_convention(fit)
   expect_equal(fit$input$method, "bayesr")
@@ -134,7 +136,7 @@ test_that("stblr_bed fits BayesR BED scheduled chains", {
   expect_equal(fit$input$nchains, 1L)
 })
 
-test_that("stblr_bed normalizes method case", {
+test_that("stblr_bed rejects noncanonical method case", {
   fixture <- make_stblr_bed_interface_fixture()
   on.exit(unlink(fixture$bed_file), add = TRUE)
   common <- list(
@@ -148,15 +150,13 @@ test_that("stblr_bed normalizes method case", {
     updateE = FALSE
   )
 
-  for (method in c("bayesC", "BayesC")) {
-    fit <- do.call(stblr_bed, c(common, list(method = method, seed = 20L)))
-    expect_equal(fit$input$method, "bayesc")
-  }
-  for (method in c("bayesR", "BayesR")) {
-    fit <- do.call(stblr_bed, c(common, list(method = method, seed = 21L)))
-    expect_equal(fit$input$method, "bayesr")
-    expect_stblr_bed_bayesr_convention(fit)
-  }
+  fit_c <- do.call(stblr_bed, c(common, list(method = "bayesc", seed = 20L)))
+  fit_r <- do.call(stblr_bed, c(common, list(method = "bayesr", seed = 21L)))
+  expect_equal(fit_c$input$method, "bayesc")
+  expect_equal(fit_r$input$method, "bayesr")
+  expect_stblr_bed_bayesr_convention(fit_r)
+  expect_error(do.call(stblr_bed, c(common, list(method = "BayesC"))), "arg")
+  expect_error(do.call(stblr_bed, c(common, list(method = "bayesR"))), "arg")
 })
 
 test_that("stblr_bed rejects invalid method and prior misuse clearly", {
@@ -165,7 +165,7 @@ test_that("stblr_bed rejects invalid method and prior misuse clearly", {
 
   expect_error(
     stblr_bed(y = fixture$y, Glist = fixture$Glist, method = "bad"),
-    "method must be one of"
+    "arg.*one of"
   )
   expect_error(
     stblr_bed(y = fixture$y, Glist = fixture$Glist, method = "bayesr", pi_init = 0.5),
@@ -176,23 +176,25 @@ test_that("stblr_bed rejects invalid method and prior misuse clearly", {
     "BayesR-specific"
   )
   expect_error(
-    stblr_bed(y = fixture$y, Glist = fixture$Glist, method = "bayesc", chain_seeds = 1L),
+    stblr_bed(y = fixture$y, Glist = fixture$Glist, method = "bayesc",
+              chain_seeds = c(1L, 2L)),
     "chain_seeds"
   )
 })
 
 expect_stblr_bed_bayesrc_convention <- function(fit) {
   required <- c(
-    "bm", "dm", "b", "d", "vbs", "vgs", "ves", "vle", "vld", "pis",
-    "covb", "covg", "cove", "pi", "pim", "comp_prob",
+    "bm", "dm", "b", "d", "vbs", "vgs", "ves", "vle", "vld", "pi_trace",
+    "cov_b_mean", "cov_g_mean", "cov_e_mean", "pi_final", "pi_mean",
+    "component_probabilities",
     "dm_component_mean", "ncomp", "alpha", "sigmaSqAlpha",
     "annotation_summary", "annotation_pi", "annotation_effects",
-    "log_cpo", "mean_log_cpo", "chains", "diagnostics", "input"
+    "chains", "diagnostics", "input"
   )
   expect_equal(setdiff(required, names(fit)), character())
-  expect_named(fit$comp_prob, colnames(fit$dm))
+  expect_named(fit$component_probabilities, colnames(fit$dm))
   for (trait in colnames(fit$dm)) {
-    cp <- fit$comp_prob[[trait]]
+    cp <- fit$component_probabilities[[trait]]
     expect_identical(colnames(cp)[1L], "gamma_0.00")
     expect_equal(unname(rowSums(cp)), rep(1, nrow(cp)), tolerance = 1e-12)
     expect_equal(unname(fit$dm[, trait]), unname(1 - cp[, 1L]), tolerance = 1e-12)
@@ -200,7 +202,7 @@ expect_stblr_bed_bayesrc_convention <- function(fit) {
   expect_equal(fit$vld, fit$vgs - fit$vle, tolerance = 1e-12)
 }
 
-test_that("stblr_bed publicly fits case-insensitive BayesRC", {
+test_that("stblr_bed accepts only the canonical lowercase BayesRC spelling", {
   skip_if_not(
     exists("stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc", mode = "function"),
     "native BED BayesRC symbol is not loaded"
@@ -211,21 +213,23 @@ test_that("stblr_bed publicly fits case-insensitive BayesRC", {
     enriched = c(TRUE, FALSE),
     row.names = c("rs1", "rs2")
   )
-  for (method in c("bayesrc", "BayesRC", "BAYESRC")) {
-    fit <- stblr_bed(
-      y = fixture$y, Glist = fixture$Glist, method = method,
-      annotation = annotation, nit = 3L, nburn = 1L,
-      updateAlpha = FALSE, updateE = FALSE, seed = 41L
-    )
-    expect_stblr_bed_bayesrc_convention(fit)
-    expect_identical(fit$input$method, "bayesrc")
-    expect_identical(fit$input$backend, "bed_bayesrc")
-    expect_identical(fit$input$prior_type, "annotation_component")
-    expect_true(fit$input$full_sweeps)
-    expect_false(fit$input$adaptive_skipping)
-    expect_false(fit$input$scheduled)
-    expect_identical(fit$input$annotation_names, c("Intercept", "enriched"))
-  }
+  fit <- stblr_bed(
+    y = fixture$y, Glist = fixture$Glist, method = "bayesrc",
+    annotation = annotation, nit = 3L, nburn = 1L,
+    updateAlpha = FALSE, updateE = FALSE, seed = 41L
+  )
+  expect_stblr_bed_bayesrc_convention(fit)
+  expect_identical(fit$input$method, "bayesrc")
+  expect_identical(fit$input$backend, "bed_bayesrc")
+  expect_identical(fit$input$prior_type, "annotation_component")
+  expect_true(fit$input$full_sweeps)
+  expect_false(fit$input$adaptive_skipping)
+  expect_false(fit$input$scheduled)
+  expect_identical(fit$input$annotation_names, c("Intercept", "enriched"))
+  expect_error(stblr_bed(y = fixture$y, Glist = fixture$Glist,
+                         method = "bayesrc"), "annotation is required")
+  expect_error(stblr_bed(y = fixture$y, Glist = fixture$Glist,
+                         method = "BAYESRC"), "arg")
   expect_identical(formals(stblr_bed)$method[[2L]], "bayesc")
 })
 
@@ -239,7 +243,8 @@ test_that("public fixed-alpha BED BayesRC reduces exactly to public fixed-pi Bay
     nit = 5L, nburn = 2L, nthin = 1L, updateB = TRUE,
     updateE = TRUE, adjE = 0.9, rebuild_every = 1L,
     return_wy = TRUE, return_r = TRUE, nchains = 2L,
-    ncores = 1L, seed = 17L
+    ncores = 1L, seed = 17L,
+    convergence_control = list(warn = FALSE)
   )
   fit_rc <- do.call(stblr_bed, c(common, list(
     method = "bayesrc",
@@ -255,7 +260,7 @@ test_that("public fixed-alpha BED BayesRC reduces exactly to public fixed-pi Bay
   expect_equal(fit_rc$bm, fit_r$bm, tolerance = 1e-12)
   expect_equal(fit_rc$dm, fit_r$dm, tolerance = 1e-12)
   expect_equal(
-    unname(fit_rc$comp_prob[[1L]]), unname(fit_r$comp_prob[[1L]]),
+    unname(fit_rc$component_probabilities[[1L]]), unname(fit_r$component_probabilities[[1L]]),
     tolerance = 1e-12
   )
 })
@@ -286,7 +291,7 @@ test_that("BED BayesRC aligns shuffled annotations and records unused rows", {
   )
   expect_identical(fit$bm, fit_aligned$bm)
   expect_identical(fit$dm, fit_aligned$dm)
-  expect_identical(fit$comp_prob, fit_aligned$comp_prob)
+  expect_identical(fit$component_probabilities, fit_aligned$component_probabilities)
 })
 
 test_that("BED BayesRC annotation alignment errors are informative", {
@@ -349,14 +354,18 @@ test_that("public BED BayesRC supports traits, chains, CPO, and compact chains",
     y = y, Glist = fixture$Glist, method = "bayesrc",
     annotation = data.frame(x = c(0, 1), row.names = c("rs1", "rs2")),
     nit = 3L, nburn = 1L, nchains = 2L, keep_chains = TRUE,
-    updateAlpha = FALSE, seed = 43L
+    updateAlpha = FALSE, seed = 43L,
+    convergence_control = list(warn = FALSE)
   )
   expect_stblr_bed_bayesrc_convention(fit)
   expect_equal(dim(fit$bm), c(2L, 2L))
-  expect_named(fit$chains, c("D1", "D2"))
-  expect_length(fit$chains$D1, 2L)
-  expect_true(all(is.finite(fit$log_cpo)))
-  expect_true(all(is.finite(fit$mean_log_cpo)))
+  expect_named(fit$chains, paste0("task", 1:4))
+  expect_identical(unname(vapply(fit$chains, `[[`, integer(1), "trait_index")),
+                   c(1L, 1L, 2L, 2L))
+  expect_identical(unname(vapply(fit$chains, `[[`, integer(1), "chain_index")),
+                   c(1L, 2L, 1L, 2L))
+  expect_true(all(is.finite(fit$diagnostics$log_cpo)))
+  expect_true(all(is.finite(fit$diagnostics$mean_log_cpo)))
 })
 
 test_that("BED BayesRC aligns annotations after chr and cls selection", {
@@ -431,7 +440,7 @@ test_that("public BED BayesRC formatting preserves direct internal raw values", 
   expect_equal(unname(fit$bm), unname(raw$marker$bm), tolerance = 1e-12)
   expect_equal(unname(fit$dm), unname(raw$marker$dm), tolerance = 1e-12)
   expect_equal(
-    unname(fit$comp_prob[[1L]]), unname(raw$component$prob[[1L]]),
+    unname(fit$component_probabilities[[1L]]), unname(raw$component$prob[[1L]]),
     tolerance = 1e-12
   )
 })

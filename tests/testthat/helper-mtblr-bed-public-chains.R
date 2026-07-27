@@ -26,11 +26,17 @@ phase17s_internal <- function(public_args) {
 }
 
 phase17s_fit_numerics <- function(fit) {
-  fields <- c("bm", "dm", "wy", "r", "b", "d", "marker_order",
-              "vbs", "vgs", "ves", "covb", "covg", "cove",
-              "vb", "vg", "ve", "pi", "pim",
-              "bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")
-  setNames(lapply(fields, function(field) unname(fit[[field]])), fields)
+  mapping <- c(
+    bm = "bm", dm = "dm", wy = "wy", r = "r", b = "b", d = "d",
+    marker_order = "marker_order", vbs = "vbs", vgs = "vgs", ves = "ves",
+    covb = "cov_b_mean", covg = "cov_g_mean", cove = "cov_e_mean",
+    vb = "cov_b_final", vg = "cov_g_final", ve = "cov_e_final",
+    pi = "pi_final", pim = "pi_mean",
+    bm_sd = "bm_chain_mean_sd", bm_min = "bm_chain_mean_min",
+    bm_max = "bm_chain_mean_max", dm_sd = "dm_chain_mean_sd",
+    dm_min = "dm_chain_mean_min", dm_max = "dm_chain_mean_max")
+  setNames(lapply(unname(mapping), function(field) unname(fit[[field]])),
+           names(mapping))
 }
 
 phase17s_raw_numerics <- function(raw) {
@@ -67,9 +73,9 @@ phase17s_compare_public_internal <- function(args, tolerance = 1e-12) {
 }
 
 phase17s_without_timing <- function(fit) {
-  fit$bed_diagnostics[c("chain_seconds", "seconds_mean", "seconds_max",
-                        "dispatch_seconds", "requested_cores",
-                        "used_workers")] <- NULL
+  fit$diagnostics$mt_bed[c("chain_seconds", "seconds_mean", "seconds_max",
+                           "dispatch_seconds", "requested_cores",
+                           "used_workers")] <- NULL
   fit$chain_diagnostics[c("chain_seconds", "seconds_mean", "seconds_max",
                           "dispatch_seconds", "requested_cores",
                           "used_workers")] <- NULL

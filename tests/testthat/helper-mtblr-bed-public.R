@@ -109,17 +109,19 @@ phase17p_compare_public_internal <- function(args, tolerance = 1e-12) {
   raw <- do.call(sblr:::mtblr_bed_internal, phase17p_native_args(args))
   marker_fields <- c("bm", "dm", "wy", "r", "b")
   trace_fields <- c("vbs", "vgs", "ves")
-  variance_fields <- c("covb", "covg", "cove", "vb", "vg", "ve")
+  variance_fields <- c(
+    covb = "cov_b_mean", covg = "cov_g_mean", cove = "cov_e_mean",
+    vb = "cov_b_final", vg = "cov_g_final", ve = "cov_e_final")
   actual <- c(
     lapply(marker_fields, function(field) unname(fit[[field]])),
     lapply(trace_fields, function(field) unname(fit[[field]])),
-    lapply(variance_fields, function(field) unname(fit[[field]])),
-    list(pi = unname(fit$pi), pim = unname(fit$pim)))
-  names(actual) <- c(marker_fields, trace_fields, variance_fields,
+    lapply(unname(variance_fields), function(field) unname(fit[[field]])),
+    list(pi = unname(fit$pi_final), pim = unname(fit$pi_mean)))
+  names(actual) <- c(marker_fields, trace_fields, names(variance_fields),
                      "pi", "pim")
   expected <- c(
     raw$marker[marker_fields], raw$trace[trace_fields],
-    raw$variance[variance_fields],
+    raw$variance[names(variance_fields)],
     list(pi = raw$pi$final, pim = raw$pi$mean))
   testthat::expect_equal(actual, expected, tolerance = tolerance)
   testthat::expect_identical(unname(fit$d), raw$marker$state)
@@ -128,7 +130,7 @@ phase17p_compare_public_internal <- function(args, tolerance = 1e-12) {
     list(fit$raw_schema_version, fit$input$backend, fit$input$data_level),
     list(1L, "mt_bed_bayesc", "individual"))
   serial_diagnostics <- names(raw$diagnostics$mt_bed)
-  testthat::expect_equal(fit$bed_diagnostics[serial_diagnostics],
+  testthat::expect_equal(fit$diagnostics$mt_bed[serial_diagnostics],
                          raw$diagnostics$mt_bed)
   invisible(fit)
 }

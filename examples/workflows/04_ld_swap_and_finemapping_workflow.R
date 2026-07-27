@@ -78,10 +78,10 @@ base_args <- list(
   seed = seed
 )
 
-fit_bayesc <- do.call(stblr_csr, c(base_args, list(method = "bayesC")))
-fit_bayesc_mh <- do.call(stblr_csr, c(base_args, list(method = "bayesC"), mh_conservative))
-fit_bayesr <- do.call(stblr_csr, c(base_args, list(method = "bayesR")))
-fit_bayesr_mh <- do.call(stblr_csr, c(base_args, list(method = "bayesR"), mh_permissive))
+fit_bayesc <- do.call(stblr_csr, c(base_args, list(method = "bayesc")))
+fit_bayesc_mh <- do.call(stblr_csr, c(base_args, list(method = "bayesc"), mh_conservative))
+fit_bayesr <- do.call(stblr_csr, c(base_args, list(method = "bayesr")))
+fit_bayesr_mh <- do.call(stblr_csr, c(base_args, list(method = "bayesr"), mh_permissive))
 
 fits <- list(
   bayesC = fit_bayesc,

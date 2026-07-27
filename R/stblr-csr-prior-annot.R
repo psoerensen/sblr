@@ -59,7 +59,6 @@
 #' @return A formatted ST-BLR fit with the resolved fixed priors in `input`.
 #'   The fit includes `vle` and `vld` traces using the same definitions and
 #'   formatting conventions as annotation-unaware CSR fits.
-#' @export
 stblr_csr_prior_annot <- function(
   stats,
   ld_prefix,

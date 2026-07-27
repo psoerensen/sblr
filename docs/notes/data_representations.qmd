@@ -62,8 +62,8 @@ marker column indices `cls`. Its BED samplers read marker blocks from disk and
 perform marker updates without first materializing all of $X$ or a full
 $X^\top X$ matrix. Optional `rows` select 1-based individual indices, and
 `scale = TRUE` standardizes markers using the corresponding allele
-frequencies. `stblr_bed_marker()` remains available as a lower-level BED marker
-interface.
+frequencies. Experimental lower-level BED marker routes are internal reference
+implementations rather than overlapping public interfaces.
 
 The individual-level representation is information-rich: if the same
 individuals have multiple measured traits, cross-trait phenotype and residual

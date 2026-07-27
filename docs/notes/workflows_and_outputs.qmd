@@ -11,6 +11,14 @@ execute:
   eval: false
 ---
 
+# Phase 18 trace and metadata contract
+
+Trait traces are `vbs`, `vgs`, `ves`, `vle`, and `vld` in iteration × trait
+orientation; convergence arrays are iteration × chain × quantity. Fit data
+records `genotype_scale`, `effect_scale`, `phenotype_scale`, `ld_scale`,
+`n_total`, `n_used`, and `n_by_trait`. Compact chains and retained convergence
+traces remain independently controlled and separately charged to memory.
+
 # Overview
 
 This note describes the recommended high-level workflows for the unreleased `sblr`
@@ -86,7 +94,7 @@ separates data representation, trait structure, and prior structure.
 | Fit from summary statistics and sparse LD | `stats` and sparse-LD metadata in `Glist` | `stblr_csr()` | CSR ST-BLR fit |
 | Fit directly from individual-level PLINK genotypes | BED-backed `Glist`, phenotype matrix, aligned marker columns | `stblr_bed()` | BED ST-BLR fit |
 | Prepare reusable summary-statistics inputs from BED | BED-backed `Glist`, phenotypes, marker IDs, allele frequencies | `make_summary_stats()` and `make_sparse_ld()` | `stats` and updated `Glist$sparseLD` |
-| Compare BayesC and BayesR priors | Same `stats`, `Glist`, traits, and MCMC settings | `stblr_csr(method = "bayesC")` and `stblr_csr(method = "bayesR")` | Comparable CSR fits |
+| Compare BayesC and BayesR priors | Same `stats`, `Glist`, traits, and MCMC settings | `stblr_csr(method = "bayesc")` and `stblr_csr(method = "bayesr")` | Comparable CSR fits |
 | Fit BayesS-style MAF-scaled CSR models | `stats`, `Glist`, CSR LD metadata, and marker-aligned MAF | `stblr_csr(..., selection_s = ...)` or `stblr_csr(..., estimate_selection_s = TRUE)` | CSR BayesC/BayesR fit with fixed global or sampled trait-specific `selection_s` |
 | Compare annotation prior families | `stats`, sparse-LD metadata in `Glist`, aligned annotations or groups | `stblr_csr_annot()` or `03_annotation_models_workflow.R` | Fixed, learned, group, and SBayesRC-style fits |
 | Fit individual-level annotation-dependent components | BED-backed `Glist`, phenotypes, marker-ID-keyed annotations | `stblr_bed(method = "bayesrc")` and `annotation_based_models.R` | BED BayesRC component and annotation summaries |
@@ -187,7 +195,7 @@ Glist <- make_sparse_ld(
 fit_csr_bayesc <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 500,
   seed = 1
@@ -202,7 +210,7 @@ BayesR can be fitted through the same wrapper by changing `method`:
 fit_csr_bayesr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = 1000,
   nburn = 500,
   seed = 1
@@ -272,7 +280,7 @@ columns, and scaling assumptions.
 fit_csr_bayesc <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 100,
   ncores = 4,
@@ -282,7 +290,7 @@ fit_csr_bayesc <- stblr_csr(
 fit_bed_bayesc <- stblr_bed(
   y = y,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 100,
   ncores = 4,
@@ -499,7 +507,7 @@ available or not applicable, these fields should be present with `NULL` values.
 fit_csr_ldswap <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = 1000,
   nburn = 100,
   ncores = 4,
@@ -572,7 +580,7 @@ Fixed `selection_s` examples:
 fit_s_null <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = NULL,
   nit = 1000,
   nburn = 100,
@@ -582,7 +590,7 @@ fit_s_null <- stblr_csr(
 fit_s_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = -1,
   nit = 1000,
   nburn = 100,
@@ -596,7 +604,7 @@ Sampled `selection_s` example:
 fit_s_sampled <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -646,7 +654,7 @@ not change sampler output.
 fit_multi <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 500,
   nburn = 100,
   ncores = 4,
@@ -662,8 +670,8 @@ check_stblr_consistency(
 )
 
 names(fit_multi$chains)
-summary(as.vector(fit_multi$dm_sd))
-summary(as.vector(fit_multi$bm_sd))
+summary(as.vector(fit_multi$dm_chain_mean_sd))
+summary(as.vector(fit_multi$bm_chain_mean_sd))
 ```
 
 When LD-swap and chains are both enabled, inspect `ld_swap_chains`:
@@ -672,7 +680,7 @@ When LD-swap and chains are both enabled, inspect `ld_swap_chains`:
 fit_multi_ldswap <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 500,
   nburn = 100,
   ncores = 4,
@@ -722,9 +730,9 @@ annotation/group/prior/component fields where relevant
 | `r` | Current or returned marker-scale residual state, when returned. |
 | `vbs`, `vgs`, `ves` | Active marker-effect, genetic, and residual variance traces/summaries. |
 | `vle`, `vld` | LE/LD variance decomposition traces where available. |
-| `pi`, `pim`, `pis` | Inclusion-probability summaries/traces where emitted by the backend. |
-| `covb`, `covg`, `cove` | Marker-effect, genetic, and residual covariance summaries where returned. |
-| `comp_prob` | BayesR/SBayesRC marker-level component probabilities. |
+| `pi`, `pi_mean`, `pi_trace` | Inclusion-probability summaries/traces where emitted by the backend. |
+| `cov_b_mean`, `cov_g_mean`, `cov_e_mean` | Marker-effect, genetic, and residual covariance summaries where returned. |
+| `component_probabilities` | BayesR/SBayesRC marker-level component probabilities. |
 | `dm_component_mean` | Component-specific non-null summaries. |
 | `input` | Model/backend/input metadata. |
 | `chains` | Per-chain outputs when `keep_chains = TRUE`. |
@@ -754,7 +762,7 @@ family:
   `group_pi`, `group_vb_multiplier`, and `group_nincluded` where returned.
 - SBayesRC-style models expose annotation effects on component probabilities.
   The `alpha` fields describe annotation effects for probit stick-breaking steps,
-  `sigmaSqAlpha` summarizes their variance parameters, `comp_prob` contains
+  `sigmaSqAlpha` summarizes their variance parameters, `component_probabilities` contains
   marker-level posterior component probabilities, and `ncomp` summarizes numbers
   of markers assigned to components.
 - In CSR BayesR, the null component column is usually `component_0` and
@@ -807,7 +815,7 @@ arch
 # Compact reporting
 
 Marker-level matrices can contain tens of thousands or millions of entries.
-Printing `fit$bm`, `fit$dm`, `fit$b`, a full `comp_prob`, or the complete fit
+Printing `fit$bm`, `fit$dm`, `fit$b`, a full `component_probabilities`, or the complete fit
 object floods the console and obscures useful diagnostics. Full objects should
 remain available for analysis and serialization, while routine reporting should
 aggregate them deliberately.
@@ -875,7 +883,7 @@ a short chain or finite simulated data. Realized simulated heritability,
 sparse-LD approximation, prior shrinkage, and Monte Carlo variation all affect
 the comparison.
 
-For multiple traits, `covb`, `covg`, and `cove` summarize different covariance
+For multiple traits, `cov_b_mean`, `cov_g_mean`, and `cov_e_mean` summarize different covariance
 targets when returned. Their off-diagonal entries should be interpreted only
 after confirming that the fitted wrapper actually represents the intended joint
 model. Parallel single-trait fits do not automatically become a fully joint

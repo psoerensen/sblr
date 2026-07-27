@@ -72,6 +72,18 @@ struct CsrScheduledBayesCExecutionResult {
  arma::vec final_vld;
  arma::vec nsamples;
  std::vector<double> task_seconds;
+ arma::mat task_bm;
+ arma::mat task_dm;
+ arma::mat task_state;
+ arma::mat task_vbs;
+ arma::mat task_vgs;
+ arma::mat task_ves;
+ arma::mat task_vle;
+ arma::mat task_vld;
+ arma::mat task_pis;
+ arma::vec task_final_pi;
+ arma::vec task_mean_pi;
+ arma::vec task_nsamples;
  int marker_count=0;
  int trait_count=0;
  int chain_count=0;
@@ -96,8 +108,6 @@ inline void validate_csr_scheduled_bayesc_context(
  if (s.cores<=0) throw std::invalid_argument("scheduled cores must be positive");
  if (!s.chain_seeds.empty() && static_cast<int>(s.chain_seeds.size())!=s.chains)
   throw std::invalid_argument("scheduled chain_seeds length must equal chains");
- if (s.keep_chains)
-  throw std::invalid_argument("scheduled keep_chains is not supported");
  if (s.sweep.full_sweep_every<0)
   throw std::invalid_argument("scheduled full_sweep_every must be non-negative");
  if (s.skip.base_interval<=0)

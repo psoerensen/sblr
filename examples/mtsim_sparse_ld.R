@@ -1716,7 +1716,7 @@ sim <- mtsim(
 )
 
 stat <- glma(y = scale(sim$y[,1]), rsids=Glist$rsidsLD[[1]], Glist = Glist)
-system.time(fitC <- gbayes(stat = stat, Glist = Glist, method = "bayesC", nit = 1000))
+system.time(fitC <- gbayes(stat = stat, Glist = Glist, method = "bayesc", nit = 1000))
 
 
 # Compute sumstats
@@ -3153,7 +3153,7 @@ sim <- mtsim(
 y <- as.matrix(scale(sim$y))
 
 stat <- glma(y = scale(sim$y[,1]), rsids=Glist$rsidsLD[[1]], Glist = Glist)
-system.time(fitC <- gbayes(stat = stat, Glist = Glist, method = "bayesC", nit = 1000))
+system.time(fitC <- gbayes(stat = stat, Glist = Glist, method = "bayesc", nit = 1000))
 
 
 # -----------------------------------------------------------------------------

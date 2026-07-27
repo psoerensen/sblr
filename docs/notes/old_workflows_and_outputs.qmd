@@ -142,7 +142,7 @@ call is:
 fit_csr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 100,
   seed = 10

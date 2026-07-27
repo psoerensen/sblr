@@ -12,7 +12,7 @@ test_that("Phase 17M public shared route equals the internal Phase 17L route", {
   expect_identical(fit$block_diagnostics$trait_owner, c(1L, 1L))
   expect_equal(fit$block_diagnostics$owners[[1L]]$blocks$start_1based,
                c(1L, 3L))
-  expect_identical(fit$alignment$wy_transformation_status,
+  expect_identical(fit$data$alignment$wy_transformation_status,
                    rep("projected_hard_truncate", 2L))
 
   mod <- sblr:::.mtblr_models(NULL, NULL, .001, 2L)
@@ -51,7 +51,7 @@ test_that("Phase 17M trait-specific filters retain consumed wy and diagnostics",
   expect_identical(fit$block_diagnostics$trait_owner, 1:2)
   expect_identical(fit$operator_metadata$sharing_mode,
                    "trait_specific_operator")
-  expect_identical(fit$alignment$wy_transformation_status,
+  expect_identical(fit$data$alignment$wy_transformation_status,
                    c("projected_hard_truncate", "unchanged_ridge_fixed"))
   expect_equal(fit$wy[, 2L], case$stats$wy[[2L]], tolerance = 0)
   expect_false(isTRUE(all.equal(fit$wy[, 1L], case$stats$wy[[1L]])))
@@ -93,7 +93,7 @@ test_that("Phase 17M named raw is schema version one and agrees with legacy", {
   expect_identical(fit$raw_schema_version, 1L)
   expect_identical(fit$input$operator_sharing_mode,
                    "fully_shared_operator")
-  expect_identical(fit$alignment$wy_transformation_status,
+  expect_identical(fit$data$alignment$wy_transformation_status,
                    "unchanged_ridge_lw")
   expect_equal(fit$wy[, 1L], case$stats$wy[[1L]], tolerance = 0)
 })

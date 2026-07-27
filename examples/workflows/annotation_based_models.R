@@ -10,8 +10,8 @@
 # longer chains and appropriate convergence and posterior predictive checks.
 #
 # Model map:
-# - stblr_csr(method = "bayesC") fits annotation-unaware CSR BayesC.
-# - stblr_csr(method = "bayesR") fits annotation-unaware CSR BayesR.
+# - stblr_csr(method = "bayesc") fits annotation-unaware CSR BayesC.
+# - stblr_csr(method = "bayesr") fits annotation-unaware CSR BayesR.
 # - stblr_csr_annot(annotation_model = "prior") uses fixed annotation-informed
 #   BayesC inclusion and variance priors.
 # - stblr_csr_annot(annotation_model = "learned") learns annotation effects on
@@ -27,7 +27,7 @@
 #
 # Inspect fit$dm for PIP/non-null probability, fit$bm for posterior mean
 # effects, fit$vbs/fit$vgs/fit$ves and fit$vle/fit$vld for variance traces,
-# fit$comp_prob and fit$dm_component_mean for BayesR/SBayesRC components, and
+# fit$component_probabilities and fit$dm_component_mean for BayesR/SBayesRC components, and
 # annotation_summary/annotation_pi/annotation_effects/annotation_prior/alpha
 # fields where those are produced by annotation-aware models. With
 # updateLDswap = TRUE, LD-swap diagnostics are in fit$ld_swap and, when
@@ -150,10 +150,10 @@ fit_bed_bayesrc <- stblr_bed(
 )
 
 fit_bed_bayesrc$dm
-fit_bed_bayesrc$comp_prob
+fit_bed_bayesrc$component_probabilities
 fit_bed_bayesrc$alpha
 fit_bed_bayesrc$sigmaSqAlpha
-fit_bed_bayesrc$pis
+fit_bed_bayesrc$pi_trace
 fit_bed_bayesrc$annotation_summary
 
 # Prepare group annotation -------------------------------------------------
@@ -227,22 +227,22 @@ mh_permissive <- list(
 
 fitC <- do.call(
   stblr_csr,
-  c(base_args, list(method = "bayesC"))
+  c(base_args, list(method = "bayesc"))
 )
 
 fitC_MH <- do.call(
   stblr_csr,
-  c(base_args, list(method = "bayesC"), mh_conservative)
+  c(base_args, list(method = "bayesc"), mh_conservative)
 )
 
 fitR <- do.call(
   stblr_csr,
-  c(base_args, list(method = "bayesR"))
+  c(base_args, list(method = "bayesr"))
 )
 
 fitR_MH <- do.call(
   stblr_csr,
-  c(base_args, list(method = "bayesR"), mh_permissive)
+  c(base_args, list(method = "bayesr"), mh_permissive)
 )
 
 # 4. Annotation-aware CSR models -------------------------------------------
@@ -439,7 +439,7 @@ field_inventory <- do.call(
       has_bm = !is.null(fit$bm),
       has_vle = !is.null(fit$vle),
       has_vld = !is.null(fit$vld),
-      has_comp_prob = !is.null(fit$comp_prob),
+      has_comp_prob = !is.null(fit$component_probabilities),
       has_dm_component_mean = !is.null(fit$dm_component_mean),
       has_ld_swap = !is.null(fit$ld_swap),
       stringsAsFactors = FALSE
@@ -920,7 +920,7 @@ annotation_summaries
 # 7. Posterior summaries and component summaries ---------------------------
 
 bayesr_component_summaries <- lapply(
-  c("bayesR", "bayesR_MH", "sbayesrc", "sbayesrc_MH"),
+  c("bayesr", "bayesR_MH", "sbayesrc", "sbayesrc_MH"),
   function(model_name) {
     x <- fits[[model_name]]
     out <- summarise_components(x)
@@ -1154,7 +1154,7 @@ maf_architecture_signal[
 fit0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = NULL,
   seed = 10
 )
@@ -1162,7 +1162,7 @@ fit0 <- stblr_csr(
 fit_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = -1,
   seed = 10
 )
@@ -1177,14 +1177,14 @@ max(abs(fit0$vld - fit_minus1$vld))
 fit_omit <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   seed = 10
 )
 
 fit_null <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = NULL,
   seed = 10
 )
@@ -1197,7 +1197,7 @@ max(abs(fit_omit$bm - fit_null$bm))
 fit_s0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = 0,
   seed = 10
 )
@@ -1205,7 +1205,7 @@ fit_s0 <- stblr_csr(
 fit_sneg <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = -0.5,
   seed = 10
 )
@@ -1263,7 +1263,7 @@ do.call(
 fit_spos1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = 1,
   seed = 10
 )
@@ -1271,7 +1271,7 @@ fit_spos1 <- stblr_csr(
 fit_sneg1_5 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = -1.5,
   seed = 10
 )
@@ -1319,7 +1319,7 @@ topn_power_matrix(topn_power_s_extreme, top_n_value = 100)
 fitR0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = NULL,
   seed = 10
 )
@@ -1327,7 +1327,7 @@ fitR0 <- stblr_csr(
 fitR_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = -1,
   seed = 10
 )
@@ -1346,8 +1346,8 @@ max(abs(fitR0$dm_component_mean - fitR_minus1$dm_component_mean))
 max_comp_prob_diff <- max(unlist(
   Map(
     function(a, b) max(abs(a - b)),
-    fitR0$comp_prob,
-    fitR_minus1$comp_prob
+    fitR0$component_probabilities,
+    fitR_minus1$component_probabilities
   )
 ))
 
@@ -1360,14 +1360,14 @@ max_comp_prob_diff
 fitR_omit <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   seed = 10
 )
 
 fitR_null <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = NULL,
   seed = 10
 )
@@ -1382,8 +1382,8 @@ max(abs(fitR_omit$dm_component_mean - fitR_null$dm_component_mean))
 max_comp_prob_diff_null <- max(unlist(
   Map(
     function(a, b) max(abs(a - b)),
-    fitR_omit$comp_prob,
-    fitR_null$comp_prob
+    fitR_omit$component_probabilities,
+    fitR_null$component_probabilities
   )
 ))
 
@@ -1396,7 +1396,7 @@ max_comp_prob_diff_null
 fitR_s0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = 0,
   seed = 10
 )
@@ -1404,7 +1404,7 @@ fitR_s0 <- stblr_csr(
 fitR_sneg <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = -0.5,
   seed = 10
 )
@@ -1428,8 +1428,8 @@ fitR_sneg$input[c(
 ## ------------------------------------------------------------
 
 check_bayesr_component_consistency <- function(fit) {
-  out <- lapply(names(fit$comp_prob), function(trait) {
-    cp <- fit$comp_prob[[trait]]
+  out <- lapply(names(fit$component_probabilities), function(trait) {
+    cp <- fit$component_probabilities[[trait]]
     
     data.frame(
       trait = trait,
@@ -1498,7 +1498,7 @@ do.call(
 fitR_spos1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = 1,
   seed = 10
 )
@@ -1506,7 +1506,7 @@ fitR_spos1 <- stblr_csr(
 fitR_sneg1_5 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = -1.5,
   seed = 10
 )
@@ -1556,7 +1556,7 @@ max_comp_prob_diff
 fitR0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = NULL,
   seed = 10
 )
@@ -1564,7 +1564,7 @@ fitR0 <- stblr_csr(
 fitR_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = -1,
   seed = 10
 )
@@ -1577,15 +1577,15 @@ max(abs(fitR0$dm_component_mean - fitR_minus1$dm_component_mean))
 
 max(unlist(Map(
   function(a, b) max(abs(a - b)),
-  fitR0$comp_prob,
-  fitR_minus1$comp_prob
+  fitR0$component_probabilities,
+  fitR_minus1$component_probabilities
 )))
 
 check_bayesr_component_consistency <- function(fit) {
   do.call(
     rbind,
-    lapply(names(fit$comp_prob), function(trait) {
-      cp <- fit$comp_prob[[trait]]
+    lapply(names(fit$component_probabilities), function(trait) {
+      cp <- fit$component_probabilities[[trait]]
       
       data.frame(
         trait = trait,
@@ -1606,7 +1606,7 @@ check_bayesr_component_consistency(fitR_minus1)
 fitC0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = NULL,
   seed = 10
 )
@@ -1614,7 +1614,7 @@ fitC0 <- stblr_csr(
 fitC_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = -1,
   seed = 10
 )
@@ -1629,7 +1629,7 @@ max(abs(fitC0$vld - fitC_minus1$vld))
 system.time(fitC0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = NULL,
   seed = 10
 ))
@@ -1637,7 +1637,7 @@ system.time(fitC0 <- stblr_csr(
 system.time(fitR0 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = NULL,
   seed = 10
 ))
@@ -1645,7 +1645,7 @@ system.time(fitR0 <- stblr_csr(
 system.time(fitR_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   selection_s = -1,
   seed = 10
 ))
@@ -1658,8 +1658,8 @@ max(abs(fitR0$dm_component_mean - fitR_minus1$dm_component_mean))
 
 max(unlist(Map(
   function(a, b) max(abs(a - b)),
-  fitR0$comp_prob,
-  fitR_minus1$comp_prob
+  fitR0$component_probabilities,
+  fitR_minus1$component_probabilities
 )))
 
 
@@ -1690,8 +1690,8 @@ max(abs(fit_sbayesrc0$dm_component_mean - fit_sbayesrc_minus1$dm_component_mean)
 
 max(unlist(Map(
   function(a, b) max(abs(a - b)),
-  fit_sbayesrc0$comp_prob,
-  fit_sbayesrc_minus1$comp_prob
+  fit_sbayesrc0$component_probabilities,
+  fit_sbayesrc_minus1$component_probabilities
 )))
 
 fit_sbayesrc_omit <- stblr_csr_annot(
@@ -1778,8 +1778,8 @@ get_null_component_col <- function(cp) {
 check_component_consistency <- function(fit) {
   do.call(
     rbind,
-    lapply(names(fit$comp_prob), function(trait) {
-      cp <- fit$comp_prob[[trait]]
+    lapply(names(fit$component_probabilities), function(trait) {
+      cp <- fit$component_probabilities[[trait]]
       null_col <- get_null_component_col(cp)
       
       data.frame(
@@ -1829,8 +1829,8 @@ get_null_component_col <- function(cp) {
 check_component_consistency <- function(fit) {
   do.call(
     rbind,
-    lapply(names(fit$comp_prob), function(trait) {
-      cp <- fit$comp_prob[[trait]]
+    lapply(names(fit$component_probabilities), function(trait) {
+      cp <- fit$component_probabilities[[trait]]
       null_col <- get_null_component_col(cp)
       
       data.frame(
@@ -1860,14 +1860,14 @@ check_component_consistency(fit_sbayesrc_sneg)
 fitC_default <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   seed = 10
 )
 
 fitC_null <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = NULL,
   estimate_selection_s = FALSE,
   seed = 10
@@ -1882,7 +1882,7 @@ max(abs(fitC_default$vld - fitC_null$vld))
 fitC_minus1 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   selection_s = -1,
   estimate_selection_s = FALSE,
   seed = 10
@@ -1898,7 +1898,7 @@ max(abs(fitC_default$vld - fitC_minus1$vld))
 fitC_sampleS <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -1919,7 +1919,7 @@ apply(fitC_sampleS$selection_s_trace, 2, sd)
 fitC_sampleS_2 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -1935,7 +1935,7 @@ max(abs(fitC_sampleS$selection_s_trace - fitC_sampleS_2$selection_s_trace))
 fitC_sampleS_sd010 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -1946,7 +1946,7 @@ fitC_sampleS_sd010 <- stblr_csr(
 fitC_sampleS_sd015 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -1964,7 +1964,7 @@ rbind(
 fitC_sampleS_wide <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -2007,7 +2007,7 @@ rbind(
 fitC_sampleS_sd025 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -2018,7 +2018,7 @@ fitC_sampleS_sd025 <- stblr_csr(
 fitC_sampleS_sd035 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -2039,7 +2039,7 @@ rbind(
 fitC_sampleS_wide <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -2086,8 +2086,8 @@ apply(
 check_bayesr_component_consistency <- function(fit) {
   do.call(
     rbind,
-    lapply(names(fit$comp_prob), function(trait) {
-      cp <- fit$comp_prob[[trait]]
+    lapply(names(fit$component_probabilities), function(trait) {
+      cp <- fit$component_probabilities[[trait]]
       
       data.frame(
         trait = trait,
@@ -2128,8 +2128,8 @@ get_sbayesrc_null_component_col <- function(cp) {
 check_sbayesrc_component_consistency <- function(fit) {
   do.call(
     rbind,
-    lapply(names(fit$comp_prob), function(trait) {
-      cp <- fit$comp_prob[[trait]]
+    lapply(names(fit$component_probabilities), function(trait) {
+      cp <- fit$component_probabilities[[trait]]
       null_col <- get_sbayesrc_null_component_col(cp)
       
       data.frame(
@@ -2171,7 +2171,7 @@ check_selection_s_fit <- function(fit) {
 fitR_sampleS <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -2185,7 +2185,7 @@ fitR_sampleS_comp <- check_bayesr_component_consistency(fitR_sampleS)
 fitR_sampleS_2 <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -2297,8 +2297,8 @@ print(apply(
 check_sbayesrc_component_consistency <- function(fit) {
   do.call(
     rbind,
-    lapply(names(fit$comp_prob), function(trait) {
-      cp <- fit$comp_prob[[trait]]
+    lapply(names(fit$component_probabilities), function(trait) {
+      cp <- fit$component_probabilities[[trait]]
       null_col <- get_sbayesrc_null_component_col(cp)
       
       data.frame(

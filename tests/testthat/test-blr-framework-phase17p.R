@@ -25,11 +25,14 @@ test_that("Phase 17P public and internal routes are numerically identical", {
     case, "diagonal", TRUE, sets = list(c(1L, 3L, 5L), c(2L, 4L))))
   state <- beta <- b <- matrix(0, m, 2L)
   state[1L, ] <- 1L; beta[1L, ] <- b[1L, ] <- c(.04, -.03)
-  phase17p_compare_public_internal(phase17p_public_args(
-    case, "full", FALSE, beta = beta, b = b, state = state))
+  # This deliberately nonzero fixed initialization can trigger the same
+  # covariance-boundary advisory in both routes on optimized installed builds;
+  # route equality, rather than that expected numerical advisory, is owned here.
+  suppressWarnings(phase17p_compare_public_internal(phase17p_public_args(
+    case, "full", FALSE, beta = beta, b = b, state = state)))
   beta[2L, ] <- c(.06, -.05)
-  phase17p_compare_public_internal(phase17p_public_args(
-    case, "full", FALSE, beta = beta, b = b, state = state))
+  suppressWarnings(phase17p_compare_public_internal(phase17p_public_args(
+    case, "full", FALSE, beta = beta, b = b, state = state)))
   phase17p_compare_public_internal(phase17p_public_args(
     case, "full", FALSE, cls = case$fixture$cls))
 
@@ -50,7 +53,7 @@ test_that("Phase 17P reuses BED alignment and reports stable provenance", {
   fit <- do.call(mtblr_bed, phase17p_public_args(
     case, "full", FALSE, trait_metadata = extra))
   expect_equal(
-    unname(fit$alignment[c("individual_policy", "row_selection_status",
+    unname(fit$data$alignment[c("individual_policy", "row_selection_status",
       "sample_order_status", "phenotype_missingness_status",
       "marker_selection_status", "marker_order_status",
       "genotype_orientation_status", "genotype_scale_status")]),
@@ -58,7 +61,7 @@ test_that("Phase 17P reuses BED alignment and reports stable provenance", {
       "phenotype_order_preserved", "complete", "default_rsidsLD",
       "selected_glist_order_preserved", "by_construction_same_glist",
       "standardized_genotype"))
-  expect_identical(fit$alignment$selected_rows, case$fixture$rows)
+  expect_identical(fit$data$alignment$selected_rows, case$fixture$rows)
   expect_identical(fit$trait_metadata$cohort, c("A", "B"))
   expect_named(fit$marker_metadata,
     c("marker_id", "chromosome_or_file", "bed_column", "allele_frequency"))
@@ -70,13 +73,13 @@ test_that("Phase 17P reuses BED alignment and reports stable provenance", {
   expect_warning(
     fit2 <- do.call(mtblr_bed, phase17p_public_args(
       unmatched, "full", FALSE)), "will be dropped")
-  expect_identical(fit2$alignment$unmatched_input_ids, "missing")
+  expect_identical(fit2$data$alignment$unmatched_input_ids, "missing")
 
   all_rows <- phase17p_case(use_all_rows = TRUE)
   on.exit(phase17p_cleanup(all_rows), add = TRUE)
   fit3 <- do.call(mtblr_bed, phase17p_public_args(
     all_rows, "full", FALSE))
-  expect_identical(fit3$alignment$row_selection_status, "all_glist_rows")
+  expect_identical(fit3$data$alignment$row_selection_status, "all_glist_rows")
   expect_identical(fit3$input$set_source, "chromosome_or_file")
 })
 
@@ -107,7 +110,7 @@ test_that("Phase 17P centers only after sample alignment", {
   original_variance <- apply(case$Y, 2L, var)
   fit <- do.call(mtblr_bed, phase17p_public_args(
     case, "full", FALSE, center = TRUE))
-  prep <- fit$phenotype_preprocessing
+  prep <- fit$data$phenotype_preprocessing
   expect_equal(unname(prep$mean_before), unname(colMeans(case$Y)),
                tolerance = 1e-15)
   expect_equal(unname(prep$mean_after), c(0, 0), tolerance = 1e-15)
@@ -129,7 +132,7 @@ test_that("Phase 17P covariance modes and priors follow the public contract", {
     case, "full", FALSE, ve = full, sse_prior = prior))
   expect_equal(fit$input$ve, full)
   expect_equal(fit$input$sse_prior, prior)
-  expect_equal(unname(fit$ve), full)
+  expect_equal(unname(fit$cov_e_final), full)
   expect_error(do.call(mtblr_bed, phase17p_public_args(
     case, "diagonal", FALSE, ve = full)), "exactly diagonal")
   expect_error(do.call(mtblr_bed, phase17p_public_args(
@@ -167,7 +170,7 @@ test_that("Phase 17P initialization accepts latent/effective state contracts", {
 test_that("Phase 17P memory estimate is analytical and warning-only", {
   estimate <- sblr:::.mtblr_bed_memory_estimate(5L, 5L, 2L, 4L, 7L)
   expected <- c(320, 80, 80, 80, 80, 40, 40, 200, 40, 192, 320, 80,
-                80, 336)
+                80, 560)
   expect_equal(unname(estimate$components_bytes), expected)
   expect_equal(estimate$estimated_total_bytes, sum(expected))
   expect_false(estimate$measured_rss)
@@ -192,7 +195,7 @@ test_that("Phase 17P rejects unsupported or malformed public input", {
   expect_error(mtblr_bed(case$Y, list(case$Glist, case$Glist)), "one Glist")
   expect_error(call(covar = matrix(1, nrow(case$Y), 1L)), "does not currently")
   expect_error(call(scale = FALSE), "scale = TRUE")
-  expect_error(call(method = "bayesR"), "Only method")
+  expect_error(call(method = "bayesr"), "Only method")
   bad <- case; bad$Y[1L, 1L] <- NA_real_
   expect_error(do.call(mtblr_bed, phase17p_public_args(
     bad, "full", FALSE)), "complete finite")
@@ -220,9 +223,10 @@ test_that("Phase 17P fit and raw metadata remain bounded", {
   expect_equal(unname(fit$input[c("backend", "data_level", "residual_covariance",
     "genotype_scale", "phenotype_scaling", "cpo", "le_ld")]),
     list("mt_bed_bayesc", "individual", "full", "standardized_genotype",
-         "not_performed", "unsupported", "unsupported"))
-  expect_true(all(c("bed_diagnostics", "phenotype_preprocessing",
-                    "memory_estimate") %in% names(fit)))
+         "not_performed", "unsupported", "trait_diagonal_decomposition"))
+  expect_true(all(c("data", "diagnostics", "memory_estimate") %in% names(fit)))
+  expect_true(all(c("alignment", "phenotype_preprocessing") %in%
+                    names(fit$data)))
   expect_false(any(c("sample_residual", "genetic_values", "phenotype",
                      "packed_bytes", "raw_pointer") %in% names(fit)))
   expect_true(all(is.finite(fit$re)))

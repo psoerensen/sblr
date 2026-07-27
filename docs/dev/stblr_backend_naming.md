@@ -457,13 +457,13 @@ route. Both serial and chains routes retain backend `mt_bed_bayesc`, data level
 Phase 17S retains `mt_bed_bayesc` for both public single- and multichain calls.
 Execution topology is represented by version-1 chain metadata, not a new name.
 
-Future diagnostic quantities use `B_diag[trait]`, `G_diag[trait]`,
-`E_diag[trait]`, trait-pair covariance names, probabilities, and
+Core diagnostic quantities use `vbs[trait]`, `vgs[trait]`, `ves[trait]`,
+`vle[trait]`, and `vld[trait]`; future extended diagnostics use trait-pair covariance names, probabilities, and
 `b/d[marker_id,trait]`, never exposed native zero-based indices.
 ## Phase 17U convergence names
 
-Internal Tier 1 quantities use `B_diag[trait]`, `G_diag[trait]`, and
-`E_diag[trait]`. The binding symbol is
+Internal Tier 1 quantities use the family-neutral `vbs[trait]`, `vgs[trait]`,
+`ves[trait]`, `vle[trait]`, and `vld[trait]` names. The binding symbol is
 `mtblr_bed_convergence_trace_internal` and remains unexported.
 
 Phase 17V exposes quantity names at `fit$convergence$summary` and reserves
@@ -472,3 +472,9 @@ Phase 17V exposes quantity names at `fit$convergence$summary` and reserves
 Phase 17W reserves future groups `B_cov`, `G_cov`, `E_cov`, `pi_mass`,
 `pi_pattern`, `marker_b`, and `marker_d`, preserving fitted trait/model/final
 marker order. These names are contractual and not yet public output.
+## Phase 18 canonical names
+
+Public models use only `bayesc`, `bayesr`, `bayesrc`, and `sbayesrc`; `cpg`
+remains an internal historical kernel term. Public operators use `csr`,
+`block_eigen`, and `packed_bed`. Deprecated case and wrapper aliases are not
+retained.

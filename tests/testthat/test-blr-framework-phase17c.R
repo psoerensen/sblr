@@ -3,6 +3,15 @@ source(blr_fixture_path("blr_phase17b_mt_default",
 source(blr_fixture_path("blr_phase17c_mt_default_corrected",
   "blr-phase17c-mt-default-corrected-reference.R"))
 
+# Phase 18 retired the legacy dispatcher from the public namespace while
+# preserving it internally as the exact scientific-reference route.
+phase17c_mt_capture <- function(id, formatted = TRUE) {
+  config <- phase17c_mt_config(id)
+  if (!formatted) return(phase17b_mt_native_raw(config))
+  set.seed(config$r_seed)
+  do.call(sblr:::sblr, phase17b_mt_public_args(config))
+}
+
 phase17c_reference <- function(id) readRDS(blr_fixture_path(
   "blr_phase17c_mt_default_corrected",
   sprintf("config-%d.rds", id)))
@@ -12,7 +21,7 @@ test_that("the corrected default is the sole supported public MT route", {
   expect_equal(source_match_count('.Call("_sblr_mtblr"', route, fixed = TRUE), 1L)
   for (algorithm in c("cpg", "cpg_arma", "cpg_omp", "eigen")) {
     expect_error(
-      sblr(algorithm = algorithm),
+      sblr:::sblr(algorithm = algorithm),
       "experimental multivariate backends were retired",
       fixed = TRUE)
   }
@@ -23,7 +32,12 @@ test_that("the corrected default is the sole supported public MT route", {
 test_that("Phase 17C uniquely owns corrected raw and formatted references", {
   for (id in 1:3) {
     ref <- phase17c_reference(id)
-    expect_equal(phase17c_mt_capture(id, FALSE), ref$raw, tolerance = 1e-12)
+    raw <- phase17c_mt_capture(id, FALSE)
+    # Preserve the frozen Phase 17C scientific reference while recognizing the
+    # additive Phase 18 LE/LD trace slots in the internal legacy adapter.
+    expect_equal(raw[seq_len(20L)], ref$raw, tolerance = 1e-12)
+    expect_length(raw, 22L)
+    expect_equal(raw[[22L]], Map(`-`, raw[[9L]], raw[[21L]]), tolerance = 1e-12)
     expect_equal(phase17c_mt_capture(id, TRUE), ref$fit, tolerance = 1e-12)
     expect_identical(length(ref$raw), 20L)
     expect_identical(ref$metadata$reference_mode,

@@ -115,7 +115,7 @@ Glist <- make_sparse_ld(
 fit_csr_bayesc <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = niter,
   nburn = nburn,
   seed = seed
@@ -135,7 +135,7 @@ check_stblr_consistency(fit_csr_bayesc)
 fit_csr_bayesr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = niter,
   nburn = nburn,
   seed = seed
@@ -164,7 +164,7 @@ is.null(fit_csr_bayesr$ld_swap_chains)
 fit_csr_bayesc_s <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE,
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
@@ -223,7 +223,7 @@ posterior_plot_bayesc <- plot_posterior(
 ##
 ## Common BayesR/SBayesRC fields include:
 ##
-##   fit$comp_prob
+##   fit$component_probabilities
 ##   fit$dm_component_mean
 ##
 ## For BayesR, the null component is usually named component_0.

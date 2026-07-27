@@ -1,5 +1,11 @@
 # BLR permanent test-contract ownership
 
+Phase 18 final vocabulary, policy-matrix, scale/sample metadata, and unsupported
+combination guards belong to `test-blr-unified-public-contract.R`. The common
+five-trace convergence contract belongs to `test-blr-unified-convergence.R`;
+cross-operator and one-trait numerical equalities belong only to
+`test-blr-operator-reductions.R`.
+
 This document assigns one primary executable owner to every supported BLR contract. Supporting tests may exercise a route for a different purpose, but must not repeat its complete reference family or process matrix.
 
 ## Test tiers
@@ -128,3 +134,14 @@ reductions. Phase 17U continues to own all diagnostic mathematics.
 Phase 17W extended-contract arithmetic and selection semantics are owned by
 `helper-mtblr-bed-extended-convergence-contract.R` and
 `test-blr-framework-phase17w.R`; only production-diff guards require checkout.
+## Phase 18 permanent owners
+
+- `test-blr-unified-public-contract.R`: exports, formals, identifiers, and fit names.
+- `test-blr-unified-convergence.R`: shared numerical engine, ST trace adapter,
+  and scheduled-CSR task-private trace retention/thinning independence.
+- `test-blr-operator-reductions.R`: executable ST/MT CSR-block-eigen,
+  BED-summary, and one-trait ST/MT reductions plus non-comparability policy.
+- `test-blr-unified-reproducibility.R`: logical task seed invariance.
+
+Historical phase owners continue to protect scientific kernels and raw schema;
+they are not copied into another Phase 18 behavioral matrix.

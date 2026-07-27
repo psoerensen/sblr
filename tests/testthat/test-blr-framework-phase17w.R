@@ -136,19 +136,19 @@ test_that("Phase 17W scalar applicability keeps binary and zero-inflated caveats
                   c(rep(0, 8), 1, 0, rep(0, 8), 1, 0),
                   c(rep(0, 7), 1, 0, 0, rep(0, 7), 1, 0, 0),
                   c(rep(0, 6), 1, 0, 0, 0, rep(0, 6), 1, 0, 0, 0))
-  got <- sblr:::.mtblr_convergence_scalar(t(binary))
+  got <- sblr:::.blr_convergence_scalar(t(binary))
   expect_true(got$status %in% c("computed", "computed_partial"))
   expect_true(is.finite(got$ess_mean))
   expect_true(is.finite(got$mcse_mean))
 
-  constant <- sblr:::.mtblr_convergence_scalar(matrix(0, 20, 4))
+  constant <- sblr:::.blr_convergence_scalar(matrix(0, 20, 4))
   expect_identical(constant$status, "constant")
   expect_true(is.na(constant$rhat))
   mismatch <- binary; mismatch[1, ] <- 0
-  expect_identical(sblr:::.mtblr_convergence_scalar(t(mismatch))$status,
+  expect_identical(sblr:::.blr_convergence_scalar(t(mismatch))$status,
                    "constant_chain_mismatch")
   zero_inflated <- binary * matrix(rep(seq_len(20), each = 4), 4, 20)
-  expect_true(sblr:::.mtblr_convergence_scalar(t(zero_inflated))$status %in%
+  expect_true(sblr:::.blr_convergence_scalar(t(zero_inflated))$status %in%
                 c("computed", "computed_partial"))
 })
 

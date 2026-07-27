@@ -166,11 +166,13 @@ make_bed_marker_chain_test_glist <- function(files) {
 }
 
 expect_bed_chain_summary_shape <- function(fit) {
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+  for (nm in c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max",
+               "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")) {
     expect_true(nm %in% names(fit))
-    expect_equal(dim(fit[[nm]]), dim(fit$dm))
-    expect_identical(rownames(fit[[nm]]), rownames(fit$dm))
-    expect_identical(colnames(fit[[nm]]), colnames(fit$dm))
+    base <- if (startsWith(nm, "dm_")) fit$dm else fit$bm
+    expect_equal(dim(fit[[nm]]), dim(base))
+    expect_identical(rownames(fit[[nm]]), rownames(base))
+    expect_identical(colnames(fit[[nm]]), colnames(base))
     expect_true(all(is.finite(fit[[nm]])))
   }
 }
@@ -179,12 +181,11 @@ test_that("BED scheduled chains expose zero-width summaries for one chain", {
   files <- make_bed_marker_chain_test_files()
   on.exit(unlink(unlist(files, use.names = FALSE)), add = TRUE)
 
-  fit <- stblr_bed_marker(
+  fit <- stblr_bed(
     Glist = make_bed_marker_chain_test_glist(files),
     y = matrix(c(-1, 0, 1, -0.5, 0.5, 1.5), ncol = 1,
                dimnames = list(NULL, "D1")),
     chr = 1:2,
-    backend = "scheduled",
     nit = 2L,
     nburn = 0L,
     full_sweep_every = 1L,
@@ -193,15 +194,16 @@ test_that("BED scheduled chains expose zero-width summaries for one chain", {
     seed = 11L
   )
 
-  expect_true(fit$input$use_chains_backend)
+  expect_identical(fit$input$backend, "bed_bayesc")
+  expect_identical(fit$operator, "packed_bed")
   expect_equal(fit$input$nchains, 1L)
   expect_bed_chain_summary_shape(fit)
-  expect_equal(fit$dm_sd, fit$dm * 0, tolerance = 1e-12)
-  expect_equal(fit$bm_sd, fit$bm * 0, tolerance = 1e-12)
-  expect_equal(fit$dm_min, fit$dm, tolerance = 1e-12)
-  expect_equal(fit$dm_max, fit$dm, tolerance = 1e-12)
-  expect_equal(fit$bm_min, fit$bm, tolerance = 1e-12)
-  expect_equal(fit$bm_max, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_sd, fit$dm * 0, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_sd, fit$bm * 0, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_min, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_max, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_min, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_max, fit$bm, tolerance = 1e-12)
 })
 
 test_that("BED scheduled chains expose finite summaries across chains", {
@@ -217,12 +219,11 @@ test_that("BED scheduled chains expose finite summaries across chains", {
   Glist$chr <- list(c(1L, 1L))
   Glist$pos <- list(c(100, 200))
 
-  fit <- stblr_bed_marker(
+  fit <- stblr_bed(
     Glist = Glist,
     y = matrix(c(-1, 0, 1, -0.5, 0.5, 1.5), ncol = 1,
                dimnames = list(NULL, "D1")),
     chr = 1L,
-    backend = "scheduled",
     nit = 2L,
     nburn = 0L,
     full_sweep_every = 1L,
@@ -231,15 +232,16 @@ test_that("BED scheduled chains expose finite summaries across chains", {
     seed = 12L
   )
 
-  expect_true(fit$input$use_chains_backend)
+  expect_identical(fit$input$backend, "bed_bayesc")
+  expect_identical(fit$operator, "packed_bed")
   expect_equal(fit$input$nchains, 2L)
   expect_bed_chain_summary_shape(fit)
-  expect_true(all(fit$dm_sd >= -1e-12))
-  expect_true(all(fit$bm_sd >= -1e-12))
-  expect_true(all(fit$dm_min <= fit$dm + 1e-12))
-  expect_true(all(fit$dm <= fit$dm_max + 1e-12))
-  expect_true(all(fit$bm_min <= fit$bm + 1e-12))
-  expect_true(all(fit$bm <= fit$bm_max + 1e-12))
+  expect_true(all(fit$dm_chain_mean_sd >= -1e-12))
+  expect_true(all(fit$bm_chain_mean_sd >= -1e-12))
+  expect_true(all(fit$dm_chain_mean_min <= fit$dm + 1e-12))
+  expect_true(all(fit$dm <= fit$dm_chain_mean_max + 1e-12))
+  expect_true(all(fit$bm_chain_mean_min <= fit$bm + 1e-12))
+  expect_true(all(fit$bm <= fit$bm_chain_mean_max + 1e-12))
 
   fm <- extract_stblr_finemap_loci(
     fit = fit,
@@ -248,10 +250,10 @@ test_that("BED scheduled chains expose finite summaries across chains", {
     trait = "D1",
     credible_sets = FALSE
   )
-  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_sd[, "D1"]))
-  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_min[, "D1"]))
-  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_max[, "D1"]))
-  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_sd[, "D1"]))
-  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_min[, "D1"]))
-  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_max[, "D1"]))
+  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_chain_mean_sd[, "D1"]))
+  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_chain_mean_min[, "D1"]))
+  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_chain_mean_max[, "D1"]))
+  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_chain_mean_sd[, "D1"]))
+  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_chain_mean_min[, "D1"]))
+  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_chain_mean_max[, "D1"]))
 })

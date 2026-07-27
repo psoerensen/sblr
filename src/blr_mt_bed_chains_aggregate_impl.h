@@ -93,6 +93,8 @@ inline void validate_mt_bed_chain_consistency(
  mt_bed_require_same_shape(reference.vbs, candidate.vbs, "vbs");
  mt_bed_require_same_shape(reference.vgs, candidate.vgs, "vgs");
  mt_bed_require_same_shape(reference.ves, candidate.ves, "ves");
+ mt_bed_require_same_shape(reference.vle, candidate.vle, "vle");
+ mt_bed_require_same_shape(reference.vld, candidate.vld, "vld");
  mt_bed_require_same_shape(reference.cvbm, candidate.cvbm, "covB");
  mt_bed_require_same_shape(reference.cvgm, candidate.cvgm, "covG");
  mt_bed_require_same_shape(reference.cvem, candidate.cvem, "covE");
@@ -128,6 +130,8 @@ inline MtBedChainSummary summarize_mt_bed_chain(
  summary.vbs=core.vbs;
  summary.vgs=core.vgs;
  summary.ves=core.ves;
+ summary.vle=core.vle;
+ summary.vld=core.vld;
  summary.covb=mt_bed_mean_nested(core.cvbm, core.covb_retained_count);
  summary.covg=mt_bed_mean_nested(core.cvgm, core.covg_retained_count);
  summary.cove=mt_bed_mean_nested(core.cvem, core.cove_retained_count);
@@ -170,6 +174,8 @@ inline MtBedChainsAggregateResult aggregate_mt_bed_chains(
  for (std::vector<double>& row : pooled.vbs) std::fill(row.begin(), row.end(), 0.0);
  for (std::vector<double>& row : pooled.vgs) std::fill(row.begin(), row.end(), 0.0);
  for (std::vector<double>& row : pooled.ves) std::fill(row.begin(), row.end(), 0.0);
+ for (std::vector<double>& row : pooled.vle) std::fill(row.begin(), row.end(), 0.0);
+ for (std::vector<double>& row : pooled.vld) std::fill(row.begin(), row.end(), 0.0);
  std::fill(pooled.pis.begin(), pooled.pis.end(), 0.0);
  pooled.marker_retained_count=0.0;
  pooled.covb_retained_count=0.0;
@@ -189,6 +195,8 @@ inline MtBedChainsAggregateResult aggregate_mt_bed_chains(
   mt_bed_add_nested(pooled.vbs, core.vbs);
   mt_bed_add_nested(pooled.vgs, core.vgs);
   mt_bed_add_nested(pooled.ves, core.ves);
+  mt_bed_add_nested(pooled.vle, core.vle);
+  mt_bed_add_nested(pooled.vld, core.vld);
   for (std::size_t model=0; model<pooled.pis.size(); ++model) {
    pooled.pis[model]+=core.pis[model];
   }
@@ -219,6 +227,8 @@ inline MtBedChainsAggregateResult aggregate_mt_bed_chains(
  mt_bed_scale_nested(pooled.vbs, static_cast<double>(results.size()));
  mt_bed_scale_nested(pooled.vgs, static_cast<double>(results.size()));
  mt_bed_scale_nested(pooled.ves, static_cast<double>(results.size()));
+ mt_bed_scale_nested(pooled.vle, static_cast<double>(results.size()));
+ mt_bed_scale_nested(pooled.vld, static_cast<double>(results.size()));
 
  const std::size_t nt=reference.bm.size();
  const std::size_t m=nt==0 ? 0 : reference.bm[0].size();

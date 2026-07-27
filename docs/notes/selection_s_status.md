@@ -1,5 +1,11 @@
 # selection_s implementation status
 
+Phase 18 names the explicit S-model compositions `sbayesc`, `sbayesr`, and
+`sbayesrc`. They reuse BayesC or BayesR-like kernels with `maf_s`; the non-S
+models `bayesc`, `bayesr`, and `bayesrc` use unit/component scales and reject
+S-only controls. The established `selection_s`, `estimate_selection_s`,
+`selection_s_prior`, and `selection_s_proposal_sd` controls remain authoritative.
+
 The package argument is `selection_s`. It corresponds to the BayesS-style
 MAF architecture parameter `S`, applied as marker-specific prior variance
 scaling in the CSR samplers that currently support it.
@@ -137,14 +143,14 @@ Valid compact examples:
 fitC <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE
 )
 
 fitR <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   estimate_selection_s = TRUE
 )
 

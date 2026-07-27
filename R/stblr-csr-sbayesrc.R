@@ -153,7 +153,6 @@
 #'   selection_s_proposal_sd = 0.35
 #' )
 #' }
-#' @export
 stblr_csr_sbayesrc_generic <- function(
   stats, ld_prefix, A, n = NULL, m = NULL,
   gamma = c(0, 0.01, 0.1, 1), pi_marker = 0.001,

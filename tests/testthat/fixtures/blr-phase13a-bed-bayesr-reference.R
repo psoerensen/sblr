@@ -20,7 +20,7 @@ phase13a_capture <- function(ncores = 1L, nchains = 1L, seed = 71L,
     pi = c(.95, .03, .015, .005), rebuild_every = 2L,
     read_block_size = 2L, full_sweep_every = full_sweep_every,
     null_skip_base = null_skip_base, null_skip_max = null_skip_max,
-    progress_every = progress_every)
+    progress_every = progress_every, convergence = "none")
   list(raw = get(".phase13a_raw", envir = .GlobalEnv), fit = fit)
 }
 

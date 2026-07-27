@@ -396,7 +396,7 @@ test_that("stblr_csr fits BayesC through public method interface", {
   fit <- stblr_csr(
     stats = make_stblr_csr_interface_stats(),
     ld_prefix = make_stblr_csr_interface_prefix(),
-    method = "bayesC",
+    method = "bayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -412,9 +412,9 @@ test_that("stblr_csr fits BayesC through public method interface", {
 
   required_fields <- c(
     "bm", "dm", "wy", "r", "b", "d",
-    "vbs", "vgs", "ves", "vle", "vld", "pis",
-    "covb", "covg", "cove",
-    "pi", "pim",
+    "vbs", "vgs", "ves", "vle", "vld", "pi_trace",
+    "cov_b_mean", "cov_g_mean", "cov_e_mean",
+    "pi_final", "pi_mean",
     "rb", "rg", "re",
     "input"
   )
@@ -422,7 +422,7 @@ test_that("stblr_csr fits BayesC through public method interface", {
   expect_equal(missing_fields, character())
   expect_equal(dim(fit$bm), c(3L, 1L))
   expect_equal(dim(fit$dm), c(3L, 1L))
-  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pi_trace")) {
     expect_equal(dim(fit[[nm]]), c(2L, 1L))
   }
   expect_equal(fit$input$method, "bayesc")
@@ -432,7 +432,7 @@ test_that("stblr_csr fits BayesC through public method interface", {
   expect_equal(fit$input$scheduled, FALSE)
   expect_equal(fit$input$nchains, 1L)
   expect_null(fit$chains)
-  expect_null(fit$ld_swap_chains)
+  expect_null(fit$diagnostics$ld_swap_chains)
 })
 
 test_that("stblr_csr BayesC no-chain formatting keeps LD-swap diagnostics", {
@@ -444,7 +444,7 @@ test_that("stblr_csr BayesC no-chain formatting keeps LD-swap diagnostics", {
   fit <- stblr_csr(
     stats = make_stblr_csr_interface_stats(),
     ld_prefix = make_stblr_csr_interface_prefix(),
-    method = "bayesC",
+    method = "bayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -465,10 +465,10 @@ test_that("stblr_csr BayesC no-chain formatting keeps LD-swap diagnostics", {
   )
 
   expect_null(fit$chains)
-  expect_null(fit$ld_swap_chains)
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_null(fit$diagnostics$ld_swap_chains)
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
+                    names(fit$diagnostics$ld_swap)))
 })
 
 test_that("stblr_csr fits BayesR through public method interface", {
@@ -480,7 +480,7 @@ test_that("stblr_csr fits BayesR through public method interface", {
   fit <- stblr_csr(
     stats = make_stblr_csr_interface_stats(),
     ld_prefix = make_stblr_csr_interface_prefix(),
-    method = "bayesR",
+    method = "bayesr",
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
@@ -492,12 +492,13 @@ test_that("stblr_csr fits BayesR through public method interface", {
   )
 
   expect_true(all(c(
-    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pi", "pim", "pis",
-    "input", "comp_prob", "dm_component_mean"
+    "bm", "dm", "vbs", "vgs", "ves", "vle", "vld", "pi_final",
+    "pi_mean", "pi_trace", "input", "component_probabilities",
+    "dm_component_mean"
   ) %in% names(fit)))
   expect_equal(dim(fit$bm), c(3L, 1L))
   expect_equal(dim(fit$dm), c(3L, 1L))
-  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+  for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pi_trace")) {
     expect_equal(dim(fit[[nm]]), c(2L, 1L))
   }
   expect_equal(fit$input$method, "bayesr")
@@ -508,12 +509,13 @@ test_that("stblr_csr fits BayesR through public method interface", {
   expect_equal(fit$input$nchains, 1L)
   expect_equal(
     unname(as.numeric(fit$dm[, "trait1"])),
-    unname(1 - fit$comp_prob$trait1[, "component_0"]),
+    unname(1 - fit$component_probabilities$trait1[, "component_0"]),
     tolerance = 1e-8
   )
-  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, 3), tolerance = 1e-8)
+  expect_equal(unname(rowSums(fit$component_probabilities$trait1)),
+               rep(1, 3), tolerance = 1e-8)
   expect_null(fit$chains)
-  expect_null(fit$ld_swap_chains)
+  expect_null(fit$diagnostics$ld_swap_chains)
 })
 
 test_that("stblr_csr_annot routes SBayesRC through raw v1 formatter", {
@@ -557,9 +559,9 @@ test_that("stblr_csr_annot routes SBayesRC through raw v1 formatter", {
 
   required_fields <- c(
     "bm", "dm", "wy", "r", "b", "d",
-    "vbs", "vgs", "ves", "vle", "vld", "pis",
-    "covb", "covg", "cove", "pi", "pim", "input",
-    "comp_prob", "dm_component_mean", "alpha", "sigmaSqAlpha",
+    "vbs", "vgs", "ves", "vle", "vld", "pi_trace",
+    "cov_b_mean", "cov_g_mean", "cov_e_mean", "pi_final", "pi_mean", "input",
+    "component_probabilities", "dm_component_mean", "alpha", "sigmaSqAlpha",
     "annotation_summary", "annotation_pi", "annotation_effects"
   )
   missing_fields <- setdiff(required_fields, names(fit))
@@ -568,17 +570,19 @@ test_that("stblr_csr_annot routes SBayesRC through raw v1 formatter", {
   expect_equal(fit$input$backend, "csr_sbayesrc")
   expect_equal(dim(fit$bm), c(3L, 1L))
   expect_equal(dim(fit$dm), c(3L, 1L))
-  expect_identical(colnames(fit$comp_prob$trait1)[1L], "gamma_0.00")
-  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, 3), tolerance = 1e-8)
+  expect_identical(colnames(fit$component_probabilities$trait1)[1L],
+                   "gamma_0.00")
+  expect_equal(unname(rowSums(fit$component_probabilities$trait1)),
+               rep(1, 3), tolerance = 1e-8)
   expect_equal(
     unname(as.numeric(fit$dm[, "trait1"])),
-    unname(1 - fit$comp_prob$trait1[, "gamma_0.00"]),
+    unname(1 - fit$component_probabilities$trait1[, "gamma_0.00"]),
     tolerance = 1e-8
   )
   expect_equal(dim(fit$alpha$trait1), c(ncol(fit$input$A), 2L))
   expect_equal(dim(fit$sigmaSqAlpha), c(1L, 2L))
   expect_null(fit$chains)
-  expect_null(fit$ld_swap_chains)
+  expect_null(fit$diagnostics$ld_swap_chains)
 })
 
 test_that("CSR SBayesRC raw v1 keep_chains exposes compact chain summaries", {

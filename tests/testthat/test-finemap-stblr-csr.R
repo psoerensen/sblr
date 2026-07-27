@@ -34,9 +34,9 @@ test_that("global parameters are extracted from traces after burn-in", {
     input = list(nburn = 2),
     ves = matrix(c(1, 2, 10, 20, 100, 200), ncol = 2, byrow = TRUE),
     vbs = matrix(c(3, 4, 30, 40, 300, 400), ncol = 2, byrow = TRUE),
-    pis = matrix(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6), ncol = 2, byrow = TRUE)
+    pi_trace = matrix(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6), ncol = 2, byrow = TRUE)
   )
-  colnames(fit$ves) <- colnames(fit$vbs) <- colnames(fit$pis) <- c("t1", "t2")
+  colnames(fit$ves) <- colnames(fit$vbs) <- colnames(fit$pi_trace) <- c("t1", "t2")
 
   expect_equal(.stblr_get_global_parameter(fit, "ve", 2), 200)
   expect_equal(.stblr_get_global_parameter(fit, "vb", 1), 300)

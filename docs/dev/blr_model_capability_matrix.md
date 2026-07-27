@@ -6,6 +6,21 @@
 
 ## Current framework status
 
+Phase 18 supersedes the older model spelling in the historical sections below.
+The canonical scientific identifiers are `bayesc`, `sbayesc`, `bayesr`,
+`sbayesr`, `bayesrc`, and `sbayesrc`. S models reuse existing kernels through
+the `maf_s` effect-scale policy; no S kernel is duplicated. The executable
+authoritative support matrix is `.blr_model_capability_matrix()` and is
+summarized in `blr_unified_architecture.md`. MTBLR supports only `bayesc` in
+Phase 18. STBLR supports `bayesc`/`sbayesc`/`bayesr`/`sbayesr` on CSR and block
+eigen, `sbayesrc` through annotation CSR and block eigen, and
+`bayesc`/`bayesr`/`bayesrc` on packed BED. All other cells are `unsupported`.
+
+Annotation-aware BayesC policies are `fixed_marker`, `learned_logistic`, and
+`group`, all through CSR. Annotation-aware mixture models use
+`annotation_probit_stick`; ordinary binary and mixture models use `global`.
+Unsupported policy/operator cells fail before numerical execution.
+
 Canonical ordinary CSR: BayesC, BayesR, SBayesRC, fixed-prior BayesC, group
 BayesC, and learned-annotation BayesC. Canonical scheduled: ordinary-CSR BayesC
 and public scheduled packed-BED BayesC. Experimental/sparse BED BayesC and
@@ -453,3 +468,12 @@ Off-diagonal covariance, probability, and marker diagnostics remain unsupported.
 
 Phase 17W formalizes, but does not implement, Tier 2 raw strict-lower B/G/E and
 active/null/explicit-pattern diagnostics plus later Tier 3 selected-marker b/d.
+## Phase 18 canonical public matrix
+
+| family | csr | block_eigen | packed_bed |
+|---|---|---|---|
+| STBLR | BayesC, BayesR; annotation BayesC/SBayesRC through `stblr_csr_annot()` | BayesC, BayesR, SBayesRC | BayesC, BayesR, BayesRC |
+| MTBLR | BayesC | BayesC | BayesC |
+
+Only lowercase model identifiers are public. MTBLR BayesR/BayesRC and extended
+convergence diagnostics are not Phase 18 capabilities.

@@ -89,25 +89,23 @@ test_that("CSR LD-swap arguments are validated", {
     "chain_seeds"
   )
   expect_error(
-    stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, keep_chains = TRUE),
-    "keep_chains"
-  )
-  expect_error(
     stblr_csr(stats = stats, ld_prefix = prefix, scheduled = TRUE, updateLDswap = TRUE),
     "updateLDswap"
   )
   expect_error(
     stblr_csr(stats = stats, ld_prefix = prefix, method = "invalid"),
-    "method"
+    "bayesc.*bayesr"
   )
 })
 
 expect_csr_chain_summary_shape <- function(fit) {
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+  for (nm in c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max",
+               "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")) {
     expect_true(nm %in% names(fit))
-    expect_equal(dim(fit[[nm]]), dim(fit$dm))
-    expect_identical(rownames(fit[[nm]]), rownames(fit$dm))
-    expect_identical(colnames(fit[[nm]]), colnames(fit$dm))
+    base <- if (startsWith(nm, "dm_")) fit$dm else fit$bm
+    expect_equal(dim(fit[[nm]]), dim(base))
+    expect_identical(rownames(fit[[nm]]), rownames(base))
+    expect_identical(colnames(fit[[nm]]), colnames(base))
     expect_false(anyNA(fit[[nm]]))
     expect_true(all(is.finite(fit[[nm]])))
   }
@@ -137,8 +135,7 @@ test_that("CSR sampler exposes ld_swap as present-but-NULL when LD-swap is disab
     seed = 11
   )
 
-  expect_true("ld_swap" %in% names(fit))
-  expect_null(fit$ld_swap)
+  expect_null(fit$diagnostics$ld_swap)
   expect_equal(fit$input$method, "bayesc")
   expect_equal(fit$input$model, "bayesc")
   expect_equal(fit$input$backend, "csr_bayesc")
@@ -163,7 +160,7 @@ test_that("CSR method defaults to BayesC and explicit BayesC preserves metadata"
   )
 
   fit_default <- do.call(stblr_csr, args)
-  fit_method <- do.call(stblr_csr, c(args, list(method = "BayesC")))
+  fit_method <- do.call(stblr_csr, c(args, list(method = "bayesc")))
 
   expect_equal(class(fit_method), class(fit_default))
   expect_equal(names(fit_method), names(fit_default))
@@ -195,11 +192,10 @@ test_that("CSR sampler runs with LD-swap enabled on tiny CSR LD", {
     ld_swap_moves = 2
   )
 
-  expect_true("ld_swap" %in% names(fit))
-  expect_equal(fit$ld_swap$attempted, 6)
-  expect_true(fit$ld_swap$accepted >= 0)
-  expect_true(fit$ld_swap$acceptance_rate >= 0)
-  expect_true(fit$ld_swap$acceptance_rate <= 1)
+  expect_equal(fit$diagnostics$ld_swap$attempted, 6)
+  expect_true(fit$diagnostics$ld_swap$accepted >= 0)
+  expect_true(fit$diagnostics$ld_swap$acceptance_rate >= 0)
+  expect_true(fit$diagnostics$ld_swap$acceptance_rate <= 1)
 })
 
 test_that("CSR sampler returns multi-chain posterior summaries", {
@@ -247,14 +243,14 @@ test_that("scheduled CSR returns one-chain posterior summaries", {
   expect_equal(fit$input$backend, "csr_scheduled_bayesc")
   expect_equal(fit$input$data_level, "summary")
   expect_equal(fit$input$scheduled, TRUE)
-  expect_true("pis" %in% names(fit))
+  expect_true("pi_trace" %in% names(fit))
   expect_csr_chain_summary_shape(fit)
-  expect_equal(fit$dm_sd, fit$dm * 0, tolerance = 1e-12)
-  expect_equal(fit$bm_sd, fit$bm * 0, tolerance = 1e-12)
-  expect_equal(fit$dm_min, fit$dm, tolerance = 1e-12)
-  expect_equal(fit$dm_max, fit$dm, tolerance = 1e-12)
-  expect_equal(fit$bm_min, fit$bm, tolerance = 1e-12)
-  expect_equal(fit$bm_max, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_sd, fit$dm * 0, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_sd, fit$bm * 0, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_min, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_max, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_min, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_max, fit$bm, tolerance = 1e-12)
 })
 
 test_that("scheduled CSR returns multi-chain posterior summaries", {
@@ -281,14 +277,14 @@ test_that("scheduled CSR returns multi-chain posterior summaries", {
   expect_equal(fit$input$backend, "csr_scheduled_bayesc")
   expect_equal(fit$input$data_level, "summary")
   expect_equal(fit$input$scheduled, TRUE)
-  expect_true("pis" %in% names(fit))
+  expect_true("pi_trace" %in% names(fit))
   expect_csr_chain_summary_shape(fit)
-  expect_true(all(fit$dm_sd >= -1e-12))
-  expect_true(all(fit$bm_sd >= -1e-12))
-  expect_true(all(fit$dm_min <= fit$dm + 1e-12))
-  expect_true(all(fit$dm <= fit$dm_max + 1e-12))
-  expect_true(all(fit$bm_min <= fit$bm + 1e-12))
-  expect_true(all(fit$bm <= fit$bm_max + 1e-12))
+  expect_true(all(fit$dm_chain_mean_sd >= -1e-12))
+  expect_true(all(fit$bm_chain_mean_sd >= -1e-12))
+  expect_true(all(fit$dm_chain_mean_min <= fit$dm + 1e-12))
+  expect_true(all(fit$dm <= fit$dm_chain_mean_max + 1e-12))
+  expect_true(all(fit$bm_chain_mean_min <= fit$bm + 1e-12))
+  expect_true(all(fit$bm <= fit$bm_chain_mean_max + 1e-12))
 
   fm <- extract_stblr_finemap_loci(
     fit = fit,
@@ -297,12 +293,12 @@ test_that("scheduled CSR returns multi-chain posterior summaries", {
     trait = "trait1",
     credible_sets = FALSE
   )
-  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_sd[, "trait1"]))
-  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_min[, "trait1"]))
-  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_max[, "trait1"]))
-  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_sd[, "trait1"]))
-  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_min[, "trait1"]))
-  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_max[, "trait1"]))
+  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_chain_mean_sd[, "trait1"]))
+  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_chain_mean_min[, "trait1"]))
+  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_chain_mean_max[, "trait1"]))
+  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_chain_mean_sd[, "trait1"]))
+  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_chain_mean_min[, "trait1"]))
+  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_chain_mean_max[, "trait1"]))
 })
 
 test_that("CSR sampler can keep compact per-chain summaries", {
@@ -324,9 +320,9 @@ test_that("CSR sampler can keep compact per-chain summaries", {
   )
 
   expect_true("chains" %in% names(fit))
-  expect_length(fit$chains$trait1, 2)
-  dm_chain <- vapply(fit$chains$trait1, function(x) x$dm, numeric(3))
-  bm_chain <- vapply(fit$chains$trait1, function(x) x$bm, numeric(3))
+  expect_length(fit$chains, 2)
+  dm_chain <- vapply(fit$chains, function(x) x$dm, numeric(3))
+  bm_chain <- vapply(fit$chains, function(x) x$bm, numeric(3))
   expect_equal(as.numeric(fit$dm[, "trait1"]), unname(rowMeans(dm_chain)), tolerance = 1e-12)
   expect_equal(as.numeric(fit$bm[, "trait1"]), unname(rowMeans(bm_chain)), tolerance = 1e-12)
 })
@@ -354,13 +350,13 @@ test_that("CSR LD-swap diagnostics aggregate across chains", {
     ld_swap_moves = 2
   )
 
-  expect_true("ld_swap" %in% names(fit))
-  expect_equal(fit$ld_swap$attempted, 12)
-  expect_true(fit$ld_swap$accepted >= 0)
-  expect_true(fit$ld_swap$acceptance_rate >= 0)
-  expect_true(fit$ld_swap$acceptance_rate <= 1)
-  expect_true("ld_swap_chains" %in% names(fit))
-  expect_equal(sum(fit$ld_swap_chains$trait1$attempted), fit$ld_swap$attempted)
+  expect_equal(fit$diagnostics$ld_swap$attempted, 12)
+  expect_true(fit$diagnostics$ld_swap$accepted >= 0)
+  expect_true(fit$diagnostics$ld_swap$acceptance_rate >= 0)
+  expect_true(fit$diagnostics$ld_swap$acceptance_rate <= 1)
+  expect_true("ld_swap_chains" %in% names(fit$diagnostics))
+  expect_equal(sum(fit$diagnostics$ld_swap_chains$trait1$attempted),
+               fit$diagnostics$ld_swap$attempted)
 })
 
 test_that("local CSR runner accepts LD-swap pass-through arguments", {

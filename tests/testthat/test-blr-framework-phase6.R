@@ -5,8 +5,10 @@ test_that("canonical CSR BayesR retains permanent exact references",{
  for(nm in names(phase5a_bayesr_configs)){
   cfg<-phase5a_bayesr_configs[[nm]]
   ref<-readRDS(phase6_path("tests","testthat","fixtures","blr_phase5a_bayesr",paste0(nm,".rds")))
-  expect_equal(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,TRUE)),ref$raw,tolerance=1e-12,info=paste(nm,"raw"))
-  expect_equal(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,FALSE)),ref$fit,tolerance=1e-12,info=paste(nm,"fit"))
+  expect_equal(phase5a_bayesr_raw_science(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,TRUE))),
+    phase5a_bayesr_raw_science(ref$raw),tolerance=1e-12,info=paste(nm,"raw scientific fields"))
+  expect_equal(phase5a_bayesr_fit_science(phase5a_bayesr_normalize(phase5a_bayesr_run(cfg,FALSE))),
+    phase5a_bayesr_fit_science(ref$fit),tolerance=1e-12,info=paste(nm,"fit scientific fields"))
  }
 })
 

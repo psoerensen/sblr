@@ -49,7 +49,7 @@ guards <- c(
   has(engine, "unavailable_single_chain", "computed = FALSE"),
   has(engine, "rhat = NA_real_", "ess_bulk = NA_real_"),
   has(engine, "if (updated[i]) reason else \"not_updated\""),
-  has(engine, ".mtblr_convergence_summary_columns"),
+  has(engine, ".blr_convergence_summary_columns"),
   has(formatter, "fit$convergence <- raw$diagnostics$convergence"),
   has(public, "fit[\"convergence_traces\"] <- list(convergence_traces)"),
   has(public, ".as_mtblr_fit("),

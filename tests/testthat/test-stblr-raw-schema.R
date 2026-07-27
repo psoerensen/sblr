@@ -130,13 +130,18 @@ test_that(".as_stblr_fit() maps a BayesR-shaped raw object with components and p
   raw <- make_fake_stblr_raw(nt = 1L, m = 6L, model = "bayesr", backend = "csr_bayesr")
   variable_names <- paste0("m", seq_len(6L))
 
-  fit <- .as_stblr_fit(raw, trait_names = "trait1", variable_names = variable_names)
+  fit <- sblr:::.blr_finalize_fit(
+    .as_stblr_fit(raw, trait_names = "trait1", variable_names = variable_names),
+    "stblr", "bayesr", "csr"
+  )
 
-  expect_true(!is.null(fit$pis))
-  expect_true(!is.null(fit$comp_prob))
-  expect_named(fit$comp_prob, "trait1")
-  expect_identical(dim(fit$comp_prob$trait1), c(6L, 3L))
-  expect_equal(fit$dm[, "trait1"], 1 - fit$comp_prob$trait1[, "component_0"], tolerance = 1e-8)
+  expect_true(!is.null(fit$pi_trace))
+  expect_true(!is.null(fit$component_probabilities))
+  expect_named(fit$component_probabilities, "trait1")
+  expect_identical(dim(fit$component_probabilities$trait1), c(6L, 3L))
+  expect_equal(fit$dm[, "trait1"],
+               1 - fit$component_probabilities$trait1[, "component_0"],
+               tolerance = 1e-8)
   expect_true(!is.null(fit$dm_component_mean))
 
   fit$input <- list(nchains = 1L)
@@ -146,14 +151,19 @@ test_that(".as_stblr_fit() maps a BayesR-shaped raw object with components and p
 
 test_that("check_stblr_consistency() flags malformed comp_prob rows", {
   raw <- make_fake_stblr_raw(nt = 1L, m = 4L, model = "bayesr", backend = "csr_bayesr")
-  fit <- .as_stblr_fit(raw, trait_names = "trait1", variable_names = paste0("m", 1:4))
+  fit <- sblr:::.blr_finalize_fit(
+    .as_stblr_fit(raw, trait_names = "trait1", variable_names = paste0("m", 1:4)),
+    "stblr", "bayesr", "csr"
+  )
 
-  fit$comp_prob$trait1[1L, ] <- c(0.5, 0.5, 0.5)
+  fit$component_probabilities$trait1[1L, ] <- c(0.5, 0.5, 0.5)
   fit$input <- list(nchains = 1L)
 
   chk <- check_stblr_consistency(fit, verbose = FALSE)
   expect_false(chk$ok)
-  expect_false(chk$checks$ok[match("comp_prob.trait1.rowsums", chk$checks$check)])
+  expect_false(chk$checks$ok[match(
+    "component_probabilities.trait1.rowsums", chk$checks$check
+  )])
 })
 
 test_that("check_stblr_consistency() validates fit$selection_s against trait count", {

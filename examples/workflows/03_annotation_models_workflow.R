@@ -142,8 +142,8 @@ sbayesrc_args <- list(
 ## 4. Fit annotation-unaware and annotation-aware models
 ## -------------------------------------------------------------------------
 
-fit_bayesc <- do.call(stblr_csr, c(base_args, list(method = "bayesC")))
-fit_bayesr <- do.call(stblr_csr, c(base_args, list(method = "bayesR")))
+fit_bayesc <- do.call(stblr_csr, c(base_args, list(method = "bayesc")))
+fit_bayesr <- do.call(stblr_csr, c(base_args, list(method = "bayesr")))
 
 fit_prior <- do.call(
   stblr_csr_annot,
@@ -177,7 +177,7 @@ posterior_summaries <- lapply(fits, summarise_posterior)
 lapply(posterior_summaries, head)
 
 component_summaries <- lapply(
-  c("bayesR", "sbayesrc"),
+  c("bayesr", "sbayesrc"),
   function(model_name) {
     out <- summarise_components(fits[[model_name]])
     out$model <- model_name

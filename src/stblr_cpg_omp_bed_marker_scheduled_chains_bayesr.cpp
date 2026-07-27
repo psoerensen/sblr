@@ -55,7 +55,8 @@ struct BedBayesRBindingMetadata {
 
 static Rcpp::List stblr_bed_bayesr_result_to_raw(
  const sblr::core::BedBayesRExecutionResult& result,
- const BedBayesRBindingMetadata& metadata
+ const BedBayesRBindingMetadata& metadata,
+ const std::vector<sblr::core::BedBayesRChainExecutionResult>& chain_results
 );
 // [[Rcpp::export]]
 Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
@@ -97,7 +98,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   int progress_every,
   int nchains,
   int ncores,
-  int seed
+  int seed,
+  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create()
 ) {
  if (nit <= 0 || nburn < 0)
   throw std::runtime_error("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr: nit must be positive and nburn non-negative.");
@@ -107,6 +109,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  if (null_skip_base <= 0) throw std::runtime_error("null_skip_base must be positive.");
  if (null_skip_max < 0) throw std::runtime_error("null_skip_max must be >= 0.");
  if (nchains <= 0) throw std::runtime_error("nchains must be positive.");
+ if (chain_seeds.size()>0 && chain_seeds.size()!=nchains)
+  throw std::runtime_error("chain_seeds must be empty or have length nchains.");
  if (read_block_size <= 0) throw std::runtime_error("read_block_size must be positive.");
  if (progress_every < 0) throw std::runtime_error("progress_every must be >= 0.");
  if (!std::isfinite(candidate_threshold) || candidate_threshold < 0.0 || candidate_threshold > 1.0)
@@ -273,8 +277,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
                               skip_nulls_burnin_only, "probability_adaptive"},
    sblr::core::CandidateControl{candidate_threshold, candidate_lifetime}
   };
-  const std::uint64_t chain_seed=
-   sblr::core::resolve_bed_family_logical_chain_seed(seed,t,ch);
+  const std::uint64_t chain_seed=chain_seeds.size()==0 ?
+   sblr::core::resolve_bed_family_logical_chain_seed(seed,t,ch) :
+   static_cast<unsigned int>(chain_seeds[static_cast<std::size_t>(ch)]+
+                             1000003*(t+1));
   const sblr::core::BedBayesRChainExecutionContext<FastPackedBedMatrixBR,MarkerMapBayesR> context{
    genotype, marker_maps, marker_order, y_mat, b_init, B, E,
    ssb_prior_mat, sse_prior_mat, components, scheduler, nub, nue, adjE,
@@ -367,12 +373,13 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  const BedBayesRBindingMetadata binding_metadata{
   m,nt,nit+nburn,nit,nburn,nthin,nchains,K,n_used,c
  };
- return stblr_bed_bayesr_result_to_raw(result,binding_metadata);
+ return stblr_bed_bayesr_result_to_raw(result,binding_metadata,job_results);
 }
 
 static Rcpp::List stblr_bed_bayesr_result_to_raw(
  const sblr::core::BedBayesRExecutionResult& result,
- const BedBayesRBindingMetadata& metadata
+ const BedBayesRBindingMetadata& metadata,
+ const std::vector<sblr::core::BedBayesRChainExecutionResult>& chain_results
 ) {
  const int m=metadata.marker_count, nt=metadata.trait_count;
  const int n_trace=metadata.trace_length, nit=metadata.iterations;
@@ -505,6 +512,31 @@ static Rcpp::List stblr_bed_bayesr_result_to_raw(
   Rcpp::Named("max") = R_NilValue,
   Rcpp::Named("acceptance") = R_NilValue
  );
+ Rcpp::List chains(nt);
+ for (int t=0; t<nt; ++t) {
+  Rcpp::List trait_chains(nchains);
+  for (int chain=0; chain<nchains; ++chain) {
+   const auto& value=chain_results[
+    static_cast<std::size_t>(chain*nt+t)];
+   trait_chains[chain]=Rcpp::List::create(
+    Rcpp::Named("marker")=Rcpp::List::create(
+     Rcpp::Named("bm")=value.bm.t(),Rcpp::Named("dm")=value.dm.t(),
+     Rcpp::Named("state")=value.d_as_double.t()),
+    Rcpp::Named("trace")=Rcpp::List::create(
+     Rcpp::Named("vbs")=value.vbs.t(),Rcpp::Named("vgs")=value.vgs.t(),
+     Rcpp::Named("ves")=value.ves.t(),Rcpp::Named("vle")=value.vles.t(),
+     Rcpp::Named("vld")=value.vlds.t()),
+    Rcpp::Named("component")=Rcpp::List::create(
+     Rcpp::Named("prob")=value.pip_k.t(),
+     Rcpp::Named("dm_component_mean")=value.component_mean.t()),
+    Rcpp::Named("pi")=Rcpp::List::create(
+     Rcpp::Named("final")=value.final_pi,
+     Rcpp::Named("mean")=value.mean_pi),
+    Rcpp::Named("diagnostics")=Rcpp::List::create(
+     Rcpp::Named("seconds")=value.seconds));
+  }
+  chains[t]=trait_chains;
+ }
 
  Rcpp::List raw = Rcpp::List::create(
   Rcpp::Named("schema") = Rcpp::List::create(
@@ -523,7 +555,7 @@ static Rcpp::List stblr_bed_bayesr_result_to_raw(
    Rcpp::Named("nburn") = nburn,
    Rcpp::Named("nthin") = nthin,
    Rcpp::Named("nchains") = nchains,
-   Rcpp::Named("keep_chains") = false,
+   Rcpp::Named("keep_chains") = true,
    Rcpp::Named("n_components") = K,
    Rcpp::Named("n_annotations") = 0,
    Rcpp::Named("n_groups") = 0
@@ -537,7 +569,7 @@ static Rcpp::List stblr_bed_bayesr_result_to_raw(
    Rcpp::Named("names") = component_names
   ),
   Rcpp::Named("diagnostics") = diagnostics,
-  Rcpp::Named("chains") = R_NilValue,
+  Rcpp::Named("chains") = chains,
   Rcpp::Named("prior") = Rcpp::List::create(),
   Rcpp::Named("group") = Rcpp::List::create(),
   Rcpp::Named("annotation") = Rcpp::List::create(),

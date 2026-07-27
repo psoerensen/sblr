@@ -134,7 +134,8 @@ expect_field_inventory_core <- function(fit, backend, data_level, annotations) {
   expect_identical(fit$input$annotations, annotations)
 
   chk <- sblr::check_stblr_consistency(fit, verbose = FALSE)
-  expect_true(chk$ok)
+  expect_true(chk$ok, info = paste(chk$checks$message[!chk$checks$ok],
+                                   collapse = "; "))
 }
 
 expect_field_inventory_csr_variance <- function(fit) {
@@ -147,7 +148,8 @@ expect_field_inventory_csr_variance <- function(fit) {
 }
 
 expect_field_inventory_chain_summaries <- function(fit) {
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+  for (nm in c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max",
+               "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")) {
     expect_true(nm %in% names(fit), info = nm)
     expect_equal(dim(fit[[nm]]), dim(fit$dm), info = nm)
   }
@@ -155,17 +157,16 @@ expect_field_inventory_chain_summaries <- function(fit) {
 
 expect_field_inventory_chains <- function(fit) {
   expect_true("chains" %in% names(fit))
-  trait <- colnames(fit$dm)[1L]
-  chain <- fit$chains[[trait]][[1L]]
+  chain <- fit$chains[[1L]]
   expect_identical(names(chain$dm), rownames(fit$dm))
   expect_identical(names(chain$bm), rownames(fit$bm))
 }
 
 expect_field_inventory_bayesr <- function(fit) {
-  expect_true(all(c("comp_prob", "dm_component_mean") %in% names(fit)))
-  expect_named(fit$comp_prob, colnames(fit$dm))
+  expect_true(all(c("component_probabilities", "dm_component_mean") %in% names(fit)))
+  expect_named(fit$component_probabilities, colnames(fit$dm))
   trait <- colnames(fit$dm)[1L]
-  expect_equal(fit$dm[, trait], 1 - fit$comp_prob[[trait]][, 1L], tolerance = 1e-8)
+  expect_equal(fit$dm[, trait], 1 - fit$component_probabilities[[trait]][, 1L], tolerance = 1e-8)
   expect_equal(dim(fit$dm_component_mean), dim(fit$dm))
 }
 
@@ -176,7 +177,7 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   res_c <- capture_stblr_raw(sblr::stblr_csr(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
-    method = "bayesC",
+    method = "bayesc",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -200,13 +201,13 @@ test_that("CSR BayesC and BayesR expose common field inventory", {
   expect_field_inventory_csr_variance(fit_c)
   expect_field_inventory_chain_summaries(fit_c)
   expect_field_inventory_chains(fit_c)
-  expect_true("ld_swap" %in% names(fit_c))
+  expect_true("ld_swap" %in% names(fit_c$diagnostics))
 
   skip_if_not(exists("stblr_cpg_omp_csr_bayesr", mode = "function"))
   res_r <- capture_stblr_raw(sblr::stblr_csr(
     stats = stats,
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
-    method = "bayesR",
+    method = "bayesr",
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
@@ -248,6 +249,7 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
     nchains = 2L,
     keep_chains = TRUE,
     chain_seeds = c(201L, 202L),
+    convergence = "none",
     ncores = 1L,
     seed = 201L
   ))
@@ -318,7 +320,7 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   expect_field_inventory_raw(res_group$raw, "csr_group_bayesc")
   expect_field_inventory_core(fit_group, "csr_group_bayesc", "summary", TRUE)
   expect_field_inventory_csr_variance(fit_group)
-  expect_true("ld_swap" %in% names(fit_group))
+  expect_true("ld_swap" %in% names(fit_group$diagnostics))
   expect_true(all(c(
     "annotation_pi", "annotation_variance", "annotation_summary",
     "group_pi", "group_vb_multiplier", "group_nincluded", "group_size"
@@ -327,10 +329,15 @@ test_that("annotation-aware CSR models expose aligned common and annotation fiel
   skip_if_not(exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"))
   res_sbayesrc <- capture_stblr_raw(sblr::stblr_csr_annot(
     stats = stats,
+    Glist = list(
+      rsidsLD = list(stats$marker_names),
+      rsids = list(stats$marker_names),
+      maf = list(rep(0.2, stats$m))
+    ),
     ld_prefix = make_field_inventory_csr_prefix(stats$m),
     annotations = A,
     annotation_model = "sbayesrc",
-    method = "bayesr",
+    method = "sbayesrc",
     gamma = c(0, 0.1, 1),
     pi_init = 0.35,
     pi_prior_mean = 0.35,
@@ -364,7 +371,7 @@ test_that("BED BayesC and BayesR expose supported field inventory", {
   res_c <- capture_stblr_raw(sblr::stblr_bed(
     y = fixture$y,
     Glist = fixture$Glist,
-    method = "bayesC",
+    method = "bayesc",
     nit = 2L,
     nburn = 0L,
     full_sweep_every = 1L,
@@ -384,7 +391,7 @@ test_that("BED BayesC and BayesR expose supported field inventory", {
   res_r <- capture_stblr_raw(sblr::stblr_bed(
     y = fixture$y,
     Glist = fixture$Glist,
-    method = "bayesR",
+    method = "bayesr",
     nit = 2L,
     nburn = 0L,
     full_sweep_every = 1L,

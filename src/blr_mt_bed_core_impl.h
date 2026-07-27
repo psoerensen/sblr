@@ -457,6 +457,8 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
   result.vbs.assign(nt, std::vector<double>(total_iterations, 0.0));
   result.vgs.assign(nt, std::vector<double>(total_iterations, 0.0));
   result.ves.assign(nt, std::vector<double>(total_iterations, 0.0));
+  result.vle.assign(nt, std::vector<double>(total_iterations, 0.0));
+  result.vld.assign(nt, std::vector<double>(total_iterations, 0.0));
   result.pis.assign(nmodels, 0.0);
   result.cvbm.assign(nt, std::vector<double>(nt, 0.0));
   result.cvgm.assign(nt, std::vector<double>(nt, 0.0));
@@ -587,6 +589,18 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
       mt_bed_genetic_covariance(data.phenotype, residual);
     for (std::size_t trait = 0; trait < nt; ++trait) {
       result.vgs[trait][iteration] = genetic_covariance(trait, trait);
+      long double diagonal_contribution = 0.0L;
+      for (std::size_t marker = 0; marker < m; ++marker) {
+        const long double effect =
+          static_cast<long double>(result.b[trait][marker]);
+        diagonal_contribution +=
+          static_cast<long double>(data.marker_maps[marker].xx) *
+          effect * effect;
+      }
+      result.vle[trait][iteration] = static_cast<double>(
+        diagonal_contribution / static_cast<long double>(n));
+      result.vld[trait][iteration] =
+        result.vgs[trait][iteration] - result.vle[trait][iteration];
     }
 
     if (execution.updateE) {

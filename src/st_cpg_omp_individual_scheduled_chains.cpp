@@ -763,7 +763,9 @@ struct BedScheduledBayesCBindingMetadata {
 
 static Rcpp::List stblr_bed_scheduled_bayesc_result_to_raw(
  const sblr::core::BedScheduledBayesCExecutionResult& result,
- const BedScheduledBayesCBindingMetadata& metadata
+ const BedScheduledBayesCBindingMetadata& metadata,
+ const std::vector<sblr::core::BedScheduledBayesCChainExecutionResult>&
+  chain_results
 ) {
  const int m=result.marker_count;
  const int nt=result.trait_count;
@@ -843,6 +845,30 @@ static Rcpp::List stblr_bed_scheduled_bayesc_result_to_raw(
   Rcpp::Named("trace")=R_NilValue,Rcpp::Named("mean")=R_NilValue,
   Rcpp::Named("sd")=R_NilValue,Rcpp::Named("min")=R_NilValue,
   Rcpp::Named("max")=R_NilValue,Rcpp::Named("acceptance")=R_NilValue);
+ Rcpp::List chains(nt);
+ for (int t=0; t<nt; ++t) {
+  Rcpp::List trait_chains(result.chain_count);
+  for (int chain=0; chain<result.chain_count; ++chain) {
+   const auto& value=chain_results[
+    static_cast<std::size_t>(chain*nt+t)];
+   trait_chains[chain]=Rcpp::List::create(
+    Rcpp::Named("marker")=Rcpp::List::create(
+     Rcpp::Named("bm")=value.bm.t(),Rcpp::Named("dm")=value.dm.t(),
+     Rcpp::Named("state")=value.d_as_double.t()),
+    Rcpp::Named("trace")=Rcpp::List::create(
+     Rcpp::Named("vbs")=value.vbs.t(),Rcpp::Named("vgs")=value.vgs.t(),
+     Rcpp::Named("ves")=value.ves.t(),Rcpp::Named("vle")=value.vles.t(),
+     Rcpp::Named("vld")=value.vlds.t(),Rcpp::Named("pis")=value.pis.t()),
+    Rcpp::Named("pi")=Rcpp::List::create(
+     Rcpp::Named("final")=Rcpp::NumericVector::create(
+      1.0-value.final_pi,value.final_pi),
+     Rcpp::Named("mean")=Rcpp::NumericVector::create(
+      1.0-value.mean_pi,value.mean_pi)),
+    Rcpp::Named("diagnostics")=Rcpp::List::create(
+     Rcpp::Named("seconds")=value.seconds));
+  }
+  chains[t]=trait_chains;
+ }
  Rcpp::List raw=Rcpp::List::create(
   Rcpp::Named("schema")=Rcpp::List::create(
    Rcpp::Named("class")="stblr_raw",Rcpp::Named("version")=1),
@@ -853,14 +879,14 @@ static Rcpp::List stblr_bed_scheduled_bayesc_result_to_raw(
    Rcpp::Named("m")=m,Rcpp::Named("nt")=nt,Rcpp::Named("n_trace")=n_trace,
    Rcpp::Named("nit")=metadata.nit,Rcpp::Named("nburn")=metadata.nburn,
    Rcpp::Named("nthin")=metadata.nthin,Rcpp::Named("nchains")=result.chain_count,
-   Rcpp::Named("keep_chains")=false,Rcpp::Named("n_components")=2,
+   Rcpp::Named("keep_chains")=true,Rcpp::Named("n_components")=2,
    Rcpp::Named("n_annotations")=0,Rcpp::Named("n_groups")=0),
   Rcpp::Named("marker")=marker,Rcpp::Named("trace")=trace,
   Rcpp::Named("variance")=variance,
   Rcpp::Named("pi")=Rcpp::List::create(
    Rcpp::Named("final")=pi_final,Rcpp::Named("mean")=pi_mean,
    Rcpp::Named("names")=Rcpp::CharacterVector::create("pi0","pi1")),
-  Rcpp::Named("diagnostics")=diagnostics,Rcpp::Named("chains")=R_NilValue,
+  Rcpp::Named("diagnostics")=diagnostics,Rcpp::Named("chains")=chains,
   Rcpp::Named("prior")=Rcpp::List::create(),Rcpp::Named("group")=Rcpp::List::create(),
   Rcpp::Named("annotation")=Rcpp::List::create(),
   Rcpp::Named("component")=Rcpp::List::create(),Rcpp::Named("selection")=selection);
@@ -908,7 +934,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   double pi_prior_b,
   int nchains,
   int ncores,
-  int seed
+  int seed,
+  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create()
 ) {
  if (nit <= 0 || nburn < 0) {
   throw std::runtime_error("stblr_cpg_omp_bed_marker_scheduled_chains: nit must be positive and nburn non-negative.");
@@ -919,6 +946,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  if (null_skip_base <= 0) throw std::runtime_error("null_skip_base must be positive.");
  if (null_skip_max < 0) throw std::runtime_error("null_skip_max must be >= 0.");
  if (nchains <= 0) throw std::runtime_error("nchains must be positive.");
+ if (chain_seeds.size()>0 && chain_seeds.size()!=nchains)
+  throw std::runtime_error("chain_seeds must be empty or have length nchains.");
  if (read_block_size <= 0) throw std::runtime_error("read_block_size must be positive.");
  if (progress_every < 0) throw std::runtime_error("progress_every must be >= 0.");
  if (!std::isfinite(pi_prior_a) || pi_prior_a <= 0.0) {
@@ -1072,8 +1101,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   const auto task=sblr::core::make_bed_family_task_index(job,nt);
   const int chain=task.chain;
   const int t=task.trait;
-  const std::uint64_t chain_seed=
-   sblr::core::resolve_bed_family_logical_chain_seed(seed,t,chain);
+  const std::uint64_t chain_seed=chain_seeds.size()==0 ?
+   sblr::core::resolve_bed_family_logical_chain_seed(seed,t,chain) :
+   static_cast<unsigned int>(chain_seeds[static_cast<std::size_t>(chain)]+
+                             1000003*(t+1));
   const sblr::core::BedPackedGenotypeView<FastPackedBedMatrix> genotype{
    G,G.data.data(),G.data.size(),static_cast<std::size_t>(G.m),
    static_cast<std::size_t>(G.n),G.nbytes,G.stride};
@@ -1142,5 +1173,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  const auto execution_result=sblr::core::aggregate_bed_scheduled_bayesc_results(
   job_results,aggregation_context);
  const BedScheduledBayesCBindingMetadata binding_metadata{nit,nburn,nthin,n_used};
- return stblr_bed_scheduled_bayesc_result_to_raw(execution_result,binding_metadata);
+ return stblr_bed_scheduled_bayesc_result_to_raw(
+  execution_result,binding_metadata,job_results);
 }

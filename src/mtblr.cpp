@@ -4486,7 +4486,9 @@ Rcpp::List mtblr_legacy_to_raw(
   Rcpp::_["trace"]=Rcpp::List::create(
    Rcpp::_["vbs"]=mt_legacy_trait_matrix(legacy,7),
    Rcpp::_["vgs"]=mt_legacy_trait_matrix(legacy,8),
-   Rcpp::_["ves"]=mt_legacy_trait_matrix(legacy,9)),
+   Rcpp::_["ves"]=mt_legacy_trait_matrix(legacy,9),
+   Rcpp::_["vle"]=mt_legacy_trait_matrix(legacy,20),
+   Rcpp::_["vld"]=mt_legacy_trait_matrix(legacy,21)),
   Rcpp::_["variance"]=Rcpp::List::create(
    Rcpp::_["covb"]=mt_legacy_trait_matrix(legacy,10),
    Rcpp::_["covg"]=mt_legacy_trait_matrix(legacy,11),
@@ -4551,6 +4553,155 @@ Rcpp::List mtblr_csr_raw_internal(
  updateB, updateE, updatePi);
 }
 
+namespace {
+
+std::vector<int> mt_summary_resolve_chain_seeds(
+ int seed, int nchains, const std::vector<int>& requested) {
+ if (nchains<1) throw std::invalid_argument("nchains must be positive");
+ if (!requested.empty() && static_cast<int>(requested.size())!=nchains)
+  throw std::invalid_argument("chain_seeds must have length nchains");
+ if (!requested.empty()) return requested;
+ std::vector<int> resolved(static_cast<std::size_t>(nchains));
+ const std::uint32_t base=static_cast<std::uint32_t>(seed);
+ for (int chain=0;chain<nchains;++chain) {
+  const std::uint32_t value=base+static_cast<std::uint32_t>(9176u)*
+   static_cast<std::uint32_t>(chain);
+  resolved[static_cast<std::size_t>(chain)]=static_cast<std::int32_t>(value);
+ }
+ return resolved;
+}
+
+template <class Runner>
+std::vector<sblr::mt::MtDefaultLegacyResult> mt_summary_dispatch_chains(
+ int nchains, int ncores, const Runner& runner,
+ std::vector<std::string>& errors, int& used_workers) {
+ if (ncores<1) throw std::invalid_argument("ncores must be positive");
+ std::vector<sblr::mt::MtDefaultLegacyResult> results(
+  static_cast<std::size_t>(nchains));
+ std::vector<int> failed(static_cast<std::size_t>(nchains),0);
+ errors.assign(static_cast<std::size_t>(nchains),std::string());
+ used_workers=1;
+#ifdef _OPENMP
+ used_workers=std::min(ncores,nchains);
+#pragma omp parallel for num_threads(used_workers) schedule(static)
+#endif
+ for (int chain=0;chain<nchains;++chain) {
+  try {
+   results[static_cast<std::size_t>(chain)]=runner(chain);
+  } catch (const std::exception& e) {
+   failed[static_cast<std::size_t>(chain)]=1;
+   errors[static_cast<std::size_t>(chain)]=e.what();
+  } catch (...) {
+   failed[static_cast<std::size_t>(chain)]=1;
+   errors[static_cast<std::size_t>(chain)]="unknown error";
+  }
+ }
+ for (int chain=0;chain<nchains;++chain) if (failed[static_cast<std::size_t>(chain)])
+  throw std::runtime_error("MT summary chain "+std::to_string(chain+1)+
+   " failed: "+errors[static_cast<std::size_t>(chain)]);
+ return results;
+}
+
+Rcpp::List mt_summary_raw_list(
+ const std::vector<sblr::mt::MtDefaultLegacyResult>& chains,
+ const std::vector<std::vector<int>>& models, const std::string& backend,
+ int nit, int nburn, int nthin, bool updateB, bool updateE, bool updatePi,
+ const std::vector<int>& seeds, int requested_workers, int used_workers,
+ Rcpp::Nullable<Rcpp::List> extra=R_NilValue) {
+ Rcpp::List raws(static_cast<R_xlen_t>(chains.size()));
+ for (std::size_t chain=0;chain<chains.size();++chain)
+  raws[static_cast<R_xlen_t>(chain)]=mtblr_legacy_to_raw(
+   chains[chain],models,backend,"summary",nit,nburn,nthin,
+   updateB,updateE,updatePi,extra);
+ return Rcpp::List::create(
+  Rcpp::_ ["raws"]=raws,
+  Rcpp::_ ["chain_seeds"]=Rcpp::wrap(seeds),
+  Rcpp::_ ["requested_workers"]=requested_workers,
+  Rcpp::_ ["used_workers"]=used_workers,
+  Rcpp::_ ["operator_preparations"]=1);
+}
+
+}  // namespace
+
+// Shared-preparation deterministic logical-chain execution for MT CSR.
+// [[Rcpp::export]]
+Rcpp::List mtblr_csr_chains_raw_internal(
+ std::vector<std::vector<double>> wy,
+ std::vector<std::vector<double>> ww,
+ std::vector<double> yy,
+ std::vector<std::vector<double>> b,
+ std::vector<std::string> ld_prefixes,
+ const std::vector<std::vector<int>>& sets,
+ arma::mat B, arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models,
+ std::vector<double> pi, double nub, double nue,
+ bool updateB, bool updateE, bool updatePi,
+ std::vector<int> n, int nit, int nburn, int nthin, int seed, int method,
+ int nchains, int ncores, std::vector<int> chain_seeds) {
+ const std::size_t nt=wy.size();
+ if (nt==0 || ww.size()!=nt || yy.size()!=nt || n.size()!=nt)
+  throw std::invalid_argument("mtblr_csr_chains_raw_internal: inconsistent trait dimensions");
+ const std::size_t m=wy[0].size();
+ if (m==0 || (ld_prefixes.size()!=1 && ld_prefixes.size()!=nt))
+  throw std::invalid_argument("mtblr_csr_chains_raw_internal: invalid LD ownership");
+ for (std::size_t trait=0;trait<nt;++trait)
+  if (wy[trait].size()!=m || ww[trait].size()!=m)
+   throw std::invalid_argument("mtblr_csr_chains_raw_internal: inconsistent marker dimensions");
+ const bool shared=ld_prefixes.size()==1;
+ if (shared) for (std::size_t trait=1;trait<nt;++trait)
+  if (ww[trait]!=ww[0]) throw std::invalid_argument(
+   "mtblr_csr_chains_raw_internal: shared LD requires identical diagonals");
+
+ std::vector<sblr::core::SparseLdCsrStorage> storage_owners;
+ std::vector<arma::rowvec> diagonal_owners;
+ const std::size_t owner_count=shared ? 1 : nt;
+ storage_owners.reserve(owner_count); diagonal_owners.reserve(owner_count);
+ for (std::size_t owner=0;owner<owner_count;++owner) {
+  const std::size_t trait=shared ? 0 : owner;
+  storage_owners.push_back(read_and_build_st_ld_csr(
+   ld_prefixes[shared ? 0 : trait],static_cast<int>(m),ww[trait]));
+  arma::rowvec diagonal(m);
+  for (std::size_t marker=0;marker<m;++marker) diagonal(marker)=ww[trait][marker];
+  diagonal_owners.push_back(std::move(diagonal));
+ }
+ std::vector<sblr::core::SparseLdCsrView> views;
+ views.reserve(nt);
+ for (std::size_t trait=0;trait<nt;++trait) {
+  const std::size_t owner=shared ? 0 : trait;
+  const auto& storage=storage_owners[owner];
+  sblr::core::SparseLdCsrView view;
+  view.marker_count=m; view.row_ptr=storage.ptr.data();
+  view.row_ptr_size=storage.ptr.size();
+  view.column_index=storage.idx.empty()?nullptr:storage.idx.data();
+  view.offdiag_xij=storage.xij.empty()?nullptr:storage.xij.data();
+  view.nonzero_count=storage.idx.size(); view.diagonal=&diagonal_owners[owner];
+  views.push_back(view);
+ }
+ const sblr::mt::MtCsrDataView data{
+  wy,yy,n,sblr::mt::MtSparseLdBundleView{m,std::move(views)}};
+ const sblr::mt::MtDefaultModelSpec model{models,sets,method};
+ const sblr::mt::MtDefaultCovariancePriorView prior{
+  ssb_prior,sse_prior,nub,nue};
+ const std::vector<int> seeds=mt_summary_resolve_chain_seeds(
+  seed,nchains,chain_seeds);
+ std::vector<std::string> errors; int used_workers=1;
+ auto runner=[&](int chain) {
+  const sblr::mt::MtDefaultExecutionSpec execution{
+   updateB,updateE,updatePi,nit,nburn,nthin,
+   seeds[static_cast<std::size_t>(chain)]};
+  sblr::mt::MtDefaultInitialState initial{b,B,E,pi};
+  auto core=sblr::mt::run_mt_csr_core(data,model,prior,execution,std::move(initial));
+  auto final=sblr::mt::finalize_mt_default_result(std::move(core));
+  return sblr::mt::make_mt_default_legacy_result(final,wy,nit,nburn);
+ };
+ const auto results=mt_summary_dispatch_chains(
+  nchains,ncores,runner,errors,used_workers);
+ return mt_summary_raw_list(results,models,"mt_csr_bayesc",nit,nburn,nthin,
+  updateB,updateE,updatePi,seeds,ncores,used_workers);
+}
+
 // Named schema adapter for the public R mtblr_block_eigen() boundary. The
 // adapter builds operators and executes the Phase 17L core exactly once.
 // [[Rcpp::export]]
@@ -4612,6 +4763,112 @@ Rcpp::List mtblr_block_eigen_raw_internal(
   adapter.legacy, models, "mt_block_eigen_bayesc", "summary",
   nit, nburn, nthin,
   updateB, updateE, updatePi,
+  Rcpp::List::create(Rcpp::_["block_eigen"]=block_diagnostics));
+}
+
+// Shared-preparation deterministic logical-chain execution for MT block eigen.
+// [[Rcpp::export]]
+Rcpp::List mtblr_block_eigen_chains_raw_internal(
+ std::vector<std::vector<double>> wy, std::vector<double> yy,
+ std::vector<std::vector<double>> b, Rcpp::List operator_descriptors,
+ const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E,
+ std::vector<std::vector<double>> ssb_prior,
+ std::vector<std::vector<double>> sse_prior,
+ std::vector<std::vector<int>> models, std::vector<double> pi,
+ double nub, double nue, bool updateB, bool updateE, bool updatePi,
+ std::vector<int> n, int nit, int nburn, int nthin, int seed, int method,
+ int nchains, int ncores, std::vector<int> chain_seeds) {
+ if (method!=4) throw std::invalid_argument(
+  "mtblr_block_eigen_chains_raw_internal supports method = 4 only");
+ const std::size_t nt=wy.size();
+ if (nt==0 || yy.size()!=nt || n.size()!=nt || b.size()!=nt)
+  throw std::invalid_argument("MT block-eigen chain trait dimensions are inconsistent");
+ const std::size_t m=wy[0].size();
+ if (m==0 || (operator_descriptors.size()!=1 &&
+     static_cast<std::size_t>(operator_descriptors.size())!=nt))
+  throw std::invalid_argument("MT block-eigen operator ownership is invalid");
+ for (std::size_t trait=0;trait<nt;++trait)
+  if (wy[trait].size()!=m || b[trait].size()!=m)
+   throw std::invalid_argument("MT block-eigen marker dimensions are inconsistent");
+
+ const bool shared=operator_descriptors.size()==1;
+ const std::size_t owner_count=shared ? 1 : nt;
+ std::vector<MtBlockEigenDescriptor> descriptors;
+ descriptors.reserve(owner_count);
+ for (std::size_t owner=0;owner<owner_count;++owner)
+  descriptors.push_back(parse_mt_block_eigen_descriptor(
+   Rcpp::as<Rcpp::List>(operator_descriptors[static_cast<R_xlen_t>(owner)]),m));
+ std::vector<sblr::core::BlockEigenStorage> storage_owners;
+ storage_owners.reserve(owner_count);
+ std::vector<std::vector<BlockEigenDiag>> owner_diagnostics(owner_count);
+ std::vector<std::vector<double>> transformed_wy=wy;
+ for (std::size_t owner=0;owner<owner_count;++owner) {
+  const auto& descriptor=descriptors[owner];
+  const int* rows=descriptor.rows0.empty()?nullptr:descriptor.rows0.data();
+  PackedBedMatrix packed=read_bedfiles_to_packed_matrix(
+   descriptor.bed_files,descriptor.n_bed,rows,
+   static_cast<int>(descriptor.rows0.size()),descriptor.cls);
+  const std::size_t rows_in_build=shared ? nt : 1;
+  arma::mat wy_matrix(rows_in_build,m);
+  for (std::size_t row=0;row<rows_in_build;++row) {
+   const std::size_t trait=shared ? row : owner;
+   for (std::size_t marker=0;marker<m;++marker)
+    wy_matrix(static_cast<arma::uword>(row),static_cast<arma::uword>(marker))=
+     wy[trait][marker];
+  }
+  storage_owners.push_back(build_block_eigen(
+   packed,descriptor.af,descriptor.block_start,descriptor.filter,
+   descriptor.tau,descriptor.eta,wy_matrix,1,&owner_diagnostics[owner]));
+  for (std::size_t row=0;row<rows_in_build;++row) {
+   const std::size_t trait=shared ? row : owner;
+   for (std::size_t marker=0;marker<m;++marker)
+    transformed_wy[trait][marker]=wy_matrix(
+     static_cast<arma::uword>(row),static_cast<arma::uword>(marker));
+  }
+ }
+ std::vector<sblr::core::BlockEigenView> views;
+ views.reserve(nt);
+ for (std::size_t trait=0;trait<nt;++trait)
+  views.push_back(storage_owners[shared?0:trait].view());
+ const sblr::mt::MtBlockEigenDataView data{
+  transformed_wy,yy,n,sblr::mt::MtBlockEigenBundleView{m,std::move(views)}};
+ const sblr::mt::MtDefaultModelSpec model{models,sets,method};
+ const sblr::mt::MtDefaultCovariancePriorView prior{ssb_prior,sse_prior,nub,nue};
+ const std::vector<int> seeds=mt_summary_resolve_chain_seeds(seed,nchains,chain_seeds);
+ std::vector<std::string> errors; int used_workers=1;
+ auto runner=[&](int chain) {
+  const sblr::mt::MtDefaultExecutionSpec execution{
+   updateB,updateE,updatePi,nit,nburn,nthin,seeds[static_cast<std::size_t>(chain)]};
+  sblr::mt::MtDefaultInitialState initial{b,B,E,pi};
+  auto core=sblr::mt::run_mt_block_eigen_core(
+   data,model,prior,execution,std::move(initial));
+  auto final=sblr::mt::finalize_mt_default_result(std::move(core));
+  return sblr::mt::make_mt_default_legacy_result(final,transformed_wy,nit,nburn);
+ };
+ const auto results=mt_summary_dispatch_chains(
+  nchains,ncores,runner,errors,used_workers);
+ Rcpp::List owners(static_cast<R_xlen_t>(owner_count));
+ for (std::size_t owner=0;owner<owner_count;++owner) {
+  const auto& descriptor=descriptors[owner];
+  owners[static_cast<R_xlen_t>(owner)]=Rcpp::List::create(
+   Rcpp::_["eigen_filter"]=mt_block_eigen_filter_name(descriptor.filter),
+   Rcpp::_["eigen_tau"]=descriptor.tau,Rcpp::_["eigen_eta"]=descriptor.eta,
+   Rcpp::_["mu_floor"]=0.01,Rcpp::_["reference_sample_size"]=descriptor.n_bed,
+   Rcpp::_["selected_row_count"]=descriptor.rows0.empty()?descriptor.n_bed:
+    static_cast<int>(descriptor.rows0.size()),
+   Rcpp::_["marker_count"]=static_cast<int>(descriptor.af.size()),
+   Rcpp::_["blocks"]=block_eigen_diagnostics_to_data_frame(owner_diagnostics[owner]));
+ }
+ Rcpp::IntegerVector trait_owner(static_cast<R_xlen_t>(nt));
+ for (std::size_t trait=0;trait<nt;++trait)
+  trait_owner[static_cast<R_xlen_t>(trait)]=static_cast<int>(shared?1:trait+1);
+ Rcpp::List block_diagnostics=Rcpp::List::create(
+  Rcpp::_["owner_count"]=static_cast<int>(owner_count),
+  Rcpp::_["trait_owner"]=trait_owner,
+  Rcpp::_["sharing_mode"]=shared?"fully_shared_operator":"trait_specific_operator",
+  Rcpp::_["owners"]=owners);
+ return mt_summary_raw_list(results,models,"mt_block_eigen_bayesc",
+  nit,nburn,nthin,updateB,updateE,updatePi,seeds,ncores,used_workers,
   Rcpp::List::create(Rcpp::_["block_eigen"]=block_diagnostics));
 }
 
@@ -4956,7 +5213,7 @@ Rcpp::List mtblr_bed_internal(
   Rcpp::_["sample_residual_returned"]=false,
   Rcpp::_["genetic_values_returned"]=false,
   Rcpp::_["cpo"]="unsupported",
-  Rcpp::_["le_ld"]="unsupported");
+  Rcpp::_["le_ld"]="trait_diagonal_decomposition");
  return mtblr_legacy_to_raw(
   legacy, models, "mt_bed_bayesc", "individual",
   nit, nburn, nthin, updateB, updateE, updatePi,
@@ -5010,7 +5267,9 @@ Rcpp::List mt_bed_compact_chain_record(
   Rcpp::_["trace"]=Rcpp::List::create(
    Rcpp::_["vbs"]=mt_bed_trait_matrix(chain.vbs),
    Rcpp::_["vgs"]=mt_bed_trait_matrix(chain.vgs),
-   Rcpp::_["ves"]=mt_bed_trait_matrix(chain.ves)),
+   Rcpp::_["ves"]=mt_bed_trait_matrix(chain.ves),
+   Rcpp::_["vle"]=mt_bed_trait_matrix(chain.vle),
+   Rcpp::_["vld"]=mt_bed_trait_matrix(chain.vld)),
   Rcpp::_["variance"]=Rcpp::List::create(
    Rcpp::_["covb"]=mt_bed_trait_matrix(chain.covb),
    Rcpp::_["covg"]=mt_bed_trait_matrix(chain.covg),
@@ -5217,7 +5476,7 @@ Rcpp::List mtblr_bed_chains_binding_impl(
   Rcpp::_["sample_residual_returned"]=false,
   Rcpp::_["genetic_values_returned"]=false,
   Rcpp::_["cpo"]="unsupported",
-  Rcpp::_["le_ld"]="unsupported",
+  Rcpp::_["le_ld"]="trait_diagonal_decomposition",
   Rcpp::_["requested_cores"]=ncores,
   Rcpp::_["used_workers"]=used_workers,
   Rcpp::_["openmp_available"]=openmp_available,

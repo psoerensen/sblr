@@ -147,7 +147,7 @@ marker values directly.
 fit_bed <- stblr_bed(
   Glist = Glist,
   y = y,
-  method = "bayesC",
+  method = "bayesc",
   chr = chr,
   cls = cls,
   scale = TRUE,
@@ -332,7 +332,7 @@ LD metadata in `Glist`:
 fit_csr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   pi_init = 0.001,
   h2 = 0.5,
   nit = 1000,

@@ -8,14 +8,14 @@ make_backend_consistency_fit <- function(nchains = 1L, summaries = FALSE) {
                dimnames = list(markers, "trait1"))
   fit <- list(dm = dm, bm = bm, input = list(nchains = nchains))
   if (summaries) {
-    fit$dm_sd <- matrix(if (nchains == 1L) rep(0, 3) else c(0.01, 0.02, 0.03),
+    fit$dm_chain_mean_sd <- matrix(if (nchains == 1L) rep(0, 3) else c(0.01, 0.02, 0.03),
                         ncol = 1, dimnames = dimnames(dm))
-    fit$dm_min <- dm - if (nchains == 1L) 0 else 0.01
-    fit$dm_max <- dm + if (nchains == 1L) 0 else 0.01
-    fit$bm_sd <- matrix(if (nchains == 1L) rep(0, 3) else c(0.001, 0.002, 0.003),
+    fit$dm_chain_mean_min <- dm - if (nchains == 1L) 0 else 0.01
+    fit$dm_chain_mean_max <- dm + if (nchains == 1L) 0 else 0.01
+    fit$bm_chain_mean_sd <- matrix(if (nchains == 1L) rep(0, 3) else c(0.001, 0.002, 0.003),
                         ncol = 1, dimnames = dimnames(bm))
-    fit$bm_min <- bm - if (nchains == 1L) 0 else 0.001
-    fit$bm_max <- bm + if (nchains == 1L) 0 else 0.001
+    fit$bm_chain_mean_min <- bm - if (nchains == 1L) 0 else 0.001
+    fit$bm_chain_mean_max <- bm + if (nchains == 1L) 0 else 0.001
   }
   fit
 }
@@ -69,8 +69,8 @@ test_that("backend consistency checker catches invalid dimensions", {
 
 test_that("backend consistency checker catches invalid min and max summaries", {
   fit <- make_backend_consistency_fit(nchains = 2L, summaries = TRUE)
-  fit$dm_min[1, 1] <- fit$dm[1, 1] + 0.1
-  fit$bm_max[2, 1] <- fit$bm[2, 1] - 0.1
+  fit$dm_chain_mean_min[1, 1] <- fit$dm[1, 1] + 0.1
+  fit$bm_chain_mean_max[2, 1] <- fit$bm[2, 1] - 0.1
 
   chk <- check_stblr_consistency(fit, verbose = FALSE)
 
@@ -87,7 +87,7 @@ test_that("backend consistency checker validates single-chain summaries", {
   )
 
   expect_true(chk$ok)
-  expect_true(chk$checks$ok[match("chain_summary.single.dm_sd_zero", chk$checks$check)])
+  expect_true(chk$checks$ok[match("chain_summary.single.dm_chain_mean_sd_zero", chk$checks$check)])
   expect_true(chk$checks$ok[match("chain_summary.single.bm_equal", chk$checks$check)])
 })
 
@@ -98,16 +98,17 @@ test_that("backend consistency checker validates compact chain summaries", {
   fit$bm <- matrix(c(0.015, -0.025, 0.035), ncol = 1,
                    dimnames = dimnames(fit$bm))
   fit$chains <- list(
-    trait1 = list(
-      chain1 = list(dm = c(0.10, 0.20, 0.30), bm = c(0.01, -0.02, 0.03)),
-      chain2 = list(dm = c(0.20, 0.30, 0.40), bm = c(0.02, -0.03, 0.04))
-    )
+    task1 = list(trait_index = 1L, chain_index = 1L,
+                 dm = c(0.10, 0.20, 0.30), bm = c(0.01, -0.02, 0.03)),
+    task2 = list(trait_index = 1L, chain_index = 2L,
+                 dm = c(0.20, 0.30, 0.40), bm = c(0.02, -0.03, 0.04))
   )
-  fit$dm_min <- pmin(fit$chains$trait1$chain1$dm, fit$chains$trait1$chain2$dm)
-  fit$dm_max <- pmax(fit$chains$trait1$chain1$dm, fit$chains$trait1$chain2$dm)
-  fit$bm_min <- pmin(fit$chains$trait1$chain1$bm, fit$chains$trait1$chain2$bm)
-  fit$bm_max <- pmax(fit$chains$trait1$chain1$bm, fit$chains$trait1$chain2$bm)
-  for (nm in c("dm_min", "dm_max", "bm_min", "bm_max")) {
+  fit$dm_chain_mean_min <- pmin(fit$chains$task1$dm, fit$chains$task2$dm)
+  fit$dm_chain_mean_max <- pmax(fit$chains$task1$dm, fit$chains$task2$dm)
+  fit$bm_chain_mean_min <- pmin(fit$chains$task1$bm, fit$chains$task2$bm)
+  fit$bm_chain_mean_max <- pmax(fit$chains$task1$bm, fit$chains$task2$bm)
+  for (nm in c("dm_chain_mean_min", "dm_chain_mean_max",
+               "bm_chain_mean_min", "bm_chain_mean_max")) {
     fit[[nm]] <- matrix(fit[[nm]], ncol = 1, dimnames = dimnames(fit$dm))
   }
 
@@ -124,7 +125,7 @@ test_that("backend consistency checker validates compact chain summaries", {
 
 test_that("backend consistency checker validates LD-swap diagnostics", {
   fit <- make_backend_consistency_fit()
-  fit$ld_swap <- data.frame(
+  fit$diagnostics$ld_swap <- data.frame(
     attempted = 10,
     accepted = 4,
     acceptance_rate = 0.4
@@ -142,7 +143,7 @@ test_that("backend consistency checker validates LD-swap diagnostics", {
 
 test_that("backend consistency checker catches invalid LD-swap diagnostics", {
   fit <- make_backend_consistency_fit()
-  fit$ld_swap <- data.frame(
+  fit$diagnostics$ld_swap <- data.frame(
     attempted = 2,
     accepted = 3,
     acceptance_rate = 1.5

@@ -2,6 +2,13 @@
 title: "Single-Trait Models"
 ---
 
+## Common variance decomposition
+
+STBLR exposes scientifically defined `vbs`, `vgs`, `ves`, `vle`, and `vld`
+traces as iteration × trait matrices. `vle` uses the aligned operator diagonal
+and current effective effects; `vld = vgs - vle` at every recorded iteration.
+The same names identify formal convergence rows.
+
 The single-trait Bayesian linear regression (ST-BLR) layer is the common
 statistical foundation for the direct BED, summary-statistics CSR, scheduled
 sparse-update, and annotation-informed workflows in `sblr`. These interfaces
@@ -245,14 +252,14 @@ Sampled trait-specific `selection_s` is requested with:
 fitC <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   estimate_selection_s = TRUE
 )
 
 fitR <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   estimate_selection_s = TRUE
 )
 ```
@@ -277,7 +284,7 @@ A short illustrative call is:
 fit_bed <- stblr_bed(
   Glist = Glist,
   y = y,
-  method = "bayesC",
+  method = "bayesc",
   chr = 1,
   cls = cls,
   pi_init = 0.001,
@@ -303,7 +310,7 @@ LD is present in the observed genotype columns.
 fit_csr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   pi_init = 0.001,
   h2 = 0.5,
   scheduled = FALSE,
@@ -415,7 +422,7 @@ sampler path, so inspect `names(fit)` and `fit$input` before interpreting them.
 | `vgs` | Retained trace of genetic variance. |
 | `ves` | Retained trace of residual variance. |
 | `pi` | Final or current inclusion-probability summary, when returned. |
-| `pim` | Posterior mean inclusion-probability summary, when returned. |
+| `pi_mean` | Posterior mean inclusion-probability summary, when returned. |
 | `input` | Resolved data, prior, scheduling, and MCMC settings recorded by the wrapper. |
 
 Depending on the implementation, fits can also contain `vb`, `vg`, `ve`,

@@ -44,10 +44,13 @@ phase10a_configs <- list(
 
 phase10a_normalize <- function(x) {
   if (!is.list(x)) return(x)
-  for (nm in names(x)) {
-    if (nm %in% c("seconds_mean", "seconds_max")) x[[nm]][] <- 0
-    else if (nm == "ld_prefix") x[[nm]] <- "<fixture>"
-    else x[[nm]] <- phase10a_normalize(x[[nm]])
+  nms <- names(x)
+  for (i in seq_along(x)) {
+    nm <- if (is.null(nms)) NA_character_ else nms[[i]]
+    if (is.na(nm) || !nzchar(nm)) x[i] <- list(phase10a_normalize(x[[i]]))
+    else if (nm %in% c("seconds", "seconds_mean", "seconds_max")) x[[nm]][] <- 0
+    else if (identical(nm, "ld_prefix")) x[[nm]] <- "<fixture>"
+    else x[nm] <- list(phase10a_normalize(x[[nm]]))
   }
   x
 }
@@ -65,6 +68,7 @@ phase10a_run <- function(cfg) {
     updateB=FALSE, updateE=FALSE, updatePi=FALSE,
     nit=8L, nburn=2L, nthin=1L, seed=1001L,
     nchains=cfg$nchains, ncores=cfg$ncores, keep_chains=FALSE,
+    convergence="none",
     chain_seeds=cfg$seeds, full_sweep_every=cfg$full,
     null_skip_base=cfg$base, null_skip_max=cfg$max,
     candidate_threshold=cfg$threshold, candidate_lifetime=cfg$lifetime,

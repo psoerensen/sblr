@@ -1,5 +1,4 @@
 stblr_csr_annot <- getFromNamespace("stblr_csr_annot", "sblr")
-stblr_csr_sbayesrc_generic <- getFromNamespace("stblr_csr_sbayesrc_generic", "sblr")
 
 make_tiny_annotation_sbayesrc_ldswap_csr_prefix <- function() {
   prefix <- tempfile("tiny_annotation_sbayesrc_ldswap_csr_")
@@ -65,8 +64,14 @@ fit_tiny_annotation_sbayesrc_ldswap <- function(updateLDswap = TRUE,
                                                 keep_chains = FALSE,
                                                 chain_seeds = NULL,
                                                 seed = 71L) {
+  stats <- tiny_annotation_sbayesrc_ldswap_stats()
   stblr_csr_annot(
-    stats = tiny_annotation_sbayesrc_ldswap_stats(),
+    stats = stats,
+    Glist = list(
+      rsidsLD = list(stats$marker_names),
+      rsids = list(stats$marker_names),
+      maf = list(rep(0.2, stats$m))
+    ),
     ld_prefix = make_tiny_annotation_sbayesrc_ldswap_csr_prefix(),
     annotations = tiny_annotation_sbayesrc_ldswap_A(),
     annotation_model = "sbayesrc",
@@ -93,17 +98,17 @@ fit_tiny_annotation_sbayesrc_ldswap <- function(updateLDswap = TRUE,
 }
 
 expect_sbayesrc_ldswap_diagnostics <- function(fit, available = TRUE) {
-  expect_true("ld_swap" %in% names(fit))
   if (!available) {
-    expect_null(fit$ld_swap)
+    expect_null(fit$diagnostics$ld_swap)
     return(invisible())
   }
-  expect_identical(colnames(fit$ld_swap),
+  expect_identical(colnames(fit$diagnostics$ld_swap),
                    c("attempted", "accepted", "acceptance_rate"))
-  expect_true(all(fit$ld_swap$attempted >= fit$ld_swap$accepted))
-  expect_true(all(fit$ld_swap$accepted >= 0))
-  expect_true(all(fit$ld_swap$acceptance_rate >= 0))
-  expect_true(all(fit$ld_swap$acceptance_rate <= 1))
+  expect_true(all(fit$diagnostics$ld_swap$attempted >=
+                  fit$diagnostics$ld_swap$accepted))
+  expect_true(all(fit$diagnostics$ld_swap$accepted >= 0))
+  expect_true(all(fit$diagnostics$ld_swap$acceptance_rate >= 0))
+  expect_true(all(fit$diagnostics$ld_swap$acceptance_rate <= 1))
 }
 
 test_that("SBayesRC annotation fit is backward compatible without LD-swap", {
@@ -119,7 +124,7 @@ test_that("SBayesRC annotation fit is backward compatible without LD-swap", {
   expect_equal(dim(fit$dm), c(3L, 1L))
   expect_equal(dim(fit$bm), c(3L, 1L))
   expect_sbayesrc_ldswap_diagnostics(fit, available = FALSE)
-  expect_true("comp_prob" %in% names(fit))
+  expect_true("component_probabilities" %in% names(fit))
 })
 
 test_that("SBayesRC annotation fit supports LD-swap diagnostics", {
@@ -139,10 +144,10 @@ test_that("SBayesRC annotation fit supports LD-swap diagnostics", {
   expect_true("alpha" %in% names(fit))
   expect_true("sigmaSqAlpha" %in% names(fit))
   expect_true("ncomp" %in% names(fit))
-  expect_equal(dim(fit$comp_prob$trait1), c(3L, 3L))
-  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, 3), tolerance = 1e-8)
-  expect_true(all(is.finite(fit$comp_prob$trait1)))
-  expect_true(all(fit$comp_prob$trait1 >= 0 & fit$comp_prob$trait1 <= 1))
+  expect_equal(dim(fit$component_probabilities$trait1), c(3L, 3L))
+  expect_equal(unname(rowSums(fit$component_probabilities$trait1)), rep(1, 3), tolerance = 1e-8)
+  expect_true(all(is.finite(fit$component_probabilities$trait1)))
+  expect_true(all(fit$component_probabilities$trait1 >= 0 & fit$component_probabilities$trait1 <= 1))
 })
 
 test_that("SBayesRC annotation LD-swap works with kept chains", {
@@ -161,17 +166,18 @@ test_that("SBayesRC annotation LD-swap works with kept chains", {
   expect_equal(fit$input$nchains, 2L)
   expect_true(isTRUE(fit$input$keep_chains))
   expect_sbayesrc_ldswap_diagnostics(fit)
-  expect_true("ld_swap_chains" %in% names(fit))
-  expect_equal(sum(fit$ld_swap_chains$trait1$attempted), fit$ld_swap$attempted)
-  expect_true("chains" %in% names(fit))
-  expect_length(fit$chains$trait1, 2L)
-  expect_true(all(vapply(fit$chains$trait1, function(ch) {
-    all(c("dm", "bm", "ld_swap", "comp_prob", "alpha", "sigmaSqAlpha") %in% names(ch)) &&
+  expect_true("ld_swap_chains" %in% names(fit$diagnostics))
+  expect_equal(sum(fit$diagnostics$ld_swap_chains$trait1$attempted),
+               fit$diagnostics$ld_swap$attempted)
+  expect_length(fit$chains, 2L)
+  expect_true(all(vapply(fit$chains, function(ch) {
+    all(c("dm", "bm", "ld_swap", "component_probabilities",
+          "alpha", "sigmaSqAlpha") %in% names(ch)) &&
       length(ch$dm) == 3L &&
       length(ch$bm) == 3L &&
       identical(names(ch$dm), tiny_annotation_sbayesrc_ldswap_stats()$marker_names) &&
       identical(names(ch$bm), tiny_annotation_sbayesrc_ldswap_stats()$marker_names) &&
-      identical(dim(ch$comp_prob), c(3L, 3L))
+      identical(dim(ch$component_probabilities), c(3L, 3L))
   }, logical(1))))
 })
 
@@ -192,37 +198,9 @@ test_that("SBayesRC annotation LD-swap is reproducible with chain seeds", {
 
   expect_equal(fit_a$dm, fit_b$dm, tolerance = 1e-12)
   expect_equal(fit_a$bm, fit_b$bm, tolerance = 1e-12)
-  expect_equal(fit_a$ld_swap, fit_b$ld_swap)
+  expect_equal(fit_a$diagnostics$ld_swap, fit_b$diagnostics$ld_swap)
 })
 
-test_that("old SBayesRC annotation wrapper accepts LD-swap", {
-  skip_if_not(
-    exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
-    "native SBayesRC CSR symbol is not loaded"
-  )
-
-  fit <- stblr_csr_sbayesrc_generic(
-    stats = tiny_annotation_sbayesrc_ldswap_stats(),
-    ld_prefix = make_tiny_annotation_sbayesrc_ldswap_csr_prefix(),
-    A = tiny_annotation_sbayesrc_ldswap_A(),
-    gamma = c(0, 0.1, 1),
-    pi_init = 0.45,
-    pi_prior_mean = 0.45,
-    pi_prior_strength = 2,
-    updateAlpha = FALSE,
-    updateB = FALSE,
-    updateE = FALSE,
-    nit = 3,
-    nburn = 0,
-    ncores = 1L,
-    seed = 72L,
-    updateLDswap = TRUE,
-    ld_swap_prob = 1,
-    ld_swap_r2 = 0.8,
-    ld_swap_max_friends = 2L,
-    ld_swap_moves = 2L
-  )
-
-  expect_equal(fit$input$backend, "csr_sbayesrc")
-  expect_sbayesrc_ldswap_diagnostics(fit)
+test_that("old SBayesRC annotation wrapper is not exported", {
+  expect_false("stblr_csr_sbayesrc_generic" %in% getNamespaceExports("sblr"))
 })

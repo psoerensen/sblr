@@ -150,9 +150,13 @@ ESS per chain, maximum relative MCSE, and the detailed-output location.
 
 ## 22. Tier 1 scope
 
-The first implementation diagnoses `B_diag[trait]`, `G_diag[trait]`, and
-`E_diag[trait]`, subject to update ownership. It consumes only per-chain
-post-burn `vbs/vgs/ves`.
+The shared Phase 18 implementation diagnoses `vbs[trait]`, `vgs[trait]`,
+`ves[trait]`, `vle[trait]`, and `vld[trait]`, subject to update ownership and
+scientific applicability. It consumes only per-chain post-burn traces. For
+MTBLR, the first three are the B/G/E diagonals; full covariance matrices remain
+separate `cov_*_mean` and `cov_*_final` fields. `vle` is the represented
+operator-diagonal contribution of current effective effects and
+`vld = vgs - vle` at every iteration.
 
 ## 23. Tier 2 scope
 
@@ -281,3 +285,9 @@ The implementation-ready Tier 2/Tier 3 ordering, deduplication, selection,
 safety, output, and staging rules are owned by the extended convergence
 contract. Tier 1 mathematics and public behavior remain unchanged, and no
 extended diagnostic is implemented in Phase 17W.
+## Phase 18 shared-engine ownership
+
+The Phase 17U mathematics is now owned by the family-neutral internal
+`.blr_convergence_*` layer. MT BED supplies the same Tier 1 bundle and remains
+numerically identical after identifier/metadata normalization. ST adapters use
+the same result schema without changing the statistical definitions.

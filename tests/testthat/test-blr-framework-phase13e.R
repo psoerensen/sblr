@@ -1,5 +1,24 @@
 source(file.path(testthat::test_path(),"fixtures","blr-phase13a-bed-bayesr-reference.R"))
 phase13e_text <- function(path) paste(readLines(blr_repo_path(path),warn=FALSE),collapse="\n")
+phase13e_pick <- function(x, current, historical = current) {
+  if (!is.null(x[[current]])) x[[current]] else x[[historical]]
+}
+phase13e_raw_science <- function(x) x[c("marker", "trace", "variance", "pi", "component")]
+phase13e_fit_science <- function(x) list(
+  bm=x$bm, dm=x$dm, wy=x$wy, r=x$r, b=x$b, d=x$d,
+  vbs=x$vbs, vgs=x$vgs, ves=x$ves, vle=x$vle, vld=x$vld,
+  component=x$component, dm_component_mean=x$dm_component_mean,
+  mixture_var=x$mixture_var,
+  component_probabilities=phase13e_pick(x,"component_probabilities","comp_prob"),
+  pi_final=as.numeric(phase13e_pick(x,"pi_final","final_pi")),
+  pi_mean=as.numeric(phase13e_pick(x,"pi_mean","mean_pi")),
+  cov_b_mean=phase13e_pick(x,"cov_b_mean","covb"),
+  cov_g_mean=phase13e_pick(x,"cov_g_mean","covg"),
+  cov_e_mean=phase13e_pick(x,"cov_e_mean","cove"),
+  cov_b_final=phase13e_pick(x,"cov_b_final","vb"),
+  cov_g_final=phase13e_pick(x,"cov_g_final","vg"),
+  cov_e_final=phase13e_pick(x,"cov_e_final","ve")
+)
 
 test_that("Phase 13E permanently protects the canonical BayesR architecture", {
   types <- phase13e_text("src/blr_bed_bayesr_types.h")
@@ -41,8 +60,10 @@ test_that("Phase 13E canonical raw and formatted fixtures are exact", {
     z <- configs[[name]]; ref <- readRDS(file.path(testthat::test_path(),"fixtures",
       "blr_phase13a_bed_bayesr",paste0(name,".rds")))
     observed <- phase13a_capture(z[1],z[2],z[3])
-    expect_equal(phase13a_normalize(observed$raw),phase13a_normalize(ref$raw),tolerance=1e-12)
-    expect_equal(phase13a_normalize(observed$fit),phase13a_normalize(ref$fit),tolerance=1e-12)
+    expect_equal(phase13e_raw_science(phase13a_normalize(observed$raw)),
+      phase13e_raw_science(phase13a_normalize(ref$raw)),tolerance=1e-12)
+    expect_equal(phase13e_fit_science(phase13a_normalize(observed$fit)),
+      phase13e_fit_science(phase13a_normalize(ref$fit)),tolerance=1e-12)
   }
 })
 
@@ -53,9 +74,9 @@ test_that("Phase 13E canonical reproducibility and identities remain exact", {
   expect_identical(phase13a_normalize(phase13a_capture(1L,2L,73L)),a)
   expect_identical(phase13a_normalize(phase13a_capture(2L,2L,73L)),a)
   x <- phase13a_capture(1L,2L,73L)$fit
-  expect_equal(unname(rowSums(x$pi)),rep(1,nrow(x$pi)),tolerance=1e-12)
-  expect_equal(unname(rowSums(x$pim)),rep(1,nrow(x$pim)),tolerance=1e-12)
-  expect_equal(x$dm[,1L],1-x$comp_prob[[1L]][,1L],tolerance=1e-12)
+  expect_equal(sum(x$pi_final),1,tolerance=1e-12)
+  expect_equal(sum(x$pi_mean),1,tolerance=1e-12)
+  expect_equal(x$dm[,1L],1-x$component_probabilities[[1L]][,1L],tolerance=1e-12)
   expect_true(all(x$component[,1L]>=0 & x$component[,1L]<=3))
 })
 

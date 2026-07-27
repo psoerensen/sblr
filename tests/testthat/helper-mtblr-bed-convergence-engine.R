@@ -24,9 +24,9 @@ phase17u_without_timing <- function(x) {
   x
 }
 
-phase17u_bundle_from_chains <- function(chains, updated = rep(TRUE, 3L),
-                                        group = c("B_diag", "G_diag",
-                                                  "E_diag")) {
+phase17u_bundle_from_chains <- function(chains, updated = rep(TRUE, 5L),
+                                        group = c("vbs", "vgs", "ves",
+                                                  "vle", "vld")) {
   stopifnot(is.matrix(chains), length(updated) == length(group))
   nit <- ncol(chains)
   nchains <- nrow(chains)
@@ -44,5 +44,5 @@ phase17u_bundle_from_chains <- function(chains, updated = rep(TRUE, 3L),
 }
 
 phase17u_fixture_metrics <- function(chains) {
-  sblr:::.mtblr_convergence_scalar(t(chains))
+  sblr:::.blr_convergence_scalar(t(chains))
 }

@@ -360,7 +360,7 @@ model with fixed marker-specific inclusion probabilities and effect-variance
 multipliers. Users may either supply `fixed_pi_marker` and
 `fixed_vb_multiplier` directly, or supply $A$ and fixed annotation
 coefficients from which the wrapper constructs them. The compatibility wrapper
-`stblr_csr_prior_annot()` exposes the same fixed-prior backend.
+`stblr_csr_annot(..., annotation_model = "prior")` exposes the same fixed-prior backend.
 
 ```r
 fit_fixed <- stblr_csr_annot(
@@ -387,7 +387,7 @@ procedure.
 
 ## Learned Annotation Effects
 
-`stblr_csr_learn_annot()` learns annotation coefficients jointly with the
+`stblr_csr_annot(..., annotation_model = "learned")` learns annotation coefficients jointly with the
 marker model. For trait $t$, the implemented construction is conceptually
 
 $$
@@ -425,7 +425,7 @@ other annotations and the sampler specification.
 
 ## Group Priors
 
-`stblr_csr_group_annot()` assigns each marker to exactly one group through
+`stblr_csr_annot(..., annotation_model = "group")` assigns each marker to exactly one group through
 `group_index`. Group $g$ receives a group-specific inclusion probability and
 variance multiplier:
 

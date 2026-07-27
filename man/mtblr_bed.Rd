@@ -14,7 +14,7 @@ mtblr_bed(
   scale = TRUE,
   center = TRUE,
   residual_covariance = c("full", "diagonal"),
-  method = "bayesC",
+  method = "bayesc",
   trait_metadata = NULL,
   sets = NULL,
   block_size = 1000,
@@ -70,7 +70,7 @@ must already satisfy the native centering tolerance.}
 
 \item{residual_covariance}{Either `"full"` or `"diagonal"`.}
 
-\item{method}{Must be `"bayesC"`.}
+\item{method}{Must be `"bayesc"`.}
 
 \item{trait_metadata}{Optional data frame with one row per trait.}
 

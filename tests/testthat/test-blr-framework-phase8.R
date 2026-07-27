@@ -72,14 +72,19 @@ test_that("Phase 8 annotation, alpha, probability, and chain contracts remain ex
  }
 })
 
-test_that("Phase 8 protected implementations and public namespace are unchanged", {
+test_that("Phase 8 numerical cores remain protected under the unified API", {
  paths <- c("src/blr_csr_bayesc_types.h", "src/blr_csr_bayesc_core_impl.h",
-            "src/blr_csr_bayesr_types.h", "src/blr_csr_bayesr_core_impl.h",
-            "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp",
-             "NAMESPACE")
+            "src/blr_csr_bayesr_types.h", "src/blr_csr_bayesr_core_impl.h")
  expected <- c("4d0eb5380007195a8d34e7b2e081dec4", "c548157cc9e5804272e714983bdcb798",
-               "bf1d4b73065207ca361c7abdab3cb253", "4dac6bef2df917613df8e1a827640303",
-               "72d4a9fa0a7cd51071328c2d62d0192b",
-               "7519d0b7f23694a1ac78c1110bbf6e0b")
+               "bf1d4b73065207ca361c7abdab3cb253", "4dac6bef2df917613df8e1a827640303")
  expect_identical(unname(tools::md5sum(vapply(paths, phase8_path, character(1)))), expected)
+ ns <- readLines(phase8_path("NAMESPACE"), warn = FALSE)
+ expect_true("export(stblr_block_eigen)" %in% ns)
+ expect_false(any(c("export(stblr_csr_sbayesrc_generic)",
+                    "export(stblr_bed_marker)") %in% ns))
+ bayesrc <- paste(readLines(phase8_path(
+   "src", "stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp"),
+   warn = FALSE), collapse = "\n")
+ expect_match(bayesrc, 'Rcpp::Named("vbs")=z.vbs', fixed = TRUE)
+ expect_match(bayesrc, "chain_seeds.size()==0", fixed = TRUE)
 })

@@ -99,17 +99,17 @@ fit_tiny_annotation_prior_ldswap <- function(updateLDswap = TRUE,
 }
 
 expect_annotation_prior_ldswap_diagnostics <- function(fit, expected_attempted) {
-  expect_true("ld_swap" %in% names(fit))
+  ld_swap <- fit$diagnostics$ld_swap
   if (is.null(expected_attempted)) {
-    expect_null(fit$ld_swap)
+    expect_null(ld_swap)
     return(invisible())
   }
-  expect_identical(colnames(fit$ld_swap),
+  expect_identical(colnames(ld_swap),
                    c("attempted", "accepted", "acceptance_rate"))
-  expect_equal(fit$ld_swap$attempted, expected_attempted)
-  expect_true(fit$ld_swap$accepted >= 0)
-  expect_true(fit$ld_swap$acceptance_rate >= 0)
-  expect_true(fit$ld_swap$acceptance_rate <= 1)
+  expect_equal(ld_swap$attempted, expected_attempted)
+  expect_true(ld_swap$accepted >= 0)
+  expect_true(ld_swap$acceptance_rate >= 0)
+  expect_true(ld_swap$acceptance_rate <= 1)
 }
 
 test_that("fixed-prior annotation CSR BayesC is backward compatible without LD-swap", {
@@ -143,11 +143,11 @@ test_that("fixed-prior annotation CSR BayesC supports LD-swap with kept chains",
   expect_equal(fit$input$nchains, 2L)
   expect_true(isTRUE(fit$input$keep_chains))
   expect_annotation_prior_ldswap_diagnostics(fit, expected_attempted = 12)
-  expect_true("ld_swap_chains" %in% names(fit))
-  expect_equal(sum(fit$ld_swap_chains$trait1$attempted), fit$ld_swap$attempted)
+  expect_equal(sum(fit$diagnostics$ld_swap_chains$trait1$attempted),
+               fit$diagnostics$ld_swap$attempted)
   expect_true("chains" %in% names(fit))
-  expect_length(fit$chains$trait1, 2L)
-  expect_true(all(vapply(fit$chains$trait1, function(ch) {
+  expect_length(fit$chains, 2L)
+  expect_true(all(vapply(fit$chains, function(ch) {
     all(c("dm", "bm", "ld_swap") %in% names(ch)) &&
       length(ch$dm) == 3L &&
       length(ch$bm) == 3L &&
@@ -168,33 +168,9 @@ test_that("fixed-prior annotation CSR BayesC LD-swap is reproducible with chain 
 
   expect_equal(fit_a$dm, fit_b$dm, tolerance = 1e-12)
   expect_equal(fit_a$bm, fit_b$bm, tolerance = 1e-12)
-  expect_equal(fit_a$ld_swap, fit_b$ld_swap)
+  expect_equal(fit_a$diagnostics$ld_swap, fit_b$diagnostics$ld_swap)
 })
 
-test_that("old fixed-prior annotation wrapper accepts LD-swap", {
-  fit <- stblr_csr_prior_annot(
-    stats = tiny_annotation_prior_ldswap_stats(),
-    ld_prefix = make_tiny_annotation_prior_ldswap_csr_prefix(),
-    A = tiny_annotation_prior_ldswap_A(),
-    fixed_pi_marker = list(c(0.55, 0.25, 0.15)),
-    fixed_vb_multiplier = list(c(1.0, 1.4, 0.8)),
-    pi_init = 0.35,
-    pi_prior_mean = 0.35,
-    pi_prior_strength = 2,
-    updateB = FALSE,
-    updateE = FALSE,
-    updatePi = FALSE,
-    nit = 3,
-    nburn = 0,
-    ncores = 1L,
-    seed = 33L,
-    updateLDswap = TRUE,
-    ld_swap_prob = 1,
-    ld_swap_r2 = 0.8,
-    ld_swap_max_friends = 2L,
-    ld_swap_moves = 2L
-  )
-
-  expect_equal(fit$input$backend, "csr_prior_bayesc")
-  expect_annotation_prior_ldswap_diagnostics(fit, expected_attempted = 6)
+test_that("old fixed-prior annotation wrapper is not exported", {
+  expect_false("stblr_csr_prior_annot" %in% getNamespaceExports("sblr"))
 })

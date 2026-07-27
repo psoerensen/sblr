@@ -92,3 +92,9 @@ Strict-lower ordering, probability deduplication, pattern and marker selection,
 quantity naming, memory/safety formulas, binary applicability, future-control
 validation, and warning grouping are portable. Only static production-diff
 assertions skip without a source checkout.
+## Phase 18
+
+The unified public contract, convergence mathematics, scalar and scheduled
+task-trace adapters, seed policy, and executable operator reductions are
+portable installed tests. Only namespace/source architecture and mutation
+guards require a source checkout.

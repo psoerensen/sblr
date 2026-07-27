@@ -1,5 +1,19 @@
 # ST-BLR Backend Computation and Return Inventory
 
+## Phase 18 canonical model and variance vocabulary
+
+Scientific model identifiers are `bayesc`, `sbayesc`, `bayesr`, `sbayesr`,
+`bayesrc`, and `sbayesrc`. The S variants reuse the corresponding BayesC or
+BayesR-like kernel with an explicit `maf_s` scale; they are not additional
+native kernels. Annotation-aware BayesC policies are `fixed_marker`, `group`,
+and `learned_logistic`; annotation-aware mixture probability uses
+`annotation_probit_stick`.
+
+All scientifically defined trait-level posterior traces are `vbs`, `vgs`,
+`ves`, `vle`, and `vld`, oriented iteration × trait and satisfying
+`vld = vgs - vle`. Formal convergence uses those same names and unpooled
+post-burn task traces.
+
 ## Experimental packed-BED BayesC routes
 
 `stblr_bed_marker()` retains two explicitly experimental implementations outside
@@ -724,3 +738,9 @@ engine. No scalar, CSR, or block-eigen backend gains convergence diagnostics.
 Off-diagonal covariance, pi, and selected-marker iteration traces are absent.
 Their future checkpoint follows all pi/B/G/E updates and uses chain-private
 optional buffers. Phase 17W adds no backend computation.
+## Phase 18 public organization
+
+Scalar kernels remain model-specific, but public routes are organized by
+operator: `stblr_csr()`, `stblr_block_eigen()`, and `stblr_bed()`, plus the one
+specialized annotation CSR entry. Logical work is trait × chain, and supported
+routes expose unpooled post-burn low-dimensional traces to the shared R engine.

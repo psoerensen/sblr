@@ -32,7 +32,7 @@ phase11a_capture <- function(model, ncores = 1L, nchains = 1L, seed = 71L) {
   args <- list(y = x$y, Glist = x$Glist, method = model, nit = 6L,
     nburn = 2L, nthin = 1L, seed = seed, ncores = ncores,
     nchains = nchains, updateB = FALSE, updateE = FALSE,
-    rebuild_every = 2L, read_block_size = 2L)
+    rebuild_every = 2L, read_block_size = 2L, convergence = "none")
   if (model == "bayesc") args <- c(args, list(pi_init = .5,
     pi_prior_mean = .5, pi_prior_strength = 4))
   if (model == "bayesr") args <- c(args, list(updatePi = FALSE,
@@ -51,9 +51,10 @@ phase11a_normalize <- function(x) {
     x$fit <- phase11a_normalize(x$fit)
   }
   if (is.list(x) && !is.null(x$input)) x$input$ncores <- 0L
+  if (is.list(x) && "memory_estimate" %in% names(x)) x$memory_estimate <- NULL
   if (is.list(x)) {
     x <- lapply(x, phase11a_normalize)
-    for (nm in intersect(names(x), c("seconds_mean", "seconds_max"))) x[[nm]][] <- 0
+    for (nm in intersect(names(x), c("seconds", "seconds_mean", "seconds_max"))) x[[nm]][] <- 0
   }
   x
 }

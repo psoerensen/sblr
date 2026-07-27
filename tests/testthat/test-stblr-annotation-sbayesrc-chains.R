@@ -67,6 +67,11 @@ fit_tiny_sbayesrc_chains <- function(
   stats <- tiny_sbayesrc_chain_stats()
   sblr::stblr_csr_annot(
     stats = stats,
+    Glist = list(
+      rsidsLD = list(stats$marker_names),
+      rsids = list(stats$marker_names),
+      maf = list(rep(0.2, stats$m))
+    ),
     ld_prefix = make_tiny_sbayesrc_chain_csr_prefix(stats$m),
     annotations = tiny_sbayesrc_chain_matrix(),
     annotation_model = "sbayesrc",
@@ -90,13 +95,14 @@ fit_tiny_sbayesrc_chains <- function(
 expect_marker_summary_dims <- function(fit, stats) {
   expect_equal(dim(fit$dm), c(stats$m, length(stats$yy)))
   expect_equal(dim(fit$bm), c(stats$m, length(stats$yy)))
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+  for (nm in c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max",
+               "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")) {
     expect_true(nm %in% names(fit), info = nm)
     expect_equal(dim(fit[[nm]]), dim(fit$dm), info = nm)
   }
 }
 
-test_that("single-chain SBayesRC annotation fit remains backward compatible", {
+test_that("single-chain SBayesRC annotation fit uses canonical fields", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
@@ -109,9 +115,9 @@ test_that("single-chain SBayesRC annotation fit remains backward compatible", {
   expect_equal(dim(fit$bm), c(stats$m, length(stats$yy)))
   expect_equal(fit$input$nchains, 1L)
   expect_false(fit$input$keep_chains)
-  expect_false("chains" %in% names(fit))
-  expect_true("comp_prob" %in% names(fit))
-  expect_equal(dim(fit$comp_prob$trait1), c(stats$m, 3L))
+  expect_null(fit$chains)
+  expect_true("component_probabilities" %in% names(fit))
+  expect_equal(dim(fit$component_probabilities$trait1), c(stats$m, 3L))
 })
 
 test_that("native SBayesRC annotation fit supports multiple chains", {
@@ -126,10 +132,10 @@ test_that("native SBayesRC annotation fit supports multiple chains", {
   expect_equal(fit$input$nchains, 2L)
   expect_false(fit$input$keep_chains)
   expect_marker_summary_dims(fit, stats)
-  expect_true(is.list(fit$comp_prob))
-  expect_equal(dim(fit$comp_prob$trait1), c(stats$m, 3L))
-  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, stats$m), tolerance = 1e-8)
-  expect_true(all(fit$comp_prob$trait1 >= 0 & fit$comp_prob$trait1 <= 1))
+  expect_true(is.list(fit$component_probabilities))
+  expect_equal(dim(fit$component_probabilities$trait1), c(stats$m, 3L))
+  expect_equal(unname(rowSums(fit$component_probabilities$trait1)), rep(1, stats$m), tolerance = 1e-8)
+  expect_true(all(fit$component_probabilities$trait1 >= 0 & fit$component_probabilities$trait1 <= 1))
 })
 
 test_that("native SBayesRC annotation fit can keep compact chains", {
@@ -147,12 +153,11 @@ test_that("native SBayesRC annotation fit can keep compact chains", {
 
   expect_true(isTRUE(fit$input$keep_chains))
   expect_true(is.list(fit$chains))
-  expect_length(fit$chains, length(stats$yy))
-  expect_length(fit$chains$trait1, 2L)
-  for (chain in fit$chains$trait1) {
+  expect_length(fit$chains, 2L)
+  for (chain in fit$chains) {
     expect_length(chain$dm, stats$m)
     expect_length(chain$bm, stats$m)
-    expect_equal(dim(chain$comp_prob), c(stats$m, 3L))
+    expect_equal(dim(chain$component_probabilities), c(stats$m, 3L))
     expect_equal(dim(chain$alpha), dim(fit$alpha$trait1))
     expect_length(chain$sigmaSqAlpha, ncol(fit$alpha$trait1))
   }

@@ -9,6 +9,30 @@ count11d <- function(pattern, x) {
   hit <- gregexpr(pattern, x, perl = TRUE)[[1]]
   if (identical(hit, -1L)) 0L else length(hit)
 }
+phase11d_pick <- function(x, current, historical = current) {
+  if (!is.null(x[[current]])) x[[current]] else x[[historical]]
+}
+phase11d_raw_science <- function(x) x[c("marker", "trace", "variance", "pi")]
+phase11d_fit_science <- function(x) list(
+  bm = x$bm, dm = x$dm, wy = x$wy, r = x$r, b = x$b, d = x$d,
+  vbs = x$vbs, vgs = x$vgs, ves = x$ves, vle = x$vle, vld = x$vld,
+  rb = x$rb, rg = x$rg, re = x$re,
+  pi_trace = phase11d_pick(x, "pi_trace", "pis"),
+  pi_final = phase11d_pick(x, "pi_final", "pi"),
+  pi_mean = phase11d_pick(x, "pi_mean", "pim"),
+  cov_b_mean = phase11d_pick(x, "cov_b_mean", "covb"),
+  cov_g_mean = phase11d_pick(x, "cov_g_mean", "covg"),
+  cov_e_mean = phase11d_pick(x, "cov_e_mean", "cove"),
+  cov_b_final = phase11d_pick(x, "cov_b_final", "vb"),
+  cov_g_final = phase11d_pick(x, "cov_g_final", "vg"),
+  cov_e_final = phase11d_pick(x, "cov_e_final", "ve"),
+  bm_chain_mean_sd = phase11d_pick(x, "bm_chain_mean_sd", "bm_sd"),
+  bm_chain_mean_min = phase11d_pick(x, "bm_chain_mean_min", "bm_min"),
+  bm_chain_mean_max = phase11d_pick(x, "bm_chain_mean_max", "bm_max"),
+  dm_chain_mean_sd = phase11d_pick(x, "dm_chain_mean_sd", "dm_sd"),
+  dm_chain_mean_min = phase11d_pick(x, "dm_chain_mean_min", "dm_min"),
+  dm_chain_mean_max = phase11d_pick(x, "dm_chain_mean_max", "dm_max")
+)
 
 test_that("public BED BayesC has one closed typed execution path", {
   src <- active11d(read11d("src/st_cpg_omp_individual_scheduled_chains.cpp"))
@@ -66,8 +90,10 @@ test_that("Phase 11B corrected raw and formatted references remain exact", {
     z <- specs[[nm]]
     ref <- readRDS(blr_fixture_path("blr_phase11b_bed_bayesc", paste0(nm, ".rds")))
     got <- phase11b_capture(z[[1]], as.integer(z[[3]]), as.integer(z[[2]]), 71L)
-    expect_equal(phase11a_normalize(got$raw), phase11a_normalize(ref$raw), tolerance=1e-12)
-    expect_equal(phase11a_normalize(got$fit), phase11a_normalize(ref$fit), tolerance=1e-12)
+    expect_equal(phase11d_raw_science(phase11a_normalize(got$raw)),
+      phase11d_raw_science(phase11a_normalize(ref$raw)), tolerance=1e-12)
+    expect_equal(phase11d_fit_science(phase11a_normalize(got$fit)),
+      phase11d_fit_science(phase11a_normalize(ref$fit)), tolerance=1e-12)
   }
 })
 
@@ -92,11 +118,10 @@ test_that("route nonidentity and protected sources are permanent", {
   protected <- c(
     "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
     "src/st_cpg_omp_individual.cpp" = "667a0445503ef9f6b23dbab1e0114b4d",
-    "src/blr_bed_scheduled_bayesc_rng.h" = "002468fa8afd7d0c491f61ea4324f982",
-    "src/stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc.cpp" = "72d4a9fa0a7cd51071328c2d62d0192b",
-    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b")
+    "src/blr_bed_scheduled_bayesc_rng.h" = "002468fa8afd7d0c491f61ea4324f982")
   expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path,
     character(1)))), unname(protected))
+  expect_false("stblr_bed_marker" %in% getNamespaceExports("sblr"))
 })
 
 

@@ -64,7 +64,7 @@ Glist <- make_sparse_ld(
 fit_csr_bayesc <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = niter,
   nburn = nburn,
   ncores = nthreads,
@@ -74,7 +74,7 @@ fit_csr_bayesc <- stblr_csr(
 fit_csr_bayesr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = niter,
   nburn = nburn,
   ncores = nthreads,
@@ -90,7 +90,7 @@ fit_csr_bayesr <- stblr_csr(
 fit_bed_bayesc <- stblr_bed(
   y = y,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = niter,
   nburn = nburn,
   ncores = nthreads,
@@ -101,7 +101,7 @@ fit_bed_bayesc <- stblr_bed(
 fit_bed_bayesr <- stblr_bed(
   y = y,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = niter,
   nburn = nburn,
   ncores = nthreads,
@@ -144,7 +144,7 @@ if (workflow_should_run_heavy()) {
   fit_bed_bayesr_2c <- stblr_bed(
     y = y,
     Glist = Glist,
-    method = "bayesR",
+    method = "bayesr",
     nit = 2000,
     nburn = 500,
     ncores = nthreads,

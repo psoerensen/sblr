@@ -1,12 +1,13 @@
 test_that("Phase 17F owns the typed binding-neutral finalizer", {
   types <- blr_source_text("src/blr_mt_default_types.h")
   finalizer <- blr_source_text("src/blr_mt_default_finalize_impl.h")
-  adapter <- blr_mt_public_source()
+  adapter <- blr_source_text("src/mtblr.cpp")
   expect_source_count("struct MtDefaultFinalResult", types, 1L)
   expect_source_count("inline MtDefaultFinalResult finalize_mt_default_result(",
     finalizer, 1L)
-  # Dense, CSR, block-eigen, and Phase 17O individual-level adapters.
-  expect_source_count("finalize_mt_default_result(", adapter, 4L)
+  # Dense, single-chain CSR/block-eigen, Phase 17O BED, and the two aligned
+  # Phase 18 native multichain operator adapters share the same finalizer.
+  expect_source_count("finalize_mt_default_result(", adapter, 6L)
   expect_source_forbidden(paste(types, finalizer), c("Rcpp", "SEXP", "RObject",
     "NumericVector", "NumericMatrix", "schema_version"))
   expect_source_forbidden(finalizer, c("std::mt19937", "sampleBset(",
@@ -19,11 +20,11 @@ test_that("Phase 17F owns posterior arithmetic and positional separation", {
   legacy <- blr_source_text("src/blr_mt_default_legacy_adapter.h")
   expect_identical(sum(grepl("/.*retained_count",
     strsplit(finalizer, "\n")[[1]])), 6L)
-  expect_source_count("MtDefaultLegacyResult result(20);", legacy, 1L)
+  expect_source_count("MtDefaultLegacyResult result(22);", legacy, 1L)
   expect_source_forbidden(adapter, c("/marker_retained_count",
     "covb_retained_count >", "covg_retained_count >",
     "cove_retained_count >", "pi_retained_count >"))
-  for (position in 0:19)
+  for (position in 0:21)
     expect_true(source_match_count(sprintf("result[%d]", position), legacy) >= 1L)
 })
 

@@ -14,7 +14,7 @@
 #' @param require_chains Logical; require compact per-chain summaries in
 #'   `fit$chains`.
 #' @param require_ld_swap Logical; require LD-swap diagnostics in
-#'   `fit$ld_swap`.
+#'   `fit$diagnostics$ld_swap`.
 #' @param verbose Logical; retained for API symmetry. Printing is handled by
 #'   [print.stblr_backend_check()].
 #'
@@ -118,7 +118,7 @@ check_stblr_consistency <- function(
   )
   .stblr_backend_check_optional_trace(
     fit = fit,
-    name = "pis",
+    name = "pi_trace",
     dm = dm,
     add_check = add_check
   )
@@ -142,7 +142,7 @@ check_stblr_consistency <- function(
   if (!nchains_ok) nchains <- NA_integer_
 
   has_chain_summaries <- all(vapply(
-    c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max"),
+    c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max", "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max"),
     function(nm) !is.null(fit[[nm]]),
     logical(1)
   ))
@@ -175,7 +175,7 @@ check_stblr_consistency <- function(
     add_check = add_check
   )
 
-  .stblr_backend_check_comp_prob(
+  .stblr_backend_check_component_probabilities(
     fit = fit,
     dm = dm,
     add_check = add_check
@@ -211,7 +211,10 @@ check_stblr_consistency <- function(
     updateLDswap = if (is.list(input) && !is.null(input$updateLDswap)) input$updateLDswap else NA,
     has_chain_summaries = has_chain_summaries,
     has_chains = !is.null(fit$chains),
-    has_ld_swap = !is.null(fit$ld_swap),
+    has_ld_swap = is.list(fit$diagnostics) &&
+      (!is.null(fit$diagnostics$ld_swap) ||
+       (is.list(fit$diagnostics$native) &&
+        !is.null(fit$diagnostics$native$ld_swap))),
     nchains_missing = nchains_missing
   )
 
@@ -355,7 +358,7 @@ print.stblr_backend_check <- function(x, ...) {
 .stblr_backend_check_chain_summaries <- function(
     fit, dm, bm, nchains, summaries_required, add_check
 ) {
-  fields <- c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")
+  fields <- c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max", "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")
   present <- vapply(fields, function(nm) !is.null(fit[[nm]]), logical(1))
 
   add_check(
@@ -368,59 +371,59 @@ print.stblr_backend_check <- function(x, ...) {
     }
   )
 
-  dm_sd <- dm_min <- dm_max <- bm_sd <- bm_min <- bm_max <- NULL
-  if (present[["dm_sd"]]) dm_sd <- .stblr_backend_check_summary_matrix(fit, "dm_sd", dm, add_check)
-  if (present[["dm_min"]]) dm_min <- .stblr_backend_check_summary_matrix(fit, "dm_min", dm, add_check)
-  if (present[["dm_max"]]) dm_max <- .stblr_backend_check_summary_matrix(fit, "dm_max", dm, add_check)
-  if (present[["bm_sd"]]) bm_sd <- .stblr_backend_check_summary_matrix(fit, "bm_sd", bm, add_check)
-  if (present[["bm_min"]]) bm_min <- .stblr_backend_check_summary_matrix(fit, "bm_min", bm, add_check)
-  if (present[["bm_max"]]) bm_max <- .stblr_backend_check_summary_matrix(fit, "bm_max", bm, add_check)
+  dm_chain_mean_sd <- dm_chain_mean_min <- dm_chain_mean_max <- bm_chain_mean_sd <- bm_chain_mean_min <- bm_chain_mean_max <- NULL
+  if (present[["dm_chain_mean_sd"]]) dm_chain_mean_sd <- .stblr_backend_check_summary_matrix(fit, "dm_chain_mean_sd", dm, add_check)
+  if (present[["dm_chain_mean_min"]]) dm_chain_mean_min <- .stblr_backend_check_summary_matrix(fit, "dm_chain_mean_min", dm, add_check)
+  if (present[["dm_chain_mean_max"]]) dm_chain_mean_max <- .stblr_backend_check_summary_matrix(fit, "dm_chain_mean_max", dm, add_check)
+  if (present[["bm_chain_mean_sd"]]) bm_chain_mean_sd <- .stblr_backend_check_summary_matrix(fit, "bm_chain_mean_sd", bm, add_check)
+  if (present[["bm_chain_mean_min"]]) bm_chain_mean_min <- .stblr_backend_check_summary_matrix(fit, "bm_chain_mean_min", bm, add_check)
+  if (present[["bm_chain_mean_max"]]) bm_chain_mean_max <- .stblr_backend_check_summary_matrix(fit, "bm_chain_mean_max", bm, add_check)
 
   tol <- 1e-8
-  if (!is.null(dm_sd)) {
-    add_check("chain_summary.dm_sd.nonnegative",
-              all(is.na(dm_sd) | dm_sd >= -tol),
-              "fit$dm_sd is non-negative")
+  if (!is.null(dm_chain_mean_sd)) {
+    add_check("chain_summary.dm_chain_mean_sd.nonnegative",
+              all(is.na(dm_chain_mean_sd) | dm_chain_mean_sd >= -tol),
+              "fit$dm_chain_mean_sd is non-negative")
   }
-  if (!is.null(bm_sd)) {
-    add_check("chain_summary.bm_sd.nonnegative",
-              all(is.na(bm_sd) | bm_sd >= -tol),
-              "fit$bm_sd is non-negative")
+  if (!is.null(bm_chain_mean_sd)) {
+    add_check("chain_summary.bm_chain_mean_sd.nonnegative",
+              all(is.na(bm_chain_mean_sd) | bm_chain_mean_sd >= -tol),
+              "fit$bm_chain_mean_sd is non-negative")
   }
-  if (!is.null(dm) && !is.null(dm_min) && !is.null(dm_max) &&
-      identical(dim(dm), dim(dm_min)) && identical(dim(dm), dim(dm_max))) {
+  if (!is.null(dm) && !is.null(dm_chain_mean_min) && !is.null(dm_chain_mean_max) &&
+      identical(dim(dm), dim(dm_chain_mean_min)) && identical(dim(dm), dim(dm_chain_mean_max))) {
     add_check("chain_summary.dm.bounds",
-              all(is.na(dm) | is.na(dm_min) | dm_min <= dm + tol) &&
-                all(is.na(dm) | is.na(dm_max) | dm <= dm_max + tol),
-              "fit$dm lies between fit$dm_min and fit$dm_max")
-    add_check("chain_summary.dm_minmax.range",
-              all(is.na(dm_min) | (dm_min >= -tol & dm_min <= 1 + tol)) &&
-                all(is.na(dm_max) | (dm_max >= -tol & dm_max <= 1 + tol)),
-              "fit$dm_min and fit$dm_max are within [0, 1] allowing tolerance")
+              all(is.na(dm) | is.na(dm_chain_mean_min) | dm_chain_mean_min <= dm + tol) &&
+                all(is.na(dm) | is.na(dm_chain_mean_max) | dm <= dm_chain_mean_max + tol),
+              "fit$dm lies between fit$dm_chain_mean_min and fit$dm_chain_mean_max")
+    add_check("chain_summary.dm_chain_mean_minmax.range",
+              all(is.na(dm_chain_mean_min) | (dm_chain_mean_min >= -tol & dm_chain_mean_min <= 1 + tol)) &&
+                all(is.na(dm_chain_mean_max) | (dm_chain_mean_max >= -tol & dm_chain_mean_max <= 1 + tol)),
+              "fit$dm_chain_mean_min and fit$dm_chain_mean_max are within [0, 1] allowing tolerance")
   }
-  if (!is.null(bm) && !is.null(bm_min) && !is.null(bm_max) &&
-      identical(dim(bm), dim(bm_min)) && identical(dim(bm), dim(bm_max))) {
+  if (!is.null(bm) && !is.null(bm_chain_mean_min) && !is.null(bm_chain_mean_max) &&
+      identical(dim(bm), dim(bm_chain_mean_min)) && identical(dim(bm), dim(bm_chain_mean_max))) {
     add_check("chain_summary.bm.bounds",
-              all(is.na(bm) | is.na(bm_min) | bm_min <= bm + tol) &&
-                all(is.na(bm) | is.na(bm_max) | bm <= bm_max + tol),
-              "fit$bm lies between fit$bm_min and fit$bm_max")
+              all(is.na(bm) | is.na(bm_chain_mean_min) | bm_chain_mean_min <= bm + tol) &&
+                all(is.na(bm) | is.na(bm_chain_mean_max) | bm <= bm_chain_mean_max + tol),
+              "fit$bm lies between fit$bm_chain_mean_min and fit$bm_chain_mean_max")
   }
   if (identical(as.integer(nchains), 1L) &&
       all(present) && !is.null(dm) && !is.null(bm)) {
-    add_check("chain_summary.single.dm_sd_zero",
-              all(abs(dm_sd) <= tol, na.rm = TRUE),
-              "single-chain fit$dm_sd is approximately zero")
-    add_check("chain_summary.single.bm_sd_zero",
-              all(abs(bm_sd) <= tol, na.rm = TRUE),
-              "single-chain fit$bm_sd is approximately zero")
+    add_check("chain_summary.single.dm_chain_mean_sd_zero",
+              all(abs(dm_chain_mean_sd) <= tol, na.rm = TRUE),
+              "single-chain fit$dm_chain_mean_sd is approximately zero")
+    add_check("chain_summary.single.bm_chain_mean_sd_zero",
+              all(abs(bm_chain_mean_sd) <= tol, na.rm = TRUE),
+              "single-chain fit$bm_chain_mean_sd is approximately zero")
     add_check("chain_summary.single.dm_equal",
-              isTRUE(all.equal(dm_min, dm, tolerance = tol, check.attributes = FALSE)) &&
-                isTRUE(all.equal(dm_max, dm, tolerance = tol, check.attributes = FALSE)),
-              "single-chain fit$dm_min and fit$dm_max equal fit$dm")
+              isTRUE(all.equal(dm_chain_mean_min, dm, tolerance = tol, check.attributes = FALSE)) &&
+                isTRUE(all.equal(dm_chain_mean_max, dm, tolerance = tol, check.attributes = FALSE)),
+              "single-chain fit$dm_chain_mean_min and fit$dm_chain_mean_max equal fit$dm")
     add_check("chain_summary.single.bm_equal",
-              isTRUE(all.equal(bm_min, bm, tolerance = tol, check.attributes = FALSE)) &&
-                isTRUE(all.equal(bm_max, bm, tolerance = tol, check.attributes = FALSE)),
-              "single-chain fit$bm_min and fit$bm_max equal fit$bm")
+              isTRUE(all.equal(bm_chain_mean_min, bm, tolerance = tol, check.attributes = FALSE)) &&
+                isTRUE(all.equal(bm_chain_mean_max, bm, tolerance = tol, check.attributes = FALSE)),
+              "single-chain fit$bm_chain_mean_min and fit$bm_chain_mean_max equal fit$bm")
   }
 }
 
@@ -435,26 +438,27 @@ print.stblr_backend_check <- function(x, ...) {
   )
   if (!has_chains || is.null(dm) || is.null(bm)) return(invisible(NULL))
 
-  trait_names <- colnames(dm)
-  if (is.null(trait_names)) trait_names <- paste0("trait", seq_len(ncol(dm)))
+  trait_names <- colnames(dm) %||% paste0("trait", seq_len(ncol(dm)))
   chains <- fit$chains
-  add_check("chains.trait_count",
-            length(chains) == ncol(dm),
-            "fit$chains has one entry per trait")
+  expected_tasks <- as.integer(nchains) * ncol(dm)
+  add_check("chains.task_count", length(chains) == expected_tasks,
+            "fit$chains has one flat record per trait-by-chain task")
 
-  for (tt in seq_len(min(length(chains), ncol(dm)))) {
-    trait_chains <- chains[[tt]]
+  for (tt in seq_len(ncol(dm))) {
     cname <- trait_names[tt]
+    trait_chains <- Filter(function(x) {
+      is.list(x) && identical(as.integer(x$trait_index), as.integer(tt))
+    }, chains)
     add_check(
       paste0("chains.", cname, ".chain_count"),
       is.list(trait_chains) && length(trait_chains) == nchains,
-      paste0("fit$chains[[", cname, "]] has nchains entries")
+      paste0("fit$chains has nchains records for ", cname)
     )
     if (!is.list(trait_chains)) next
 
     dm_chain <- list()
     bm_chain <- list()
-    comp_prob_chain <- list()
+    component_probabilities_chain <- list()
     for (cc in seq_along(trait_chains)) {
       ch <- trait_chains[[cc]]
       if (!is.list(ch)) {
@@ -462,24 +466,29 @@ print.stblr_backend_check <- function(x, ...) {
                   FALSE, "chain entry is list-like")
         next
       }
-      if (!is.null(ch$dm)) {
-        dm_chain[[length(dm_chain) + 1L]] <- as.numeric(ch$dm)
+      marker <- if (is.list(ch$marker)) ch$marker else list()
+      chain_dm <- ch$dm %||% marker$dm
+      chain_bm <- ch$bm %||% marker$bm
+      chain_component_probabilities <-
+        ch$component_probabilities %||% marker$component_probabilities
+      if (!is.null(chain_dm)) {
+        dm_chain[[length(dm_chain) + 1L]] <- as.numeric(chain_dm)
         add_check(paste0("chains.", cname, ".chain", cc, ".dm_length"),
-                  length(ch$dm) == nrow(dm),
+                  length(chain_dm) == nrow(dm),
                   "chain dm length matches number of markers")
       }
-      if (!is.null(ch$bm)) {
-        bm_chain[[length(bm_chain) + 1L]] <- as.numeric(ch$bm)
+      if (!is.null(chain_bm)) {
+        bm_chain[[length(bm_chain) + 1L]] <- as.numeric(chain_bm)
         add_check(paste0("chains.", cname, ".chain", cc, ".bm_length"),
-                  length(ch$bm) == nrow(bm),
+                  length(chain_bm) == nrow(bm),
                   "chain bm length matches number of markers")
       }
-      if (!is.null(ch$comp_prob)) {
-        cp <- as.matrix(ch$comp_prob)
-        comp_prob_chain[[length(comp_prob_chain) + 1L]] <- cp
-        add_check(paste0("chains.", cname, ".chain", cc, ".comp_prob_rows"),
+      if (!is.null(chain_component_probabilities)) {
+        cp <- as.matrix(chain_component_probabilities)
+        component_probabilities_chain[[length(component_probabilities_chain) + 1L]] <- cp
+        add_check(paste0("chains.", cname, ".chain", cc, ".component_probabilities_rows"),
                   nrow(cp) == nrow(dm),
-                  "chain comp_prob row count matches number of markers")
+                  "chain component_probabilities row count matches number of markers")
       }
     }
     if (length(dm_chain) == nchains &&
@@ -498,23 +507,23 @@ print.stblr_backend_check <- function(x, ...) {
                                  check.attributes = FALSE)),
                 "mean chain bm equals fit$bm")
     }
-    if (!is.null(fit$comp_prob) && !is.null(fit$comp_prob[[cname]]) &&
-        length(comp_prob_chain) == nchains) {
-      target_cp <- as.matrix(fit$comp_prob[[cname]])
+    if (!is.null(fit$component_probabilities) && !is.null(fit$component_probabilities[[cname]]) &&
+        length(component_probabilities_chain) == nchains) {
+      target_cp <- as.matrix(fit$component_probabilities[[cname]])
       same_dim <- all(vapply(
-        comp_prob_chain,
+        component_probabilities_chain,
         function(x) identical(dim(x), dim(target_cp)),
         logical(1)
       ))
-      add_check(paste0("chains.", cname, ".comp_prob_dim"),
+      add_check(paste0("chains.", cname, ".component_probabilities_dim"),
                 same_dim,
-                "chain comp_prob dimensions match fit$comp_prob")
+                "chain component_probabilities dimensions match fit$component_probabilities")
       if (same_dim) {
-        cp_mean <- Reduce(`+`, comp_prob_chain) / length(comp_prob_chain)
-        add_check(paste0("chains.", cname, ".comp_prob_mean"),
+        cp_mean <- Reduce(`+`, component_probabilities_chain) / length(component_probabilities_chain)
+        add_check(paste0("chains.", cname, ".component_probabilities_mean"),
                   isTRUE(all.equal(cp_mean, target_cp, tolerance = 1e-8,
                                    check.attributes = FALSE)),
-                  "mean chain comp_prob equals fit$comp_prob")
+                  "mean chain component_probabilities equals fit$component_probabilities")
       }
     }
   }
@@ -522,27 +531,31 @@ print.stblr_backend_check <- function(x, ...) {
 }
 
 .stblr_backend_check_ld_swap <- function(fit, require_ld_swap, add_check) {
-  has_ld_swap <- !is.null(fit$ld_swap)
+  diagnostics <- if (is.list(fit$diagnostics)) fit$diagnostics else list()
+  native <- if (is.list(diagnostics$native)) diagnostics$native else list()
+  ld_swap <- diagnostics$ld_swap %||% native$ld_swap
+  ld_swap_chains <- diagnostics$ld_swap_chains %||% native$ld_swap_chains
+  has_ld_swap <- !is.null(ld_swap)
   add_check(
     "ld_swap.required",
     !require_ld_swap || has_ld_swap,
-    if (require_ld_swap) "fit$ld_swap is present" else "fit$ld_swap is optional"
+    if (require_ld_swap) "fit$diagnostics$ld_swap is present" else "fit$diagnostics$ld_swap is optional"
   )
   if (has_ld_swap) {
-    .stblr_backend_validate_ld_swap_table(fit$ld_swap, "ld_swap", add_check)
+    .stblr_backend_validate_ld_swap_table(ld_swap, "ld_swap", add_check)
   }
-  if (!is.null(fit$ld_swap_chains)) {
-    if (is.list(fit$ld_swap_chains) && !is.data.frame(fit$ld_swap_chains)) {
-      for (nm in names(fit$ld_swap_chains)) {
+  if (!is.null(ld_swap_chains)) {
+    if (is.list(ld_swap_chains) && !is.data.frame(ld_swap_chains)) {
+      for (nm in names(ld_swap_chains)) {
         .stblr_backend_validate_ld_swap_table(
-          fit$ld_swap_chains[[nm]],
+          ld_swap_chains[[nm]],
           paste0("ld_swap_chains.", nm),
           add_check
         )
       }
     } else {
       .stblr_backend_validate_ld_swap_table(
-        fit$ld_swap_chains,
+        ld_swap_chains,
         "ld_swap_chains",
         add_check
       )
@@ -579,48 +592,48 @@ print.stblr_backend_check <- function(x, ...) {
   invisible(NULL)
 }
 
-.stblr_backend_check_comp_prob <- function(fit, dm, add_check) {
-  cp <- fit$comp_prob
+.stblr_backend_check_component_probabilities <- function(fit, dm, add_check) {
+  cp <- fit$component_probabilities
   if (is.null(cp)) return(invisible(NULL))
 
   if (!is.list(cp) || is.null(names(cp)) || any(!nzchar(names(cp)))) {
     add_check(
-      "comp_prob.named_list", FALSE,
-      "fit$comp_prob is a named list of marker-by-component matrices by trait"
+      "component_probabilities.named_list", FALSE,
+      "fit$component_probabilities is a named list of marker-by-component matrices by trait"
     )
     return(invisible(NULL))
   }
   add_check(
-    "comp_prob.named_list", TRUE,
-    "fit$comp_prob is a named list of marker-by-component matrices by trait"
+    "component_probabilities.named_list", TRUE,
+    "fit$component_probabilities is a named list of marker-by-component matrices by trait"
   )
 
   tol <- 1e-6
   for (trait in names(cp)) {
     x <- .stblr_backend_as_matrix(cp[[trait]])
-    label <- paste0("comp_prob.", trait)
+    label <- paste0("component_probabilities.", trait)
     add_check(
       paste0(label, ".matrix"), !is.null(x),
-      paste0("fit$comp_prob[['", trait, "']] is matrix-like")
+      paste0("fit$component_probabilities[['", trait, "']] is matrix-like")
     )
     if (is.null(x)) next
 
     if (!is.null(dm)) {
       add_check(
         paste0(label, ".nrow"), nrow(x) == nrow(dm),
-        paste0("fit$comp_prob[['", trait, "']] has nrow(fit$dm) rows")
+        paste0("fit$component_probabilities[['", trait, "']] has nrow(fit$dm) rows")
       )
     }
     add_check(
       paste0(label, ".range"),
       all(is.na(x) | (x >= -tol & x <= 1 + tol)),
-      paste0("fit$comp_prob[['", trait, "']] values are within [0, 1]")
+      paste0("fit$component_probabilities[['", trait, "']] values are within [0, 1]")
     )
     row_sums <- rowSums(x)
     add_check(
       paste0(label, ".rowsums"),
       all(is.na(row_sums) | abs(row_sums - 1) <= 1e-4),
-      paste0("fit$comp_prob[['", trait, "']] rows sum to 1")
+      paste0("fit$component_probabilities[['", trait, "']] rows sum to 1")
     )
   }
   invisible(NULL)
@@ -664,10 +677,10 @@ print.stblr_backend_check <- function(x, ...) {
     csr_prior_bayesc = "prior",
     csr_group_bayesc = c("group", "group_pi", "group_vb_multiplier"),
     csr_annot_bayesc = c("eta_pi", "eta_vb"),
-    csr_sbayesrc = c("alpha", "sigmaSqAlpha", "comp_prob"),
-    csr_bayesr = "comp_prob",
-    bed_bayesr = "comp_prob",
-    bed_bayesrc = c("alpha", "sigmaSqAlpha", "comp_prob"),
+    csr_sbayesrc = c("alpha", "sigmaSqAlpha", "component_probabilities"),
+    csr_bayesr = "component_probabilities",
+    bed_bayesr = "component_probabilities",
+    bed_bayesrc = c("alpha", "sigmaSqAlpha", "component_probabilities"),
     character()
   )
   for (nm in expect_fields) {

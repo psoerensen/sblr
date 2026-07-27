@@ -18,7 +18,8 @@ New readers can follow this sequence:
 1. [Model Overview](model_overview.html) for the package landscape and model
    selection map.
 2. [ST-BLR Interface and Output Map](stblr_interface_and_output_map.html) for
-   the current `stblr_csr()`, `stblr_bed()`, and `stblr_csr_annot()`
+   the current `stblr_csr()`, `stblr_block_eigen()`, `stblr_bed()`, and
+   `stblr_csr_annot()`
    interfaces, shared `Glist` object, standardized outputs, helpers, and
    unsupported combinations.
 3. [Data Representations](data_representations.html) for the relationship
@@ -46,7 +47,8 @@ New readers can follow this sequence:
   and plain versus annotation-informed priors.
 
 - [ST-BLR Interface and Output Map](stblr_interface_and_output_map.html)
-  maps `stblr_csr()`, `stblr_bed()`, and `stblr_csr_annot()`, the shared
+  maps `stblr_csr()`, `stblr_block_eigen()`, `stblr_bed()`, and
+  `stblr_csr_annot()`, the shared
   `Glist` object, summary-statistics and sparse-LD preparation, current
   model-family support, standardized outputs, helper functions, and
   fine-mapping diagnostics.

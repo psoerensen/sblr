@@ -35,15 +35,15 @@ make_bayesr_component_summary_fit <- function(optional = TRUE) {
   fit <- list(
     dm = dm,
     bm = bm,
-    comp_prob = list(D1 = cp1, D2 = cp2)
+    component_probabilities = list(D1 = cp1, D2 = cp2)
   )
   if (optional) {
-    fit$dm_sd <- matrix(
+    fit$dm_chain_mean_sd <- matrix(
       c(0.01, 0.02, 0.03, 0.04, 0.04, 0.03, 0.02, 0.01),
       nrow = 4,
       dimnames = dimnames(dm)
     )
-    fit$bm_sd <- matrix(
+    fit$bm_chain_mean_sd <- matrix(
       c(0.001, 0.002, 0.003, 0.004, 0.004, 0.003, 0.002, 0.001),
       nrow = 4,
       dimnames = dimnames(dm)
@@ -74,19 +74,19 @@ test_that("summarise_components returns basic PIP and component summaries", {
   expect_equal(out$n_pip_gt_0_05[out$trait == "D1"], sum(fit$dm[, "D1"] > 0.05))
   expect_equal(out$n_pip_gt_0_5[out$trait == "D1"], sum(fit$dm[, "D1"] > 0.5))
   expect_equal(out$n_pip_gt_0_95[out$trait == "D1"], sum(fit$dm[, "D1"] > 0.95))
-  expect_equal(out$mean_component_0[out$trait == "D1"], mean(fit$comp_prob$D1[, "component_0"]))
-  expect_equal(out$mean_component_1[out$trait == "D1"], mean(fit$comp_prob$D1[, "component_1"]))
-  expect_equal(out$max_component_2[out$trait == "D1"], max(fit$comp_prob$D1[, "component_2"]))
+  expect_equal(out$mean_component_0[out$trait == "D1"], mean(fit$component_probabilities$D1[, "component_0"]))
+  expect_equal(out$mean_component_1[out$trait == "D1"], mean(fit$component_probabilities$D1[, "component_1"]))
+  expect_equal(out$max_component_2[out$trait == "D1"], max(fit$component_probabilities$D1[, "component_2"]))
 })
 
 test_that("summarise_components includes chain stability fields", {
   fit <- make_bayesr_component_summary_fit(optional = TRUE)
   out <- summarise_components(fit)
 
-  expect_equal(out$mean_pip_sd[out$trait == "D1"], mean(fit$dm_sd[, "D1"]))
-  expect_equal(out$max_pip_sd[out$trait == "D1"], max(fit$dm_sd[, "D1"]))
-  expect_equal(out$mean_effect_sd[out$trait == "D1"], mean(fit$bm_sd[, "D1"]))
-  expect_equal(out$max_effect_sd[out$trait == "D1"], max(fit$bm_sd[, "D1"]))
+  expect_equal(out$mean_pip_sd[out$trait == "D1"], mean(fit$dm_chain_mean_sd[, "D1"]))
+  expect_equal(out$max_pip_sd[out$trait == "D1"], max(fit$dm_chain_mean_sd[, "D1"]))
+  expect_equal(out$mean_effect_sd[out$trait == "D1"], mean(fit$bm_chain_mean_sd[, "D1"]))
+  expect_equal(out$max_effect_sd[out$trait == "D1"], max(fit$bm_chain_mean_sd[, "D1"]))
   expect_equal(out$mean_abs_effect[out$trait == "D1"], mean(abs(fit$bm[, "D1"])))
   expect_equal(out$max_abs_effect[out$trait == "D1"], max(abs(fit$bm[, "D1"])))
   expect_equal(out$mean_component_index[out$trait == "D1"], mean(fit$dm_component_mean[, "D1"]))
@@ -126,17 +126,17 @@ test_that("summarise_components validates required fields", {
   )
 
   fit_no_comp <- fit
-  fit_no_comp$comp_prob <- NULL
+  fit_no_comp$component_probabilities <- NULL
   expect_error(
     summarise_components(fit_no_comp),
-    "fit\\$comp_prob must be present"
+    "fit\\$component_probabilities must be present"
   )
 })
 
 test_that("summarise_components uses sensible missing trait names", {
   fit <- make_bayesr_component_summary_fit(optional = FALSE)
   colnames(fit$dm) <- NULL
-  names(fit$comp_prob) <- c("trait1", "trait2")
+  names(fit$component_probabilities) <- c("trait1", "trait2")
 
   out <- summarise_components(fit)
 

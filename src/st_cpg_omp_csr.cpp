@@ -1172,7 +1172,14 @@ static Rcpp::List stblr_csr_bayesc_result_to_raw(
       Rcpp::Named("dm") = chain_dm,
       Rcpp::Named("state") = chain_state
      ),
-     Rcpp::Named("trace") = Rcpp::List::create(),
+     Rcpp::Named("trace") = Rcpp::List::create(
+      Rcpp::Named("vbs") = current.marker_variance_trace,
+      Rcpp::Named("vgs") = current.genetic_variance_trace,
+      Rcpp::Named("ves") = current.residual_variance_trace,
+      Rcpp::Named("vle") = current.le_variance_trace,
+      Rcpp::Named("vld") = current.ld_variance_trace,
+      Rcpp::Named("pis") = current.inclusion_trace
+     ),
      Rcpp::Named("pi") = Rcpp::List::create(
       Rcpp::Named("final") = Rcpp::NumericVector::create(
        1.0 - current.final_inclusion_probability,
@@ -2627,7 +2634,14 @@ Rcpp::List stblr_cpg_omp_csr_impl(
       Rcpp::Named("dm") = chain_dm,
       Rcpp::Named("state") = chain_state
      ),
-     Rcpp::Named("trace") = Rcpp::List::create(),
+     Rcpp::Named("trace") = Rcpp::List::create(
+      Rcpp::Named("vbs") = Rcpp::wrap(vbs_task.row(task_u)),
+      Rcpp::Named("vgs") = Rcpp::wrap(vgs_task.row(task_u)),
+      Rcpp::Named("ves") = Rcpp::wrap(ves_task.row(task_u)),
+      Rcpp::Named("vle") = Rcpp::wrap(vles_task.row(task_u)),
+      Rcpp::Named("vld") = Rcpp::wrap(vlds_task.row(task_u)),
+      Rcpp::Named("pis") = Rcpp::wrap(pis_task.row(task_u))
+     ),
      Rcpp::Named("pi") = Rcpp::List::create(
       Rcpp::Named("final") = Rcpp::NumericVector::create(
        1.0 - final_pi_task(task_u), final_pi_task(task_u)

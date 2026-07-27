@@ -2,8 +2,7 @@
 #'
 #' `stblr_csr_annot()` is the unified public entry point for the current
 #' annotation-aware CSR summary-statistics backends. It dispatches to the
-#' existing explicit wrappers and standardizes fit metadata and annotation
-#' output aliases while preserving wrapper-specific fields.
+#' internal model adapters and standardizes fit metadata and annotation output.
 #'
 #' Available annotation models are `annotation_model = "prior"` for fixed
 #' annotation-informed prior probabilities and variance multipliers,
@@ -25,8 +24,8 @@
 #' @param annotation_model Annotation model. Synonyms are accepted:
 #'   `"prior"`, `"fixed_prior"`, `"fixed"`; `"learned"`, `"annot"`,
 #'   `"annotation"`; `"group"`, `"groups"`; and `"sbayesrc"`/`"SBayesRC"`.
-#' @param method Optional method override. BayesC-like annotation models accept
-#'   `"bayesc"`/`"bayesC"`; SBayesRC accepts `"sbayesrc"` or `"bayesr"`.
+#' @param method Optional lowercase method override. BayesC-like annotation
+#'   models use `"bayesc"`; SBayesRC uses `"sbayesrc"`.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
@@ -34,6 +33,10 @@
 #' @param chain_seeds Optional integer seeds, one per chain.
 #' @param keep_chains Logical; return compact per-chain summaries when
 #'   supported.
+#' @param convergence Convergence mode: `"auto"`, `"none"`, or `"core"`.
+#' @param convergence_control Optional named convergence-control list.
+#' @param memory_warning_gb Analytical memory-warning threshold in GiB.
+#' @param verbose Print resolved execution metadata.
 #' @param updateLDswap Logical; request optional LD-swap/MH. This is supported
 #'   for the current annotation-aware CSR models, including SBayesRC.
 #' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
@@ -81,24 +84,26 @@
 #'   Annotation-aware outputs are model-specific and may include
 #'   `annotation_summary`, `annotation_pi`, `annotation_effects`,
 #'   `annotation_prior`, `alpha`, and `sigmaSqAlpha`. SBayesRC fits also
-#'   include BayesR-style `comp_prob` marker-by-component posterior
+#'   include BayesR-style `component_probabilities` marker-by-component posterior
 #'   probabilities by trait, `dm_component_mean`, and `ncomp` where available.
 #'   The SBayesRC null component column is `gamma_0.00`, so
 #'   `dm = 1 - P(gamma_0.00)`.
 #'
-#'   LD-swap-enabled fits include `ld_swap` and, where chain summaries are
-#'   retained, `ld_swap_chains` or chain-level LD-swap entries. With
+#'   LD-swap-enabled fits include `fit$diagnostics$ld_swap` and, where chain
+#'   summaries are retained, `fit$diagnostics$ld_swap_chains` or chain-level
+#'   LD-swap entries. With
 #'   `keep_chains = TRUE`, compact per-chain summaries are returned in
 #'   `chains` for supported CSR annotation backends.
 #'
 #'   For sampled SBayesRC `selection_s`, the fit also contains `selection_s`,
-#'   `selection_s_sd`, `selection_s_min`, `selection_s_max`,
+#'   `selection_s_chain_mean_sd`, `selection_s_chain_mean_min`,
+#'   `selection_s_chain_mean_max`,
 #'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
 #'   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
 #'   and `selection_s_acceptance` is the MH acceptance rate by trait. With
 #'   `keep_chains = TRUE`, chain-level sampled-S output is available as
-#'   `fit$chains[[trait]][[chain]]$selection_s` and
-#'   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+#'   the matching flat trait-by-chain record's `selection_s` and
+#'   `selection_s_acceptance` fields.
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
 #'   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
@@ -119,9 +124,8 @@
 #' SBayesRC uses annotations to affect component probabilities; `selection_s`,
 #' when requested, affects only marker-specific effect-size prior variance.
 #'
-#' Existing wrappers remain supported:
-#' [stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
-#' [stblr_csr_group_annot()], and [stblr_csr_sbayesrc_generic()].
+#' The model-specific adapters are internal. `stblr_csr_annot()` is the sole
+#' public annotation-aware CSR fitting entry.
 #'
 #' CSR effects are on the standardized-genotype scale. The BayesS-style
 #' MAF-dependent prior scale used by fixed and sampled `selection_s` is
@@ -171,11 +175,15 @@ stblr_csr_annot <- function(
   nit = 1000,
   nburn = 100,
   nthin = 1,
-  ncores = 1,
   seed = 1,
   nchains = 1L,
+  ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
+  convergence = c("auto", "none", "core"),
+  convergence_control = NULL,
+  memory_warning_gb = 8,
+  verbose = FALSE,
   h2 = 0.3,
   adjE = 0.9,
   updateB = TRUE,
@@ -199,6 +207,13 @@ stblr_csr_annot <- function(
  }
 
  annotation_model <- .stblr_match_annotation_model(annotation_model[[1L]])
+ chain <- .blr_chain_controls(
+  nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
+ conv <- .blr_convergence_controls(
+  convergence, convergence_control, chain$nchains)
+ memory <- .blr_st_preflight_memory(
+  stats = stats, operator = "csr", chain = chain, conv = conv,
+  memory_warning_gb = memory_warning_gb)
  .stblr_check_annotation_method(method, annotation_model)
  .stblr_check_annotation_chains(annotation_model, nchains, keep_chains, chain_seeds)
  .validate_ld_swap_args(
@@ -223,15 +238,28 @@ stblr_csr_annot <- function(
   adjE = adjE,
   updateB = updateB,
   updateE = updateE,
-  nit = nit,
-  nburn = nburn,
-  nthin = nthin,
-  ncores = ncores,
-  seed = seed,
-  nchains = nchains,
-  chain_seeds = chain_seeds,
-  keep_chains = keep_chains
+  nit = chain$nit,
+  nburn = chain$nburn,
+  nthin = chain$nthin,
+  ncores = chain$ncores,
+  seed = chain$seed,
+  nchains = chain$nchains,
+  chain_seeds = if (length(chain$chain_seeds_native))
+    chain$chain_seeds_native else NULL,
+  keep_chains = chain$keep_chains || conv$compute || conv$keep_traces
  )
+ probability_policy <- switch(
+  annotation_model, prior = "fixed_marker", learned = "learned_logistic",
+  group = "group", sbayesrc = "annotation_probit_stick")
+ finish <- function(fit) {
+  model <- if (annotation_model == "sbayesrc") "sbayesrc" else "bayesc"
+  out <- .blr_finalize_st_public(
+   fit, model, "csr", chain, conv, memory_warning_gb, verbose, memory)
+  out$input$annotation_policy <- probability_policy
+  out$input$probability_policy <- probability_policy
+  out$input$effect_scale <- if (model == "sbayesrc") "component_maf_s" else "unit"
+  out
+ }
  extra <- list(...)
 
  common$updateLDswap <- updateLDswap
@@ -259,7 +287,7 @@ stblr_csr_annot <- function(
  if (annotation_model == "prior") {
   args <- .stblr_prior_annotation_args(annotations, extra)
   args <- c(common, args)
-  return(do.call(stblr_csr_prior_annot, args))
+  return(finish(do.call(stblr_csr_prior_annot, args)))
  }
 
  if (annotation_model == "learned") {
@@ -267,7 +295,7 @@ stblr_csr_annot <- function(
    stop("Supply learned annotations through annotations, not both annotations and A.")
   }
   args <- c(common, list(A = annotations), extra)
-  return(do.call(stblr_csr_learn_annot, args))
+  return(finish(do.call(stblr_csr_learn_annot, args)))
  }
 
  if (annotation_model == "group") {
@@ -275,12 +303,13 @@ stblr_csr_annot <- function(
    stop("Supply group annotations through annotations, not both annotations and group.")
   }
   args <- c(common, list(group = annotations), extra)
-  return(do.call(stblr_csr_group_annot, args))
+  return(finish(do.call(stblr_csr_group_annot, args)))
  }
 
  if ("A" %in% names(extra)) {
   stop("Supply SBayesRC annotations through annotations, not both annotations and A.")
  }
+ if (is.null(selection_s) && !isTRUE(estimate_selection_s)) selection_s <- 0
  args <- c(
   common,
   list(
@@ -294,7 +323,7 @@ stblr_csr_annot <- function(
   ),
   extra
  )
- do.call(stblr_csr_sbayesrc_generic, args)
+ finish(do.call(stblr_csr_sbayesrc_generic, args))
 }
 
 .stblr_check_annotation_chains <- function(annotation_model, nchains, keep_chains,
@@ -331,9 +360,9 @@ stblr_csr_annot <- function(
   return(invisible(TRUE))
  }
 
- if (!method %in% c("sbayesrc", "bayesr")) {
+ if (!method %in% "sbayesrc") {
   stop(
-   "annotation_model = \"sbayesrc\" requires method = NULL, \"sbayesrc\", or \"bayesr\".",
+   "annotation_model = \"sbayesrc\" requires method = NULL or \"sbayesrc\".",
    call. = FALSE
   )
  }

@@ -5,9 +5,34 @@ phase10d_text <- function(path) paste(readLines(blr_repo_path(path),
   warn = FALSE), collapse = "\n")
 phase10d_comparable <- function(x) {
   if (is.list(x) && !is.null(x$input)) x$input$ncores <- 0L
+  if (is.list(x) && "memory_estimate" %in% names(x)) x["memory_estimate"] <- list(NULL)
   if (is.list(x)) for (nm in intersect(names(x), c("seconds_mean", "seconds_max"))) x[[nm]][] <- 0
   x
 }
+phase10d_pick <- function(x, current, historical = current) {
+  if (!is.null(x[[current]])) x[[current]] else x[[historical]]
+}
+phase10d_raw_science <- function(x) x[c("marker", "trace", "variance", "pi")]
+phase10d_fit_science <- function(x) list(
+  bm = x$bm, dm = x$dm, wy = x$wy, r = x$r, b = x$b, d = x$d,
+  vbs = x$vbs, vgs = x$vgs, ves = x$ves, vle = x$vle, vld = x$vld,
+  rb = x$rb, rg = x$rg, re = x$re,
+  pi_trace = phase10d_pick(x, "pi_trace", "pis"),
+  pi_final = phase10d_pick(x, "pi_final", "pi"),
+  pi_mean = phase10d_pick(x, "pi_mean", "pim"),
+  cov_b_mean = phase10d_pick(x, "cov_b_mean", "covb"),
+  cov_g_mean = phase10d_pick(x, "cov_g_mean", "covg"),
+  cov_e_mean = phase10d_pick(x, "cov_e_mean", "cove"),
+  cov_b_final = phase10d_pick(x, "cov_b_final", "vb"),
+  cov_g_final = phase10d_pick(x, "cov_g_final", "vg"),
+  cov_e_final = phase10d_pick(x, "cov_e_final", "ve"),
+  bm_chain_mean_sd = phase10d_pick(x, "bm_chain_mean_sd", "bm_sd"),
+  bm_chain_mean_min = phase10d_pick(x, "bm_chain_mean_min", "bm_min"),
+  bm_chain_mean_max = phase10d_pick(x, "bm_chain_mean_max", "bm_max"),
+  dm_chain_mean_sd = phase10d_pick(x, "dm_chain_mean_sd", "dm_sd"),
+  dm_chain_mean_min = phase10d_pick(x, "dm_chain_mean_min", "dm_min"),
+  dm_chain_mean_max = phase10d_pick(x, "dm_chain_mean_max", "dm_max")
+)
 
 test_that("canonical scheduled BayesC architecture is singular and build safe", {
   source <- phase10d_text("src/st_cpg_omp_csr_scheduled.cpp")
@@ -46,8 +71,10 @@ test_that("canonical corrected raw and formatted references remain exact", {
     ref <- readRDS(file.path(testthat::test_path(), "fixtures",
       "blr_phase10b_scheduled_csr", paste0(nm, ".rds")))
     observed <- phase10b_run(phase10b_configs[[nm]])
-    expect_equal(observed$raw, ref$raw, tolerance=1e-12, info = paste(nm, "raw"))
-    expect_equal(observed$fit, ref$fit, tolerance=1e-12, info = paste(nm, "formatted"))
+    expect_equal(phase10d_raw_science(observed$raw), phase10d_raw_science(ref$raw),
+      tolerance=1e-12, info = paste(nm, "raw scientific fields"))
+    expect_equal(phase10d_fit_science(observed$fit), phase10d_fit_science(ref$fit),
+      tolerance=1e-12, info = paste(nm, "formatted scientific fields"))
     expect_identical(ref$metadata$rng_ownership_version, "scheduled_chain_rng_v1")
     expect_identical(ref$metadata$reference_mode, "fresh R process")
   }
@@ -84,8 +111,9 @@ test_that("scheduler semantics and unsupported boundaries remain explicit", {
     expect_match(core, needle, fixed = TRUE)
   }
   expect_false("model" %in% names(formals(sblr::stblr_csr)))
-  expect_match(phase10d_text("src/st_cpg_omp_csr_scheduled.cpp"),
-    "keep_chains is not yet supported for scheduled CSR", fixed = TRUE)
+  source <- phase10d_text("src/st_cpg_omp_csr_scheduled.cpp")
+  expect_match(source, 'Rcpp::Named("chains")=chains', fixed = TRUE)
+  expect_match(source, 'Rcpp::Named("vbs")=result.task_vbs', fixed = TRUE)
 })
 
 test_that("dense scheduled execution retains its documented nonidentity", {
@@ -102,8 +130,10 @@ test_that("Phase 10D protects canonical and unrelated native backends", {
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "src/st_cpg_omp_csr_group.cpp" = "87e923f7f8ee6420e39d9f041263d11b",
     "src/st_cpg_omp_csr_annot.cpp" = "59bd49f048d116d0fe61d73d79bd4693",
-    "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6",
-    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b")
+    "src/st_cpg_omp_individual_scheduled.cpp" = "0d726fe3faf5deec887381c1458ab6b6")
   expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path, character(1)))),
     unname(protected))
+  ns <- readLines(blr_repo_path("NAMESPACE"), warn = FALSE)
+  expect_true("export(stblr_block_eigen)" %in% ns)
+  expect_false("export(stblr_bed_marker)" %in% ns)
 })

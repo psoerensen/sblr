@@ -29,11 +29,11 @@ inline MtBedConvergenceTraceBundle build_mt_bed_convergence_trace_bundle(
  MtBedConvergenceTraceBundle bundle;
  bundle.nchains=static_cast<int>(results.size());
  bundle.postburn_draws=nit;
- bundle.quantities.reserve(static_cast<std::size_t>(3*nt));
- for (const char* group : {"B_diag", "G_diag", "E_diag"}) {
+ bundle.quantities.reserve(static_cast<std::size_t>(5*nt));
+ for (const char* group : {"vbs", "vgs", "ves", "vle", "vld"}) {
   for (int trait=0; trait<nt; ++trait) {
-   const bool updated=std::string(group)=="B_diag" ? updateB :
-    (std::string(group)=="E_diag" ? updateE : true);
+   const bool updated=std::string(group)=="vbs" ? updateB :
+    (std::string(group)=="ves" ? updateE : true);
    bundle.quantities.push_back(MtBedConvergenceQuantity{
     group, trait, updated});
   }
@@ -49,9 +49,11 @@ inline MtBedConvergenceTraceBundle build_mt_bed_convergence_trace_bundle(
      "MT BED convergence traces require successful ordered chains");
    }
    const std::vector<std::vector<double>>* traces=nullptr;
-   if (quantity.group=="B_diag") traces=&result.core.posterior.vbs;
-   else if (quantity.group=="G_diag") traces=&result.core.posterior.vgs;
-   else traces=&result.core.posterior.ves;
+   if (quantity.group=="vbs") traces=&result.core.posterior.vbs;
+   else if (quantity.group=="vgs") traces=&result.core.posterior.vgs;
+   else if (quantity.group=="ves") traces=&result.core.posterior.ves;
+   else if (quantity.group=="vle") traces=&result.core.posterior.vle;
+   else traces=&result.core.posterior.vld;
    if (traces->size()!=static_cast<std::size_t>(nt) ||
        (*traces)[static_cast<std::size_t>(quantity.trait)].size()!=expected) {
     throw std::invalid_argument(

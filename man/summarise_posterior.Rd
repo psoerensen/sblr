@@ -7,7 +7,7 @@
 summarise_posterior(
   fit,
   nburn = NULL,
-  traces = c("vbs", "vgs", "ves", "pis", "vle", "vld"),
+  traces = c("vbs", "vgs", "ves", "pi_trace", "vle", "vld"),
   prob = 0.95,
   derived = TRUE,
   include_m_included = TRUE,
@@ -40,7 +40,7 @@ A data frame with columns `parameter`, `label`, `trait`, `n`,
 }
 \description{
 Computes posterior summaries for global ST-BLR trace parameters. The
-function summarizes traces such as `vbs`, `vgs`, `ves`, `pis`, `vle`, and
+function summarizes traces such as `vbs`, `vgs`, `ves`, `pi_trace`, `vle`, and
 `vld`.
 }
 \details{

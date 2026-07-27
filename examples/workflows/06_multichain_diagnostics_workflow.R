@@ -55,7 +55,7 @@ Glist <- make_sparse_ld(
 fit_single <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 500,
   nburn = 100,
   ncores = nthreads,
@@ -65,12 +65,12 @@ fit_single <- stblr_csr(
 
 check_fit(fit_single, require_chain_summaries = TRUE)
 
-stopifnot(all(fit_single$dm_sd == 0, na.rm = TRUE))
-stopifnot(all(fit_single$bm_sd == 0, na.rm = TRUE))
-stopifnot(isTRUE(all.equal(fit_single$dm_min, fit_single$dm)))
-stopifnot(isTRUE(all.equal(fit_single$dm_max, fit_single$dm)))
-stopifnot(isTRUE(all.equal(fit_single$bm_min, fit_single$bm)))
-stopifnot(isTRUE(all.equal(fit_single$bm_max, fit_single$bm)))
+stopifnot(all(fit_single$dm_chain_mean_sd == 0, na.rm = TRUE))
+stopifnot(all(fit_single$bm_chain_mean_sd == 0, na.rm = TRUE))
+stopifnot(isTRUE(all.equal(fit_single$dm_chain_mean_min, fit_single$dm)))
+stopifnot(isTRUE(all.equal(fit_single$dm_chain_mean_max, fit_single$dm)))
+stopifnot(isTRUE(all.equal(fit_single$bm_chain_mean_min, fit_single$bm)))
+stopifnot(isTRUE(all.equal(fit_single$bm_chain_mean_max, fit_single$bm)))
 
 ## -------------------------------------------------------------------------
 ## 2. Multi-chain fit
@@ -79,7 +79,7 @@ stopifnot(isTRUE(all.equal(fit_single$bm_max, fit_single$bm)))
 fit_multi <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 500,
   nburn = 100,
   ncores = nthreads,
@@ -92,8 +92,8 @@ fit_multi <- stblr_csr(
 check_fit(fit_multi, require_chain_summaries = TRUE)
 
 length(fit_multi$chains)
-summary(as.vector(fit_multi$dm_sd))
-summary(as.vector(fit_multi$bm_sd))
+summary(as.vector(fit_multi$dm_chain_mean_sd))
+summary(as.vector(fit_multi$bm_chain_mean_sd))
 
 ## -------------------------------------------------------------------------
 ## 3. Multi-chain LD-swap diagnostics
@@ -102,7 +102,7 @@ summary(as.vector(fit_multi$bm_sd))
 fit_multi_ldswap <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 500,
   nburn = 100,
   ncores = nthreads,
@@ -143,7 +143,7 @@ if (workflow_should_run_heavy()) {
   fit_bayesr_multi <- stblr_csr(
     stats = stats,
     Glist = Glist,
-    method = "bayesR",
+    method = "bayesr",
     nit = 1000,
     nburn = 250,
     ncores = nthreads,

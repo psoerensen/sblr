@@ -4,7 +4,7 @@ title: "Technical Appendix: SBayesRC-Style Annotation Priors"
 
 This appendix describes the SBayesRC-style annotation-dependent BayesR prior
 available through `stblr_csr_annot(annotation_model = "sbayesrc")` and the
-compatibility wrapper `stblr_csr_sbayesrc_generic()`. The core prior family is
+compatibility wrapper `stblr_csr_annot(..., annotation_model = "sbayesrc")`. The core prior family is
 closely aligned with published SBayesRC: marker effects follow a multi-normal
 mixture, and marker-specific mixture probabilities are determined by
 conditional probit stick-breaking regressions on annotations. The exposed
@@ -218,7 +218,7 @@ Rows of $A$ must be aligned with the markers in the sufficient statistics,
 CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or
 quantitative annotations, and overlap is allowed.
 
-Before fitting, `stblr_csr_sbayesrc_generic()` calls the shared annotation
+Before fitting, `stblr_csr_annot(..., annotation_model = "sbayesrc")` calls the shared annotation
 preparation helper using these controls:
 
 - `add_intercept = TRUE` adds an all-ones first column when one is not already
@@ -400,9 +400,9 @@ annotation coefficients at that stick-breaking step. They should be
 interpreted together with alpha coefficients, annotation scaling, and chain
 diagnostics.
 
-### `comp_prob`
+### `component_probabilities`
 
-`fit$comp_prob` is a list with one marker-by-component matrix per trait. It
+`fit$component_probabilities` is a list with one marker-by-component matrix per trait. It
 contains posterior frequencies of sampled component assignments after burn-in
 and thinning. It is not the same object as the annotation-derived prior
 probability matrix computed from $A\alpha$.
@@ -528,7 +528,7 @@ hyperparameters.
 
 The most accurate description is therefore:
 
-> `stblr_csr_sbayesrc_generic()` implements an SBayesRC-style,
+> `stblr_csr_annot(..., annotation_model = "sbayesrc")` implements an SBayesRC-style,
 > annotation-dependent BayesR prior that is closely aligned with the published
 > SBayesRC prior structure, fitted with the `sblr` CSR sparse-LD likelihood.
 
@@ -549,7 +549,7 @@ Before interpreting an SBayesRC-style fit:
   `alpha_update_every`;
 - check component counts, PIPs, variance traces, and chain behavior;
 - distinguish annotation-derived prior probabilities from posterior component
-  frequencies in `comp_prob`;
+  frequencies in `component_probabilities`;
 - compare annotation-row and full marker-profile diagnostics;
 - assess sensitivity to gamma, sparse-LD thresholds, annotations, and
   hyperparameters; and

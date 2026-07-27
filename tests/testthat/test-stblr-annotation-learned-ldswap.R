@@ -94,17 +94,17 @@ fit_tiny_annotation_learned_ldswap <- function(updateLDswap = TRUE,
 }
 
 expect_annotation_learned_ldswap_diagnostics <- function(fit, expected_attempted) {
-  expect_true("ld_swap" %in% names(fit))
+  ld_swap <- fit$diagnostics$ld_swap
   if (is.null(expected_attempted)) {
-    expect_null(fit$ld_swap)
+    expect_null(ld_swap)
     return(invisible())
   }
-  expect_identical(colnames(fit$ld_swap),
+  expect_identical(colnames(ld_swap),
                    c("attempted", "accepted", "acceptance_rate"))
-  expect_equal(fit$ld_swap$attempted, expected_attempted)
-  expect_true(fit$ld_swap$accepted >= 0)
-  expect_true(fit$ld_swap$acceptance_rate >= 0)
-  expect_true(fit$ld_swap$acceptance_rate <= 1)
+  expect_equal(ld_swap$attempted, expected_attempted)
+  expect_true(ld_swap$accepted >= 0)
+  expect_true(ld_swap$acceptance_rate >= 0)
+  expect_true(ld_swap$acceptance_rate <= 1)
 }
 
 test_that("learned annotation CSR BayesC is backward compatible without LD-swap", {
@@ -149,11 +149,11 @@ test_that("learned annotation CSR BayesC supports LD-swap with kept chains", {
   expect_equal(fit$input$nchains, 2L)
   expect_true(isTRUE(fit$input$keep_chains))
   expect_annotation_learned_ldswap_diagnostics(fit, expected_attempted = 12)
-  expect_true("ld_swap_chains" %in% names(fit))
-  expect_equal(sum(fit$ld_swap_chains$trait1$attempted), fit$ld_swap$attempted)
+  expect_equal(sum(fit$diagnostics$ld_swap_chains$trait1$attempted),
+               fit$diagnostics$ld_swap$attempted)
   expect_true("chains" %in% names(fit))
-  expect_length(fit$chains$trait1, 2L)
-  expect_true(all(vapply(fit$chains$trait1, function(ch) {
+  expect_length(fit$chains, 2L)
+  expect_true(all(vapply(fit$chains, function(ch) {
     all(c("dm", "bm", "ld_swap", "eta_pi", "eta_vb") %in% names(ch)) &&
       length(ch$dm) == 3L &&
       length(ch$bm) == 3L &&
@@ -174,36 +174,9 @@ test_that("learned annotation CSR BayesC LD-swap is reproducible with chain seed
 
   expect_equal(fit_a$dm, fit_b$dm, tolerance = 1e-12)
   expect_equal(fit_a$bm, fit_b$bm, tolerance = 1e-12)
-  expect_equal(fit_a$ld_swap, fit_b$ld_swap)
+  expect_equal(fit_a$diagnostics$ld_swap, fit_b$diagnostics$ld_swap)
 })
 
-test_that("old learned annotation wrapper accepts LD-swap", {
-  fit <- stblr_csr_learn_annot(
-    stats = tiny_annotation_learned_ldswap_stats(),
-    ld_prefix = make_tiny_annotation_learned_ldswap_csr_prefix(),
-    A = tiny_annotation_learned_ldswap_A(),
-    pi_init = 0.35,
-    pi_prior_mean = 0.35,
-    pi_prior_strength = 2,
-    updateB = FALSE,
-    updateE = FALSE,
-    updatePi = FALSE,
-    learn_pi_annot = TRUE,
-    learn_vb_annot = TRUE,
-    annot_update_every = 1L,
-    rw_sd_eta_pi = 0.01,
-    rw_sd_eta_vb = 0.01,
-    nit = 3,
-    nburn = 0,
-    ncores = 1L,
-    seed = 93L,
-    updateLDswap = TRUE,
-    ld_swap_prob = 1,
-    ld_swap_r2 = 0.8,
-    ld_swap_max_friends = 2L,
-    ld_swap_moves = 2L
-  )
-
-  expect_equal(fit$input$backend, "csr_annot_bayesc")
-  expect_annotation_learned_ldswap_diagnostics(fit, expected_attempted = 6)
+test_that("old learned annotation wrapper is not exported", {
+  expect_false("stblr_csr_learn_annot" %in% getNamespaceExports("sblr"))
 })

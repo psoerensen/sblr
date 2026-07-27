@@ -254,3 +254,10 @@ diagnostic scope. Passing diagnostics does not prove convergence.
 Current modes remain `auto`, `none`, and `core`. A future explicit `extended`
 mode will use nested failure-closed covariance, probability, and selected-marker
 controls; `auto` remains Tier 1 only. Phase 17W changes no public surface.
+## Phase 18 common fit boundary
+
+MT BED retains its validated numerical and convergence routes, while its
+formatted result now follows the family-neutral metadata ownership and naming
+contract. Covariance mean/final states, probability mean/final/trace fields,
+and chain-mean stability summaries use explicit names. The shared convergence
+engine is a nonnumerical generalization of the Phase 17U implementation.

@@ -1,5 +1,15 @@
 # Unified BLR Framework: Reduction, Regression, and Validation Test Matrix
 
+## Phase 18 final variance reductions
+
+The executable owner `test-blr-operator-reductions.R` compares the five common
+trait traces (`vbs`, `vgs`, `ves`, `vle`, `vld`) for exact/unfiltered CSR and
+block-eigen BayesC, BayesR, SBayesC, SBayesR, and SBayesRC configurations. It
+also checks matched null-state BED/summary and one-trait ST/MT reductions.
+Where scalar and joint covariance priors differ, `vbs`/`ves` are explicitly
+non-reducing; matched operator/effect definitions still require equal `vle`
+and `vld`.
+
 Phase 16A disposition note: the experimental packed-BED scheduled single-chain
 route is not an exact reduction of canonical one-chain BayesC because its
 historical logical-chain seed mapping differs; Phase 11B permanently records the
@@ -748,3 +758,10 @@ count, seeds, and update modes are permanent equality owners.
 Portable oracles own strict-lower order, covariance update/structural states,
 probability deduplication, pattern/marker resolution, binary applicability,
 memory reuse, safety controls, and warning grouping. Production remains exact.
+## Phase 18 unified reductions
+
+Unfiltered CSR/block-eigen reconstructions target exact or documented
+floating-point equivalence for ST BayesC, BayesR, SBayesRC and MT BayesC.
+BED/summary and one-trait ST/MT comparisons are asserted only when scaling,
+likelihood, residual, prior, and update contracts coincide. Filtering and full
+MT residual covariance are explicitly classified rather than forced equal.

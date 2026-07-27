@@ -300,7 +300,7 @@ test_that("default stblr_csr BayesC remains on sparse CSR path", {
   fit <- stblr_csr(
     stats = fixture$stats,
     ld_prefix = make_stblr_block_eigen_csr_prefix(m = fixture$stats$m),
-    method = "bayesC",
+    method = "bayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -446,7 +446,7 @@ test_that("default stblr_csr BayesR remains on sparse CSR path", {
   fit <- stblr_csr(
     stats = fixture$stats,
     ld_prefix = make_stblr_block_eigen_csr_prefix(m = fixture$stats$m),
-    method = "bayesR",
+    method = "bayesr",
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
@@ -494,8 +494,8 @@ expect_stblr_block_eigen_sbayesrc_fit <- function(fit, eigen_filter, n_anno) {
   expect_true(all(is.finite(fit$dm)))
   expect_true(all(is.finite(fit$vbs)))
   expect_true(all(is.finite(fit$ves)))
-  for (trait in names(fit$comp_prob)) {
-    cp <- fit$comp_prob[[trait]]
+  for (trait in names(fit$component_probabilities)) {
+    cp <- fit$component_probabilities[[trait]]
     expect_identical(colnames(cp)[1L], "gamma_0.00")
     expect_equal(unname(rowSums(cp)), rep(1, nrow(cp)), tolerance = 1e-8)
     expect_equal(

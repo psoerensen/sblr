@@ -292,7 +292,7 @@ test_that("stblr_csr_annot dispatches fixed-prior BayesC annotations", {
   )
   expect_true(is.list(fit$annotation_prior))
   expect_true(is.data.frame(fit$annotation_summary))
-  expect_true(all(c("covb", "vbs", "vgs", "ves") %in% names(fit)))
+  expect_true(all(c("cov_b_mean", "vbs", "vgs", "ves") %in% names(fit)))
 })
 
 test_that("stblr_csr_annot dispatches learned BayesC annotations", {
@@ -384,10 +384,13 @@ test_that("stblr_csr_annot dispatches SBayesRC annotations", {
   gamma <- c(0, 0.1, 1)
   fit <- sblr::stblr_csr_annot(
     stats = stats,
+    Glist = list(rsidsLD = list(stats$marker_names),
+                 rsids = list(stats$marker_names),
+                 maf = list(rep(.2, stats$m))),
     ld_prefix = make_tiny_annotation_interface_csr_prefix(stats$m),
     annotations = A,
-    annotation_model = "SBayesRC",
-    method = "bayesr",
+    annotation_model = "sbayesrc",
+    method = "sbayesrc",
     gamma = gamma,
     pi_init = 0.35,
     pi_prior_mean = 0.35,
@@ -407,6 +410,6 @@ test_that("stblr_csr_annot dispatches SBayesRC annotations", {
   expect_identical(fit$annotation_effects, fit$alpha)
   expect_identical(fit$annotation_variance, fit$sigmaSqAlpha)
   expect_length(fit$annotation_pi, 1L)
-  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, stats$m), tolerance = 1e-8)
-  expect_true(all(c("comp_prob", "alpha", "sigmaSqAlpha", "ncomp") %in% names(fit)))
+  expect_equal(unname(rowSums(fit$component_probabilities$trait1)), rep(1, stats$m), tolerance = 1e-8)
+  expect_true(all(c("component_probabilities", "alpha", "sigmaSqAlpha", "ncomp") %in% names(fit)))
 })

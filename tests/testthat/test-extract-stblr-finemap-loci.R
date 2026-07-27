@@ -11,32 +11,32 @@ make_extract_finemap_fit <- function() {
       ncol = 1,
       dimnames = list(markers, "D1")
     ),
-    dm_sd = matrix(
+    dm_chain_mean_sd = matrix(
       c(0.01, 0.06, 0.03, 0.002),
       ncol = 1,
       dimnames = list(markers, "D1")
     ),
-    dm_min = matrix(
+    dm_chain_mean_min = matrix(
       c(0.08, 0.50, 0.30, 0.01),
       ncol = 1,
       dimnames = list(markers, "D1")
     ),
-    dm_max = matrix(
+    dm_chain_mean_max = matrix(
       c(0.12, 0.70, 0.40, 0.03),
       ncol = 1,
       dimnames = list(markers, "D1")
     ),
-    bm_sd = matrix(
+    bm_chain_mean_sd = matrix(
       c(0.001, 0.02, 0.01, 0.000),
       ncol = 1,
       dimnames = list(markers, "D1")
     ),
-    bm_min = matrix(
+    bm_chain_mean_min = matrix(
       c(0.00, 0.15, -0.12, 0.00),
       ncol = 1,
       dimnames = list(markers, "D1")
     ),
-    bm_max = matrix(
+    bm_chain_mean_max = matrix(
       c(0.02, 0.25, -0.08, 0.00),
       ncol = 1,
       dimnames = list(markers, "D1")

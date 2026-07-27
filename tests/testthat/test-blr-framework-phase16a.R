@@ -55,7 +55,7 @@ test_that("single-chain experimental reference remains exact", {
 test_that("sparse experimental route is same-process deterministic", {
   source(blr_fixture_path("blr-phase11a-bed-reference.R"), local = TRUE)
   x <- phase11a_fixture()
-  run <- function() sblr::stblr_bed_marker(x$Glist, x$y, backend = "sparse",
+  run <- function() sblr:::stblr_bed_marker(x$Glist, x$y, backend = "sparse",
     pi_init = .5, pi_prior_mean = .5, pi_prior_strength = 4,
     nit = 6L, nburn = 2L, nthin = 1L, seed = 71L, ncores = 1L,
     updateB = FALSE, updateE = FALSE, rebuild_every = 2L,
@@ -69,7 +69,7 @@ test_that("current support policy and schemas remain coherent", {
   expect_match(matrix, "Explicitly experimental", fixed = TRUE)
   expect_match(matrix, "scheduled single-chain and sparse", fixed = TRUE)
   expect_match(schema, "schema `class = \"stblr_raw\"", fixed = TRUE)
-  expect_true("stblr_bed_marker" %in% getNamespaceExports("sblr"))
+  expect_false("stblr_bed_marker" %in% getNamespaceExports("sblr"))
   expect_true(all(c("bayesc", "bayesr", "bayesrc") %in%
     eval(formals(sblr::stblr_bed)$method)))
 })
@@ -78,8 +78,7 @@ test_that("protected canonical numerical sources are unchanged", {
   protected <- c(
     "src/blr_bed_scheduled_bayesc_core_impl.h" = "723cee003504c1fdcd075b965cb63d83",
     "src/blr_bed_bayesr_core_impl.h" = "afe77e26d2cf2b8e3d64088221b33e14",
-    "src/blr_bed_bayesrc_core_impl.h" = "82365cf3f1f5306c57b980f59b4d83d3",
-    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b")
+    "src/blr_bed_bayesrc_core_impl.h" = "82365cf3f1f5306c57b980f59b4d83d3")
   expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path,
     character(1)))), unname(protected))
 })

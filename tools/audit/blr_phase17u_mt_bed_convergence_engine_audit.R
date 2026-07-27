@@ -25,9 +25,9 @@ values <- c(
   trace_extractor_count =
     count_fixed(extractor, "build_mt_bed_convergence_trace_bundle("),
   production_rhat_engine_count =
-    count_fixed(engine, ".mtblr_convergence_rhat_basic <- function"),
+    count_fixed(engine, ".blr_convergence_rhat_basic <- function"),
   production_ess_engine_count =
-    count_fixed(engine, ".mtblr_convergence_ess <- function"),
+    count_fixed(engine, ".blr_convergence_ess <- function"),
   production_mcse_engine_count =
     count_fixed(engine, "mcse_mean <- posterior_sd / sqrt(ess_mean)"),
   public_convergence_formal_count =

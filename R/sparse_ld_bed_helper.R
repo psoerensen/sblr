@@ -1094,7 +1094,9 @@ NULL
       marker = list(bm = ch$bm, dm = ch$dm, state = ch$state),
       component = list(prob = ch$comp_prob),
       annotation = list(alpha = ch$alpha, sigmaSqAlpha = ch$sigmaSqAlpha),
-      trace = list(pis = ch$pis)
+      trace = list(
+       vbs = ch$vbs, vgs = ch$vgs, ves = ch$ves,
+       vle = ch$vle, vld = ch$vld, pis = ch$pis)
      )
     }
     trait_chains[[cc]] <- list(
@@ -1149,17 +1151,17 @@ NULL
        as.numeric(ch$annotation$sigmaSqAlpha), step_names
       )
      }
-     for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
-      if (!is.null(ch$trace[[nm]])) {
-       trait_chains[[cc]][[nm]] <- as.numeric(ch$trace[[nm]])
-       names(trait_chains[[cc]][[nm]]) <- paste0(
-        "Iter", seq_along(trait_chains[[cc]][[nm]])
-       )
-      }
-     }
      if (!is.null(ch$diagnostics$updateE)) {
       trait_chains[[cc]]$updateE_diagnostics <- set_updateE_diagnostics(
        matrix(as.numeric(ch$diagnostics$updateE), nrow = 1L)
+      )
+     }
+    }
+    for (nm in c("vbs", "vgs", "ves", "vle", "vld", "pis")) {
+     if (!is.null(ch$trace[[nm]])) {
+      trait_chains[[cc]][[nm]] <- as.numeric(ch$trace[[nm]])
+      names(trait_chains[[cc]][[nm]]) <- paste0(
+       "Iter", seq_along(trait_chains[[cc]][[nm]])
       )
      }
     }
@@ -1367,6 +1369,7 @@ NULL
   nchains = 1,
   ncores = 1,
   seed = 10,
+  chain_seeds = NULL,
   trait_names = NULL,
   variable_names = NULL,
   keep_diagnostics = TRUE
@@ -1450,7 +1453,8 @@ NULL
   progress_every = as.integer(progress_every),
   nchains = nchains,
   ncores = ncores,
-  seed = as.integer(seed)
+  seed = as.integer(seed),
+  chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds)
  )
 
  if (.is_stblr_raw(raw)) {
@@ -1480,11 +1484,6 @@ NULL
   nthin = as.integer(nthin)
  )
  fit
-}
-
-# Compatibility alias for scripts/tests that used the old internal helper name.
-.stblr_bed_marker_bayesr_experimental <- function(...) {
- .fit_stblr_bed_bayesr(...)
 }
 
 .format_stblr_csr_bayesr_fit <- function(fit, nt, m, trait_names,
@@ -1823,7 +1822,6 @@ NULL
 #'   errors clearly.
 #'
 #' @return A formatted ST-BLR BayesR fit.
-#' @export
 stblr_csr_bayesr <- function(
   stats,
   Glist = NULL,
@@ -2106,88 +2104,6 @@ stblr_csr_bayesr <- function(
  fit
 }
 
-# Internal clearer helper name for the exact CSR BayesR backend.
-.fit_stblr_csr_bayesr <- stblr_csr_bayesr
-
-# Compatibility alias for scripts/tests that used the old internal helper name.
-.stblr_csr_bayesr_experimental <- function(
-  Glist = NULL,
-  stats,
-  ld_prefix = NULL,
-  n = NULL,
-  m = NULL,
-  h2 = 0.3,
-  mixture_var = c(0, 0.01, 0.1, 1),
-  pi = NULL,
-  alpha = NULL,
-  nub = 4,
-  nue = 4,
-  updateB = TRUE,
-  updateE = TRUE,
-  updatePi = TRUE,
-  adjE = 0.9,
-  nit = 1000,
-  nburn = 100,
-  nthin = 1,
-  ncores = 1,
-  seed = 10,
-  nchains = 1L,
-  keep_chains = FALSE,
-  chain_seeds = NULL,
-  scheduled = FALSE,
-  updateLDswap = FALSE,
-  ld_swap_prob = 0.05,
-  ld_swap_r2 = 0.8,
-  ld_swap_max_friends = 50L,
-  ld_swap_moves = 1L,
-  use_comp_init = FALSE,
-  comp_init = NULL,
-  use_r_init = FALSE,
-  r_init = NULL,
-  rebuild_r_before_updateE = FALSE,
-  updateE_start = NULL,
-  updateE_every = 1L
-) {
- .fit_stblr_csr_bayesr(
-  stats = stats,
-  Glist = Glist,
-  ld_prefix = ld_prefix,
-  n = n,
-  m = m,
-  pi = pi,
-  mixture_var = mixture_var,
-  alpha = alpha,
-  h2 = h2,
-  adjE = adjE,
-  nit = nit,
-  nburn = nburn,
-  nthin = nthin,
-  ncores = ncores,
-  seed = seed,
-  nchains = nchains,
-  keep_chains = keep_chains,
-  chain_seeds = chain_seeds,
-  updateB = updateB,
-  updateE = updateE,
-  updatePi = updatePi,
-  updateE_start = updateE_start,
-  updateE_every = updateE_every,
-  nub = nub,
-  nue = nue,
-  use_comp_init = use_comp_init,
-  comp_init = comp_init,
-  use_r_init = use_r_init,
-  r_init = r_init,
-  rebuild_r_before_updateE = rebuild_r_before_updateE,
-  scheduled = scheduled,
-  updateLDswap = updateLDswap,
-  ld_swap_prob = ld_swap_prob,
-  ld_swap_r2 = ld_swap_r2,
-  ld_swap_max_friends = ld_swap_max_friends,
-  ld_swap_moves = ld_swap_moves
- )
-}
-
 .resolve_Glist_markers <- function(Glist, chr = NULL, cls = NULL) {
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
@@ -2278,7 +2194,7 @@ stblr_csr_bayesr <- function(
 #' using sufficient statistics from [bed_xtx_xty()] and a disk-backed CSR LD
 #' prefix from [sparseLD_stream_CSR()].
 #'
-#' Available methods are `method = "bayesC"` and `method = "bayesR"`. Both
+#' Available methods are `method = "bayesc"` and `method = "bayesr"`. Both
 #' support fixed global `selection_s`, sampled trait-specific `selection_s`,
 #' LD-swap/fine-mapping diagnostics where `updateLDswap = TRUE`, and native
 #' multi-chain posterior summaries.
@@ -2391,7 +2307,7 @@ stblr_csr_bayesr <- function(
 #'   enabled fits include `ld_swap` and, where chain summaries are retained,
 #'   `ld_swap_chains` or chain-level LD-swap entries.
 #'
-#'   For `method = "bayesR"`, `dm` is `P(component > 0)`, `comp_prob` contains
+#'   For `method = "bayesr"`, `dm` is `P(component > 0)`, `comp_prob` contains
 #'   marker-by-component posterior probabilities by trait, and
 #'   `dm_component_mean` contains posterior mean component/effect-class
 #'   summaries. The BayesR null component column is `component_0`, so
@@ -2457,28 +2373,28 @@ stblr_csr_bayesr <- function(
 #' fit_fixed_s <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
-#'   method = "bayesC",
+#'   method = "bayesc",
 #'   selection_s = -0.5
 #' )
 #'
 #' fit_sampled_s_bc <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
-#'   method = "bayesC",
+#'   method = "bayesc",
 #'   estimate_selection_s = TRUE
 #' )
 #'
 #' fit_sampled_s_br <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
-#'   method = "bayesR",
+#'   method = "bayesr",
 #'   estimate_selection_s = TRUE,
 #'   selection_s_prior = c(-3, 2),
 #'   selection_s_proposal_sd = 0.35
 #' )
 #' }
-#' @export
-stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
+#' @noRd
+.stblr_csr_impl <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
                       method = c("bayesc", "bayesr"),
                       pi_init = 0.001, pi_vb_init = NULL,
                       pi_prior_mean = 0.001, pi_prior_strength = 5e5,
@@ -2619,9 +2535,6 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
  } else {
   chain_seeds <- integer()
  }
- if (isTRUE(scheduled) && isTRUE(keep_chains)) {
-  stop("scheduled = TRUE, keep_chains = TRUE is not yet supported.")
- }
  if (isTRUE(scheduled) && isTRUE(updateLDswap)) {
   stop("updateLDswap is currently implemented only for scheduled = FALSE.")
  }
@@ -2684,7 +2597,8 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
   B = pri$B, E = pri$E, ssb_prior = pri$ssb_prior_list,
   sse_prior = pri$sse_prior_list, pi = arch$pi, nub = nub, nue = nue,
   updateB = updateB, updateE = updateE, updatePi = updatePi, adjE = adjE,
-  n = rep(as.integer(n), nt), nit = nit, nburn = nburn, nthin = nthin
+  n = if (length(n) == 1L) rep(as.integer(n), nt) else as.integer(n),
+  nit = nit, nburn = nburn, nthin = nthin
  )
  if (scheduled) {
   raw <- do.call(stblr_cpg_omp_csr_scheduled, c(common, list(
@@ -3572,7 +3486,6 @@ stblr_csr <- function(Glist=NULL, stats, ld_prefix=NULL, n = NULL, m = NULL,
 #' @return A formatted ST-BLR fit. Fits from the scheduled multi-chain backend
 #'   include CSR-compatible chain-stability summaries for marker inclusion
 #'   probabilities and posterior effects.
-#' @export
 stblr_bed_marker <- function(
     Glist, y, chr = NULL, cls = NULL, block_size = 1000,
     pi_init = 0.001, pi_vb_init = NULL, pi_prior_mean = 0.001,
@@ -3890,7 +3803,7 @@ stblr_bed_marker <- function(
 #' fitC_bed <- stblr_bed(
 #'   y = y,
 #'   Glist = Glist,
-#'   method = "bayesC",
+#'   method = "bayesc",
 #'   nit = 1000,
 #'   nburn = 100
 #' )
@@ -3898,7 +3811,7 @@ stblr_bed_marker <- function(
 #' fitR_bed <- stblr_bed(
 #'   y = y,
 #'   Glist = Glist,
-#'   method = "bayesR",
+#'   method = "bayesr",
 #'   nit = 1000,
 #'   nburn = 100
 #' )
@@ -3920,8 +3833,8 @@ stblr_bed_marker <- function(
 #'   nchains = 2
 #' )
 #' }
-#' @export
-stblr_bed <- function(
+#' @noRd
+.stblr_bed_impl <- function(
   y,
   Glist,
   method = c("bayesc", "bayesr", "bayesrc"),
@@ -3994,9 +3907,6 @@ stblr_bed <- function(
  if (!is.null(covar)) {
   stop("covar is not currently supported by stblr_bed(); pass pre-adjusted phenotypes.")
  }
- if (!is.null(chain_seeds)) {
-  stop("chain_seeds is not currently supported by the BED scheduled-chain backends.")
- }
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
   stop("nchains must be a positive integer scalar.")
@@ -4004,9 +3914,6 @@ stblr_bed <- function(
  nchains <- as.integer(nchains)
  if (!is.logical(keep_chains) || length(keep_chains) != 1L || is.na(keep_chains)) {
   stop("keep_chains must be TRUE or FALSE.")
- }
- if (method != "bayesrc" && isTRUE(keep_chains)) {
-  stop("keep_chains = TRUE is currently supported by stblr_bed() only for method = 'bayesrc'.")
  }
  if (!is.numeric(ncores) || length(ncores) != 1L ||
      !is.finite(ncores) || ncores < 1 || ncores != floor(ncores)) {
@@ -4205,7 +4112,8 @@ stblr_bed <- function(
    nchains = nchains,
    keep_chains = keep_chains,
    ncores = ncores,
-   seed = as.integer(seed)
+   seed = as.integer(seed),
+   chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds)
   )
   fit <- .as_stblr_fit(raw, dat$trait_names, dat$variable_names)
   if (!("chains" %in% names(fit))) fit["chains"] <- list(NULL)
@@ -4247,6 +4155,7 @@ stblr_bed <- function(
    rebuild_every = as.integer(rebuild_every),
    ncores = ncores,
    seed = as.integer(seed),
+   chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds),
    nchains = nchains,
    read_block_size = as.integer(read_block_size),
    scale = scale,
@@ -4344,7 +4253,8 @@ stblr_bed <- function(
    seed = seed,
    trait_names = dat$trait_names,
    variable_names = dat$variable_names,
-   keep_diagnostics = TRUE
+   keep_diagnostics = TRUE,
+   chain_seeds = chain_seeds
   )
   fit$input <- c(list(
    method = "bayesr",
@@ -4451,7 +4361,8 @@ stblr_bed <- function(
   pi_prior_b = arch$pi_prior_b,
   nchains = nchains,
   ncores = ncores,
-  seed = seed
+  seed = seed,
+  chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds)
  )
  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, common)
  if (.is_stblr_raw(raw)) {

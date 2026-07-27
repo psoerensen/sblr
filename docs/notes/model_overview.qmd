@@ -2,6 +2,15 @@
 title: "Model Overview"
 ---
 
+## Phase 18 canonical model vocabulary
+
+The scientific model identifiers are `bayesc`, `sbayesc`, `bayesr`,
+`sbayesr`, `bayesrc`, and `sbayesrc`. S models reuse the corresponding kernel
+with an explicit `maf_s` effect scale. Probability/annotation policies are a
+separate dimension: `global`, `fixed_marker`, `group`, `learned_logistic`, and
+`annotation_probit_stick`. Unsupported model/operator/policy combinations are
+errors, not fallbacks.
+
 `sblr` is an experimental R package for Bayesian linear regression of genomic
 marker effects. Its models estimate marker effects, posterior inclusion
 probabilities, variance components, and model-specific diagnostics from either
@@ -74,10 +83,10 @@ interface:
 
 The older compatibility wrappers remain useful for explicit workflows:
 
-- `stblr_csr_prior_annot()`;
-- `stblr_csr_learn_annot()`;
-- `stblr_csr_group_annot()`;
-- `stblr_csr_sbayesrc_generic()`.
+- `stblr_csr_annot(..., annotation_model = "prior")`;
+- `stblr_csr_annot(..., annotation_model = "learned")`;
+- `stblr_csr_annot(..., annotation_model = "group")`;
+- `stblr_csr_annot(..., annotation_model = "sbayesrc")`.
 
 ## `Glist` as the Shared Data Carrier
 
@@ -143,7 +152,7 @@ The updated `Glist` is then passed to CSR model fits:
 fit <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC"
+  method = "bayesc"
 )
 ```
 
@@ -166,7 +175,7 @@ separate sparse-LD artifact:
 fit_bed <- stblr_bed(
   Glist = Glist,
   y = y,
-  method = "bayesC"
+  method = "bayesc"
 )
 ```
 
@@ -186,9 +195,10 @@ full joint MTBLR sharing model.
 
 **Multi-trait BLR (MTBLR)** treats marker effects as vectors and can model
 effect covariance, residual covariance, and explicit trait-sharing models. The
-public `sblr()` interface accepts summary-statistics inputs such as a trait
-cross-product matrix `yy`, marker-trait cross-products `Xy`, LD or marker
-cross-products `XX`, and optional multi-trait inclusion models. Full
+public `mtblr_csr()`, `mtblr_block_eigen()`, and `mtblr_bed()` interfaces use
+canonical sparse-LD, reconstructed block-eigen, and individual-level packed
+BED operators. They accept joint trait inputs and optional multi-trait
+inclusion models. Full
 summary-statistics residual-covariance modeling additionally depends on
 cross-trait phenotype products and sample-overlap assumptions.
 
@@ -222,9 +232,9 @@ $$
 
 `stblr_csr()` uses sufficient statistics from `make_summary_stats()` with disk-backed
 sparse-LD metadata written into `Glist$sparseLD` by `make_sparse_ld()`. The
-public `sblr()` interface represents the broader summary-statistics model
-family and accepts dense or sparse marker cross-product structures through
-`XX`.
+public `mtblr_csr()` and `mtblr_block_eigen()` interfaces represent the joint
+summary-statistics model. The former dense `sblr()` dispatcher is retained only
+as an internal scientific reference.
 
 These representations, their information requirements, and sample-overlap
 issues are covered in [Data representations](data_representations.qmd). The
@@ -281,8 +291,8 @@ The current support matrix is:
 
 | Backend | Fixed global `selection_s` | Sampled trait-specific `selection_s` |
 |---|---:|---:|
-| `stblr_csr(method = "bayesC")` | yes | yes |
-| `stblr_csr(method = "bayesR")` | yes | yes |
+| `stblr_csr(method = "bayesc")` | yes | yes |
+| `stblr_csr(method = "bayesr")` | yes | yes |
 | `stblr_csr_annot(annotation_model = "sbayesrc")` | yes | yes |
 | scheduled CSR BayesC | no | no |
 | `stblr_csr_annot(annotation_model = "prior")` | no | no |
@@ -323,7 +333,7 @@ MCMC samples:
 
 BayesR and SBayesRC fits also return component summaries:
 
-- `comp_prob`: marker-by-component posterior probabilities by trait;
+- `component_probabilities`: marker-by-component posterior probabilities by trait;
 - `dm_component_mean`: posterior mean component/effect-class summary.
 
 The null component naming differs by model:
@@ -431,16 +441,16 @@ hold in real data.
 | Function | Primary role | Data representation | Trait/prior emphasis | Read next |
 |---|---|---|---|---|
 | `stblr_bed()` | Fit ST-BLR directly from PLINK BED markers and phenotypes. | Individual-level BED through `Glist`. | Plain/global BayesC or BayesR ST-BLR; accepts one or more phenotype columns; no sampler-level `selection_s`. | [ST-BLR interface and output map](stblr_interface_and_output_map.qmd), [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Single-trait models](single_trait_models.qmd) |
-| `stblr_bed_marker()` | Lower-level direct BED marker interface retained for compatibility and specialized workflows. | Individual-level BED. | Plain/global ST-BLR. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd) |
+| `stblr_bed()` | Lower-level direct BED marker interface retained for compatibility and specialized workflows. | Individual-level BED. | Plain/global ST-BLR. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd) |
 | `make_summary_stats()` | Derive marker-trait and phenotype sufficient statistics from BED-backed `Glist` data. | BED to summary statistics. | Preparation, not a fitted model. | [Data representations](data_representations.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
 | `make_sparse_ld()` | Construct disk-backed sparse LD from BED-backed `Glist` data and store metadata in `Glist$sparseLD`. | BED to CSR LD. | Preparation, not a fitted model. | [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.qmd), [Technical sparse LD and CSR](technical_sparse_ld_csr.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
 | `stblr_csr()` | Fit annotation-unaware ST-BLR from `stats` and sparse LD in `Glist`. | Summary statistics plus disk-backed sparse LD. | CSR BayesC or BayesR, with fixed global or sampled trait-specific `selection_s` where supported. | [Single-trait models](single_trait_models.qmd), [selection_s status](selection_s_status.md), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
 | `stblr_csr_annot()` | Unified annotation-aware CSR interface. | Summary statistics plus CSR LD and annotations. | `annotation_model = "prior"`, `"learned"`, `"group"`, or `"sbayesrc"`; only SBayesRC supports fixed and sampled `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [ST-BLR interface and output map](stblr_interface_and_output_map.qmd) |
-| `stblr_csr_prior_annot()` | Compatibility wrapper for fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. | Summary statistics plus CSR LD and optional annotations. | Fixed annotation-informed prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd) |
-| `stblr_csr_learn_annot()` | Compatibility wrapper for learned annotation effects on marker inclusion and optionally effect-variance multipliers. | Summary statistics plus CSR LD and annotations. | Direct learned annotation prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [Technical annotation priors](technical_annotation_priors.qmd) |
-| `stblr_csr_group_annot()` | Compatibility wrapper for group-level inclusion probabilities and variance multipliers. | Summary statistics plus CSR LD and marker groups. | Group prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd) |
-| `stblr_csr_sbayesrc_generic()` | Compatibility wrapper for SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. | Summary statistics plus CSR LD and overlapping annotations. | SBayesRC mixture prior; supports fixed and sampled `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd) |
-| `sblr()` | Fit the broader summary-statistics BLR interface, including multi-trait inputs and optional sharing models. | Summary statistics plus marker cross-products/LD. | Plain single- or multi-trait model components. | [Multi-trait models](multi_trait_models.qmd) |
+| `stblr_csr_annot(..., annotation_model = "prior")` | Compatibility wrapper for fixed marker-specific priors, supplied directly or derived from fixed annotation coefficients. | Summary statistics plus CSR LD and optional annotations. | Fixed annotation-informed prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd) |
+| `stblr_csr_annot(..., annotation_model = "learned")` | Compatibility wrapper for learned annotation effects on marker inclusion and optionally effect-variance multipliers. | Summary statistics plus CSR LD and annotations. | Direct learned annotation prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [Technical annotation priors](technical_annotation_priors.qmd) |
+| `stblr_csr_annot(..., annotation_model = "group")` | Compatibility wrapper for group-level inclusion probabilities and variance multipliers. | Summary statistics plus CSR LD and marker groups. | Group prior; no sampler-level `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd) |
+| `stblr_csr_annot(..., annotation_model = "sbayesrc")` | Compatibility wrapper for SBayesRC-style annotation-dependent BayesR prior with marker-specific mixture probabilities. | Summary statistics plus CSR LD and overlapping annotations. | SBayesRC mixture prior; supports fixed and sampled `selection_s`. | [Annotation-informed models](annotation_informed_models.qmd), [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.qmd) |
+| `mtblr_csr()` / `mtblr_block_eigen()` / `mtblr_bed()` | Fit joint small-T BayesC models using the selected canonical operator. | Summary statistics plus CSR/block provenance, or individual-level BED data. | Joint multi-trait BayesC. | [Multi-trait models](multi_trait_models.qmd) |
 | `finemap_stblr_csr()` | Local fine-mapping/refitting around predefined marker regions using architecture from a global CSR fit. | Global CSR fit plus `Glist`, `stats`, and marker sets. | Local regional summaries and optional credible sets. | [Workflows and outputs](workflows_and_outputs.qmd) |
 | `make_credible_sets()` | Construct credible sets from fitted posterior marker probabilities and marker/LD information. | Fit summaries and marker/LD metadata. | Post-processing helper, not a core sampler. | [Workflows and outputs](workflows_and_outputs.qmd) |
 | `mtsim()` | Simulate multi-trait phenotypes and marker effects with shared and trait-specific signals. | Simulated matrix or `Glist` genotypes. | Model checking and multi-trait truth. | [Workflows and outputs](workflows_and_outputs.qmd) |
@@ -450,10 +460,10 @@ hold in real data.
 
 | Model/API | Fixed `selection_s` | Sampled `selection_s` | Annotation-aware | Component probabilities | Annotation outputs | LD-swap/fine-mapping diagnostics |
 |---|---:|---:|---:|---:|---:|---:|
-| `stblr_csr(method = "bayesC")` | yes | yes | no | no | no | yes, regular CSR where enabled |
-| `stblr_csr(method = "bayesR")` | yes | yes | no | yes | no | yes, regular CSR where enabled |
-| `stblr_bed(method = "bayesC")` | no | no | no | no | no | no core LD-swap output |
-| `stblr_bed(method = "bayesR")` | no | no | no | yes | no | no core LD-swap output |
+| `stblr_csr(method = "bayesc")` | yes | yes | no | no | no | yes, regular CSR where enabled |
+| `stblr_csr(method = "bayesr")` | yes | yes | no | yes | no | yes, regular CSR where enabled |
+| `stblr_bed(method = "bayesc")` | no | no | no | no | no | no core LD-swap output |
+| `stblr_bed(method = "bayesr")` | no | no | no | yes | no | no core LD-swap output |
 | `stblr_csr_annot(annotation_model = "prior")` | no | no | yes | no | yes | backend-specific diagnostics only |
 | `stblr_csr_annot(annotation_model = "learned")` | no | no | yes | no | yes | backend-specific diagnostics only |
 | `stblr_csr_annot(annotation_model = "group")` | no | no | yes | no | yes | backend-specific diagnostics only |

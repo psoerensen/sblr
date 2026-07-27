@@ -73,7 +73,7 @@ trait <- "D1"
 fitC <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 100,
   seed = 10
@@ -82,7 +82,7 @@ fitC <- stblr_csr(
 fitC_MH <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 100,
   seed = 10,
@@ -95,7 +95,7 @@ fitC_MH <- stblr_csr(
 fitR <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = 1000,
   nburn = 100,
   seed = 10
@@ -104,7 +104,7 @@ fitR <- stblr_csr(
 fitR_MH <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = 1000,
   nburn = 100,
   seed = 10,
@@ -123,7 +123,7 @@ fitR_MH <- stblr_csr(
 fitC_bed <- stblr_bed(
   y = y,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000,
   nburn = 100,
   seed = 10,
@@ -133,7 +133,7 @@ fitC_bed <- stblr_bed(
 fitR_bed <- stblr_bed(
   y = y,
   Glist = Glist,
-  method = "bayesR",
+  method = "bayesr",
   nit = 1000,
   nburn = 100,
   seed = 10,
@@ -357,22 +357,22 @@ print(sapply(chain_fields, function(x) x %in% names(fitMH)))
 
 stopifnot(all(chain_fields %in% names(fitMH)))
 
-stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_sd)))
-stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_min)))
-stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_max)))
+stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_chain_mean_sd)))
+stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_chain_mean_min)))
+stopifnot(identical(dim(fitMH$dm), dim(fitMH$dm_chain_mean_max)))
 
-stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_sd)))
-stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_min)))
-stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_max)))
+stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_chain_mean_sd)))
+stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_chain_mean_min)))
+stopifnot(identical(dim(fitMH$bm), dim(fitMH$bm_chain_mean_max)))
 
-stopifnot(all(fitMH$dm_sd >= 0, na.rm = TRUE))
-stopifnot(all(fitMH$bm_sd >= 0, na.rm = TRUE))
+stopifnot(all(fitMH$dm_chain_mean_sd >= 0, na.rm = TRUE))
+stopifnot(all(fitMH$bm_chain_mean_sd >= 0, na.rm = TRUE))
 
-stopifnot(all(fitMH$dm_min <= fitMH$dm + 1e-12, na.rm = TRUE))
-stopifnot(all(fitMH$dm <= fitMH$dm_max + 1e-12, na.rm = TRUE))
+stopifnot(all(fitMH$dm_chain_mean_min <= fitMH$dm + 1e-12, na.rm = TRUE))
+stopifnot(all(fitMH$dm <= fitMH$dm_chain_mean_max + 1e-12, na.rm = TRUE))
 
-stopifnot(all(fitMH$bm_min <= fitMH$bm + 1e-12, na.rm = TRUE))
-stopifnot(all(fitMH$bm <= fitMH$bm_max + 1e-12, na.rm = TRUE))
+stopifnot(all(fitMH$bm_chain_mean_min <= fitMH$bm + 1e-12, na.rm = TRUE))
+stopifnot(all(fitMH$bm <= fitMH$bm_chain_mean_max + 1e-12, na.rm = TRUE))
 
 
 ## ------------------------------------------------------------
@@ -454,9 +454,9 @@ stopifnot(any(!is.na(fm_extract$markers$pip_sd)))
 stopifnot(any(!is.na(fm_extract$markers$pip_min)))
 stopifnot(any(!is.na(fm_extract$markers$pip_max)))
 
-stopifnot(any(!is.na(fm_extract$markers$bm_sd)))
-stopifnot(any(!is.na(fm_extract$markers$bm_min)))
-stopifnot(any(!is.na(fm_extract$markers$bm_max)))
+stopifnot(any(!is.na(fm_extract$markers$bm_chain_mean_sd)))
+stopifnot(any(!is.na(fm_extract$markers$bm_chain_mean_min)))
+stopifnot(any(!is.na(fm_extract$markers$bm_chain_mean_max)))
 
 
 ## ------------------------------------------------------------
@@ -512,7 +512,7 @@ if (!is.null(fm_extract$credible_sets$summary)) {
 
 cat("\nAll basic ST-BLR backend and fine-mapping checks passed.\n")
 
-matplot(fit$pis)
+matplot(fit$pi_trace)
 matplot(fit$ves)
 matplot(fit$vld)
 matplot(fit$vle)
@@ -538,7 +538,7 @@ check_stblr_consistency(
 )
 
 range(fit_br_noE$dm, na.rm = TRUE)
-head(fit_br_noE$comp_prob[[1]])
+head(fit_br_noE$component_probabilities[[1]])
 
 
 post <- sblr:::summarise_posterior(fit)
@@ -645,7 +645,7 @@ fm_sum[order(fm_sum$class, -fm_sum$total_pip), c(
 #
 # For subset phenotypes, rownames(y) or names(y) are matched to Glist$ids.
 
-fit_bed <- stblr_bed_marker(
+fit_bed <- stblr_bed(
   Glist = Glist,
   y = y,
   ## Same conservative sparse architecture.
@@ -661,7 +661,7 @@ fit_bed <- stblr_bed_marker(
 )
 
 
-matplot(fit_bed$pis)
+matplot(fit_bed$pi_trace)
 matplot(fit_bed$ves)
 matplot(fit_bed$vld)
 matplot(fit_bed$vle)
@@ -680,7 +680,7 @@ plot_posterior(
 # This illustrates the new automatic backend selection.
 
 if (run_heavy) {
-  fit_bed_wg <- stblr_bed_marker(
+  fit_bed_wg <- stblr_bed(
     Glist = Glist,
     y = y[, 1],
     pi_init = 0.001,
@@ -783,7 +783,7 @@ stat_qgg <- glma(
 fit_qgg <- gbayes(
   stat = stat_qgg,
   Glist = Glist,
-  method = "bayesC",
+  method = "bayesc",
   nit = 1000
 )
 
@@ -843,7 +843,7 @@ fit_csr <- stblr_csr(
 # Individual-level BED BLR models =========================================
 
 # Scheduled individual-level BED sampler, single chain.
-fit_bed_sched_single <- stblr_bed_marker(
+fit_bed_sched_single <- stblr_bed(
   Glist = Glist,
   y = y,
   chr = chr,

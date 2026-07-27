@@ -93,13 +93,9 @@ expect_square_trait_matrix <- function(x, ntraits) {
   expect_true(all(is.na(x) | is.finite(x)))
 }
 
-test_that("annotation-aware exported wrappers and helpers are available", {
+test_that("canonical annotation entry point and helpers are exported", {
   exports <- getNamespaceExports("sblr")
   for (fn in c(
-    "stblr_csr_prior_annot",
-    "stblr_csr_learn_annot",
-    "stblr_csr_group_annot",
-    "stblr_csr_sbayesrc_generic",
     "stblr_csr_annot",
     "make_sbayesrc_alpha_init",
     "sbayesrc_annotation_pi",
@@ -112,6 +108,10 @@ test_that("annotation-aware exported wrappers and helpers are available", {
     expect_true(fn %in% exports, info = fn)
     expect_true(is.function(getExportedValue("sblr", fn)), info = fn)
   }
+  expect_false(any(c(
+    "stblr_csr_prior_annot", "stblr_csr_learn_annot",
+    "stblr_csr_group_annot", "stblr_csr_sbayesrc_generic"
+  ) %in% exports))
 })
 
 test_that("annotation backend design document records the backend contract", {
@@ -203,12 +203,15 @@ test_that("csr_prior_bayesc wrapper returns standard marker summaries", {
 
   stats <- tiny_annotation_stats()
   A <- tiny_annotation_matrix()
-  fit <- sblr::stblr_csr_prior_annot(
+  fit <- sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_tiny_annotation_csr_prefix(stats$m),
-    A = A,
-    fixed_pi_marker = list(rep(0.35, stats$m)),
-    fixed_vb_multiplier = list(c(1, 1.2, 0.8, 1)),
+    annotations = list(
+      A = A,
+      fixed_pi_marker = list(rep(0.35, stats$m)),
+      fixed_vb_multiplier = list(c(1, 1.2, 0.8, 1))
+    ),
+    annotation_model = "prior",
     use_pi_marker = TRUE,
     use_vb_multiplier = TRUE,
     pi_init = 0.35,
@@ -243,7 +246,7 @@ test_that("csr_prior_bayesc wrapper returns standard marker summaries", {
   expect_trace_matrix(fit$vbs, 1L)
   expect_trace_matrix(fit$vgs, 1L)
   expect_trace_matrix(fit$ves, 1L)
-  expect_square_trait_matrix(fit$covb, 1L)
+  expect_square_trait_matrix(fit$cov_b_mean, 1L)
 })
 
 test_that("csr_annot_bayesc wrapper returns learned annotation fields", {
@@ -254,10 +257,11 @@ test_that("csr_annot_bayesc wrapper returns learned annotation fields", {
 
   stats <- tiny_annotation_stats()
   A <- tiny_annotation_matrix()
-  fit <- sblr::stblr_csr_learn_annot(
+  fit <- sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_tiny_annotation_csr_prefix(stats$m),
-    A = A,
+    annotations = A,
+    annotation_model = "learned",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -309,10 +313,11 @@ test_that("csr_group_bayesc wrapper returns group-level annotation fields", {
 
   stats <- tiny_annotation_stats()
   group <- stats::setNames(c("coding", "background", "coding", "background"), stats$marker_names)
-  fit <- sblr::stblr_csr_group_annot(
+  fit <- sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_tiny_annotation_csr_prefix(stats$m),
-    group = group,
+    annotations = group,
+    annotation_model = "group",
     group_names = c("coding", "background"),
     group_pi_init = c(0.35, 0.25),
     group_vb_multiplier_init = c(1.2, 0.8),
@@ -361,10 +366,16 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
   stats <- tiny_annotation_stats()
   A <- tiny_annotation_matrix()
   gamma <- c(0, 0.1, 1)
-  fit <- sblr::stblr_csr_sbayesrc_generic(
+  fit <- sblr::stblr_csr_annot(
     stats = stats,
+    Glist = list(
+      rsidsLD = list(stats$marker_names),
+      rsids = list(stats$marker_names),
+      maf = list(rep(0.2, stats$m))
+    ),
     ld_prefix = make_tiny_annotation_csr_prefix(stats$m),
-    A = A,
+    annotations = A,
+    annotation_model = "sbayesrc",
     gamma = gamma,
     pi_init = 0.35,
     pi_prior_mean = 0.35,
@@ -387,11 +398,11 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
   expect_true(isTRUE(fit$input$annotations))
   expect_equal(fit$input$nchains, 1L)
   expect_false(fit$input$keep_chains)
-  expect_true("comp_prob" %in% names(fit))
-  expect_length(fit$comp_prob, 1L)
-  expect_equal(dim(fit$comp_prob$trait1), c(stats$m, length(gamma)))
-  expect_equal(unname(rowSums(fit$comp_prob$trait1)), rep(1, stats$m), tolerance = 1e-8)
-  expect_true(all(fit$comp_prob$trait1 >= 0 & fit$comp_prob$trait1 <= 1))
+  expect_true("component_probabilities" %in% names(fit))
+  expect_length(fit$component_probabilities, 1L)
+  expect_equal(dim(fit$component_probabilities$trait1), c(stats$m, length(gamma)))
+  expect_equal(unname(rowSums(fit$component_probabilities$trait1)), rep(1, stats$m), tolerance = 1e-8)
+  expect_true(all(fit$component_probabilities$trait1 >= 0 & fit$component_probabilities$trait1 <= 1))
   expect_length(fit$alpha, 1L)
   expect_equal(dim(fit$alpha$trait1), c(ncol(fit$input$A), length(gamma) - 1L))
   expect_equal(dim(fit$sigmaSqAlpha), c(1L, length(gamma) - 1L))

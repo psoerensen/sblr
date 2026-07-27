@@ -80,7 +80,12 @@ format_bayesr_csr_test_fit <- function(raw, nchains) {
     updateLDswap = FALSE,
     nchains = nchains
   )
-  fit
+  fit$chains <- sblr:::.blr_flatten_st_chains(
+    fit$chains, "D1", "bayesr", "csr")
+  sblr:::.blr_finalize_fit(
+    fit, "stblr", "bayesr", "csr",
+    data = list(marker_ids = paste0("m", 1:3), trait_names = "D1"),
+    diagnostics = list(native = fit$diagnostics))
 }
 
 test_that("CSR BayesR formatter exposes standard and component fields", {
@@ -88,48 +93,50 @@ test_that("CSR BayesR formatter exposes standard and component fields", {
   fit <- format_bayesr_csr_test_fit(raw, nchains = 1L)
 
   for (nm in c(
-    "dm", "bm", "dm_sd", "dm_min", "dm_max",
-    "bm_sd", "bm_min", "bm_max", "comp_prob", "dm_component_mean"
+    "dm", "bm", "dm_chain_mean_sd", "dm_chain_mean_min",
+    "dm_chain_mean_max", "bm_chain_mean_sd", "bm_chain_mean_min",
+    "bm_chain_mean_max", "component_probabilities", "dm_component_mean"
   )) {
     expect_true(nm %in% names(fit))
   }
 
   expect_equal(as.numeric(fit$dm[, "D1"]), 1 - raw$comp_prob[[1]][, 1], tolerance = 1e-12)
   expect_true(all(fit$dm >= -1e-12 & fit$dm <= 1 + 1e-12))
-  expect_identical(rownames(fit$comp_prob$D1), paste0("m", 1:3))
-  expect_identical(colnames(fit$comp_prob$D1), paste0("component_", 0:2))
-  expect_equal(unname(rowSums(fit$comp_prob$D1)), rep(1, 3), tolerance = 1e-12)
-  expect_true(all(fit$comp_prob$D1 >= -1e-12 & fit$comp_prob$D1 <= 1 + 1e-12))
+  expect_identical(rownames(fit$component_probabilities$D1), paste0("m", 1:3))
+  expect_identical(colnames(fit$component_probabilities$D1), paste0("component_", 0:2))
+  expect_equal(unname(rowSums(fit$component_probabilities$D1)), rep(1, 3), tolerance = 1e-12)
+  expect_true(all(fit$component_probabilities$D1 >= -1e-12 & fit$component_probabilities$D1 <= 1 + 1e-12))
   expect_equal(unname(fit$dm_component_mean[, "D1"]), c(0.4, 1.5, 0.8))
 })
 
 test_that("CSR BayesR formatter exposes single-chain summary convention", {
   fit <- format_bayesr_csr_test_fit(make_bayesr_csr_raw(nchains = 1L), nchains = 1L)
 
-  for (nm in c("bm_sd", "bm_min", "bm_max", "dm_sd", "dm_min", "dm_max")) {
+  for (nm in c("bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max",
+               "dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max")) {
     expect_equal(dim(fit[[nm]]), dim(fit$dm))
     expect_identical(rownames(fit[[nm]]), rownames(fit$dm))
     expect_identical(colnames(fit[[nm]]), colnames(fit$dm))
   }
-  expect_equal(fit$bm_sd, fit$bm * 0, tolerance = 1e-12)
-  expect_equal(fit$dm_sd, fit$dm * 0, tolerance = 1e-12)
-  expect_equal(fit$bm_min, fit$bm, tolerance = 1e-12)
-  expect_equal(fit$bm_max, fit$bm, tolerance = 1e-12)
-  expect_equal(fit$dm_min, fit$dm, tolerance = 1e-12)
-  expect_equal(fit$dm_max, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_sd, fit$bm * 0, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_sd, fit$dm * 0, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_min, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$bm_chain_mean_max, fit$bm, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_min, fit$dm, tolerance = 1e-12)
+  expect_equal(fit$dm_chain_mean_max, fit$dm, tolerance = 1e-12)
 })
 
 test_that("CSR BayesR formatter exposes finite multi-chain summaries", {
   fit <- format_bayesr_csr_test_fit(make_bayesr_csr_raw(nchains = 2L), nchains = 2L)
 
-  expect_true(all(is.finite(fit$bm_sd)))
-  expect_true(all(is.finite(fit$dm_sd)))
-  expect_true(all(fit$bm_sd >= -1e-12))
-  expect_true(all(fit$dm_sd >= -1e-12))
-  expect_true(all(fit$bm_min <= fit$bm + 1e-12))
-  expect_true(all(fit$bm <= fit$bm_max + 1e-12))
-  expect_true(all(fit$dm_min <= fit$dm + 1e-12))
-  expect_true(all(fit$dm <= fit$dm_max + 1e-12))
+  expect_true(all(is.finite(fit$bm_chain_mean_sd)))
+  expect_true(all(is.finite(fit$dm_chain_mean_sd)))
+  expect_true(all(fit$bm_chain_mean_sd >= -1e-12))
+  expect_true(all(fit$dm_chain_mean_sd >= -1e-12))
+  expect_true(all(fit$bm_chain_mean_min <= fit$bm + 1e-12))
+  expect_true(all(fit$bm <= fit$bm_chain_mean_max + 1e-12))
+  expect_true(all(fit$dm_chain_mean_min <= fit$dm + 1e-12))
+  expect_true(all(fit$dm <= fit$dm_chain_mean_max + 1e-12))
 
   chk <- check_stblr_consistency(
     fit,
@@ -156,41 +163,41 @@ test_that("CSR BayesR formatted fit is compatible with fine-mapping extractor", 
     credible_sets = FALSE
   )
 
-  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_sd[, "D1"]))
-  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_min[, "D1"]))
-  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_max[, "D1"]))
-  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_sd[, "D1"]))
-  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_min[, "D1"]))
-  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_max[, "D1"]))
+  expect_equal(fm$markers$pip_sd, as.numeric(fit$dm_chain_mean_sd[, "D1"]))
+  expect_equal(fm$markers$pip_min, as.numeric(fit$dm_chain_mean_min[, "D1"]))
+  expect_equal(fm$markers$pip_max, as.numeric(fit$dm_chain_mean_max[, "D1"]))
+  expect_equal(fm$markers$bm_sd, as.numeric(fit$bm_chain_mean_sd[, "D1"]))
+  expect_equal(fm$markers$bm_min, as.numeric(fit$bm_chain_mean_min[, "D1"]))
+  expect_equal(fm$markers$bm_max, as.numeric(fit$bm_chain_mean_max[, "D1"]))
 })
 
 test_that("public CSR BayesR API exists and rejects unsupported modes early", {
   expect_true(is.function(stblr_csr_bayesr))
   expect_error(
-    stblr_csr_bayesr(stats = list(), scheduled = TRUE),
+    stblr_csr(stats = list(), method = "bayesr", scheduled = TRUE),
     "scheduled CSR BayesR"
   )
 })
 
 test_that("CSR BayesR LD-swap arguments are validated", {
   expect_error(
-    stblr_csr_bayesr(stats = list(), updateLDswap = NA),
+    stblr_csr(stats = list(), method = "bayesr", updateLDswap = NA),
     "updateLDswap"
   )
   expect_error(
-    stblr_csr_bayesr(stats = list(), ld_swap_prob = 2),
+    stblr_csr(stats = list(), method = "bayesr", ld_swap_prob = 2),
     "ld_swap_prob"
   )
   expect_error(
-    stblr_csr_bayesr(stats = list(), ld_swap_r2 = -0.1),
+    stblr_csr(stats = list(), method = "bayesr", ld_swap_r2 = -0.1),
     "ld_swap_r2"
   )
   expect_error(
-    stblr_csr_bayesr(stats = list(), ld_swap_max_friends = 0),
+    stblr_csr(stats = list(), method = "bayesr", ld_swap_max_friends = 0),
     "ld_swap_max_friends"
   )
   expect_error(
-    stblr_csr_bayesr(stats = list(), ld_swap_moves = -1),
+    stblr_csr(stats = list(), method = "bayesr", ld_swap_moves = -1),
     "ld_swap_moves"
   )
 })
@@ -272,8 +279,8 @@ expect_bayesr_csr_conventions <- function(fit) {
 
   expect_true(all(is.finite(fit$dm)))
   expect_true(all(fit$dm >= -1e-12 & fit$dm <= 1 + 1e-12))
-  for (trait in names(fit$comp_prob)) {
-    cp <- fit$comp_prob[[trait]]
+  for (trait in names(fit$component_probabilities)) {
+    cp <- fit$component_probabilities[[trait]]
     expect_equal(
       unname(as.numeric(fit$dm[rownames(cp), trait])),
       unname(as.numeric(1 - cp[, 1L])),
@@ -293,18 +300,19 @@ expect_bayesr_csr_chain_aggregation <- function(fit) {
   )
   expect_true(chk$ok)
 
-  for (trait in names(fit$chains)) {
-    chains <- fit$chains[[trait]]
+  for (trait in colnames(fit$dm)) {
+    chains <- Filter(function(ch) identical(ch$trait_name, trait), fit$chains)
     dm_mat <- do.call(cbind, lapply(chains, function(ch) ch$dm))
     bm_mat <- do.call(cbind, lapply(chains, function(ch) ch$bm))
     expect_equal(unname(rowMeans(dm_mat)), as.numeric(fit$dm[, trait]), tolerance = 1e-8)
     expect_equal(unname(rowMeans(bm_mat)), as.numeric(fit$bm[, trait]), tolerance = 1e-8)
 
-    cp_mean <- Reduce(`+`, lapply(chains, function(ch) ch$comp_prob)) / length(chains)
-    expect_equal(cp_mean, fit$comp_prob[[trait]], tolerance = 1e-8)
+    cp_mean <- Reduce(`+`, lapply(chains, function(ch) ch$component_probabilities)) / length(chains)
+    expect_equal(cp_mean, fit$component_probabilities[[trait]], tolerance = 1e-8)
     for (ch in chains) {
       expect_true(all(c(
-        "dm", "bm", "comp_prob", "dm_component_mean", "final_pi", "mean_pi",
+        "dm", "bm", "component_probabilities", "dm_component_mean",
+        "pi_final", "pi_mean",
         "vbs", "vgs", "ves", "updateE_diagnostics"
       ) %in% names(ch)))
     }
@@ -320,12 +328,14 @@ expect_bayesr_ld_swap_diagnostics <- function(fit, require_chains = FALSE) {
     verbose = FALSE
   )
   expect_true(chk$ok)
-  expect_true("ld_swap" %in% names(fit))
-  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in% names(fit$ld_swap)))
-  expect_true(all(fit$ld_swap$attempted >= fit$ld_swap$accepted))
-  expect_true(all(fit$ld_swap$accepted >= 0))
-  expect_true(all(fit$ld_swap$acceptance_rate >= 0))
-  expect_true(all(fit$ld_swap$acceptance_rate <= 1))
+  expect_true("ld_swap" %in% names(fit$diagnostics))
+  expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
+                    names(fit$diagnostics$ld_swap)))
+  expect_true(all(fit$diagnostics$ld_swap$attempted >=
+                    fit$diagnostics$ld_swap$accepted))
+  expect_true(all(fit$diagnostics$ld_swap$accepted >= 0))
+  expect_true(all(fit$diagnostics$ld_swap$acceptance_rate >= 0))
+  expect_true(all(fit$diagnostics$ld_swap$acceptance_rate <= 1))
 }
 
 test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
@@ -349,8 +359,11 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
     seed = 10,
     updateE = FALSE
   )
-  fit_direct <- do.call(stblr_csr_bayesr, common)
-  fit_bridge <- do.call(stblr_csr, c(common, list(method = "BayesR")))
+  common$convergence <- "none"
+  direct_common <- common
+  direct_common$convergence <- NULL
+  fit_direct <- do.call(stblr_csr_bayesr, direct_common)
+  fit_bridge <- do.call(stblr_csr, c(common, list(method = "bayesr")))
 
   expect_bayesr_csr_conventions(fit_bridge)
   expect_equal(fit_bridge$input$method, "bayesr")
@@ -360,17 +373,18 @@ test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
   expect_equal(fit_bridge$input$scheduled, FALSE)
   expect_equal(dim(fit_bridge$dm), dim(fit_direct$dm))
   expect_equal(dim(fit_bridge$bm), dim(fit_direct$bm))
-  expect_equal(names(fit_bridge$comp_prob), names(fit_direct$comp_prob))
+  expect_equal(names(fit_bridge$component_probabilities),
+               names(fit_direct$comp_prob))
   required_fields <- c(
     "bm", "dm", "wy", "r", "b", "d",
-    "vbs", "vgs", "ves", "vle", "vld", "pis",
-    "covb", "covg", "cove", "pi", "pim", "input",
-    "comp_prob", "dm_component_mean"
+    "vbs", "vgs", "ves", "vle", "vld", "pi_trace",
+    "cov_b_mean", "cov_g_mean", "cov_e_mean", "pi_final", "pi_mean",
+    "input", "component_probabilities", "dm_component_mean"
   )
   missing_fields <- setdiff(required_fields, names(fit_bridge))
   expect_equal(missing_fields, character())
   expect_null(fit_bridge$chains)
-  expect_null(fit_bridge$ld_swap_chains)
+  expect_null(fit_bridge$diagnostics$ld_swap_chains)
 
   keep_args <- common
   keep_args$nchains <- 2
@@ -440,7 +454,7 @@ test_that("CSR BayesR formatter preserves compact per-chain component summaries"
 
   expect_bayesr_csr_chain_aggregation(fit)
   expect_identical(
-    colnames(fit$chains$D1$chain1$updateE_diagnostics),
+    colnames(fit$chains[[1L]]$updateE_diagnostics),
     c(
       "trait_index", "chain_index", "n_updateE", "min_sse",
       "min_sse_iter", "min_residual_scale", "max_nonzero_components",
@@ -458,7 +472,8 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   fixture <- make_small_bayesr_csr_stats()
   write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
-  fit_noE <- stblr_csr_bayesr(
+  fit_noE <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -471,8 +486,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
     updateE = FALSE
   )
   expect_bayesr_csr_conventions(fit_noE)
-  expect_true("ld_swap" %in% names(fit_noE))
-  expect_null(fit_noE$ld_swap)
+  expect_null(fit_noE$diagnostics$ld_swap)
   expect_equal(sum(fit_noE$input$pi[-1L]), 0.001, tolerance = 1e-12)
   expect_equal(
     unname(fit_noE$input$alpha / sum(fit_noE$input$alpha)),
@@ -488,7 +502,8 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_equal(fit_noE$input$keep_chains, FALSE)
   expect_equal(fit_noE$input$updateLDswap, FALSE)
 
-  fit_E <- stblr_csr_bayesr(
+  fit_E <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -514,7 +529,8 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_true(all(fit_E$updateE_diagnostics[, "min_residual_scale"] > 0))
   expect_true(all(fit_E$updateE_diagnostics[, "min_sse_iter"] >= 0))
 
-  fit_E_two_chain <- stblr_csr_bayesr(
+  fit_E_two_chain <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -523,13 +539,15 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
     nburn = 5,
     ncores = 1,
     nchains = 2,
+    convergence = "none",
     seed = 10,
     updateE = TRUE
   )
   expect_bayesr_csr_conventions(fit_E_two_chain)
   expect_equal(nrow(fit_E_two_chain$updateE_diagnostics), 2L)
 
-  fit_E_keep <- stblr_csr_bayesr(
+  fit_E_keep <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -539,6 +557,7 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
     ncores = 1,
     nchains = 2,
     keep_chains = TRUE,
+    convergence = "none",
     seed = 10,
     updateE = TRUE
   )
@@ -546,7 +565,8 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   expect_equal(fit_E_keep$input$keep_chains, TRUE)
   expect_bayesr_csr_chain_aggregation(fit_E_keep)
 
-  fit_E_delayed <- stblr_csr_bayesr(
+  fit_E_delayed <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -570,7 +590,8 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
   )
 
   expect_error(
-    stblr_csr_bayesr(
+    stblr_csr(
+      method = "bayesr",
       stats = fixture$stats,
       Glist = fixture$Glist,
       h2 = 0.3,
@@ -586,19 +607,11 @@ test_that("supported exact CSR BayesR public API supports strict updateE modes",
     "updateE_every must be a positive integer scalar"
   )
 
-  fit_alias <- .stblr_csr_bayesr_experimental(
-    stats = fixture$stats,
-    Glist = fixture$Glist,
-    h2 = 0.3,
-    adjE = 0.9,
-    nit = 12,
-    nburn = 4,
-    ncores = 1,
-    nchains = 1,
-    seed = 10,
-    updateE = FALSE
-  )
-  expect_bayesr_csr_conventions(fit_alias)
+  expect_false(exists(
+    ".stblr_csr_bayesr_experimental",
+    envir = asNamespace("sblr"),
+    inherits = FALSE
+  ))
 })
 
 test_that("CSR BayesR LD-swap runs and returns diagnostics", {
@@ -610,7 +623,8 @@ test_that("CSR BayesR LD-swap runs and returns diagnostics", {
   fixture <- make_small_bayesr_csr_stats()
   write_high_ld_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
-  fit <- stblr_csr_bayesr(
+  fit <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -673,7 +687,8 @@ test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {
   fixture <- make_small_bayesr_csr_stats()
   write_high_ld_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
 
-  fit <- stblr_csr_bayesr(
+  fit <- stblr_csr(
+    method = "bayesr",
     stats = fixture$stats,
     Glist = fixture$Glist,
     h2 = 0.3,
@@ -685,6 +700,7 @@ test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {
     ncores = 1,
     nchains = 2,
     keep_chains = TRUE,
+    convergence = "none",
     seed = 31,
     updateB = FALSE,
     updateE = FALSE,
@@ -699,7 +715,9 @@ test_that("CSR BayesR LD-swap diagnostics aggregate across chains", {
   expect_bayesr_csr_conventions(fit)
   expect_bayesr_csr_chain_aggregation(fit)
   expect_bayesr_ld_swap_diagnostics(fit, require_chains = TRUE)
-  expect_true("ld_swap_chains" %in% names(fit))
-  expect_equal(sum(fit$ld_swap_chains$T1$attempted), fit$ld_swap$attempted)
-  expect_true(all(vapply(fit$chains$T1, function(ch) "ld_swap" %in% names(ch), logical(1))))
+  expect_true("ld_swap_chains" %in% names(fit$diagnostics))
+  expect_equal(sum(fit$diagnostics$ld_swap_chains$T1$attempted),
+               fit$diagnostics$ld_swap$attempted)
+  expect_true(all(vapply(fit$chains, function(ch)
+    "ld_swap" %in% names(ch), logical(1))))
 })

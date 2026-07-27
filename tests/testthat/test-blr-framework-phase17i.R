@@ -173,7 +173,7 @@ test_that("one core, finalizer, adapter, and internal-only wrapper remain", {
   namespace <- phase17i_src("NAMESPACE")
   expect_match(cpp, "run_mt_csr_core", fixed=TRUE)
   expect_match(cpp, "make_mt_default_legacy_result", fixed=TRUE)
-  expect_match(adapter, "MtDefaultLegacyResult result(20)", fixed=TRUE)
+  expect_match(adapter, "MtDefaultLegacyResult result(22)", fixed=TRUE)
   expect_false(grepl("mtblr_csr_internal", rroute, fixed=TRUE))
   expect_false(grepl("mtblr_csr_internal", namespace, fixed=TRUE))
   expect_false(grepl("mtblr_cpg_omp_csr", cpp, fixed=TRUE))

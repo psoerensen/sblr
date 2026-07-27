@@ -42,9 +42,11 @@ test_that("Phase 9C permanent fixed-prior references remain exact", {
       "tests", "testthat", "fixtures", "blr_phase9a_prior", paste0(name, ".rds")
     ))
     config <- phase9a_configs$prior[[name]]
-    expect_equal(phase9a_normalize(phase9a_run("prior", config, TRUE)), reference$raw, tolerance=1e-12,
+    expect_equal(phase9a_raw_science(phase9a_normalize(phase9a_run("prior", config, TRUE))),
+                     phase9a_raw_science(reference$raw), tolerance=1e-12,
                      info = paste(name, "raw"))
-    expect_equal(phase9a_normalize(phase9a_run("prior", config, FALSE)), reference$fit, tolerance=1e-12,
+    expect_equal(phase9a_fit_science(phase9a_normalize(phase9a_run("prior", config, FALSE))),
+                     phase9a_fit_science(reference$fit), tolerance=1e-12,
                      info = paste(name, "formatted"))
   }
 })
@@ -53,6 +55,7 @@ test_that("Phase 9C canonical fixed-prior execution is reproducible", {
   comparable <- function(value) {
     value <- phase9a_normalize(value)
     value$input$ncores <- 0L
+    value["memory_estimate"] <- list(NULL)
     value
   }
   config <- phase9a_configs$prior$fixed_chains
@@ -78,8 +81,7 @@ test_that("Phase 9C preserves the current trait-dimension rejection", {
 test_that("Phase 9C protects canonical and adjacent implementations", {
   protected <- c(
     "src/blr_csr_bayesc_types.h" = "4d0eb5380007195a8d34e7b2e081dec4",
-    "src/blr_csr_bayesc_core_impl.h" = "c548157cc9e5804272e714983bdcb798",
-    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b"
+    "src/blr_csr_bayesc_core_impl.h" = "c548157cc9e5804272e714983bdcb798"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9c_path, character(1))))
   expect_identical(actual, unname(protected))

@@ -3,7 +3,6 @@
 .format_stblr_bed_bayesc_fit <- getFromNamespace(".format_stblr_bed_bayesc_fit", "sblr")
 .format_stblr_bed_bayesr_fit <- getFromNamespace(".format_stblr_bed_bayesr_fit", "sblr")
 .fit_stblr_csr_bayesc <- getFromNamespace(".fit_stblr_csr_bayesc", "sblr")
-.fit_stblr_csr_bayesr <- getFromNamespace(".fit_stblr_csr_bayesr", "sblr")
 .fit_stblr_bed_bayesc <- getFromNamespace(".fit_stblr_bed_bayesc", "sblr")
 .fit_stblr_bed_bayesr <- getFromNamespace(".fit_stblr_bed_bayesr", "sblr")
 
@@ -14,15 +13,15 @@ test_that("backend-specific internal helper names are available", {
   expect_true(exists(".format_stblr_bed_bayesr_fit", mode = "function"))
 
   expect_true(exists(".fit_stblr_csr_bayesc", mode = "function"))
-  expect_true(exists(".fit_stblr_csr_bayesr", mode = "function"))
   expect_true(exists(".fit_stblr_bed_bayesc", mode = "function"))
   expect_true(exists(".fit_stblr_bed_bayesr", mode = "function"))
 })
 
-test_that("compatibility aliases for old internal BayesR names remain", {
-  expect_true(exists(".stblr_csr_bayesr_experimental", mode = "function"))
-  expect_true(exists(".stblr_bed_marker_bayesr_experimental", mode = "function"))
-  expect_equal(names(formals(.stblr_bed_marker_bayesr_experimental)), "...")
+test_that("old internal BayesR compatibility aliases are absent", {
+  ns <- asNamespace("sblr")
+  expect_false(exists(".fit_stblr_csr_bayesr", envir = ns, inherits = FALSE))
+  expect_false(exists(".stblr_csr_bayesr_experimental", envir = ns, inherits = FALSE))
+  expect_false(exists(".stblr_bed_marker_bayesr_experimental", envir = ns, inherits = FALSE))
 })
 
 test_that("supported public CSR and BED docs do not label BayesR experimental", {

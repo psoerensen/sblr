@@ -243,7 +243,7 @@
   if (!all(required %in% names(raw))) stop("mtblr_raw is missing required namespaces.", call. = FALSE)
   m <- raw$meta$m; nt <- raw$meta$nt; ntr <- raw$meta$n_trace; nm <- raw$meta$nmodels
   for (x in c("bm", "dm", "wy", "r", "b", "state")) if (!identical(dim(raw$marker[[x]]), c(m, nt))) stop("Invalid mtblr_raw marker dimensions.", call. = FALSE)
-  for (x in c("vbs", "vgs", "ves")) if (!identical(dim(raw$trace[[x]]), c(ntr, nt))) stop("Invalid mtblr_raw trace dimensions.", call. = FALSE)
+  for (x in c("vbs", "vgs", "ves", "vle", "vld")) if (!identical(dim(raw$trace[[x]]), c(ntr, nt))) stop("Invalid mtblr_raw trace dimensions.", call. = FALSE)
   for (x in c("covb", "covg", "cove", "vb", "vg", "ve")) if (!identical(dim(raw$variance[[x]]), c(nt, nt))) stop("Invalid mtblr_raw covariance dimensions.", call. = FALSE)
   if (length(raw$pi$final) != nm || length(raw$pi$mean) != nm || !identical(dim(raw$model$patterns), c(nm, nt))) stop("Invalid mtblr_raw probability/model dimensions.", call. = FALSE)
   if (any(!raw$model$patterns %in% 0:1) || length(raw$marker$order) != m) stop("Invalid mtblr_raw patterns or marker order.", call. = FALSE)
@@ -315,7 +315,7 @@
         !identical(bed$sample_residual_returned, FALSE) ||
         !identical(bed$genetic_values_returned, FALSE) ||
         !identical(bed$cpo, "unsupported") ||
-        !identical(bed$le_ld, "unsupported")) {
+        !identical(bed$le_ld, "trait_diagonal_decomposition")) {
       stop("Invalid mtblr_raw individual-level MT BED diagnostics.",
            call. = FALSE)
     }
@@ -384,7 +384,7 @@
               identical(as.integer(chain$chain), i) &&
               identical(as.numeric(chain$seed), as.numeric(bed$chain_seeds[i])) &&
               identical(names(chain$marker), c("bm", "dm", "b", "state")) &&
-              identical(names(chain$trace), c("vbs", "vgs", "ves")) &&
+              identical(names(chain$trace), c("vbs", "vgs", "ves", "vle", "vld")) &&
               identical(names(chain$variance),
                         c("covb", "covg", "cove", "vb", "vg", "ve")) &&
               identical(names(chain$pi), c("final", "mean")) &&
@@ -409,7 +409,7 @@
   }
   if (!is.null(raw$diagnostics$convergence)) {
     raw$diagnostics$convergence <-
-      .mtblr_validate_convergence_result(raw$diagnostics$convergence)
+      .blr_validate_convergence_result(raw$diagnostics$convergence)
   }
   raw
 }
@@ -489,7 +489,7 @@
 #' @param trait_metadata Optional data frame with trait/study provenance.
 #' @param marker_policy Either strict order matching or R-side stats reordering.
 #' @param sample_overlap Must be `"not_modeled"`.
-#' @param method Must be `"bayesC"`.
+#' @param method Must be `"bayesc"`.
 #' @param n Optional sample sizes overriding identical values only.
 #' @param sets Optional disjoint complete marker partition (1-based).
 #' @param b Optional initial marker-by-trait effects.
@@ -502,19 +502,33 @@
 #' @param nub,nue Prior degrees of freedom.
 #' @param nit,nburn,nthin MCMC controls.
 #' @param seed Explicit native RNG seed.
+#' @param nchains Number of complete joint-MT logical chains.
+#' @param ncores Requested logical-chain workers.
+#' @param chain_seeds Optional signed integer seed per chain.
+#' @param keep_chains Retain compact logical-chain records.
+#' @param convergence Convergence mode: `"auto"`, `"none"`, or `"core"`.
+#' @param convergence_control Optional named convergence-control list.
+#' @param memory_warning_gb Analytical memory-warning threshold in GiB.
 #' @param verbose Print resolved execution metadata.
 #' @return An object of class `mtblr_fit`.
 #' @export
 mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   trait_metadata = NULL, marker_policy = c("strict", "reorder_stats"),
-  sample_overlap = "not_modeled", method = "bayesC", n = NULL, sets = NULL,
+  sample_overlap = "not_modeled", method = "bayesc", n = NULL, sets = NULL,
   b = NULL, h2 = 0.5, pi = 0.001, models = NULL, pimodels = NULL,
   vg = NULL, vb = NULL, ve = NULL, ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
-  nit = 1000, nburn = 500, nthin = 1, seed = 1, verbose = FALSE) {
+  nit = 1000, nburn = 500, nthin = 1, seed = 1,
+  nchains = 1L, ncores = 1L, chain_seeds = NULL,
+  keep_chains = FALSE, convergence = c("auto", "none", "core"),
+  convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE) {
   marker_policy <- match.arg(marker_policy)
+  chain <- .blr_chain_controls(
+    nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
+  conv <- .blr_convergence_controls(
+    convergence, convergence_control, chain$nchains)
   if (!identical(sample_overlap, "not_modeled")) stop("sample_overlap must be exactly 'not_modeled'.", call. = FALSE)
-  if (!identical(method, "bayesC")) stop("Only method = 'bayesC' is supported.", call. = FALSE)
+  if (!identical(method, "bayesc")) stop("Only method = 'bayesc' is supported.", call. = FALSE)
   st <- .mtblr_normalize_stats(stats); if (!is.null(n) && !identical(as.integer(rep(n, length.out = st$nt)), st$n)) stop("n conflicts with stats sample sizes.", call. = FALSE)
   ld <- .mtblr_resolve_ld(Glist, ld_prefix, ld_metadata, st$nt)
   aligned <- .mtblr_align(st, ld, marker_policy); st <- aligned$stats
@@ -532,31 +546,72 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   if (is.null(b)) b <- matrix(0, st$m, st$nt)
   if (is.list(b)) b <- do.call(cbind, b); b <- as.matrix(b)
   if (!identical(dim(b), c(st$m, st$nt)) || any(!is.finite(b))) stop("b must be a finite m by nt matrix or trait list.", call. = FALSE)
-  for (x in c("nit", "nburn", "nthin", "seed")) { value <- get(x); if (length(value) != 1L || !is.finite(value) || value != as.integer(value) || (x != "nburn" && value <= 0) || (x == "nburn" && value < 0)) stop(x, " must be an integer-compatible scalar in its valid range.", call. = FALSE) }
   trait_metadata <- if (is.null(trait_metadata)) data.frame(trait_id = st$trait_names) else as.data.frame(trait_metadata, stringsAsFactors = FALSE)
   if (is.null(trait_metadata$trait_id)) trait_metadata$trait_id <- st$trait_names
   if (nrow(trait_metadata) != st$nt || !identical(as.character(trait_metadata$trait_id), st$trait_names) || anyDuplicated(trait_metadata$trait_id)) stop("trait_metadata trait_id must uniquely match trait order.", call. = FALSE)
   for (x in c("study_id", "ancestry", "population", "ld_reference")) if (is.null(trait_metadata[[x]])) trait_metadata[[x]] <- NA_character_
   trait_metadata$sample_size <- st$n; trait_metadata$ld_prefix <- rep(native_prefix, length.out = st$nt); trait_metadata$ld_sharing_mode <- sharing
-  raw <- mtblr_csr_raw_internal(st$wy, st$ww, st$yy,
-    lapply(seq_len(st$nt), function(t) b[, t]), native_prefix, set_spec$native,
-    vb, ve, lapply(seq_len(st$nt), function(i) ssb_prior[, i]),
-    lapply(seq_len(st$nt), function(i) sse_prior[, i]), mod$native, mod$probabilities,
-    nub, nue, updateB, updateE, updatePi, st$n, as.integer(nit), as.integer(nburn),
-    as.integer(nthin), as.integer(seed), 4L)
+  operator_bytes <- sum(file.info(unlist(lapply(unique(native_prefix), function(x)
+    paste0(x, c(".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
+                ".values.f32.bin")))))$size, na.rm = TRUE)
+  memory <- .blr_memory_estimate(
+    "mtblr", "csr", st$m, st$nt, chain$nchains, chain$ncores,
+    chain$nit, chain$nit + chain$nburn, chain$keep_chains,
+    convergence_quantities = if (conv$compute || conv$keep_traces) 5L * st$nt else 0L,
+    keep_traces = conv$keep_traces, operator_bytes = operator_bytes)
+  .blr_memory_warning(memory, memory_warning_gb, conv$mode,
+                      conv$compute || conv$keep_traces, conv$keep_traces)
+  native_execution <- mtblr_csr_chains_raw_internal(
+    st$wy, st$ww, st$yy,
+    lapply(seq_len(st$nt), function(t) b[, t]), native_prefix,
+    set_spec$native, vb, ve,
+    lapply(seq_len(st$nt), function(i) ssb_prior[, i]),
+    lapply(seq_len(st$nt), function(i) sse_prior[, i]), mod$native,
+    mod$probabilities, nub, nue, updateB, updateE, updatePi, st$n,
+    chain$nit, chain$nburn, chain$nthin, chain$seed, 4L,
+    chain$nchains, chain$ncores, chain$chain_seeds_native)
+  execution <- .mtblr_summary_multichain(
+    native_execution, chain, conv, st$trait_names, "bayesc", "csr",
+    updateB, updateE)
+  raw <- execution$raw
   raw$model$names <- mod$names; raw$pi$names <- mod$names
   raw$data <- list(marker_metadata = aligned$marker_metadata, trait_metadata = trait_metadata,
     sample_size = st$n, ld_prefix = native_prefix, ld_sharing_mode = sharing, scale = "standardized_genotype")
   raw$alignment <- list(marker_policy = marker_policy, intersection_policy = "error", per_trait = aligned$report,
     orientation_status = aligned$report$allele_status)
   input <- list(method = "bayesc", model = "bayesc", backend = "mt_csr_bayesc", data_level = "summary",
-    m = st$m, nt = st$nt, n = st$n, h2 = h2, nub = nub, nue = nue, nit = nit, nburn = nburn,
-    nthin = nthin, seed = seed, updateB = updateB, updateE = updateE, updatePi = updatePi,
+    m = st$m, nt = st$nt, n = st$n, h2 = h2, nub = nub, nue = nue,
+    nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
+    seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
+    chain_seeds_requested = chain$chain_seeds_requested,
+    chain_seeds_resolved = execution$seeds,
+    keep_chains = chain$keep_chains, convergence = conv$mode,
+    convergence_control = conv[c("warn", "rhat_threshold",
+      "ess_per_chain_threshold", "mcse_mean_over_sd_threshold",
+      "keep_traces")], memory_warning_gb = memory_warning_gb,
+    updateB = updateB, updateE = updateE, updatePi = updatePi,
     models = mod$matrix, model_names = mod$names, pimodels = mod$probabilities, sets = set_spec$public,
     ld_prefix = native_prefix, ld_sharing_mode = sharing, ld_reference = trait_metadata$ld_reference,
     marker_policy = marker_policy, marker_intersection_policy = "error", scale = "standardized_genotype",
     sample_overlap = "not_modeled", phenotype_crossproduct_policy = "marginal_yy_only",
     residual_covariance_policy = "diagonal", trait_metadata = trait_metadata, alignment = raw$alignment)
-  if (isTRUE(verbose)) print(input[c("backend", "m", "nt", "ld_sharing_mode", "seed")])
-  .as_mtblr_fit(raw, aligned$marker_ids, st$trait_names, aligned$marker_metadata, trait_metadata, raw$alignment, input)
+  if (isTRUE(verbose)) print(input[c("backend", "m", "nt", "ld_sharing_mode", "seed", "nchains", "ncores")])
+  fit <- .as_mtblr_fit(raw, aligned$marker_ids, st$trait_names,
+                       aligned$marker_metadata, trait_metadata,
+                       raw$alignment, input)
+  fit$chains <- execution$chains
+  fit$convergence <- execution$convergence
+  fit["convergence_traces"] <- list(execution$convergence_traces)
+  fit$input$memory_estimate <- memory
+  messages <- .blr_convergence_warning_messages(
+    fit$convergence, if (conv$mode == "core") "core" else "auto",
+    "mtblr", "csr")
+  if (isTRUE(conv$warn) && conv$mode != "none" &&
+      !(conv$mode == "auto" && chain$nchains == 1L) && length(messages)) {
+    warning(messages[[1L]], call. = FALSE)
+  }
+  .blr_finalize_fit(
+    fit,
+    "mtblr", "bayesc", "csr", data = raw$data,
+    diagnostics = raw$diagnostics, memory_estimate = memory)
 }

@@ -581,7 +581,7 @@ finemap_stblr_csr <- function(
   if (!is.null(override)) {
     return(.stblr_select_parameter_value(override, trait, fit, parameter))
   }
-  trace_name <- switch(parameter, ve = "ves", vb = "vbs", pi = "pis")
+  trace_name <- switch(parameter, ve = "ves", vb = "vbs", pi = "pi_trace")
   if (!is.null(fit[[trace_name]])) {
     x <- fit[[trace_name]]
     burn <- if (!is.null(fit$input$nburn)) as.integer(fit$input$nburn) else 0L
@@ -1003,7 +1003,8 @@ finemap_stblr_csr <- function(
 }
 
 .stblr_compact_run_summary <- function(fit) {
-  list(dm = fit$dm, bm = fit$bm, vbs = fit$vbs, ves = fit$ves, pis = fit$pis)
+  list(dm = fit$dm, bm = fit$bm, vbs = fit$vbs, ves = fit$ves,
+       pi_trace = fit$pi_trace)
 }
 
 .stblr_validate_finemap_parameters <- function(ve, vb, pi) {

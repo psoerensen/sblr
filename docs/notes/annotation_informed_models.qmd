@@ -2,6 +2,14 @@
 title: "Annotation-Informed Models"
 ---
 
+## Phase 18 policy vocabulary
+
+Annotation-aware BayesC remains one kernel with `fixed_marker`, `group`, or
+`learned_logistic` probability policy through `stblr_csr_annot()`.
+BayesRC/SBayesRC use `annotation_probit_stick`; SBayesRC additionally uses
+`maf_s`. These policies are not artificial extra scientific model names, and
+unsupported operator combinations fail before sampling.
+
 Annotation-informed Bayesian linear regression uses external marker
 annotations to structure priors over marker inclusion, effect variance, or
 mixture-component membership. The likelihood still comes from phenotype
@@ -202,7 +210,7 @@ architecture changed at the same time.
 
 ## Fixed Marker-Specific Priors
 
-`stblr_csr_prior_annot()` fits CSR ST-BLR using fixed marker-specific inclusion
+`stblr_csr_annot(..., annotation_model = "prior")` fits CSR ST-BLR using fixed marker-specific inclusion
 probabilities, fixed variance multipliers, or both. It supports two routes:
 
 1. supply `fixed_pi_marker` and `fixed_vb_multiplier` directly; or
@@ -258,7 +266,7 @@ fit_fixed <- stblr_csr_annot(
 )
 ```
 
-The compatibility wrapper `stblr_csr_prior_annot()` accepts the same underlying
+The compatibility wrapper `stblr_csr_annot(..., annotation_model = "prior")` accepts the same underlying
 prior information for explicit fixed-prior workflows.
 
 Fixed priors are appropriate when prior values come from external biological
@@ -273,7 +281,7 @@ uncertainty.
 
 ## Direct Learned Annotation Effects
 
-`stblr_csr_learn_annot()` learns annotation effects while fitting marker
+`stblr_csr_annot(..., annotation_model = "learned")` learns annotation effects while fitting marker
 effects. For each trait, it maintains annotation coefficient vectors
 $\eta_{\pi,t}$ and $\eta_{v,t}$. The implemented marker-specific prior is
 conceptually
@@ -332,7 +340,7 @@ They should be interpreted jointly with annotation scaling, coefficient
 shrinkage, bounds, proposal behavior, marker-level posterior summaries, and
 convergence diagnostics.
 
-The compatibility wrapper `stblr_csr_learn_annot()` remains available when a
+The compatibility wrapper `stblr_csr_annot(..., annotation_model = "learned")` remains available when a
 workflow needs the lower-level learned-annotation call explicitly.
 
 Use the learned model when annotation effects are genuinely part of the
@@ -343,7 +351,7 @@ short chains can produce unstable or poorly mixed coefficient estimates.
 
 ## Group Priors
 
-`stblr_csr_group_annot()` assigns every marker to exactly one group and gives
+`stblr_csr_annot(..., annotation_model = "group")` assigns every marker to exactly one group and gives
 each group trait-specific prior parameters. If $g(i)$ is marker $i$'s
 group index, the prior is
 
@@ -376,7 +384,7 @@ fit_group <- stblr_csr_annot(
 )
 ```
 
-The compatibility wrapper `stblr_csr_group_annot()` exposes the same grouped
+The compatibility wrapper `stblr_csr_annot(..., annotation_model = "group")` exposes the same grouped
 backend for workflows that prefer an explicit group-prior function.
 
 Group inclusion probabilities have group-specific beta-prior controls.
@@ -394,7 +402,7 @@ matrix-based or SBayesRC-style models are usually more appropriate.
 
 ## SBayesRC-Style Overlapping-Annotation Mixture Priors
 
-`stblr_csr_sbayesrc_generic()` replaces a single active-effect distribution
+`stblr_csr_annot(..., annotation_model = "sbayesrc")` replaces a single active-effect distribution
 with multiple variance components. Let
 
 $$
@@ -481,7 +489,7 @@ fit_sbayesrc <- stblr_csr_annot(
 ```
 
 The fit contains annotation coefficients `alpha`, annotation-effect variances
-`sigmaSqAlpha`, marker component probabilities `comp_prob`, and component
+`sigmaSqAlpha`, marker component probabilities `component_probabilities`, and component
 counts `ncomp`.
 
 CSR SBayesRC also supports BayesS-style MAF-dependent prior variance scaling

@@ -60,15 +60,18 @@ expect_bayesc_chain_fit <- function(fit, stats, nchains = 2L, keep_chains = TRUE
   expect_identical(fit$input$keep_chains, keep_chains)
   expect_equal(dim(fit$dm), c(stats$m, length(stats$yy)))
   expect_equal(dim(fit$bm), c(stats$m, length(stats$yy)))
-  for (nm in c("dm_sd", "dm_min", "dm_max", "bm_sd", "bm_min", "bm_max")) {
+  for (nm in c("dm_chain_mean_sd", "dm_chain_mean_min", "dm_chain_mean_max",
+               "bm_chain_mean_sd", "bm_chain_mean_min", "bm_chain_mean_max")) {
     expect_true(nm %in% names(fit), info = nm)
     expect_equal(dim(fit[[nm]]), dim(fit$dm), info = nm)
   }
   if (keep_chains) {
     expect_true(is.list(fit$chains))
-    expect_identical(names(fit$chains), names(stats$yy))
-    expect_length(fit$chains[[1]], nchains)
-    for (chain in fit$chains[[1]]) {
+    expect_identical(names(fit$chains), paste0("task", seq_len(nchains)))
+    expect_length(fit$chains, nchains)
+    for (chain in fit$chains) {
+      expect_identical(chain$trait_index, 1L)
+      expect_identical(chain$trait_name, names(stats$yy))
       expect_length(chain$dm, stats$m)
       expect_length(chain$bm, stats$m)
       expect_identical(names(chain$dm), stats$marker_names)
@@ -102,6 +105,7 @@ fit_prior_bayesc_chains <- function(nchains = 2L, keep_chains = TRUE,
     seed = 100L,
     nchains = nchains,
     keep_chains = keep_chains,
+    convergence = "none",
     chain_seeds = chain_seeds
   )
 }
@@ -112,7 +116,8 @@ test_that("fixed-prior BayesC annotations support native chains", {
 
   fit1 <- fit_prior_bayesc_chains(nchains = 1L, keep_chains = FALSE, chain_seeds = NULL)
   expect_equal(fit1$input$nchains, 1L)
-  expect_false("chains" %in% names(fit1))
+  expect_true("chains" %in% names(fit1))
+  expect_null(fit1$chains)
 
   fit <- fit_prior_bayesc_chains()
   expect_bayesc_chain_fit(fit, stats)
@@ -126,10 +131,11 @@ test_that("learned BayesC annotations support native chains", {
   skip_if_not(exists("stblr_cpg_omp_csr_annot", mode = "function"))
   stats <- tiny_annotation_bayesc_chain_stats()
   A <- tiny_annotation_bayesc_chain_matrix()
-  fit <- sblr::stblr_csr_learn_annot(
+  fit <- sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_tiny_annotation_bayesc_chain_csr_prefix(stats$m),
-    A = A,
+    annotations = A,
+    annotation_model = "learned",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -147,11 +153,12 @@ test_that("learned BayesC annotations support native chains", {
     seed = 101L,
     nchains = 2L,
     keep_chains = TRUE,
+    convergence = "none",
     chain_seeds = c(11L, 12L)
   )
 
   expect_bayesc_chain_fit(fit, stats)
-  expect_true(all(c("eta_pi", "eta_vb") %in% names(fit$chains[[1]][[1]])))
+  expect_true(all(c("eta_pi", "eta_vb") %in% names(fit$chains[[1]])))
 })
 
 test_that("group BayesC annotations support native chains", {
@@ -159,10 +166,11 @@ test_that("group BayesC annotations support native chains", {
   stats <- tiny_annotation_bayesc_chain_stats()
   group <- stats::setNames(c("coding", "background", "coding", "background"),
                            stats$marker_names)
-  fit <- sblr::stblr_csr_group_annot(
+  fit <- sblr::stblr_csr_annot(
     stats = stats,
     ld_prefix = make_tiny_annotation_bayesc_chain_csr_prefix(stats$m),
-    group = group,
+    annotations = group,
+    annotation_model = "group",
     group_names = c("coding", "background"),
     group_pi_init = c(0.35, 0.25),
     group_vb_multiplier_init = c(1.2, 0.8),
@@ -179,11 +187,12 @@ test_that("group BayesC annotations support native chains", {
     seed = 102L,
     nchains = 2L,
     keep_chains = TRUE,
+    convergence = "none",
     chain_seeds = c(21L, 22L)
   )
 
   expect_bayesc_chain_fit(fit, stats)
   expect_true(all(c(
     "group_pi", "group_vb_multiplier", "group_nincluded"
-  ) %in% names(fit$chains[[1]][[1]])))
+  ) %in% names(fit$chains[[1]])))
 })

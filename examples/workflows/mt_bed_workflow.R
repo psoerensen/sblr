@@ -53,8 +53,8 @@ fit_retained <- mtblr_bed(
 fit_retained$nchains
 fit_retained$chain_seeds
 fit_retained$chain_diagnostics
-fit_retained$bm_sd
-fit_retained$dm_sd
+fit_retained$bm_chain_mean_sd
+fit_retained$dm_chain_mean_sd
 fit_retained$chains
 fit_retained$memory_estimate
 

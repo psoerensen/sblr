@@ -71,6 +71,7 @@ make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
     Glist = selection_s_csr_glist(),
     stats = selection_s_csr_stats(),
     ld_prefix = make_selection_s_csr_prefix(),
+    method = "sbayesc",
     selection_s = selection_s,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
@@ -86,6 +87,7 @@ make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
+    convergence = "none",
     ...
   )
 }
@@ -98,7 +100,7 @@ make_selection_s_csr_bayesr_fit <- function(selection_s = NULL,
     Glist = selection_s_csr_glist(),
     stats = selection_s_csr_stats(),
     ld_prefix = make_selection_s_csr_prefix(),
-    method = "bayesR",
+    method = "sbayesr",
     selection_s = selection_s,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
@@ -114,16 +116,17 @@ make_selection_s_csr_bayesr_fit <- function(selection_s = NULL,
     updateB = FALSE,
     updateE = FALSE,
     updatePi = FALSE,
+    convergence = "none",
     ...
   )
 }
 
 expect_selection_s_bayesr_dm_matches_component0 <- function(fit,
                                                             tolerance = 1e-12) {
-  for (trait in names(fit$comp_prob)) {
+  for (trait in names(fit$component_probabilities)) {
     expect_equal(
       unname(as.numeric(fit$dm[, trait])),
-      unname(as.numeric(1 - fit$comp_prob[[trait]][, "component_0"])),
+      unname(as.numeric(1 - fit$component_probabilities[[trait]][, "component_0"])),
       tolerance = tolerance
     )
   }
@@ -176,6 +179,7 @@ make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
     updateAlpha = FALSE,
     updateB = updateB,
     updateE = FALSE,
+    convergence = "none",
     ...
   )
 }
@@ -188,7 +192,7 @@ expect_selection_s_sbayesrc_finite <- function(fit) {
   expect_true(all(is.finite(fit$ves)))
   expect_true(all(is.finite(fit$vle)))
   expect_true(all(is.finite(fit$vld)))
-  expect_true(all(vapply(fit$comp_prob, function(cp) all(is.finite(cp)), logical(1))))
+  expect_true(all(vapply(fit$component_probabilities, function(cp) all(is.finite(cp)), logical(1))))
 }
 
 get_sbayesrc_null_component_col <- function(cp) {
@@ -221,8 +225,8 @@ get_sbayesrc_null_component_col <- function(cp) {
 
 expect_selection_s_sbayesrc_component_consistency <- function(fit,
                                                              tolerance = 1e-12) {
-  for (trait in names(fit$comp_prob)) {
-    cp <- fit$comp_prob[[trait]]
+  for (trait in names(fit$component_probabilities)) {
+    cp <- fit$component_probabilities[[trait]]
     null_col <- get_sbayesrc_null_component_col(cp)
 
     expect_equal(
@@ -239,7 +243,7 @@ expect_selection_s_sbayesrc_component_consistency <- function(fit,
   }
 }
 
-test_that("fixed selection_s is optional and preserves default CSR BayesC behavior", {
+test_that("SBayesC selection_s zero reduces to CSR BayesC", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
@@ -249,7 +253,7 @@ test_that("fixed selection_s is optional and preserves default CSR BayesC behavi
     Glist = selection_s_csr_glist(),
     stats = selection_s_csr_stats(),
     ld_prefix = make_selection_s_csr_prefix(),
-    method = "bayesC",
+    method = "bayesc",
     nit = 8,
     nburn = 2,
     nthin = 1,
@@ -262,18 +266,19 @@ test_that("fixed selection_s is optional and preserves default CSR BayesC behavi
     updateE = FALSE,
     updatePi = FALSE
   )
-  fit_omitted <- do.call(stblr_csr, args)
-  fit_null <- do.call(stblr_csr, c(args, list(selection_s = NULL)))
+  s_args <- args
+  s_args$method <- "sbayesc"
+  fit_omitted <- do.call(stblr_csr, s_args)
+  fit_null <- do.call(stblr_csr, c(s_args, list(selection_s = 0)))
 
   expect_equal(fit_null$dm, fit_omitted$dm)
   expect_equal(fit_null$bm, fit_omitted$bm)
   expect_equal(fit_null$vbs, fit_omitted$vbs)
   expect_equal(fit_null$vgs, fit_omitted$vgs)
   expect_equal(fit_null$ves, fit_omitted$ves)
-  expect_null(fit_null$input$selection_s)
-  expect_false(fit_null$input$selection_s_fixed)
-  expect_null(fit_null$input$selection_s_exponent)
-  expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
+  expect_identical(fit_null$model, "sbayesc")
+  expect_identical(fit_null$input$effect_scale, "maf_s")
+  expect_identical(fit_null$input$selection_s, 0)
 })
 
 test_that("fixed selection_s CSR BayesC fits return finite outputs and metadata", {
@@ -295,25 +300,24 @@ test_that("fixed selection_s CSR BayesC fits return finite outputs and metadata"
   }
 })
 
-test_that("selection_s = -1 gives unit prior scale and matches default", {
+test_that("SBayesC selection_s = -1 records unit prior scale", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
-  fit_default <- make_selection_s_csr_fit(seed = 121)
   fit_s_minus_one <- make_selection_s_csr_fit(selection_s = -1, seed = 121)
 
-  expect_equal(fit_s_minus_one$dm, fit_default$dm)
-  expect_equal(fit_s_minus_one$bm, fit_default$bm)
-  expect_equal(fit_s_minus_one$vbs, fit_default$vbs)
-  expect_equal(fit_s_minus_one$ves, fit_default$ves)
+  expect_true(all(is.finite(fit_s_minus_one$dm)))
+  expect_true(all(is.finite(fit_s_minus_one$bm)))
+  expect_true(all(is.finite(fit_s_minus_one$vbs)))
+  expect_true(all(is.finite(fit_s_minus_one$ves)))
   expect_equal(fit_s_minus_one$input$selection_s, -1)
   expect_true(fit_s_minus_one$input$selection_s_fixed)
   expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
 })
 
-test_that("fixed selection_s is optional and preserves default CSR BayesR behavior", {
+test_that("SBayesR omitted selection_s resolves to the maf_s default", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
@@ -327,28 +331,28 @@ test_that("fixed selection_s is optional and preserves default CSR BayesR behavi
   expect_equal(fit_null$vbs, fit_omitted$vbs)
   expect_equal(fit_null$vle, fit_omitted$vle)
   expect_equal(fit_null$vld, fit_omitted$vld)
-  expect_equal(fit_null$comp_prob, fit_omitted$comp_prob)
-  expect_null(fit_null$input$selection_s)
-  expect_false(fit_null$input$selection_s_fixed)
-  expect_null(fit_null$input$selection_s_exponent)
+  expect_equal(fit_null$component_probabilities, fit_omitted$component_probabilities)
+  expect_identical(fit_null$model, "sbayesr")
+  expect_identical(fit_null$input$effect_scale, "component_maf_s")
+  expect_equal(fit_null$input$selection_s, 0)
+  expect_true(fit_null$input$selection_s_fixed)
+  expect_equal(fit_null$input$selection_s_exponent, 1)
   expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
 })
 
-test_that("selection_s = -1 gives unit prior scale and matches default CSR BayesR", {
+test_that("SBayesR selection_s = -1 records unit prior scale", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
-  fit_default <- make_selection_s_csr_bayesr_fit(seed = 142)
   fit_s_minus_one <- make_selection_s_csr_bayesr_fit(selection_s = -1, seed = 142)
 
-  expect_equal(fit_s_minus_one$dm, fit_default$dm)
-  expect_equal(fit_s_minus_one$bm, fit_default$bm)
-  expect_equal(fit_s_minus_one$vbs, fit_default$vbs)
-  expect_equal(fit_s_minus_one$vle, fit_default$vle)
-  expect_equal(fit_s_minus_one$vld, fit_default$vld)
-  expect_equal(fit_s_minus_one$comp_prob, fit_default$comp_prob)
+  expect_true(all(is.finite(fit_s_minus_one$dm)))
+  expect_true(all(is.finite(fit_s_minus_one$bm)))
+  expect_true(all(is.finite(fit_s_minus_one$vbs)))
+  expect_true(all(is.finite(fit_s_minus_one$vle)))
+  expect_true(all(is.finite(fit_s_minus_one$vld)))
   expect_equal(fit_s_minus_one$input$selection_s, -1)
   expect_true(fit_s_minus_one$input$selection_s_fixed)
   expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
@@ -366,8 +370,8 @@ test_that("fixed selection_s CSR BayesR fits return finite outputs and component
     expect_true(all(is.finite(fit$bm)))
     expect_true(all(is.finite(fit$vle)))
     expect_true(all(is.finite(fit$vld)))
-    expect_true(all(vapply(fit$comp_prob, function(cp) all(is.finite(cp)), logical(1))))
-    expect_true(all(vapply(fit$comp_prob, function(cp) {
+    expect_true(all(vapply(fit$component_probabilities, function(cp) all(is.finite(cp)), logical(1))))
+    expect_true(all(vapply(fit$component_probabilities, function(cp) {
       all(abs(rowSums(cp) - 1) < 1e-8)
     }, logical(1))))
     expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
@@ -412,6 +416,7 @@ test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
       Glist = selection_s_csr_glist(),
       stats = selection_s_csr_stats(),
       ld_prefix = make_selection_s_csr_prefix(),
+      method = "sbayesc",
       scheduled = TRUE,
       selection_s = 0,
       nit = 2,
@@ -429,6 +434,7 @@ test_that("selection_s validates MAF alignment to CSR LD marker order", {
       Glist = bad_glist,
       stats = selection_s_csr_stats(),
       ld_prefix = make_selection_s_csr_prefix(),
+      method = "sbayesc",
       selection_s = 0,
       nit = 2,
       nburn = 0
@@ -449,9 +455,9 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
   expect_true(all(is.finite(fit$bm)))
   expect_true(all(is.finite(fit$vle)))
   expect_true(all(is.finite(fit$vld)))
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
+                    names(fit$diagnostics$ld_swap)))
 
   chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
@@ -510,9 +516,8 @@ test_that("sampled selection_s supports keep_chains and is reproducible", {
 
   expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
   expect_equal(fit1$selection_s, fit2$selection_s)
-  expect_equal(length(fit1$chains), 1L)
-  expect_equal(length(fit1$chains[[1]]), 2L)
-  expect_true(all(vapply(fit1$chains[[1]], function(ch) {
+  expect_equal(length(fit1$chains), 2L)
+  expect_true(all(vapply(fit1$chains, function(ch) {
     is.numeric(ch$selection_s) &&
       length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
       is.finite(ch$selection_s_acceptance) &&
@@ -539,8 +544,8 @@ test_that("sampled selection_s runs for CSR BayesR and returns mechanics", {
   expect_true(all(is.finite(fit$vgs)))
   expect_true(all(is.finite(fit$vle)))
   expect_true(all(is.finite(fit$vld)))
-  expect_true(all(vapply(fit$comp_prob, function(cp) all(is.finite(cp)), logical(1))))
-  expect_true(all(vapply(fit$comp_prob, function(cp) {
+  expect_true(all(vapply(fit$component_probabilities, function(cp) all(is.finite(cp)), logical(1))))
+  expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
   expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-12)
@@ -581,9 +586,8 @@ test_that("sampled selection_s CSR BayesR supports keep_chains and is reproducib
   expect_equal(fit1$bm, fit2$bm)
   expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
   expect_equal(fit1$selection_s, fit2$selection_s)
-  expect_equal(length(fit1$chains), 1L)
-  expect_equal(length(fit1$chains[[1]]), 2L)
-  expect_true(all(vapply(fit1$chains[[1]], function(ch) {
+  expect_equal(length(fit1$chains), 2L)
+  expect_true(all(vapply(fit1$chains, function(ch) {
     is.numeric(ch$selection_s) &&
       length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
       is.finite(ch$selection_s_acceptance) &&
@@ -638,6 +642,7 @@ test_that("sampled selection_s validates inputs and unsupported combinations", {
       Glist = selection_s_csr_glist(),
       stats = selection_s_csr_stats(),
       ld_prefix = make_selection_s_csr_prefix(),
+      method = "sbayesc",
       scheduled = TRUE,
       estimate_selection_s = TRUE,
       nit = 2,
@@ -661,10 +666,10 @@ test_that("sampled selection_s works with CSR BayesR LD-swap", {
   )
 
   expect_true(all(is.finite(fit$selection_s_trace)))
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
-  expect_true(all(vapply(fit$comp_prob, function(cp) {
+                    names(fit$diagnostics$ld_swap)))
+  expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
   expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-12)
@@ -684,11 +689,11 @@ test_that("sampled selection_s works with CSR BayesC LD-swap", {
   )
 
   expect_true(all(is.finite(fit$selection_s_trace)))
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
+                    names(fit$diagnostics$ld_swap)))
   expect_null(fit$chains)
-  expect_null(fit$ld_swap_chains)
+  expect_null(fit$diagnostics$ld_swap_chains)
 })
 
 test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
@@ -707,10 +712,10 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
   expect_true(all(is.finite(fit$bm)))
   expect_true(all(is.finite(fit$vle)))
   expect_true(all(is.finite(fit$vld)))
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
-  expect_true(all(vapply(fit$comp_prob, function(cp) {
+                    names(fit$diagnostics$ld_swap)))
+  expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
   expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
@@ -719,7 +724,7 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
   expect_true(all(chk$checks$ok))
 })
 
-test_that("fixed selection_s is optional and preserves default CSR SBayesRC behavior", {
+test_that("SBayesRC omitted selection_s resolves to the maf_s default", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
@@ -733,29 +738,23 @@ test_that("fixed selection_s is optional and preserves default CSR SBayesRC beha
   expect_equal(fit_null$vbs, fit_omitted$vbs)
   expect_equal(fit_null$vle, fit_omitted$vle)
   expect_equal(fit_null$vld, fit_omitted$vld)
-  expect_equal(fit_null$comp_prob, fit_omitted$comp_prob)
-  expect_null(fit_null$input$selection_s)
-  expect_false(fit_null$input$selection_s_fixed)
-  expect_null(fit_null$input$selection_s_exponent)
+  expect_equal(fit_null$component_probabilities, fit_omitted$component_probabilities)
+  expect_equal(fit_null$input$selection_s, 0)
+  expect_true(fit_null$input$selection_s_fixed)
+  expect_equal(fit_null$input$selection_s_exponent, 1)
   expect_equal(fit_null$input$selection_s_scale, "standardized_genotype_effect")
 })
 
-test_that("selection_s = -1 gives unit prior scale and matches default CSR SBayesRC", {
+test_that("SBayesRC selection_s = -1 records unit prior scale", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
-  fit_default <- make_selection_s_csr_sbayesrc_fit(seed = 172)
   fit_s_minus_one <- make_selection_s_csr_sbayesrc_fit(selection_s = -1, seed = 172)
 
-  expect_equal(fit_s_minus_one$dm, fit_default$dm)
-  expect_equal(fit_s_minus_one$bm, fit_default$bm)
-  expect_equal(fit_s_minus_one$vbs, fit_default$vbs)
-  expect_equal(fit_s_minus_one$vle, fit_default$vle)
-  expect_equal(fit_s_minus_one$vld, fit_default$vld)
-  expect_equal(fit_s_minus_one$dm_component_mean, fit_default$dm_component_mean)
-  expect_equal(fit_s_minus_one$comp_prob, fit_default$comp_prob)
+  expect_selection_s_sbayesrc_finite(fit_s_minus_one)
+  expect_selection_s_sbayesrc_component_consistency(fit_s_minus_one)
   expect_equal(fit_s_minus_one$input$selection_s, -1)
   expect_true(fit_s_minus_one$input$selection_s_fixed)
   expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
@@ -832,16 +831,16 @@ test_that("selection_s works with CSR SBayesRC LD-swap and backend consistency",
   )
 
   expect_selection_s_sbayesrc_finite(fit)
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
+                    names(fit$diagnostics$ld_swap)))
   expect_selection_s_sbayesrc_component_consistency(fit)
 
   chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
 })
 
-test_that("multi-chain CSR SBayesRC selection_s = -1 matches default and keep_chains works", {
+test_that("multi-chain CSR SBayesRC selection_s metadata and chains are stable", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
@@ -860,11 +859,9 @@ test_that("multi-chain CSR SBayesRC selection_s = -1 matches default and keep_ch
     chain_seeds = seeds
   )
 
-  expect_equal(fit_s_minus_one$dm, fit_default$dm)
-  expect_equal(fit_s_minus_one$bm, fit_default$bm)
-  expect_equal(fit_s_minus_one$vle, fit_default$vle)
-  expect_equal(fit_s_minus_one$vld, fit_default$vld)
-  expect_equal(fit_s_minus_one$comp_prob, fit_default$comp_prob)
+  expect_equal(fit_default$input$selection_s, 0)
+  expect_equal(fit_s_minus_one$input$selection_s, -1)
+  expect_true(all(is.finite(fit_s_minus_one$dm)))
 
   fit_keep <- make_selection_s_csr_sbayesrc_fit(
     selection_s = 0,
@@ -892,7 +889,7 @@ test_that("sampled selection_s runs for CSR SBayesRC and returns mechanics", {
   )
 
   expect_selection_s_sbayesrc_finite(fit)
-  expect_true(all(vapply(fit$comp_prob, function(cp) {
+  expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
   expect_selection_s_sbayesrc_component_consistency(fit, tolerance = 1e-12)
@@ -900,9 +897,9 @@ test_that("sampled selection_s runs for CSR SBayesRC and returns mechanics", {
   expect_equal(ncol(fit$selection_s_trace), length(selection_s_csr_stats()$yy))
   expect_length(fit$selection_s, length(selection_s_csr_stats()$yy))
   expect_true(all(is.finite(fit$selection_s)))
-  expect_true(all(is.finite(fit$selection_s_sd)))
-  expect_true(all(is.finite(fit$selection_s_min)))
-  expect_true(all(is.finite(fit$selection_s_max)))
+  expect_true(all(is.finite(fit$selection_s_chain_mean_sd)))
+  expect_true(all(is.finite(fit$selection_s_chain_mean_min)))
+  expect_true(all(is.finite(fit$selection_s_chain_mean_max)))
   expect_true(all(fit$selection_s_trace >= -3 & fit$selection_s_trace <= 2))
   expect_true(all(is.finite(fit$selection_s_acceptance)))
   expect_true(all(fit$selection_s_acceptance >= 0 & fit$selection_s_acceptance <= 1))
@@ -938,9 +935,8 @@ test_that("sampled selection_s CSR SBayesRC supports keep_chains and is reproduc
   expect_equal(fit1$bm, fit2$bm)
   expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
   expect_equal(fit1$selection_s, fit2$selection_s)
-  expect_equal(length(fit1$chains), 1L)
-  expect_equal(length(fit1$chains[[1]]), 2L)
-  expect_true(all(vapply(fit1$chains[[1]], function(ch) {
+  expect_equal(length(fit1$chains), 2L)
+  expect_true(all(vapply(fit1$chains, function(ch) {
     is.numeric(ch$selection_s) &&
       length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
       is.finite(ch$selection_s_acceptance) &&
@@ -1002,9 +998,9 @@ test_that("sampled selection_s works with CSR SBayesRC LD-swap", {
   )
 
   expect_true(all(is.finite(fit$selection_s_trace)))
-  expect_s3_class(fit$ld_swap, "data.frame")
+  expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
-                    names(fit$ld_swap)))
+                    names(fit$diagnostics$ld_swap)))
   expect_selection_s_sbayesrc_component_consistency(fit, tolerance = 1e-12)
 })
 

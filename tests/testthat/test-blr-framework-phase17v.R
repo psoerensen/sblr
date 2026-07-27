@@ -36,23 +36,24 @@ test_that("Phase 17V convergence controls fail closed", {
 })
 
 test_that("Phase 17V constructors validate disabled and quiet states", {
-  control <- sblr:::.mtblr_convergence_control()
-  none <- sblr:::.mtblr_convergence_not_requested(
+  control <- sblr:::.blr_convergence_control()
+  none <- sblr:::.blr_convergence_not_requested(
     c("T1", "T2"), TRUE, TRUE, 1L, 8L, control)
   expect_false(none$requested)
   expect_false(none$computed)
   expect_identical(none$scope, "none")
   expect_identical(none$overall_status, "not_requested")
   expect_identical(nrow(none$summary), 0L)
-  unavailable <- sblr:::.mtblr_convergence_unavailable(
+  unavailable <- sblr:::.blr_convergence_unavailable(
     c("T1", "T2"), FALSE, FALSE, 1L, 8L, control)
   expect_true(unavailable$requested)
   expect_false(unavailable$computed)
-  expect_identical(nrow(unavailable$summary), 6L)
+  expect_identical(nrow(unavailable$summary), 10L)
   expect_true(all(unavailable$summary$status[
-    unavailable$summary$group %in% c("B_diag", "E_diag")] == "not_updated"))
+    unavailable$summary$group %in% c("vbs", "ves")] == "not_updated"))
   expect_true(all(unavailable$summary$status[
-    unavailable$summary$group == "G_diag"] == "unavailable_single_chain"))
+    unavailable$summary$group %in% c("vgs", "vle", "vld")] ==
+      "unavailable_single_chain"))
   expect_true(all(!unavailable$summary$rhat_available))
 })
 
@@ -75,9 +76,9 @@ test_that("Phase 17V public routing and Tier 1 output are exact", {
   fit <- do.call(mtblr_bed, args)
   expect_identical(fit$input$convergence_trace_route,
                    "mtblr_bed_convergence_trace_internal")
-  expect_identical(nrow(fit$convergence$summary), 3L * ncol(case$Y))
+  expect_identical(nrow(fit$convergence$summary), 5L * ncol(case$Y))
   expect_identical(dim(fit$convergence_traces$values),
-                   c(8L, 2L, 3L * ncol(case$Y)))
+                   c(8L, 2L, 5L * ncol(case$Y)))
   expected <- phase17v_internal_diagnostic(
     args, colnames(case$Y), keep_traces = TRUE)
   expect_identical(fit$convergence$summary,
@@ -109,19 +110,19 @@ test_that("Phase 17V public warnings follow mode and suppression policy", {
 
 test_that("Phase 17V warning policy is aggregated and suppressible", {
   flagged <- phase17v_warning_fixture(flagged = TRUE)
-  message <- sblr:::.mtblr_convergence_warning_messages(flagged, "auto")
+  message <- sblr:::.blr_convergence_warning_messages(flagged, "auto")
   expect_length(message, 1L)
   expect_match(message, "advisory requires review")
   expect_match(message, "max R-hat")
   expect_match(message, "fit\\$convergence")
   partial <- phase17v_warning_fixture("computed_partial", FALSE, 2L, 5L)
-  expect_length(sblr:::.mtblr_convergence_warning_messages(
+  expect_length(sblr:::.blr_convergence_warning_messages(
     partial, "core"), 1L)
-  unavailable <- sblr:::.mtblr_convergence_unavailable(
-    "T1", TRUE, TRUE, 1L, 8L, sblr:::.mtblr_convergence_control())
-  expect_match(sblr:::.mtblr_convergence_warning_messages(
+  unavailable <- sblr:::.blr_convergence_unavailable(
+    "T1", TRUE, TRUE, 1L, 8L, sblr:::.blr_convergence_control())
+  expect_match(sblr:::.blr_convergence_warning_messages(
     unavailable, "core"), "unavailable")
-  expect_length(sblr:::.mtblr_convergence_warning_messages(
+  expect_length(sblr:::.blr_convergence_warning_messages(
     unavailable, "auto"), 0L)
 })
 
@@ -129,7 +130,7 @@ test_that("Phase 17V memory accounting separates diagnostic storage", {
   controls <- sblr:::.mtblr_bed_convergence_controls("core", NULL, 4L)
   memory <- sblr:::.mtblr_bed_convergence_memory(
     "core", controls, 4L, 100L, 2L)
-  expect_identical(memory$trace_capture_bytes, 8 * 4 * 100 * 3 * 2)
+  expect_identical(memory$trace_capture_bytes, 8 * 4 * 100 * 5 * 2)
   expect_gt(memory$maximum_workspace_bytes, 0)
   kept_controls <- sblr:::.mtblr_bed_convergence_controls(
     "core", list(keep_traces = TRUE), 4L)
@@ -148,9 +149,9 @@ test_that("Phase 17V memory accounting separates diagnostic storage", {
 })
 
 test_that("Phase 17V protects native and unrelated public surfaces", {
-  expect_false("convergence" %in% names(formals(mtblr_csr)))
-  expect_false("convergence" %in% names(formals(mtblr_block_eigen)))
-  expect_false("convergence" %in% names(formals(stblr_bed)))
+  expect_true("convergence" %in% names(formals(mtblr_csr)))
+  expect_true("convergence" %in% names(formals(mtblr_block_eigen)))
+  expect_true("convergence" %in% names(formals(stblr_bed)))
   expect_false("convergence" %in% names(formals(sblr)))
   root <- blr_repo_path()
   skip_if(is.null(root), "source checkout unavailable")

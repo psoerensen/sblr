@@ -29,14 +29,14 @@ phase17v_internal_diagnostic <- function(args, trait_names,
     phase17s_internal_args(args))
   sblr:::.mtblr_bed_convergence_internal(
     native, trait_names, updateB, updateE,
-    control = sblr:::.mtblr_convergence_control(),
+    control = sblr:::.blr_convergence_control(),
     keep_traces = keep_traces)
 }
 
 phase17v_warning_fixture <- function(status = "computed", flagged = FALSE,
                                      nchains = 4L, nit = 10L) {
-  result <- sblr:::.mtblr_convergence_unavailable(
-    "T1", TRUE, TRUE, nchains, nit, sblr:::.mtblr_convergence_control())
+  result <- sblr:::.blr_convergence_unavailable(
+    "T1", TRUE, TRUE, nchains, nit, sblr:::.blr_convergence_control())
   row <- result$summary[1L, ]
   row$status <- status
   if (status %in% c("computed", "computed_fewer_than_four_chains",
@@ -62,8 +62,8 @@ phase17v_warning_fixture <- function(status = "computed", flagged = FALSE,
     ess_tail = sum(row$ess_tail_available),
     ess_mean = sum(row$ess_mean_available),
     mcse_mean = sum(row$mcse_mean_available))
-  result$overview <- sblr:::.mtblr_convergence_overview(row)
+  result$overview <- sblr:::.blr_convergence_overview(row)
   result$overall_status <- result$overview$overall_status
   result$computed <- any(unlist(result$availability) > 0L)
-  sblr:::.mtblr_validate_convergence_result(result)
+  sblr:::.blr_validate_convergence_result(result)
 }

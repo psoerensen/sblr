@@ -35,6 +35,8 @@ inline MtDefaultFinalResult finalize_mt_default_result(
  result.vbs=std::move(core_result.vbs);
  result.vgs=std::move(core_result.vgs);
  result.ves=std::move(core_result.ves);
+ result.vle=std::move(core_result.vle);
+ result.vld=std::move(core_result.vld);
 
  result.covb=std::move(core_result.cvbm);
  result.covg=std::move(core_result.cvgm);

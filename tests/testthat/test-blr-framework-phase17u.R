@@ -76,7 +76,7 @@ test_that("Phase 17U separates metric availability and statuses", {
   expect_true(mismatch$rhat_flag)
   expect_identical(phase17u_fixture_metrics(
     fixtures$nonfinite)$status, "nonfinite")
-  not_updated <- sblr:::.mtblr_convergence_scalar(
+  not_updated <- sblr:::.blr_convergence_scalar(
     t(fixtures$well_mixed), updated = FALSE)
   expect_identical(not_updated$status, "not_updated")
   expect_true(all(is.na(unlist(not_updated[c(
@@ -85,10 +85,10 @@ test_that("Phase 17U separates metric availability and statuses", {
 
 test_that("Phase 17U rank, split, tail, and ESS stabilization are explicit", {
   odd <- matrix(seq_len(20), 5, 4)
-  split <- sblr:::.mtblr_convergence_split_chains(odd)
+  split <- sblr:::.blr_convergence_split_chains(odd)
   expect_identical(dim(split), c(2L, 8L))
   expect_false(any(split == odd[3L, 1L]))
-  tied <- sblr:::.mtblr_convergence_rank_normalize(
+  tied <- sblr:::.blr_convergence_rank_normalize(
     matrix(c(1, 1, 2, 3), 2))
   expected <- qnorm((c(1.5, 1.5, 3, 4) - 3 / 8) / (4 + 1 / 4))
   expect_equal(as.vector(tied), expected, tolerance = 1e-15)
@@ -115,18 +115,21 @@ test_that("Phase 17U trace route preserves raw and extracts post-burn draws", {
   expect_identical(phase17r_without_timing(native$raw),
                    phase17r_without_timing(ordinary))
   bundle <- native$trace_bundle
-  expect_silent(sblr:::.mtblr_validate_convergence_trace_bundle(
+  expect_silent(sblr:::.blr_validate_convergence_trace_bundle(
     bundle, nt = 2L, updateB = TRUE, updateE = TRUE))
-  expect_identical(dim(bundle$values), c(8L, 2L, 6L))
+  expect_identical(dim(bundle$values), c(8L, 2L, 10L))
   expect_identical(as.character(bundle$quantities$group),
-                   rep(c("B_diag", "G_diag", "E_diag"), each = 2L))
+                   rep(c("vbs", "vgs", "ves", "vle", "vld"), each = 2L))
   expect_identical(as.integer(bundle$quantities$trait_index),
-                   rep(1:2, 3L))
+                   rep(1:2, 5L))
   source_trace <- ordinary$chains$chain1$trace$vbs
   expect_identical(bundle$values[, 1L, 1L],
                    source_trace[4:11, 1L])
-  expect_identical(bundle$values[, 2L, 6L],
-                   ordinary$chains$chain2$trace$ves[4:11, 2L])
+  expect_identical(bundle$values[, 2L, 10L],
+                   ordinary$chains$chain2$trace$vld[4:11, 2L])
+  expect_equal(bundle$values[, , 9:10],
+               bundle$values[, , 3:4] - bundle$values[, , 7:8],
+               tolerance = 1e-12)
 })
 
 test_that("Phase 17U diagnostics are independent of compact chains and workers", {
@@ -145,7 +148,7 @@ test_that("Phase 17U diagnostics are independent of compact chains and workers",
   expect_null(d1$convergence_traces)
   kept <- phase17u_diagnose(
     dropped, colnames(case$Y), TRUE, TRUE, keep_traces = TRUE)
-  expect_identical(dim(kept$convergence_traces$values), c(8L, 2L, 6L))
+  expect_identical(dim(kept$convergence_traces$values), c(8L, 2L, 10L))
   expect_identical(dimnames(kept$convergence_traces$values)[[2L]],
                    c("chain1", "chain2"))
 
@@ -167,14 +170,14 @@ test_that("Phase 17U update flags and nthin do not change Tier 1 ownership", {
   second <- phase17u_native_call(case, nchains = 2L)
   expect_identical(first$trace_bundle, second$trace_bundle)
   expect_identical(first$trace_bundle$quantities$updated,
-                   c(FALSE, TRUE, FALSE))
+                   c(FALSE, TRUE, FALSE, TRUE, TRUE))
   diagnosed <- phase17u_diagnose(first, "T1", FALSE, FALSE)
   tab <- diagnosed$raw$diagnostics$convergence$summary
-  expect_identical(tab$status, c(
-    "not_updated", tab$status[2L], "not_updated"))
-  expect_true(tab$status[2L] %in% c(
+  expect_identical(tab$status[c(1L, 3L)],
+                   c("not_updated", "not_updated"))
+  expect_true(all(tab$status[c(2L, 4L, 5L)] %in% c(
     "computed", "computed_fewer_than_four_chains",
-    "computed_partial", "constant", "constant_chain_mismatch"))
+    "computed_partial", "constant", "constant_chain_mismatch")))
   expect_true(all(is.na(tab$rhat[c(1L, 3L)])))
 })
 
@@ -199,17 +202,17 @@ test_that("Phase 17U actual scope covers chain, trait, and covariance modes", {
     diagnosed <- phase17u_diagnose(
       native, colnames(case$Y), spec$updateB, spec$updateE)
     convergence <- diagnosed$raw$diagnostics$convergence
-    expect_identical(nrow(convergence$summary), 3L * spec$nt)
+    expect_identical(nrow(convergence$summary), 5L * spec$nt)
     expect_identical(convergence$nchains, spec$nchains)
     expect_identical(convergence$postburn_draws_per_chain, 8L)
     expect_true(all(convergence$summary$status[
-      convergence$summary$group == "B_diag"] ==
+      convergence$summary$group == "vbs"] ==
         if (spec$updateB) convergence$summary$status[
-          convergence$summary$group == "B_diag"] else "not_updated"))
+          convergence$summary$group == "vbs"] else "not_updated"))
     expect_true(all(convergence$summary$status[
-      convergence$summary$group == "E_diag"] ==
+      convergence$summary$group == "ves"] ==
         if (spec$updateE) convergence$summary$status[
-          convergence$summary$group == "E_diag"] else "not_updated"))
+          convergence$summary$group == "ves"] else "not_updated"))
   }
 })
 
@@ -274,23 +277,23 @@ test_that("Phase 17U internal diagnostics are fresh-process reproducible", {
 test_that("Phase 17U validators and memory accounting are failure closed", {
   fixture <- phase17u_bundle_from_chains(
     phase17t_fixtures()$well_mixed)
-  result <- sblr:::.mtblr_convergence_tier1(fixture, "T1")
-  expect_silent(sblr:::.mtblr_validate_convergence_result(result))
+  result <- sblr:::.blr_convergence_tier1(fixture, "T1")
+  expect_silent(sblr:::.blr_validate_convergence_result(result))
   bad <- fixture
   bad$values <- bad$values[-1]
-  expect_error(sblr:::.mtblr_validate_convergence_trace_bundle(bad),
+  expect_error(sblr:::.blr_validate_convergence_trace_bundle(bad),
                "dimensions")
   bad <- fixture
   bad$values[1L, 1L, 1L] <- Inf
-  expect_error(sblr:::.mtblr_validate_convergence_trace_bundle(bad),
+  expect_error(sblr:::.blr_validate_convergence_trace_bundle(bad),
                "quantities")
-  memory <- sblr:::.mtblr_convergence_memory_estimate(4, 1000, 5, TRUE)
-  expect_identical(memory$trace_capture_bytes, 8 * 4 * 1000 * 3 * 5)
+  memory <- sblr:::.blr_convergence_memory_estimate(4, 1000, 5, TRUE)
+  expect_identical(memory$trace_capture_bytes, 8 * 4 * 1000 * 5 * 5)
   expect_identical(memory$retained_trace_bytes,
                    memory$trace_capture_bytes)
   expect_false(memory$measured_rss)
   expect_false(memory$measured_peak_rss)
-  expect_lt(sblr:::.mtblr_convergence_memory_estimate(
+  expect_lt(sblr:::.blr_convergence_memory_estimate(
     4, 1000, 5, FALSE)$estimated_total_bytes,
     memory$estimated_total_bytes)
 })

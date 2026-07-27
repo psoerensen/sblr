@@ -363,6 +363,42 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mtblr_csr_chains_raw_internal
+Rcpp::List mtblr_csr_chains_raw_internal(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b, std::vector<std::string> ld_prefixes, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method, int nchains, int ncores, std::vector<int> chain_seeds);
+RcppExport SEXP _sblr_mtblr_csr_chains_raw_internal(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP bSEXP, SEXP ld_prefixesSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP chain_seedsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b(bSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type ld_prefixes(ld_prefixesSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_csr_chains_raw_internal(wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mtblr_block_eigen_raw_internal
 Rcpp::List mtblr_block_eigen_raw_internal(std::vector<std::vector<double>> wy, std::vector<double> yy, std::vector<std::vector<double>> b, Rcpp::List operator_descriptors, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method);
 RcppExport SEXP _sblr_mtblr_block_eigen_raw_internal(SEXP wySEXP, SEXP yySEXP, SEXP bSEXP, SEXP operator_descriptorsSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP) {
@@ -392,6 +428,41 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< int >::type method(methodSEXP);
     rcpp_result_gen = Rcpp::wrap(mtblr_block_eigen_raw_internal(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mtblr_block_eigen_chains_raw_internal
+Rcpp::List mtblr_block_eigen_chains_raw_internal(std::vector<std::vector<double>> wy, std::vector<double> yy, std::vector<std::vector<double>> b, Rcpp::List operator_descriptors, const std::vector<std::vector<int>>& sets, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<std::vector<int>> models, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, std::vector<int> n, int nit, int nburn, int nthin, int seed, int method, int nchains, int ncores, std::vector<int> chain_seeds);
+RcppExport SEXP _sblr_mtblr_block_eigen_chains_raw_internal(SEXP wySEXP, SEXP yySEXP, SEXP bSEXP, SEXP operator_descriptorsSEXP, SEXP setsSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP modelsSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP seedSEXP, SEXP methodSEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP chain_seedsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b(bSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type operator_descriptors(operator_descriptorsSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type sets(setsSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type models(modelsSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_block_eigen_chains_raw_internal(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1294,8 +1365,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_cpg_omp_bed_marker_scheduled_chains
-Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, int nit, int nburn, int nthin, int rebuild_every, int full_sweep_every, int null_skip_base, int null_skip_max, double candidate_threshold, int candidate_lifetime, bool skip_nulls_burnin_only, bool return_wy, bool return_r, int read_block_size, int progress_every, double pi_prior_a, double pi_prior_b, int nchains, int ncores, int seed);
-RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP full_sweep_everySEXP, SEXP null_skip_baseSEXP, SEXP null_skip_maxSEXP, SEXP candidate_thresholdSEXP, SEXP candidate_lifetimeSEXP, SEXP skip_nulls_burnin_onlySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP progress_everySEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP) {
+Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, int nit, int nburn, int nthin, int rebuild_every, int full_sweep_every, int null_skip_base, int null_skip_max, double candidate_threshold, int candidate_lifetime, bool skip_nulls_burnin_only, bool return_wy, bool return_r, int read_block_size, int progress_every, double pi_prior_a, double pi_prior_b, int nchains, int ncores, int seed, Rcpp::IntegerVector chain_seeds);
+RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP full_sweep_everySEXP, SEXP null_skip_baseSEXP, SEXP null_skip_maxSEXP, SEXP candidate_thresholdSEXP, SEXP candidate_lifetimeSEXP, SEXP skip_nulls_burnin_onlySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP progress_everySEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP chain_seedsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1338,7 +1409,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, pi_prior_a, pi_prior_b, nchains, ncores, seed));
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, pi_prior_a, pi_prior_b, nchains, ncores, seed, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1470,8 +1542,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_cpg_omp_bed_marker_scheduled_chains_bayesr
-Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> c, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, int nit, int nburn, int nthin, int rebuild_every, int full_sweep_every, int null_skip_base, int null_skip_max, double candidate_threshold, int candidate_lifetime, bool skip_nulls_burnin_only, bool return_wy, bool return_r, int read_block_size, int progress_every, int nchains, int ncores, int seed);
-RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP cSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP full_sweep_everySEXP, SEXP null_skip_baseSEXP, SEXP null_skip_maxSEXP, SEXP candidate_thresholdSEXP, SEXP candidate_lifetimeSEXP, SEXP skip_nulls_burnin_onlySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP progress_everySEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP) {
+Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> c, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, int nit, int nburn, int nthin, int rebuild_every, int full_sweep_every, int null_skip_base, int null_skip_max, double candidate_threshold, int candidate_lifetime, bool skip_nulls_burnin_only, bool return_wy, bool return_r, int read_block_size, int progress_every, int nchains, int ncores, int seed, Rcpp::IntegerVector chain_seeds);
+RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP cSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP full_sweep_everySEXP, SEXP null_skip_baseSEXP, SEXP null_skip_maxSEXP, SEXP candidate_thresholdSEXP, SEXP candidate_lifetimeSEXP, SEXP skip_nulls_burnin_onlySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP progress_everySEXP, SEXP nchainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP chain_seedsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1514,13 +1586,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, c, alpha, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, nchains, ncores, seed));
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, c, alpha, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, nchains, ncores, seed, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
 // stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc
-Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, std::vector<double> gamma, arma::mat annot_alpha_init, arma::vec annot_sigma_sq_alpha_init, bool intercept_flat, double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub, double nue, bool updateAlpha, bool updateB, bool updateE, int annot_alpha_update_every, double adjE, int nit, int nburn, int nthin, int rebuild_every, bool return_wy, bool return_r, int read_block_size, int nchains, bool keep_chains, int ncores, int seed);
-RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP annot_alpha_initSEXP, SEXP annot_sigma_sq_alpha_initSEXP, SEXP intercept_flatSEXP, SEXP sigmaSqAlpha_aSEXP, SEXP sigmaSqAlpha_bSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateAlphaSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP annot_alpha_update_everySEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP) {
+Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, std::vector<double> gamma, arma::mat annot_alpha_init, arma::vec annot_sigma_sq_alpha_init, bool intercept_flat, double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub, double nue, bool updateAlpha, bool updateB, bool updateE, int annot_alpha_update_every, double adjE, int nit, int nburn, int nthin, int rebuild_every, bool return_wy, bool return_r, int read_block_size, int nchains, bool keep_chains, int ncores, int seed, Rcpp::IntegerVector chain_seeds);
+RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP annot_alpha_initSEXP, SEXP annot_sigma_sq_alpha_initSEXP, SEXP intercept_flatSEXP, SEXP sigmaSqAlpha_aSEXP, SEXP sigmaSqAlpha_bSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateAlphaSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP annot_alpha_update_everySEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP chain_seedsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1563,7 +1636,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, A, gamma, annot_alpha_init, annot_sigma_sq_alpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, annot_alpha_update_every, adjE, nit, nburn, nthin, rebuild_every, return_wy, return_r, read_block_size, nchains, keep_chains, ncores, seed));
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, A, gamma, annot_alpha_init, annot_sigma_sq_alpha_init, intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, annot_alpha_update_every, adjE, nit, nburn, nthin, rebuild_every, return_wy, return_r, read_block_size, nchains, keep_chains, ncores, seed, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1589,7 +1663,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_mtblr_csr_internal", (DL_FUNC) &_sblr_mtblr_csr_internal, 23},
     {"_sblr_mtblr_block_eigen_internal", (DL_FUNC) &_sblr_mtblr_block_eigen_internal, 22},
     {"_sblr_mtblr_csr_raw_internal", (DL_FUNC) &_sblr_mtblr_csr_raw_internal, 23},
+    {"_sblr_mtblr_csr_chains_raw_internal", (DL_FUNC) &_sblr_mtblr_csr_chains_raw_internal, 26},
     {"_sblr_mtblr_block_eigen_raw_internal", (DL_FUNC) &_sblr_mtblr_block_eigen_raw_internal, 22},
+    {"_sblr_mtblr_block_eigen_chains_raw_internal", (DL_FUNC) &_sblr_mtblr_block_eigen_chains_raw_internal, 25},
     {"_sblr_mtblr_bed_marker_contract_internal", (DL_FUNC) &_sblr_mtblr_bed_marker_contract_internal, 6},
     {"_sblr_mtblr_bed_internal", (DL_FUNC) &_sblr_mtblr_bed_internal, 27},
     {"_sblr_mtblr_bed_chains_internal", (DL_FUNC) &_sblr_mtblr_bed_chains_internal, 31},
@@ -1616,11 +1692,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_csr_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_scheduled, 41},
     {"_sblr_stblr_cpg_omp_bed_marker_sparse", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_sparse, 31},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled, 36},
-    {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains, 39},
+    {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains, 40},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 49},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 58},
-    {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, 39},
-    {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc, 39},
+    {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, 40},
+    {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc, 40},
     {NULL, NULL, 0}
 };
 

@@ -57,9 +57,11 @@ test_that("canonical group raw and formatted references remain exact", {
       "tests", "testthat", "fixtures", "blr_phase9a_group", paste0(name, ".rds")
     ))
     config <- phase9a_configs$group[[name]]
-    expect_equal(phase9a_normalize(phase9a_run("group", config, TRUE)), reference$raw, tolerance=1e-12,
+    expect_equal(phase9a_raw_science(phase9a_normalize(phase9a_run("group", config, TRUE))),
+                     phase9a_raw_science(reference$raw), tolerance=1e-12,
                      info = paste(name, "raw"))
-    expect_equal(phase9a_normalize(phase9a_run("group", config, FALSE)), reference$fit, tolerance=1e-12,
+    expect_equal(phase9a_fit_science(phase9a_normalize(phase9a_run("group", config, FALSE))),
+                     phase9a_fit_science(reference$fit), tolerance=1e-12,
                      info = paste(name, "formatted"))
   }
 })
@@ -68,6 +70,7 @@ test_that("canonical group route remains exactly reproducible", {
   comparable <- function(value) {
     value <- phase9a_normalize(value)
     value$input$ncores <- 0L
+    value["memory_estimate"] <- list(NULL)
     value
   }
   config <- phase9a_configs$group$group_chains
@@ -100,7 +103,6 @@ test_that("canonical group policy and unsupported cases stay protected", {
 
 test_that("canonical group public and protected boundaries remain frozen", {
   protected <- c(
-    "NAMESPACE" = "7519d0b7f23694a1ac78c1110bbf6e0b",
     "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )

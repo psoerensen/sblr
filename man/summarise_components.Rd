@@ -19,24 +19,24 @@ summarise_components(
 with `dm` greater than each threshold.}
 
 \item{include_components}{Logical; include mean component probabilities and
-maximum non-null component probabilities from `fit$comp_prob`.}
+maximum non-null component probabilities from `fit$component_probabilities`.}
 
 \item{include_chain_stability}{Logical; include chain-stability summaries
-from `fit$dm_sd` and `fit$bm_sd` when available.}
+from `fit$dm_chain_mean_sd` and `fit$bm_chain_mean_sd` when available.}
 
-\item{top_unstable}{Integer. If positive and `fit$dm_sd` is available, return
+\item{top_unstable}{Integer. If positive and `fit$dm_chain_mean_sd` is available, return
 a list with the summary data frame and the top markers by PIP standard
 deviation for each trait.}
 }
 \value{
 A data frame with one row per trait, unless `top_unstable > 0` and
-  `fit$dm_sd` is available, in which case a list with elements `summary` and
+  `fit$dm_chain_mean_sd` is available, in which case a list with elements `summary` and
   `unstable` is returned.
 }
 \description{
 Computes lightweight marker-level diagnostic summaries for formatted ST-BLR
 BayesR fit objects. In these objects `fit$dm` is expected to be the non-null
-posterior inclusion probability, `P(component > 0)`, and `fit$comp_prob` is
+posterior inclusion probability, `P(component > 0)`, and `fit$component_probabilities` is
 expected to be a named list of marker-by-component probability matrices, one
 per trait. When a `component_0` column is present it is treated as the null
 component, so `fit$dm` should equal `1 - component_0`.
@@ -60,7 +60,7 @@ fit <- list(
               dimnames = list(rownames(comp), "trait1")),
   bm = matrix(c(0.01, -0.03, 0.02), ncol = 1,
               dimnames = list(rownames(comp), "trait1")),
-  comp_prob = list(trait1 = comp)
+  component_probabilities = list(trait1 = comp)
 )
 summarise_components(fit)
 

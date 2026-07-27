@@ -2,7 +2,7 @@
 #'
 #' Computes lightweight marker-level diagnostic summaries for formatted ST-BLR
 #' BayesR fit objects. In these objects `fit$dm` is expected to be the non-null
-#' posterior inclusion probability, `P(component > 0)`, and `fit$comp_prob` is
+#' posterior inclusion probability, `P(component > 0)`, and `fit$component_probabilities` is
 #' expected to be a named list of marker-by-component probability matrices, one
 #' per trait. When a `component_0` column is present it is treated as the null
 #' component, so `fit$dm` should equal `1 - component_0`.
@@ -15,15 +15,15 @@
 #' @param pip_thresholds Numeric vector of PIP thresholds used to count markers
 #'   with `dm` greater than each threshold.
 #' @param include_components Logical; include mean component probabilities and
-#'   maximum non-null component probabilities from `fit$comp_prob`.
+#'   maximum non-null component probabilities from `fit$component_probabilities`.
 #' @param include_chain_stability Logical; include chain-stability summaries
-#'   from `fit$dm_sd` and `fit$bm_sd` when available.
-#' @param top_unstable Integer. If positive and `fit$dm_sd` is available, return
+#'   from `fit$dm_chain_mean_sd` and `fit$bm_chain_mean_sd` when available.
+#' @param top_unstable Integer. If positive and `fit$dm_chain_mean_sd` is available, return
 #'   a list with the summary data frame and the top markers by PIP standard
 #'   deviation for each trait.
 #'
 #' @return A data frame with one row per trait, unless `top_unstable > 0` and
-#'   `fit$dm_sd` is available, in which case a list with elements `summary` and
+#'   `fit$dm_chain_mean_sd` is available, in which case a list with elements `summary` and
 #'   `unstable` is returned.
 #'
 #' @examples
@@ -40,7 +40,7 @@
 #'               dimnames = list(rownames(comp), "trait1")),
 #'   bm = matrix(c(0.01, -0.03, 0.02), ncol = 1,
 #'               dimnames = list(rownames(comp), "trait1")),
-#'   comp_prob = list(trait1 = comp)
+#'   component_probabilities = list(trait1 = comp)
 #' )
 #' summarise_components(fit)
 #'
@@ -58,20 +58,20 @@ summarise_components <- function(
 
   dm <- .stblr_bayesr_summary_as_matrix(fit$dm, "fit$dm", required = TRUE)
   bm <- .stblr_bayesr_summary_as_matrix(fit$bm, "fit$bm", required = FALSE)
-  dm_sd <- .stblr_bayesr_summary_as_matrix(fit$dm_sd, "fit$dm_sd", required = FALSE)
-  bm_sd <- .stblr_bayesr_summary_as_matrix(fit$bm_sd, "fit$bm_sd", required = FALSE)
+  dm_chain_mean_sd <- .stblr_bayesr_summary_as_matrix(fit$dm_chain_mean_sd, "fit$dm_chain_mean_sd", required = FALSE)
+  bm_chain_mean_sd <- .stblr_bayesr_summary_as_matrix(fit$bm_chain_mean_sd, "fit$bm_chain_mean_sd", required = FALSE)
   dm_component_mean <- .stblr_bayesr_summary_as_matrix(
     fit$dm_component_mean,
     "fit$dm_component_mean",
     required = FALSE
   )
 
-  if (is.null(fit$comp_prob)) {
-    stop("fit$comp_prob must be present.")
+  if (is.null(fit$component_probabilities)) {
+    stop("fit$component_probabilities must be present.")
   }
-  if (!is.list(fit$comp_prob) || is.null(names(fit$comp_prob)) ||
-      any(!nzchar(names(fit$comp_prob)))) {
-    stop("fit$comp_prob must be a named list.")
+  if (!is.list(fit$component_probabilities) || is.null(names(fit$component_probabilities)) ||
+      any(!nzchar(names(fit$component_probabilities)))) {
+    stop("fit$component_probabilities must be a named list.")
   }
 
   if (!is.numeric(pip_thresholds) || any(!is.finite(pip_thresholds))) {
@@ -101,8 +101,8 @@ summarise_components <- function(
   }
 
   .stblr_bayesr_summary_check_dims(bm, dm, "fit$bm")
-  .stblr_bayesr_summary_check_dims(dm_sd, dm, "fit$dm_sd")
-  .stblr_bayesr_summary_check_dims(bm_sd, dm, "fit$bm_sd")
+  .stblr_bayesr_summary_check_dims(dm_chain_mean_sd, dm, "fit$dm_chain_mean_sd")
+  .stblr_bayesr_summary_check_dims(bm_chain_mean_sd, dm, "fit$bm_chain_mean_sd")
   .stblr_bayesr_summary_check_dims(dm_component_mean, dm, "fit$dm_component_mean")
 
   rows <- lapply(seq_len(ncol(dm)), function(j) {
@@ -122,35 +122,35 @@ summarise_components <- function(
         sum(pip > thr, na.rm = TRUE)
     }
 
-    if (isTRUE(include_chain_stability) && !is.null(dm_sd)) {
-      row$mean_pip_sd <- mean(dm_sd[, j], na.rm = TRUE)
-      row$max_pip_sd <- max(dm_sd[, j], na.rm = TRUE)
+    if (isTRUE(include_chain_stability) && !is.null(dm_chain_mean_sd)) {
+      row$mean_pip_sd <- mean(dm_chain_mean_sd[, j], na.rm = TRUE)
+      row$max_pip_sd <- max(dm_chain_mean_sd[, j], na.rm = TRUE)
     }
     if (!is.null(bm)) {
       abs_bm <- abs(bm[, j])
       row$mean_abs_effect <- mean(abs_bm, na.rm = TRUE)
       row$max_abs_effect <- max(abs_bm, na.rm = TRUE)
     }
-    if (isTRUE(include_chain_stability) && !is.null(bm_sd)) {
-      row$mean_effect_sd <- mean(bm_sd[, j], na.rm = TRUE)
-      row$max_effect_sd <- max(bm_sd[, j], na.rm = TRUE)
+    if (isTRUE(include_chain_stability) && !is.null(bm_chain_mean_sd)) {
+      row$mean_effect_sd <- mean(bm_chain_mean_sd[, j], na.rm = TRUE)
+      row$max_effect_sd <- max(bm_chain_mean_sd[, j], na.rm = TRUE)
     }
     if (!is.null(dm_component_mean)) {
       row$mean_component_index <- mean(dm_component_mean[, j], na.rm = TRUE)
       row$max_component_index <- max(dm_component_mean[, j], na.rm = TRUE)
     }
 
-    cp <- fit$comp_prob[[trait]]
+    cp <- fit$component_probabilities[[trait]]
     if (is.null(cp)) {
-      stop("fit$comp_prob is missing trait '", trait, "'.")
+      stop("fit$component_probabilities is missing trait '", trait, "'.")
     }
     cp <- .stblr_bayesr_summary_as_matrix(
       cp,
-      paste0("fit$comp_prob[['", trait, "']]"),
+      paste0("fit$component_probabilities[['", trait, "']]"),
       required = TRUE
     )
     if (nrow(cp) != nrow(dm)) {
-      stop("fit$comp_prob[['", trait, "']] must have nrow(fit$dm) rows.")
+      stop("fit$component_probabilities[['", trait, "']] must have nrow(fit$dm) rows.")
     }
     if (is.null(colnames(cp))) {
       colnames(cp) <- paste0("component_", seq.int(0L, ncol(cp) - 1L))
@@ -183,18 +183,18 @@ summarise_components <- function(
   rownames(out) <- NULL
   class(out) <- c("stblr_bayesr_component_summary", class(out))
 
-  if (top_unstable > 0L && !is.null(dm_sd)) {
+  if (top_unstable > 0L && !is.null(dm_chain_mean_sd)) {
     unstable <- lapply(seq_len(ncol(dm)), function(j) {
       trait <- trait_names[j]
       marker <- rownames(dm)
       if (is.null(marker)) marker <- paste0("marker", seq_len(nrow(dm)))
-      ord <- order(dm_sd[, j], decreasing = TRUE, na.last = NA)
+      ord <- order(dm_chain_mean_sd[, j], decreasing = TRUE, na.last = NA)
       ord <- ord[seq_len(min(top_unstable, length(ord)))]
       data.frame(
         marker = marker[ord],
         trait = trait,
         pip = dm[ord, j],
-        pip_sd = dm_sd[ord, j],
+        pip_sd = dm_chain_mean_sd[ord, j],
         stringsAsFactors = FALSE
       )
     })

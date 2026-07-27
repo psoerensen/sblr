@@ -173,7 +173,7 @@ test_that("public CSR routing and retained MT eigen disposition remain unchanged
   r_text <- paste(vapply(c("R/sparse_ld_bed_helper.R", "R/stblr-csr-sbayesrc.R", "R/interface_mtblr.R"), blr_source_text, character(1)), collapse = "\n")
   mt_text <- blr_source_text("src/mtblr.cpp")
   expect_false("ld_backend" %in% names(formals(sblr::stblr_csr)))
-  expect_false("ld_backend" %in% names(formals(sblr::stblr_csr_bayesr)))
+  expect_false("stblr_csr_bayesr" %in% getNamespaceExports("sblr"))
   expect_false("ld_backend" %in% names(formals(sblr::stblr_csr_annot)))
   expect_false("mtblr_eigen" %in% getNamespaceExports("sblr"))
   expect_match(mt_text, "mtblr_eigen", fixed = TRUE)

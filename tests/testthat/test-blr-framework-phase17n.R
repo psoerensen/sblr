@@ -128,7 +128,7 @@ test_that("Phase 17N source architecture remains audit-only", {
 })
 
 test_that("current scalar BED interface remains trait-specific and rejects covariates", {
-  expect_match(paste(deparse(body(stblr_bed)), collapse = "\n"),
+  expect_match(paste(deparse(body(sblr:::.stblr_bed_impl)), collapse = "\n"),
                "covar is not currently supported")
   expect_true("mtblr_bed" %in% getNamespaceExports("sblr"))
 })

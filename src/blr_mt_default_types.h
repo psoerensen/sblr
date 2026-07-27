@@ -68,6 +68,8 @@ struct MtDefaultCoreResult {
  std::vector<std::vector<double>> vbs;
  std::vector<std::vector<double>> vgs;
  std::vector<std::vector<double>> ves;
+ std::vector<std::vector<double>> vle;
+ std::vector<std::vector<double>> vld;
 
  std::vector<std::vector<double>> cvbm;
  std::vector<std::vector<double>> cvgm;
@@ -104,6 +106,8 @@ struct MtDefaultFinalResult {
  std::vector<std::vector<double>> vbs;
  std::vector<std::vector<double>> vgs;
  std::vector<std::vector<double>> ves;
+ std::vector<std::vector<double>> vle;
+ std::vector<std::vector<double>> vld;
 
  std::vector<std::vector<double>> covb;
  std::vector<std::vector<double>> covg;

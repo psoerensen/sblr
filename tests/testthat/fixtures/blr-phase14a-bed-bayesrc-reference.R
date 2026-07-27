@@ -14,7 +14,8 @@ phase14a_capture <- function(ncores=1L,nchains=1L,seed=141L,updateAlpha=TRUE,
   add_intercept=FALSE,standardize_annotations=FALSE,updateAlpha=updateAlpha,
   mixture_var=c(0,.01,.1,1),pi=c(.95,.03,.015,.005),nit=8L,nburn=2L,nthin=1L,
   seed=seed,ncores=ncores,nchains=nchains,updateB=FALSE,updateE=FALSE,
-  rebuild_every=2L,read_block_size=2L,return_wy=TRUE,return_r=TRUE)
+  rebuild_every=2L,read_block_size=2L,return_wy=TRUE,return_r=TRUE,
+  convergence="none")
  list(raw=get(".phase14a_raw",envir=.GlobalEnv),fit=fit)
 }
 

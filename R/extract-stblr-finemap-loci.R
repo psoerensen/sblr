@@ -118,22 +118,28 @@ extract_stblr_finemap_loci <- function(
     fit, "bm", trait = trait, marker_names = marker_names, required = TRUE
   )
   pip_sd <- .stblr_extract_finemap_fit_stat(
-    fit, "dm_sd", trait = trait, marker_names = marker_names, required = FALSE
+    fit, "dm_chain_mean_sd", trait = trait, marker_names = marker_names,
+    required = FALSE
   )
   pip_min <- .stblr_extract_finemap_fit_stat(
-    fit, "dm_min", trait = trait, marker_names = marker_names, required = FALSE
+    fit, "dm_chain_mean_min", trait = trait, marker_names = marker_names,
+    required = FALSE
   )
   pip_max <- .stblr_extract_finemap_fit_stat(
-    fit, "dm_max", trait = trait, marker_names = marker_names, required = FALSE
+    fit, "dm_chain_mean_max", trait = trait, marker_names = marker_names,
+    required = FALSE
   )
   bm_sd <- .stblr_extract_finemap_fit_stat(
-    fit, "bm_sd", trait = trait, marker_names = marker_names, required = FALSE
+    fit, "bm_chain_mean_sd", trait = trait, marker_names = marker_names,
+    required = FALSE
   )
   bm_min <- .stblr_extract_finemap_fit_stat(
-    fit, "bm_min", trait = trait, marker_names = marker_names, required = FALSE
+    fit, "bm_chain_mean_min", trait = trait, marker_names = marker_names,
+    required = FALSE
   )
   bm_max <- .stblr_extract_finemap_fit_stat(
-    fit, "bm_max", trait = trait, marker_names = marker_names, required = FALSE
+    fit, "bm_chain_mean_max", trait = trait, marker_names = marker_names,
+    required = FALSE
   )
 
   map <- .stblr_marker_map_from_Glist(Glist, fit = fit)

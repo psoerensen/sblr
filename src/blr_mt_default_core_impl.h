@@ -55,6 +55,8 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  std::vector<std::vector<double>> ves(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
  std::vector<std::vector<double>> vbs(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
  std::vector<std::vector<double>> vgs(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
+ std::vector<std::vector<double>> vle(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
+ std::vector<std::vector<double>> vld(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
  std::vector<std::vector<double>> cvbm(nt, std::vector<double>(nt, 0.0));
  std::vector<std::vector<double>> cvem(nt, std::vector<double>(nt, 0.0));
  std::vector<std::vector<double>> cvgm(nt, std::vector<double>(nt, 0.0));
@@ -230,6 +232,15 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
   computeG(nt, m, b, wy, r, n, G);
   for (int t = 0; t < nt; t++) {
    vgs[t][it] = G(t,t);
+   long double diagonal_contribution=0.0L;
+   for (int i=0; i<m; ++i) {
+    const long double effect=static_cast<long double>(b[t][i]);
+    diagonal_contribution+=static_cast<long double>(mt_diagonal(data,t,i))*
+     effect*effect;
+   }
+   vle[t][it]=static_cast<double>(
+    diagonal_contribution/static_cast<long double>(n[t]));
+   vld[t][it]=vgs[t][it]-vle[t][it];
   }
   for (int t1 = 0; t1 < nt; t1++  ) {
    for (int t2 = 0; t2 < nt; t2++) {
@@ -280,6 +291,8 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  result.vbs=std::move(vbs);
  result.vgs=std::move(vgs);
  result.ves=std::move(ves);
+ result.vle=std::move(vle);
+ result.vld=std::move(vld);
  result.cvbm=std::move(cvbm);
  result.cvgm=std::move(cvgm);
  result.cvem=std::move(cvem);

@@ -12,7 +12,7 @@ mtblr_csr(
   trait_metadata = NULL,
   marker_policy = c("strict", "reorder_stats"),
   sample_overlap = "not_modeled",
-  method = "bayesC",
+  method = "bayesc",
   n = NULL,
   sets = NULL,
   b = NULL,
@@ -34,6 +34,13 @@ mtblr_csr(
   nburn = 500,
   nthin = 1,
   seed = 1,
+  nchains = 1L,
+  ncores = 1L,
+  chain_seeds = NULL,
+  keep_chains = FALSE,
+  convergence = c("auto", "none", "core"),
+  convergence_control = NULL,
+  memory_warning_gb = 8,
   verbose = FALSE
 )
 }
@@ -53,7 +60,7 @@ single-trait objects containing `wy`, `ww`, `yy`, `n`, and marker IDs.}
 
 \item{sample_overlap}{Must be `"not_modeled"`.}
 
-\item{method}{Must be `"bayesC"`.}
+\item{method}{Must be `"bayesc"`.}
 
 \item{n}{Optional sample sizes overriding identical values only.}
 
@@ -78,6 +85,20 @@ single-trait objects containing `wy`, `ww`, `yy`, `n`, and marker IDs.}
 \item{nit, nburn, nthin}{MCMC controls.}
 
 \item{seed}{Explicit native RNG seed.}
+
+\item{nchains}{Number of complete joint-MT logical chains.}
+
+\item{ncores}{Requested logical-chain workers.}
+
+\item{chain_seeds}{Optional signed integer seed per chain.}
+
+\item{keep_chains}{Retain compact logical-chain records.}
+
+\item{convergence}{Convergence mode: `"auto"`, `"none"`, or `"core"`.}
+
+\item{convergence_control}{Optional named convergence-control list.}
+
+\item{memory_warning_gb}{Analytical memory-warning threshold in GiB.}
 
 \item{verbose}{Print resolved execution metadata.}
 }

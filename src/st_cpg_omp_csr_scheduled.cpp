@@ -387,6 +387,38 @@ static Rcpp::List stblr_csr_scheduled_bayesc_result_to_raw(
   Rcpp::Named("mean")=R_NilValue,Rcpp::Named("sd")=R_NilValue,
   Rcpp::Named("min")=R_NilValue,Rcpp::Named("max")=R_NilValue,
   Rcpp::Named("acceptance")=R_NilValue);
+ Rcpp::List chains=R_NilValue;
+ if (binding.keep_chains) {
+  chains=Rcpp::List(nt);
+  for (int t=0;t<nt;++t) {
+   Rcpp::List trait_chains(binding.nchains);
+   for (int chain=0;chain<binding.nchains;++chain) {
+    const int task=t*binding.nchains+chain;
+    const arma::uword task_u=static_cast<arma::uword>(task);
+    trait_chains[chain]=Rcpp::List::create(
+     Rcpp::Named("marker")=Rcpp::List::create(
+      Rcpp::Named("bm")=result.task_bm.row(task_u).t(),
+      Rcpp::Named("dm")=result.task_dm.row(task_u).t(),
+      Rcpp::Named("state")=result.task_state.row(task_u).t()),
+     Rcpp::Named("trace")=Rcpp::List::create(
+      Rcpp::Named("vbs")=result.task_vbs.row(task_u).t(),
+      Rcpp::Named("vgs")=result.task_vgs.row(task_u).t(),
+      Rcpp::Named("ves")=result.task_ves.row(task_u).t(),
+      Rcpp::Named("vle")=result.task_vle.row(task_u).t(),
+      Rcpp::Named("vld")=result.task_vld.row(task_u).t(),
+      Rcpp::Named("pis")=result.task_pis.row(task_u).t()),
+     Rcpp::Named("pi")=Rcpp::List::create(
+      Rcpp::Named("final")=Rcpp::NumericVector::create(
+       1.0-result.task_final_pi(task_u),result.task_final_pi(task_u)),
+      Rcpp::Named("mean")=Rcpp::NumericVector::create(
+       1.0-result.task_mean_pi(task_u),result.task_mean_pi(task_u))),
+     Rcpp::Named("retained_draw_count")=result.task_nsamples(task_u),
+     Rcpp::Named("diagnostics")=Rcpp::List::create(
+      Rcpp::Named("seconds")=result.task_seconds[static_cast<std::size_t>(task)]));
+   }
+   chains[t]=trait_chains;
+  }
+ }
  Rcpp::List raw=Rcpp::List::create(
   Rcpp::Named("schema")=Rcpp::List::create(Rcpp::Named("class")="stblr_raw",Rcpp::Named("version")=1),
   Rcpp::Named("meta")=Rcpp::List::create(
@@ -400,7 +432,7 @@ static Rcpp::List stblr_csr_scheduled_bayesc_result_to_raw(
   Rcpp::Named("marker")=marker,Rcpp::Named("trace")=trace,Rcpp::Named("variance")=variance,
   Rcpp::Named("pi")=Rcpp::List::create(Rcpp::Named("final")=pi_final,
    Rcpp::Named("mean")=pi_mean,Rcpp::Named("names")=Rcpp::CharacterVector::create("pi0","pi1")),
-  Rcpp::Named("diagnostics")=diagnostics,Rcpp::Named("chains")=R_NilValue,
+  Rcpp::Named("diagnostics")=diagnostics,Rcpp::Named("chains")=chains,
   Rcpp::Named("prior")=Rcpp::List::create(),Rcpp::Named("group")=Rcpp::List::create(),
   Rcpp::Named("annotation")=Rcpp::List::create(),Rcpp::Named("component")=Rcpp::List::create(),
   Rcpp::Named("selection")=selection);
@@ -465,9 +497,6 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
  if (nburn < 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: nburn must be non-negative.");
  if (nthin <= 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: nthin must be positive.");
  if (nchains <= 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: nchains must be positive.");
- if (keep_chains) {
-  throw std::runtime_error("stblr_cpg_omp_csr_scheduled: keep_chains is not yet supported for scheduled CSR.");
- }
  if (!chain_seeds.empty() && static_cast<int>(chain_seeds.size()) != nchains) {
   throw std::runtime_error("stblr_cpg_omp_csr_scheduled: chain_seeds must have length nchains.");
  }

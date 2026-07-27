@@ -24,7 +24,7 @@ optional but validated when present.}
 `fit$chains`.}
 
 \item{require_ld_swap}{Logical; require LD-swap diagnostics in
-`fit$ld_swap`.}
+`fit$diagnostics$ld_swap`.}
 
 \item{verbose}{Logical; retained for API symmetry. Printing is handled by
 [print.stblr_backend_check()].}

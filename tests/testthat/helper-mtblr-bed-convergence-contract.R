@@ -162,7 +162,7 @@ phase17t_overview <- function(summary) {
 
 phase17t_memory <- function(nchains, nit, nt, nmodels, selected_markers) {
   q <- nt * (nt + 1) / 2
-  c(tier1_trace_bytes = 8 * nchains * nit * 3 * nt,
+  c(tier1_trace_bytes = 8 * nchains * nit * 5 * nt,
     covariance_trace_bytes = 8 * nchains * nit * 3 * q,
     probability_trace_bytes = 8 * nchains * nit * 2,
     full_pi_trace_bytes = 8 * nchains * nit * nmodels,
@@ -172,7 +172,7 @@ phase17t_memory <- function(nchains, nit, nt, nmodels, selected_markers) {
 }
 
 phase17t_scope_contract <- function() {
-  list(tier1 = c("B_diag", "G_diag", "E_diag"),
+  list(tier1 = c("vbs", "vgs", "ves", "vle", "vld"),
        tier2_requires_new_traces = c("B_lower", "G_lower", "E_lower",
                                     "pi_null", "pi_active"),
        tier3_opt_in = c("selected_marker_b", "selected_marker_d"),

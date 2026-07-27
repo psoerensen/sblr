@@ -35,6 +35,8 @@ struct MtBedChainSummary {
  std::vector<std::vector<double>> vbs;
  std::vector<std::vector<double>> vgs;
  std::vector<std::vector<double>> ves;
+ std::vector<std::vector<double>> vle;
+ std::vector<std::vector<double>> vld;
  std::vector<std::vector<double>> covb;
  std::vector<std::vector<double>> covg;
  std::vector<std::vector<double>> cove;

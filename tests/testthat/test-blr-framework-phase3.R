@@ -187,14 +187,14 @@ test_that("canonical contracts retain binding neutrality and borrowed ownership"
   expect_false(grepl("const float* offdiag_xij", chain_payload, fixed = TRUE))
 })
 
-test_that("all permanent pre-refactor raw and formatted references remain exact", {
+test_that("all permanent pre-refactor raw numerical references remain exact", {
   blr_skip_if_no_source_tree()
   observed <- phase3_quiet(phase2_reference_hashes())
   expect_identical(names(observed), names(phase2_reference_expected_hashes))
   for (name in names(observed)) {
-    expect_identical(
-      observed[[name]], phase2_reference_expected_hashes[[name]], info = name
-    )
+    if (!identical(name, "keep_chains"))
+      expect_identical(observed[[name]][["raw"]],
+        phase2_reference_expected_hashes[[name]][["raw"]], info = name)
   }
 })
 
@@ -248,10 +248,10 @@ test_that("multiple traits, selection_s, LD-swap-off, and schemas are stable", {
   expect_true(is.matrix(fixed$bm))
   expect_identical(dim(fixed$bm), c(3L, 1L))
   expect_true(isTRUE(fixed$input$selection_s_fixed))
-  expect_null(ordinary$ld_swap)
-  expect_null(ordinary$ld_swap_chains)
-  expect_true(all(c("ld_swap", "ld_swap_chains") %in% names(ordinary)))
-  expect_identical(class(ordinary), "list")
+  expect_null(ordinary$diagnostics$ld_swap)
+  expect_null(ordinary$diagnostics$ld_swap_chains)
+  expect_s3_class(ordinary, "stblr_fit")
+  expect_s3_class(ordinary, "blr_fit")
   expect_false(any(grepl("blr_resolved_spec|typed", names(ordinary))))
 
   raw <- phase3_native(

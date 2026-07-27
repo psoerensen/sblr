@@ -275,11 +275,14 @@ mtblr_block_eigen <- function(
   eigen_filter = "hard_truncate", eigen_tau = 0.01, eigen_eta = 0,
   summary_reference = "same_bed_by_construction", trait_metadata = NULL,
   marker_policy = c("strict", "reorder_stats"),
-  sample_overlap = "not_modeled", method = "bayesC", n = NULL, sets = NULL,
+  sample_overlap = "not_modeled", method = "bayesc", n = NULL, sets = NULL,
   b = NULL, h2 = 0.5, pi = 0.001, models = NULL, pimodels = NULL,
   vg = NULL, vb = NULL, ve = NULL, ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
-  nit = 1000, nburn = 500, nthin = 1, seed = 1, verbose = FALSE
+  nit = 1000, nburn = 500, nthin = 1, seed = 1,
+  nchains = 1L, ncores = 1L, chain_seeds = NULL,
+  keep_chains = FALSE, convergence = c("auto", "none", "core"),
+  convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
   if (missing(Glist) || is.null(Glist)) {
     stop("Glist is mandatory for mtblr_block_eigen().", call. = FALSE)
@@ -289,6 +292,10 @@ mtblr_block_eigen <- function(
   }
   operator_sharing <- match.arg(operator_sharing)
   marker_policy <- match.arg(marker_policy)
+  chain <- .blr_chain_controls(
+    nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
+  conv <- .blr_convergence_controls(
+    convergence, convergence_control, chain$nchains)
   if (!identical(summary_reference, "same_bed_by_construction")) {
     .mtblr_block_eigen_reference_error(
       "summary_reference must be 'same_bed_by_construction'.")
@@ -296,8 +303,8 @@ mtblr_block_eigen <- function(
   if (!identical(sample_overlap, "not_modeled")) {
     stop("sample_overlap must be exactly 'not_modeled'.", call. = FALSE)
   }
-  if (!identical(method, "bayesC")) {
-    stop("Only method = 'bayesC' is supported.", call. = FALSE)
+  if (!identical(method, "bayesc")) {
+    stop("Only method = 'bayesc' is supported.", call. = FALSE)
   }
   st <- .mtblr_normalize_stats(stats)
   if (!is.null(n) &&
@@ -386,16 +393,6 @@ mtblr_block_eigen <- function(
   if (!identical(dim(b), c(st$m, st$nt)) || any(!is.finite(b))) {
     stop("b must be a finite m by nt matrix or trait list.", call. = FALSE)
   }
-  for (x in c("nit", "nburn", "nthin", "seed")) {
-    value <- get(x)
-    if (length(value) != 1L || !is.finite(value) ||
-        value != as.integer(value) ||
-        (x != "nburn" && value <= 0) ||
-        (x == "nburn" && value < 0)) {
-      stop(x, " must be an integer-compatible scalar in its valid range.",
-           call. = FALSE)
-    }
-  }
   trait_metadata <- if (is.null(trait_metadata)) {
     data.frame(trait_id = st$trait_names)
   } else as.data.frame(trait_metadata, stringsAsFactors = FALSE)
@@ -413,14 +410,27 @@ mtblr_block_eigen <- function(
   }
   trait_metadata$sample_size <- st$n
   trait_metadata$operator_sharing_mode <- sharing_mode
-  raw <- mtblr_block_eigen_raw_internal(
+  memory <- .blr_memory_estimate(
+    "mtblr", "block_eigen", st$m, st$nt, chain$nchains, chain$ncores,
+    chain$nit, chain$nit + chain$nburn, chain$keep_chains,
+    convergence_quantities = if (conv$compute || conv$keep_traces) 5L * st$nt else 0L,
+    keep_traces = conv$keep_traces,
+    operator_bytes = 8 * st$m * st$m * owner_count)
+  .blr_memory_warning(memory, memory_warning_gb, conv$mode,
+                      conv$compute || conv$keep_traces, conv$keep_traces)
+  native_execution <- mtblr_block_eigen_chains_raw_internal(
     st$wy, st$yy, lapply(seq_len(st$nt), function(t) b[, t]),
     operator_descriptors, set_spec$native, vb, ve,
     lapply(seq_len(st$nt), function(i) ssb_prior[, i]),
     lapply(seq_len(st$nt), function(i) sse_prior[, i]),
     mod$native, mod$probabilities, nub, nue, updateB, updateE, updatePi,
-    st$n, as.integer(nit), as.integer(nburn), as.integer(nthin),
-    as.integer(seed), 4L)
+    st$n, chain$nit, chain$nburn, chain$nthin,
+    chain$seed, 4L, chain$nchains, chain$ncores,
+    chain$chain_seeds_native)
+  execution <- .mtblr_summary_multichain(
+    native_execution, chain, conv, st$trait_names, "bayesc", "block_eigen",
+    updateB, updateE)
+  raw <- execution$raw
   raw$diagnostics$block_eigen$sharing_mode <- sharing_mode
   raw$model$names <- mod$names
   raw$pi$names <- mod$names
@@ -472,7 +482,14 @@ mtblr_block_eigen <- function(
     summary_ww_policy =
       "validated_by_construction_not_used_as_runtime_diagonal",
     m = st$m, nt = st$nt, n = st$n, h2 = h2, nub = nub, nue = nue,
-    nit = nit, nburn = nburn, nthin = nthin, seed = seed,
+    nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
+    seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
+    chain_seeds_requested = chain$chain_seeds_requested,
+    chain_seeds_resolved = execution$seeds,
+    keep_chains = chain$keep_chains, convergence = conv$mode,
+    convergence_control = conv[c("warn", "rhat_threshold",
+      "ess_per_chain_threshold", "mcse_mean_over_sd_threshold",
+      "keep_traces")], memory_warning_gb = memory_warning_gb,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     models = mod$matrix, model_names = mod$names,
     pimodels = mod$probabilities, sets = set_spec$public,
@@ -485,7 +502,8 @@ mtblr_block_eigen <- function(
     scale = "standardized_genotype", alignment = raw$alignment,
     trait_metadata = trait_metadata)
   if (isTRUE(verbose)) {
-    print(input[c("backend", "m", "nt", "operator_sharing_mode", "seed")])
+    print(input[c("backend", "m", "nt", "operator_sharing_mode", "seed",
+                  "nchains", "ncores")])
   }
   fit <- .as_mtblr_fit(raw, aligned$marker_ids, st$trait_names,
                        aligned$marker_metadata, trait_metadata,
@@ -508,5 +526,21 @@ mtblr_block_eigen <- function(
     bed_reference_source = raw$data$bed_reference_source,
     reference_sample_size = raw$data$reference_sample_size,
     selected_row_count = raw$data$selected_row_count)
-  fit
+  fit$chains <- execution$chains
+  fit$convergence <- execution$convergence
+  fit["convergence_traces"] <- list(execution$convergence_traces)
+  fit$input$memory_estimate <- memory
+  messages <- .blr_convergence_warning_messages(
+    fit$convergence, if (conv$mode == "core") "core" else "auto",
+    "mtblr", "block_eigen")
+  if (isTRUE(conv$warn) && conv$mode != "none" &&
+      !(conv$mode == "auto" && chain$nchains == 1L) && length(messages)) {
+    warning(messages[[1L]], call. = FALSE)
+  }
+  .blr_finalize_fit(
+    fit, "mtblr", "bayesc", "block_eigen", data = raw$data,
+    diagnostics = c(raw$diagnostics, list(
+      block_eigen_public = diagnostics,
+      operator_metadata = fit$operator_metadata)),
+    memory_estimate = memory)
 }

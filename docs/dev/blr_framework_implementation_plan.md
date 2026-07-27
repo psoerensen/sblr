@@ -1630,6 +1630,15 @@ memory, and warning terminology; block-eigen public API organization; operator
 reduction tests; and removal of unnecessary aliases and compatibility-only
 naming because backward compatibility is not required.
 
+Implementation owns the seven canonical fitting exports, exact lowercase
+method values, the common terminal MCMC/control block, flat deterministic
+logical-chain records, explicit probability/covariance/stability names, a
+family-neutral scalar convergence engine, the public ST block-eigen route, and
+permanent unified contract/reduction/reproducibility owners. The scheduled CSR
+BayesC route remains available through `stblr_csr()` with task-private modern
+convergence traces; historical dense and low-level marker routes remain
+internal scientific references.
+
 ## Phases 19–21
 
 - Phase 19: MTBLR BayesR across supported operators.

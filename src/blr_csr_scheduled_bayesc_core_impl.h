@@ -655,6 +655,28 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
  result.final_vld=std::move(final_vld);
  result.nsamples=std::move(nsamples_vec);
  result.task_seconds=std::move(task_seconds);
+ result.task_bm=std::move(bm_task);
+ result.task_dm=std::move(dm_task);
+ result.task_state=std::move(d_task_double);
+ result.task_vbs=std::move(vbs_task);
+ result.task_vgs=std::move(vgs_task);
+ result.task_ves=std::move(ves_task);
+ result.task_vle=std::move(vles_task);
+ result.task_vld=std::move(vlds_task);
+ result.task_pis=std::move(pis_task);
+ result.task_final_pi=std::move(final_pi_task);
+ result.task_nsamples=std::move(nsamples_task);
+ result.task_mean_pi=arma::vec(ntasks,arma::fill::zeros);
+ for (int task=0;task<ntasks;++task) {
+  const arma::uword task_u=static_cast<arma::uword>(task);
+  double sum=0.0; int count=0;
+  for (int it=nburn;it<nit+nburn;++it) {
+   if ((it-nburn)%nthin!=0) continue;
+   sum+=result.task_pis(task_u,static_cast<arma::uword>(it)); ++count;
+  }
+  result.task_mean_pi(task_u)=count>0 ? sum/static_cast<double>(count) :
+   result.task_final_pi(task_u);
+ }
  result.marker_count=m;
  result.trait_count=nt;
  result.chain_count=nchains;

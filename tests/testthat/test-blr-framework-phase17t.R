@@ -59,7 +59,7 @@ test_that("Phase 17T thresholds and overview are advisory and aggregated", {
   flags <- phase17t_flags(1.02, 350, 399, 0.06, 4)
   expect_true(all(flags))
   expect_false(any(phase17t_flags(1.01, 400, 400, 0.05, 4)))
-  tab <- data.frame(quantity = c("B_diag[T1]", "G_diag[T1]"),
+  tab <- data.frame(quantity = c("vbs[T1]", "vgs[T1]"),
     status = c("computed", "constant"), rhat = c(1.02, NA),
     ess_bulk = c(300, NA), ess_tail = c(250, NA),
     mcse_mean_over_sd = c(.06, NA), nchains = 4,
@@ -73,7 +73,7 @@ test_that("Phase 17T thresholds and overview are advisory and aggregated", {
 
 test_that("Phase 17T memory formulas count only diagnostic storage", {
   got <- phase17t_memory(4, 1000, 5, 16, 10)
-  expect_equal(unname(got["tier1_trace_bytes"]), 8 * 4 * 1000 * 3 * 5)
+  expect_equal(unname(got["tier1_trace_bytes"]), 8 * 4 * 1000 * 5 * 5)
   expect_equal(unname(got["covariance_trace_bytes"]), 8 * 4 * 1000 * 3 * 15)
   expect_equal(unname(got["probability_trace_bytes"]), 8 * 4 * 1000 * 2)
   expect_equal(unname(got["full_pi_trace_bytes"]), 8 * 4 * 1000 * 16)
@@ -84,7 +84,7 @@ test_that("Phase 17T memory formulas count only diagnostic storage", {
 
 test_that("Phase 17T tiers and retention are explicitly separate", {
   scope <- phase17t_scope_contract()
-  expect_identical(scope$tier1, c("B_diag", "G_diag", "E_diag"))
+  expect_identical(scope$tier1, c("vbs", "vgs", "ves", "vle", "vld"))
   expect_setequal(scope$tier2_requires_new_traces,
                   c("B_lower", "G_lower", "E_lower", "pi_null", "pi_active"))
   expect_identical(scope$tier3_opt_in,
@@ -110,6 +110,6 @@ test_that("Phase 17T contract remains protected after public activation", {
                   collapse = "\n")
   expect_true(grepl("diagnostics\\$convergence", source))
   expect_true(grepl("MtBedConvergenceTraceBundle", native, fixed = TRUE))
-  expect_false(grepl("\\.mtblr_convergence_ess <-", source))
+  expect_false(grepl("\\.blr_convergence_ess <-", source))
   expect_true(grepl("iterationwise_chain_mean", source, fixed = TRUE))
 })

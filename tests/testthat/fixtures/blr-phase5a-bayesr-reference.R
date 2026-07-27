@@ -50,8 +50,9 @@ phase5a_bayesr_run <- function(config, raw=FALSE) {
   args <- list(stats=x$stats,Glist=x$Glist,ld_prefix=prefix,mixture_var=config$mixture,
     pi=pi,alpha=alpha,h2=.4,adjE=.9,nit=14L,nburn=4L,nthin=1L,ncores=config$ncores,
     seed=31L,nchains=config$nchains,keep_chains=config$keep,chain_seeds=config$seeds,
-    updateB=TRUE,updateE=FALSE,updatePi=config$update_pi,updateLDswap=FALSE)
-  fit <- do.call(stblr_csr_bayesr,args)
+    updateB=TRUE,updateE=FALSE,updatePi=config$update_pi,updateLDswap=FALSE,
+    method="bayesr",convergence="none")
+  fit <- do.call(stblr_csr,args)
   if (!raw) return(fit)
   nt <- config$traits; m <- 4L; vy <- rep(1,nt); active <- sum(pi[-1])
   B <- diag((vy*.4)/(m*active),nt); E <- diag(vy*.6,nt)
@@ -69,13 +70,37 @@ phase5a_bayesr_run <- function(config, raw=FALSE) {
 
 phase5a_bayesr_normalize <- function(x) {
   if (!is.list(x)) return(x)
-  for (nm in names(x)) {
-    if (nm %in% c("seconds_mean","seconds_max")) x[[nm]][] <- 0
-    else if (nm == "ld_prefix") x[[nm]] <- "<fixture>"
-    else x[[nm]] <- phase5a_bayesr_normalize(x[[nm]])
+  nms <- names(x)
+  for (i in seq_along(x)) {
+    nm <- if (is.null(nms)) NA_character_ else nms[[i]]
+    if (!is.na(nm) && nm %in% c("seconds_mean","seconds_max")) x[[nm]][] <- 0
+    else if (!is.na(nm) && identical(nm,"ld_prefix")) x[[nm]] <- "<fixture>"
+    else x[i] <- list(phase5a_bayesr_normalize(x[[i]]))
   }
   x
 }
+phase5a_bayesr_pick <- function(x,current,historical=current) if(!is.null(x[[current]])) x[[current]] else x[[historical]]
+phase5a_bayesr_fit_science <- function(x) list(
+ bm=x$bm,dm=x$dm,wy=x$wy,r=x$r,b=x$b,d=x$d,vbs=x$vbs,vgs=x$vgs,
+ ves=x$ves,vle=x$vle,vld=x$vld,component=x$component,
+ pi_final=as.numeric(phase5a_bayesr_pick(x,"pi_final","final_pi")),
+ pi_mean=as.numeric(phase5a_bayesr_pick(x,"pi_mean","mean_pi")),
+ cov_b_mean=phase5a_bayesr_pick(x,"cov_b_mean","covb"),
+ cov_g_mean=phase5a_bayesr_pick(x,"cov_g_mean","covg"),
+ cov_e_mean=phase5a_bayesr_pick(x,"cov_e_mean","cove"),
+ cov_b_final=phase5a_bayesr_pick(x,"cov_b_final","vb"),
+ cov_g_final=phase5a_bayesr_pick(x,"cov_g_final","vg"),
+ cov_e_final=phase5a_bayesr_pick(x,"cov_e_final","ve"),
+ component_probabilities=phase5a_bayesr_pick(x,"component_probabilities","comp_prob"),
+ dm_component_mean=x$dm_component_mean,ncomp=x$ncomp,mixture_var=x$mixture_var,
+ updateE_diagnostics=x$updateE_diagnostics,rb=x$rb,rg=x$rg,re=x$re)
+phase5a_bayesr_drop_null <- function(x) {
+ if(!is.list(x)) return(x)
+ x <- x[!vapply(x,is.null,logical(1))]
+ lapply(x,phase5a_bayesr_drop_null)
+}
+phase5a_bayesr_raw_science <- function(x)
+ phase5a_bayesr_drop_null(x[c("marker","trace","variance","pi","component")])
 
 phase5a_bayesr_metadata <- function(name,config) list(
   starting_commit=phase5a_bayesr_starting_commit,R_version=R.version.string,

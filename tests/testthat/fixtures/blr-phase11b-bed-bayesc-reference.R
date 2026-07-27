@@ -13,7 +13,7 @@ phase11b_capture <- function(route = c("multichain", "single"), ncores = 1L,
     tracer = quote(assign(".phase11b_raw", raw, envir = .GlobalEnv)),
     where = ns, print = FALSE))
   on.exit(suppressMessages(try(untrace(".as_stblr_fit", where = ns), silent = TRUE)))
-  fit <- sblr::stblr_bed_marker(x$Glist, x$y, pi_init = .5,
+  fit <- sblr:::stblr_bed_marker(x$Glist, x$y, pi_init = .5,
     pi_prior_mean = .5, pi_prior_strength = 4, nit = 6L, nburn = 2L,
     nthin = 1L, seed = seed, ncores = ncores, nchains = 1L,
     backend = "scheduled", updateB = FALSE, updateE = FALSE,

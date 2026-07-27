@@ -20,7 +20,7 @@ inline MtDefaultLegacyResult make_mt_default_legacy_result(
  const int nt=value.nt;
  const int m=value.m;
  const int nmodels=value.nmodels;
- MtDefaultLegacyResult result(20);
+ MtDefaultLegacyResult result(22);
  for (auto& field : result) field.resize(nt);
  for (int t=0; t<nt; ++t) {
   for (int field=0; field<=6; ++field) result[field][t].resize(m);
@@ -30,6 +30,8 @@ inline MtDefaultLegacyResult make_mt_default_legacy_result(
   result[17][t].resize(nmodels);
   result[18][t].resize(4);
   result[19][t].resize(2);
+  result[20][t].resize(nit+nburn);
+  result[21][t].resize(nit+nburn);
  }
  for (int t=0; t<nt; ++t) {
   for (int i=0; i<m; ++i) {
@@ -45,6 +47,8 @@ inline MtDefaultLegacyResult make_mt_default_legacy_result(
    result[7][t][i]=value.vbs[t][i];
    result[8][t][i]=value.vgs[t][i];
    result[9][t][i]=value.ves[t][i];
+   result[20][t][i]=value.vle[t][i];
+   result[21][t][i]=value.vld[t][i];
   }
   for (int t2=0; t2<nt; ++t2) {
    result[10][t][t2]=value.covb[t][t2];

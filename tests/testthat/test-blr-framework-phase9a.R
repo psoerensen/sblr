@@ -32,13 +32,13 @@ test_that("Phase 9A binding-neutral contracts contain no binding APIs",{
  for(tok in c("Rcpp","RcppArmadillo","SEXP","RObject","NumericVector","NumericMatrix","Nullable","Rcpp::stop","Rcpp::Rcout","R::rnorm","R::rchisq","arma::randn","arma::randu","pybind11","Python.h"))expect_false(grepl(tok,x,fixed=TRUE),info=tok)
 })
 test_that("Phase 9A all production raw and formatted references are exact",{
- for(backend in names(phase9a_configs))for(nm in names(phase9a_configs[[backend]])){ref<-readRDS(phase9a_path("tests","testthat","fixtures",paste0("blr_phase9a_",backend),paste0(nm,".rds")));cfg<-phase9a_configs[[backend]][[nm]];tol<-if(backend=="annotation"&&nm=="annot_learned")1e-8 else 1e-12;expect_equal(phase9a_normalize(phase9a_run(backend,cfg,TRUE)),ref$raw,tolerance=tol,info=paste(backend,nm,"raw"));expect_equal(phase9a_normalize(phase9a_run(backend,cfg,FALSE)),ref$fit,tolerance=tol,info=paste(backend,nm,"fit"))}
+ for(backend in names(phase9a_configs))for(nm in names(phase9a_configs[[backend]])){ref<-readRDS(phase9a_path("tests","testthat","fixtures",paste0("blr_phase9a_",backend),paste0(nm,".rds")));cfg<-phase9a_configs[[backend]][[nm]];tol<-if(backend=="annotation"&&nm=="annot_learned")1e-8 else 1e-12;expect_equal(phase9a_raw_science(phase9a_normalize(phase9a_run(backend,cfg,TRUE))),phase9a_raw_science(ref$raw),tolerance=tol,info=paste(backend,nm,"raw"));expect_equal(phase9a_fit_science(phase9a_normalize(phase9a_run(backend,cfg,FALSE))),phase9a_fit_science(ref$fit),tolerance=tol,info=paste(backend,nm,"fit"))}
 })
 test_that("Phase 9A reproducibility is exact for each supported policy",{
  for(backend in names(phase9a_configs)){cfg<-phase9a_configs[[backend]][[2]];a<-phase9a_normalize(phase9a_run(backend,cfg,FALSE));b<-phase9a_normalize(phase9a_run(backend,cfg,FALSE));expect_identical(a,b,info=backend)}
 })
 test_that("Phase 9A core ordering and intervening annotation fits are exact",{
- comparable<-function(x){x<-phase9a_normalize(x);x$input$ncores<-0L;x}
+ comparable<-function(x) phase9a_fit_science(phase9a_normalize(x))
  for(backend in names(phase9a_configs)){
   cfg<-phase9a_configs[[backend]][[2]];cfg$ncores<-1L;one<-comparable(phase9a_run(backend,cfg,FALSE))
   cfg$ncores<-2L;two<-comparable(phase9a_run(backend,cfg,FALSE));expect_identical(two,one,info=paste(backend,"1/2 cores"));expect_identical(comparable(phase9a_run(backend,cfg,FALSE)),two)

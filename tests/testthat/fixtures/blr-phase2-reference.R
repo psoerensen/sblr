@@ -128,10 +128,11 @@ phase2_reference_native <- function(config, prefix, inputs) {
 }
 
 phase2_reference_formatted <- function(config, prefix, inputs) {
-  stblr_csr(
+  args <- list(
     stats = inputs$stats,
     Glist = inputs$glist,
     ld_prefix = prefix,
+    method = if (is.null(config$selection_s)) "bayesc" else "sbayesc",
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -146,10 +147,11 @@ phase2_reference_formatted <- function(config, prefix, inputs) {
     keep_chains = config$keep_chains,
     chain_seeds = config$chain_seeds,
     ncores = config$cores,
-    selection_s = config$selection_s,
     updateLDswap = FALSE,
     scheduled = FALSE
   )
+  if (!is.null(config$selection_s)) args$selection_s <- config$selection_s
+  do.call(stblr_csr, args)
 }
 
 phase2_reference_normalize <- function(x) {

@@ -57,11 +57,11 @@ test_that("Phase 17S default calls reduce exactly to the serial reference", {
         expect_equal(unname(fit$bm), serial$marker$bm, tolerance = 0)
         expect_equal(unname(fit$dm), serial$marker$dm, tolerance = 0)
         expect_identical(unname(fit$d), serial$marker$state)
-        expect_true(all(fit$bm_sd == 0) && all(fit$dm_sd == 0))
-        expect_identical(fit$bm_min, fit$bm)
-        expect_identical(fit$bm_max, fit$bm)
-        expect_identical(fit$dm_min, fit$dm)
-        expect_identical(fit$dm_max, fit$dm)
+        expect_true(all(fit$bm_chain_mean_sd == 0) && all(fit$dm_chain_mean_sd == 0))
+        expect_identical(fit$bm_chain_mean_min, fit$bm)
+        expect_identical(fit$bm_chain_mean_max, fit$bm)
+        expect_identical(fit$dm_chain_mean_min, fit$dm)
+        expect_identical(fit$dm_chain_mean_max, fit$dm)
         expect_null(fit$chains)
       }
     }
@@ -97,12 +97,12 @@ test_that("Phase 17S exposes pooled, primary, trace, and compact semantics", {
   dm <- simplify2array(lapply(fit$chains, function(x) x$marker$dm))
   expect_equal(fit$bm, apply(bm, 1:2, mean), tolerance = 1e-15)
   expect_equal(fit$dm, apply(dm, 1:2, mean), tolerance = 1e-15)
-  expect_equal(fit$bm_sd, apply(bm, 1:2, sd), tolerance = 1e-15)
-  expect_equal(fit$dm_sd, apply(dm, 1:2, sd), tolerance = 1e-15)
+  expect_equal(fit$bm_chain_mean_sd, apply(bm, 1:2, sd), tolerance = 1e-15)
+  expect_equal(fit$dm_chain_mean_sd, apply(dm, 1:2, sd), tolerance = 1e-15)
   expect_identical(fit$b, fit$chains$chain1$marker$b)
   expect_identical(fit$d, fit$chains$chain1$marker$state)
-  expect_identical(fit$vb, fit$chains$chain1$variance$vb)
-  expect_identical(fit$pi, fit$chains$chain1$pi$final)
+  expect_identical(fit$cov_b_final, fit$chains$chain1$variance$vb)
+  expect_identical(fit$pi_final, fit$chains$chain1$pi$final)
   expect_identical(fit$vgs,
                    (fit$chains$chain1$trace$vgs +
                       fit$chains$chain2$trace$vgs) / 2)
@@ -122,7 +122,7 @@ test_that("Phase 17S memory scales by shared, workers, results, and retention", 
   retained <- sblr:::.mtblr_bed_memory_estimate(5, 5, 2, 4, 7, 4, 9, TRUE)
   expect_equal(unname(one$components_bytes),
                c(320, 80, 80, 80, 80, 40, 40, 200, 40, 192, 320, 80,
-                 80, 336))
+                 80, 560))
   expect_identical(one$shared_bytes, many$shared_bytes)
   expect_identical(many$requested_worker_count, 2L)
   expect_identical(retained$requested_worker_count, 4L)
@@ -201,21 +201,21 @@ test_that("Phase 17S changes only the public R activation surface", {
     "marker_policy", "sample_overlap", "method", "n", "sets", "b", "h2",
     "pi", "models", "pimodels", "vg", "vb", "ve", "ssb_prior",
     "sse_prior", "updateB", "updateE", "updatePi", "nub", "nue", "nit",
-    "nburn", "nthin", "seed", "verbose"))
+    "nburn", "nthin", "seed", "nchains", "ncores", "chain_seeds",
+    "keep_chains", "convergence", "convergence_control",
+    "memory_warning_gb", "verbose"))
   expect_identical(names(formals(mtblr_block_eigen)), c(
     "stats", "Glist", "block_start", "operator_sharing", "eigen_filter",
     "eigen_tau", "eigen_eta", "summary_reference", "trait_metadata",
     "marker_policy", "sample_overlap", "method", "n", "sets", "b", "h2",
     "pi", "models", "pimodels", "vg", "vb", "ve", "ssb_prior",
     "sse_prior", "updateB", "updateE", "updatePi", "nub", "nue", "nit",
-    "nburn", "nthin", "seed", "verbose"))
-  expect_identical(names(formals(sblr)), c(
-    "yy", "Xy", "XX", "n", "sets", "b", "h2", "pi", "models",
-    "pimodels", "vg", "vb", "ve", "ssb_prior", "sse_prior", "updateB",
-    "updateE", "updatePi", "algorithm", "nub", "nue", "nit", "nburn",
-    "nthin", "method", "verbose"))
-  expect_identical(names(formals(stblr_bed))[1:17], c(
-    "y", "Glist", "method", "covar", "chr", "cls", "block_size", "rows",
-    "scale", "nit", "nburn", "nthin", "ncores", "seed", "nchains",
-    "keep_chains", "chain_seeds"))
+    "nburn", "nthin", "seed", "nchains", "ncores", "chain_seeds",
+    "keep_chains", "convergence", "convergence_control",
+    "memory_warning_gb", "verbose"))
+  expect_false("sblr" %in% getNamespaceExports("sblr"))
+  expect_identical(names(formals(stblr_bed)), c(
+    "y", "Glist", "method", "...", "nit", "nburn", "nthin", "seed",
+    "nchains", "ncores", "chain_seeds", "keep_chains", "convergence",
+    "convergence_control", "memory_warning_gb", "verbose"))
 })

@@ -79,7 +79,7 @@
     model_work = 8 * nmodels * (nt * nt + 2 * nt + 2),
     marker_wy = 8 * m * nt,
     final_marker_r = 8 * m * nt,
-    traces = 8 * trace_length * 3 * nt
+    traces = 8 * trace_length * 5 * nt
   )
   shared_names <- c("packed_genotype", "phenotype", "marker_maps",
                     "marker_order_and_sets", "marker_wy")
@@ -94,7 +94,7 @@
   retained_components <- c(
     marker_bm_dm_b = 3 * 8 * m * nt,
     marker_state = 4 * m * nt,
-    traces = 8 * trace_length * 3 * nt,
+    traces = 8 * trace_length * 5 * nt,
     covariance_matrices = 6 * 8 * nt * nt,
     pi_final_and_mean = 2 * 8 * nmodels,
     diagnostics = 8 * 8
@@ -276,7 +276,7 @@
 
 .mtblr_bed_convergence_memory <- function(convergence, controls, nchains,
                                            nit, nt) {
-  estimate <- .mtblr_convergence_memory_estimate(
+  estimate <- .blr_convergence_memory_estimate(
     nchains, nit, nt, keep_traces = controls$keep_traces)
   if (identical(convergence, "none")) {
     estimate$trace_capture_bytes <- 0
@@ -325,7 +325,7 @@
 #' @param center Center aligned phenotype columns in R. If `FALSE`, columns
 #'   must already satisfy the native centering tolerance.
 #' @param residual_covariance Either `"full"` or `"diagonal"`.
-#' @param method Must be `"bayesC"`.
+#' @param method Must be `"bayesc"`.
 #' @param trait_metadata Optional data frame with one row per trait.
 #' @param sets Optional disjoint complete list of one-based marker sets.
 #' @param block_size Block size used for default sets within one BED file.
@@ -399,7 +399,7 @@
 mtblr_bed <- function(
   y, Glist, covar = NULL, chr = NULL, cls = NULL, rows = NULL,
   scale = TRUE, center = TRUE,
-  residual_covariance = c("full", "diagonal"), method = "bayesC",
+  residual_covariance = c("full", "diagonal"), method = "bayesc",
   trait_metadata = NULL, sets = NULL, block_size = 1000,
   beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
   models = NULL, pimodels = NULL, vg = NULL, vb = NULL, ve = NULL,
@@ -436,8 +436,8 @@ mtblr_bed <- function(
   center <- .mtblr_bed_logical(center, "center")
   residual_covariance <- match.arg(residual_covariance)
   convergence <- match.arg(convergence)
-  if (!identical(method, "bayesC")) {
-    stop("Only method = 'bayesC' is supported.", call. = FALSE)
+  if (!identical(method, "bayesc")) {
+    stop("Only method = 'bayesc' is supported.", call. = FALSE)
   }
   if (!is.numeric(block_size) || length(block_size) != 1L ||
       !is.finite(block_size) || block_size <= 0 ||
@@ -677,11 +677,11 @@ mtblr_bed <- function(
   } else {
     raw <- native_result
     raw$diagnostics$convergence <- if (identical(convergence, "none")) {
-      .mtblr_convergence_not_requested(
+      .blr_convergence_not_requested(
         trait_names, updateB, updateE, nchains, as.integer(nit),
         convergence_controls$thresholds)
     } else {
-      .mtblr_convergence_unavailable(
+      .blr_convergence_unavailable(
         trait_names, updateB, updateE, nchains, as.integer(nit),
         convergence_controls$thresholds)
     }
@@ -692,10 +692,10 @@ mtblr_bed <- function(
                                                  nchains < 2L)) {
     character()
   } else {
-    .mtblr_convergence_warning_messages(convergence_result, convergence)
+    .blr_convergence_warning_messages(convergence_result, convergence)
   }
   raw$diagnostics$convergence <-
-    .mtblr_validate_convergence_result(convergence_result)
+    .blr_validate_convergence_result(convergence_result)
   raw <- .validate_mtblr_raw(raw)
   bed_diagnostics <- raw$diagnostics$mt_bed
   alignment$nchains <- nchains
@@ -745,7 +745,7 @@ mtblr_bed <- function(
     covariate_policy = "pre_adjusted_or_unadjusted_as_supplied",
     covariates_fitted = FALSE,
     missing_phenotype_policy = "complete_matrix_required",
-    cpo = "unsupported", le_ld = "unsupported",
+    cpo = "unsupported", le_ld = "trait_diagonal_decomposition",
     sample_residual_returned = FALSE, genetic_values_returned = FALSE,
     n = dat$n_used, n_total = dat$n_total, n_used = dat$n_used,
     m = dat$m, nt = dat$nt, chr = dat$chr, cls = dat$cls,
@@ -804,5 +804,7 @@ mtblr_bed <- function(
   if (isTRUE(input$convergence_warning_emitted)) {
     warning(raw$diagnostics$convergence$warning_messages[1L], call. = FALSE)
   }
-  fit
+  .blr_finalize_fit(
+    fit, "mtblr", "bayesc", "packed_bed", data = raw$data,
+    diagnostics = raw$diagnostics, memory_estimate = memory)
 }

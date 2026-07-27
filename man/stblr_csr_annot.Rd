@@ -13,11 +13,15 @@ stblr_csr_annot(
   nit = 1000,
   nburn = 100,
   nthin = 1,
-  ncores = 1,
   seed = 1,
   nchains = 1L,
+  ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
+  convergence = c("auto", "none", "core"),
+  convergence_control = NULL,
+  memory_warning_gb = 8,
+  verbose = FALSE,
   h2 = 0.3,
   adjE = 0.9,
   updateB = TRUE,
@@ -53,21 +57,29 @@ or `pi_marker`, and `fixed_vb_multiplier` or `vb_multiplier` elements. For
 `"prior"`, `"fixed_prior"`, `"fixed"`; `"learned"`, `"annot"`,
 `"annotation"`; `"group"`, `"groups"`; and `"sbayesrc"`/`"SBayesRC"`.}
 
-\item{method}{Optional method override. BayesC-like annotation models accept
-`"bayesc"`/`"bayesC"`; SBayesRC accepts `"sbayesrc"` or `"bayesr"`.}
+\item{method}{Optional lowercase method override. BayesC-like annotation
+models use `"bayesc"`; SBayesRC uses `"sbayesrc"`.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
-
-\item{ncores}{Number of OpenMP threads.}
 
 \item{seed}{Sampler seed.}
 
 \item{nchains}{Number of independent chains.}
 
+\item{ncores}{Number of OpenMP threads.}
+
 \item{chain_seeds}{Optional integer seeds, one per chain.}
 
 \item{keep_chains}{Logical; return compact per-chain summaries when
 supported.}
+
+\item{convergence}{Convergence mode: `"auto"`, `"none"`, or `"core"`.}
+
+\item{convergence_control}{Optional named convergence-control list.}
+
+\item{memory_warning_gb}{Analytical memory-warning threshold in GiB.}
+
+\item{verbose}{Print resolved execution metadata.}
 
 \item{h2}{Initial heritability.}
 
@@ -131,24 +143,26 @@ A formatted ST-BLR fit. All returned fits contain `dm`
   Annotation-aware outputs are model-specific and may include
   `annotation_summary`, `annotation_pi`, `annotation_effects`,
   `annotation_prior`, `alpha`, and `sigmaSqAlpha`. SBayesRC fits also
-  include BayesR-style `comp_prob` marker-by-component posterior
+  include BayesR-style `component_probabilities` marker-by-component posterior
   probabilities by trait, `dm_component_mean`, and `ncomp` where available.
   The SBayesRC null component column is `gamma_0.00`, so
   `dm = 1 - P(gamma_0.00)`.
 
-  LD-swap-enabled fits include `ld_swap` and, where chain summaries are
-  retained, `ld_swap_chains` or chain-level LD-swap entries. With
+  LD-swap-enabled fits include `fit$diagnostics$ld_swap` and, where chain
+  summaries are retained, `fit$diagnostics$ld_swap_chains` or chain-level
+  LD-swap entries. With
   `keep_chains = TRUE`, compact per-chain summaries are returned in
   `chains` for supported CSR annotation backends.
 
   For sampled SBayesRC `selection_s`, the fit also contains `selection_s`,
-  `selection_s_sd`, `selection_s_min`, `selection_s_max`,
+  `selection_s_chain_mean_sd`, `selection_s_chain_mean_min`,
+  `selection_s_chain_mean_max`,
   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
   and `selection_s_acceptance` is the MH acceptance rate by trait. With
   `keep_chains = TRUE`, chain-level sampled-S output is available as
-  `fit$chains[[trait]][[chain]]$selection_s` and
-  `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+  the matching flat trait-by-chain record's `selection_s` and
+  `selection_s_acceptance` fields.
 
   Fine-mapping diagnostics are available through PIP summaries in `dm` and
   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
@@ -159,8 +173,7 @@ A formatted ST-BLR fit. All returned fits contain `dm`
 \description{
 `stblr_csr_annot()` is the unified public entry point for the current
 annotation-aware CSR summary-statistics backends. It dispatches to the
-existing explicit wrappers and standardizes fit metadata and annotation
-output aliases while preserving wrapper-specific fields.
+internal model adapters and standardizes fit metadata and annotation output.
 }
 \details{
 Available annotation models are `annotation_model = "prior"` for fixed
@@ -185,9 +198,8 @@ inclusion probabilities and/or marker-effect variance priors directly.
 SBayesRC uses annotations to affect component probabilities; `selection_s`,
 when requested, affects only marker-specific effect-size prior variance.
 
-Existing wrappers remain supported:
-[stblr_csr_prior_annot()], [stblr_csr_learn_annot()],
-[stblr_csr_group_annot()], and [stblr_csr_sbayesrc_generic()].
+The model-specific adapters are internal. `stblr_csr_annot()` is the sole
+public annotation-aware CSR fitting entry.
 
 CSR effects are on the standardized-genotype scale. The BayesS-style
 MAF-dependent prior scale used by fixed and sampled `selection_s` is

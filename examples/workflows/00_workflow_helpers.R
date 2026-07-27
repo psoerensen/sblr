@@ -78,9 +78,11 @@ fit_metadata_table <- function(fits) {
 
 fit_field_inventory <- function(fits) {
   fields <- c(
-    "dm", "bm", "vbs", "vgs", "ves", "vle", "vld", "pis", "pi", "pim",
-    "chains", "ld_swap", "ld_swap_chains", "bm_sd", "bm_min", "bm_max",
-    "dm_sd", "dm_min", "dm_max", "comp_prob", "dm_component_mean",
+    "dm", "bm", "vbs", "vgs", "ves", "vle", "vld", "pi_trace",
+    "pi_final", "pi_mean", "chains", "bm_chain_mean_sd",
+    "bm_chain_mean_min", "bm_chain_mean_max", "dm_chain_mean_sd",
+    "dm_chain_mean_min", "dm_chain_mean_max", "component_probabilities",
+    "dm_component_mean",
     "annotation_summary", "annotation_pi", "annotation_effects",
     "annotation_prior", "group", "prior", "selection"
   )

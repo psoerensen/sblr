@@ -1,136 +1,13 @@
-
-#' Check ST-BLR MCMC Convergence
-#'
-#' Computes simple MCMC convergence diagnostics from available ST-BLR trace
-#' matrices. The function uses post-burn-in samples from traces such as `vbs`,
-#' `vgs`, `ves`, `pis`, `vle`, and `vld`.
-#'
-#' It reports Geweke z-scores, effective sample sizes, lag-1 autocorrelation,
-#' and pass/fail indicators for each available trace and trait. These are
-#' screening diagnostics and should be interpreted together with trace plots
-#' and domain knowledge.
-#'
-#' @param fit Fitted ST-BLR object.
-#' @param nburn Number of initial iterations to discard. Defaults to
-#'   `fit$input$nburn`.
-#' @param traces Character vector of trace components to inspect.
-#' @param crit Named numeric vector of absolute Geweke z-score thresholds.
-#' @param frac1,frac2 Fractions passed to `coda::geweke.diag()`.
-#' @param require Character vector of traces required for the overall pass/fail
-#'   result.
-#' @param use_coda Logical; whether to use `coda` diagnostics when available
-#'   and applicable.
-#'
-#' @return A list with:
-#' \describe{
-#'   \item{passed}{Logical overall pass/fail indicator for required traces.}
-#'   \item{diagnostics}{Data frame of trace-level diagnostics.}
-#'   \item{nburn}{Burn-in used.}
-#'   \item{crit}{Geweke z-score thresholds used.}
-#'   \item{required}{Trace names required for the overall pass/fail result.}
-#' }
-#'
-#' @examples
-#' set.seed(1)
-#' fake_fit <- list(
-#'   input = list(nburn = 5),
-#'   vgs = matrix(rnorm(40, mean = 0.6, sd = 0.02), ncol = 1,
-#'                dimnames = list(NULL, "trait1")),
-#'   ves = matrix(rnorm(40, mean = 0.4, sd = 0.02), ncol = 1,
-#'                dimnames = list(NULL, "trait1")),
-#'   pis = matrix(runif(40, min = 0.01, max = 0.03), ncol = 1,
-#'                dimnames = list(NULL, "trait1"))
-#' )
-#' conv <- check_stblr_convergence(
-#'   fake_fit,
-#'   traces = c("vgs", "ves", "pis"),
-#'   require = c("vgs", "ves")
-#' )
-#' names(conv)
-#'
-#' @export
-check_stblr_convergence <- function(
-    fit,
-    nburn = fit$input$nburn,
-    traces = c("vbs", "vgs", "ves", "pis", "vle", "vld"),
-    crit = c(vbs = 3, vgs = 3, ves = 3, pis = 3, vle = 3, vld = 3),
-    frac1 = 0.1,
-    frac2 = 0.5,
-    require = c("vbs", "vgs", "ves", "pis", "vle"),
-    use_coda = TRUE
-) {
-  out <- list()
-  has_coda <- isTRUE(use_coda) && requireNamespace("coda", quietly = TRUE)
-  
-  for (nm in traces) {
-    if (is.null(fit[[nm]])) next
-    
-    x <- fit[[nm]]
-    x <- as.matrix(x)
-    
-    if (nrow(x) <= nburn + 5L) next
-    
-    post <- x[seq.int(nburn + 1L, nrow(x)), , drop = FALSE]
-    
-    tab <- lapply(seq_len(ncol(post)), function(j) {
-      z <- NA_real_
-      ess <- NA_real_
-      ac1 <- NA_real_
-      
-      y <- post[, j]
-      y <- y[is.finite(y)]
-      
-      if (length(y) > 10L && stats::sd(y) > 0) {
-        if (has_coda) {
-          z <- tryCatch(
-            coda::geweke.diag(coda::mcmc(y), frac1 = frac1, frac2 = frac2)$z,
-            error = function(e) NA_real_
-          )
-          ess <- tryCatch(
-            as.numeric(coda::effectiveSize(coda::mcmc(y))),
-            error = function(e) NA_real_
-          )
-        }
-        ac1 <- tryCatch(
-          stats::acf(y, lag.max = 1, plot = FALSE)$acf[2],
-          error = function(e) NA_real_
-        )
-      }
-      
-      data.frame(
-        trace = nm,
-        trait = colnames(post)[j],
-        n = length(y),
-        mean = mean(y),
-        sd = stats::sd(y),
-        min = min(y),
-        max = max(y),
-        geweke_z = z,
-        ess = ess,
-        acf1 = ac1,
-        passed = ifelse(is.na(z), NA, abs(z) < crit[[nm]]),
-        stringsAsFactors = FALSE
-      )
-    })
-    
-    out[[nm]] <- do.call(rbind, tab)
+# The legacy Geweke/coda convergence screen was retired in Phase 18.
+# This internal convenience returns the validated modern result already owned
+# by the fit and never calculates a competing statistic.
+check_stblr_convergence <- function(fit) {
+  if (!inherits(fit, "stblr_fit") || is.null(fit$convergence)) {
+    stop("fit must be an stblr_fit with modern convergence diagnostics.",
+         call. = FALSE)
   }
-  
-  diagnostics <- do.call(rbind, out)
-  
-  required <- diagnostics$trace %in% require
-  passed <- all(diagnostics$passed[required] %in% TRUE)
-  
-  list(
-    passed = passed,
-    diagnostics = diagnostics,
-    nburn = nburn,
-    crit = crit,
-    required = require
-  )
+  fit$convergence
 }
-
-
 #' Plot ST-BLR Posterior Summaries
 #'
 #' Plots posterior means or medians with HPD intervals, equal-tail intervals,
@@ -453,7 +330,7 @@ plot_posterior <- function(
 #' Summarise ST-BLR Posterior Traces
 #'
 #' Computes posterior summaries for global ST-BLR trace parameters. The
-#' function summarizes traces such as `vbs`, `vgs`, `ves`, `pis`, `vle`, and
+#' function summarizes traces such as `vbs`, `vgs`, `ves`, `pi_trace`, `vle`, and
 #' `vld`.
 #'
 #' For each trace it computes posterior mean, median, posterior standard
@@ -510,7 +387,7 @@ plot_posterior <- function(
 summarise_posterior <- function(
     fit,
     nburn = NULL,
-    traces = c("vbs", "vgs", "ves", "pis", "vle", "vld"),
+    traces = c("vbs", "vgs", "ves", "pi_trace", "vle", "vld"),
     prob = 0.95,
     derived = TRUE,
     include_m_included = TRUE,
@@ -532,7 +409,7 @@ summarise_posterior <- function(
     vbs = "vb",
     vgs = "vg",
     ves = "ve",
-    pis = "pi",
+    pi_trace = "pi",
     vle = "vle",
     vld = "vld"
   )
@@ -766,10 +643,10 @@ summarise_posterior <- function(
     }
     
     if (!is.null(post$vbs) &&
-        !is.null(post$pis) &&
+        !is.null(post$pi_trace) &&
         !is.null(fit$input$m)) {
       m <- as.numeric(fit$input$m)
-      varch <- post$vbs * post$pis * m
+      varch <- post$vbs * post$pi_trace * m
       
       out$varch <- summarise_matrix(
         varch,
@@ -792,7 +669,7 @@ summarise_posterior <- function(
       
       if (isTRUE(include_m_included)) {
         out$m_included <- summarise_matrix(
-          post$pis * m,
+          post$pi_trace * m,
           parameter = "m_included"
         )
       }
@@ -808,7 +685,7 @@ summarise_posterior <- function(
 
 plot_stblr_traces <- function(
     fit,
-    traces = c("vgs", "ves", "vbs", "pis", "vle", "vld"),
+    traces = c("vgs", "ves", "vbs", "pi_trace", "vle", "vld"),
     traits = NULL,
     nburn = NULL,
     max_cols = 2

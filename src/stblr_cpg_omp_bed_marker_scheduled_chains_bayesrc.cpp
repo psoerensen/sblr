@@ -46,7 +46,9 @@ static Rcpp::List stblr_bed_bayesrc_result_to_raw(
      Rcpp::Named("comp_prob")=z.comp_prob,
      Rcpp::Named("alpha")=z.annot_alpha_mean,
      Rcpp::Named("sigmaSqAlpha")=z.annot_sigma_mean,
-     Rcpp::Named("pis")=z.pis
+     Rcpp::Named("vbs")=z.vbs,Rcpp::Named("vgs")=z.vgs,
+     Rcpp::Named("ves")=z.ves,Rcpp::Named("vle")=z.vles,
+     Rcpp::Named("vld")=z.vlds,Rcpp::Named("pis")=z.pis
     );
    }
    retained_chains[t]=trait_chains;
@@ -121,10 +123,13 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
   int annot_alpha_update_every = 10, double adjE = 0.9, int nit = 1000,
   int nburn = 100, int nthin = 1, int rebuild_every = 100,
   bool return_wy = true, bool return_r = true, int read_block_size = 256,
-  int nchains = 1, bool keep_chains = false, int ncores = 1, int seed = 10
+  int nchains = 1, bool keep_chains = false, int ncores = 1, int seed = 10,
+  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create()
 ) {
  if (nit <= 0 || nburn < 0 || nthin <= 0 || nchains <= 0 || ncores <= 0)
   throw std::runtime_error("invalid MCMC or chain controls.");
+ if (chain_seeds.size()>0 && chain_seeds.size()!=nchains)
+  throw std::runtime_error("chain_seeds must be empty or have length nchains.");
  if (annot_alpha_update_every <= 0)
   throw std::runtime_error("annot_alpha_update_every must be positive.");
  if (!std::isfinite(pi_floor) || pi_floor <= 0.0 || pi_floor >= 1.0)
@@ -177,8 +182,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  for (int job = 0; job < njobs; ++job) {
   const auto task=sblr::core::make_bed_family_task_index(job,nt);
   const int trait=task.trait, chain=task.chain;
-  const std::uint64_t chain_seed=
-   sblr::core::resolve_bed_family_logical_chain_seed(seed,trait,chain);
+  const std::uint64_t chain_seed=chain_seeds.size()==0 ?
+   sblr::core::resolve_bed_family_logical_chain_seed(seed,trait,chain) :
+   static_cast<unsigned int>(chain_seeds[static_cast<std::size_t>(chain)]+
+                             1000003*(trait+1));
   const sblr::core::BedBayesRCChainExecutionContext<
    FastPackedBedMatrixBR,arma::mat,MarkerMapBayesR
   > context{

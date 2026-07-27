@@ -217,7 +217,6 @@
 #' @return A formatted ST-BLR fit with learned annotation effects. The fit
 #'   includes `vle` and `vld` traces using the same definitions and formatting
 #'   conventions as annotation-unaware CSR fits.
-#' @export
 stblr_csr_learn_annot <- function(
   stats,
   ld_prefix,
