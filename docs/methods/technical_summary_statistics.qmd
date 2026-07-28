@@ -1,0 +1,751 @@
+---
+title: "Technical Appendix: Summary Statistics"
+---
+
+This appendix develops the summary-statistics representation used by `sblr`
+from the individual-level linear model. It explains why cross-products are
+sufficient for BLR-style marker updates, how BED-derived statistics and
+sparse LD are combined by the CSR samplers, and which assumptions are required
+for single- and multi-trait analyses.
+
+The central principle is that the Gaussian regression likelihood depends on
+the observed data through a small set of cross-products. Replacing $X$ and
+$y$ with those cross-products can preserve the marker-update algebra, but
+only when marker order, sample definition, scaling, and LD are compatible.
+
+## Individual-Level Model and Cross-Product Sufficiency
+
+For one centered phenotype, consider
+
+$$
+y=Xb+e,
+\qquad
+e\sim N(0,v_eI_n),
+$$
+
+where $X$ is an $n\times m$ genotype matrix and $b$ is an $m$-vector of
+marker effects. Conditional on $b$ and $v_e$, the Gaussian log likelihood
+is, up to constants,
+
+$$
+\log p(y\mid b,v_e)
+=
+-\frac{1}{2v_e}(y-Xb)^\top(y-Xb).
+$$
+
+Expanding the residual sum of squares gives
+
+$$
+\begin{aligned}
+(y-Xb)^\top(y-Xb)
+&=
+y^\top y
+-2b^\top X^\top y
++b^\top X^\top Xb.
+\end{aligned}
+$$
+
+Thus, the likelihood does not require repeated access to every individual
+observation once the following quantities are available:
+
+$$
+y^\top y,
+\qquad
+X^\top y,
+\qquad
+X^\top X,
+\qquad
+n.
+$$
+
+The prior can still require additional parameters, but BLR marker likelihood
+calculations can be expressed through these cross-products. This is the sense
+in which they are sufficient for the Gaussian regression layer.
+
+## Single-Trait Summary-Statistic Notation
+
+For one trait, define
+
+$$
+wy=X^\top y,
+\qquad
+XX=X^\top X,
+\qquad
+yy=y^\top y.
+$$
+
+The diagonal genotype cross-products are
+
+$$
+ww_i=XX_{ii}=x_i^\top x_i.
+$$
+
+In `sblr` interfaces:
+
+- `wy` is the marker-phenotype cross-product vector;
+- `ww` is the vector containing the diagonal of $XX$;
+- `yy` is the phenotype sum of squares;
+- the sparse-LD object represents retained off-diagonal structure; and
+- $n$ is the sample size associated with these quantities.
+
+The dense matrix $XX$ can be written as
+
+$$
+XX=D+O,
+$$
+
+where $D=\operatorname{diag}(ww)$ and $O$ contains off-diagonal marker
+cross-products. The CSR samplers keep $D$ explicitly through `ww` and
+reconstruct a sparse approximation to $O$ from disk-backed LD correlations.
+
+## Residual Scores and Marker Updates
+
+Define the marker-scale residual score vector
+
+$$
+r
+=
+X^\top(y-Xb)
+=
+wy-XXb.
+$$
+
+This is not the individual-level residual vector $y-Xb$. It is its
+projection onto all marker columns.
+
+For marker $i$, adding the current marker effect back to its score gives
+
+$$
+s_i=r_i+ww_i b_i.
+$$
+
+Because
+
+$$
+r_i
+=
+x_i^\top y
+-x_i^\top x_i b_i
+-\sum_{j\ne i}x_i^\top x_jb_j,
+$$
+
+the quantity $s_i$ equals
+
+$$
+s_i
+=
+x_i^\top y
+-\sum_{j\ne i}x_i^\top x_jb_j,
+$$
+
+which is the marker's cross-product with the residual excluding its own
+current effect. BayesC-style inclusion and effect updates depend on $s_i$,
+$ww_i$, the residual variance, and prior parameters.
+
+If marker $i$'s effect changes by
+
+$$
+\Delta b_i=b_i^{\mathrm{new}}-b_i^{\mathrm{old}},
+$$
+
+then
+
+$$
+r^{\mathrm{new}}
+=
+r^{\mathrm{old}}-XX_{\cdot i}\Delta b_i.
+$$
+
+The CSR implementation performs the diagonal part directly:
+
+$$
+r_i^{\mathrm{new}}
+=
+r_i^{\mathrm{old}}-ww_i\Delta b_i,
+$$
+
+then updates retained LD neighbors using sparse off-diagonal
+$x_j^\top x_i$ values. This avoids multiplying by a dense $XX$ matrix on
+every marker update.
+
+## The Identity $XXb=wy-r$
+
+Rearranging the residual-score definition gives
+
+$$
+XXb=wy-r.
+$$
+
+This identity is useful beyond marker updates. It permits likelihood,
+genetic-variance, and annotation-contribution calculations from summary
+statistics and the current marker effects.
+
+### Residual sum of squares
+
+Starting from
+
+$$
+\operatorname{SSE}
+=
+yy-2b^\top wy+b^\top XXb
+$$
+
+and substituting $XXb=wy-r$ yields
+
+$$
+\begin{aligned}
+\operatorname{SSE}
+&=
+yy-2b^\top wy+b^\top(wy-r)\\
+&=
+yy-b^\top(wy+r).
+\end{aligned}
+$$
+
+The single-trait CSR residual-variance update uses this form. It combines
+`yy` with the current `b`, `wy`, and residual score `r` without returning to
+individual-level observations.
+
+### Genetic variance
+
+For centered genotypes, the realized genetic value is $g=Xb$. Its quadratic
+form is
+
+$$
+g^\top g
+=
+b^\top XXb
+=
+b^\top(wy-r).
+$$
+
+The corresponding sample-scaled genetic-variance quantity is
+
+$$
+\widehat V_G
+=
+\frac{1}{n}b^\top(wy-r).
+$$
+
+This is the identity used by the CSR implementation to calculate genetic
+variance from the current effects and residual scores.
+
+## Genotype Scaling, Allele Frequencies, and `ww`
+
+Summary statistics and LD are meaningful only relative to the genotype matrix
+that produced them. Let $g_{ki}\in\{0,1,2\}$ be the dosage for individual
+$k$ at marker $i$, and let $p_i$ be the supplied or estimated allele
+frequency.
+
+With `bed_xtx_xty(..., scale = TRUE)`, the implemented marker coding is
+
+$$
+x_{ki}
+=
+\frac{g_{ki}-2p_i}
+{\sqrt{2p_i(1-p_i)}}.
+$$
+
+Missing BED genotypes are mapped to zero on this standardized scale, which is
+mean imputation under the supplied allele frequency. For nondegenerate markers
+and a compatible sample, the expected marker variance is approximately one,
+so
+
+$$
+ww_i=x_i^\top x_i
+$$
+
+is often near the number of used individuals. It is not assumed to equal
+exactly $n$: realized allele counts, missingness, external allele
+frequencies, and sample selection affect it.
+
+With `scale = FALSE`, the implementation uses raw dosage coding and mean
+imputes missing values to $2p_i$. This path is intentionally uncentered.
+Consequently, cross-products and regression interpretation differ from the
+standardized path unless centering is handled elsewhere.
+
+Allele frequencies therefore define more than metadata. They determine the
+genotype matrix used in `wy`, `ww`, and LD. Supplying inconsistent allele
+frequencies to sufficient-statistic and sparse-LD construction changes the
+implied $X$.
+
+## Dense LD, Correlation LD, and Sparse Cross-Products
+
+The dense genotype cross-product matrix has entries
+
+$$
+XX_{ij}=x_i^\top x_j.
+$$
+
+Its diagonal is supplied through `ww`. The disk-backed CSR files produced by
+the sparse-LD workflow store retained correlations $r_{ij}$, not full
+cross-products. When the CSR sampler reads them, it reconstructs retained
+off-diagonal cross-products as
+
+$$
+\widetilde{XX}_{ij}
+=
+r_{ij}\sqrt{ww_iww_j}.
+$$
+
+The sampler symmetrizes the retained off-diagonal entries for marker-wise
+updates. It handles the diagonal separately using `ww`; diagonal treatment is
+therefore part of the interface contract and should not be recreated by
+manually inserting assumed values into the disk files.
+
+With all correlations retained and compatible `ww`, the reconstruction can
+represent the corresponding dense $XX$. In practice, sparse-LD construction
+uses thresholds and windows, producing
+
+$$
+\widetilde{XX}\approx XX.
+$$
+
+The residual score maintained by the sparse sampler is consequently
+
+$$
+\widetilde r
+=
+wy-\widetilde{XX}b.
+$$
+
+Weak or distant omitted LD does not propagate effect changes through this
+approximate residual score. This approximation is the principal statistical
+difference between a complete cross-product representation and thresholded
+CSR LD.
+
+See [Technical sparse LD and CSR](technical_sparse_ld_csr.html) for storage,
+thresholding, and disk-contract details.
+
+## Computing Statistics With `bed_xtx_xty()`
+
+`bed_xtx_xty()` computes sufficient statistics directly from selected markers
+in one PLINK BED file. A short call is:
+
+```r
+stats <- bed_xtx_xty(
+  bed_file = Glist$bedfiles[chr],
+  n = Glist$n,
+  cls = cls,
+  af = Glist$af[[chr]][cls],
+  y = y,
+  rows = NULL,
+  scale = TRUE
+)
+```
+
+Its principal inputs have the following contracts:
+
+- `bed_file` identifies the PLINK BED file.
+- `n` is the number of individuals represented by that BED file.
+- `cls` contains positive one-based BED marker indices in the desired model
+  order.
+- `af` contains allele frequencies in exactly the `cls` order. If omitted,
+  the implementation computes frequencies from selected individuals.
+- `y` is an $n_{\mathrm{used}}\times n_t$ phenotype matrix.
+- `rows` optionally selects unique one-based BED rows; when supplied, `y` must
+  contain exactly those selected individuals in that order.
+- `scale` selects standardized or raw-dosage marker coding.
+
+For each trait $t$, the function returns:
+
+$$
+wy_t=X^\top y_t,
+\qquad
+ww_t=\operatorname{diag}(X^\top X),
+\qquad
+yy_t=y_t^\top y_t.
+$$
+
+The same `ww` vector is repeated across traits because the current function
+uses one selected genotype matrix $X$ for all phenotype columns. Additional
+returned fields include `xx`, allele frequencies used, row-selection
+information, sample and marker counts, scaling status, and summaries of
+marker diagonal cross-products.
+
+The output order is the input `cls` order. The function does not infer the
+intended biological marker order from IDs, so that ordering must be
+established before the call.
+
+## Combining `bed_xtx_xty()` With Sparse LD
+
+The sufficient-statistics and LD branches must describe the same genotype
+matrix:
+
+```text
+same BED marker selection and order
++ same selected individuals
++ same allele frequencies and scaling
+    -> compatible wy, ww, yy, and sparse LD
+```
+
+`make_sparse_ld()` constructs retained marker correlations from BED data,
+writes them under a sparse-LD prefix, and records the metadata in
+`Glist$sparseLD`. It must use the same marker ordering, sample rows, allele
+frequencies, and scaling convention used to create the sufficient statistics.
+The lower-level writer behind this workflow is `sparseLD_stream_CSR()`.
+
+The central workflow handoff is:
+
+```text
+BED + phenotype
+  -> make_summary_stats()     -> wy, ww, yy, n
+  -> make_sparse_ld()  -> Glist$sparseLD
+  -> stblr_csr(stats = stats, Glist = Glist)
+```
+
+The complete operational sequence is documented in
+[Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.html).
+
+## How `stblr_csr()` Consumes the Statistics
+
+`stblr_csr()` accepts:
+
+- `stats$wy`, one marker vector per trait;
+- `stats$ww`, one positive marker-diagonal vector per trait;
+- `stats$yy`, one phenotype sum of squares per trait;
+- $n$, supplied explicitly or taken from `stats$n`;
+- `Glist$sparseLD$prefix`, or an explicit `ld_prefix`, identifying the
+  compatible disk-backed sparse LD; and
+- prior, variance-update, scheduling, and MCMC controls.
+
+The wrapper uses `yy/(n-1)` to initialize phenotype-variance-related prior
+scales. The native sampler validates marker and trait dimensions, reconstructs
+retained off-diagonal cross-products from LD correlations and `ww`, initializes
+or rebuilds
+
+$$
+r=wy-\widetilde{XX}b,
+$$
+
+and performs marker and variance updates from the resulting summary-statistic
+state.
+
+For the current shared-LD single-trait-per-trait CSR path, `ww` and $n$ must
+agree across traits. This reflects one common genotype sample and scaling
+scheme. Supplying trait-specific summary statistics from materially different
+samples requires a model and LD contract that explicitly supports those
+differences.
+
+## Multi-Trait Summary-Statistic Notation
+
+For $n_t$ traits, collect phenotypes in
+
+$$
+Y=
+\begin{bmatrix}
+y_1 & \cdots & y_{n_t}
+\end{bmatrix}
+$$
+
+and marker effects in an $m\times n_t$ matrix
+
+$$
+B=
+\begin{bmatrix}
+b_1 & \cdots & b_{n_t}
+\end{bmatrix}.
+$$
+
+The individual-level model is
+
+$$
+Y=XB+E_Y,
+$$
+
+where the rows of $E_Y$ may have residual covariance matrix
+$\Sigma_e$. The central multi-trait cross-products are
+
+$$
+WY=X^\top Y
+$$
+
+and
+
+$$
+SSY=Y^\top Y.
+$$
+
+Column $t$ of $WY$ is $wy_t=X^\top y_t$. Entry
+$SSY_{ts}=y_t^\top y_s$ is the observed cross-trait phenotype product among
+individuals shared by traits $t$ and $s$.
+
+For a common $X$, define the marker-score matrix
+
+$$
+R=X^\top(Y-XB)=WY-XXB.
+$$
+
+Trait by trait,
+
+$$
+XXb_t=wy_t-r_t.
+$$
+
+This permits a symmetric genetic covariance estimate:
+
+$$
+\widehat G_{ts}
+=
+\frac{1}{2\sqrt{n_tn_s}}
+\left[
+b_t^\top(wy_s-r_s)
++
+b_s^\top(wy_t-r_t)
+\right].
+$$
+
+When $t=s$, this reduces to the single-trait genetic-variance expression.
+When all traits use the same $n$, the denominator becomes $n$.
+
+## Cross-Trait Phenotype Products and Sample Overlap
+
+The diagonal of `SSY` contains the single-trait values:
+
+$$
+SSY_{tt}=yy_t.
+$$
+
+The off-diagonals contain information not recoverable from separate `yy`
+values:
+
+$$
+SSY_{ts}
+=
+\sum_{i\in\mathcal I_{ts}}y_{it}y_{is},
+$$
+
+where $\mathcal I_{ts}$ is the set of individuals observed for both traits.
+These terms are required for a full residual covariance update because
+
+$$
+(Y-XB)^\top(Y-XB)
+=
+SSY
+-Y^\top XB
+-B^\top X^\top Y
++B^\top XXB.
+$$
+
+With individual-level data, `SSY` and overlap counts are directly observable.
+With summary statistics, they must be supplied or reconstructed. If
+$N_{ts}=|\mathcal I_{ts}|$ and the cross-trait phenotype covariance is
+$\sigma_{ts}$, then under random missingness and covariance homogeneity,
+
+$$
+E(SSY_{ts})=N_{ts}\sigma_{ts}.
+$$
+
+Given phenotype correlations $R_y$ and approximate trait variances
+
+$$
+\widehat{\operatorname{Var}}(y_t)
+\approx
+\frac{yy_t}{n_t},
+$$
+
+one can form
+
+$$
+\widehat{\sigma}_{ts}
+=
+R_{y,ts}
+\sqrt{
+\widehat{\operatorname{Var}}(y_t)
+\widehat{\operatorname{Var}}(y_s)
+}
+$$
+
+and reconstruct
+
+$$
+\widehat{SSY}
+=
+N\odot\widehat{\operatorname{Cov}}(Y),
+$$
+
+forcing the diagonal to the observed `yy` values.
+
+Full-overlap and fractional-overlap assumptions define different $N$
+matrices and therefore different reconstructed likelihood information.
+Missing or incorrect cross-trait information limits residual covariance
+inference even when every trait has valid marginal summary statistics. The
+complete derivation and sensitivity considerations belong in
+[Technical multi-trait sample overlap](technical_multitrait_overlap.html).
+
+## Residual and Genetic Covariance From Summary Scores
+
+For a joint multi-trait model, the residual cross-product matrix can be
+constructed from `SSY`, $WY$, current effects, and residual scores. One
+orientation is
+
+$$
+\widehat S_e
+=
+SSY
+-B^\top WY
+-WY^\top B
++B^\top XXB.
+$$
+
+Using $XXB=WY-R$,
+
+$$
+\widehat S_e
+=
+SSY
+-B^\top WY
+-WY^\top B
++B^\top(WY-R).
+$$
+
+Finite precision, asymmetric inputs, or trait-specific constructions can make
+cross-trait expressions differ slightly by orientation. The native multi-trait
+CSR implementation symmetrizes off-diagonal residual and genetic covariance
+quantities before covariance updates.
+
+These calculations require a compatible definition of $X$, trait sample
+sizes, and cross-trait phenotype products. A vector of per-trait `yy` values
+supports separate trait-wise residual variance updates; it does not by itself
+identify a full residual covariance matrix.
+
+## Set-Specific and Weighted Genetic Contributions
+
+The identity $XXb_t=wy_t-r_t$ also supports marker-set summaries. For a
+marker set $S_k$, define
+
+$$
+\widehat V_{G,k,t}
+=
+\frac{1}{n_t}
+\sum_{i\in S_k}
+\widehat b_{it}(wy_{it}-r_{it}).
+$$
+
+The corresponding marker-level contribution is
+
+$$
+c_{it}
+=
+\frac{\widehat b_{it}(wy_{it}-r_{it})}{n_t}.
+$$
+
+An optional posterior-inclusion-weighted version is
+
+$$
+c^{\mathrm{weighted}}_{it}
+=
+\frac{
+\widehat{dm}_{it}\widehat b_{it}(wy_{it}-r_{it})
+}{n_t}.
+$$
+
+These are useful descriptive summaries for annotations or genomic regions.
+For disjoint sets, their sums can approximate a partition of the fitted
+genetic-variance expression. For overlapping sets, a marker contributes to
+every set containing it, so set totals are attributions rather than an
+additive partition.
+
+The formulas also mix posterior summaries nonlinearly when posterior mean
+`bm`, PIP `dm`, and a returned residual score are combined. They should not be
+confused with exact posterior expectations unless calculated draw by draw.
+
+## Exact Equivalence and Practical Differences
+
+Suppose the following are all exact and compatible:
+
+- the same centered or otherwise identically coded $X$;
+- the same phenotype $y$;
+- complete $wy=X^\top y$, $yy=y^\top y$, and $XX=X^\top X$;
+- the same prior, initialization, and variance model; and
+- an exact implementation of the same update schedule.
+
+Then individual-level and summary-statistics marker updates can target the
+same model family because their likelihood calculations are algebraically
+equivalent.
+
+Practical BED and CSR fits are not expected to be numerically identical:
+
+- sparse LD omits weak or distant off-diagonal entries;
+- stored correlations and reconstructed cross-products use finite precision;
+- BED and CSR implementations can maintain residuals differently;
+- update scheduling and marker order can differ;
+- prior and residual-adjustment settings may differ; and
+- MCMC output contains Monte Carlo variation.
+
+Agreement should therefore be assessed through posterior patterns,
+predictions, variance summaries, and sensitivity analyses rather than equality
+of individual draws.
+
+## Validation and Diagnostics
+
+Before fitting a summary-statistics model, check:
+
+1. Every trait's `wy` vector has length $m$.
+2. Every trait's `ww` vector has length $m$, contains finite positive values,
+   and is compatible with the LD scaling.
+3. `yy` has one value per trait for parallel single-trait fitting, or `SSY` is
+   a valid $n_t\times n_t$ matrix for a full joint multi-trait likelihood.
+4. The supplied $n$ is the sample size used to calculate the corresponding
+   statistics; trait-specific $n_t$ values and overlap assumptions are
+   recorded where relevant.
+5. Sparse-LD dimensions equal $m\times m$, and its marker order matches
+   `wy` and `ww`.
+6. `cls`, allele frequencies, `rows`, and `scale` choices match between
+   `bed_xtx_xty()` and sparse-LD construction.
+7. Marker names, annotation rows, and posterior output rows use the same order.
+8. Phenotypes are centered or the intercept/centering convention is otherwise
+   explicit.
+9. `ww` magnitude is plausible for the coding and sample size.
+10. LD thresholds, windows, precision, and reference-sample provenance are
+    recorded.
+
+Useful diagnostics include inspecting `stats$n`, `stats$m`, `stats$scale`,
+`stats$min_xx`, `stats$mean_xx`, and `stats$max_xx`; reading CSR metadata with
+`sparseLD_read_CSR()`; and comparing BED-direct and CSR fits when the same
+individual-level data are available.
+
+## Limitations
+
+Summary-statistics inference cannot recover information that was not retained
+or supplied.
+
+- **LD compatibility:** `wy` and `ww` from one sample or scaling convention
+  combined with LD from another imply an approximate and potentially biased
+  likelihood.
+- **LD-reference mismatch:** ancestry, allele frequencies, imputation quality,
+  marker filtering, and sample selection can make reference LD differ from
+  study LD.
+- **Sparsification:** thresholding and windowing deliberately remove
+  off-diagonal information.
+- **Phenotype preprocessing:** unrecorded centering, scaling, covariate
+  adjustment, or residualization changes the meaning of `wy` and `yy`.
+- **Multi-trait information:** marginal trait statistics do not identify
+  cross-trait phenotype products or sample overlap.
+- **Overlap assumptions:** incorrect $N$ or phenotype covariance assumptions
+  can distort full residual covariance inference.
+- **Posterior summaries:** set contributions calculated from posterior means
+  do not automatically propagate full posterior uncertainty.
+
+These limitations should be treated as model-input assumptions, not merely
+implementation details.
+
+## Related Notes and Sources
+
+- [Data representations](data_representations.html) introduces the two data
+  representations and their alignment contracts.
+- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.html) gives the
+  practical BED-to-statistics-to-CSR sequence.
+- [Technical sparse LD and CSR](technical_sparse_ld_csr.html) documents the
+  disk-backed sparse-LD contract.
+- [Technical multi-trait sample overlap](technical_multitrait_overlap.html)
+  preserves the full `SSY` and overlap reconstruction theory.
+- [Single-trait models](single_trait_models.html) develops the sparse BLR prior
+  and marker-update interpretation.
+- [Multi-trait models](multi_trait_models.html) places cross-trait sufficient
+  statistics within joint MTBLR models.
+
+This appendix reorganizes the summary-statistic residual identities and
+set-contribution derivations from the archived annotation draft together with
+the `SSY` foundations from the archived theory draft, aligned to the current
+BED sufficient-statistics and CSR implementations.

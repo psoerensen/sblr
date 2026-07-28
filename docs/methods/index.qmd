@@ -1,0 +1,23 @@
+---
+title: "Statistical methods"
+format: html
+---
+
+This section documents the statistical models, likelihoods, priors, and
+computational representations implemented in `sblr`.
+
+## General model theory
+
+- [Bayesian linear regression model theory](model_theory.qmd)
+- [Summary-statistics likelihood](summary_statistics.qmd)
+- [Cross-trait sample overlap](multitrait_overlap.qmd)
+
+## Operators
+
+- [Sparse-LD CSR representation](sparse_ld_csr.qmd)
+
+## Annotation-informed models
+
+- [Annotation-informed model formulation](annotation_informed_models.qmd)
+- [Annotation-dependent priors](annotation_priors.qmd)
+- [SBayesRC-style annotation probabilities](sbayesrc_annotations.qmd)

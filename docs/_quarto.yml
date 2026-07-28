@@ -3,7 +3,7 @@ project:
   output-dir: "."
   render:
     - notes/*.qmd
-    - notes/drafts/*.qmd
+    - methods/*.qmd
 
 execute:
   eval: false
@@ -26,6 +26,8 @@ website:
         href: index.html
       - text: "Notes"
         href: notes/index.html
+      - text: "Methods"
+        href: methods/index.html
     right:
       - text: "GitHub"
         href: https://github.com/psoerensen/sblr
@@ -39,3 +41,4 @@ format:
     code-fold: true
     code-tools: true
     highlight-style: github
+    
