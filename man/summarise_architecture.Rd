@@ -12,8 +12,7 @@ summarise_architecture(
   min_pip = NULL,
   top_n = NULL,
   response = c("log_pip_weighted_bm2", "log_bm2"),
-  epsilon = 1e-12,
-  use_pip_weights = TRUE
+  epsilon = 1e-12
 )
 }
 \arguments{
@@ -40,9 +39,6 @@ per trait after any explicit `markers` and `min_pip` filters.}
 `"log_bm2"` regresses `log(bm^2 + epsilon)`.}
 
 \item{epsilon}{Positive scalar added before taking logs.}
-
-\item{use_pip_weights}{Deprecated compatibility argument. If `response` is
-left at its default, `FALSE` selects `response = "log_bm2"`.}
 }
 \value{
 A data frame with one row per trait and columns `trait`,

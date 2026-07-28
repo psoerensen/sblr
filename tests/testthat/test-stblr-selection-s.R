@@ -1057,7 +1057,7 @@ test_that("summarise_architecture handles h and unweighted response", {
   out <- summarise_architecture(
     fit,
     h = stats::setNames(seq(0.095, 0.48, length.out = 6), paste0("m", 1:6)),
-    use_pip_weights = FALSE
+    response = "log_bm2"
   )
 
   expect_equal(out$method, "posthoc_regression")

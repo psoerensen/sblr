@@ -45,6 +45,7 @@ inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
  const arma::mat& B=*context.marker_variance_initial;
  const arma::mat& E=*context.residual_variance_initial;
  const std::vector<double>& pi=*context.global_probability;
+ (void)pi;
  const std::vector<int>& n=*context.sample_size;
  const std::vector<std::vector<double>>& d_init=*context.initial_inclusion;
  const std::vector<std::vector<double>>& r_init=*context.initial_residual;
@@ -104,17 +105,7 @@ inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
  omp_set_dynamic(0);
  nthreads = std::max(1, std::min(ncores, nt));
  omp_set_num_threads(nthreads);
- std::cout << "STBLR group annotation CSR OpenMP requested threads = "
-             << nthreads << ", omp_get_max_threads = " << omp_get_max_threads()
-             << ", num procs = " << omp_get_num_procs() << "\n";
 #endif
-
- std::cout << "STBLR group annotation CSR: ngroup=" << ngroup
-             << ", updatePi=" << updatePi
-             << ", updateGroupVb=" << updateGroupVb
-             << ", updateB=" << updateB
-             << ", normalize_group_vb=" << normalize_group_vb
-             << "\n";
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -386,13 +377,6 @@ inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
 #endif
   }
  }
-
-#ifdef _OPENMP
- for (int t = 0; t < nt; ++t) {
-  std::cout << "trait " << t << " used thread " << thread_used[static_cast<std::size_t>(t)]
-              << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)] << "\n";
- }
-#endif
 
  for (int t = 0; t < nt; ++t) {
   if (failed[static_cast<std::size_t>(t)]) {

@@ -12,7 +12,7 @@ test_that("MT BayesRC factorized annotation probabilities have one null state", 
                tolerance = 1e-14)
 })
 
-test_that("fixed-alpha MT SBayesRC reduces exactly to Phase 19 SBayesR", {
+test_that("fixed-alpha MT SBayesRC reduces exactly to MT SBayesR", {
   x <- .mt_bayesrc_fixture(); on.exit(.mt_bayesrc_cleanup(x), add = TRUE)
   init <- make_sbayesrc_alpha_init(
     x$annotations, gamma = c(0, .1, 1), pi_init = .3,

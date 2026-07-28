@@ -1,4 +1,4 @@
-# The legacy Geweke/coda convergence screen was retired in Phase 18.
+# Convergence diagnostics are owned by the shared rank-normalized engine.
 # This internal convenience returns the validated modern result already owned
 # by the fit and never calculates a competing statistic.
 check_stblr_convergence <- function(fit) {

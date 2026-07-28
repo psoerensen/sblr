@@ -57,7 +57,7 @@
   }
   if (!is.null(selection_s_init) || !is.null(selection_s_prior) ||
       !is.null(selection_s_proposal_sd)) {
-    stop("selection_s_init, selection_s_prior, and selection_s_proposal_sd require estimate_selection_s = TRUE, which is unsupported for MTBLR in Phase 19.",
+    stop("selection_s_init, selection_s_prior, and selection_s_proposal_sd require estimate_selection_s = TRUE, which is unsupported for MTBLR.",
          call. = FALSE)
   }
   selection_s_active <- !is.null(selection_s)
@@ -281,7 +281,7 @@
            call. = FALSE)
     return(list(beta = matrix(0, m, nt), b = b,
                 state = matrix(0L, m, nt), component = integer(),
-                policy = "phase18_bayesc_initialization"))
+                policy = "canonical_bayesc_initialization"))
   }
   state <- matrix_value(state, "state", "integer")
   if (is.null(state)) {

@@ -984,12 +984,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  read_nthreads = ncores > 0 ? std::max(1, ncores) : std::max(1, omp_get_max_threads());
 #endif
 
- Rcpp::Rcout
- << "Reading/packing BED with blocked reader: n_bed=" << n
- << ", n_rows=" << n_rows
- << ", read_block_size=" << read_block_size
- << ", read_nthreads=" << read_nthreads
- << "\n";
 
  FastPackedBedMatrix G = read_bedfiles_to_fast_packed_matrix_blocked(
   bed_files_cpp,
@@ -1052,19 +1046,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  omp_set_num_threads(nthreads);
 #endif
 
- Rcpp::Rcout
- << "Building scheduled packed BED STBLR chains: n=" << n_used
- << ", m=" << m
- << ", nt=" << nt
- << ", nchains=" << nchains
- << ", jobs=" << njobs
- << ", scale=" << scale
- << ", af_computed=" << af_computed
- << ", read_block_size=" << read_block_size
- << ", progress_every=" << progress_every
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
  std::vector<MarkerMapSTScheduledChains> marker_maps = build_marker_maps_scheduled_chains(
   G,
@@ -1074,27 +1055,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  );
  std::vector<int> marker_order = make_marker_order_from_sets_scheduled_chains(sets, m);
 
- Rcpp::Rcout
- << "Scheduled chains sampler: full_sweep_every=" << full_sweep_every
- << ", null_skip_base=" << null_skip_base
- << ", null_skip_max=" << null_skip_max
- << ", candidate_threshold=" << candidate_threshold
- << ", candidate_lifetime=" << candidate_lifetime
- << ", skip_nulls_burnin_only=" << skip_nulls_burnin_only
- << ", return_wy=" << return_wy
- << ", return_r=" << return_r
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
 #ifdef _OPENMP
- Rcpp::Rcout
- << "STBLR scheduled packed BED chains OpenMP threads = " << nthreads
- << ", max threads = " << omp_get_max_threads()
- << ", num procs = " << omp_get_num_procs()
- << "\n";
 #else
- Rcpp::Rcout << "STBLR scheduled packed BED chains compiled without OpenMP; using one thread.\n";
 #endif
 
  arma::mat y_mat(n_used, nt, arma::fill::zeros);
@@ -1140,21 +1103,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   const auto task=sblr::core::make_bed_family_task_index(job,nt);
   const int chain=task.chain;
   const int t=task.trait;
-  Rcpp::Rcout
-  << "chain " << chain
-  << ", trait " << t
-  << ", failed=" << r.failed
-  << ", seconds=" << r.seconds
-  << ", nsamples=" << r.nsamples
-  << ", final_pi=" << r.final_pi
-  << ", log_cpo=" << r.log_cpo
-  << ", mean_log_cpo=" << r.mean_log_cpo
-  << "\n";
-
+  (void)chain;
+  (void)t;
   if (r.failed) {
    ++failed_total;
-   Rcpp::Rcout
-   << "  error: " << r.error << "\n";
   }
  }
 

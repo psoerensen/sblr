@@ -1,0 +1,17 @@
+---
+title: "Convergence diagnostics"
+format: html
+---
+
+`convergence = "auto"` retains core-only behavior, `"none"` disables formal
+capture, `"core"` requests the five trait variance quantities, and
+`"extended"` adds applicable covariance, probability, `selection_s`, and
+annotation quantities.
+
+Selected-marker diagnostics require explicit IDs or one-based indices and may
+capture effective `b`, binary `d`, and mixture component states where defined.
+There is no all-marker shortcut. Trace memory is guarded before sampling.
+
+Diagnostics use rank-normalized split/folded R-hat, bulk/tail/mean ESS, and
+MCSE of the posterior mean. They assess chain mixing; passing thresholds does
+not prove model correctness or absolute convergence.

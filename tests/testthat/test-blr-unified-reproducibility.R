@@ -6,7 +6,7 @@ test_that("logical task seeds are independent of worker count", {
   explicit <- sblr:::.blr_chain_controls(
     10, 5, 1, 17, 3, 2, c(41, 42, 43), FALSE)
   expect_identical(sblr:::.blr_st_task_seeds(explicit, 2L),
-                   sblr:::blr_phase4_scalar_seeds_cpp(
+                   sblr:::blr_scalar_seeds_cpp(
                      17L, 2L, 3L, c(41L, 42L, 43L)))
 })
 
@@ -22,12 +22,12 @@ test_that("logical task seeds are independent of worker count", {
 }
 
 test_that("MT CSR native logical chains share one prepared operator", {
-  case <- phase17j_public_case()
+  case <- blr_csr_public_public_case()
   on.exit(unlink(paste0(case$x$prefixes, c(
     ".row_ptr.u64.bin", ".col_idx.u32.0based.bin", ".values.f32.bin",
     ".meta.txt"))), add = TRUE)
   call <- function(ncores, keep_chains = FALSE, seeds = NULL) {
-    phase17j_call(
+    blr_csr_public_call(
       case, nchains = 4L, ncores = ncores, chain_seeds = seeds,
       keep_chains = keep_chains, convergence = "core",
       convergence_control = list(warn = FALSE, keep_traces = TRUE))
@@ -57,10 +57,10 @@ test_that("MT CSR native logical chains share one prepared operator", {
 })
 
 test_that("MT block-eigen native logical chains share one prepared operator", {
-  case <- phase17m_public_case()
+  case <- blr_block_public_public_case()
   on.exit(unlink(case$stats$bed_files), add = TRUE)
   call <- function(ncores, keep_chains = FALSE, seeds = NULL) {
-    phase17m_call(
+    blr_block_public_call(
       case, nchains = 4L, ncores = ncores, chain_seeds = seeds,
       keep_chains = keep_chains, convergence = "core",
       convergence_control = list(warn = FALSE, keep_traces = TRUE))

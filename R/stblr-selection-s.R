@@ -25,8 +25,6 @@
 #'   `"log_pip_weighted_bm2"` regresses `log(PIP * bm^2 + epsilon)`.
 #'   `"log_bm2"` regresses `log(bm^2 + epsilon)`.
 #' @param epsilon Positive scalar added before taking logs.
-#' @param use_pip_weights Deprecated compatibility argument. If `response` is
-#'   left at its default, `FALSE` selects `response = "log_bm2"`.
 #'
 #' @return A data frame with one row per trait and columns `trait`,
 #'   `selection_s_posthoc`, `se`, `p_value`, `r2`, `intercept`, `n_markers`,
@@ -55,8 +53,7 @@ summarise_architecture <- function(
     min_pip = NULL,
     top_n = NULL,
     response = c("log_pip_weighted_bm2", "log_bm2"),
-    epsilon = 1e-12,
-    use_pip_weights = TRUE
+    epsilon = 1e-12
 ) {
   if (!is.list(fit)) {
     stop("fit must be a list-like ST-BLR fit object.")
@@ -81,15 +78,7 @@ summarise_architecture <- function(
       !is.finite(epsilon) || epsilon <= 0) {
     stop("epsilon must be a positive finite numeric scalar.")
   }
-  if (!is.logical(use_pip_weights) || length(use_pip_weights) != 1L ||
-      is.na(use_pip_weights)) {
-    stop("use_pip_weights must be TRUE or FALSE.")
-  }
-  response_missing <- missing(response)
   response <- match.arg(response)
-  if (!use_pip_weights && response_missing) {
-    response <- "log_bm2"
-  }
   if (!is.null(min_pip) &&
       (!is.numeric(min_pip) || length(min_pip) != 1L ||
        !is.finite(min_pip) || min_pip < 0 || min_pip > 1)) {

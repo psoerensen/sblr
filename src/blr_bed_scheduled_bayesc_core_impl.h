@@ -38,6 +38,8 @@ BedScheduledBayesCChainExecutionResult run_bed_scheduled_bayesc_chain(
  const int t=context.trait_index;
  const int chain=context.chain_index;
  const int progress_every=context.progress_every;
+ (void)chain;
+ (void)progress_every;
  const bool updateB=context.updateB;
  const bool updateE=context.updateE;
  const bool updatePi=context.updatePi;
@@ -211,41 +213,6 @@ BedScheduledBayesCChainExecutionResult run_bed_scheduled_bayesc_chain(
   double nsamples_t = 0.0;
 
   for (int it = 0; it < total_it; ++it) {
-   if (progress_every > 0 &&
-       (it == 0 || ((it + 1) % progress_every == 0) || it + 1 == total_it)) {
-    double n_included_progress = 0.0;
-    for (arma::uword jj = 0; jj < d_t.n_elem; ++jj) {
-     if (d_t(jj) > 0) n_included_progress += 1.0;
-    }
-
-    const double vle_progress = computeLE_sparse_scheduled_chains(b_t, marker_maps, G.n);
-    const double vld_progress = vg_t - vle_progress;
-
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-{
- std::cout
- << "progress chain " << chain
- << ", trait " << t
- << ": iter " << (it + 1)
- << "/" << total_it
- << ", vb=" << vb_t
- << ", ve=" << ve_t
- << ", vg=" << vg_t
- << ", vle=" << vle_progress
- << ", vld=" << vld_progress
- << ", vei=" << vei_t
- << ", pi=" << pi_t[1]
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << ", n_included=" << n_included_progress
- << ", active=" << active_list.size()
- << ", candidates=" << candidate_list.size()
- << "\n";
-}
-   }
-
    const bool skipping_allowed =
     null_skip_base > 1 &&
     (!skip_nulls_burnin_only || it < nburn);

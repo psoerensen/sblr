@@ -771,7 +771,6 @@ NULL
  meta <- raw$meta
  nt <- as.integer(meta$nt)
  m <- as.integer(meta$m)
- n_trace <- as.integer(meta$n_trace)
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
 
@@ -2444,9 +2443,7 @@ stblr_csr_bayesr <- function(
                       updateE_start = NULL, updateE_every = NULL,
                       use_comp_init = FALSE, comp_init = NULL,
                       .convergence_spec = NULL) {
- method <- tolower(method)
- if (length(method) > 1L) method <- method[1L]
- if (length(method) < 1L || is.na(method) ||
+ if (length(method) != 1L || is.na(method) ||
      !method %in% c("bayesc", "bayesr")) {
   stop("method must be one of 'bayesc' or 'bayesr'.")
  }
@@ -3716,9 +3713,7 @@ stblr_bed_marker <- function(
 }
 
 .normalize_stblr_method <- function(method) {
- method <- tolower(method)
- if (length(method) > 1L) method <- method[1L]
- if (length(method) < 1L || is.na(method) ||
+ if (length(method) != 1L || is.na(method) ||
      !method %in% c("bayesc", "bayesr", "bayesrc")) {
   stop("method must be one of 'bayesc', 'bayesr', or 'bayesrc'.")
  }
@@ -4227,7 +4222,7 @@ stblr_bed_marker <- function(
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor
   )
-  fit <- .stblr_add_sbayesrc_annotation_aliases(fit)
+  fit <- .stblr_add_sbayesrc_annotation_metadata(fit)
   return(fit)
  }
 

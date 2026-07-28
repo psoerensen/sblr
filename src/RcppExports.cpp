@@ -11,43 +11,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// blr_phase1_validate_spec_cpp
-Rcpp::List blr_phase1_validate_spec_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase1_validate_spec_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase1_validate_spec_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase1_validate_result_dimensions_cpp
-Rcpp::List blr_phase1_validate_result_dimensions_cpp(Rcpp::List dimensions);
-RcppExport SEXP _sblr_blr_phase1_validate_result_dimensions_cpp(SEXP dimensionsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type dimensions(dimensionsSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase1_validate_result_dimensions_cpp(dimensions));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase4_scalar_tasks_cpp
-Rcpp::DataFrame blr_phase4_scalar_tasks_cpp(int ntraits, int nchains);
-RcppExport SEXP _sblr_blr_phase4_scalar_tasks_cpp(SEXP ntraitsSEXP, SEXP nchainsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type ntraits(ntraitsSEXP);
-    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase4_scalar_tasks_cpp(ntraits, nchains));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase4_scalar_seeds_cpp
-Rcpp::IntegerVector blr_phase4_scalar_seeds_cpp(int seed, int ntraits, int nchains, Rcpp::IntegerVector chain_seeds);
-RcppExport SEXP _sblr_blr_phase4_scalar_seeds_cpp(SEXP seedSEXP, SEXP ntraitsSEXP, SEXP nchainsSEXP, SEXP chain_seedsSEXP) {
+// blr_scalar_seeds_cpp
+Rcpp::IntegerVector blr_scalar_seeds_cpp(int seed, int ntraits, int nchains, Rcpp::IntegerVector chain_seeds);
+RcppExport SEXP _sblr_blr_scalar_seeds_cpp(SEXP seedSEXP, SEXP ntraitsSEXP, SEXP nchainsSEXP, SEXP chain_seedsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -55,110 +21,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type ntraits(ntraitsSEXP);
     Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type chain_seeds(chain_seedsSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase4_scalar_seeds_cpp(seed, ntraits, nchains, chain_seeds));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase4_retained_iterations_cpp
-Rcpp::LogicalVector blr_phase4_retained_iterations_cpp(int trace_length, int burnin, int thinning);
-RcppExport SEXP _sblr_blr_phase4_retained_iterations_cpp(SEXP trace_lengthSEXP, SEXP burninSEXP, SEXP thinningSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type trace_length(trace_lengthSEXP);
-    Rcpp::traits::input_parameter< int >::type burnin(burninSEXP);
-    Rcpp::traits::input_parameter< int >::type thinning(thinningSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase4_retained_iterations_cpp(trace_length, burnin, thinning));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase5a_validate_bayesr_contract_cpp
-Rcpp::List blr_phase5a_validate_bayesr_contract_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase5a_validate_bayesr_contract_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase5a_validate_bayesr_contract_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase7a_validate_sbayesrc_contract_cpp
-Rcpp::List blr_phase7a_validate_sbayesrc_contract_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase7a_validate_sbayesrc_contract_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase7a_validate_sbayesrc_contract_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase9a_validate_fixed_prior_bayesc_cpp
-Rcpp::List blr_phase9a_validate_fixed_prior_bayesc_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase9a_validate_fixed_prior_bayesc_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase9a_validate_group_bayesc_cpp
-Rcpp::List blr_phase9a_validate_group_bayesc_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase9a_validate_group_bayesc_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase9a_validate_group_bayesc_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase9a_validate_learned_annotation_bayesc_cpp
-Rcpp::List blr_phase9a_validate_learned_annotation_bayesc_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase9a_validate_learned_annotation_bayesc_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase10a_validate_scheduled_execution_cpp
-Rcpp::List blr_phase10a_validate_scheduled_execution_cpp(Rcpp::List spec);
-RcppExport SEXP _sblr_blr_phase10a_validate_scheduled_execution_cpp(SEXP specSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type spec(specSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase10a_validate_scheduled_execution_cpp(spec));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase10a_distribution_cache_diagnostic_cpp
-Rcpp::List blr_phase10a_distribution_cache_diagnostic_cpp(int seed, int threads);
-RcppExport SEXP _sblr_blr_phase10a_distribution_cache_diagnostic_cpp(SEXP seedSEXP, SEXP threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase10a_distribution_cache_diagnostic_cpp(seed, threads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// blr_phase10b_chain_rng_diagnostic_cpp
-Rcpp::List blr_phase10b_chain_rng_diagnostic_cpp(int seed, int draws);
-RcppExport SEXP _sblr_blr_phase10b_chain_rng_diagnostic_cpp(SEXP seedSEXP, SEXP drawsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type draws(drawsSEXP);
-    rcpp_result_gen = Rcpp::wrap(blr_phase10b_chain_rng_diagnostic_cpp(seed, draws));
+    rcpp_result_gen = Rcpp::wrap(blr_scalar_seeds_cpp(seed, ntraits, nchains, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1825,19 +1688,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_sblr_blr_phase1_validate_spec_cpp", (DL_FUNC) &_sblr_blr_phase1_validate_spec_cpp, 1},
-    {"_sblr_blr_phase1_validate_result_dimensions_cpp", (DL_FUNC) &_sblr_blr_phase1_validate_result_dimensions_cpp, 1},
-    {"_sblr_blr_phase4_scalar_tasks_cpp", (DL_FUNC) &_sblr_blr_phase4_scalar_tasks_cpp, 2},
-    {"_sblr_blr_phase4_scalar_seeds_cpp", (DL_FUNC) &_sblr_blr_phase4_scalar_seeds_cpp, 4},
-    {"_sblr_blr_phase4_retained_iterations_cpp", (DL_FUNC) &_sblr_blr_phase4_retained_iterations_cpp, 3},
-    {"_sblr_blr_phase5a_validate_bayesr_contract_cpp", (DL_FUNC) &_sblr_blr_phase5a_validate_bayesr_contract_cpp, 1},
-    {"_sblr_blr_phase7a_validate_sbayesrc_contract_cpp", (DL_FUNC) &_sblr_blr_phase7a_validate_sbayesrc_contract_cpp, 1},
-    {"_sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_fixed_prior_bayesc_cpp, 1},
-    {"_sblr_blr_phase9a_validate_group_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_group_bayesc_cpp, 1},
-    {"_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp", (DL_FUNC) &_sblr_blr_phase9a_validate_learned_annotation_bayesc_cpp, 1},
-    {"_sblr_blr_phase10a_validate_scheduled_execution_cpp", (DL_FUNC) &_sblr_blr_phase10a_validate_scheduled_execution_cpp, 1},
-    {"_sblr_blr_phase10a_distribution_cache_diagnostic_cpp", (DL_FUNC) &_sblr_blr_phase10a_distribution_cache_diagnostic_cpp, 2},
-    {"_sblr_blr_phase10b_chain_rng_diagnostic_cpp", (DL_FUNC) &_sblr_blr_phase10b_chain_rng_diagnostic_cpp, 2},
+    {"_sblr_blr_scalar_seeds_cpp", (DL_FUNC) &_sblr_blr_scalar_seeds_cpp, 4},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_mtblr_cpg_omp_csr", (DL_FUNC) &_sblr_mtblr_cpg_omp_csr, 23},
     {"_sblr_bed_xtx_xty", (DL_FUNC) &_sblr_bed_xtx_xty, 11},

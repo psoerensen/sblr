@@ -2759,7 +2759,7 @@ rownames(sse_prior) <- colnames(sse_prior) <- trait_names
 
 
 
-# The former direct mtblr_cpg_omp_csr experiment was removed in Phase 17G.
+# The former direct low-level MT CSR experiment is retired; use mtblr_csr().
 # That native-only route remains unsupported research evidence, not an example.
 
 m <- length(cls)

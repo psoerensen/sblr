@@ -1,4 +1,4 @@
-# Phase 20 MT BayesRC/SBayesRC workflow (small inputs assumed).
+# canonical MT BayesRC/SBayesRC workflow (small inputs assumed).
 # `annotations` must carry explicit marker IDs in row names or a marker_id
 # column. Mixed binary and continuous columns share one preprocessing contract.
 

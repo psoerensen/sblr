@@ -733,13 +733,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
  }
 #endif
 
- Rcpp::Rcout
- << "Building packed BED marker-wise STBLR: n=" << n_used
- << ", m=" << m
- << ", nt=" << nt
- << ", scale=" << scale
- << ", af_computed=" << af_computed
- << "\n";
 
  std::vector<MarkerMapST> marker_maps = stblr_build_marker_maps_sparse(
   G,
@@ -752,13 +745,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
   m
  );
 
- Rcpp::Rcout
- << "Packed BED marker-wise sampler: full_sweep_every=" << full_sweep_every
- << ", null_update_prob=" << null_update_prob
- << ", candidate_threshold=" << candidate_threshold
- << ", candidate_lifetime=" << candidate_lifetime
- << ", skip_nulls_burnin_only=" << skip_nulls_burnin_only
- << "\n";
 
  arma::mat y_mat(n_used, nt, arma::fill::zeros);
 
@@ -793,11 +779,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
 #ifdef _OPENMP
  nthreads = ncores > 0 ? std::max(1, std::min(ncores, nt)) : std::min(omp_get_max_threads(), nt);
  omp_set_num_threads(nthreads);
- Rcpp::Rcout
- << "STBLR packed BED OpenMP threads = " << nthreads
- << ", max threads = " << omp_get_max_threads()
- << ", num procs = " << omp_get_num_procs()
- << "\n";
 #endif
 
 #ifdef _OPENMP
@@ -1048,11 +1029,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
 
 #ifdef _OPENMP
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout
-  << "trait " << t
-  << " used thread " << thread_used[static_cast<std::size_t>(t)]
-  << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
-  << "\n";
  }
 #endif
 
@@ -2513,16 +2489,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
 //  }
 // #endif
 //
-//  Rcpp::Rcout << "Building BED-backed STBLR blocks: n=" << n_used
-//              << ", m=" << m
-//              << ", nt=" << nt
-//              << ", scale=" << scale
-//              << ", af_computed=" << af_computed
-//              << "\n";
 //
 //  std::vector<STBedBlock> blocks = stblr_build_bed_blocks(G, sets, af_cpp, scale);
 //
-//  Rcpp::Rcout << "Number of STBLR blocks = " << blocks.size() << "\n";
 //  Rcpp::Rcout << "BED sampler: safe block-first loop, one decode per block visit.\n";
 //
 //  arma::mat y_mat(n_used, nt, arma::fill::zeros);
@@ -4023,16 +3992,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
 //  }
 // #endif
 //
-//  Rcpp::Rcout << "Building BED-backed STBLR blocks: n=" << n_used
-//              << ", m=" << m
-//              << ", nt=" << nt
-//              << ", scale=" << scale
-//              << ", af_computed=" << af_computed
-//              << "\n";
 //
 //  std::vector<STBedBlock> blocks = stblr_build_bed_blocks(G, sets, af_cpp, scale);
 //
-//  Rcpp::Rcout << "Number of STBLR blocks = " << blocks.size() << "\n";
 //
 //  arma::mat bm_mat(nt, m, arma::fill::zeros);
 //  arma::mat dm_mat(nt, m, arma::fill::zeros);
@@ -5574,17 +5536,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_sparse(
 //  }
 // #endif
 //
-//  Rcpp::Rcout << "Building BED-backed STBLR blocks: n=" << n_used
-//              << ", m=" << m
-//              << ", nt=" << nt
-//              << ", scale=" << scale
-//              << ", af_computed=" << af_computed
-//              << "\n";
 //
 //  // Cached genotype block cross-products are shared across traits.
 //  std::vector<STBedBlock> blocks = stblr_build_bed_blocks(G, sets, af_cpp, scale);
 //
-//  Rcpp::Rcout << "Number of STBLR blocks = " << blocks.size() << "\n";
 //
 //  arma::mat bm_mat(nt, m, arma::fill::zeros);
 //  arma::mat dm_mat(nt, m, arma::fill::zeros);

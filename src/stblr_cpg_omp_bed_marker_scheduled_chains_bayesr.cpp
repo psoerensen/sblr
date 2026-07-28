@@ -154,12 +154,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  read_nthreads = ncores > 0 ? std::max(1, ncores) : std::max(1, omp_get_max_threads());
 #endif
 
- Rcpp::Rcout
- << "Reading/packing BED with blocked reader: n_bed=" << n
- << ", n_rows=" << n_rows
- << ", read_block_size=" << read_block_size
- << ", read_nthreads=" << read_nthreads
- << "\n";
 
  FastPackedBedMatrixBR G = br_read_bed_blocked(
   bed_files_cpp,
@@ -222,41 +216,13 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  omp_set_num_threads(nthreads);
 #endif
 
- Rcpp::Rcout
- << "Building BayesR scheduled packed BED chains: n=" << n_used
- << ", m=" << m
- << ", K=" << K
- << ", nt=" << nt
- << ", nchains=" << nchains
- << ", jobs=" << njobs
- << ", scale=" << scale
- << ", af_computed=" << af_computed
- << ", read_block_size=" << read_block_size
- << ", progress_every=" << progress_every
- << "\n";
 
  std::vector<MarkerMapBayesR> marker_maps = br_build_marker_maps(G, af_cpp, scale, nthreads);
  std::vector<int> marker_order = br_make_marker_order(sets, m);
 
- Rcpp::Rcout
- << "BayesR scheduled chains: full_sweep_every=" << full_sweep_every
- << ", null_skip_base=" << null_skip_base
- << ", null_skip_max=" << null_skip_max
- << ", candidate_threshold=" << candidate_threshold
- << ", candidate_lifetime=" << candidate_lifetime
- << ", skip_nulls_burnin_only=" << skip_nulls_burnin_only
- << ", return_wy=" << return_wy
- << ", return_r=" << return_r
- << "\n";
 
 #ifdef _OPENMP
- Rcpp::Rcout
- << "BayesR scheduled packed BED chains OpenMP threads = " << nthreads
- << ", max threads = " << omp_get_max_threads()
- << ", num procs = " << omp_get_num_procs()
- << "\n";
 #else
- Rcpp::Rcout << "BayesR scheduled packed BED chains compiled without OpenMP; using one thread.\n";
 #endif
 
  arma::mat y_mat(n_used, nt, arma::fill::zeros);
@@ -305,36 +271,13 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   const auto task=sblr::core::make_bed_family_task_index(job,nt);
   const int ch=task.chain;
   const int t=task.trait;
+  (void)ch;
+  (void)t;
   for (const sblr::core::BedBayesRProgressEvent& event : r.progress_events) {
-   Rcpp::Rcout
-   << "progress chain " << event.chain_index
-   << ", trait " << event.trait_index
-   << ": iter " << event.iteration << "/" << event.total_iterations
-   << ", vb=" << event.vb
-   << ", ve=" << event.ve
-   << ", vg=" << event.vg
-   << ", vle=" << event.vle
-   << ", vld=" << event.vld
-   << ", vei=" << event.vei
-   << ", pi_nonnull=" << event.pi_nonnull
-   << ", K=" << event.component_count
-   << ", n_included=" << event.included
-   << ", active=" << event.active_count
-   << ", candidates=" << event.candidate_count
-   << "\n";
+   (void)event;
   }
-  Rcpp::Rcout
-  << "chain " << ch
-  << ", trait " << t
-  << ", failed=" << r.failed
-  << ", seconds=" << r.seconds
-  << ", nsamples=" << r.nsamples
-  << ", log_cpo=" << r.log_cpo
-  << ", mean_log_cpo=" << r.mean_log_cpo
-  << "\n";
   if (r.failed) {
    ++failed_total;
-   Rcpp::Rcout << "  error: " << r.error << "\n";
   }
  }
 

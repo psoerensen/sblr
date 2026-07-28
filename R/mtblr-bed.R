@@ -524,7 +524,7 @@ mtblr_bed <- function(
   mean_after <- colMeans(Y)
   tolerance <- .mtblr_bed_center_tolerance(Y)
   if (any(abs(mean_after) > tolerance)) {
-    stop("center = FALSE requires phenotype columns already centered to the Phase 17O tolerance.",
+    stop("center = FALSE requires phenotype columns already centered to the package tolerance.",
          call. = FALSE)
   }
   variance_after <- apply(Y, 2L, stats::var)

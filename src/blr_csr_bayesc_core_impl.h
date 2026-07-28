@@ -632,7 +632,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
             input.controls.use_fixed_selection_scale) {
           const arma::rowvec& active_scale = input.controls.estimate_selection_s
             ? dynamic_selection_scale : *input.controls.fixed_selection_scale;
-          // PHASE2_MARKER_LOOP_BEGIN
+          // Marker sweep begin.
           for (int sorted = 0; sorted < m; ++sorted) {
             const int marker =
               (*input.marker_order)[static_cast<std::size_t>(sorted)];
@@ -641,9 +641,9 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
               diagonal, residual, effects, state, input.data, gen
             );
           }
-          // PHASE2_MARKER_LOOP_END
+          // Marker sweep end.
         } else {
-          // PHASE2_MARKER_LOOP_BEGIN
+          // Marker sweep begin.
           for (int sorted = 0; sorted < m; ++sorted) {
             const int marker =
               (*input.marker_order)[static_cast<std::size_t>(sorted)];
@@ -652,7 +652,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
               residual, effects, state, input.data, gen
             );
           }
-          // PHASE2_MARKER_LOOP_END
+          // Marker sweep end.
         }
         if (input.controls.update_ld_swap && input.controls.ld_swap_moves > 0 &&
             input.controls.ld_swap_probability > 0.0) {

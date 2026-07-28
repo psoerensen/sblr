@@ -21,16 +21,12 @@ jobs:
           cache-version: 1
       - name: Compile and run full suite
         run: Rscript -e "Rcpp::compileAttributes('.'); pkgload::load_all('.', compile=TRUE); devtools::test('.')"
-      - name: Unified architecture and mutation audits
+      - name: Permanent architecture, mutation, and documentation audits
         run: |
-          Rscript tools/audit/blr_phase18_unified_architecture_audit.R
-          Rscript tools/audit/blr_phase18_mutation_sensitivity.R
-            Rscript tools/audit/blr_phase19_mt_bayesr_architecture_audit.R
-            Rscript tools/audit/blr_phase19_mutation_sensitivity.R
-            Rscript tools/audit/blr_phase20_mt_bayesrc_architecture_audit.R
-            Rscript tools/audit/blr_phase20_mutation_sensitivity.R
-            Rscript tools/audit/blr_phase21_extended_diagnostics_architecture_audit.R
-            Rscript tools/audit/blr_phase21_mutation_sensitivity.R
+          Rscript tools/audit/blr_generated_interfaces_audit.R
+          Rscript tools/audit/blr_architecture_audit.R
+          Rscript tools/audit/blr_mutation_sensitivity.R
+          Rscript tools/audit/blr_documentation_audit.R
       - name: Peak-RSS smoke measurement
         run: Rscript tools/benchmarks/measure_peak_rss.R --smoke
       - name: Package check

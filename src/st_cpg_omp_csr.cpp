@@ -956,27 +956,9 @@ static Rcpp::List stblr_csr_bayesc_result_to_raw(
  const int nthreads = stblr_num_threads_for_tasks(
   ncores, stblr_num_chain_tasks(nt, nchains)
  );
- Rcpp::Rcout
- << "STBLR OpenMP requested threads = "
- << nthreads
- << ", omp_get_max_threads = "
- << omp_get_max_threads()
- << ", num procs = "
- << omp_get_num_procs()
- << ", pi_prior_a = "
- << pi_prior_a
- << ", pi_prior_b = "
- << pi_prior_b
- << "\n";
  for (int task = 0; task < stblr_num_chain_tasks(nt, nchains); ++task) {
   const sblr::core::CsrBayesCChainResult& chain_result =
    result.chains[static_cast<std::size_t>(task)];
-  Rcpp::Rcout
-  << "trait " << stblr_task_trait(task, nchains)
-  << ", chain " << stblr_task_chain(task, nchains)
-  << " used thread " << chain_result.thread_used
-  << ", seconds = " << chain_result.seconds
-  << "\n";
  }
 #endif
 
@@ -1881,18 +1863,6 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  // Explicitly set the OpenMP thread count for this runtime.
  omp_set_num_threads(nthreads);
 
- Rcpp::Rcout
- << "STBLR OpenMP requested threads = "
- << nthreads
- << ", omp_get_max_threads = "
- << omp_get_max_threads()
- << ", num procs = "
- << omp_get_num_procs()
- << ", pi_prior_a = "
- << pi_prior_a
- << ", pi_prior_b = "
- << pi_prior_b
- << "\n";
 #endif
 
  // #ifdef _OPENMP
@@ -2341,12 +2311,6 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  for (int task = 0; task < ntasks; ++task) {
   const int t = stblr_task_trait(task, nchains);
   const int chain = stblr_task_chain(task, nchains);
-  Rcpp::Rcout
-  << "trait " << t
-  << ", chain " << chain
-  << " used thread " << thread_used[static_cast<std::size_t>(task)]
-  << ", seconds = " << task_seconds[static_cast<std::size_t>(task)]
-  << "\n";
  }
 #endif
 

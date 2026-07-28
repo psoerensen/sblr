@@ -1,8 +1,0 @@
-pkgload::load_all(".",compile=FALSE,quiet=TRUE)
-scripts<-c(BayesC="tools/benchmarks/blr_phase11d_bed_scheduled_bayesc.R",BayesR="tools/benchmarks/blr_phase13e_bed_bayesr.R",BayesRC="tools/benchmarks/blr_phase14e_bed_bayesrc.R")
-info<-data.frame(model=names(scripts),canonical_script=unname(scripts),fixture=c("Phase 11B canonical","Phase 13A canonical","Phase 14A canonical"),controls=c("adaptive binary scheduler","ordered global mixture scheduler","annotation probit-stick full sweep"),stringsAsFactors=FALSE)
-cat("Phase 15A packed-BED family audit benchmark convention\n")
-cat("no cross-model speed ranking\ncompleted-fit RSS is not peak RSS\nworkloads are model-specific\npage-cache effects apply\n")
-cat("R:",R.version.string," sblr:",as.character(utils::packageVersion("sblr")),"\n")
-print(info,row.names=FALSE)
-cat("Run each canonical script independently to obtain its warm-up, repetitions, timing, RSS, BED-size, and model-specific metadata.\n")

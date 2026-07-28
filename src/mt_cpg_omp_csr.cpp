@@ -267,12 +267,6 @@ inline LDCSR read_and_build_mt_ld_csr(
   }
  }
 
- Rcpp::Rcout
- << "MT flat LD builder: input nnz=" << static_cast<double>(nnz_u64)
- << ", symmetric nnz=" << static_cast<double>(nnz_sym)
- << ", max_abs_rij=" << max_abs_rij
- << ", max_abs_xij=" << max_abs_xij
- << "\n";
 
  return ld;
 }

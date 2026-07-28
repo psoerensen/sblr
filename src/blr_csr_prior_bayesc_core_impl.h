@@ -100,24 +100,7 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
  nthreads = std::max(1, std::min(ncores, nt));
  omp_set_num_threads(nthreads);
 
- std::cout
- << "STBLR prior CSR OpenMP requested threads = "
- << nthreads
- << ", omp_get_max_threads = "
- << omp_get_max_threads()
- << ", num procs = "
- << omp_get_num_procs()
- << "\n";
 #endif
-
- std::cout
- << "STBLR prior CSR: use_pi_marker=" << use_pi_marker
- << ", use_vb_multiplier=" << use_vb_multiplier
- << ", updatePi=" << updatePi
- << ", updateB=" << updateB
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -448,16 +431,6 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
 #endif
   }
  }
-
-#ifdef _OPENMP
- for (int t = 0; t < nt; ++t) {
-  std::cout
-  << "trait " << t
-  << " used thread " << thread_used[static_cast<std::size_t>(t)]
-  << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
-  << "\n";
- }
-#endif
 
  for (int t = 0; t < nt; ++t) {
   if (failed[static_cast<std::size_t>(t)]) {

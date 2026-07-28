@@ -1,4 +1,4 @@
-test_that("shared scalar convergence engine retains the Phase 17 mathematics", {
+test_that("shared scalar convergence engine retains the canonical mathematics", {
   x <- cbind(
     c(-2, -1, 0, 1, 2, -1, 0, 1),
     c(-1.8, -.8, .2, 1.2, 2.2, -.8, .2, 1.2),
@@ -66,9 +66,9 @@ test_that("scheduled ST CSR convergence uses task-private post-burn traces", {
 })
 
 test_that("MT packed-BED exposes chain-private five-trace convergence", {
-  case <- phase17p_case(nt = 2L)
-  on.exit(phase17p_cleanup(case), add = TRUE)
-  fit <- do.call(mtblr_bed, phase17v_public_args(
+  case <- blr_bed_public_case(nt = 2L)
+  on.exit(blr_bed_public_cleanup(case), add = TRUE)
+  fit <- do.call(mtblr_bed, blr_public_convergence_public_args(
     case, nchains = 2L, ncores = 1L, convergence = "core",
     warn = FALSE, keep_traces = TRUE, nit = 8L, nburn = 2L))
   expect_equal(fit$vld, fit$vgs - fit$vle, tolerance = 1e-12)

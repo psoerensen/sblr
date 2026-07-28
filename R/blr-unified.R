@@ -576,7 +576,7 @@
 }
 
 .blr_st_task_seeds <- function(chain, ntraits) {
-  blr_phase4_scalar_seeds_cpp(
+  blr_scalar_seeds_cpp(
     as.integer(chain$seed), as.integer(ntraits), as.integer(chain$nchains),
     if (is.null(chain$chain_seeds_requested)) integer() else
       as.integer(chain$chain_seeds_requested))
@@ -720,10 +720,6 @@
                                     memory = NULL) {
   trait_names <- colnames(fit$bm) %||% paste0("T", seq_len(ncol(fit$bm)))
   original_chains <- fit$chains
-  marker_ids <- fit$data$marker_metadata$marker_id %||% rownames(fit$bm) %||%
-    paste0("m", seq_len(nrow(fit$bm)))
-  selected_markers <- .blr_resolve_selected_markers(
-    conv$selected_markers, marker_ids)
   if (isTRUE(conv$full_probability_states)) {
     stop("full_probability_states is available only for MT BayesR/SBayesR.",
          call. = FALSE)

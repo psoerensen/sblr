@@ -164,7 +164,7 @@ inline void validate_resolved_spec(const ResolvedSpec& spec) {
   }
   if (spec.execution.scheduled) {
     throw std::invalid_argument(
-      "execution$scheduled must be false in Phase 1"
+      "execution$scheduled must be false for this contract"
     );
   }
 }

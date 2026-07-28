@@ -1,0 +1,19 @@
+---
+title: "selection_s"
+format: html
+---
+
+`selection_s` is an optional MAF-dependent effect-scale policy:
+
+```text
+q_j(S) = [2 p_j (1-p_j)]^(S+1)
+```
+
+`NULL` means no MAF scaling. A finite value is fixed scaling, while `-1`
+explicitly requests a scale numerically equal to one. Sampled `selection_s` is
+available only on validated ST routes; sampled MT `selection_s` is unsupported.
+
+MAF provenance and alignment are recorded. Reference-panel fallback requires
+explicit permission. MAF-derived annotations may coexist with `selection_s`,
+but the overlap is reported because it can confound probability and variance
+effects.

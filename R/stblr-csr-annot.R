@@ -395,7 +395,9 @@ stblr_csr_annot <- function(
 
 .stblr_check_annotation_method <- function(method, annotation_model) {
  if (is.null(method)) return(invisible(TRUE))
- method <- tolower(gsub("-", "", method))
+ if (length(method) != 1L || is.na(method)) {
+  stop("method must be one canonical lowercase model identifier.", call. = FALSE)
+ }
 
  if (annotation_model %in% c("prior", "learned", "group")) {
   if (!method %in% "sbayesc") {
@@ -513,19 +515,19 @@ stblr_csr_annot <- function(
  if (is.null(fit$input$keep_chains)) fit$input$keep_chains <- FALSE
 
  if (annotation_model == "prior") {
-  fit <- .stblr_add_prior_annotation_aliases(fit)
+  fit <- .stblr_add_prior_annotation_metadata(fit)
  } else if (annotation_model == "learned") {
-  fit <- .stblr_add_learned_annotation_aliases(fit)
+  fit <- .stblr_add_learned_annotation_metadata(fit)
  } else if (annotation_model == "group") {
-  fit <- .stblr_add_group_annotation_aliases(fit)
+  fit <- .stblr_add_group_annotation_metadata(fit)
  } else {
-  fit <- .stblr_add_sbayesrc_annotation_aliases(fit)
+  fit <- .stblr_add_sbayesrc_annotation_metadata(fit)
  }
 
  fit
 }
 
-.stblr_add_prior_annotation_aliases <- function(fit) {
+.stblr_add_prior_annotation_metadata <- function(fit) {
  if (!is.null(fit$input$A)) fit$annotation <- fit$input$A
 
  fit$annotation_prior <- list(
@@ -556,7 +558,7 @@ stblr_csr_annot <- function(
  fit
 }
 
-.stblr_add_learned_annotation_aliases <- function(fit) {
+.stblr_add_learned_annotation_metadata <- function(fit) {
  if (!is.null(fit$input$A)) fit$annotation <- fit$input$A
  fit$annotation_effects <- list(pi = fit$eta_pi, variance = fit$eta_vb)
 
@@ -570,7 +572,7 @@ stblr_csr_annot <- function(
  fit
 }
 
-.stblr_add_group_annotation_aliases <- function(fit) {
+.stblr_add_group_annotation_metadata <- function(fit) {
  fit$annotation <- list(
   group = fit$input$group,
   group_names = fit$input$group_names,
@@ -586,7 +588,7 @@ stblr_csr_annot <- function(
  fit
 }
 
-.stblr_add_sbayesrc_annotation_aliases <- function(fit) {
+.stblr_add_sbayesrc_annotation_metadata <- function(fit) {
  if (!is.null(fit$input$A)) fit$annotation <- fit$input$A
  fit$annotation_effects <- fit$alpha
  fit$annotation_variance <- fit$sigmaSqAlpha

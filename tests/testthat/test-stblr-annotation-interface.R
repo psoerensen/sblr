@@ -135,19 +135,18 @@ make_annotation_raw_common_args <- function() {
   )
 }
 
-test_that("stblr_csr_annot is exported and normalizes annotation model names", {
+test_that("stblr_csr_annot accepts only canonical annotation policy names", {
   expect_true("stblr_csr_annot" %in% getNamespaceExports("sblr"))
 
   expect_equal(sblr:::.stblr_match_annotation_model("prior"), "prior")
-  expect_equal(sblr:::.stblr_match_annotation_model("fixed_prior"), "prior")
-  expect_equal(sblr:::.stblr_match_annotation_model("fixed"), "prior")
   expect_equal(sblr:::.stblr_match_annotation_model("learned"), "learned")
-  expect_equal(sblr:::.stblr_match_annotation_model("annot"), "learned")
-  expect_equal(sblr:::.stblr_match_annotation_model("annotation"), "learned")
   expect_equal(sblr:::.stblr_match_annotation_model("group"), "group")
-  expect_equal(sblr:::.stblr_match_annotation_model("groups"), "group")
   expect_equal(sblr:::.stblr_match_annotation_model("sbayesrc"), "sbayesrc")
-  expect_equal(sblr:::.stblr_match_annotation_model("SBayesRC"), "sbayesrc")
+  for (obsolete in c("fixed_prior", "fixed", "annot", "annotation", "groups",
+                     "SBayesRC")) {
+    expect_error(sblr:::.stblr_match_annotation_model(obsolete),
+                 "must be one of prior")
+  }
 })
 
 test_that("marker-prior BayesC CSR backend returns raw v1 schema", {
@@ -274,7 +273,7 @@ test_that("stblr_csr_annot dispatches fixed-prior BayesC annotations", {
       fixed_pi_marker = list(rep(0.35, stats$m)),
       fixed_vb_multiplier = list(c(1, 1.2, 0.8, 1))
     ),
-    annotation_model = "fixed_prior",
+    annotation_model = "prior",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -307,7 +306,7 @@ test_that("stblr_csr_annot dispatches learned BayesC annotations", {
     stats = stats,
     ld_prefix = make_tiny_annotation_interface_csr_prefix(stats$m),
     annotations = A,
-    annotation_model = "annot",
+    annotation_model = "learned",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -348,7 +347,7 @@ test_that("stblr_csr_annot dispatches group BayesC annotations", {
     stats = stats,
     ld_prefix = make_tiny_annotation_interface_csr_prefix(stats$m),
     annotations = group,
-    annotation_model = "groups",
+    annotation_model = "group",
     group_names = c("coding", "background"),
     group_pi_init = c(0.35, 0.25),
     group_vb_multiplier_init = c(1.2, 0.8),

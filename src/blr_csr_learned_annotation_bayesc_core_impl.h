@@ -120,26 +120,7 @@ run_csr_learned_annotation_bayesc(
  nthreads = std::max(1, std::min(ncores, nt));
  omp_set_num_threads(nthreads);
 
- std::cout
- << "STBLR annotation CSR OpenMP requested threads = "
- << nthreads
- << ", omp_get_max_threads = "
- << omp_get_max_threads()
- << ", num procs = "
- << omp_get_num_procs()
- << "\n";
 #endif
-
- std::cout
- << "STBLR annotation CSR: K=" << K
- << ", learn_pi_annot=" << learn_pi_annot
- << ", learn_vb_annot=" << learn_vb_annot
- << ", annot_update_every=" << annot_update_every
- << ", pi bounds=[" << pi_min << "," << pi_max << "]"
- << ", vb multiplier bounds=[" << vb_multiplier_min << "," << vb_multiplier_max << "]"
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -569,16 +550,6 @@ run_csr_learned_annotation_bayesc(
   }
  }
 
-#ifdef _OPENMP
- for (int t = 0; t < nt; ++t) {
-  std::cout
-  << "trait " << t
-  << " used thread " << thread_used[static_cast<std::size_t>(t)]
-  << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
-  << "\n";
- }
-#endif
-
  for (int t = 0; t < nt; ++t) {
   if (failed[static_cast<std::size_t>(t)]) {
    throw std::runtime_error(
@@ -723,24 +694,6 @@ run_csr_learned_annotation_bayesc(
   result[22][ts][1] = accepted;
   result[22][ts][2] = attempted > 0.0 ? accepted / attempted : 0.0;
   result[22][ts][3] = 1.0;
- }
-
- std::cout << "Annotation eta_pi MH accepted/proposed by trait:\n";
- for (int t = 0; t < nt; ++t) {
-  std::cout
-  << "trait " << t
-  << ": " << eta_pi_accept(static_cast<arma::uword>(t), 0)
-  << "/" << eta_pi_accept(static_cast<arma::uword>(t), 1)
-  << "\n";
- }
-
- std::cout << "Annotation eta_vb MH accepted/proposed by trait:\n";
- for (int t = 0; t < nt; ++t) {
-  std::cout
-  << "trait " << t
-  << ": " << eta_vb_accept(static_cast<arma::uword>(t), 0)
-  << "/" << eta_vb_accept(static_cast<arma::uword>(t), 1)
-  << "\n";
  }
 
  CsrLearnedAnnotationBayesCExecutionResult execution_result;

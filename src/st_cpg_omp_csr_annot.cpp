@@ -280,12 +280,6 @@ using namespace arma;
 //   }
 //  }
 //
-//  Rcpp::Rcout
-//  << "ST annotation flat LD builder: input nnz=" << static_cast<double>(nnz_u64)
-//  << ", symmetric nnz=" << static_cast<double>(nnz_sym)
-//  << ", max_abs_rij=" << max_abs_rij
-//  << ", max_abs_xij=" << max_abs_xij
-//  << "\n";
 //
 //  return ld;
 // }
@@ -2971,24 +2965,8 @@ Rcpp::List stblr_cpg_omp_csr_annot(
 //  nthreads = std::max(1, std::min(ncores, nt));
 //  omp_set_num_threads(nthreads);
 //
-//  Rcpp::Rcout
-//  << "STBLR annotation CSR OpenMP requested threads = "
-//  << nthreads
-//  << ", omp_get_max_threads = "
-//  << omp_get_max_threads()
-//  << ", num procs = "
-//  << omp_get_num_procs()
-//  << "\n";
 // #endif
 //
-//  Rcpp::Rcout
-//  << "STBLR annotation CSR: K=" << K
-//  << ", learn_pi_annot=" << learn_pi_annot
-//  << ", learn_vb_annot=" << learn_vb_annot
-//  << ", annot_update_every=" << annot_update_every
-//  << ", pi bounds=[" << pi_min << "," << pi_max << "]"
-//  << ", vb multiplier bounds=[" << vb_multiplier_min << "," << vb_multiplier_max << "]"
-//  << "\n";
 //
 // #ifdef _OPENMP
 // #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -3343,11 +3321,6 @@ Rcpp::List stblr_cpg_omp_csr_annot(
 //
 // #ifdef _OPENMP
 //  for (int t = 0; t < nt; ++t) {
-//   Rcpp::Rcout
-//   << "trait " << t
-//   << " used thread " << thread_used[static_cast<std::size_t>(t)]
-//   << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
-//   << "\n";
 //  }
 // #endif
 //
@@ -3483,22 +3456,10 @@ Rcpp::List stblr_cpg_omp_csr_annot(
 //   }
 //  }
 //
-//  Rcpp::Rcout << "Annotation eta_pi MH accepted/proposed by trait:\n";
 //  for (int t = 0; t < nt; ++t) {
-//   Rcpp::Rcout
-//   << "trait " << t
-//   << ": " << eta_pi_accept(static_cast<arma::uword>(t), 0)
-//   << "/" << eta_pi_accept(static_cast<arma::uword>(t), 1)
-//   << "\n";
 //  }
 //
-//  Rcpp::Rcout << "Annotation eta_vb MH accepted/proposed by trait:\n";
 //  for (int t = 0; t < nt; ++t) {
-//   Rcpp::Rcout
-//   << "trait " << t
-//   << ": " << eta_vb_accept(static_cast<arma::uword>(t), 0)
-//   << "/" << eta_vb_accept(static_cast<arma::uword>(t), 1)
-//   << "\n";
 //  }
 //
 //  return result;

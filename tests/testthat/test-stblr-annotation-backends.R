@@ -114,20 +114,6 @@ test_that("canonical annotation entry point and helpers are exported", {
   ) %in% exports))
 })
 
-test_that("annotation backend design document records the backend contract", {
-  path <- blr_repo_path("docs", "dev", "stblr_annotation_backend_design.md")
-  expect_true(file.exists(path))
-  txt <- readLines(path, warn = FALSE)
-  for (backend in c(
-    "csr_prior_bayesc",
-    "csr_annot_bayesc",
-    "csr_group_bayesc",
-    "csr_sbayesrc"
-  )) {
-    expect_true(any(grepl(backend, txt, fixed = TRUE)), info = backend)
-  }
-})
-
 test_that("SBayesRC diagnostic helpers preserve annotation and marker shapes", {
   gamma <- c(0, 0.01, 0.1, 1)
   A <- cbind(

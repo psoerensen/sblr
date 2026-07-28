@@ -7,27 +7,14 @@
   stop("annotation_model must be a single string.")
  }
 
- key <- tolower(gsub("-", "_", model))
- aliases <- c(
-  prior = "prior",
-  fixed_prior = "prior",
-  fixed = "prior",
-  learned = "learned",
-  annot = "learned",
-  annotation = "learned",
-  group = "group",
-  groups = "group",
-  sbayesrc = "sbayesrc"
- )
-
- out <- unname(aliases[[key]])
- if (is.null(out)) {
+ valid <- c("prior", "learned", "group", "sbayesrc")
+ if (!model %in% valid) {
   stop(
    "annotation_model must be one of prior, learned, group, or sbayesrc.",
    call. = FALSE
   )
  }
- out
+ model
 }
 
 .stblr_validate_annotation_chain_args <- function(nchains, keep_chains, chain_seeds) {
@@ -337,7 +324,6 @@
   vb_multiplier_min = 1e-3,
   vb_multiplier_max = 1e3
 ) {
- m <- nrow(A)
  K <- ncol(A)
 
  if (is.null(beta_pi)) beta_pi <- rep(0, K)

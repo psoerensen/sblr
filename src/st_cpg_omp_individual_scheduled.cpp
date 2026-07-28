@@ -665,31 +665,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled(
  }
 #endif
 
- Rcpp::Rcout
- << "Building scheduled packed BED STBLR: n=" << n_used
- << ", m=" << m
- << ", nt=" << nt
- << ", scale=" << scale
- << ", af_computed=" << af_computed
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
  std::vector<MarkerMapSTScheduled> marker_maps = build_marker_maps_scheduled(G, af_cpp, scale);
  std::vector<int> marker_order = make_marker_order_from_sets_scheduled(sets, m);
 
- Rcpp::Rcout
- << "Scheduled sampler: full_sweep_every=" << full_sweep_every
- << ", null_skip_base=" << null_skip_base
- << ", null_skip_max=" << null_skip_max
- << ", candidate_threshold=" << candidate_threshold
- << ", candidate_lifetime=" << candidate_lifetime
- << ", skip_nulls_burnin_only=" << skip_nulls_burnin_only
- << ", return_wy=" << return_wy
- << ", return_r=" << return_r
- << ", pi_prior_a=" << pi_prior_a
- << ", pi_prior_b=" << pi_prior_b
- << "\n";
 
  arma::mat y_mat(n_used, nt, arma::fill::zeros);
  for (int t = 0; t < nt; ++t) {
@@ -725,11 +704,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled(
 #ifdef _OPENMP
  nthreads = ncores > 0 ? std::max(1, std::min(ncores, nt)) : std::min(omp_get_max_threads(), nt);
  omp_set_num_threads(nthreads);
- Rcpp::Rcout
- << "STBLR scheduled packed BED OpenMP threads = " << nthreads
- << ", max threads = " << omp_get_max_threads()
- << ", num procs = " << omp_get_num_procs()
- << "\n";
 #endif
 
 #ifdef _OPENMP
@@ -1057,11 +1031,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled(
 
 #ifdef _OPENMP
  for (int t = 0; t < nt; ++t) {
-  Rcpp::Rcout
-  << "trait " << t
-  << " used thread " << thread_used[static_cast<std::size_t>(t)]
-  << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
-  << "\n";
  }
 #endif
 

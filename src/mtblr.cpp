@@ -4515,7 +4515,7 @@ std::string mt_block_eigen_filter_name(EigenFilterMode mode) {
 
 // Named schema adapter for the public R mtblr_csr() boundary. Numerical
 // execution remains exclusively owned by mtblr_csr_internal() and its shared
-// Phase 17I core; this function only names and shapes finalized values.
+// This adapter only names and shapes finalized values.
 // [[Rcpp::export]]
 Rcpp::List mtblr_csr_raw_internal(
  std::vector<std::vector<double>> wy,
@@ -4876,7 +4876,7 @@ Rcpp::List mtblr_csr_chains_raw_internal(
 }
 
 // Named schema adapter for the public R mtblr_block_eigen() boundary. The
-// adapter builds operators and executes the Phase 17L core exactly once.
+// The adapter builds operators and executes the core exactly once.
 // [[Rcpp::export]]
 Rcpp::List mtblr_block_eigen_raw_internal(
  std::vector<std::vector<double>> wy,
@@ -5284,7 +5284,7 @@ MtBedPreparedAdapter prepare_mt_bed_adapter(
  }
 
  MtBedPreparedAdapter prepared;
- // Phase 17O architecture guard retained: PackedBedMatrix owner=
+ // PackedBedMatrix ownership guard: owner=
  // The unique_ptr below constructs that sole owner directly at its stationary
  // address so a prepared-adapter move cannot invalidate borrowed views.
  prepared.owner.reset(new PackedBedMatrix(read_bedfiles_to_packed_matrix(

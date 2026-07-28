@@ -5,7 +5,7 @@
 // st_sbayesrc_omp_csr.cpp after the package's Armadillo configuration and the
 // concrete operator types have been established. All borrowed objects in the
 // context must outlive run_csr_sbayesrc(); this is the native realization of
-// the Phase 7A storage_outlives_execution ownership contract.
+// the canonical storage_outlives_execution ownership contract.
 
 namespace sblr { namespace core {
 
@@ -35,7 +35,7 @@ struct CsrSBayesRCExecutionContext {
  const arma::rowvec& prior_scale;
  const arma::rowvec& selection_s_log_h;
 
- // Phase 7A contract views describe the same borrowed prepared inputs. The
+ // Contract views describe the same borrowed prepared inputs. The
  // numerical body continues to use the native Armadillo/operator references.
  const SBayesRCAnnotationDesignView& annotation_contract;
  const SBayesRCComponentSpec& component_contract;
@@ -295,25 +295,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  nthreads = stblr_num_threads_for_tasks(ncores, ntasks);
  omp_set_num_threads(nthreads);
 
- std::cout
- << "STBLR SBayesRC CSR OpenMP requested threads = "
- << nthreads
- << ", omp_get_max_threads = "
- << omp_get_max_threads()
- << ", num procs = "
- << omp_get_num_procs()
- << "\n";
 #endif
-
- std::cout
- << "STBLR real-SBayesRC CSR: m=" << m
- << ", nt=" << nt
- << ", nchains=" << nchains
- << ", annotations=" << nAnno
- << ", components=" << Kgamma
- << ", updateAlpha=" << updateAlpha
- << ", alpha_update_every=" << alpha_update_every
- << "\n";
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -776,19 +758,6 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 #endif
   }
  }
-
-#ifdef _OPENMP
- for (int task = 0; task < ntasks; ++task) {
-  const int t = stblr_task_trait(task, nchains);
-  const int chain = stblr_task_chain(task, nchains);
-  std::cout
-  << "trait " << t
-  << ", chain " << chain
-  << " used thread " << thread_used[static_cast<std::size_t>(task)]
-  << ", seconds = " << task_seconds[static_cast<std::size_t>(task)]
-  << "\n";
- }
-#endif
 
  for (int task = 0; task < ntasks; ++task) {
   if (failed[static_cast<std::size_t>(task)]) {

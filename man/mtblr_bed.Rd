@@ -238,6 +238,7 @@ and nondeterministic. The package never changes global BLAS settings; users
 should normally configure BLAS to one thread when running concurrent chain
 workers to avoid oversubscription.
 }
+
 \section{Convergence diagnostics}{
 
 Core diagnostics use post-burn, unthinned per-chain `vbs`, `vgs`, `ves`,

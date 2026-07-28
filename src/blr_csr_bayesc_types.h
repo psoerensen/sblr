@@ -151,7 +151,7 @@ struct CsrBayesCChainResult {
   double seconds = 0.0;
 };
 
-// BayesC extension of the Phase 1 typed result vocabulary. Matrices retain
+// BayesC extension of the canonical typed result vocabulary. Matrices retain
 // the existing trait-major native orientation; the binding alone transposes
 // them into the canonical markers x traits and samples x traits R shapes.
 struct CsrBayesCResult : BlrResult {

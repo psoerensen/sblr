@@ -310,12 +310,6 @@ using namespace arma;
 //   }
 //  }
 //
-//  Rcpp::Rcout
-//  << "ST prior flat LD builder: input nnz=" << static_cast<double>(nnz_u64)
-//  << ", symmetric nnz=" << static_cast<double>(nnz_sym)
-//  << ", max_abs_rij=" << max_abs_rij
-//  << ", max_abs_xij=" << max_abs_xij
-//  << "\n";
 //
 //  return ld;
 // }
@@ -2649,22 +2643,8 @@ Rcpp::List stblr_cpg_omp_csr_prior(
 //  nthreads = std::max(1, std::min(ncores, nt));
 //  omp_set_num_threads(nthreads);
 //
-//  Rcpp::Rcout
-//  << "STBLR prior CSR OpenMP requested threads = "
-//  << nthreads
-//  << ", omp_get_max_threads = "
-//  << omp_get_max_threads()
-//  << ", num procs = "
-//  << omp_get_num_procs()
-//  << "\n";
 // #endif
 //
-//  Rcpp::Rcout
-//  << "STBLR prior CSR: use_pi_marker=" << use_pi_marker
-//  << ", use_vb_multiplier=" << use_vb_multiplier
-//  << ", updatePi=" << updatePi
-//  << ", updateB=" << updateB
-//  << "\n";
 //
 // #ifdef _OPENMP
 // #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -2927,11 +2907,6 @@ Rcpp::List stblr_cpg_omp_csr_prior(
 //
 // #ifdef _OPENMP
 //  for (int t = 0; t < nt; ++t) {
-//   Rcpp::Rcout
-//   << "trait " << t
-//   << " used thread " << thread_used[static_cast<std::size_t>(t)]
-//   << ", seconds = " << trait_seconds[static_cast<std::size_t>(t)]
-//   << "\n";
 //  }
 // #endif
 //
