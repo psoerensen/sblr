@@ -59,6 +59,9 @@ BedScheduledBayesCChainExecutionResult run_bed_scheduled_bayesc_chain(
  out.pis = arma::rowvec(nit + nburn, arma::fill::zeros);
  out.vles = arma::rowvec(nit + nburn, arma::fill::zeros);
  out.vlds = arma::rowvec(nit + nburn, arma::fill::zeros);
+ const arma::uword convergence_marker_count=static_cast<arma::uword>(context.convergence_markers.size());
+ if (context.convergence_b && convergence_marker_count>0) out.convergence_b.zeros(nit,convergence_marker_count);
+ if (context.convergence_d && convergence_marker_count>0) out.convergence_d.zeros(nit,convergence_marker_count);
 
  try {
   BedScheduledBayesCChainRng chain_rng(context.chain_seed);
@@ -346,6 +349,14 @@ BedScheduledBayesCChainExecutionResult run_bed_scheduled_bayesc_chain(
    vles_t(static_cast<arma::uword>(it)) = vle_t;
    vlds_t(static_cast<arma::uword>(it)) = vld_t;
    pis_t(static_cast<arma::uword>(it)) = pi_t[1];
+   if (it>=nburn) {
+    const arma::uword draw=static_cast<arma::uword>(it-nburn);
+    for (arma::uword s=0;s<convergence_marker_count;++s) {
+     const arma::uword marker=static_cast<arma::uword>(context.convergence_markers[static_cast<std::size_t>(s)]);
+     if (context.convergence_b) out.convergence_b(draw,s)=b_t(marker);
+     if (context.convergence_d) out.convergence_d(draw,s)=d_t(marker);
+    }
+   }
 
    if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
     nsamples_t += 1.0;

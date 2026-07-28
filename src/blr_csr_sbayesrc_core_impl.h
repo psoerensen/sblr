@@ -79,6 +79,11 @@ struct CsrSBayesRCExecutionContext {
  double selection_s_prior_lower;
  double selection_s_prior_upper;
  double selection_s_proposal_sd;
+ const std::vector<int>& convergence_markers;
+ bool convergence_annotations;
+ bool convergence_b;
+ bool convergence_d;
+ bool convergence_component;
 };
 
 struct CsrSBayesRCExecutionResult {
@@ -92,6 +97,9 @@ struct CsrSBayesRCExecutionResult {
  arma::vec selection_s_attempted_task, selection_s_accepted_task;
  std::vector<arma::mat> alpha_mean_task, comp_prob_mean_task;
  std::vector<arma::vec> sigmaSqAlpha_mean_task, ncomp_mean_task;
+ std::vector<arma::mat> convergence_alpha_task, convergence_sigma_task;
+ std::vector<arma::mat> convergence_b_task;
+ std::vector<arma::imat> convergence_d_task, convergence_component_task;
 
  arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
  arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
@@ -170,6 +178,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const double selection_s_prior_lower = context.selection_s_prior_lower;
  const double selection_s_prior_upper = context.selection_s_prior_upper;
  const double selection_s_proposal_sd = context.selection_s_proposal_sd;
+ const std::vector<int>& convergence_markers=context.convergence_markers;
  const int ntasks = stblr_num_chain_tasks(nt, nchains);
 
  arma::mat bm_task(ntasks, m, arma::fill::zeros);
@@ -203,12 +212,35 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<arma::vec> sigmaSqAlpha_mean_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::mat> comp_prob_mean_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::vec> ncomp_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> convergence_alpha_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> convergence_sigma_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> convergence_b_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::imat> convergence_d_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::imat> convergence_component_task(static_cast<std::size_t>(ntasks));
+
+ for (int marker: convergence_markers) if (marker<0 || marker>=m)
+  throw std::invalid_argument("SBayesRC convergence marker index is out of range.");
 
  for (int task = 0; task < ntasks; ++task) {
   alpha_mean_task[static_cast<std::size_t>(task)] = arma::mat(nAnno, nstep, arma::fill::zeros);
   sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = arma::vec(nstep, arma::fill::zeros);
   comp_prob_mean_task[static_cast<std::size_t>(task)] = arma::mat(m, Kgamma, arma::fill::zeros);
   ncomp_mean_task[static_cast<std::size_t>(task)] = arma::vec(Kgamma, arma::fill::zeros);
+  if (context.convergence_annotations) {
+   convergence_alpha_task[static_cast<std::size_t>(task)]=
+    arma::mat(nit,nAnno*nstep,arma::fill::zeros);
+   convergence_sigma_task[static_cast<std::size_t>(task)]=
+    arma::mat(nit,nstep,arma::fill::zeros);
+  }
+  if (context.convergence_b)
+   convergence_b_task[static_cast<std::size_t>(task)]=
+    arma::mat(nit,convergence_markers.size(),arma::fill::zeros);
+  if (context.convergence_d)
+   convergence_d_task[static_cast<std::size_t>(task)]=
+    arma::imat(nit,convergence_markers.size(),arma::fill::zeros);
+  if (context.convergence_component)
+   convergence_component_task[static_cast<std::size_t>(task)]=
+    arma::imat(nit,convergence_markers.size(),arma::fill::zeros);
  }
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
@@ -628,6 +660,28 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      selection_s_task(task_u, static_cast<arma::uword>(it)) = selection_s_current;
     }
 
+    if (it>=nburn) {
+     const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     if (context.convergence_annotations) {
+      arma::uword q=0;
+      for (int stick=0; stick<nstep; ++stick)
+       for (int annotation=0; annotation<nAnno; ++annotation)
+        convergence_alpha_task[static_cast<std::size_t>(task)](draw,q++)=
+         alpha_t(static_cast<arma::uword>(annotation),static_cast<arma::uword>(stick));
+      convergence_sigma_task[static_cast<std::size_t>(task)].row(draw)=sigmaSqAlpha_t.t();
+     }
+     for (std::size_t q=0; q<convergence_markers.size(); ++q) {
+      const arma::uword marker=static_cast<arma::uword>(convergence_markers[q]);
+      const int component=comp_t(marker);
+      if (context.convergence_b)
+       convergence_b_task[static_cast<std::size_t>(task)](draw,q)=b_t(marker);
+      if (context.convergence_d)
+       convergence_d_task[static_cast<std::size_t>(task)](draw,q)=component>0 ? 1 : 0;
+      if (context.convergence_component)
+       convergence_component_task[static_cast<std::size_t>(task)](draw,q)=component;
+     }
+    }
+
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
      nsamples_t += 1.0;
 
@@ -903,6 +957,11 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.sigmaSqAlpha_mean_task = std::move(sigmaSqAlpha_mean_task);
  result.comp_prob_mean_task = std::move(comp_prob_mean_task);
  result.ncomp_mean_task = std::move(ncomp_mean_task);
+ result.convergence_alpha_task=std::move(convergence_alpha_task);
+ result.convergence_sigma_task=std::move(convergence_sigma_task);
+ result.convergence_b_task=std::move(convergence_b_task);
+ result.convergence_d_task=std::move(convergence_d_task);
+ result.convergence_component_task=std::move(convergence_component_task);
  result.bm_mat = std::move(bm_mat);
  result.dm_mat = std::move(dm_mat);
  result.bm_sd_mat = std::move(bm_sd_mat);

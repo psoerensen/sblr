@@ -743,7 +743,11 @@ sblr::core::CsrGroupBayesCExecutionResult stblr_cpg_omp_csr_group_annot_single(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  const std::vector<int>& convergence_markers=std::vector<int>(),
+  bool convergence_annotations=false,
+  bool convergence_b=false,
+  bool convergence_d=false
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -975,6 +979,10 @@ sblr::core::CsrGroupBayesCExecutionResult stblr_cpg_omp_csr_group_annot_single(
  context.group_policy.normalize_multiplier=normalize_group_vb;
  context.group_policy.multiplier_prior_df=nub_group;
  context.group_policy.multiplier_prior_scale=ssb_group_prior;
+ context.convergence_markers=&convergence_markers;
+ context.convergence_annotations=convergence_annotations;
+ context.convergence_b=convergence_b;
+ context.convergence_d=convergence_d;
  return sblr::core::run_csr_group_bayesc(context);
 }
 
@@ -1057,7 +1065,12 @@ static Rcpp::List cpg_group_chains_raw_v1(
  int m,
  int nt,
  int ngroup,
- int nchains
+ int nchains,
+ const std::vector<arma::mat>& convergence_group_pi,
+ const std::vector<arma::mat>& convergence_group_vb,
+ const std::vector<arma::mat>& convergence_b,
+ const std::vector<arma::imat>& convergence_d,
+ const std::vector<int>& convergence_markers
 ) {
  if (raw.size() <= 39) return Rcpp::List::create();
  Rcpp::List traits(nt);
@@ -1091,6 +1104,13 @@ static Rcpp::List cpg_group_chains_raw_v1(
      Rcpp::_["vb_multiplier_mean"] = group_vb,
      Rcpp::_["n_included_mean"] = group_nincluded
     ),
+    Rcpp::_["convergence_trace"] = Rcpp::List::create(
+     Rcpp::_["marker_index"] = Rcpp::wrap(convergence_markers),
+     Rcpp::_["group_pi"] = convergence_group_pi[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["group_vb"] = convergence_group_vb[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["b"] = convergence_b[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["d"] = convergence_d[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["component"] = R_NilValue),
     Rcpp::_["diagnostics"] = Rcpp::List::create(Rcpp::_["ld_swap"] = ld)
    );
   }
@@ -1110,7 +1130,12 @@ static Rcpp::List stblr_csr_group_bayesc_result_to_raw(
  int nburn,
  int nthin,
  int nchains,
- bool keep_chains
+ bool keep_chains,
+ const std::vector<arma::mat>& convergence_group_pi,
+ const std::vector<arma::mat>& convergence_group_vb,
+ const std::vector<arma::mat>& convergence_b,
+ const std::vector<arma::imat>& convergence_d,
+ const std::vector<int>& convergence_markers
 ) {
  const std::vector<std::vector<std::vector<double>>>& raw=execution_result.raw;
  const int n_trace = nit + nburn;
@@ -1137,7 +1162,9 @@ static Rcpp::List stblr_csr_group_bayesc_result_to_raw(
   group_index_r[i] = group_index[static_cast<std::size_t>(i)];
   if (group_index_r[i] >= 0 && group_index_r[i] < ngroup) ++group_size[group_index_r[i]];
  }
- Rcpp::RObject chains = keep_chains ? Rcpp::RObject(cpg_group_chains_raw_v1(raw, m, nt, ngroup, nchains)) : Rcpp::RObject(R_NilValue);
+ Rcpp::RObject chains = keep_chains ? Rcpp::RObject(cpg_group_chains_raw_v1(
+  raw,m,nt,ngroup,nchains,convergence_group_pi,convergence_group_vb,
+  convergence_b,convergence_d,convergence_markers)) : Rcpp::RObject(R_NilValue);
  Rcpp::List raw_out = Rcpp::List::create(
   Rcpp::_["schema"] = Rcpp::List::create(Rcpp::_["class"] = "stblr_raw", Rcpp::_["version"] = 1),
   Rcpp::_["meta"] = Rcpp::List::create(
@@ -1266,7 +1293,11 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_annotations=false,
+  bool convergence_b=false,
+  bool convergence_d=false
 ) {
  if (nchains <= 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_group_annot: nchains must be positive.");
@@ -1304,6 +1335,16 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
  std::vector<std::vector<double>> chain_group_nincluded_flat;
  std::vector<std::vector<double>> ld_swap_attempted_sum;
  std::vector<std::vector<double>> ld_swap_accepted_sum;
+ const std::vector<int> convergence_markers_cpp=
+  Rcpp::as<std::vector<int>>(convergence_markers);
+ std::vector<arma::mat> convergence_group_pi;
+ std::vector<arma::mat> convergence_group_vb;
+ std::vector<arma::mat> convergence_b_trace;
+ std::vector<arma::imat> convergence_d_trace;
+ convergence_group_pi.reserve(static_cast<std::size_t>(nchains*wy.size()));
+ convergence_group_vb.reserve(static_cast<std::size_t>(nchains*wy.size()));
+ convergence_b_trace.reserve(static_cast<std::size_t>(nchains*wy.size()));
+ convergence_d_trace.reserve(static_cast<std::size_t>(nchains*wy.size()));
 
  for (int chain = 0; chain < nchains; ++chain) {
   int chain_seed = seed;
@@ -1321,8 +1362,16 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
     group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior,
     normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n,
     nit, nburn, nthin, ncores, chain_seed, updateLDswap, ld_swap_prob,
-    ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+    ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
+    convergence_markers_cpp,convergence_annotations,
+    convergence_b,convergence_d
    );
+  for (std::size_t t=0;t<execution_result.convergence_group_pi.size();++t) {
+   convergence_group_pi.push_back(execution_result.convergence_group_pi[t]);
+   convergence_group_vb.push_back(execution_result.convergence_group_vb[t]);
+   convergence_b_trace.push_back(execution_result.convergence_b[t]);
+   convergence_d_trace.push_back(execution_result.convergence_d[t]);
+  }
   std::vector<std::vector<std::vector<double>>>& raw=execution_result.raw;
 
   if (chain == 0) {
@@ -1447,7 +1496,9 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
   aggregate_result.raw=std::move(extended);
   return stblr_csr_group_bayesc_result_to_raw(
    aggregate_result, group_index, updateLDswap, static_cast<int>(wy[0].size()),
-   static_cast<int>(wy.size()), ngroup, nit, nburn, nthin, nchains, keep_chains
+   static_cast<int>(wy.size()), ngroup, nit, nburn, nthin, nchains, keep_chains,
+   convergence_group_pi,convergence_group_vb,convergence_b_trace,
+   convergence_d_trace,convergence_markers_cpp
   );
  }
 
@@ -1455,6 +1506,8 @@ Rcpp::List stblr_cpg_omp_csr_group_annot(
  aggregate_result.raw=std::move(out);
  return stblr_csr_group_bayesc_result_to_raw(
   aggregate_result, group_index, updateLDswap, static_cast<int>(wy[0].size()),
-  static_cast<int>(wy.size()), ngroup, nit, nburn, nthin, nchains, keep_chains
+  static_cast<int>(wy.size()), ngroup, nit, nburn, nthin, nchains, keep_chains,
+  convergence_group_pi,convergence_group_vb,convergence_b_trace,
+  convergence_d_trace,convergence_markers_cpp
  );
 }

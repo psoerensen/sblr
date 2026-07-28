@@ -18,7 +18,7 @@ stblr_csr_annot(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core"),
+  convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE,
@@ -75,9 +75,11 @@ models use `"bayesc"`; SBayesRC uses `"sbayesrc"`.}
 \item{keep_chains}{Logical; return compact per-chain summaries when
 supported.}
 
-\item{convergence}{Convergence mode: `"auto"`, `"none"`, or `"core"`.}
+\item{convergence}{Convergence mode: `"auto"`, `"none"`, `"core"`, or
+`"extended"`. Automatic mode remains core-only.}
 
-\item{convergence_control}{Optional named convergence-control list.}
+\item{convergence_control}{Optional uniquely named convergence-control list,
+including extended groups and diagnostic trace-memory guards.}
 
 \item{memory_warning_gb}{Analytical memory-warning threshold in GiB.}
 

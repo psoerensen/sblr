@@ -78,6 +78,21 @@ inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
  arma::mat group_vb_mean(nt, ngroup, arma::fill::zeros);
  arma::mat group_nincluded_mean(nt, ngroup, arma::fill::zeros);
  arma::mat group_size_mat(nt, ngroup, arma::fill::zeros);
+ std::vector<arma::mat> convergence_group_pi(static_cast<std::size_t>(nt));
+ std::vector<arma::mat> convergence_group_vb(static_cast<std::size_t>(nt));
+ std::vector<arma::mat> convergence_b(static_cast<std::size_t>(nt));
+ std::vector<arma::imat> convergence_d(static_cast<std::size_t>(nt));
+ const std::vector<int>& convergence_markers=*context.convergence_markers;
+ for (int t=0;t<nt;++t) {
+  if (context.convergence_annotations) {
+   convergence_group_pi[static_cast<std::size_t>(t)].zeros(nit,ngroup);
+   convergence_group_vb[static_cast<std::size_t>(t)].zeros(nit,ngroup);
+  }
+  if (context.convergence_b)
+   convergence_b[static_cast<std::size_t>(t)].zeros(nit,convergence_markers.size());
+  if (context.convergence_d)
+   convergence_d[static_cast<std::size_t>(t)].zeros(nit,convergence_markers.size());
+ }
 
  std::vector<int> failed(static_cast<std::size_t>(nt), 0);
  std::vector<std::string> errors(static_cast<std::size_t>(nt));
@@ -293,6 +308,21 @@ inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
     vles_t(static_cast<arma::uword>(it)) = vle_t;
     vlds_t(static_cast<arma::uword>(it)) = vld_t;
 
+    if (it>=nburn) {
+     const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     if (context.convergence_annotations) {
+      convergence_group_pi[static_cast<std::size_t>(t)].row(draw)=group_pi_t;
+      convergence_group_vb[static_cast<std::size_t>(t)].row(draw)=group_vb_multiplier_t;
+     }
+     for (std::size_t q=0;q<convergence_markers.size();++q) {
+      const arma::uword marker=static_cast<arma::uword>(convergence_markers[q]);
+      if (context.convergence_b)
+       convergence_b[static_cast<std::size_t>(t)](draw,q)=b_t(marker);
+      if (context.convergence_d)
+       convergence_d[static_cast<std::size_t>(t)](draw,q)=d_t(marker);
+     }
+    }
+
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
      nsamples_t += 1.0;
      for (int i = 0; i < m; ++i) {
@@ -483,6 +513,10 @@ inline CsrGroupBayesCExecutionResult run_csr_group_bayesc(
 
  CsrGroupBayesCExecutionResult execution_result;
  execution_result.raw=std::move(result);
+ execution_result.convergence_group_pi=std::move(convergence_group_pi);
+ execution_result.convergence_group_vb=std::move(convergence_group_vb);
+ execution_result.convergence_b=std::move(convergence_b);
+ execution_result.convergence_d=std::move(convergence_d);
  return execution_result;
 
 }

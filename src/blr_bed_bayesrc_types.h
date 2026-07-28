@@ -52,6 +52,8 @@ struct BedBayesRCChainExecutionResult {
  arma::mat comp_prob;
  arma::mat annot_alpha_mean, annot_alpha_final;
  arma::vec annot_sigma_mean, annot_sigma_final;
+ arma::mat convergence_alpha, convergence_sigma, convergence_b;
+ arma::imat convergence_d, convergence_component;
  arma::rowvec mean_prior;
  arma::vec residual;
  double final_vb=0.0, final_vg=0.0, final_ve=0.0;
@@ -111,6 +113,9 @@ struct BedBayesRCChainExecutionContext {
  int iterations, burnin, thinning, rebuild_every;
  std::uint64_t chain_seed;
  int trait_index, chain_index;
+ const std::vector<int>& convergence_markers;
+ bool convergence_annotations, convergence_b, convergence_d,
+  convergence_component;
 };
 
 template <class PackedGenotype, class AnnotationMatrix, class MarkerMap>
@@ -161,6 +166,9 @@ inline void validate_bed_bayesrc_chain_context(
      x.chain_index<0 || !std::isfinite(x.pi_floor) || x.pi_floor<=0.0 || x.pi_floor>=1.0 ||
      !std::isfinite(x.nub) || !std::isfinite(x.nue) || !std::isfinite(x.adjE))
   throw std::invalid_argument("BayesRC execution controls are invalid");
+ for (int marker: x.convergence_markers)
+  if (marker<0 || static_cast<std::size_t>(marker)>=g.marker_count)
+   throw std::invalid_argument("BayesRC convergence marker index is out of range");
 }
 
 } }

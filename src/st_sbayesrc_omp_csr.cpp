@@ -1163,6 +1163,7 @@ struct CsrSBayesRCBindingMetadata {
  bool update_ld_swap;
  bool estimate_selection_s;
  bool use_selection_s_prior_scale;
+ const std::vector<int>& convergence_markers;
 };
 
 static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
@@ -1221,6 +1222,11 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   Rcpp::NumericVector selection_s_prior,
   double selection_s_proposal_sd,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h,
+  Rcpp::IntegerVector convergence_markers,
+  bool convergence_annotations,
+  bool convergence_b,
+  bool convergence_d,
+  bool convergence_component,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1230,6 +1236,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
  }
 
  const int m = static_cast<int>(wy[0].size());
+ const std::vector<int> convergence_markers_cpp=
+  Rcpp::as<std::vector<int>>(convergence_markers);
 
  if (m <= 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: m must be positive.");
@@ -1650,7 +1658,12 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   selection_s_init,
   selection_s_prior[0],
   selection_s_prior[1],
-  selection_s_proposal_sd
+  selection_s_proposal_sd,
+  convergence_markers_cpp,
+  convergence_annotations,
+  convergence_b,
+  convergence_d,
+  convergence_component
  };
  auto execution_result = sblr::core::run_csr_sbayesrc(execution_context);
 
@@ -1671,7 +1684,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   keep_chains,
   updateLDswap,
   estimate_selection_s,
-  use_selection_s_prior_scale
+  use_selection_s_prior_scale,
+  convergence_markers_cpp
  };
  return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);
 }
@@ -1696,6 +1710,7 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const bool updateLDswap = metadata.update_ld_swap;
  const bool estimate_selection_s = metadata.estimate_selection_s;
  const bool use_selection_s_prior_scale = metadata.use_selection_s_prior_scale;
+ const std::vector<int>& convergence_markers=metadata.convergence_markers;
 
  const auto& bm_task = execution_result.bm_task;
  const auto& dm_task = execution_result.dm_task;
@@ -1709,6 +1724,11 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& selection_s_task = execution_result.selection_s_task;
  const auto& final_pi_component_task = execution_result.final_pi_component_task;
  const auto& selection_s_attempted_task = execution_result.selection_s_attempted_task;
+ const auto& convergence_alpha_task=execution_result.convergence_alpha_task;
+ const auto& convergence_sigma_task=execution_result.convergence_sigma_task;
+ const auto& convergence_b_task=execution_result.convergence_b_task;
+ const auto& convergence_d_task=execution_result.convergence_d_task;
+ const auto& convergence_component_task=execution_result.convergence_component_task;
  const auto& selection_s_accepted_task = execution_result.selection_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
@@ -2006,6 +2026,13 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
       Rcpp::Named("alpha") = alpha_mean_task[static_cast<std::size_t>(task)],
       Rcpp::Named("sigmaSqAlpha") = sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)]
      ),
+     Rcpp::Named("convergence_trace")=Rcpp::List::create(
+      Rcpp::Named("marker_index")=Rcpp::wrap(convergence_markers),
+      Rcpp::Named("b")=convergence_b_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("d")=convergence_d_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("component")=convergence_component_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("alpha")=convergence_alpha_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("sigmaSqAlpha")=convergence_sigma_task[static_cast<std::size_t>(task)]),
      Rcpp::Named("selection") = chain_selection,
      Rcpp::Named("diagnostics") = Rcpp::List::create(
       Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue
@@ -2108,7 +2135,10 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   bool estimate_selection_s = false, double selection_s_init = 0.0,
   Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
   double selection_s_proposal_sd = 0.35,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_annotations=false, bool convergence_b=false,
+  bool convergence_d=false, bool convergence_component=false
 ) {
  auto make_csr_operator = [&](int m, const std::vector<double>& xx,
                               const arma::rowvec& xx_row, arma::mat& wy_mat,
@@ -2135,7 +2165,9 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2,
   ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale,
   estimate_selection_s, selection_s_init, selection_s_prior,
-  selection_s_proposal_sd, selection_s_log_h, make_csr_operator
+  selection_s_proposal_sd, selection_s_log_h, convergence_markers,
+  convergence_annotations, convergence_b, convergence_d,
+  convergence_component, make_csr_operator
  );
 }
 
@@ -2163,6 +2195,9 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
   double selection_s_proposal_sd = 0.35,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_annotations=false, bool convergence_b=false,
+  bool convergence_d=false, bool convergence_component=false,
   Rcpp::CharacterVector bed_files = Rcpp::CharacterVector::create(),
   int n_bed = 0, Rcpp::List cls = R_NilValue,
   Rcpp::Nullable<Rcpp::IntegerVector> rows = R_NilValue,
@@ -2229,7 +2264,9 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2,
   ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale,
   estimate_selection_s, selection_s_init, selection_s_prior,
-  selection_s_proposal_sd, selection_s_log_h, make_block_operator
+  selection_s_proposal_sd, selection_s_log_h, convergence_markers,
+  convergence_annotations, convergence_b, convergence_d,
+  convergence_component, make_block_operator
  );
 }
 

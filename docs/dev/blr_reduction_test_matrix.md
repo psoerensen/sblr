@@ -785,3 +785,11 @@ BayesR reduction, exact/unfiltered CSR-to-block-eigen SBayesRC reduction,
 individual/summary prior-contract equality, selection-S unit-scale reduction,
 and marker-ID permutation invariance. Posterior BED/summary equality is not
 claimed when their likelihood or residual-covariance contracts differ.
+
+## Extended diagnostic reductions
+
+Permanent Phase 21 owners cover strict-lower ordering/status, probability
+simplex names and optional joint state, BayesRC coefficient ordering, selected
+marker request order, and exact posterior equality with diagnostics disabled or
+enabled. Exact unfiltered CSR/block-eigen scientific reductions remain Phase 19
+and 20 owners and protect diagnostic capture from changing posterior targets.

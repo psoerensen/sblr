@@ -522,3 +522,13 @@ fit.
 - [Technical sparse LD and CSR](technical_sparse_ld_csr.html)
 - [Technical annotation priors](technical_annotation_priors.html)
 - [Complete sparse-LD/BED workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R)
+
+## Extended convergence
+
+Use `convergence = "extended"` for applicable global probability or sampled
+selection-S diagnostics. BayesR routes diagnose their current global component
+simplex, and learned/group/probit-stick routes diagnose genuine low-dimensional
+task states. Marker diagnostics require explicit IDs or one-based indices and
+never default to every marker. Selected `b` is the effective effect, `d` is
+binary activity, and `component` is the ordered mixture state. Trace retention
+is independent of compact-chain retention and posterior-summary thinning.

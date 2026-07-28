@@ -46,8 +46,11 @@ test_that("ST CSR and unfiltered block eigen execute BayesC reduction", {
   block_diagnostic <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
     eigen_filter = "hard_truncate", eigen_tau = 0), diagnostic_common))
-  expect_equal(block_diagnostic$convergence$summary,
-               csr_diagnostic$convergence$summary, tolerance = 1e-12)
+  block_summary <- block_diagnostic$convergence$summary
+  csr_summary <- csr_diagnostic$convergence$summary
+  block_summary$diagnostic_key <- NULL
+  csr_summary$diagnostic_key <- NULL
+  expect_equal(block_summary, csr_summary, tolerance = 1e-12)
 })
 
 test_that("ST CSR and unfiltered block eigen execute BayesR reduction", {
@@ -69,6 +72,39 @@ test_that("ST CSR and unfiltered block eigen execute BayesR reduction", {
   }
   expect_equal(block$component_probabilities,
                csr$component_probabilities, tolerance = 1e-8)
+})
+
+test_that("ST CSR and block eigen expose identical native BayesR diagnostics", {
+  fixture <- blr_unified_fixture()
+  on.exit(blr_unified_cleanup(fixture), add = TRUE)
+  prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
+  on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
+  common <- list(
+    method = "sbayesr", mixture_var = c(0, .01, .1),
+    pi = c(.7, .2, .1), alpha = c(1, 1, 1),
+    updateB = FALSE, updateE = FALSE, updatePi = TRUE,
+    nit = 6L, nburn = 2L, nthin = 1L, seed = 421L,
+    nchains = 2L, ncores = 1L, keep_chains = TRUE,
+    convergence = "extended", convergence_control = list(
+      warn = FALSE, extended_groups = "probability",
+      selected_markers = c(3L, 1L),
+      selected_marker_quantities = c("b", "d", "component"),
+      keep_traces = TRUE))
+  csr <- do.call(stblr_csr, c(list(stats = fixture$stats,
+                                    ld_prefix = prefix), common))
+  block <- do.call(stblr_block_eigen, c(list(
+    stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    eigen_filter = "hard_truncate", eigen_tau = 0), common))
+  csr_desc <- csr$convergence_traces$quantities
+  block_desc <- block$convergence_traces$quantities
+  expect_identical(block_desc$quantity, csr_desc$quantity)
+  expect_equal(block$convergence_traces$values,
+               csr$convergence_traces$values, tolerance = 1e-7)
+  expect_identical(unique(block_desc$marker_id[block_desc$tier == 3L]),
+                   fixture$stats$marker_names[c(3L, 1L)])
+  component <- block$convergence_traces$values[, ,
+    which(block_desc$parameter_name == "selected_component"), drop = FALSE]
+  expect_true(all(component %in% 0:2))
 })
 
 test_that("ST CSR and unfiltered block eigen execute SBayesRC reduction", {

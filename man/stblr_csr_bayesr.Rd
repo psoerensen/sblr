@@ -45,6 +45,7 @@ stblr_csr_bayesr(
   use_r_init = FALSE,
   r_init = NULL,
   rebuild_r_before_updateE = FALSE,
+  .convergence_spec = NULL,
   ...
 )
 }
@@ -127,6 +128,8 @@ sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.}
 \item{nub, nue}{Prior degrees of freedom.}
 
 \item{use_comp_init, comp_init, use_r_init, r_init, rebuild_r_before_updateE}{Advanced initialization controls.}
+
+\item{.convergence_spec}{Internal pre-resolved diagnostic capture plan.}
 
 \item{...}{Unsupported options. Passing scheduled CSR controls through `...`
 errors clearly.}

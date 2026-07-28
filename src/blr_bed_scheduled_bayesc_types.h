@@ -31,6 +31,8 @@ struct BedScheduledBayesCChainExecutionResult {
  arma::rowvec pis;
  arma::rowvec vles;
  arma::rowvec vlds;
+ arma::mat convergence_b;
+ arma::imat convergence_d;
  double final_vb=0.0;
  double final_vg=0.0;
  double final_ve=0.0;
@@ -129,6 +131,9 @@ struct BedScheduledBayesCChainExecutionContext {
  bool updateB;
  bool updateE;
  bool updatePi;
+ const std::vector<int>& convergence_markers;
+ bool convergence_b;
+ bool convergence_d;
 };
 
 template <class PackedGenotype>
@@ -185,6 +190,9 @@ inline void validate_bed_scheduled_bayesc_chain_context(
  if (!std::isfinite(x.pi_prior_a) || x.pi_prior_a<=0.0 ||
      !std::isfinite(x.pi_prior_b) || x.pi_prior_b<=0.0)
   throw std::invalid_argument("BED chain pi prior parameters must be finite and positive");
+ for (int marker : x.convergence_markers) if (marker<0 ||
+     static_cast<std::size_t>(marker)>=g.marker_count)
+  throw std::invalid_argument("BED chain convergence marker index is out of range");
 }
 
 } }

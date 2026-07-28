@@ -178,6 +178,44 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  std::vector<std::vector<double>> cvgm(nt, std::vector<double>(nt, 0.0));
  std::vector<std::vector<double>> mus(nt, std::vector<double>(execution.nit+execution.nburn, 0.0));
 
+ MtExtendedTraceResult extended;
+ const MtExtendedTraceSpec* trace_spec=model.convergence;
+ const int total_iterations=execution.nit+execution.nburn;
+ const int covariance_count=nt*(nt-1)/2;
+ if (trace_spec!=nullptr) {
+  for (int marker:trace_spec->selected_markers)
+   if (marker<0 || marker>=m)
+    throw std::invalid_argument("selected convergence marker is out of range");
+  if (trace_spec->covariance) {
+   extended.cov_b.assign(covariance_count,std::vector<double>(total_iterations));
+   extended.cov_g.assign(covariance_count,std::vector<double>(total_iterations));
+   extended.cov_e.assign(covariance_count,std::vector<double>(total_iterations));
+  }
+  if (trace_spec->probability) {
+   const int components=method==5 ? component_count : 0;
+   if (components>0)
+    extended.component_pi.assign(components,std::vector<double>(total_iterations));
+   const int patterns=method==6 ? static_cast<int>(pattern_pi.size()) :
+    (method==5 ? (nmodels-1)/(component_count-1) : (nmodels==2 ? 1 : nmodels));
+   extended.pattern_pi.assign(patterns,std::vector<double>(total_iterations));
+   if (trace_spec->full_probability_states && method==5)
+    extended.joint_pi.assign(nmodels,std::vector<double>(total_iterations));
+  }
+  if (trace_spec->annotations && method==6) {
+   extended.annotation_alpha.assign(annotation_alpha.n_elem,
+    std::vector<double>(total_iterations));
+   extended.annotation_sigma.assign(annotation_sigma.n_elem,
+    std::vector<double>(total_iterations));
+  }
+  const int selected=static_cast<int>(trace_spec->selected_markers.size());
+  if (trace_spec->selected_b)
+   extended.selected_b.assign(selected*nt,std::vector<double>(total_iterations));
+  if (trace_spec->selected_d)
+   extended.selected_d.assign(selected*nt,std::vector<int>(total_iterations));
+  if (trace_spec->selected_component && (method==5 || method==6))
+   extended.selected_component.assign(selected,std::vector<int>(total_iterations));
+ }
+
  std::vector<double> x2t(m);
  std::vector<std::vector<double>> x2(nt, std::vector<double>(m, 0.0));
  std::vector<std::vector<double>> r(nt, std::vector<double>(m, 0.0));
@@ -453,6 +491,65 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
    if (it >= execution.nburn) cove_retained_count = cove_retained_count + 1.0;
   }
 
+  // Observational convergence capture at the completed-iteration checkpoint.
+  if (trace_spec!=nullptr) {
+   if (trace_spec->covariance) {
+    int q=0;
+    for (int col=0;col<nt;++col) for (int row=col+1;row<nt;++row,++q) {
+     extended.cov_b[q][it]=B(row,col);
+     extended.cov_g[q][it]=G(row,col);
+     extended.cov_e[q][it]=E(row,col);
+    }
+   }
+   if (trace_spec->probability) {
+    if (method==4) {
+     if (nmodels==2) {
+      int active=0;
+      for (int state=0;state<nmodels;++state)
+       for (int trait=0;trait<nt;++trait)
+        if (models[state][trait]!=0) active=state;
+      extended.pattern_pi[0][it]=pi[active];
+     } else for (int state=0;state<nmodels;++state)
+       extended.pattern_pi[state][it]=pi[state];
+    } else if (method==5) {
+     std::vector<double> component_pi(component_count,0.0);
+     std::vector<double> pattern_marginal(
+      static_cast<std::size_t>((nmodels-1)/(component_count-1)),0.0);
+     for (int state=0;state<nmodels;++state) {
+      component_pi[model.joint->component[state]]+=pi[state];
+      if (state>0) pattern_marginal[(state-1)/(
+       component_count-1)]+=pi[state];
+      if (trace_spec->full_probability_states)
+       extended.joint_pi[state][it]=pi[state];
+     }
+     for (int k=0;k<component_count;++k)
+      extended.component_pi[k][it]=component_pi[k];
+     const double active=1.0-component_pi[0];
+     for (std::size_t p=0;p<pattern_marginal.size();++p)
+      extended.pattern_pi[p][it]=active>0.0 ? pattern_marginal[p]/active : 0.0;
+    } else if (method==6) {
+     for (std::size_t p=0;p<pattern_pi.size();++p)
+      extended.pattern_pi[p][it]=pattern_pi[p];
+    }
+   }
+   if (trace_spec->annotations && method==6) {
+    for (arma::uword q=0;q<annotation_alpha.n_elem;++q)
+     extended.annotation_alpha[q][it]=annotation_alpha[q];
+    for (arma::uword q=0;q<annotation_sigma.n_elem;++q)
+     extended.annotation_sigma[q][it]=annotation_sigma[q];
+   }
+   for (std::size_t selected=0;selected<trace_spec->selected_markers.size();++selected) {
+    const int marker=trace_spec->selected_markers[selected];
+    for (int trait=0;trait<nt;++trait) {
+     const std::size_t q=selected*static_cast<std::size_t>(nt)+trait;
+     if (trace_spec->selected_b) extended.selected_b[q][it]=b[trait][marker];
+     if (trace_spec->selected_d) extended.selected_d[q][it]=d[trait][marker]>0 ? 1 : 0;
+    }
+    if (trace_spec->selected_component && (method==5 || method==6))
+     extended.selected_component[selected][it]=component[marker];
+   }
+  }
+
   if ((it >= execution.nburn) && ((it - execution.nburn) % execution.nthin == 0)) {
    marker_retained_count = marker_retained_count + 1.0;
   }
@@ -495,6 +592,7 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
  result.pi_trace=std::move(pi_trace);
  result.pistrait=std::move(pistrait);
  result.pismarker=std::move(pismarker);
+ result.convergence=std::move(extended);
  if (method==6) {
   result.annotation_alpha_final=annotation_alpha;
   result.annotation_sigma_final=annotation_sigma;

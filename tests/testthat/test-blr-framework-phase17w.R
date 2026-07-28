@@ -162,26 +162,15 @@ test_that("Phase 17W warnings group details without row-wise emission", {
   expect_identical(names(got), c("B_cov", "marker_d"))
 })
 
-test_that("Phase 17W is contract-only and protects production", {
+test_that("Phase 17W contracts are activated only by the later Phase 21 route", {
   root <- blr_repo_path()
   skip_if(is.na(root), "source architecture assertion requires a checkout")
-  protected <- c("R/mtblr-bed.R", "R/mtblr-convergence.R", "R/mtblr-csr.R",
-    "R/RcppExports.R", "src/RcppExports.cpp", "src/mtblr.cpp",
-    "src/blr_mt_bed_core_impl.h", "src/blr_mt_bed_types.h",
-    "src/blr_mt_bed_chains_types.h", "src/blr_mt_bed_chains_execution_impl.h",
-    "src/blr_mt_bed_chains_aggregate_impl.h",
-    "src/blr_mt_bed_convergence_types.h",
-    "src/blr_mt_bed_convergence_trace_impl.h", "DESCRIPTION", "NAMESPACE",
-    "man/mtblr_bed.Rd")
-  changed <- system2("git", c("diff", "--name-only", "--", protected),
-                     stdout = TRUE)
-  expect_length(changed, 0)
   public <- readLines(file.path(root, "R", "mtblr-bed.R"), warn = FALSE)
-  expect_false(any(grepl('convergence = c\\("auto", "none", "core", "extended"',
-                         public)))
+  expect_true(any(grepl('convergence = c\\("auto", "none", "core", "extended"',
+                        public)))
   native <- paste(readLines(file.path(root, "src", "mtblr.cpp"), warn = FALSE),
                   collapse = "\n")
-  expect_false(grepl("extended_convergence", native, fixed = TRUE))
+  expect_true(grepl("convergence_covariance", native, fixed = TRUE))
   expect_identical(deparse(formals(sblr::mtblr_bed)$convergence),
-                   "c(\"auto\", \"none\", \"core\")")
+                   "c(\"auto\", \"none\", \"core\", \"extended\")")
 })

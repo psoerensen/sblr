@@ -91,6 +91,9 @@ struct CsrBayesCControls {
   double selection_s_prior_upper = 2.0;
   double selection_s_proposal_sd = 0.35;
   const arma::rowvec* selection_s_log_h = nullptr;
+  std::vector<int> convergence_markers;
+  bool convergence_b = false;
+  bool convergence_d = false;
 };
 
 struct CsrBayesCOutputSpec {
@@ -131,6 +134,8 @@ struct CsrBayesCChainResult {
   arma::rowvec le_variance_trace;
   arma::rowvec ld_variance_trace;
   arma::rowvec selection_s_trace;
+  arma::mat convergence_b;
+  arma::imat convergence_d;
   double final_marker_variance = 0.0;
   double final_genetic_variance = 0.0;
   double final_residual_variance = 0.0;

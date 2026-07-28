@@ -23,7 +23,7 @@ stblr_block_eigen(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core"),
+  convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE,
@@ -65,9 +65,12 @@ are unavailable. The default is `FALSE`.}
 
 \item{keep_chains}{Retain compact logical-chain records.}
 
-\item{convergence}{Convergence mode.}
+\item{convergence}{Convergence mode: `"auto"`, `"none"`, `"core"`, or
+`"extended"`. Automatic mode remains core-only.}
 
-\item{convergence_control}{Named convergence controls.}
+\item{convergence_control}{A uniquely named convergence-control list. The
+extended controls cover diagnostic groups, explicit marker selection,
+retained traces, and hard trace-memory guards.}
 
 \item{memory_warning_gb}{Analytical warning threshold.}
 

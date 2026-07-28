@@ -89,9 +89,9 @@ test_that("canonical route and unsupported policies remain explicit",{
 })
 
 test_that("canonical BayesRC protects other backends and interfaces",{
- protected<-c("src/blr_bed_bayesr_core_impl.h"="afe77e26d2cf2b8e3d64088221b33e14",
-  "src/blr_bed_scheduled_bayesc_core_impl.h"="723cee003504c1fdcd075b965cb63d83",
-  "src/blr_csr_sbayesrc_core_impl.h"="d06ec2a530e8c914201ee22b6be65739")
+ protected<-c("src/blr_bed_bayesr_core_impl.h"="bcdb60b4e57924c29b04f8abd52b60a9",
+  "src/blr_bed_scheduled_bayesc_core_impl.h"="7389c52be2803211ec085fa834126d10",
+  "src/blr_csr_sbayesrc_core_impl.h"="42b6fb38b4297912388c8ebaa7c996fd")
  expect_identical(unname(tools::md5sum(vapply(names(protected),blr_repo_path,character(1)))),unname(protected))
  expect_false("stblr_bed_marker" %in% getNamespaceExports("sblr"))
 })

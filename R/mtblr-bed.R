@@ -379,12 +379,12 @@
 #'   length `nchains`, retained in supplied order. Negative values represent
 #'   unsigned 32-bit seeds above the signed integer maximum.
 #' @param keep_chains Retain compact per-chain posterior records.
-#' @param convergence Convergence-diagnostic mode: `"auto"` computes Tier 1
-#'   diagnostics for two or more chains, `"none"` disables diagnostics, and
-#'   `"core"` explicitly requests them.
-#' @param convergence_control Optional uniquely named list controlling `warn`,
-#'   `rhat_threshold`, `ess_per_chain_threshold`,
-#'   `mcse_mean_over_sd_threshold`, and `keep_traces`.
+#' @param convergence Convergence-diagnostic mode: `"auto"` preserves core-only
+#'   automatic behavior, `"none"` disables capture, `"core"` explicitly requests
+#'   the five core quantities, and `"extended"` adds applicable Tier 2 groups.
+#' @param convergence_control Optional uniquely named list controlling warnings,
+#'   thresholds, retention, extended groups, explicit selected-marker quantities,
+#'   full probability-state opt-in, and hard diagnostic trace-memory guards.
 #' @param memory_warning_gb Positive warning threshold in GiB, or `Inf`.
 #' @param verbose Print resolved execution metadata.
 #' @return An object of class `mtblr_fit` with BED diagnostics, phenotype
@@ -425,8 +425,9 @@
 #' contain only these post-burn trait-level traces, use no extra thinning, and increase
 #' the analytical memory estimate. Threshold warnings are advisory and are
 #' aggregated at most once per fit; multiple chains or passing thresholds do
-#' not prove convergence. Marker, covariance off-diagonal, model-probability,
-#' ESS-for-SD, and quantile/median-MCSE diagnostics are not implemented.
+#' not prove convergence. Extended mode adds applicable low-dimensional and
+#' explicitly selected-marker scalar diagnostics. Matrix/simplex convergence,
+#' ESS-for-SD, and quantile/median MCSE remain outside the formal engine.
 #' @export
 mtblr_bed <- function(
   y, Glist, covar = NULL, chr = NULL, cls = NULL, rows = NULL,
@@ -449,7 +450,7 @@ mtblr_bed <- function(
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL, keep_chains = FALSE,
-  convergence = c("auto", "none", "core"), convergence_control = NULL,
+  convergence = c("auto", "none", "core", "extended"), convergence_control = NULL,
   memory_warning_gb = 8, verbose = FALSE
 ) {
   semantics <- .mtblr_resolve_public_method(method, "packed_bed")
@@ -651,6 +652,11 @@ mtblr_bed <- function(
   native_chain_seeds <- chain_control$native
   convergence_controls <- .mtblr_bed_convergence_controls(
     convergence, convergence_control, nchains)
+  extended_plan <- .blr_mtblr_extended_plan(
+    convergence_controls, marker_metadata$marker_id, trait_names, method,
+    mixture, bayesrc, updateB, updateE, updatePi, residual_covariance,
+    nchains, as.integer(nit))
+  convergence_controls$selected_markers_resolved <- extended_plan$selected
   convergence_memory <- .mtblr_bed_convergence_memory(
     convergence, convergence_controls, nchains, as.integer(nit), dat$nt)
   if (!is.numeric(memory_warning_gb) || length(memory_warning_gb) != 1L ||
@@ -667,6 +673,7 @@ mtblr_bed <- function(
     mixture$component_count)
   memory <- .mtblr_bayesrc_memory(
     memory,bayesrc,dat$m,nchains,ncores,nit+nburn)
+  memory <- .blr_add_extended_memory(memory, extended_plan)
   if (memory$estimated_total_gib > memory_warning_gb) {
     warning(sprintf(
       paste0("mtblr_bed analytical upper-bound estimate (not measured RSS; ",
@@ -747,7 +754,16 @@ mtblr_bed <- function(
     sigma_alpha_a = bayesrc$sigma_alpha_a,
     sigma_alpha_b = bayesrc$sigma_alpha_b,
     pi_floor = bayesrc$pi_floor,
-    alpha_update_every = bayesrc$alpha_update_every)
+    alpha_update_every = bayesrc$alpha_update_every,
+    convergence_covariance = extended_plan$native$convergence_covariance,
+    convergence_probability = extended_plan$native$convergence_probability,
+    convergence_annotations = extended_plan$native$convergence_annotations,
+    convergence_full_probability =
+      extended_plan$native$convergence_full_probability,
+    convergence_markers = extended_plan$native$convergence_markers,
+    convergence_b = extended_plan$native$convergence_b,
+    convergence_d = extended_plan$native$convergence_d,
+    convergence_component = extended_plan$native$convergence_component)
   native_route <- if (isTRUE(convergence_controls$trace_route_required)) {
     mtblr_bed_convergence_trace_internal
   } else {
@@ -774,7 +790,8 @@ mtblr_bed <- function(
       native_result = native_result, trait_names = trait_names,
       updateB = updateB, updateE = updateE,
       control = convergence_controls$thresholds,
-      keep_traces = convergence_controls$keep_traces)
+      keep_traces = convergence_controls$keep_traces,
+      extended_plan = extended_plan, model = method)
     raw <- diagnostic_result$raw
     convergence_traces <- diagnostic_result$convergence_traces
   } else {
@@ -818,6 +835,7 @@ mtblr_bed <- function(
     mixture$component_count)
   memory <- .mtblr_bayesrc_memory(
     memory,bayesrc,dat$m,nchains,ncores,nit+nburn)
+  memory <- .blr_add_extended_memory(memory, extended_plan)
   raw$model$names <- model_spec$names
   raw$pi$names <- model_spec$names
   raw$data <- list(
@@ -848,8 +866,15 @@ mtblr_bed <- function(
     blas_thread_environment = blas_thread_environment,
     convergence = convergence,
     convergence_requested = convergence_controls$diagnostic_requested,
-    convergence_scope = if (identical(convergence, "none")) "none" else "core",
+    convergence_scope = if (identical(convergence, "none")) "none" else convergence,
     convergence_keep_traces = convergence_controls$keep_traces,
+    convergence_control = convergence_controls[c(
+      "warn", "rhat_threshold", "ess_per_chain_threshold",
+      "mcse_mean_over_sd_threshold", "keep_traces",
+      "extended_groups_requested", "extended_groups_resolved",
+      "selected_markers", "selected_marker_quantities",
+      "selected_markers_resolved",
+      "full_probability_states", "max_trace_gb", "allow_large_traces")],
     convergence_memory_estimate = convergence_memory)
   raw$alignment <- alignment
   input <- list(
@@ -910,7 +935,7 @@ mtblr_bed <- function(
     memory_warning_gb = memory_warning_gb,
     convergence = convergence,
     convergence_requested = convergence_controls$diagnostic_requested,
-    convergence_scope = if (identical(convergence, "none")) "none" else "core",
+    convergence_scope = if (identical(convergence, "none")) "none" else convergence,
     convergence_trace_route = if (convergence_controls$trace_route_required)
       "mtblr_bed_convergence_trace_internal" else
       "mtblr_bed_chains_internal",
@@ -918,6 +943,13 @@ mtblr_bed <- function(
     convergence_warning_emitted = convergence_controls$warn &&
       length(raw$diagnostics$convergence$warning_messages) > 0L,
     convergence_keep_traces = convergence_controls$keep_traces,
+    convergence_control = convergence_controls[c(
+      "warn", "rhat_threshold", "ess_per_chain_threshold",
+      "mcse_mean_over_sd_threshold", "keep_traces",
+      "extended_groups_requested", "extended_groups_resolved",
+      "selected_markers", "selected_marker_quantities",
+      "selected_markers_resolved",
+      "full_probability_states", "max_trace_gb", "allow_large_traces")],
     convergence_thresholds = convergence_controls$thresholds,
     convergence_status = raw$diagnostics$convergence$overall_status,
     convergence_computed = raw$diagnostics$convergence$computed,

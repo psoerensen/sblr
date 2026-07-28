@@ -722,3 +722,13 @@ output distinguishes posterior marker component probabilities from posterior
 mean annotation-driven prior probabilities. MAF-derived annotations may be
 combined with fixed `selection_s`, but the fit records the overlap and warns
 once because MAF then enters both probability and effect-scale policies.
+
+Formal extended diagnostics target sampled alpha, sigmaSqAlpha, and global
+conditional pattern probabilities. Marker-level prior component probabilities
+are posterior summaries and are not default convergence traces.
+
+For ST models, group probabilities/variance multipliers and learned inclusion
+or variance coefficients are diagnosed from each trait-chain's current native
+state. SBayesRC/BayesRC alpha and sigmaSqAlpha use annotation-fast,
+stick-second ordering and explicit intercept metadata. Fixed marker-specific
+priors remain fixed inputs and are not expanded into marker-level formal traces.

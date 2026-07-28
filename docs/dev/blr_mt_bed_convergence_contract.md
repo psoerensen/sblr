@@ -291,3 +291,18 @@ The Phase 17U mathematics is now owned by the family-neutral internal
 `.blr_convergence_*` layer. MT BED supplies the same Tier 1 bundle and remains
 numerically identical after identifier/metadata normalization. ST adapters use
 the same result schema without changing the statistical definitions.
+
+## Phase 21 additive extension
+
+Phase 21 implements this extension through the shared bundle and scalar engine.
+MT BED owns strict-lower covariance, probability/annotation, and explicit
+selected-marker buffers inside each joint chain. The same public descriptor,
+memory-guard, warning, and retention contracts now consume ST trait-by-chain
+component, annotation/group, and selected-marker native buffers without
+changing the MT recorder or convergence mathematics.
+
+`extended` adds strict-lower raw B/G/E entries, applicable model probability
+states, BayesRC coefficient states, and explicitly selected b/d/component
+states. The completed-iteration native checkpoint is unchanged. Diagonal-E
+off-diagonals are structural rows without stochastic capture; covariance
+diagonals remain exclusively in Tier 1.

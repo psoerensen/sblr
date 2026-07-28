@@ -17,7 +17,7 @@ stblr_bed(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core"),
+  convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE
@@ -44,9 +44,13 @@ stblr_bed(
 
 \item{keep_chains}{Retain compact logical-chain records.}
 
-\item{convergence}{Convergence mode.}
+\item{convergence}{Convergence mode: `"auto"` preserves core-only automatic
+behavior, `"none"` disables capture, `"core"` requests the five trait-level
+diagnostics, and `"extended"` adds applicable low-dimensional diagnostics.}
 
-\item{convergence_control}{Named convergence controls.}
+\item{convergence_control}{A uniquely named list of convergence thresholds,
+trace retention, extended groups, explicit selected markers and quantities,
+and diagnostic trace-memory guards.}
 
 \item{memory_warning_gb}{Analytical warning threshold.}
 

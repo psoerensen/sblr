@@ -166,3 +166,11 @@ The canonical MT matrix now includes `mtblr_bed(method="bayesrc")` and
 Phase 19 joint-state descriptor, one base B, and the same chain/convergence
 infrastructure. Annotation preprocessing and operator preparation each occur
 once per fit; chain-private coefficient states never cross worker boundaries.
+
+## Extended convergence ownership
+
+The family-neutral R engine consumes schema-version-1 scalar bundles. MT
+operators receive one immutable extended trace specification and allocate only
+requested chain-private covariance, probability, annotation, and selected
+marker buffers. Trace capture never controls chains, operator preparation, RNG,
+or posterior accumulation.

@@ -180,6 +180,12 @@ BedBayesRChainExecutionResult run_bed_bayesr_chain(
  out.vlds = arma::rowvec(nit + nburn, arma::fill::zeros);
  out.final_pi.assign(static_cast<std::size_t>(K), 0.0);
  out.mean_pi.assign(static_cast<std::size_t>(K), 0.0);
+ const int convergence_pi_count=context.convergence_probability ? (K==2 ? 1 : K) : 0;
+ const arma::uword convergence_marker_count=static_cast<arma::uword>(context.convergence_markers.size());
+ if (convergence_pi_count>0) out.convergence_pi.zeros(nit,convergence_pi_count);
+ if (context.convergence_b && convergence_marker_count>0) out.convergence_b.zeros(nit,convergence_marker_count);
+ if (context.convergence_d && convergence_marker_count>0) out.convergence_d.zeros(nit,convergence_marker_count);
+ if (context.convergence_component && convergence_marker_count>0) out.convergence_component.zeros(nit,convergence_marker_count);
 
  try {
   const unsigned int chain_seed=static_cast<unsigned int>(context.chain_seed);
@@ -461,6 +467,18 @@ BedBayesRChainExecutionResult run_bed_bayesr_chain(
 
    // Accumulate pi for mean_pi (post-burnin only, no thinning, mirrors original)
    if (it >= nburn) {
+    const arma::uword draw=static_cast<arma::uword>(it-nburn);
+    if (convergence_pi_count>0) {
+     if (K==2) out.convergence_pi(draw,0)=pi_t[1];
+     else for (int k=0;k<K;++k) out.convergence_pi(draw,static_cast<arma::uword>(k))=pi_t[static_cast<std::size_t>(k)];
+    }
+    for (arma::uword s=0;s<convergence_marker_count;++s) {
+     const arma::uword marker=static_cast<arma::uword>(context.convergence_markers[static_cast<std::size_t>(s)]);
+     const int component=d_t(marker);
+     if (context.convergence_b) out.convergence_b(draw,s)=b_t(marker);
+     if (context.convergence_d) out.convergence_d(draw,s)=component>0 ? 1 : 0;
+     if (context.convergence_component) out.convergence_component(draw,s)=component;
+    }
     for (int k = 0; k < K; ++k)
      mean_pi_acc[static_cast<std::size_t>(k)] += pi_t[static_cast<std::size_t>(k)];
     ++npi_acc;

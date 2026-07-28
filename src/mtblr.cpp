@@ -4586,7 +4586,38 @@ struct MtSummaryChainResult {
  arma::mat prior_component_probabilities;
  int annotation_updates_attempted=0;
  int annotation_updates_completed=0;
+ sblr::mt::MtExtendedTraceResult convergence;
 };
+
+Rcpp::List mt_extended_trace_to_list(
+ const sblr::mt::MtExtendedTraceResult& trace) {
+ auto numeric=[](const std::vector<std::vector<double>>& x) {
+  const std::size_t nq=x.size(), n=nq==0 ? 0 : x[0].size();
+  Rcpp::NumericMatrix out(static_cast<int>(n),static_cast<int>(nq));
+  for (std::size_t q=0;q<nq;++q) for (std::size_t i=0;i<n;++i)
+   out(static_cast<int>(i),static_cast<int>(q))=x[q][i];
+  return out;
+ };
+ auto integer=[](const std::vector<std::vector<int>>& x) {
+  const std::size_t nq=x.size(), n=nq==0 ? 0 : x[0].size();
+  Rcpp::IntegerMatrix out(static_cast<int>(n),static_cast<int>(nq));
+  for (std::size_t q=0;q<nq;++q) for (std::size_t i=0;i<n;++i)
+   out(static_cast<int>(i),static_cast<int>(q))=x[q][i];
+  return out;
+ };
+ return Rcpp::List::create(
+  Rcpp::_["cov_b"]=numeric(trace.cov_b),
+  Rcpp::_["cov_g"]=numeric(trace.cov_g),
+  Rcpp::_["cov_e"]=numeric(trace.cov_e),
+  Rcpp::_["component_pi"]=numeric(trace.component_pi),
+  Rcpp::_["pattern_pi"]=numeric(trace.pattern_pi),
+  Rcpp::_["joint_pi"]=numeric(trace.joint_pi),
+  Rcpp::_["alpha"]=numeric(trace.annotation_alpha),
+  Rcpp::_["sigmaSqAlpha"]=numeric(trace.annotation_sigma),
+  Rcpp::_["b"]=numeric(trace.selected_b),
+  Rcpp::_["d"]=integer(trace.selected_d),
+  Rcpp::_["component"]=integer(trace.selected_component));
+}
 
 template <class Runner>
 std::vector<MtSummaryChainResult> mt_summary_dispatch_chains(
@@ -4675,6 +4706,8 @@ Rcpp::List mt_summary_raw_list(
      Rcpp::_ ["annotation_updates_attempted"]=chains[chain].annotation_updates_attempted,
      Rcpp::_ ["annotation_updates_completed"]=chains[chain].annotation_updates_completed);
    }
+   raw["convergence_capture"]=mt_extended_trace_to_list(
+    chains[chain].convergence);
    raws[static_cast<R_xlen_t>(chain)]=raw;
   }
  return Rcpp::List::create(
@@ -4719,7 +4752,13 @@ Rcpp::List mtblr_csr_chains_raw_internal(
   std::vector<double> pattern_pi_prior,
   bool updateAlpha, bool intercept_flat,
   double sigma_alpha_a, double sigma_alpha_b,
-  double pi_floor, int alpha_update_every) {
+  double pi_floor, int alpha_update_every,
+  bool convergence_covariance=false, bool convergence_probability=false,
+  bool convergence_annotations=false,
+  bool convergence_full_probability=false,
+  SEXP convergence_markers=R_NilValue,
+  bool convergence_b=false, bool convergence_d=false,
+  bool convergence_component=false) {
  const std::size_t nt=wy.size();
  if (nt==0 || ww.size()!=nt || yy.size()!=nt || n.size()!=nt)
   throw std::invalid_argument("mtblr_csr_chains_raw_internal: inconsistent trait dimensions");
@@ -4778,10 +4817,24 @@ Rcpp::List mtblr_csr_chains_raw_internal(
   bayesrc.pi_floor=pi_floor;
   bayesrc.alpha_update_every=alpha_update_every;
  }
+ sblr::mt::MtExtendedTraceSpec convergence_spec;
+ convergence_spec.covariance=convergence_covariance;
+ convergence_spec.probability=convergence_probability;
+ convergence_spec.annotations=convergence_annotations;
+ convergence_spec.full_probability_states=convergence_full_probability;
+ convergence_spec.selected_markers=Rf_isNull(convergence_markers) ?
+  std::vector<int>() : Rcpp::as<std::vector<int>>(convergence_markers);
+ convergence_spec.selected_b=convergence_b;
+ convergence_spec.selected_d=convergence_d;
+ convergence_spec.selected_component=convergence_component;
+ const bool any_extended=convergence_spec.covariance ||
+  convergence_spec.probability || convergence_spec.annotations ||
+  !convergence_spec.selected_markers.empty();
  const sblr::mt::MtDefaultModelSpec model{
   models,sets,method,(method==5||method==6)?&joint:nullptr,
   (method==5||method==6)?&marker_scale:nullptr,
-  method==5?&pi_prior:nullptr,method==6?&bayesrc:nullptr};
+  method==5?&pi_prior:nullptr,method==6?&bayesrc:nullptr,
+  any_extended?&convergence_spec:nullptr};
  const sblr::mt::MtDefaultCovariancePriorView prior{
   ssb_prior,sse_prior,nub,nue};
  const std::vector<int> seeds=mt_summary_resolve_chain_seeds(
@@ -4810,6 +4863,7 @@ Rcpp::List mtblr_csr_chains_raw_internal(
   out.prior_component_probabilities=final.prior_component_probabilities;
   out.annotation_updates_attempted=final.annotation_updates_attempted;
   out.annotation_updates_completed=final.annotation_updates_completed;
+  out.convergence=std::move(final.convergence);
   out.legacy=sblr::mt::make_mt_default_legacy_result(final,wy,nit,nburn);
   return out;
  };
@@ -4912,7 +4966,13 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   std::vector<double> pattern_pi_prior,
   bool updateAlpha, bool intercept_flat,
   double sigma_alpha_a, double sigma_alpha_b,
-  double pi_floor, int alpha_update_every) {
+  double pi_floor, int alpha_update_every,
+  bool convergence_covariance=false, bool convergence_probability=false,
+  bool convergence_annotations=false,
+  bool convergence_full_probability=false,
+  SEXP convergence_markers=R_NilValue,
+  bool convergence_b=false, bool convergence_d=false,
+  bool convergence_component=false) {
  if (method!=4 && method!=5 && method!=6) throw std::invalid_argument(
   "mtblr_block_eigen_chains_raw_internal supports methods 4, 5, and 6 only");
  const std::size_t nt=wy.size();
@@ -4984,10 +5044,24 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   bayesrc.pi_floor=pi_floor;
   bayesrc.alpha_update_every=alpha_update_every;
  }
+ sblr::mt::MtExtendedTraceSpec convergence_spec;
+ convergence_spec.covariance=convergence_covariance;
+ convergence_spec.probability=convergence_probability;
+ convergence_spec.annotations=convergence_annotations;
+ convergence_spec.full_probability_states=convergence_full_probability;
+ convergence_spec.selected_markers=Rf_isNull(convergence_markers) ?
+  std::vector<int>() : Rcpp::as<std::vector<int>>(convergence_markers);
+ convergence_spec.selected_b=convergence_b;
+ convergence_spec.selected_d=convergence_d;
+ convergence_spec.selected_component=convergence_component;
+ const bool any_extended=convergence_spec.covariance ||
+  convergence_spec.probability || convergence_spec.annotations ||
+  !convergence_spec.selected_markers.empty();
  const sblr::mt::MtDefaultModelSpec model{
   models,sets,method,(method==5||method==6)?&joint:nullptr,
   (method==5||method==6)?&marker_scale:nullptr,
-  method==5?&pi_prior:nullptr,method==6?&bayesrc:nullptr};
+  method==5?&pi_prior:nullptr,method==6?&bayesrc:nullptr,
+  any_extended?&convergence_spec:nullptr};
  const sblr::mt::MtDefaultCovariancePriorView prior{ssb_prior,sse_prior,nub,nue};
  const std::vector<int> seeds=mt_summary_resolve_chain_seeds(seed,nchains,chain_seeds);
  std::vector<std::string> errors; int used_workers=1;
@@ -5014,6 +5088,7 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   out.prior_component_probabilities=final.prior_component_probabilities;
   out.annotation_updates_attempted=final.annotation_updates_attempted;
   out.annotation_updates_completed=final.annotation_updates_completed;
+  out.convergence=std::move(final.convergence);
   out.legacy=sblr::mt::make_mt_default_legacy_result(
    final,transformed_wy,nit,nburn);
   return out;
@@ -5537,15 +5612,30 @@ Rcpp::List mt_bed_convergence_trace_bundle_to_list(
   static_cast<R_xlen_t>(bundle.quantities.size());
  Rcpp::IntegerVector quantity_index(quantity_count);
  Rcpp::CharacterVector group(quantity_count);
- Rcpp::IntegerVector trait_index(quantity_count);
- Rcpp::LogicalVector updated(quantity_count);
+ Rcpp::IntegerVector trait_index(quantity_count),trait2_index(quantity_count),
+  marker_index(quantity_count),component_index(quantity_count),
+  pattern_index(quantity_count),annotation_index(quantity_count),
+  stick_index(quantity_count),tier(quantity_count);
+ Rcpp::LogicalVector updated(quantity_count),derived(quantity_count),
+  structural(quantity_count);
+ bool extended=false;
  for (R_xlen_t quantity=0; quantity<quantity_count; ++quantity) {
   const sblr::mt::MtBedConvergenceQuantity& descriptor=
    bundle.quantities[static_cast<std::size_t>(quantity)];
   quantity_index[quantity]=static_cast<int>(quantity)+1;
   group[quantity]=descriptor.group;
   trait_index[quantity]=descriptor.trait+1;
+  trait2_index[quantity]=descriptor.trait2+1;
+  marker_index[quantity]=descriptor.marker+1;
+  component_index[quantity]=descriptor.component+1;
+  pattern_index[quantity]=descriptor.pattern+1;
+  annotation_index[quantity]=descriptor.annotation+1;
+  stick_index[quantity]=descriptor.stick+1;
+  tier[quantity]=descriptor.tier;
+  extended=extended || descriptor.tier>1;
   updated[quantity]=descriptor.updated;
+  derived[quantity]=descriptor.derived;
+  structural[quantity]=descriptor.structural;
  }
  Rcpp::NumericVector values(
   bundle.values.begin(), bundle.values.end());
@@ -5556,14 +5646,23 @@ Rcpp::List mt_bed_convergence_trace_bundle_to_list(
   Rcpp::_["schema"]=Rcpp::List::create(
    Rcpp::_["class"]="mtblr_convergence_trace_bundle",
    Rcpp::_["version"]=1),
-  Rcpp::_["scope"]="core",
+  Rcpp::_["scope"]=extended ? "extended" : "core",
   Rcpp::_["nchains"]=bundle.nchains,
   Rcpp::_["postburn_draws_per_chain"]=bundle.postburn_draws,
   Rcpp::_["quantities"]=Rcpp::DataFrame::create(
    Rcpp::_["quantity_index"]=quantity_index,
    Rcpp::_["group"]=group,
    Rcpp::_["trait_index"]=trait_index,
-   Rcpp::_["updated"]=updated),
+   Rcpp::_["trait2_index"]=trait2_index,
+   Rcpp::_["marker_index"]=marker_index,
+   Rcpp::_["component_index"]=component_index,
+   Rcpp::_["pattern_index"]=pattern_index,
+   Rcpp::_["annotation_index"]=annotation_index,
+   Rcpp::_["stick_index"]=stick_index,
+   Rcpp::_["tier"]=tier,
+   Rcpp::_["updated"]=updated,
+   Rcpp::_["derived"]=derived,
+   Rcpp::_["structural"]=structural),
   Rcpp::_["values"]=values);
 }
 
@@ -5615,7 +5714,11 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  std::vector<double> pattern_pi_prior,
  bool updateAlpha, bool intercept_flat,
  double sigma_alpha_a, double sigma_alpha_b,
- double pi_floor, int alpha_update_every
+ double pi_floor, int alpha_update_every,
+ bool convergence_covariance, bool convergence_probability,
+ bool convergence_annotations, bool convergence_full_probability,
+ std::vector<int> convergence_markers,
+ bool convergence_b, bool convergence_d, bool convergence_component
 ) {
  if (nchains<=0 || ncores<=0) {
   throw std::invalid_argument("nchains and ncores must be positive integers");
@@ -5657,6 +5760,18 @@ Rcpp::List mtblr_bed_chains_binding_impl(
   bayesrc.pi_floor=pi_floor;
   bayesrc.alpha_update_every=alpha_update_every;
  }
+ sblr::mt::MtExtendedTraceSpec convergence_spec;
+ convergence_spec.covariance=convergence_covariance;
+ convergence_spec.probability=convergence_probability;
+ convergence_spec.annotations=convergence_annotations;
+ convergence_spec.full_probability_states=convergence_full_probability;
+ convergence_spec.selected_markers=std::move(convergence_markers);
+ convergence_spec.selected_b=convergence_b;
+ convergence_spec.selected_d=convergence_d;
+ convergence_spec.selected_component=convergence_component;
+ const bool any_extended=convergence_spec.covariance ||
+  convergence_spec.probability || convergence_spec.annotations ||
+  !convergence_spec.selected_markers.empty();
  sblr::mt::MtBedExecutionSpec execution{
   updateB, updateE, updatePi, residual_covariance,
   nit, nburn, nthin, static_cast<std::uint32_t>(seed), method
@@ -5687,7 +5802,8 @@ Rcpp::List mtblr_bed_chains_binding_impl(
    tasks, used_workers, data, initial, sets, ssb_prior, sse_prior,
    models, nub, nue, execution, (method==5||method==6)?&joint:nullptr,
    (method==5||method==6)?&marker_scale:nullptr,
-   method==5?&pi_prior:nullptr,method==6?&bayesrc:nullptr);
+   method==5?&pi_prior:nullptr,method==6?&bayesrc:nullptr,
+   any_extended?&convergence_spec:nullptr);
  const double dispatch_seconds=std::chrono::duration<double>(
   std::chrono::steady_clock::now()-dispatch_start).count();
 
@@ -5707,7 +5823,8 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  sblr::mt::MtBedConvergenceTraceBundle convergence_bundle;
  if (capture_convergence_traces) {
   convergence_bundle=sblr::mt::build_mt_bed_convergence_trace_bundle(
-   results, nburn, nit, updateB, updateE);
+   results, nburn, nit, updateB, updateE, updatePi, updateAlpha, method,
+   residual_covariance, any_extended?&convergence_spec:nullptr);
  }
 
  sblr::mt::MtBedChainsAggregateResult aggregate=
@@ -5871,7 +5988,13 @@ Rcpp::List mtblr_bed_chains_internal(
  std::vector<double> pattern_pi_prior,
  bool updateAlpha, bool intercept_flat,
  double sigma_alpha_a, double sigma_alpha_b,
- double pi_floor, int alpha_update_every
+ double pi_floor, int alpha_update_every,
+ bool convergence_covariance=false, bool convergence_probability=false,
+ bool convergence_annotations=false,
+ bool convergence_full_probability=false,
+ SEXP convergence_markers=R_NilValue,
+ bool convergence_b=false, bool convergence_d=false,
+ bool convergence_component=false
 ) {
  return mtblr_bed_chains_binding_impl(
   bed_files, n_bed, cls, rows, af, Y, std::move(beta_init),
@@ -5885,7 +6008,11 @@ Rcpp::List mtblr_bed_chains_internal(
   std::move(pi_prior),std::move(component_init),std::move(annotations),
   std::move(alpha_init),std::move(sigma_alpha_init),
   std::move(pattern_pi_init),std::move(pattern_pi_prior),updateAlpha,
-  intercept_flat,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every);
+  intercept_flat,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every,
+  convergence_covariance,convergence_probability,convergence_annotations,
+  convergence_full_probability,Rf_isNull(convergence_markers) ?
+   std::vector<int>() : Rcpp::as<std::vector<int>>(convergence_markers),
+  convergence_b,convergence_d,convergence_component);
 }
 
 // Internal MT BED multichain route with a post-burn Tier 1 trace bundle.
@@ -5918,7 +6045,13 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
  std::vector<double> pattern_pi_prior,
  bool updateAlpha, bool intercept_flat,
  double sigma_alpha_a, double sigma_alpha_b,
- double pi_floor, int alpha_update_every
+ double pi_floor, int alpha_update_every,
+ bool convergence_covariance=false, bool convergence_probability=false,
+ bool convergence_annotations=false,
+ bool convergence_full_probability=false,
+ SEXP convergence_markers=R_NilValue,
+ bool convergence_b=false, bool convergence_d=false,
+ bool convergence_component=false
 ) {
  return mtblr_bed_chains_binding_impl(
   bed_files, n_bed, cls, rows, af, Y, std::move(beta_init),
@@ -5932,7 +6065,11 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
   std::move(pi_prior),std::move(component_init),std::move(annotations),
   std::move(alpha_init),std::move(sigma_alpha_init),
   std::move(pattern_pi_init),std::move(pattern_pi_prior),updateAlpha,
-  intercept_flat,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every);
+  intercept_flat,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every,
+  convergence_covariance,convergence_probability,convergence_annotations,
+  convergence_full_probability,Rf_isNull(convergence_markers) ?
+   std::vector<int>() : Rcpp::as<std::vector<int>>(convergence_markers),
+  convergence_b,convergence_d,convergence_component);
 }
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the

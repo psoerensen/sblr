@@ -80,8 +80,8 @@ test_that("Phase 9C preserves the current trait-dimension rejection", {
 
 test_that("Phase 9C protects canonical and adjacent implementations", {
   protected <- c(
-    "src/blr_csr_bayesc_types.h" = "4d0eb5380007195a8d34e7b2e081dec4",
-    "src/blr_csr_bayesc_core_impl.h" = "c548157cc9e5804272e714983bdcb798"
+    "src/blr_csr_bayesc_types.h" = "e29c0ff5990b71b702d51546f21fbaee",
+    "src/blr_csr_bayesc_core_impl.h" = "c6676ca562c2ea0d5ef8f1d517c1480d"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9c_path, character(1))))
   expect_identical(actual, unname(protected))

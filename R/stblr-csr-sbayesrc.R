@@ -85,6 +85,7 @@
 #'   controls.
 #' @param pi_floor Lower probability bound used by the sampler.
 #' @param alpha_update_every Iterations between annotation-effect updates.
+#' @param .convergence_spec Internal pre-resolved diagnostic capture plan.
 #'
 #' @return A formatted SBayesRC-style ST-BLR fit. Common posterior fields
 #'   include `dm` (marker-by-trait non-null component probability), `bm`
@@ -174,9 +175,9 @@ stblr_csr_sbayesrc_generic <- function(
   alpha_update_every = 10, selection_s = NULL,
   estimate_selection_s = FALSE, selection_s_init = 0,
   selection_s_prior = c(-3, 2), selection_s_proposal_sd = 0.35,
-  Glist = NULL
+  Glist = NULL, .convergence_spec = NULL
 ) {
- args <- as.list(environment())
+ args <- as.list(environment(), all.names = TRUE)
  do.call(.stblr_csr_sbayesrc_generic_impl, args)
 }
 
@@ -243,7 +244,8 @@ stblr_csr_sbayesrc_generic <- function(
   Glist = NULL,
   .native_fun = stblr_cpg_omp_csr_sbayesrc,
   .native_args = list(),
-  .input_extra = list()
+  .input_extra = list(),
+  .convergence_spec = NULL
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
@@ -437,7 +439,12 @@ stblr_csr_sbayesrc_generic <- function(
   selection_s_init = selection_s_init,
   selection_s_prior = selection_s_prior,
   selection_s_proposal_sd = selection_s_proposal_sd,
-  selection_s_log_h = selection_s_info$log_h
+  selection_s_log_h = selection_s_info$log_h,
+  convergence_markers = .convergence_spec$markers %||% integer(),
+  convergence_annotations = isTRUE(.convergence_spec$annotations),
+  convergence_b = isTRUE(.convergence_spec$b),
+  convergence_d = isTRUE(.convergence_spec$d),
+  convergence_component = isTRUE(.convergence_spec$component)
  ), .native_args))
 
  if (!is.null(raw_fit$diagnostics$block_eigen)) {

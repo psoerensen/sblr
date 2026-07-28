@@ -511,3 +511,17 @@ The analogous BayesC mapping is packed-BED `bayesc` versus summary
 Annotations are mandatory and explicitly marker aligned. MT fixed-marker,
 group, learned-logistic BayesC policies and annotation-dependent trait-pattern
 probabilities remain unsupported.
+
+## Phase 21 diagnostic capability
+
+All canonical fits retain core diagnostics. ST BayesR/SBayesR exposes native
+component-simplex diagnostics for CSR, block eigen, and packed BED. ST group
+and learned annotation routes expose their genuine low-dimensional states;
+ST SBayesRC/BayesRC exposes alpha and sigmaSqAlpha. Explicit ST b/d/component
+traces are supported where the state exists, while fixed-marker priors allocate
+no marker-expanded parameter traces. MT BayesC adds pattern probability
+and covariance diagnostics; MT BayesR adds component/pattern marginals and
+optional full joint pi; MT BayesRC adds pattern pi plus alpha and sigmaSqAlpha.
+Explicit ST/MT b/d/component traces are supported where the state exists.
+Sampled S remains an ST-only diagnostic. Marker-expanded prior/posterior
+probability matrices are excluded from default formal diagnostics.

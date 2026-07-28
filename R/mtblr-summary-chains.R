@@ -137,7 +137,8 @@
 .mtblr_summary_multichain <- function(native_execution, chain, conv,
                                       trait_names, model, operator,
                                       updateB, updateE,
-                                      model_parameters = NULL) {
+                                      model_parameters = NULL,
+                                      extended_plan = NULL) {
   if (!is.list(native_execution) ||
       length(native_execution$raws) != chain$nchains ||
       !identical(as.integer(native_execution$operator_preparations), 1L)) {
@@ -160,10 +161,14 @@
     bundle <- .mtblr_summary_convergence_bundle(
       raws, trait_names, model, operator, chain$nit, chain$nburn,
       updateB, updateE)
+    bundle <- .blr_merge_convergence_bundles(
+      bundle, .blr_mtblr_extended_bundle(
+        raws, extended_plan, model, operator, chain$nit, chain$nburn))
     convergence <- .blr_convergence_tier1(
       bundle, trait_names, conv$thresholds, conv$keep_traces)
     if (conv$keep_traces) {
       traces <- bundle
+      traces$quantities$quantity <- convergence$summary$quantity
       dimnames(traces$values) <- list(
         paste0("Iter", seq_len(chain$nit)),
         paste0("chain", seq_len(chain$nchains)),

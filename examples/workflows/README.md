@@ -49,3 +49,6 @@ By default, those sections are skipped.
 These scripts are demonstration templates. The MCMC settings are intentionally short.
 Real analyses need longer chains, convergence checks, posterior predictive checks, and
 careful validation of LD, marker order, allele alignment, and phenotype preprocessing.
+# Phase 21 adds `08_extended_diagnostics_workflow.R`, which demonstrates core
+# and extended groups, explicit selected-marker traces, trace retention, memory
+# preflight, and group-level summaries.

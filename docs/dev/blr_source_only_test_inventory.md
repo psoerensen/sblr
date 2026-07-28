@@ -112,3 +112,11 @@ Installed tests retain portable probability-oracle, annotation-validation,
 small operator-reduction, raw-schema, fit-output, and convergence protections.
 Only native-source ownership and workflow-text assertions may skip without a
 source checkout. The benchmark and mutation matrix remain extended/source-only.
+
+## Phase 21 source-only additions
+
+Portable installed tests own control validation, strict-lower ordering,
+probability deduplication, annotation identities, selected-marker resolution,
+RNG neutrality, native-oracle ST component/annotation/selected-state checks,
+and memory formulas. Native source-text ownership, mutation
+sensitivity, and the moderate benchmark remain source-checkout only.

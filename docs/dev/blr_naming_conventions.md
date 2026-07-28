@@ -87,3 +87,11 @@ posterior mean annotation-driven prior; `component_probabilities` is the
 posterior marker-state distribution; global conditional pattern probabilities
 use the `pattern_pi_*` prefix. Phase 19 joint `pi_*` fields are present but NULL
 for BayesRC/SBayesRC and are never redefined as marker averages.
+
+## Diagnostic quantities
+
+Core names remain `vbs`, `vgs`, `ves`, `vle`, and `vld`. Extended names use
+`cov_b/cov_g/cov_e`, `pi_active`, `component_pi`, `pattern_pi`, `joint_pi`,
+`selection_s`, `alpha`, and `sigmaSqAlpha`. Explicit marker quantities are
+`b`, `d`, and `component`; identity also lives in typed descriptor columns and
+not only in the human-readable label.

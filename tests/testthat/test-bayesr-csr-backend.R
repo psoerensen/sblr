@@ -338,6 +338,79 @@ expect_bayesr_ld_swap_diagnostics <- function(fit, require_chains = FALSE) {
   expect_true(all(fit$diagnostics$ld_swap$acceptance_rate <= 1))
 }
 
+test_that("CSR SBayesR extended diagnostics use native task-private states", {
+  fixture <- make_small_bayesr_csr_stats()
+  write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+  fit <- stblr_csr(
+    stats = fixture$stats, Glist = fixture$Glist, method = "sbayesr",
+    mixture_var = c(0, .1, 1), updateB = FALSE, updateE = FALSE,
+    nit = 8L, nburn = 2L, nchains = 2L, ncores = 1L, seed = 901L,
+    convergence = "extended", convergence_control = list(
+      warn = FALSE, extended_groups = "probability",
+      selected_markers = c("m3", "m1"),
+      selected_marker_quantities = c("b", "d", "component"),
+      keep_traces = TRUE))
+  summary <- fit$convergence$summary
+  expect_true(all(c("component_pi", "selected_b", "selected_d",
+                    "selected_component") %in% summary$group))
+  expect_identical(unique(summary$marker_id[summary$tier == 3L]),
+                   c("m3", "m1"))
+  probability <- fit$convergence_traces$values[, ,
+    summary$quantity[summary$group == "component_pi"], drop = FALSE]
+  expect_equal(unname(apply(probability, c(1, 2), sum)), matrix(1, 8, 2),
+               tolerance = 1e-12)
+  expect_true(all(fit$convergence_traces$values[, ,
+    summary$quantity[summary$group == "selected_d"]] %in% c(0, 1)))
+})
+
+test_that("CSR SBayesR diagnostic capture is RNG-neutral and unthinned", {
+  fixture <- make_small_bayesr_csr_stats()
+  write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+  common <- list(
+    stats = fixture$stats, Glist = fixture$Glist, method = "sbayesr",
+    mixture_var = c(0, .1, 1), updateB = FALSE, updateE = FALSE,
+    nit = 8L, nburn = 2L, nchains = 2L, ncores = 1L, seed = 902L)
+  none <- do.call(stblr_csr, c(common, list(convergence = "none")))
+  run <- function(nthin, keep_chains, keep_traces) do.call(stblr_csr, c(
+    common, list(nthin = nthin, keep_chains = keep_chains,
+      convergence = "extended", convergence_control = list(
+        warn = FALSE, extended_groups = "probability",
+        selected_markers = c("m3", "m1"),
+        selected_marker_quantities = c("b", "d", "component"),
+        keep_traces = keep_traces))))
+  retained <- run(1L, TRUE, TRUE)
+  unretained <- run(1L, FALSE, FALSE)
+  thinned <- run(2L, FALSE, TRUE)
+  for (field in c("bm", "dm", "b_final", "d_final", "pi_final", "pi_mean",
+                  "component_probabilities", "vbs", "vgs", "ves", "vle",
+                  "vld"))
+    expect_equal(retained[[field]], none[[field]], tolerance = 0, info = field)
+  expect_equal(unretained$convergence$summary,
+               retained$convergence$summary, tolerance = 0)
+  expect_equal(thinned$convergence_traces$values,
+               retained$convergence_traces$values, tolerance = 0)
+  expect_null(unretained$convergence_traces)
+  expect_null(unretained$chains)
+})
+
+test_that("binary fixed component probabilities are deduplicated and not updated", {
+  fixture <- make_small_bayesr_csr_stats()
+  write_empty_csr_ld_fixture(fixture$Glist$sparseLD$prefix, fixture$m)
+  fit <- stblr_csr(
+    stats = fixture$stats, Glist = fixture$Glist, method = "sbayesr",
+    mixture_var = c(0, 1), pi = c(.7, .3), updatePi = FALSE,
+    updateB = FALSE, updateE = FALSE, nit = 8L, nburn = 2L,
+    nchains = 2L, ncores = 1L, seed = 903L,
+    convergence = "extended", convergence_control = list(
+      warn = FALSE, extended_groups = "probability", keep_traces = TRUE))
+  probability <- fit$convergence$summary[
+    fit$convergence$summary$group == "component_pi", , drop = FALSE]
+  expect_equal(nrow(probability), 1L)
+  expect_false(probability$updated)
+  expect_true(all(probability$status == "not_updated"))
+  expect_identical(probability$component_name, "component_1")
+})
+
 test_that("stblr_csr dispatches exact CSR BayesR through method argument", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),

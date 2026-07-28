@@ -57,7 +57,8 @@ stblr_csr_group_annot(
   updateGroupVb = FALSE,
   nub_group = 4,
   ssb_group_prior = 1,
-  normalize_group_vb = TRUE
+  normalize_group_vb = TRUE,
+  .convergence_spec = NULL
 )
 }
 \arguments{
@@ -141,6 +142,8 @@ marker for swap proposals.}
 \item{ssb_group_prior}{Group variance-prior scale.}
 
 \item{normalize_group_vb}{Normalize group variance multipliers.}
+
+\item{.convergence_spec}{Internal pre-resolved diagnostic capture plan.}
 }
 \value{
 A formatted ST-BLR fit with group-level posterior summaries. The

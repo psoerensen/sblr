@@ -405,3 +405,8 @@ For marker (j), Phase 20 uses annotation-dependent component probabilities
 `theta[j,]` and global conditional non-null pattern probabilities `omega`.
 The null state has mass `theta[j,0]`; active `(pattern, component)` mass is
 `theta[j,k] * omega[p]`. This preserves one null state and one base B matrix.
+
+Extended MT diagnostics add raw strict-lower B/G/E entries, model probability
+states, BayesRC coefficient states, and explicitly selected effective effects,
+binary trait activity, and mixture components. Full joint BayesR probabilities
+are opt-in; scalar rows do not establish joint matrix or simplex convergence.

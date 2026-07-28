@@ -52,10 +52,16 @@ struct CsrGroupBayesCExecutionContext {
  std::size_t ld_row_ptr_count=0;
  const void* ld_friends_storage=nullptr;
  GroupBayesCPolicyView group_policy;
+ const std::vector<int>* convergence_markers=nullptr;
+ bool convergence_annotations=false, convergence_b=false,
+  convergence_d=false;
 };
 
 struct CsrGroupBayesCExecutionResult {
  std::vector<std::vector<std::vector<double>>> raw;
+ std::vector<arma::mat> convergence_group_pi, convergence_group_vb;
+ std::vector<arma::mat> convergence_b;
+ std::vector<arma::imat> convergence_d;
 };
 
 inline void validate_csr_group_bayesc_execution_context(
@@ -85,6 +91,11 @@ inline void validate_csr_group_bayesc_execution_context(
      !x.marker_group || !x.group_size || !x.marker_order ||
      !x.ld_storage || !x.ld_friends_storage)
   throw std::invalid_argument("group execution context has a null dependency");
+ if (!x.convergence_markers)
+  throw std::invalid_argument("group convergence marker metadata is missing");
+ for (int marker: *x.convergence_markers)
+  if (marker<0 || static_cast<std::size_t>(marker)>=data.marker_count)
+   throw std::invalid_argument("group convergence marker index is out of range");
  if (x.marker_order->size()!=data.marker_count)
   throw std::invalid_argument("group marker order length mismatch");
  if (x.initial_group_probability->size()!=data.trait_count ||

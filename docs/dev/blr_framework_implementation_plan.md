@@ -1657,3 +1657,12 @@ conditional non-null trait-pattern distribution while retaining the Phase 19
 state descriptor and base-covariance kernel. The raw schema stays at version 1
 and model semantics at version 2. Extended annotation/probability diagnostics
 remain the next phase.
+
+## Phase 21 extended diagnostics
+
+Phase 21 keeps the scalar convergence mathematics fixed and adds a resolved,
+memory-guarded quantity plan. MT covariance, probability, annotation, and
+explicit selected-marker traces use chain-private native state. Genuine ST
+probability and selection-S traces are adapted without pooling. The long-term
+cleanup phase remains contingent on completing the ST native trace owners
+listed in the Phase 21 report.

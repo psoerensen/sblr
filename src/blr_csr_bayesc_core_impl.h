@@ -490,6 +490,10 @@ void validate_csr_bayesc_execution_input(
        (input.ld_friends.friend_count > 0 && input.ld_friends.index == nullptr))) {
     throw std::invalid_argument("csr_bayesc LD-swap friend view is invalid");
   }
+  for (int marker : controls.convergence_markers) if (marker < 0 ||
+      static_cast<std::size_t>(marker) >= markers) {
+    throw std::invalid_argument("csr_bayesc convergence marker index is out of range");
+  }
 }
 
 CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
@@ -611,6 +615,9 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       output.le_variance_trace.zeros(n_trace);
       output.ld_variance_trace.zeros(n_trace);
       output.selection_s_trace.zeros(n_trace);
+      const arma::uword selected_count=static_cast<arma::uword>(input.controls.convergence_markers.size());
+      if (input.controls.convergence_b && selected_count>0) output.convergence_b.zeros(input.controls.nit,selected_count);
+      if (input.controls.convergence_d && selected_count>0) output.convergence_d.zeros(input.controls.nit,selected_count);
       arma::rowvec dynamic_selection_scale;
       double selection_s = input.controls.selection_s_initial;
 
@@ -775,6 +782,14 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         output.le_variance_trace(iteration_u) = le_variance;
         output.ld_variance_trace(iteration_u) = ld_variance;
         output.selection_s_trace(iteration_u) = selection_s;
+        if (iteration >= input.controls.nburn) {
+          const arma::uword draw=static_cast<arma::uword>(iteration-input.controls.nburn);
+          for (arma::uword s=0;s<selected_count;++s) {
+            const arma::uword marker=static_cast<arma::uword>(input.controls.convergence_markers[static_cast<std::size_t>(s)]);
+            if (input.controls.convergence_b) output.convergence_b(draw,s)=effects(marker);
+            if (input.controls.convergence_d) output.convergence_d(draw,s)=state(marker);
+          }
+        }
         if (scalar_iteration_is_retained(
               iteration, input.controls.nburn, input.controls.nthin)) {
           output.retained_samples += 1.0;

@@ -111,8 +111,8 @@ test_that("Phase 9G canonical route remains reproducible", {
 
 test_that("Phase 9G protects public and unrelated backends", {
   protected <- c(
-    "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
-    "src/st_cpg_omp_csr_group.cpp" = "87e923f7f8ee6420e39d9f041263d11b",
+    "src/st_cpg_omp_csr_prior.cpp" = "602c1620a4be5741c63a8c7b7baa07e6",
+    "src/st_cpg_omp_csr_group.cpp" = "7b232d89e9757b46e3566855df95f124",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9g_path, character(1))))

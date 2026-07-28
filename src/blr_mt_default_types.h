@@ -19,6 +19,31 @@ struct MtDefaultDataView {
  const std::vector<int>& n;
 };
 
+struct MtExtendedTraceSpec {
+ bool covariance=false;
+ bool probability=false;
+ bool annotations=false;
+ bool full_probability_states=false;
+ bool selected_b=false;
+ bool selected_d=false;
+ bool selected_component=false;
+ std::vector<int> selected_markers;
+};
+
+struct MtExtendedTraceResult {
+ std::vector<std::vector<double>> cov_b;
+ std::vector<std::vector<double>> cov_g;
+ std::vector<std::vector<double>> cov_e;
+ std::vector<std::vector<double>> component_pi;
+ std::vector<std::vector<double>> pattern_pi;
+ std::vector<std::vector<double>> joint_pi;
+ std::vector<std::vector<double>> annotation_alpha;
+ std::vector<std::vector<double>> annotation_sigma;
+ std::vector<std::vector<double>> selected_b;
+ std::vector<std::vector<int>> selected_d;
+ std::vector<std::vector<int>> selected_component;
+};
+
 struct MtDefaultModelSpec {
  const std::vector<std::vector<int>>& models;
  const std::vector<std::vector<int>>& sets;
@@ -27,6 +52,7 @@ struct MtDefaultModelSpec {
  const std::vector<double>* marker_scale=nullptr;
  const std::vector<double>* pi_prior=nullptr;
  const MtBayesRCSpec* bayesrc=nullptr;
+ const MtExtendedTraceSpec* convergence=nullptr;
 };
 
 struct MtDefaultCovariancePriorView {
@@ -109,6 +135,7 @@ struct MtDefaultCoreResult {
  arma::mat prior_component_probabilities;
  int annotation_updates_attempted=0;
  int annotation_updates_completed=0;
+ MtExtendedTraceResult convergence;
 };
 
 struct MtDefaultFinalResult {
@@ -161,6 +188,7 @@ struct MtDefaultFinalResult {
  arma::mat prior_component_probabilities;
  int annotation_updates_attempted=0;
  int annotation_updates_completed=0;
+ MtExtendedTraceResult convergence;
 };
 
 }  // namespace mt

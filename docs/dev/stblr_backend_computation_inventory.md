@@ -767,3 +767,13 @@ safe normal probability utilities, reached-stick augmentation, coefficient
 prior, intercept-flat convention, and variance update. This is shared
 scientific infrastructure, not a change to the validated ST kernels. MT adds
 one shared coefficient state per joint chain rather than one per trait.
+
+## Phase 21 task-private diagnostic ownership
+
+Each scalar trait-by-chain result optionally owns post-burn, every-iteration
+buffers resolved before dispatch. BayesR routes store current global component
+probabilities and direct selected b/d/component states. Group and learned CSR
+routes store current group or coefficient states; SBayesRC/BayesRC routes store
+current alpha and sigmaSqAlpha. Fixed-marker BayesC stores selected b/d only.
+Buffers scale with the resolved request, are written before aggregation, consume
+no RNG, and are independent of `nthin`, `keep_chains`, and worker assignment.

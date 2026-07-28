@@ -75,8 +75,8 @@ test_that("Phase 8 annotation, alpha, probability, and chain contracts remain ex
 test_that("Phase 8 numerical cores remain protected under the unified API", {
  paths <- c("src/blr_csr_bayesc_types.h", "src/blr_csr_bayesc_core_impl.h",
             "src/blr_csr_bayesr_types.h", "src/blr_csr_bayesr_core_impl.h")
- expected <- c("4d0eb5380007195a8d34e7b2e081dec4", "c548157cc9e5804272e714983bdcb798",
-               "bf1d4b73065207ca361c7abdab3cb253", "4dac6bef2df917613df8e1a827640303")
+ expected <- c("e29c0ff5990b71b702d51546f21fbaee", "c6676ca562c2ea0d5ef8f1d517c1480d",
+               "bf1d4b73065207ca361c7abdab3cb253", "80def6c66196401c4ffc73c7e322f879")
  expect_identical(unname(tools::md5sum(vapply(paths, phase8_path, character(1)))), expected)
  ns <- readLines(phase8_path("NAMESPACE"), warn = FALSE)
  expect_true("export(stblr_block_eigen)" %in% ns)

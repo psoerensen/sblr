@@ -11,6 +11,7 @@ struct BedBayesRCBindingMetadata {
  double n_annotations;
  int annotation_updates_per_chain;
  bool keep_chains, return_wy, return_r;
+ const std::vector<int>& convergence_markers;
 };
 
 static Rcpp::List stblr_bed_bayesrc_result_to_raw(
@@ -46,6 +47,12 @@ static Rcpp::List stblr_bed_bayesrc_result_to_raw(
      Rcpp::Named("comp_prob")=z.comp_prob,
      Rcpp::Named("alpha")=z.annot_alpha_mean,
      Rcpp::Named("sigmaSqAlpha")=z.annot_sigma_mean,
+     Rcpp::Named("convergence_trace")=Rcpp::List::create(
+      Rcpp::Named("marker_index")=Rcpp::wrap(metadata.convergence_markers),
+      Rcpp::Named("b")=z.convergence_b,Rcpp::Named("d")=z.convergence_d,
+      Rcpp::Named("component")=z.convergence_component,
+      Rcpp::Named("alpha")=z.convergence_alpha,
+      Rcpp::Named("sigmaSqAlpha")=z.convergence_sigma),
      Rcpp::Named("vbs")=z.vbs,Rcpp::Named("vgs")=z.vgs,
      Rcpp::Named("ves")=z.ves,Rcpp::Named("vle")=z.vles,
      Rcpp::Named("vld")=z.vlds,Rcpp::Named("pis")=z.pis
@@ -124,7 +131,10 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
   int nburn = 100, int nthin = 1, int rebuild_every = 100,
   bool return_wy = true, bool return_r = true, int read_block_size = 256,
   int nchains = 1, bool keep_chains = false, int ncores = 1, int seed = 10,
-  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create()
+  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create(),
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_annotations=false, bool convergence_b=false,
+  bool convergence_d=false, bool convergence_component=false
 ) {
  if (nit <= 0 || nburn < 0 || nthin <= 0 || nchains <= 0 || ncores <= 0)
   throw std::runtime_error("invalid MCMC or chain controls.");
@@ -135,6 +145,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  if (!std::isfinite(pi_floor) || pi_floor <= 0.0 || pi_floor >= 1.0)
   throw std::runtime_error("pi_floor must be in (0, 1).");
  const int K = static_cast<int>(gamma.size());
+ const std::vector<int> convergence_markers_cpp=
+  Rcpp::as<std::vector<int>>(convergence_markers);
  if (K < 2 || gamma[0] != 0.0) throw std::runtime_error("gamma must start with exact zero.");
  for (int k = 1; k < K; ++k)
   if (!std::isfinite(gamma[k]) || gamma[k] <= 0.0)
@@ -195,7 +207,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
    {annot_alpha_init,annot_sigma_sq_alpha_init,intercept_flat,
     sigmaSqAlpha_a,sigmaSqAlpha_b,updateAlpha,annot_alpha_update_every},
    maps,order,y_mat,b_init,B,E,ssb,sse,pi_floor,nub,nue,adjE,
-   updateB,updateE,nit,nburn,nthin,rebuild_every,chain_seed,trait,chain
+   updateB,updateE,nit,nburn,nthin,rebuild_every,chain_seed,trait,chain,
+   convergence_markers_cpp,convergence_annotations,convergence_b,
+   convergence_d,convergence_component
   };
   jobs[job]=sblr::core::run_bed_bayesrc_chain(context);
  }
@@ -225,7 +239,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  const BedBayesRCBindingMetadata metadata{
   gamma,m,nt,ntrace,nit,nburn,nthin,nchains,n_used,static_cast<double>(A.n_cols),
   updateAlpha ? (nit+nburn)/annot_alpha_update_every : 0,
-  keep_chains,return_wy,return_r
+  keep_chains,return_wy,return_r,convergence_markers_cpp
  };
  return stblr_bed_bayesrc_result_to_raw(result,metadata);
 }

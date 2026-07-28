@@ -439,7 +439,8 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
     const MtJointStateSpec* joint = nullptr,
     const std::vector<double>* marker_scale = nullptr,
     const std::vector<double>* pi_prior = nullptr,
-    const MtBayesRCSpec* bayesrc = nullptr) {
+    const MtBayesRCSpec* bayesrc = nullptr,
+    const MtExtendedTraceSpec* convergence = nullptr) {
   validate_mt_bed_problem(
     data, initial, sets, ssb_prior, sse_prior, models,
     execution, nub, nue);
@@ -478,6 +479,7 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
   result.pi = initial.pi;
   result.pistrait.assign(nt, std::vector<double>(4, 0.0));
   result.pismarker.assign(2, 0.0);
+  MtExtendedTraceResult extended;
 
   int component_count=0;
   if (execution.method==5 || execution.method==6) {
@@ -539,6 +541,42 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
   }
   result.component_counts.assign(
     m, std::vector<double>(static_cast<std::size_t>(component_count),0.0));
+  const std::size_t covariance_count=nt*(nt-1)/2;
+  if (convergence!=nullptr) {
+    for (int marker:convergence->selected_markers)
+      if (marker<0 || static_cast<std::size_t>(marker)>=m)
+        throw std::invalid_argument("selected convergence marker is out of range");
+    if (convergence->covariance) {
+      extended.cov_b.assign(covariance_count,std::vector<double>(total_iterations));
+      extended.cov_g.assign(covariance_count,std::vector<double>(total_iterations));
+      extended.cov_e.assign(covariance_count,std::vector<double>(total_iterations));
+    }
+    if (convergence->probability) {
+      if (execution.method==5 && component_count>0)
+        extended.component_pi.assign(component_count,std::vector<double>(total_iterations));
+      const std::size_t patterns=execution.method==6 ? pattern_pi.size() :
+        (execution.method==5 ? static_cast<std::size_t>((nmodels-1)/(component_count-1)) :
+         (nmodels==2 ? 1 : nmodels));
+      extended.pattern_pi.assign(patterns,std::vector<double>(total_iterations));
+      if (convergence->full_probability_states && execution.method==5)
+        extended.joint_pi.assign(nmodels,std::vector<double>(total_iterations));
+    }
+    if (convergence->annotations && execution.method==6) {
+      extended.annotation_alpha.assign(annotation_alpha.n_elem,
+        std::vector<double>(total_iterations));
+      extended.annotation_sigma.assign(annotation_sigma.n_elem,
+        std::vector<double>(total_iterations));
+    }
+    if (convergence->selected_b)
+      extended.selected_b.assign(convergence->selected_markers.size()*nt,
+        std::vector<double>(total_iterations));
+    if (convergence->selected_d)
+      extended.selected_d.assign(convergence->selected_markers.size()*nt,
+        std::vector<int>(total_iterations));
+    if (convergence->selected_component && (execution.method==5 || execution.method==6))
+      extended.selected_component.assign(convergence->selected_markers.size(),
+        std::vector<int>(total_iterations));
+  }
 
   std::vector<std::vector<double>> beta = initial.beta;
   arma::mat residual = data.phenotype;
@@ -771,6 +809,64 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
       }
     }
 
+    if (convergence!=nullptr) {
+      if (convergence->covariance) {
+        std::size_t q=0;
+        for (std::size_t col=0;col<nt;++col)
+          for (std::size_t row=col+1;row<nt;++row,++q) {
+            extended.cov_b[q][iteration]=result.B(row,col);
+            extended.cov_g[q][iteration]=genetic_covariance(row,col);
+            extended.cov_e[q][iteration]=result.E(row,col);
+          }
+      }
+      if (convergence->probability) {
+        if (execution.method==4) {
+          if (nmodels==2) {
+            std::size_t active=0;
+            for (std::size_t state=0;state<nmodels;++state)
+              for (std::size_t trait=0;trait<nt;++trait)
+                if (models[state][trait]!=0) active=state;
+            extended.pattern_pi[0][iteration]=result.pi[active];
+          } else for (std::size_t state=0;state<nmodels;++state)
+            extended.pattern_pi[state][iteration]=result.pi[state];
+        } else if (execution.method==5) {
+          std::vector<double> component_pi(component_count,0.0);
+          std::vector<double> pattern_marginal(
+            static_cast<std::size_t>((nmodels-1)/(component_count-1)),0.0);
+          for (std::size_t state=0;state<nmodels;++state) {
+            component_pi[joint->component[state]]+=result.pi[state];
+            if (state>0) pattern_marginal[(state-1)/(component_count-1)]+=result.pi[state];
+            if (convergence->full_probability_states)
+              extended.joint_pi[state][iteration]=result.pi[state];
+          }
+          for (int k=0;k<component_count;++k)
+            extended.component_pi[k][iteration]=component_pi[k];
+          const double active=1.0-component_pi[0];
+          for (std::size_t p=0;p<pattern_marginal.size();++p)
+            extended.pattern_pi[p][iteration]=active>0.0 ? pattern_marginal[p]/active : 0.0;
+        } else if (execution.method==6) {
+          for (std::size_t p=0;p<pattern_pi.size();++p)
+            extended.pattern_pi[p][iteration]=pattern_pi[p];
+        }
+      }
+      if (convergence->annotations && execution.method==6) {
+        for (arma::uword q=0;q<annotation_alpha.n_elem;++q)
+          extended.annotation_alpha[q][iteration]=annotation_alpha[q];
+        for (arma::uword q=0;q<annotation_sigma.n_elem;++q)
+          extended.annotation_sigma[q][iteration]=annotation_sigma[q];
+      }
+      for (std::size_t selected=0;selected<convergence->selected_markers.size();++selected) {
+        const std::size_t marker=static_cast<std::size_t>(convergence->selected_markers[selected]);
+        for (std::size_t trait=0;trait<nt;++trait) {
+          const std::size_t q=selected*nt+trait;
+          if (convergence->selected_b) extended.selected_b[q][iteration]=result.b[trait][marker];
+          if (convergence->selected_d) extended.selected_d[q][iteration]=result.d[trait][marker]>0 ? 1 : 0;
+        }
+        if (convergence->selected_component && (execution.method==5 || execution.method==6))
+          extended.selected_component[selected][iteration]=result.component[marker];
+      }
+    }
+
     if (iteration >= execution.nburn) {
       if (execution.updateB) {
         for (std::size_t row = 0; row < nt; ++row) {
@@ -811,6 +907,7 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
     throw std::runtime_error("mtblr_bed: no retained marker-summary samples");
   }
   result.G = genetic_covariance;
+  result.convergence=std::move(extended);
   if (execution.method==6) {
     if (annotation_retained_count<=0.0)
       throw std::runtime_error("MT BED BayesRC has no retained annotation samples");

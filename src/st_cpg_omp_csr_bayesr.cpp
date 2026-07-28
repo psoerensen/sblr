@@ -1223,6 +1223,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   Rcpp::NumericVector selection_s_prior,
   double selection_s_proposal_sd,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h,
+  std::vector<int> convergence_markers,
+  bool convergence_probability,
+  bool convergence_b,
+  bool convergence_d,
+  bool convergence_component,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1250,6 +1255,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  }
  if (!chain_seeds.empty() && static_cast<int>(chain_seeds.size()) != nchains) {
   throw std::runtime_error("stblr_cpg_omp_csr_bayesr: chain_seeds must have length nchains.");
+ }
+ for (int marker : convergence_markers) if (marker < 0 || marker >= m) {
+  throw std::runtime_error("stblr_cpg_omp_csr_bayesr: convergence marker index is out of range.");
  }
 
  bool use_selection_s_prior_scale = selection_s_prior_scale.isNotNull();
@@ -1430,12 +1438,16 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  execution_context.wy_mat=&wy_mat; execution_context.b_init_mat=&b_init_mat; execution_context.B=&B; execution_context.E=&E;
  execution_context.ssb_prior_mat=&ssb_prior_mat; execution_context.sse_prior_mat=&sse_prior_mat; execution_context.yy_vec=&yy_vec;
  execution_context.prior_scale=&prior_scale; execution_context.selection_s_log_h_row=&selection_s_log_h_row;
+ execution_context.convergence_markers=&convergence_markers;
  execution_context.K=K; execution_context.m=m; execution_context.nt=nt; execution_context.nchains=nchains;
  execution_context.ncores=ncores; execution_context.nit=nit; execution_context.nburn=nburn; execution_context.nthin=nthin;
  execution_context.seed=seed; execution_context.updateE_start=updateE_start; execution_context.updateE_every=updateE_every;
  execution_context.ld_swap_moves=ld_swap_moves; execution_context.use_comp_init=use_comp_init; execution_context.use_r_init=use_r_init;
  execution_context.estimate_selection_s=estimate_selection_s; execution_context.use_selection_s_prior_scale=use_selection_s_prior_scale;
  execution_context.updateLDswap=updateLDswap; execution_context.updateB=updateB; execution_context.updateE=updateE; execution_context.updatePi=updatePi;
+ execution_context.convergence_probability=convergence_probability;
+ execution_context.convergence_b=convergence_b; execution_context.convergence_d=convergence_d;
+ execution_context.convergence_component=convergence_component;
  execution_context.ld_swap_prob=ld_swap_prob; execution_context.selection_s_init=selection_s_init;
  execution_context.selection_s_prior_lower=selection_s_prior[0]; execution_context.selection_s_prior_upper=selection_s_prior[1];
  execution_context.selection_s_proposal_sd=selection_s_proposal_sd; execution_context.nub=nub; execution_context.nue=nue; execution_context.adjE=adjE;
@@ -1449,6 +1461,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  const arma::mat &final_pi_task=execution_result.final_pi_task,&mean_pi_task=execution_result.mean_pi_task;
  const arma::vec &selection_s_attempted_task=execution_result.selection_s_attempted_task,&selection_s_accepted_task=execution_result.selection_s_accepted_task;
  const std::vector<arma::mat>& comp_prob_task=execution_result.comp_prob_task; const std::vector<arma::vec>& ncomp_task=execution_result.ncomp_task;
+ const std::vector<arma::mat>& convergence_pi_task=execution_result.convergence_pi_task;
+ const std::vector<arma::mat>& convergence_b_task=execution_result.convergence_b_task;
+ const std::vector<arma::imat>& convergence_d_task=execution_result.convergence_d_task;
+ const std::vector<arma::imat>& convergence_component_task=execution_result.convergence_component_task;
  const arma::mat &bm=execution_result.bm,&dm=execution_result.dm,&bm_sd=execution_result.bm_sd,&dm_sd=execution_result.dm_sd;
  const arma::mat &bm_min=execution_result.bm_min,&dm_min=execution_result.dm_min,&bm_max=execution_result.bm_max,&dm_max=execution_result.dm_max;
  const arma::mat &component_mean=execution_result.component_mean,&b_out=execution_result.b_out,&r_out=execution_result.r_out,&component_out=execution_result.component_out;
@@ -1640,6 +1656,13 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
       attempted > 0.0 ? accepted / attempted : 0.0;
     }
 
+    Rcpp::List convergence_trace = Rcpp::List::create(
+     Rcpp::Named("component_pi") = convergence_pi_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("b") = convergence_b_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("d") = convergence_d_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("component") = convergence_component_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("marker_index") = Rcpp::wrap(convergence_markers)
+    );
     trait_chains[chain] = Rcpp::List::create(
      Rcpp::Named("marker") = Rcpp::List::create(
       Rcpp::Named("bm") = chain_bm,
@@ -1664,6 +1687,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
       Rcpp::Named("dm_component_mean") = chain_component_mean
      ),
      Rcpp::Named("selection") = chain_selection,
+     Rcpp::Named("convergence_trace") = convergence_trace,
      Rcpp::Named("diagnostics") = Rcpp::List::create(
       Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue,
       Rcpp::Named("updateE") = updateE_diag
@@ -1784,7 +1808,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   double selection_s_init = 0.0,
   Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
   double selection_s_proposal_sd = 0.35,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::IntegerVector convergence_markers = Rcpp::IntegerVector::create(),
+  bool convergence_probability = false,
+  bool convergence_b = false,
+  bool convergence_d = false,
+  bool convergence_component = false
 ) {
  auto make_csr_operator = [&](int m,
                               const std::vector<double>& xx,
@@ -1817,7 +1846,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2,
   ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale,
   estimate_selection_s, selection_s_init, selection_s_prior,
-  selection_s_proposal_sd, selection_s_log_h, make_csr_operator
+  selection_s_proposal_sd, selection_s_log_h,
+  Rcpp::as<std::vector<int>>(convergence_markers),
+  convergence_probability, convergence_b, convergence_d,
+  convergence_component, make_csr_operator
  );
 }
 
@@ -1868,6 +1900,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
   double selection_s_proposal_sd = 0.35,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::IntegerVector convergence_markers = Rcpp::IntegerVector::create(),
+  bool convergence_probability = false,
+  bool convergence_b = false,
+  bool convergence_d = false,
+  bool convergence_component = false,
   Rcpp::CharacterVector bed_files = Rcpp::CharacterVector::create(),
   int n_bed = 0,
   Rcpp::List cls = R_NilValue,
@@ -1949,6 +1986,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2,
   ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale,
   estimate_selection_s, selection_s_init, selection_s_prior,
-  selection_s_proposal_sd, selection_s_log_h, make_block_eigen_operator
+  selection_s_proposal_sd, selection_s_log_h,
+  Rcpp::as<std::vector<int>>(convergence_markers),
+  convergence_probability, convergence_b, convergence_d,
+  convergence_component, make_block_eigen_operator
  );
 }

@@ -136,6 +136,40 @@ test_that("stblr_bed fits BayesR BED scheduled chains", {
   expect_equal(fit$input$nchains, 1L)
 })
 
+test_that("ST BED BayesR diagnostics use native component and selected states", {
+  skip_if_not(
+    exists("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", mode = "function"),
+    "native BayesR BED scheduled-chain symbol is not loaded"
+  )
+  fixture <- make_stblr_bed_interface_fixture()
+  on.exit(unlink(fixture$bed_file), add = TRUE)
+  fit <- stblr_bed(
+    y = fixture$y, Glist = fixture$Glist, method = "bayesr",
+    mixture_var = c(0, .1, 1), pi = c(.7, .2, .1),
+    nit = 6L, nburn = 2L, full_sweep_every = 1L,
+    seed = 2111L, nchains = 2L, ncores = 1L, updateE = FALSE,
+    keep_chains = TRUE, convergence = "extended",
+    convergence_control = list(
+      warn = FALSE, extended_groups = "probability",
+      selected_markers = c(2L, 1L),
+      selected_marker_quantities = c("b", "d", "component"),
+      keep_traces = TRUE))
+  summary <- fit$convergence$summary
+  expect_true(all(c("component_pi", "selected_b", "selected_d",
+                    "selected_component") %in% summary$parameter_name))
+  expect_identical(unique(summary$marker_index[summary$tier == 3L]), c(2L, 1L))
+  native <- fit$chains[[1L]]$convergence_trace
+  component_pi <- which(summary$parameter_name == "component_pi")
+  expect_equal(
+    unname(apply(fit$convergence_traces$values[, 1L, component_pi, drop = FALSE],
+                 1L, sum)),
+    rep(1, dim(fit$convergence_traces$values)[[1L]]), tolerance = 1e-12)
+  selected_component <- which(
+    summary$parameter_name == "selected_component")[[1L]]
+  expect_equal(unname(fit$convergence_traces$values[, 1L, selected_component]),
+               unname(native$component[, 1L]), tolerance = 0)
+})
+
 test_that("stblr_bed rejects noncanonical method case", {
   fixture <- make_stblr_bed_interface_fixture()
   on.exit(unlink(fixture$bed_file), add = TRUE)

@@ -415,3 +415,145 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
   expect_length(fit$annotation_pi, 1L)
   expect_true(is.data.frame(fit$annotation_summary))
 })
+
+test_that("ST learned and group extended diagnostics use task-private native traces", {
+  stats <- tiny_annotation_stats()
+  A <- tiny_annotation_matrix()
+  prefix <- make_tiny_annotation_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(".row_ptr.u64.bin",
+    ".col_idx.u32.0based.bin", ".values.f32.bin", ".meta.txt"))), add = TRUE)
+  controls <- list(warn = FALSE, extended_groups = "annotations",
+    selected_markers = c("m4", "m1"),
+    selected_marker_quantities = c("b", "d"), keep_traces = TRUE)
+  learned <- stblr_csr_annot(
+    stats = stats, ld_prefix = prefix, annotations = A,
+    annotation_model = "learned", learn_pi_annot = TRUE,
+    learn_vb_annot = TRUE, annot_update_every = 2L,
+    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
+    nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L,
+    keep_chains = TRUE, convergence = "extended",
+    convergence_control = controls, seed = 2101L)
+  learned_summary <- learned$convergence$summary
+  expect_true(all(c("inclusion_coefficient", "variance_coefficient",
+                    "selected_b", "selected_d") %in%
+                  learned_summary$parameter_name))
+  expect_identical(unique(learned_summary$marker_id[learned_summary$tier == 3L]),
+                   c("m4", "m1"))
+  native_eta <- learned$chains[[1L]]$convergence_trace$inclusion_coefficient
+  q <- learned_summary$quantity[learned_summary$parameter_name ==
+                                  "inclusion_coefficient"][[1L]]
+  expect_equal(unname(learned$convergence_traces$values[, 1L, q]),
+               unname(native_eta[, 1L]), tolerance = 0)
+
+  group <- stats::setNames(c("coding", "background", "coding", "background"),
+                           stats$marker_names)
+  grouped <- stblr_csr_annot(
+    stats = stats, ld_prefix = prefix, annotations = group,
+    annotation_model = "group", group_names = c("coding", "background"),
+    group_pi_init = c(.35, .25), group_vb_multiplier_init = c(1.2, .8),
+    updateGroupVb = TRUE, updatePi = TRUE, updateB = FALSE, updateE = FALSE,
+    nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L,
+    keep_chains = TRUE, convergence = "extended",
+    convergence_control = controls, seed = 2102L)
+  group_summary <- grouped$convergence$summary
+  expect_true(all(c("group_pi", "group_variance_multiplier",
+                    "selected_b", "selected_d") %in%
+                  group_summary$parameter_name))
+  expect_identical(unique(group_summary$pattern_name[!is.na(group_summary$pattern_name)]),
+                   c("coding", "background"))
+})
+
+test_that("ST SBayesRC extended diagnostics preserve alpha and selected states", {
+  stats <- tiny_annotation_stats()
+  A <- tiny_annotation_matrix()
+  prefix <- make_tiny_annotation_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(".row_ptr.u64.bin",
+    ".col_idx.u32.0based.bin", ".values.f32.bin", ".meta.txt"))), add = TRUE)
+  fit <- stblr_csr_annot(
+    stats = stats,
+    Glist = list(rsidsLD = list(stats$marker_names),
+      rsids = list(stats$marker_names), maf = list(rep(.2, stats$m))),
+    ld_prefix = prefix, annotations = A, annotation_model = "sbayesrc",
+    gamma = c(0, .1, 1), updateAlpha = TRUE, alpha_update_every = 2L,
+    updateB = FALSE, updateE = FALSE,
+    nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L,
+    keep_chains = TRUE, convergence = "extended",
+    convergence_control = list(
+      warn = FALSE, extended_groups = "annotations",
+      selected_markers = c("m3", "m1"),
+      selected_marker_quantities = c("b", "d", "component"),
+      keep_traces = TRUE), seed = 2103L)
+  summary <- fit$convergence$summary
+  expect_true(all(c("alpha", "sigmaSqAlpha", "selected_b", "selected_d",
+                    "selected_component") %in% summary$parameter_name))
+  expect_identical(unique(summary$marker_id[summary$tier == 3L]), c("m3", "m1"))
+  expect_true(any(summary$is_intercept))
+  native_alpha <- fit$chains[[1L]]$convergence_trace$alpha
+  alpha_quantity <- which(summary$parameter_name == "alpha")[[1L]]
+  expect_equal(unname(fit$convergence_traces$values[, 1L, alpha_quantity]),
+               unname(native_alpha[, 1L]), tolerance = 0)
+  component_values <- fit$convergence_traces$values[, ,
+    summary$quantity[summary$group == "selected_component"], drop = FALSE]
+  expect_true(all(component_values %in% 0:2))
+})
+
+test_that("ST fixed-marker BayesC captures selected native states only", {
+  stats <- tiny_annotation_stats()
+  A <- tiny_annotation_matrix()
+  prefix <- make_tiny_annotation_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(".row_ptr.u64.bin",
+    ".col_idx.u32.0based.bin", ".values.f32.bin", ".meta.txt"))), add = TRUE)
+  fit <- stblr_csr_annot(
+    stats = stats, ld_prefix = prefix,
+    annotations = list(
+      A = A,
+      fixed_pi_marker = list(rep(.35, stats$m)),
+      fixed_vb_multiplier = list(c(1, 1.2, .8, 1))),
+    annotation_model = "prior", use_pi_marker = TRUE,
+    use_vb_multiplier = TRUE, pi_init = .35,
+    pi_prior_mean = .35, pi_prior_strength = 2,
+    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
+    nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L,
+    keep_chains = TRUE, convergence = "extended",
+    convergence_control = list(
+      warn = FALSE, extended_groups = "annotations",
+      selected_markers = c("m4", "m1"),
+      selected_marker_quantities = c("b", "d"), keep_traces = TRUE),
+    seed = 2104L)
+  summary <- fit$convergence$summary
+  selected <- summary[summary$tier == 3L, , drop = FALSE]
+  expect_identical(unique(selected$marker_id), c("m4", "m1"))
+  expect_setequal(unique(selected$parameter_name), c("selected_b", "selected_d"))
+  expect_false(any(summary$group == "annotations"))
+  native <- fit$chains[[1L]]$convergence_trace
+  b_quantity <- selected$quantity[selected$parameter_name == "selected_b"][[1L]]
+  d_quantity <- selected$quantity[selected$parameter_name == "selected_d"][[1L]]
+  expect_equal(unname(fit$convergence_traces$values[, 1L, b_quantity]),
+               unname(native$b[, 1L]), tolerance = 0)
+  expect_equal(unname(fit$convergence_traces$values[, 1L, d_quantity]),
+               unname(native$d[, 1L]), tolerance = 0)
+  expect_true(all(fit$convergence_traces$values[, , d_quantity] %in% 0:1))
+})
+
+test_that("ST learned diagnostic capture is RNG-neutral", {
+  stats <- tiny_annotation_stats()
+  A <- tiny_annotation_matrix()
+  prefix <- make_tiny_annotation_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(".row_ptr.u64.bin",
+    ".col_idx.u32.0based.bin", ".values.f32.bin", ".meta.txt"))), add = TRUE)
+  common <- list(
+    stats = stats, ld_prefix = prefix, annotations = A,
+    annotation_model = "learned", learn_pi_annot = TRUE,
+    learn_vb_annot = TRUE, annot_update_every = 2L,
+    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
+    nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L, seed = 2105L)
+  none <- do.call(stblr_csr_annot, c(common, list(convergence = "none")))
+  extended <- do.call(stblr_csr_annot, c(common, list(
+    convergence = "extended", convergence_control = list(
+      warn = FALSE, extended_groups = "annotations",
+      selected_markers = c("m2", "m1"),
+      selected_marker_quantities = c("b", "d")))))
+  for (field in c("bm", "dm", "b_final", "d_final", "eta_pi", "eta_vb",
+                  "vbs", "vgs", "ves", "vle", "vld"))
+    expect_equal(extended[[field]], none[[field]], tolerance = 0, info = field)
+})

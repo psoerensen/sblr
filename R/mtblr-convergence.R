@@ -25,58 +25,21 @@
 .mtblr_bed_convergence_controls <- function(convergence,
                                              convergence_control,
                                              nchains) {
-  defaults <- list(
-    warn = TRUE,
-    rhat_threshold = 1.01,
-    ess_per_chain_threshold = 100,
-    mcse_mean_over_sd_threshold = 0.05,
-    keep_traces = FALSE
-  )
-  if (is.null(convergence_control)) {
-    out <- defaults
-  } else {
-    if (!is.list(convergence_control) || is.data.frame(convergence_control) ||
-        is.null(names(convergence_control)) ||
-        any(!nzchar(names(convergence_control))) ||
-        anyDuplicated(names(convergence_control)) ||
-        any(!names(convergence_control) %in% names(defaults))) {
-      stop("convergence_control must be a uniquely named list containing only supported controls.",
-           call. = FALSE)
-    }
-    out <- utils::modifyList(defaults, convergence_control)
-  }
-  for (name in c("warn", "keep_traces")) {
-    if (!is.logical(out[[name]]) || length(out[[name]]) != 1L ||
-        is.na(out[[name]])) {
-      stop("convergence_control$", name,
-           " must be TRUE or FALSE.", call. = FALSE)
-    }
-  }
-  for (name in c("rhat_threshold", "ess_per_chain_threshold",
-                 "mcse_mean_over_sd_threshold")) {
-    value <- out[[name]]
-    if (!is.numeric(value) || length(value) != 1L || !is.finite(value) ||
-        value <= 0) {
-      stop("convergence_control$", name,
-           " must be one finite positive number.", call. = FALSE)
-    }
-  }
-  if (identical(convergence, "none") && isTRUE(out$keep_traces)) {
-    stop("convergence = 'none' cannot retain convergence traces.",
-         call. = FALSE)
-  }
+  out <- .blr_convergence_controls(
+    convergence, convergence_control, nchains)
   out$diagnostic_requested <- !identical(convergence, "none")
   out$trace_route_required <- isTRUE(out$keep_traces) ||
-    (out$diagnostic_requested && nchains >= 2L)
-  out$thresholds <- out[c(
-    "rhat_threshold", "ess_per_chain_threshold",
-    "mcse_mean_over_sd_threshold")]
+    (out$diagnostic_requested && nchains >= 2L) ||
+    identical(convergence, "extended")
   out
 }
 
 .blr_convergence_summary_columns <- function() c(
-  "quantity", "group", "trait", "trait2", "marker_id", "model_name",
-  "updated", "status", "rhat", "rhat_rank", "rhat_folded",
+  "quantity", "tier", "group", "parameter_name", "trait", "trait2",
+  "marker_id", "marker_index", "component_name", "pattern_name",
+  "annotation_name", "stick_name", "is_intercept", "model_name",
+  "updated", "derived", "structural", "captured", "diagnostic_key",
+  "status", "rhat", "rhat_rank", "rhat_folded",
   "ess_bulk", "ess_bulk_per_chain", "ess_q05", "ess_q95",
   "ess_tail", "ess_tail_per_chain", "ess_mean", "posterior_sd",
   "mcse_mean", "mcse_mean_over_sd", "nchains", "draws_per_chain",
@@ -88,9 +51,15 @@
 .blr_convergence_summary_row <- function(group, trait, updated, status,
                                             nchains, nit) {
   data.frame(
-    quantity = paste0(group, "[", trait, "]"), group = group,
-    trait = trait, trait2 = NA_character_, marker_id = NA_character_,
-    model_name = NA_character_, updated = updated, status = status,
+    quantity = paste0(group, "[", trait, "]"), tier = 1L, group = group,
+    parameter_name = group, trait = trait, trait2 = NA_character_,
+    marker_id = NA_character_, marker_index = NA_integer_,
+    component_name = NA_character_, pattern_name = NA_character_,
+    annotation_name = NA_character_, stick_name = NA_character_,
+    is_intercept = FALSE, model_name = NA_character_, updated = updated,
+    derived = group %in% c("vgs", "vle", "vld"), structural = FALSE,
+    captured = updated, diagnostic_key = paste("core", group, trait, sep = ":"),
+    status = status,
     rhat = NA_real_, rhat_rank = NA_real_, rhat_folded = NA_real_,
     ess_bulk = NA_real_, ess_bulk_per_chain = NA_real_,
     ess_q05 = NA_real_, ess_q95 = NA_real_, ess_tail = NA_real_,
@@ -447,7 +416,7 @@
   if (!is.list(bundle) ||
       !bundle$schema$class %in% supported_classes ||
       !identical(as.integer(bundle$schema$version), 1L) ||
-      !identical(bundle$scope, "core")) {
+      !bundle$scope %in% c("core", "extended")) {
     stop("Invalid BLR convergence trace-bundle schema.", call. = FALSE)
   }
   nchains <- as.integer(bundle$nchains)
@@ -466,8 +435,11 @@
   if (identical(bundle$schema$class, "blr_convergence_trace_bundle")) {
     required <- c(
       "quantity_index", "family", "model", "operator", "tier", "group",
-      "trait_index", "trait2_index", "marker_index", "model_index",
-      "updated", "derived", "structural", "captured", "diagnostic_key")
+      "parameter_name", "trait_index", "trait2_index", "marker_index",
+      "marker_id", "component_index", "component_name", "pattern_index",
+      "pattern_name", "annotation_index", "annotation_name", "stick_index",
+      "stick_name", "is_intercept", "model_index", "updated", "derived",
+      "structural", "captured", "diagnostic_key")
     if (!all(required %in% names(quantities)) ||
         !identical(as.integer(quantities$quantity_index),
                    seq_len(nrow(quantities))) ||
@@ -574,8 +546,19 @@
                                       control = NULL,
                                       keep_traces = FALSE) {
   bundle <- .blr_validate_convergence_trace_bundle(bundle)
+  if (identical(bundle$schema$class, "mtblr_convergence_trace_bundle")) {
+    bundle <- .blr_convergence_bundle(
+      bundle$values, bundle$quantities,
+      family = bundle$family %||% "mtblr",
+      model = bundle$model %||% "bayesc",
+      operator = bundle$operator %||% "packed_bed",
+      scope = bundle$scope %||% "core")
+  }
   control <- .blr_convergence_control(control)
-  nt <- max(as.integer(bundle$quantities$trait_index), 0L)
+  positive_traits <- bundle$quantities$trait_index[
+    bundle$quantities$trait_index > 0L]
+  nt <- if (length(positive_traits)) max(as.integer(positive_traits)) else
+    length(trait_names)
   if (!is.character(trait_names) || length(trait_names) != nt ||
       anyNA(trait_names) || any(!nzchar(trait_names)) ||
       anyDuplicated(trait_names)) {
@@ -592,23 +575,53 @@
       draws,
       updated = descriptor$updated,
       applicable = if ("captured" %in% names(descriptor)) {
-        isTRUE(descriptor$captured)
+        isTRUE(descriptor$captured) || isTRUE(descriptor$structural)
       } else TRUE,
       structural = if ("structural" %in% names(descriptor)) {
         isTRUE(descriptor$structural)
       } else FALSE,
       control = control)
+    trait_value <- if (descriptor$trait_index > 0L)
+      trait_names[descriptor$trait_index] else NA_character_
+    trait2_value <- if (descriptor$trait2_index > 0L)
+      trait_names[descriptor$trait2_index] else NA_character_
     quantity_name <- if ("quantity" %in% names(descriptor) &&
                          nzchar(as.character(descriptor$quantity))) {
       as.character(descriptor$quantity)
-    } else paste0(descriptor$group, "[",
-                  trait_names[descriptor$trait_index], "]")
+    } else if (!is.na(descriptor$marker_id)) {
+      paste0(descriptor$parameter_name, "[", descriptor$marker_id,
+             if (!is.na(trait_value)) paste0(",", trait_value) else "", "]")
+    } else if (!is.na(descriptor$annotation_name)) {
+      paste0(descriptor$parameter_name, "[", descriptor$annotation_name,
+             if (!is.na(descriptor$stick_name))
+               paste0(",", descriptor$stick_name) else "", "]")
+    } else if (!is.na(descriptor$stick_name)) {
+      paste0(descriptor$parameter_name, "[", descriptor$stick_name, "]")
+    } else if (!is.na(descriptor$component_name)) {
+      paste0(descriptor$group, "[", descriptor$component_name, "]")
+    } else if (!is.na(descriptor$pattern_name)) {
+      paste0(descriptor$group, "[", descriptor$pattern_name, "]")
+    } else if (!is.na(trait2_value)) {
+      paste0(descriptor$group, "[", trait2_value, ",", trait_value, "]")
+    } else paste0(descriptor$group, "[", trait_value, "]")
     identity <- list(
-      quantity = quantity_name,
+      quantity = quantity_name, tier = as.integer(descriptor$tier),
       group = as.character(descriptor$group),
-      trait = trait_names[descriptor$trait_index],
-      trait2 = NA_character_, marker_id = NA_character_,
-      model_name = NA_character_, updated = as.logical(descriptor$updated)
+      parameter_name = as.character(descriptor$parameter_name),
+      trait = trait_value, trait2 = trait2_value,
+      marker_id = as.character(descriptor$marker_id),
+      marker_index = if (descriptor$marker_index > 0L)
+        as.integer(descriptor$marker_index) else NA_integer_,
+      component_name = as.character(descriptor$component_name),
+      pattern_name = as.character(descriptor$pattern_name),
+      annotation_name = as.character(descriptor$annotation_name),
+      stick_name = as.character(descriptor$stick_name),
+      is_intercept = as.logical(descriptor$is_intercept),
+      model_name = NA_character_, updated = as.logical(descriptor$updated),
+      derived = as.logical(descriptor$derived),
+      structural = as.logical(descriptor$structural),
+      captured = as.logical(descriptor$captured),
+      diagnostic_key = as.character(descriptor$diagnostic_key)
     )
     as.data.frame(c(identity, metric), stringsAsFactors = FALSE,
                   optional = TRUE)
@@ -626,7 +639,7 @@
   result <- list(
     version = 1L, requested = TRUE,
     computed = any(unlist(availability, use.names = FALSE) > 0L),
-    scope = "core", overall_status = overview$overall_status,
+    scope = bundle$scope, overall_status = overview$overall_status,
     nchains = as.integer(bundle$nchains),
     postburn_draws_per_chain =
       as.integer(bundle$postburn_draws_per_chain),
@@ -638,12 +651,13 @@
     summary = summary, overview = overview,
     warning_messages = if (overview$n_flagged) {
       paste0(overview$n_flagged,
-             " Tier 1 convergence quantities exceed advisory thresholds.")
+             " convergence quantities exceed advisory thresholds.")
     } else character(),
     trace_retention = list(
       retained = isTRUE(keep_traces), burnin_included = FALSE,
       additional_thinning = FALSE),
-    algorithm = .blr_convergence_algorithm()
+    algorithm = .blr_convergence_algorithm(),
+    group_overview = .blr_convergence_group_overview(summary)
   )
   .blr_validate_convergence_result(result)
 }
@@ -700,7 +714,7 @@
   } else FALSE
   if (!is.list(result) || !all(required %in% names(result)) ||
       !identical(as.integer(result$version), 1L) ||
-      !result$scope %in% c("none", "core") ||
+      !result$scope %in% c("none", "core", "extended") ||
       !result$overall_status %in% c(
         "not_requested", "unavailable", "ok", "warning", "partial") ||
       !is.data.frame(result$summary) ||
@@ -752,7 +766,7 @@
 }
 
 .blr_convergence_warning_messages <- function(convergence,
-                                                mode = c("auto", "core"),
+                                                mode = c("auto", "core", "extended"),
                                                 family = "mtblr",
                                                 operator = "packed_bed") {
   mode <- match.arg(mode)
@@ -761,12 +775,13 @@
                        "dense_reference")) {
     stop("Invalid BLR convergence warning context.", call. = FALSE)
   }
-  label <- paste(toupper(family), gsub("_", " ", operator), "Tier 1")
+  label <- paste(toupper(family), gsub("_", " ", operator),
+                 if (mode == "extended") "extended" else "core")
   convergence <- .blr_validate_convergence_result(convergence)
   overview <- convergence$overview
   advisory <- overview$n_flagged > 0L ||
     identical(convergence$overall_status, "partial") ||
-    (identical(mode, "core") &&
+    (mode %in% c("core", "extended") &&
      identical(convergence$overall_status, "unavailable"))
   if (!advisory) return(character())
   if (identical(convergence$overall_status, "unavailable")) {
@@ -800,15 +815,23 @@
 .mtblr_bed_convergence_internal <- function(native_result, trait_names,
                                              updateB, updateE,
                                              control = NULL,
-                                             keep_traces = FALSE) {
+                                             keep_traces = FALSE,
+                                             extended_plan = NULL,
+                                             model = "bayesc") {
   if (!is.list(native_result) ||
       !identical(names(native_result), c("raw", "trace_bundle"))) {
     stop("Expected an MT BED native convergence-trace result.",
          call. = FALSE)
   }
   raw <- .validate_mtblr_raw(native_result$raw)
+  bundle <- .blr_mtblr_convert_native_bundle(
+    native_result$trace_bundle, extended_plan %||% list(
+      selected = data.frame(marker_index = integer(), marker_id = character()),
+      component_names = character(), pattern_names = character(),
+      joint_names = character(), annotation_names = character(),
+      stick_names = character()), model)
   bundle <- .blr_validate_convergence_trace_bundle(
-    native_result$trace_bundle, nt = length(trait_names),
+    bundle, nt = length(trait_names),
     updateB = updateB, updateE = updateE)
   convergence <- .blr_convergence_tier1(
     bundle, trait_names, control = control, keep_traces = keep_traces)
@@ -821,13 +844,10 @@
       paste0("Iter", seq_len(dim(values)[1L])),
       paste0("chain", seq_len(dim(values)[2L])),
       quantity_names)
-    traces <- list(
-      scope = "core",
-      postburn_draws_per_chain =
-        as.integer(bundle$postburn_draws_per_chain),
-      quantities = transform(
-        bundle$quantities, quantity = quantity_names),
-      values = values)
+    traces <- bundle
+    traces$quantities <- transform(
+      bundle$quantities, quantity = quantity_names)
+    traces$values <- values
   }
   list(raw = raw, convergence_traces = traces)
 }

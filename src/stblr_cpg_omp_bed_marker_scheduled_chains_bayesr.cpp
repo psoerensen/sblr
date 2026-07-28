@@ -51,6 +51,7 @@ struct BedBayesRBindingMetadata {
  int marker_count, trait_count, trace_length, iterations, burnin, thinning;
  int chain_count, component_count, sample_count;
  const std::vector<double>& component_scales;
+ const std::vector<int>& convergence_markers;
 };
 
 static Rcpp::List stblr_bed_bayesr_result_to_raw(
@@ -99,7 +100,12 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
   int nchains,
   int ncores,
   int seed,
-  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create()
+  Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create(),
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_probability=false,
+  bool convergence_b=false,
+  bool convergence_d=false,
+  bool convergence_component=false
 ) {
  if (nit <= 0 || nburn < 0)
   throw std::runtime_error("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr: nit must be positive and nburn non-negative.");
@@ -138,6 +144,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  std::vector<std::string> bed_files_cpp = br_copy_bed_files(bed_files);
  std::vector<std::vector<int>> cls_by_file = br_copy_int_list(cls);
  std::vector<int> rows0 = br_copy_rows0(rows, n);
+ const std::vector<int> convergence_markers_cpp=Rcpp::as<std::vector<int>>(convergence_markers);
 
  const int* rows0_ptr = rows0.empty() ? nullptr : rows0.data();
  const int n_rows = rows0.empty() ? 0 : static_cast<int>(rows0.size());
@@ -285,7 +292,9 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
    genotype, marker_maps, marker_order, y_mat, b_init, B, E,
    ssb_prior_mat, sse_prior_mat, components, scheduler, nub, nue, adjE,
    nit, nburn, nthin, rebuild_every, progress_every, chain_seed, t, ch,
-   updateB, updateE, updatePi
+   updateB, updateE, updatePi, convergence_markers_cpp,
+   convergence_probability, convergence_b, convergence_d,
+   convergence_component
   };
   job_results[static_cast<std::size_t>(job)] = sblr::core::run_bed_bayesr_chain(context);
  }
@@ -371,7 +380,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  }
 
  const BedBayesRBindingMetadata binding_metadata{
-  m,nt,nit+nburn,nit,nburn,nthin,nchains,K,n_used,c
+  m,nt,nit+nburn,nit,nburn,nthin,nchains,K,n_used,c,
+  convergence_markers_cpp
  };
  return stblr_bed_bayesr_result_to_raw(result,binding_metadata,job_results);
 }
@@ -387,6 +397,7 @@ static Rcpp::List stblr_bed_bayesr_result_to_raw(
  const int nchains=metadata.chain_count, K=metadata.component_count;
  const int n_used=metadata.sample_count;
  const std::vector<double>& c=metadata.component_scales;
+ const std::vector<int>& convergence_markers=metadata.convergence_markers;
 
 
  auto marker_matrix = [&](const arma::mat& x) {
@@ -532,6 +543,12 @@ static Rcpp::List stblr_bed_bayesr_result_to_raw(
     Rcpp::Named("pi")=Rcpp::List::create(
      Rcpp::Named("final")=value.final_pi,
      Rcpp::Named("mean")=value.mean_pi),
+    Rcpp::Named("convergence_trace")=Rcpp::List::create(
+     Rcpp::Named("component_pi")=value.convergence_pi,
+     Rcpp::Named("b")=value.convergence_b,
+     Rcpp::Named("d")=value.convergence_d,
+     Rcpp::Named("component")=value.convergence_component,
+     Rcpp::Named("marker_index")=convergence_markers),
     Rcpp::Named("diagnostics")=Rcpp::List::create(
      Rcpp::Named("seconds")=value.seconds));
   }

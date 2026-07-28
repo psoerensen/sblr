@@ -33,8 +33,10 @@
 #' @param chain_seeds Optional integer seeds, one per chain.
 #' @param keep_chains Logical; return compact per-chain summaries when
 #'   supported.
-#' @param convergence Convergence mode: `"auto"`, `"none"`, or `"core"`.
-#' @param convergence_control Optional named convergence-control list.
+#' @param convergence Convergence mode: `"auto"`, `"none"`, `"core"`, or
+#'   `"extended"`. Automatic mode remains core-only.
+#' @param convergence_control Optional uniquely named convergence-control list,
+#'   including extended groups and diagnostic trace-memory guards.
 #' @param memory_warning_gb Analytical memory-warning threshold in GiB.
 #' @param verbose Print resolved execution metadata.
 #' @param updateLDswap Logical; request optional LD-swap/MH. This is supported
@@ -183,7 +185,7 @@ stblr_csr_annot <- function(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core"),
+  convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE,
@@ -216,9 +218,31 @@ stblr_csr_annot <- function(
   nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
  conv <- .blr_convergence_controls(
   convergence, convergence_control, chain$nchains)
+ extra <- list(...)
+ marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id
+ if (!length(marker_ids)) marker_ids <- paste0("V", seq_along(stats$ww[[1L]]))
+ component_count <- if (annotation_model == "sbayesrc")
+  length(extra$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L
+ annotation_quantity_count <- switch(
+  annotation_model,
+  prior = 0L,
+  group = 2L * length(unique(as.character(annotations))),
+  learned = 2L * (ncol(as.matrix(annotations)) +
+    as.integer(isTRUE(extra$add_intercept %||% FALSE))),
+  sbayesrc = {
+   processed_columns <- ncol(as.matrix(annotations)) +
+    as.integer(isTRUE(extra$add_intercept %||% TRUE))
+   processed_columns * (component_count - 1L) + (component_count - 1L)
+  })
+ trace_spec <- .blr_st_native_trace_spec(
+  conv, marker_ids,
+  if (annotation_model == "sbayesrc") "bayesrc" else "bayesc",
+  annotations = annotation_model != "prior",
+  component_count = component_count,
+  annotation_quantity_count = annotation_quantity_count)
  memory <- .blr_st_preflight_memory(
   stats = stats, operator = "csr", chain = chain, conv = conv,
-  memory_warning_gb = memory_warning_gb)
+  memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
  .stblr_check_annotation_method(method, annotation_model)
  if (annotation_model %in% c("prior", "learned", "group")) {
   if (isTRUE(estimate_selection_s)) {
@@ -267,7 +291,8 @@ stblr_csr_annot <- function(
   nchains = chain$nchains,
   chain_seeds = if (length(chain$chain_seeds_native))
     chain$chain_seeds_native else NULL,
-  keep_chains = chain$keep_chains || conv$compute || conv$keep_traces
+  keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
+  .convergence_spec = trace_spec
  )
  probability_policy <- switch(
   annotation_model, prior = "fixed_marker", learned = "learned_logistic",
@@ -297,8 +322,6 @@ stblr_csr_annot <- function(
   out$data$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
   out
  }
- extra <- list(...)
-
  common$updateLDswap <- updateLDswap
  common$ld_swap_prob <- ld_swap_prob
  common$ld_swap_r2 <- ld_swap_r2

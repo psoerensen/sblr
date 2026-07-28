@@ -551,3 +551,7 @@ Phase 20 adds MT BayesRC for packed BED and MT SBayesRC for CSR/block eigen.
 Annotations change component probabilities through ordered probit sticks;
 trait-pattern probabilities remain global conditional on a non-null component.
 The covariance prior and optional `selection_s` scaling remain separate.
+
+Extended convergence diagnostics inspect low-dimensional sampler states and
+explicitly selected marker encodings. They assess chain mixing; passing their
+advisory thresholds does not prove model correctness or absolute convergence.

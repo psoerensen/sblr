@@ -458,8 +458,9 @@ Phase 17S retains `mt_bed_bayesc` for both public single- and multichain calls.
 Execution topology is represented by version-1 chain metadata, not a new name.
 
 Core diagnostic quantities use `vbs[trait]`, `vgs[trait]`, `ves[trait]`,
-`vle[trait]`, and `vld[trait]`; future extended diagnostics use trait-pair covariance names, probabilities, and
-`b/d[marker_id,trait]`, never exposed native zero-based indices.
+`vle[trait]`, and `vld[trait]`. Extended names include `component_pi`, genuine
+annotation/group parameter identities, and selected
+`b/d/component[marker_id,trait]`; native zero-based indices are never exposed.
 ## Phase 17U convergence names
 
 Internal Tier 1 quantities use the family-neutral `vbs[trait]`, `vgs[trait]`,

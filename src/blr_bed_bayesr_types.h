@@ -51,6 +51,8 @@ struct BedBayesRChainExecutionResult {
  double log_cpo=std::numeric_limits<double>::quiet_NaN();
  double mean_log_cpo=std::numeric_limits<double>::quiet_NaN();
  std::vector<double> mean_pi;
+ arma::mat convergence_pi, convergence_b;
+ arma::imat convergence_d, convergence_component;
  double nsamples=0.0, seconds=0.0;
  int failed=0;
  std::string error;
@@ -95,6 +97,9 @@ struct BedBayesRChainExecutionContext {
  std::uint64_t chain_seed;
  int trait_index, chain_index;
  bool updateB, updateE, updatePi;
+ const std::vector<int>& convergence_markers;
+ bool convergence_probability, convergence_b, convergence_d;
+ bool convergence_component;
 };
 
 template <class PackedGenotype, class MarkerMap>
@@ -150,6 +155,9 @@ inline void validate_bed_bayesr_chain_context(
   throw std::invalid_argument("BayesR null-skip growth rule is unsupported");
  if (x.chain_index<0 || !std::isfinite(x.nub) || !std::isfinite(x.nue))
   throw std::invalid_argument("BayesR chain or variance controls are invalid");
+ for (int marker : x.convergence_markers) if (marker<0 ||
+     static_cast<std::size_t>(marker)>=g.marker_count)
+  throw std::invalid_argument("BayesR convergence marker index is out of range");
 }
 
 } }

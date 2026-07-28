@@ -214,6 +214,7 @@
 #' @param pi_min,pi_max Bounds for marker-specific inclusion probabilities.
 #' @param vb_multiplier_min,vb_multiplier_max Bounds for marker-specific
 #'   variance multipliers.
+#' @param .convergence_spec Internal pre-resolved diagnostic capture plan.
 #' @return A formatted ST-BLR fit with learned annotation effects. The fit
 #'   includes `vle` and `vld` traces using the same definitions and formatting
 #'   conventions as annotation-unaware CSR fits.
@@ -275,7 +276,8 @@ stblr_csr_learn_annot <- function(
   pi_min = 1e-8,
   pi_max = 0.5,
   vb_multiplier_min = 1e-3,
-  vb_multiplier_max = 1e3
+  vb_multiplier_max = 1e3,
+  .convergence_spec = NULL
 ) {
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
@@ -418,7 +420,11 @@ stblr_csr_learn_annot <- function(
   ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
-  ld_swap_moves = as.integer(ld_swap_moves)
+  ld_swap_moves = as.integer(ld_swap_moves),
+  convergence_markers = .convergence_spec$markers %||% integer(),
+  convergence_annotations = isTRUE(.convergence_spec$annotations),
+  convergence_b = isTRUE(.convergence_spec$b),
+  convergence_d = isTRUE(.convergence_spec$d)
  )
 
  if (.is_stblr_raw(raw_fit)) {

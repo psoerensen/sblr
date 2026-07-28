@@ -51,6 +51,7 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
  const STLDCSR& ld=*static_cast<const STLDCSR*>(context.ld_storage);
  const CsrPriorBayesCLdFriendsView& ld_swap_friends=*context.ld_friends;
  const std::vector<int>& order=*context.marker_order;
+ const std::vector<int>& convergence_markers=*context.convergence_markers;
  // --------------------------------------------------------------------------
  // Output storage
  // --------------------------------------------------------------------------
@@ -74,6 +75,14 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
  arma::vec nsamples_vec(nt, arma::fill::zeros);
  arma::vec ld_swap_attempted_vec(nt, arma::fill::zeros);
  arma::vec ld_swap_accepted_vec(nt, arma::fill::zeros);
+ std::vector<arma::mat> convergence_b(static_cast<std::size_t>(nt));
+ std::vector<arma::imat> convergence_d(static_cast<std::size_t>(nt));
+ for (int t=0;t<nt;++t) {
+  if (context.convergence_b)
+   convergence_b[static_cast<std::size_t>(t)].zeros(nit,convergence_markers.size());
+  if (context.convergence_d)
+   convergence_d[static_cast<std::size_t>(t)].zeros(nit,convergence_markers.size());
+ }
 
  // --------------------------------------------------------------------------
  // Parallel over traits
@@ -360,6 +369,17 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
     vles_t(static_cast<arma::uword>(it)) = vle_t;
     vlds_t(static_cast<arma::uword>(it)) = vld_t;
 
+    if (it >= nburn) {
+     const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     for (std::size_t q=0;q<convergence_markers.size();++q) {
+      const arma::uword marker=static_cast<arma::uword>(convergence_markers[q]);
+      if (context.convergence_b)
+       convergence_b[static_cast<std::size_t>(t)](draw,q)=b_t(marker);
+      if (context.convergence_d)
+       convergence_d[static_cast<std::size_t>(t)](draw,q)=d_t(marker);
+     }
+    }
+
     // -------------------------------------------------------
     // Store posterior summaries
     // -------------------------------------------------------
@@ -594,6 +614,8 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
 
  CsrPriorBayesCExecutionResult execution_result;
  execution_result.raw = std::move(result);
+ execution_result.convergence_b=std::move(convergence_b);
+ execution_result.convergence_d=std::move(convergence_d);
  return execution_result;
 
 }

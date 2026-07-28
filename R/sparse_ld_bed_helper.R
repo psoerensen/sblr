@@ -1090,19 +1090,24 @@ NULL
     next
    }
     if (identical(meta$model, "bayesrc") && is.null(ch$marker)) {
+     convergence_trace <- ch$convergence_trace
      ch <- list(
       marker = list(bm = ch$bm, dm = ch$dm, state = ch$state),
       component = list(prob = ch$comp_prob),
       annotation = list(alpha = ch$alpha, sigmaSqAlpha = ch$sigmaSqAlpha),
       trace = list(
        vbs = ch$vbs, vgs = ch$vgs, ves = ch$ves,
-       vle = ch$vle, vld = ch$vld, pis = ch$pis)
+       vle = ch$vle, vld = ch$vld, pis = ch$pis),
+      convergence_trace = convergence_trace
      )
     }
     trait_chains[[cc]] <- list(
      dm = stats::setNames(as.numeric(ch$marker$dm), variable_names),
      bm = stats::setNames(as.numeric(ch$marker$bm), variable_names)
     )
+    if (!is.null(ch$convergence_trace)) {
+     trait_chains[[cc]]$convergence_trace <- ch$convergence_trace
+    }
     if (!is.null(ch$marker$state)) {
      trait_chains[[cc]]$state <- stats::setNames(
       as.numeric(ch$marker$state), variable_names
@@ -1372,7 +1377,8 @@ NULL
   chain_seeds = NULL,
   trait_names = NULL,
   variable_names = NULL,
-  keep_diagnostics = TRUE
+  keep_diagnostics = TRUE,
+  .convergence_spec = NULL
 ) {
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -1454,7 +1460,12 @@ NULL
   nchains = nchains,
   ncores = ncores,
   seed = as.integer(seed),
-  chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds)
+  chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds),
+  convergence_markers = .convergence_spec$markers %||% integer(),
+  convergence_probability = isTRUE(.convergence_spec$probability),
+  convergence_b = isTRUE(.convergence_spec$b),
+  convergence_d = isTRUE(.convergence_spec$d),
+  convergence_component = isTRUE(.convergence_spec$component)
  )
 
  if (.is_stblr_raw(raw)) {
@@ -1703,6 +1714,9 @@ NULL
     if (!is.null(ch$selection_s_acceptance)) {
      chain$selection_s_acceptance <- as.numeric(ch$selection_s_acceptance)[1L]
     }
+    if (!is.null(ch$convergence_trace)) {
+     chain$convergence_trace <- ch$convergence_trace
+    }
     chain
    })
    names(trait_chains) <- paste0("chain", seq_along(trait_chains))
@@ -1820,6 +1834,7 @@ NULL
 #'   Advanced initialization controls.
 #' @param ... Unsupported options. Passing scheduled CSR controls through `...`
 #'   errors clearly.
+#' @param .convergence_spec Internal pre-resolved diagnostic capture plan.
 #'
 #' @return A formatted ST-BLR BayesR fit.
 stblr_csr_bayesr <- function(
@@ -1863,6 +1878,7 @@ stblr_csr_bayesr <- function(
   use_r_init = FALSE,
   r_init = NULL,
   rebuild_r_before_updateE = FALSE,
+  .convergence_spec = NULL,
   ...
 ) {
  dots <- list(...)
@@ -2043,6 +2059,11 @@ stblr_csr_bayesr <- function(
   selection_s_prior = selection_s_prior,
   selection_s_proposal_sd = selection_s_proposal_sd,
   selection_s_log_h = selection_s_info$log_h
+  ,convergence_markers = .convergence_spec$markers %||% integer()
+  ,convergence_probability = isTRUE(.convergence_spec$probability)
+  ,convergence_b = isTRUE(.convergence_spec$b)
+  ,convergence_d = isTRUE(.convergence_spec$d)
+  ,convergence_component = isTRUE(.convergence_spec$component)
  )
 
  if (.is_stblr_raw(raw)) {
@@ -2088,7 +2109,9 @@ stblr_csr_bayesr <- function(
   mixture_var = as.numeric(mixture_var),
   pi = as.numeric(pi),
   alpha = as.numeric(alpha),
+  updateB = updateB,
   updateE = updateE,
+  updatePi = updatePi,
   updateE_start = updateE_start,
   updateE_every = updateE_every,
   selection_s = selection_s_info$selection_s,
@@ -2419,7 +2442,8 @@ stblr_csr_bayesr <- function(
                       ld_swap_moves = 1,
                       mixture_var = NULL, pi = NULL, alpha = NULL,
                       updateE_start = NULL, updateE_every = NULL,
-                      use_comp_init = FALSE, comp_init = NULL) {
+                      use_comp_init = FALSE, comp_init = NULL,
+                      .convergence_spec = NULL) {
  method <- tolower(method)
  if (length(method) > 1L) method <- method[1L]
  if (length(method) < 1L || is.na(method) ||
@@ -2500,6 +2524,7 @@ stblr_csr_bayesr <- function(
    selection_s_init = selection_s_init,
    selection_s_prior = selection_s_prior,
    selection_s_proposal_sd = selection_s_proposal_sd
+   ,.convergence_spec = .convergence_spec
   )
   if (!is.null(mixture_var)) br_args$mixture_var <- mixture_var
   if (!is.null(pi)) br_args$pi <- pi
@@ -2610,7 +2635,10 @@ stblr_csr_bayesr <- function(
    wakeup_diff_threshold = wakeup_diff_threshold,
    wakeup_max_neighbors = wakeup_max_neighbors, pi_prior_a = arch$pi_prior_a,
    pi_prior_b = arch$pi_prior_b, ncores = ncores, seed = seed,
-   nchains = nchains, keep_chains = keep_chains, chain_seeds = chain_seeds
+   nchains = nchains, keep_chains = keep_chains, chain_seeds = chain_seeds,
+   convergence_markers = .convergence_spec$markers %||% integer(),
+   convergence_b = isTRUE(.convergence_spec$b),
+   convergence_d = isTRUE(.convergence_spec$d)
   )))
  } else {
  raw <- do.call(stblr_cpg_omp_csr, c(common, list(
@@ -2626,7 +2654,10 @@ stblr_csr_bayesr <- function(
    selection_s_init = selection_s_init,
    selection_s_prior = selection_s_prior,
    selection_s_proposal_sd = selection_s_proposal_sd,
-   selection_s_log_h = selection_s_info$log_h
+   selection_s_log_h = selection_s_info$log_h,
+   convergence_markers = .convergence_spec$markers %||% integer(),
+   convergence_b = isTRUE(.convergence_spec$b),
+   convergence_d = isTRUE(.convergence_spec$d)
   )))
  }
  if (.is_stblr_raw(raw)) {
@@ -2775,7 +2806,7 @@ stblr_csr_bayesr <- function(
   rebuild_r_before_updateE = FALSE,
   updateLDswap = FALSE, ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8, ld_swap_max_friends = 50,
-  ld_swap_moves = 1
+  ld_swap_moves = 1, .convergence_spec = NULL
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
   eigen_filter <- eigen_filter[1L]
@@ -2892,6 +2923,9 @@ stblr_csr_bayesr <- function(
   selection_s_prior = selection_s_prior,
   selection_s_proposal_sd = selection_s_proposal_sd,
   selection_s_log_h = selection_s_info$log_h,
+  convergence_markers = .convergence_spec$markers %||% integer(),
+  convergence_b = isTRUE(.convergence_spec$b),
+  convergence_d = isTRUE(.convergence_spec$d),
   bed_files = bed$bed_files,
   n_bed = bed$n_bed,
   cls = bed$cls,
@@ -2984,7 +3018,8 @@ stblr_csr_bayesr <- function(
   comp_init = NULL,
   use_r_init = FALSE,
   r_init = NULL,
-  rebuild_r_before_updateE = FALSE
+  rebuild_r_before_updateE = FALSE,
+  .convergence_spec = NULL
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
   eigen_filter <- eigen_filter[1L]
@@ -3125,6 +3160,11 @@ stblr_csr_bayesr <- function(
   selection_s_init = selection_s_init, selection_s_prior = selection_s_prior,
   selection_s_proposal_sd = selection_s_proposal_sd,
   selection_s_log_h = selection_s_info$log_h,
+  convergence_markers = .convergence_spec$markers %||% integer(),
+  convergence_probability = isTRUE(.convergence_spec$probability),
+  convergence_b = isTRUE(.convergence_spec$b),
+  convergence_d = isTRUE(.convergence_spec$d),
+  convergence_component = isTRUE(.convergence_spec$component),
   bed_files = bed$bed_files, n_bed = bed$n_bed, cls = bed$cls,
   rows = bed$rows, af = bed$af, block_start = bed$block_start,
   eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta
@@ -3156,7 +3196,9 @@ stblr_csr_bayesr <- function(
   h2 = h2, nub = nub, nue = nue, adjE = adjE,
   nit = as.integer(nit), nburn = as.integer(nburn), nthin = as.integer(nthin),
   mixture_var = as.numeric(mixture_var), pi = as.numeric(pi), alpha = as.numeric(alpha),
+  updateB = updateB,
   updateE = updateE, updateE_start = updateE_start,
+  updatePi = updatePi,
   updateE_every = updateE_every,
   selection_s = selection_s_info$selection_s,
   selection_s_fixed = selection_s_info$fixed,
@@ -3891,6 +3933,7 @@ stblr_bed_marker <- function(
   return_r = FALSE,
   read_block_size = 64,
   progress_every = 0,
+  .convergence_spec = NULL,
   ...
 ) {
  method <- .normalize_stblr_method(method)
@@ -4113,7 +4156,12 @@ stblr_bed_marker <- function(
    keep_chains = keep_chains,
    ncores = ncores,
    seed = as.integer(seed),
-   chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds)
+   chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds),
+   convergence_markers = .convergence_spec$markers %||% integer(),
+   convergence_annotations = isTRUE(.convergence_spec$annotations),
+   convergence_b = isTRUE(.convergence_spec$b),
+   convergence_d = isTRUE(.convergence_spec$d),
+   convergence_component = isTRUE(.convergence_spec$component)
   )
   fit <- .as_stblr_fit(raw, dat$trait_names, dat$variable_names)
   if (!("chains" %in% names(fit))) fit["chains"] <- list(NULL)
@@ -4254,6 +4302,7 @@ stblr_bed_marker <- function(
    trait_names = dat$trait_names,
    variable_names = dat$variable_names,
    keep_diagnostics = TRUE,
+   .convergence_spec = .convergence_spec,
    chain_seeds = chain_seeds
   )
   fit$input <- c(list(
@@ -4362,7 +4411,10 @@ stblr_bed_marker <- function(
   nchains = nchains,
   ncores = ncores,
   seed = seed,
-  chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds)
+  chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds),
+  convergence_markers = .convergence_spec$markers %||% integer(),
+  convergence_b = isTRUE(.convergence_spec$b),
+  convergence_d = isTRUE(.convergence_spec$d)
  )
  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, common)
  if (.is_stblr_raw(raw)) {

@@ -29,6 +29,9 @@ struct CsrScheduledBayesCExecutionContext {
  const std::vector<std::vector<double>>& initial_d;
  const std::vector<std::vector<double>>& initial_r;
  const ScheduledExecutionControl& scheduled;
+ const std::vector<int>& convergence_markers;
+ bool convergence_b;
+ bool convergence_d;
 
  int marker_count;
  int trait_count;
@@ -84,6 +87,8 @@ struct CsrScheduledBayesCExecutionResult {
  arma::vec task_final_pi;
  arma::vec task_mean_pi;
  arma::vec task_nsamples;
+ std::vector<arma::mat> convergence_b;
+ std::vector<arma::imat> convergence_d;
  int marker_count=0;
  int trait_count=0;
  int chain_count=0;
@@ -148,6 +153,8 @@ inline void validate_csr_scheduled_bayesc_context(
   throw std::invalid_argument("scheduled initial_d trait dimension mismatch");
  if (x.use_r_init && x.initial_r.size()!=static_cast<std::size_t>(x.trait_count))
   throw std::invalid_argument("scheduled initial_r trait dimension mismatch");
+ for (int marker : x.convergence_markers) if (marker<0 || marker>=x.marker_count)
+  throw std::invalid_argument("scheduled convergence marker index is out of range");
  if (s.rng_ownership.engine_owner!="chain" ||
      s.rng_ownership.distribution_owner!="chain" ||
      s.rng_ownership.lifetime!="one_chain_execution" ||

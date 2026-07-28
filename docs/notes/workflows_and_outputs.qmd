@@ -1071,15 +1071,16 @@ outputs therefore remain unchanged in Phase 17U.
 Public MT BED fits now contain `fit$convergence` and a stable
 `fit$convergence_traces` field. Diagnostics are advisory and Tier 1 only.
 
-Future extended diagnostics remain scalar marginals: covariance entries do not
+Extended diagnostics remain scalar marginals: covariance entries do not
 prove joint matrix convergence, pattern probabilities do not prove joint
 simplex convergence, and selected markers do not describe unselected markers.
 
 For MT BayesR/SBayesR, inspect `component_final`,
 `component_probabilities`, the named joint `pi_final`/`pi_mean`/`pi_trace`, and
-`model_parameters$mixture`. Core convergence still covers only `vbs`, `vgs`,
-`ves`, `vle`, and `vld`; probability, component, S, and marker diagnostics are
-deferred.
+`model_parameters$mixture`. Core convergence covers `vbs`, `vgs`, `ves`,
+`vle`, and `vld`; extended mode adds applicable probability, component,
+sampled-S, annotation, covariance, and explicitly selected-marker diagnostics
+without changing posterior output.
 ## MT BayesRC outputs
 
 Use `mtblr_bed(method="bayesrc")` for individual data and
@@ -1088,3 +1089,9 @@ Use `mtblr_bed(method="bayesrc")` for individual data and
 `fit$model_parameters$annotations$prior_component_probabilities` is the
 posterior mean annotation-driven prior. Conditional pattern results use
 `pattern_pi_*`; general joint-state `pi_*` fields are NULL for this model.
+
+`fit$convergence$summary` has one row per scalar diagnostic and explicit typed
+identity columns. `fit$convergence$group_overview` summarizes core, covariance,
+probability, selection-S, annotation, and selected-marker groups. When retained,
+`fit$convergence_traces` is the schema-version-1 iteration by chain by quantity
+bundle; it is separate from `fit$chains`.

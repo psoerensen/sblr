@@ -62,7 +62,8 @@ stblr_csr_learn_annot(
   pi_min = 1e-08,
   pi_max = 0.5,
   vb_multiplier_min = 0.001,
-  vb_multiplier_max = 1000
+  vb_multiplier_max = 1000,
+  .convergence_spec = NULL
 )
 }
 \arguments{
@@ -154,6 +155,8 @@ matrices.}
 
 \item{vb_multiplier_min, vb_multiplier_max}{Bounds for marker-specific
 variance multipliers.}
+
+\item{.convergence_spec}{Internal pre-resolved diagnostic capture plan.}
 }
 \value{
 A formatted ST-BLR fit with learned annotation effects. The fit

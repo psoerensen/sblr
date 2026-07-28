@@ -67,7 +67,7 @@ mtblr_block_eigen(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core"),
+  convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE
@@ -186,9 +186,13 @@ sampled-S controls, rejected while `estimate_selection_s` is unsupported.}
 
 \item{keep_chains}{Retain compact logical-chain records.}
 
-\item{convergence}{Convergence mode: `"auto"`, `"none"`, or `"core"`.}
+\item{convergence}{Convergence mode: `"auto"`, `"none"`, `"core"`, or
+`"extended"`. Automatic mode remains core-only.}
 
-\item{convergence_control}{Optional named convergence-control list.}
+\item{convergence_control}{Optional uniquely named convergence-control list.
+Extended mode can request covariance, probability, annotation, or
+selection-S groups plus explicitly selected marker traces, subject to a
+pre-execution hard memory guard.}
 
 \item{memory_warning_gb}{Analytical memory-warning threshold in GiB.}
 

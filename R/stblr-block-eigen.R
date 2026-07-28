@@ -23,8 +23,11 @@
 #' @param ncores Requested concurrent trait-by-chain workers.
 #' @param chain_seeds Optional signed chain seeds.
 #' @param keep_chains Retain compact logical-chain records.
-#' @param convergence Convergence mode.
-#' @param convergence_control Named convergence controls.
+#' @param convergence Convergence mode: `"auto"`, `"none"`, `"core"`, or
+#'   `"extended"`. Automatic mode remains core-only.
+#' @param convergence_control A uniquely named convergence-control list. The
+#'   extended controls cover diagnostic groups, explicit marker selection,
+#'   retained traces, and hard trace-memory guards.
 #' @param memory_warning_gb Analytical warning threshold.
 #' @param verbose Print resolved execution information.
 #' @param ... Model-specific validated controls.
@@ -39,7 +42,7 @@ stblr_block_eigen <- function(
   eigen_tau = 0.01, eigen_eta = 0,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
-  keep_chains = FALSE, convergence = c("auto", "none", "core"),
+  keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8,
   verbose = FALSE, ...
 ) {
@@ -57,9 +60,22 @@ stblr_block_eigen <- function(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
                                     chain$nchains)
+  marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id %||%
+    unlist(Glist$rsids %||% Glist$rsidsLD, use.names = FALSE)
+  if (!length(marker_ids)) marker_ids <- paste0("V", seq_along(stats$ww[[1L]]))
+  trace_spec <- .blr_st_native_trace_spec(
+    conv, marker_ids, resolved_model$prior_kernel,
+    annotations = identical(method, "sbayesrc"),
+    component_count = if (resolved_model$prior_kernel %in% c("bayesr", "bayesrc"))
+      length(dots$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L,
+    annotation_quantity_count = if (identical(method, "sbayesrc")) {
+      annotation_columns <- ncol(annotation %||% matrix(nrow = 0L, ncol = 0L))
+      component_count <- length(dots$mixture_var %||% c(0, 0.01, 0.1, 1))
+      annotation_columns * (component_count - 1L) + (component_count - 1L)
+    } else 0L)
   memory <- .blr_st_preflight_memory(
     stats = stats, operator = "block_eigen", chain = chain, conv = conv,
-    memory_warning_gb = memory_warning_gb)
+    memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
   common <- list(
     stats = stats, Glist = Glist, block_start = block_start,
     eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta,
@@ -67,7 +83,8 @@ stblr_block_eigen <- function(
     seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
       chain$chain_seeds_native else NULL,
-    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces)
+    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
+    .convergence_spec = trace_spec)
   fit <- switch(
     method,
     sbayesc = do.call(.stblr_csr_bayesc_block_eigen, c(common, dots)),
@@ -81,7 +98,8 @@ stblr_block_eigen <- function(
                          "eigen_tau", "eigen_eta")],
                 list(annotation = annotation),
                 common[c("nit", "nburn", "nthin", "seed", "nchains",
-                         "ncores", "chain_seeds", "keep_chains")], dots))
+                         "ncores", "chain_seeds", "keep_chains",
+                         ".convergence_spec")], dots))
     })
   fit <- .blr_finalize_st_public(
     fit, method, "block_eigen", chain, conv, memory_warning_gb, verbose,

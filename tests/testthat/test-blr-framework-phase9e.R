@@ -103,7 +103,7 @@ test_that("canonical group policy and unsupported cases stay protected", {
 
 test_that("canonical group public and protected boundaries remain frozen", {
   protected <- c(
-    "src/st_cpg_omp_csr_prior.cpp" = "cce51072da6ddc3c18d58ab3b1f3c6df",
+    "src/st_cpg_omp_csr_prior.cpp" = "602c1620a4be5741c63a8c7b7baa07e6",
     "docs/dev/stblr_raw_schema.md" = "82ac9ba4b7d8edc6f3e16ee3a26d8466"
   )
   actual <- unname(tools::md5sum(vapply(names(protected), phase9e_path, character(1))))

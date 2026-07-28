@@ -916,6 +916,7 @@ struct CsrBayesCRawConversionContext {
  bool use_fixed_selection_scale;
  bool estimate_selection_s;
  const std::vector<int>* sample_size;
+ const std::vector<int>* convergence_markers;
 };
 
 // This is the sole typed-result-to-stblr_raw_v1 conversion for ordinary CSR
@@ -944,6 +945,12 @@ static Rcpp::List stblr_csr_bayesc_result_to_raw(
   );
  }
  const std::vector<int>& n = *context.sample_size;
+ if (context.convergence_markers == nullptr) {
+  throw std::runtime_error(
+   "stblr_csr_bayesc_result_to_raw: convergence-marker metadata is missing."
+  );
+ }
+ const std::vector<int>& convergence_markers = *context.convergence_markers;
 
 #ifdef _OPENMP
  const int nthreads = stblr_num_threads_for_tasks(
@@ -1188,6 +1195,11 @@ static Rcpp::List stblr_csr_bayesc_result_to_raw(
       Rcpp::Named("mean") = R_NilValue
      ),
      Rcpp::Named("selection") = chain_selection,
+     Rcpp::Named("convergence_trace") = Rcpp::List::create(
+      Rcpp::Named("b") = current.convergence_b,
+      Rcpp::Named("d") = current.convergence_d,
+      Rcpp::Named("component") = R_NilValue,
+      Rcpp::Named("marker_index") = Rcpp::wrap(convergence_markers)),
      Rcpp::Named("diagnostics") = Rcpp::List::create(
       Rcpp::Named("ld_swap") = updateLDswap
        ? Rcpp::wrap(chain_ld) : R_NilValue
@@ -1310,6 +1322,9 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
   const Rcpp::NumericVector& selection_s_prior,
   double selection_s_proposal_sd,
   const arma::rowvec& selection_s_log_h_row,
+  const std::vector<int>& convergence_markers,
+  bool convergence_b,
+  bool convergence_d,
   const std::vector<int>& order
 ) {
  sblr::core::ResolvedSpec specification;
@@ -1388,6 +1403,9 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
  input.controls.selection_s_proposal_sd = selection_s_proposal_sd;
  input.controls.selection_s_log_h =
   estimate_selection_s ? &selection_s_log_h_row : nullptr;
+ input.controls.convergence_markers = convergence_markers;
+ input.controls.convergence_b = convergence_b;
+ input.controls.convergence_d = convergence_d;
  input.output.keep_chains = keep_chains;
  input.ld_friends.row_ptr = ld_swap_friends.ptr.empty()
   ? nullptr : ld_swap_friends.ptr.data();
@@ -1402,7 +1420,7 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
  const CsrBayesCRawConversionContext conversion = {
   m, nt, nit, nburn, nthin, ncores, nchains, keep_chains,
   pi_prior_a, pi_prior_b, updateLDswap, use_selection_s_prior_scale,
-  estimate_selection_s, &n
+  estimate_selection_s, &n, &convergence_markers
  };
  return stblr_csr_bayesc_result_to_raw(result, conversion);
 }
@@ -1456,6 +1474,9 @@ Rcpp::List stblr_cpg_omp_csr_impl(
   Rcpp::NumericVector selection_s_prior,
   double selection_s_proposal_sd,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h,
+  std::vector<int> convergence_markers,
+  bool convergence_b,
+  bool convergence_d,
   OperatorFactory make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1767,7 +1788,8 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap,
    ld_swap_prob, ld_swap_moves, use_selection_s_prior_scale, prior_scale,
    estimate_selection_s, selection_s_init, selection_s_prior,
-   selection_s_proposal_sd, selection_s_log_h_row, order
+   selection_s_proposal_sd, selection_s_log_h_row, convergence_markers,
+   convergence_b, convergence_d, order
   );
  } else {
 
@@ -1802,6 +1824,13 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
  arma::vec selection_s_attempted_task(ntasks, arma::fill::zeros);
  arma::vec selection_s_accepted_task(ntasks, arma::fill::zeros);
+ std::vector<arma::mat> convergence_b_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::imat> convergence_d_task(static_cast<std::size_t>(ntasks));
+ const arma::uword convergence_marker_count=static_cast<arma::uword>(convergence_markers.size());
+ for (int task=0;task<ntasks;++task) {
+  if (convergence_b && convergence_marker_count>0) convergence_b_task[static_cast<std::size_t>(task)].zeros(nit,convergence_marker_count);
+  if (convergence_d && convergence_marker_count>0) convergence_d_task[static_cast<std::size_t>(task)].zeros(nit,convergence_marker_count);
+ }
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
@@ -2223,6 +2252,14 @@ Rcpp::List stblr_cpg_omp_csr_impl(
     vles_t(static_cast<arma::uword>(it)) = vle_t;
     vlds_t(static_cast<arma::uword>(it)) = vld_t;
     selection_s_t(static_cast<arma::uword>(it)) = selection_s_current;
+    if (it>=nburn) {
+     const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     for (arma::uword s=0;s<convergence_marker_count;++s) {
+      const arma::uword marker=static_cast<arma::uword>(convergence_markers[static_cast<std::size_t>(s)]);
+      if (convergence_b) convergence_b_task[static_cast<std::size_t>(task)](draw,s)=b_t(marker);
+      if (convergence_d) convergence_d_task[static_cast<std::size_t>(task)](draw,s)=d_t(marker);
+     }
+    }
 
     // -------------------------------------------------------
     // Store posterior summaries
@@ -2649,6 +2686,11 @@ Rcpp::List stblr_cpg_omp_csr_impl(
       Rcpp::Named("mean") = R_NilValue
      ),
      Rcpp::Named("selection") = chain_selection,
+     Rcpp::Named("convergence_trace") = Rcpp::List::create(
+      Rcpp::Named("b") = convergence_b_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("d") = convergence_d_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("component") = R_NilValue,
+      Rcpp::Named("marker_index") = Rcpp::wrap(convergence_markers)),
      Rcpp::Named("diagnostics") = Rcpp::List::create(
       Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue
      )
@@ -2759,7 +2801,10 @@ Rcpp::List stblr_cpg_omp_csr(
   double selection_s_init = 0.0,
   Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
   double selection_s_proposal_sd = 0.35,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue
+  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::IntegerVector convergence_markers = Rcpp::IntegerVector::create(),
+  bool convergence_b = false,
+  bool convergence_d = false
 ) {
  auto make_csr_operator = [&](int m,
                               const std::vector<double>& xx,
@@ -2798,6 +2843,8 @@ Rcpp::List stblr_cpg_omp_csr(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
   selection_s_prior_scale, estimate_selection_s, selection_s_init,
   selection_s_prior, selection_s_proposal_sd, selection_s_log_h,
+  Rcpp::as<std::vector<int>>(convergence_markers), convergence_b,
+  convergence_d,
   make_csr_operator
  );
 }
@@ -2847,6 +2894,9 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
   double selection_s_proposal_sd = 0.35,
   Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::IntegerVector convergence_markers = Rcpp::IntegerVector::create(),
+  bool convergence_b = false,
+  bool convergence_d = false,
   Rcpp::CharacterVector bed_files = Rcpp::CharacterVector::create(),
   int n_bed = 0,
   Rcpp::List cls = R_NilValue,
@@ -2946,6 +2996,8 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
   selection_s_prior_scale, estimate_selection_s, selection_s_init,
   selection_s_prior, selection_s_proposal_sd, selection_s_log_h,
+  Rcpp::as<std::vector<int>>(convergence_markers), convergence_b,
+  convergence_d,
   make_block_eigen_operator
  );
 }

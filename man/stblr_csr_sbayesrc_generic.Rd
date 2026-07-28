@@ -64,7 +64,8 @@ stblr_csr_sbayesrc_generic(
   selection_s_init = 0,
   selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.35,
-  Glist = NULL
+  Glist = NULL,
+  .convergence_spec = NULL
 )
 }
 \arguments{
@@ -185,6 +186,8 @@ Defaults to 0.35.}
 \item{Glist}{Optional genotype/LD metadata. Required when `selection_s` is
 non-`NULL` or `estimate_selection_s = TRUE` so MAF can be aligned to the
 CSR LD marker order using `Glist$rsidsLD`, `Glist$rsids`, and `Glist$maf`.}
+
+\item{.convergence_spec}{Internal pre-resolved diagnostic capture plan.}
 }
 \value{
 A formatted SBayesRC-style ST-BLR fit. Common posterior fields

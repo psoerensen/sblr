@@ -443,3 +443,9 @@ by explicit marker ID before native dispatch. Coefficients, variances, latent
 probit workspace, and accumulators are chain private. Public prior component
 probabilities are marker by component; no full marker-by-joint-state array is
 returned by default.
+
+Extended trace storage is resolved before execution. Numeric values use eight
+bytes; d/component native states use int32 plus numeric scalar workspace. The
+memory preflight separates capture, workspace, retention, descriptors, and
+summary output and never charges genotype, phenotype, or operator storage to
+diagnostic traces.

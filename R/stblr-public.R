@@ -11,8 +11,12 @@
 #' @param ncores Requested concurrent trait-by-chain workers.
 #' @param chain_seeds Optional signed chain seeds.
 #' @param keep_chains Retain compact logical-chain records.
-#' @param convergence Convergence mode.
-#' @param convergence_control Named convergence controls.
+#' @param convergence Convergence mode: `"auto"` preserves core-only automatic
+#'   behavior, `"none"` disables capture, `"core"` requests the five trait-level
+#'   diagnostics, and `"extended"` adds applicable low-dimensional diagnostics.
+#' @param convergence_control A uniquely named list of convergence thresholds,
+#'   trace retention, extended groups, explicit selected markers and quantities,
+#'   and diagnostic trace-memory guards.
 #' @param memory_warning_gb Analytical warning threshold.
 #' @param verbose Print resolved controls.
 #' @param selection_maf Optional MAF aligned to the final summary-marker order
@@ -28,7 +32,7 @@ stblr_csr <- function(
   allow_reference_maf_for_selection_s = FALSE, ...,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
-  keep_chains = FALSE, convergence = c("auto", "none", "core"),
+  keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
   dots <- list(...)
@@ -44,9 +48,15 @@ stblr_csr <- function(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
                                     chain$nchains)
+  marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id %||%
+    paste0("V", seq_along(stats$ww[[1L]]))
+  trace_spec <- .blr_st_native_trace_spec(
+    conv, marker_ids, resolved_model$prior_kernel,
+    component_count = if (resolved_model$prior_kernel == "bayesr")
+      length(dots$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L)
   memory <- .blr_st_preflight_memory(
     stats = stats, operator = "csr", chain = chain, conv = conv,
-    memory_warning_gb = memory_warning_gb)
+    memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
   forbidden <- intersect(names(dots), c(
     "nit", "nburn", "nthin", "seed", "nchains", "ncores",
     "chain_seeds", "keep_chains", "method"))
@@ -60,7 +70,8 @@ stblr_csr <- function(
     seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
       chain$chain_seeds_native else NULL,
-    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces), dots))
+    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
+    .convergence_spec = trace_spec), dots))
   fit <- .blr_finalize_st_public(
     fit, method, "csr", chain, conv, memory_warning_gb, verbose, memory)
   fit$input$effect_scale <- resolved_model$effect_scale
@@ -93,7 +104,7 @@ stblr_bed <- function(
   y, Glist, method = c("bayesc", "bayesr", "bayesrc"), ...,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
-  keep_chains = FALSE, convergence = c("auto", "none", "core"),
+  keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
   dots <- list(...)
@@ -107,9 +118,23 @@ stblr_bed <- function(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
                                     chain$nchains)
+  bed_marker_ids <- unlist(Glist$rsids %||% Glist$rsidsLD, use.names = FALSE)
+  if (!length(bed_marker_ids)) bed_marker_ids <- paste0(
+    "V", seq_len(sum(lengths(Glist$cls))))
+  trace_spec <- .blr_st_native_trace_spec(
+    conv, bed_marker_ids, method,
+    annotations = identical(method, "bayesrc"),
+    component_count = if (method %in% c("bayesr", "bayesrc"))
+      length(dots$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L,
+    annotation_quantity_count = if (identical(method, "bayesrc")) {
+      annotation_columns <- ncol(dots$A %||% dots$annotations %||% matrix(nrow = 0L, ncol = 0L))
+      component_count <- length(dots$mixture_var %||% c(0, 0.01, 0.1, 1))
+      annotation_columns * (component_count - 1L) + (component_count - 1L)
+    } else 0L)
   memory <- .blr_st_preflight_memory(
     y = y, Glist = Glist, operator = "packed_bed", chain = chain,
-    conv = conv, memory_warning_gb = memory_warning_gb)
+    conv = conv, memory_warning_gb = memory_warning_gb,
+    trace_spec = trace_spec)
   forbidden <- intersect(names(dots), c(
     "nit", "nburn", "nthin", "seed", "nchains", "ncores",
     "chain_seeds", "keep_chains", "method"))
@@ -122,7 +147,8 @@ stblr_bed <- function(
     seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
       chain$chain_seeds_native else NULL,
-    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces), dots))
+    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
+    .convergence_spec = trace_spec), dots))
   fit <- .blr_finalize_st_public(
     fit, method, "packed_bed", chain, conv, memory_warning_gb, verbose,
     memory)

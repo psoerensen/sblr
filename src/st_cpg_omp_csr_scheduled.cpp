@@ -311,6 +311,7 @@ struct STScheduledBayesCBindingMetadata {
  const std::vector<int>& sample_sizes;
  int nit,nburn,nthin,nchains;
  bool keep_chains;
+ const std::vector<int>& convergence_markers;
 };
 
 static Rcpp::List stblr_csr_scheduled_bayesc_result_to_raw(
@@ -413,6 +414,11 @@ static Rcpp::List stblr_csr_scheduled_bayesc_result_to_raw(
       Rcpp::Named("mean")=Rcpp::NumericVector::create(
        1.0-result.task_mean_pi(task_u),result.task_mean_pi(task_u))),
      Rcpp::Named("retained_draw_count")=result.task_nsamples(task_u),
+     Rcpp::Named("convergence_trace")=Rcpp::List::create(
+      Rcpp::Named("b")=result.convergence_b[static_cast<std::size_t>(task)],
+      Rcpp::Named("d")=result.convergence_d[static_cast<std::size_t>(task)],
+      Rcpp::Named("component")=R_NilValue,
+      Rcpp::Named("marker_index")=Rcpp::wrap(binding.convergence_markers)),
      Rcpp::Named("diagnostics")=Rcpp::List::create(
       Rcpp::Named("seconds")=result.task_seconds[static_cast<std::size_t>(task)]));
    }
@@ -486,12 +492,16 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
   int seed,
   int nchains,
   bool keep_chains,
-  std::vector<int> chain_seeds
+  std::vector<int> chain_seeds,
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_b=false,
+  bool convergence_d=false
 ) {
  const int nt = static_cast<int>(wy.size());
 
  if (nt <= 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: nt must be positive.");
  const int m = static_cast<int>(wy[0].size());
+ const std::vector<int> convergence_markers_cpp=Rcpp::as<std::vector<int>>(convergence_markers);
  if (m <= 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: m must be positive.");
  if (nit <= 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: nit must be positive.");
  if (nburn < 0) throw std::runtime_error("stblr_cpg_omp_csr_scheduled: nburn must be non-negative.");
@@ -691,13 +701,14 @@ Rcpp::List stblr_cpg_omp_csr_scheduled(
  const sblr::core::CsrScheduledBayesCExecutionContext<STLDCSR> execution_context{
   ld, wy_mat, ww_mat, b_mat, yy_vec, ssb_prior_mat, sse_prior_mat,
   B, E, pi, n, order, d_init, r_init, scheduled_control,
+  convergence_markers_cpp, convergence_b, convergence_d,
   m, nt, nub, nue, adjE, pi_prior_a, pi_prior_b,
   use_d_init, use_r_init, rebuild_r_before_updateE,
   updateB, updateE, updatePi
  };
  auto execution_result=sblr::core::run_csr_scheduled_bayesc(execution_context);
  const STScheduledBayesCBindingMetadata binding_metadata{
-  wy_mat,n,nit,nburn,nthin,nchains,keep_chains
+  wy_mat,n,nit,nburn,nthin,nchains,keep_chains,convergence_markers_cpp
  };
  return stblr_csr_scheduled_bayesc_result_to_raw(
   execution_result,binding_metadata

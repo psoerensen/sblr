@@ -80,6 +80,13 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
  arma::vec final_vle_task(ntasks, arma::fill::zeros);
  arma::vec final_vld_task(ntasks, arma::fill::zeros);
  arma::vec nsamples_task(ntasks, arma::fill::zeros);
+ const arma::uword convergence_marker_count=static_cast<arma::uword>(context.convergence_markers.size());
+ std::vector<arma::mat> convergence_b_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::imat> convergence_d_task(static_cast<std::size_t>(ntasks));
+ for (int task=0;task<ntasks;++task) {
+  if (context.convergence_b && convergence_marker_count>0) convergence_b_task[static_cast<std::size_t>(task)].zeros(nit,convergence_marker_count);
+  if (context.convergence_d && convergence_marker_count>0) convergence_d_task[static_cast<std::size_t>(task)].zeros(nit,convergence_marker_count);
+ }
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
  arma::mat dm_mat(nt, m, arma::fill::zeros);
@@ -464,6 +471,14 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
     pis_t(static_cast<arma::uword>(it)) = pi_t[1];
     vles_t(static_cast<arma::uword>(it)) = vle_t;
     vlds_t(static_cast<arma::uword>(it)) = vld_t;
+    if (it>=nburn) {
+     const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     for (arma::uword s=0;s<convergence_marker_count;++s) {
+      const arma::uword marker=static_cast<arma::uword>(context.convergence_markers[static_cast<std::size_t>(s)]);
+      if (context.convergence_b) convergence_b_task[static_cast<std::size_t>(task)](draw,s)=b_t(marker);
+      if (context.convergence_d) convergence_d_task[static_cast<std::size_t>(task)](draw,s)=d_t(marker);
+     }
+    }
 
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
      nsamples_t += 1.0;
@@ -666,6 +681,8 @@ CsrScheduledBayesCExecutionResult run_csr_scheduled_bayesc(
  result.task_pis=std::move(pis_task);
  result.task_final_pi=std::move(final_pi_task);
  result.task_nsamples=std::move(nsamples_task);
+ result.convergence_b=std::move(convergence_b_task);
+ result.convergence_d=std::move(convergence_d_task);
  result.task_mean_pi=arma::vec(ntasks,arma::fill::zeros);
  for (int task=0;task<ntasks;++task) {
   const arma::uword task_u=static_cast<arma::uword>(task);

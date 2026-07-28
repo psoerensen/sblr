@@ -90,6 +90,23 @@ run_csr_learned_annotation_bayesc(
  arma::mat eta_vb_final(K, nt, arma::fill::zeros);
  arma::mat eta_pi_accept(nt, 2, arma::fill::zeros);
  arma::mat eta_vb_accept(nt, 2, arma::fill::zeros);
+ std::vector<arma::mat> convergence_eta_pi(static_cast<std::size_t>(nt));
+ std::vector<arma::mat> convergence_eta_vb(static_cast<std::size_t>(nt));
+ std::vector<arma::mat> convergence_b(static_cast<std::size_t>(nt));
+ std::vector<arma::imat> convergence_d(static_cast<std::size_t>(nt));
+ const std::vector<int>& convergence_markers=*context.convergence_markers;
+ for (int t=0;t<nt;++t) {
+  if (context.convergence_annotations) {
+   if (learn_pi_annot)
+    convergence_eta_pi[static_cast<std::size_t>(t)].zeros(nit,K);
+   if (learn_vb_annot)
+    convergence_eta_vb[static_cast<std::size_t>(t)].zeros(nit,K);
+  }
+  if (context.convergence_b)
+   convergence_b[static_cast<std::size_t>(t)].zeros(nit,convergence_markers.size());
+  if (context.convergence_d)
+   convergence_d[static_cast<std::size_t>(t)].zeros(nit,convergence_markers.size());
+ }
 
  std::vector<int> failed(static_cast<std::size_t>(nt), 0);
  std::vector<std::string> errors(static_cast<std::size_t>(nt));
@@ -447,6 +464,23 @@ run_csr_learned_annotation_bayesc(
     vles_t(static_cast<arma::uword>(it)) = vle_t;
     vlds_t(static_cast<arma::uword>(it)) = vld_t;
 
+    if (it>=nburn) {
+     const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     if (context.convergence_annotations) {
+      if (learn_pi_annot)
+       convergence_eta_pi[static_cast<std::size_t>(t)].row(draw)=eta_pi_t.t();
+      if (learn_vb_annot)
+       convergence_eta_vb[static_cast<std::size_t>(t)].row(draw)=eta_vb_t.t();
+     }
+     for (std::size_t q=0;q<convergence_markers.size();++q) {
+      const arma::uword marker=static_cast<arma::uword>(convergence_markers[q]);
+      if (context.convergence_b)
+       convergence_b[static_cast<std::size_t>(t)](draw,q)=b_t(marker);
+      if (context.convergence_d)
+       convergence_d[static_cast<std::size_t>(t)](draw,q)=d_t(marker);
+     }
+    }
+
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
      nsamples_t += 1.0;
 
@@ -711,6 +745,10 @@ run_csr_learned_annotation_bayesc(
 
  CsrLearnedAnnotationBayesCExecutionResult execution_result;
  execution_result.raw=std::move(result);
+ execution_result.convergence_eta_pi=std::move(convergence_eta_pi);
+ execution_result.convergence_eta_vb=std::move(convergence_eta_vb);
+ execution_result.convergence_b=std::move(convergence_b);
+ execution_result.convergence_d=std::move(convergence_d);
  return execution_result;
 
 }

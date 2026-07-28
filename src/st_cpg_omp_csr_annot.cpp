@@ -1094,7 +1094,7 @@ inline void samplePi_ST_annot(
 #include "blr_csr_learned_annotation_bayesc_core_impl.h"
 #undef SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT
 
-std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot_single(
+sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_single(
   std::vector<std::vector<double>> wy,
   std::vector<std::vector<double>> ww,
   std::vector<double> yy,
@@ -1142,7 +1142,11 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot_single(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  const std::vector<int>& convergence_markers=std::vector<int>(),
+  bool convergence_annotations=false,
+  bool convergence_b=false,
+  bool convergence_d=false
 ) {
  const int nt = static_cast<int>(wy.size());
 
@@ -1448,10 +1452,14 @@ std::vector<std::vector<std::vector<double>>> stblr_cpg_omp_csr_annot_single(
  context.ld_row_ptr_count=ld.ptr.size();
  context.ld_friends_storage=&ld_swap_friends;
  context.annotation_policy=annotation_policy;
+ context.convergence_markers=&convergence_markers;
+ context.convergence_annotations=convergence_annotations;
+ context.convergence_b=convergence_b;
+ context.convergence_d=convergence_d;
 
  sblr::core::CsrLearnedAnnotationBayesCExecutionResult execution_result=
   sblr::core::run_csr_learned_annotation_bayesc(context);
- return std::move(execution_result.raw);
+ return execution_result;
 }
 
 static Rcpp::NumericMatrix cpg_raw_marker_matrix(
@@ -1533,7 +1541,12 @@ static Rcpp::List cpg_annot_chains_raw_v1(
  int m,
  int nt,
  int nanno,
- int nchains
+ int nchains,
+ const std::vector<arma::mat>& convergence_eta_pi,
+ const std::vector<arma::mat>& convergence_eta_vb,
+ const std::vector<arma::mat>& convergence_b,
+ const std::vector<arma::imat>& convergence_d,
+ const std::vector<int>& convergence_markers
 ) {
  if (raw.size() <= 34) return Rcpp::List::create();
  Rcpp::List traits(nt);
@@ -1564,6 +1577,13 @@ static Rcpp::List cpg_annot_chains_raw_v1(
      Rcpp::_["eta_pi_mean"] = eta_pi,
      Rcpp::_["eta_vb_mean"] = eta_vb
     ),
+    Rcpp::_["convergence_trace"] = Rcpp::List::create(
+     Rcpp::_["marker_index"] = Rcpp::wrap(convergence_markers),
+     Rcpp::_["inclusion_coefficient"] = convergence_eta_pi[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["variance_coefficient"] = convergence_eta_vb[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["b"] = convergence_b[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["d"] = convergence_d[static_cast<std::size_t>(cc*nt+t)],
+     Rcpp::_["component"] = R_NilValue),
     Rcpp::_["diagnostics"] = Rcpp::List::create(Rcpp::_["ld_swap"] = ld)
    );
   }
@@ -1582,7 +1602,12 @@ static Rcpp::List stblr_csr_learned_annotation_bayesc_result_to_raw(
  int nburn,
  int nthin,
  int nchains,
- bool keep_chains
+ bool keep_chains,
+ const std::vector<arma::mat>& convergence_eta_pi,
+ const std::vector<arma::mat>& convergence_eta_vb,
+ const std::vector<arma::mat>& convergence_b,
+ const std::vector<arma::imat>& convergence_d,
+ const std::vector<int>& convergence_markers
 ) {
  const std::vector<std::vector<std::vector<double>>>& raw=result.raw;
  const int n_trace = nit + nburn;
@@ -1603,7 +1628,9 @@ static Rcpp::List stblr_csr_learned_annotation_bayesc_result_to_raw(
   }
   ld_swap = ld;
  }
- Rcpp::RObject chains = keep_chains ? Rcpp::RObject(cpg_annot_chains_raw_v1(raw, m, nt, nanno, nchains)) : Rcpp::RObject(R_NilValue);
+ Rcpp::RObject chains = keep_chains ? Rcpp::RObject(cpg_annot_chains_raw_v1(
+  raw,m,nt,nanno,nchains,convergence_eta_pi,convergence_eta_vb,
+  convergence_b,convergence_d,convergence_markers)) : Rcpp::RObject(R_NilValue);
  Rcpp::List raw_out = Rcpp::List::create(
   Rcpp::_["schema"] = Rcpp::List::create(Rcpp::_["class"] = "stblr_raw", Rcpp::_["version"] = 1),
   Rcpp::_["meta"] = Rcpp::List::create(
@@ -1742,7 +1769,11 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
   int ld_swap_max_friends = 50,
-  int ld_swap_moves = 1
+  int ld_swap_moves = 1,
+  Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
+  bool convergence_annotations=false,
+  bool convergence_b=false,
+  bool convergence_d=false
 ) {
  if (nchains <= 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_annot: nchains must be positive.");
@@ -1767,6 +1798,14 @@ Rcpp::List stblr_cpg_omp_csr_annot(
  std::vector<std::vector<double>> chain_ld_swap_flat;
  std::vector<std::vector<double>> chain_eta_pi_flat;
  std::vector<std::vector<double>> chain_eta_vb_flat;
+ const std::vector<int> convergence_markers_cpp=
+  Rcpp::as<std::vector<int>>(convergence_markers);
+ std::vector<arma::mat> convergence_eta_pi,convergence_eta_vb,
+  convergence_b_trace;
+ std::vector<arma::imat> convergence_d_trace;
+ const std::size_t task_count=static_cast<std::size_t>(nchains*wy.size());
+ convergence_eta_pi.reserve(task_count); convergence_eta_vb.reserve(task_count);
+ convergence_b_trace.reserve(task_count); convergence_d_trace.reserve(task_count);
 
  for (int chain = 0; chain < nchains; ++chain) {
   int chain_seed = seed;
@@ -1776,7 +1815,7 @@ Rcpp::List stblr_cpg_omp_csr_annot(
    chain_seed = seed + 9176 * (chain + 1);
   }
 
-  std::vector<std::vector<std::vector<double>>> raw =
+  sblr::core::CsrLearnedAnnotationBayesCExecutionResult chain_result =
    stblr_cpg_omp_csr_annot_single(
     wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
     rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
@@ -1785,8 +1824,16 @@ Rcpp::List stblr_cpg_omp_csr_annot(
     annot_update_every, pi_min, pi_max, vb_multiplier_min,
     vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n,
     nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, chain_seed,
-    updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
+    updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
+    convergence_markers_cpp,convergence_annotations,convergence_b,convergence_d
    );
+  std::vector<std::vector<std::vector<double>>>& raw=chain_result.raw;
+  for (std::size_t t=0;t<chain_result.convergence_eta_pi.size();++t) {
+   convergence_eta_pi.push_back(chain_result.convergence_eta_pi[t]);
+   convergence_eta_vb.push_back(chain_result.convergence_eta_vb[t]);
+   convergence_b_trace.push_back(chain_result.convergence_b[t]);
+   convergence_d_trace.push_back(chain_result.convergence_d[t]);
+  }
 
   if (chain == 0) {
    out = raw;
@@ -1895,7 +1942,9 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   execution_result.raw=std::move(extended);
   return stblr_csr_learned_annotation_bayesc_result_to_raw(
    execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
-   static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains
+   static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains,
+   convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
+   convergence_d_trace,convergence_markers_cpp
   );
  }
 
@@ -1903,7 +1952,9 @@ Rcpp::List stblr_cpg_omp_csr_annot(
  execution_result.raw=std::move(out);
  return stblr_csr_learned_annotation_bayesc_result_to_raw(
   execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
-  static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains
+  static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains,
+  convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
+  convergence_d_trace,convergence_markers_cpp
  );
 }
 

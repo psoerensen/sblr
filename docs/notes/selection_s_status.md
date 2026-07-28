@@ -181,3 +181,12 @@ Fixed `selection_s` is supported independently for MT BayesRC/SBayesRC on all
 three operators. `NULL` means no MAF scale; `-1` explicitly requests the
 unit-scale reduction. Sampled MT S remains unsupported. MAF-named annotations
 plus selection-S are allowed with explicit overlap metadata and one advisory.
+
+Phase 21 diagnoses S only when the sampler genuinely updates it. A fixed finite
+S is `not_updated`; `NULL` is `not_applicable`; acceptance rate remains a
+sampler diagnostic rather than an R-hat/ESS quantity. Sampled MT S is still
+rejected.
+
+The sampled ST trace is task-private and recorded at every post-burn completed
+iteration. It coexists with component-probability, annotation-parameter, and
+explicit selected-marker capture without diagnostic thinning or RNG use.

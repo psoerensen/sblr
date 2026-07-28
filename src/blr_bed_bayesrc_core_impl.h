@@ -94,6 +94,16 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
  out.vbs.zeros(total_it); out.vgs.zeros(total_it); out.ves.zeros(total_it);
  out.vles.zeros(total_it); out.vlds.zeros(total_it); out.pis.zeros(total_it);
  out.comp_prob.zeros(m, K); out.mean_prior.zeros(K);
+ if (context.convergence_annotations) {
+  out.convergence_alpha.zeros(nit,annotation.n_cols*(K-1));
+  out.convergence_sigma.zeros(nit,K-1);
+ }
+ if (context.convergence_b)
+  out.convergence_b.zeros(nit,context.convergence_markers.size());
+ if (context.convergence_d)
+  out.convergence_d.zeros(nit,context.convergence_markers.size());
+ if (context.convergence_component)
+  out.convergence_component.zeros(nit,context.convergence_markers.size());
  try {
   validate_bed_bayesrc_chain_context(context);
   std::mt19937 gen(static_cast<unsigned int>(context.chain_seed));
@@ -153,6 +163,27 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
    out.vles(static_cast<arma::uword>(it)) = vle;
    out.vlds(static_cast<arma::uword>(it)) = vg - vle;
    out.pis(static_cast<arma::uword>(it)) = 1.0 - arma::mean(snp_pi.col(0));
+   if (it>=nburn) {
+    const arma::uword draw=static_cast<arma::uword>(it-nburn);
+    if (context.convergence_annotations) {
+     arma::uword q=0;
+     for (int stick=0; stick<K-1; ++stick)
+      for (arma::uword annotation_index=0;
+           annotation_index<annotation.n_cols; ++annotation_index)
+       out.convergence_alpha(draw,q++)=annot_alpha(
+        annotation_index,static_cast<arma::uword>(stick));
+     out.convergence_sigma.row(draw)=annot_sigma.t();
+    }
+    for (std::size_t q=0;q<context.convergence_markers.size();++q) {
+     const arma::uword marker=static_cast<arma::uword>(
+      context.convergence_markers[q]);
+     const int component=component_t(marker);
+     if (context.convergence_b) out.convergence_b(draw,q)=b_t(marker);
+     if (context.convergence_d) out.convergence_d(draw,q)=component>0 ? 1 : 0;
+     if (context.convergence_component)
+      out.convergence_component(draw,q)=component;
+    }
+   }
    if (it >= nburn && ((it - nburn) % nthin == 0)) {
     nsamples += 1.0;
     br_update_log_inv_cpo(residual, ve, log_inv_cpo);

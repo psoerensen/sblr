@@ -168,3 +168,16 @@ they are not copied into another Phase 18 behavioral matrix.
   and MAF-overlap warning policy.
 - `blr_phase20_mt_bayesrc_architecture_audit.R` and
   `blr_phase20_mutation_sensitivity.R`: source architecture and mutation guards.
+
+## Phase 21 owners
+
+Permanent owners are `test-blr-extended-covariance-diagnostics.R`,
+`test-blr-extended-probability-diagnostics.R`,
+`test-blr-extended-parameter-diagnostics.R`, and
+`test-blr-selected-marker-diagnostics.R`. Native ST ownership is additionally
+protected by `test-bayesr-csr-backend.R`, `test-stblr-annotation-backends.R`,
+`test-stblr-bed-interface.R`, and `test-blr-operator-reductions.R`; these compare
+component, annotation/group, and selected-marker traces with task-private
+native results and protect RNG/thinning/retention independence. Architecture and mutation ownership
+resides in the matching Phase 21 audit scripts; moderate memory cases remain a
+benchmark, not a fast test.

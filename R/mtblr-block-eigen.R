@@ -291,7 +291,7 @@ mtblr_block_eigen <- function(
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
-  keep_chains = FALSE, convergence = c("auto", "none", "core"),
+  keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
   semantics <- .mtblr_resolve_public_method(method, "block_eigen")
@@ -397,6 +397,10 @@ mtblr_block_eigen <- function(
     center_binary_annotations, alpha_init, sigmaSqAlpha_init,
     intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor,
     alpha_update_every, updateAlpha)
+  extended_plan <- .blr_mtblr_extended_plan(
+    conv, aligned$marker_ids, st$trait_names, method, mixture, bayesrc,
+    updateB, updateE, updatePi, "diagonal", chain$nchains, chain$nit)
+  conv$selected_markers_resolved <- extended_plan$selected
   mod <- mixture$patterns
   set_spec <- .mtblr_sets(sets, st$m)
   h2 <- rep(h2, length.out = st$nt)
@@ -451,6 +455,7 @@ mtblr_block_eigen <- function(
   memory <- .mtblr_bayesrc_memory(
     memory,bayesrc,st$m,chain$nchains,chain$ncores,
     chain$nit+chain$nburn)
+  memory <- .blr_add_extended_memory(memory, extended_plan)
   .blr_memory_warning(memory, memory_warning_gb, conv$mode,
                       conv$compute || conv$keep_traces, conv$keep_traces)
   native_execution <- mtblr_block_eigen_chains_raw_internal(
@@ -469,14 +474,22 @@ mtblr_block_eigen <- function(
     bayesrc$annotations,bayesrc$alpha_init,bayesrc$sigma_alpha_init,
     bayesrc$pattern_pi_init,bayesrc$pattern_pi_prior,bayesrc$updateAlpha,
     bayesrc$intercept_flat,bayesrc$sigma_alpha_a,bayesrc$sigma_alpha_b,
-    bayesrc$pi_floor,bayesrc$alpha_update_every)
+    bayesrc$pi_floor,bayesrc$alpha_update_every,
+    extended_plan$native$convergence_covariance,
+    extended_plan$native$convergence_probability,
+    extended_plan$native$convergence_annotations,
+    extended_plan$native$convergence_full_probability,
+    extended_plan$native$convergence_markers,
+    extended_plan$native$convergence_b,
+    extended_plan$native$convergence_d,
+    extended_plan$native$convergence_component)
   if (!is.null(bayesrc$model_parameters))
     native_execution$raws <- lapply(native_execution$raws,
       .mtblr_bayesrc_enrich_raw, bayesrc = bayesrc, method = method,
       updatePi = updatePi)
   execution <- .mtblr_summary_multichain(
     native_execution, chain, conv, st$trait_names, method, "block_eigen",
-    updateB, updateE, mixture$model_parameters)
+    updateB, updateE, mixture$model_parameters, extended_plan)
   raw <- execution$raw
   raw$diagnostics$block_eigen$sharing_mode <- sharing_mode
   raw$model$names <- mod$names
@@ -551,7 +564,11 @@ mtblr_block_eigen <- function(
     keep_chains = chain$keep_chains, convergence = conv$mode,
     convergence_control = conv[c("warn", "rhat_threshold",
       "ess_per_chain_threshold", "mcse_mean_over_sd_threshold",
-      "keep_traces")], memory_warning_gb = memory_warning_gb,
+      "keep_traces", "extended_groups_requested",
+      "extended_groups_resolved", "selected_markers",
+      "selected_markers_resolved",
+      "selected_marker_quantities", "full_probability_states",
+      "max_trace_gb", "allow_large_traces")], memory_warning_gb = memory_warning_gb,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     updateAlpha = bayesrc$updateAlpha,
     annotation_policy = if (is.null(bayesrc$model_parameters)) "global" else

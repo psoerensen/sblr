@@ -44,14 +44,18 @@
        keep_chains = keep_chains)
 }
 
-.blr_convergence_controls <- function(convergence = c("auto", "none", "core"),
+.blr_convergence_controls <- function(convergence = c("auto", "none", "core", "extended"),
                                       convergence_control = NULL,
                                       nchains = 1L) {
   convergence <- match.arg(convergence)
   defaults <- list(
     warn = TRUE, rhat_threshold = 1.01,
     ess_per_chain_threshold = 100,
-    mcse_mean_over_sd_threshold = 0.05, keep_traces = FALSE)
+    mcse_mean_over_sd_threshold = 0.05, keep_traces = FALSE,
+    extended_groups = NULL, selected_markers = NULL,
+    selected_marker_quantities = c("b", "d"),
+    full_probability_states = FALSE, max_trace_gb = 1,
+    allow_large_traces = FALSE)
   if (is.null(convergence_control)) {
     resolved <- defaults
   } else {
@@ -81,6 +85,7 @@
     stop("convergence = 'none' cannot retain convergence traces.",
          call. = FALSE)
   }
+  resolved <- .blr_validate_extended_controls(resolved, convergence)
   resolved$mode <- convergence
   resolved$requested <- convergence != "none"
   resolved$compute <- resolved$requested && nchains >= 2L
@@ -91,7 +96,7 @@
 }
 
 .blr_convergence_bundle <- function(values, quantities, family, model,
-                                    operator) {
+                                    operator, scope = "core") {
   if (!is.array(values) || length(dim(values)) != 3L ||
       !is.data.frame(quantities) || nrow(quantities) != dim(values)[3L]) {
     stop("values and quantities do not define a scalar convergence bundle.",
@@ -101,7 +106,12 @@
   quantities$model <- model
   quantities$operator <- operator
   defaults <- list(
-    tier = 1L, trait2_index = -1L, marker_index = -1L,
+    tier = 1L, parameter_name = NA_character_, trait2_index = -1L,
+    marker_index = -1L, marker_id = NA_character_, component_index = -1L,
+    component_name = NA_character_, pattern_index = -1L,
+    pattern_name = NA_character_, annotation_index = -1L,
+    annotation_name = NA_character_, stick_index = -1L,
+    stick_name = NA_character_, is_intercept = FALSE,
     model_index = -1L, derived = FALSE, structural = FALSE,
     captured = TRUE)
   for (name in names(defaults)) {
@@ -109,17 +119,24 @@
   }
   if (is.null(quantities$diagnostic_key)) {
     quantities$diagnostic_key <- paste(
-      family, model, operator, quantities$group, quantities$trait_index,
+      family, model, operator, quantities$group, quantities$parameter_name,
+      quantities$trait_index,
+      quantities$trait2_index, quantities$marker_index,
+      quantities$component_index, quantities$pattern_index,
+      quantities$annotation_index, quantities$stick_index,
       sep = ":")
   }
   order <- c(
     "quantity_index", "family", "model", "operator", "tier", "group",
-    "trait_index", "trait2_index", "marker_index", "model_index",
-    "updated", "derived", "structural", "captured", "diagnostic_key")
+    "parameter_name", "trait_index", "trait2_index", "marker_index",
+    "marker_id", "component_index", "component_name", "pattern_index",
+    "pattern_name", "annotation_index", "annotation_name", "stick_index",
+    "stick_name", "is_intercept", "model_index", "updated", "derived",
+    "structural", "captured", "diagnostic_key")
   quantities <- quantities[order]
   list(
     schema = list(class = "blr_convergence_trace_bundle", version = 1L),
-    scope = "core", family = family, model = model, operator = operator,
+    scope = scope, family = family, model = model, operator = operator,
     nchains = as.integer(dim(values)[2L]),
     postburn_draws_per_chain = as.integer(dim(values)[1L]),
     quantities = quantities, values = values)
@@ -372,7 +389,8 @@
 
 .blr_st_preflight_memory <- function(stats = NULL, y = NULL, Glist = NULL,
                                      operator, chain, conv,
-                                     memory_warning_gb) {
+                                     memory_warning_gb,
+                                     trace_spec = NULL) {
   if (!is.null(stats)) {
     m <- as.integer(stats$m %||% length(stats$wy[[1L]]))
     nt <- as.integer(length(stats$wy %||% stats$yy))
@@ -387,9 +405,68 @@
     chain$nit + chain$nburn, chain$keep_chains,
     convergence_quantities = quantity_count,
     keep_traces = conv$keep_traces)
+  if (!is.null(trace_spec) && identical(conv$mode, "extended")) {
+    nselected <- length(trace_spec$markers %||% integer())
+    probability_count <- if (isTRUE(trace_spec$probability))
+      as.integer(trace_spec$probability_quantity_count %||% 0L) * nt else 0L
+    annotation_count <- if (isTRUE(trace_spec$annotations))
+      as.integer(trace_spec$annotation_quantity_count %||% 0L) * nt else 0L
+    selected_b <- if (isTRUE(trace_spec$b)) nselected * nt else 0L
+    selected_d <- if (isTRUE(trace_spec$d)) nselected * nt else 0L
+    selected_component <- if (isTRUE(trace_spec$component))
+      nselected * nt else 0L
+    extended <- .blr_extended_trace_memory(
+      chain$nchains, chain$nit,
+      probability_count + annotation_count + selected_b,
+      selected_d + selected_component, conv$keep_traces)
+    extended$st_probability_trace_bytes <- 8 * chain$nchains * chain$nit *
+      probability_count
+    extended$st_annotation_group_trace_bytes <- 8 * chain$nchains * chain$nit *
+      annotation_count
+    extended$st_selected_b_trace_bytes <- 8 * chain$nchains * chain$nit * selected_b
+    extended$st_selected_d_trace_bytes <- 4 * chain$nchains * chain$nit * selected_d
+    extended$st_selected_component_trace_bytes <- 4 * chain$nchains * chain$nit *
+      selected_component
+    counts <- c(
+      chains = chain$nchains, draws = chain$nit,
+      probability = probability_count, annotations = annotation_count,
+      selected_b = selected_b, selected_d = selected_d,
+      selected_component = selected_component)
+    .blr_enforce_trace_guard(extended, conv, counts, nselected)
+    memory <- .blr_add_extended_memory(
+      memory, list(enabled = TRUE, memory = extended))
+  }
   .blr_memory_warning(memory, memory_warning_gb, conv$mode,
                       conv$compute || conv$keep_traces, conv$keep_traces)
   memory
+}
+
+.blr_st_native_trace_spec <- function(conv, marker_ids, prior_kernel,
+                                      annotations = FALSE,
+                                      component_count = 0L,
+                                      annotation_quantity_count = 0L) {
+  selected <- .blr_resolve_selected_markers(conv$selected_markers, marker_ids)
+  quantities <- conv$selected_marker_quantities %||% character()
+  if ("component" %in% quantities &&
+      !prior_kernel %in% c("bayesr", "bayesrc")) {
+    stop("Selected component diagnostics are not applicable to BayesC models.",
+         call. = FALSE)
+  }
+  probability_quantity_count <- if (prior_kernel == "bayesr") {
+    if (component_count == 2L) 1L else as.integer(component_count)
+  } else 1L
+  list(
+    markers = as.integer(selected$marker_index - 1L),
+    selected = selected,
+    probability = identical(conv$mode, "extended") &&
+      "probability" %in% conv$extended_groups_resolved,
+    probability_quantity_count = probability_quantity_count,
+    annotations = identical(conv$mode, "extended") && annotations &&
+      "annotations" %in% conv$extended_groups_resolved,
+    annotation_quantity_count = as.integer(annotation_quantity_count),
+    b = "b" %in% quantities,
+    d = "d" %in% quantities,
+    component = "component" %in% quantities)
 }
 
 .blr_st_convergence_bundle <- function(chains, trait_names, model, operator,
@@ -643,6 +720,14 @@
                                     memory = NULL) {
   trait_names <- colnames(fit$bm) %||% paste0("T", seq_len(ncol(fit$bm)))
   original_chains <- fit$chains
+  marker_ids <- fit$data$marker_metadata$marker_id %||% rownames(fit$bm) %||%
+    paste0("m", seq_len(nrow(fit$bm)))
+  selected_markers <- .blr_resolve_selected_markers(
+    conv$selected_markers, marker_ids)
+  if (isTRUE(conv$full_probability_states)) {
+    stop("full_probability_states is available only for MT BayesR/SBayesR.",
+         call. = FALSE)
+  }
   unavailable_result <- function() {
     groups <- c("vbs", "vgs", "ves", "vle", "vld")
     present <- c(!is.null(fit$vbs), !is.null(fit$vgs), !is.null(fit$ves),
@@ -666,13 +751,20 @@
                       "No eligible STBLR core traces were captured.")) NULL
         else stop(error)
       })
-    if (is.null(bundle)) {
+    extended_bundle <- .blr_st_extended_bundle(
+      original_chains, trait_names, model, operator, chain$nit,
+      chain$nburn, fit, conv)
+    if (is.null(bundle) && is.null(extended_bundle)) {
       fit$convergence <- unavailable_result()
     } else {
+      bundle <- if (is.null(bundle)) extended_bundle else if (is.null(extended_bundle))
+        bundle else .blr_merge_convergence_bundles(bundle, extended_bundle)
       fit$convergence <- .blr_convergence_tier1(
         bundle, trait_names, conv$thresholds, conv$keep_traces)
       if (conv$keep_traces) {
         fit$convergence_traces <- bundle
+        fit$convergence_traces$quantities$quantity <-
+          fit$convergence$summary$quantity
         dimnames(fit$convergence_traces$values) <- list(
           paste0("Iter", seq_len(chain$nit)),
           paste0("chain", seq_len(chain$nchains)),
@@ -696,12 +788,15 @@
   fit$input$convergence <- conv$mode
   fit$input$convergence_control <- conv[c(
     "warn", "rhat_threshold", "ess_per_chain_threshold",
-    "mcse_mean_over_sd_threshold", "keep_traces")]
+    "mcse_mean_over_sd_threshold", "keep_traces",
+    "extended_groups_requested", "extended_groups_resolved",
+    "selected_markers", "selected_marker_quantities",
+    "full_probability_states", "max_trace_gb", "allow_large_traces")]
   fit$input$memory_warning_gb <- memory_warning_gb
   if (isTRUE(conv$warn) && conv$mode != "none" &&
       !(conv$mode == "auto" && chain$nchains == 1L)) {
     messages <- .blr_convergence_warning_messages(
-      fit$convergence, if (conv$mode == "core") "core" else "auto",
+      fit$convergence, conv$mode,
       family = "stblr", operator = operator)
     if (length(messages)) warning(messages[1L], call. = FALSE)
   }

@@ -66,7 +66,7 @@ mtblr_bed(
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core"),
+  convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL,
   memory_warning_gb = 8,
   verbose = FALSE
@@ -185,13 +185,13 @@ unsigned 32-bit seeds above the signed integer maximum.}
 
 \item{keep_chains}{Retain compact per-chain posterior records.}
 
-\item{convergence}{Convergence-diagnostic mode: `"auto"` computes Tier 1
-diagnostics for two or more chains, `"none"` disables diagnostics, and
-`"core"` explicitly requests them.}
+\item{convergence}{Convergence-diagnostic mode: `"auto"` preserves core-only
+automatic behavior, `"none"` disables capture, `"core"` explicitly requests
+the five core quantities, and `"extended"` adds applicable Tier 2 groups.}
 
-\item{convergence_control}{Optional uniquely named list controlling `warn`,
-`rhat_threshold`, `ess_per_chain_threshold`,
-`mcse_mean_over_sd_threshold`, and `keep_traces`.}
+\item{convergence_control}{Optional uniquely named list controlling warnings,
+thresholds, retention, extended groups, explicit selected-marker quantities,
+full probability-state opt-in, and hard diagnostic trace-memory guards.}
 
 \item{memory_warning_gb}{Positive warning threshold in GiB, or `Inf`.}
 
@@ -238,7 +238,6 @@ and nondeterministic. The package never changes global BLAS settings; users
 should normally configure BLAS to one thread when running concurrent chain
 workers to avoid oversubscription.
 }
-
 \section{Convergence diagnostics}{
 
 Core diagnostics use post-burn, unthinned per-chain `vbs`, `vgs`, `ves`,
@@ -253,6 +252,7 @@ Diagnostics are independent of `keep_chains`. Optional convergence traces
 contain only these post-burn trait-level traces, use no extra thinning, and increase
 the analytical memory estimate. Threshold warnings are advisory and are
 aggregated at most once per fit; multiple chains or passing thresholds do
-not prove convergence. Marker, covariance off-diagonal, model-probability,
-ESS-for-SD, and quantile/median-MCSE diagnostics are not implemented.
+not prove convergence. Extended mode adds applicable low-dimensional and
+explicitly selected-marker scalar diagnostics. Matrix/simplex convergence,
+ESS-for-SD, and quantile/median MCSE remain outside the formal engine.
 }

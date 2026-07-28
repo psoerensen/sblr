@@ -59,7 +59,8 @@ stblr_csr_prior_annot(
   pi_min = 1e-08,
   pi_max = 0.5,
   vb_multiplier_min = 0.001,
-  vb_multiplier_max = 1000
+  vb_multiplier_max = 1000,
+  .convergence_spec = NULL
 )
 }
 \arguments{
@@ -151,6 +152,8 @@ marker-specific inclusion probabilities and variance multipliers from `A`.}
 
 \item{vb_multiplier_min, vb_multiplier_max}{Bounds for annotation-derived
 variance multipliers.}
+
+\item{.convergence_spec}{Internal pre-resolved diagnostic capture plan.}
 }
 \value{
 A formatted ST-BLR fit with the resolved fixed priors in `input`.

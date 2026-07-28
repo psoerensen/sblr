@@ -29,6 +29,8 @@ jobs:
             Rscript tools/audit/blr_phase19_mutation_sensitivity.R
             Rscript tools/audit/blr_phase20_mt_bayesrc_architecture_audit.R
             Rscript tools/audit/blr_phase20_mutation_sensitivity.R
+            Rscript tools/audit/blr_phase21_extended_diagnostics_architecture_audit.R
+            Rscript tools/audit/blr_phase21_mutation_sensitivity.R
       - name: Peak-RSS smoke measurement
         run: Rscript tools/benchmarks/measure_peak_rss.R --smoke
       - name: Package check

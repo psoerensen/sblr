@@ -82,6 +82,7 @@ inline MtDefaultFinalResult finalize_mt_default_result(
   std::move(core_result.prior_component_probabilities);
  result.annotation_updates_attempted=core_result.annotation_updates_attempted;
  result.annotation_updates_completed=core_result.annotation_updates_completed;
+ result.convergence=std::move(core_result.convergence);
  return result;
 }
 

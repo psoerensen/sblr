@@ -34,6 +34,7 @@ phase7a_sbayesrc_run <- function(config,raw=FALSE) {
 
 phase7a_sbayesrc_normalize <- function(x) {
   if(!is.list(x)) return(x)
+  x$convergence_trace <- NULL
   for(nm in names(x)) if(nm %in% c("seconds_mean","seconds_max")) x[[nm]][]<-0 else if(nm=="ld_prefix") x[[nm]]<-"<fixture>" else x[[nm]]<-phase7a_sbayesrc_normalize(x[[nm]])
   x
 }

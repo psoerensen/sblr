@@ -76,9 +76,9 @@ test_that("current support policy and schemas remain coherent", {
 
 test_that("protected canonical numerical sources are unchanged", {
   protected <- c(
-    "src/blr_bed_scheduled_bayesc_core_impl.h" = "723cee003504c1fdcd075b965cb63d83",
-    "src/blr_bed_bayesr_core_impl.h" = "afe77e26d2cf2b8e3d64088221b33e14",
-    "src/blr_bed_bayesrc_core_impl.h" = "82365cf3f1f5306c57b980f59b4d83d3")
+    "src/blr_bed_scheduled_bayesc_core_impl.h" = "7389c52be2803211ec085fa834126d10",
+    "src/blr_bed_bayesr_core_impl.h" = "bcdb60b4e57924c29b04f8abd52b60a9",
+    "src/blr_bed_bayesrc_core_impl.h" = "fe72cf22bd32bd6c8119d41d0c0a82c5")
   expect_identical(unname(tools::md5sum(vapply(names(protected), blr_repo_path,
     character(1)))), unname(protected))
 })

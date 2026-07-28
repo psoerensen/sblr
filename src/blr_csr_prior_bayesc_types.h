@@ -53,10 +53,14 @@ struct CsrPriorBayesCExecutionContext {
  std::size_t ld_row_ptr_count=0;
  const CsrPriorBayesCLdFriendsView* ld_friends=nullptr;
  const std::vector<int>* marker_order=nullptr;
+ const std::vector<int>* convergence_markers=nullptr;
+ bool convergence_b=false, convergence_d=false;
 };
 
 struct CsrPriorBayesCExecutionResult {
  std::vector<std::vector<std::vector<double>>> raw;
+ std::vector<arma::mat> convergence_b;
+ std::vector<arma::imat> convergence_d;
 };
 
 inline void validate_csr_prior_bayesc_execution_context(
@@ -90,10 +94,13 @@ inline void validate_csr_prior_bayesc_execution_context(
      !x.residual_scale_prior || !x.marker_variance_initial ||
      !x.residual_variance_initial || !x.global_probability || !x.ld_storage ||
      !x.initial_inclusion || !x.initial_residual || !x.ld_friends ||
-     !x.marker_order)
+     !x.marker_order || !x.convergence_markers)
   throw std::invalid_argument("fixed-prior execution context has a null dependency");
  if (x.marker_order->size()!=data.marker_count)
   throw std::invalid_argument("fixed-prior marker order length mismatch");
+ for (const int marker : *x.convergence_markers)
+  if (marker < 0 || marker >= x.marker_count)
+   throw std::invalid_argument("fixed-prior convergence marker index is out of range");
 }
 
 CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
