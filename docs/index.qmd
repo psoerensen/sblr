@@ -1,0 +1,83 @@
+---
+title: "sblr"
+subtitle: "Scalable Bayesian Linear Regression"
+---
+
+`sblr` is an experimental R package for Bayesian genomic prediction and
+variable selection. It supports individual-level PLINK BED genotypes, GWAS
+summary statistics, sparse LD matrices, block-eigen LD operators, multi-trait
+models, and annotation-informed priors.
+
+::: {.callout-note title="Research software"}
+The package is a research implementation and is not yet CRAN-ready. Its public
+model names, operator contracts, fit schema, and seven canonical fitting
+interfaces are stabilized and documented, but scientific analyses still need
+appropriate chain lengths, sensitivity checks, and external validation.
+:::
+
+## Start here
+
+- [Practical Notes](notes/index.qmd) explain model choice, data preparation,
+  fitting, outputs, credible sets, and diagnostic interpretation.
+- [Statistical Methods](methods/index.qmd) describe the implemented
+  likelihoods, priors, state spaces, annotation models, and LD operators.
+- [Maintained workflows](https://github.com/psoerensen/sblr/tree/master/examples/workflows)
+  provide small canonical examples and identify external-data requirements.
+- [The GitHub repository](https://github.com/psoerensen/sblr) contains the
+  package source, generated R help, tests, and development contracts.
+
+For downstream interpretation, see [Credible sets and fine-mapping](notes/credible_sets_and_finemapping.qmd).
+For chain-mixing assessment, see [Convergence diagnostics](notes/convergence_diagnostics.qmd).
+
+## Canonical fitting functions
+
+```r
+stblr_csr()
+stblr_csr_annot()
+stblr_block_eigen()
+stblr_bed()
+
+mtblr_csr()
+mtblr_block_eigen()
+mtblr_bed()
+```
+
+The STBLR functions fit scalar-trait models. The MTBLR functions fit one joint
+multi-trait model per logical chain. Operators are prepared once per fit and
+shared across deterministic logical chains.
+
+## Model names
+
+| Model | Prior kernel | Data level |
+|---|---|---|
+| `bayesc` | BayesC | individual level |
+| `sbayesc` | BayesC | summary statistics |
+| `bayesr` | BayesR | individual level |
+| `sbayesr` | BayesR | summary statistics |
+| `bayesrc` | annotation-informed BayesR | individual level |
+| `sbayesrc` | annotation-informed BayesR | summary statistics |
+
+The `s` prefix means **summary statistics**. It does not activate MAF-dependent
+effect scaling.
+
+`selection_s` is a separate, optional MAF-dependent effect-variance control.
+It can be used only on routes that explicitly support it; its value and MAF
+provenance are recorded independently of the public model name. See the
+[`selection_s` guide](notes/selection_s.qmd) for the scale definition and
+support limits.
+
+## Data representations and diagnostics
+
+The canonical operators are packed BED for individual-level analysis, sparse
+CSR LD for summary-statistics analysis, and block-eigen LD construction with a
+reconstructed runtime operator. The [data-representation guide](notes/data_representations.qmd)
+explains their scales, alignment requirements, and provenance.
+
+Core convergence diagnostics cover the five trait-level variance traces.
+Extended diagnostics cover applicable low-dimensional covariance,
+probability, annotation, and sampled `selection_s` parameters. Explicitly
+selected markers can additionally retain effective-effect, binary-activity,
+and mixture-component mixing diagnostics under a pre-execution memory guard.
+
+Diagnostics assess MCMC mixing; they do not prove model correctness or
+absolute convergence.
