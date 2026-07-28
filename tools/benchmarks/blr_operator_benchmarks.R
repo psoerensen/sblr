@@ -26,7 +26,7 @@ rows <- list(); index <- 1L
 for (model in c("bayesr", "sbayesr")) for (operator in names(cases)) {
   entry <- cases[[operator]]
   args <- c(entry$args, common, list(method = model,
-    selection_s = if (model == "sbayesr") -1 else NULL))
+    maf_effect_s = if (model == "sbayesr") -1 else NULL))
   elapsed <- system.time(fit <- do.call(entry$fun, args))[["elapsed"]]
   rows[[index]] <- data.frame(operator = operator, model = model,
     traits = ncol(fit$bm), patterns = nrow(fit$model_patterns),

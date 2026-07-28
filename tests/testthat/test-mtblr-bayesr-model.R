@@ -14,23 +14,23 @@ test_that("MT BayesR state specification is unique, ordered, and validated", {
   expect_error(sblr:::.mtblr_bayesr_spec(
     "bayesr", patterns, NULL, 3L, c(0, .1, .1)), "unique ascending")
   explicit_unit <- sblr:::.mtblr_bayesr_spec(
-    "bayesr", patterns, rep(.25, 3L), 3L, c(0, 1), selection_s = -1)
+    "bayesr", patterns, rep(.25, 3L), 3L, c(0, 1), maf_effect_s = -1)
   expect_equal(explicit_unit$marker_scale, rep(1, 3L))
 })
 
-test_that("MT fixed selection_s independently applies the canonical MAF-S scale", {
+test_that("MT fixed maf_effect_s independently applies the canonical MAF-S scale", {
   patterns <- sblr:::.mtblr_models(matrix(c(0L, 1L), 2L, 1L),
                                     c(.8, .2), .2, 1L)
   frequency <- c(.1, .25, .4)
   scaled <- sblr:::.mtblr_bayesr_spec(
-    "bayesr", patterns, frequency, 3L, c(0, 1), selection_s = 0)
+    "bayesr", patterns, frequency, 3L, c(0, 1), maf_effect_s = 0)
   expect_equal(scaled$marker_scale, 2 * frequency * (1 - frequency))
   unit <- sblr:::.mtblr_bayesr_spec(
-    "bayesr", patterns, frequency, 3L, c(0, 1), selection_s = -1)
+    "bayesr", patterns, frequency, 3L, c(0, 1), maf_effect_s = -1)
   expect_equal(unit$marker_scale, rep(1, 3))
   expect_error(sblr:::.mtblr_bayesr_spec(
     "bayesr", patterns, frequency, 3L, c(0, 1),
-    estimate_selection_s = TRUE), "not implemented")
+    estimate_maf_effect_s = TRUE), "not implemented")
 })
 
 test_that("MT BayesR initialization enforces pattern-component consistency", {
@@ -92,9 +92,9 @@ test_that("MT BayesR public controls are aligned and failure-closed", {
     "sigmaSqAlpha_init", "intercept_flat", "sigmaSqAlpha_a",
     "sigmaSqAlpha_b", "pi_floor", "alpha_update_every", "updateAlpha")
   selection_controls <- c(
-    "selection_s", "selection_maf", "allow_reference_maf_for_selection_s",
-    "estimate_selection_s", "selection_s_init",
-    "selection_s_prior", "selection_s_proposal_sd")
+    "maf_effect_s", "effect_maf", "allow_reference_maf_for_maf_effect_s",
+    "estimate_maf_effect_s", "maf_effect_s_init",
+    "maf_effect_s_prior", "maf_effect_s_proposal_sd")
   controls <- c(bayesr_controls, bayesrc_controls, selection_controls)
   for (fun in list(mtblr_csr, mtblr_block_eigen, mtblr_bed)) {
     form <- names(formals(fun))
@@ -108,7 +108,7 @@ test_that("MT BayesR public controls are aligned and failure-closed", {
     "bayesr", patterns, NULL, 2L, c(0, 1), joint_pi = c(.5, .3, .2)),
     "joint-state count")
   expect_error(sblr:::.mtblr_bayesr_spec(
-    "bayesr", patterns, c(.2, NA), 2L, c(0, 1), selection_s = 0),
+    "bayesr", patterns, c(.2, NA), 2L, c(0, 1), maf_effect_s = 0),
     "allele frequencies")
   many <- list(matrix = rbind(matrix(0L, 1L, 13L),
     as.matrix(expand.grid(rep(list(0:1), 13L)))[-1L, , drop = FALSE]),

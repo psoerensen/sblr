@@ -8,7 +8,7 @@
 #' [mtblr_block_eigen()], and [mtblr_bed()].
 #'
 #' The public `s` model prefix denotes summary-statistics data and is
-#' independent of the optional MAF-dependent `selection_s` effect scale.
+#' independent of the optional MAF-dependent `maf_effect_s` effect scale.
 #'
 #' @useDynLib sblr, .registration = TRUE
 #' @importFrom Rcpp evalCpp

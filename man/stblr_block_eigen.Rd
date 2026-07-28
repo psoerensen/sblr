@@ -9,8 +9,8 @@ stblr_block_eigen(
   Glist,
   block_start,
   method = c("sbayesc", "sbayesr", "sbayesrc"),
-  selection_maf = NULL,
-  allow_reference_maf_for_selection_s = FALSE,
+  effect_maf = NULL,
+  allow_reference_maf_for_maf_effect_s = FALSE,
   annotation = NULL,
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01,
@@ -40,10 +40,10 @@ stblr_block_eigen(
 \item{method}{One of `"sbayesc"`, `"sbayesr"`, or `"sbayesrc"`;
 the `s` prefix denotes summary-statistics data.}
 
-\item{selection_maf}{Optional marker-aligned allele frequencies used only
-when the independent `selection_s` variance-scaling option is active.}
+\item{effect_maf}{Optional marker-aligned allele frequencies used only
+when the independent `maf_effect_s` variance-scaling option is active.}
 
-\item{allow_reference_maf_for_selection_s}{Whether aligned reference-panel
+\item{allow_reference_maf_for_maf_effect_s}{Whether aligned reference-panel
 frequencies may be used explicitly when summary-population frequencies
 are unavailable. The default is `FALSE`.}
 

@@ -1,7 +1,7 @@
 check_stblr_consistency <- getFromNamespace("check_stblr_consistency", "sblr")
 
-make_selection_s_csr_prefix <- function() {
-  prefix <- tempfile("tiny_selection_s_csr_")
+make_maf_effect_s_csr_prefix <- function() {
+  prefix <- tempfile("tiny_maf_effect_s_csr_")
   row_ptr <- c(0, 1, 1, 1)
   col_idx <- 1L
   values <- 0.4
@@ -44,7 +44,7 @@ make_selection_s_csr_prefix <- function() {
   prefix
 }
 
-selection_s_csr_stats <- function() {
+maf_effect_s_csr_stats <- function() {
   markers <- paste0("m", 1:3)
   list(
     wy = list(trait1 = stats::setNames(c(8, 3, 0.4), markers)),
@@ -57,7 +57,7 @@ selection_s_csr_stats <- function() {
   )
 }
 
-selection_s_csr_glist <- function() {
+maf_effect_s_csr_glist <- function() {
   list(
     rsidsLD = list(c("m1", "m2", "m3")),
     rsids = list(c("m3", "m1", "m2")),
@@ -65,15 +65,15 @@ selection_s_csr_glist <- function() {
   )
 }
 
-make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
+make_maf_effect_s_csr_fit <- function(maf_effect_s = NULL, updateLDswap = FALSE,
                                      seed = 11, ...) {
   stblr_csr(
-    Glist = selection_s_csr_glist(),
-    stats = selection_s_csr_stats(),
-    ld_prefix = make_selection_s_csr_prefix(),
+    Glist = maf_effect_s_csr_glist(),
+    stats = maf_effect_s_csr_stats(),
+    ld_prefix = make_maf_effect_s_csr_prefix(),
     method = "sbayesc",
-    selection_s = selection_s,
-    allow_reference_maf_for_selection_s = TRUE,
+    maf_effect_s = maf_effect_s,
+    allow_reference_maf_for_maf_effect_s = TRUE,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
     ld_swap_r2 = 0.01,
@@ -93,17 +93,17 @@ make_selection_s_csr_fit <- function(selection_s = NULL, updateLDswap = FALSE,
   )
 }
 
-make_selection_s_csr_bayesr_fit <- function(selection_s = NULL,
+make_maf_effect_s_csr_bayesr_fit <- function(maf_effect_s = NULL,
                                             updateLDswap = FALSE,
                                             seed = 11,
                                             ...) {
   stblr_csr(
-    Glist = selection_s_csr_glist(),
-    stats = selection_s_csr_stats(),
-    ld_prefix = make_selection_s_csr_prefix(),
+    Glist = maf_effect_s_csr_glist(),
+    stats = maf_effect_s_csr_stats(),
+    ld_prefix = make_maf_effect_s_csr_prefix(),
     method = "sbayesr",
-    selection_s = selection_s,
-    allow_reference_maf_for_selection_s = TRUE,
+    maf_effect_s = maf_effect_s,
+    allow_reference_maf_for_maf_effect_s = TRUE,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
     ld_swap_r2 = 0.01,
@@ -123,7 +123,7 @@ make_selection_s_csr_bayesr_fit <- function(selection_s = NULL,
   )
 }
 
-expect_selection_s_bayesr_dm_matches_component0 <- function(fit,
+expect_maf_effect_s_bayesr_dm_matches_component0 <- function(fit,
                                                             tolerance = 1e-12) {
   for (trait in names(fit$component_probabilities)) {
     expect_equal(
@@ -134,7 +134,7 @@ expect_selection_s_bayesr_dm_matches_component0 <- function(fit,
   }
 }
 
-selection_s_sbayesrc_annotations <- function() {
+maf_effect_s_sbayesrc_annotations <- function() {
   matrix(
     c(1, 0, 0, 1, 1, 1),
     nrow = 3,
@@ -143,13 +143,13 @@ selection_s_sbayesrc_annotations <- function() {
   )
 }
 
-selection_s_sbayesrc_glist <- function() {
-  glist <- selection_s_csr_glist()
-  glist$sparseLD <- list(prefix = make_selection_s_csr_prefix())
+maf_effect_s_sbayesrc_glist <- function() {
+  glist <- maf_effect_s_csr_glist()
+  glist$sparseLD <- list(prefix = make_maf_effect_s_csr_prefix())
   glist
 }
 
-make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
+make_maf_effect_s_csr_sbayesrc_fit <- function(maf_effect_s = NULL,
                                               updateLDswap = FALSE,
                                               updateB = FALSE,
                                               nchains = 1L,
@@ -158,12 +158,12 @@ make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
                                               seed = 11,
                                               ...) {
   stblr_csr_annot(
-    Glist = selection_s_sbayesrc_glist(),
-    stats = selection_s_csr_stats(),
-    annotations = selection_s_sbayesrc_annotations(),
+    Glist = maf_effect_s_sbayesrc_glist(),
+    stats = maf_effect_s_csr_stats(),
+    annotations = maf_effect_s_sbayesrc_annotations(),
     annotation_model = "annotation_probit_stick",
-    selection_s = selection_s,
-    allow_reference_maf_for_selection_s = TRUE,
+    maf_effect_s = maf_effect_s,
+    allow_reference_maf_for_maf_effect_s = TRUE,
     updateLDswap = updateLDswap,
     ld_swap_prob = 1,
     ld_swap_r2 = 0.01,
@@ -187,7 +187,7 @@ make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
   )
 }
 
-expect_selection_s_sbayesrc_finite <- function(fit) {
+expect_maf_effect_s_sbayesrc_finite <- function(fit) {
   expect_true(all(is.finite(fit$dm)))
   expect_true(all(is.finite(fit$bm)))
   expect_true(all(is.finite(fit$vbs)))
@@ -226,7 +226,7 @@ get_sbayesrc_null_component_col <- function(cp) {
   )
 }
 
-expect_selection_s_sbayesrc_component_consistency <- function(fit,
+expect_maf_effect_s_sbayesrc_component_consistency <- function(fit,
                                                              tolerance = 1e-12) {
   for (trait in names(fit$component_probabilities)) {
     cp <- fit$component_probabilities[[trait]]
@@ -246,16 +246,16 @@ expect_selection_s_sbayesrc_component_consistency <- function(fit,
   }
 }
 
-test_that("summary BayesC selection_s -1 gives the unit-scale reduction", {
+test_that("summary BayesC maf_effect_s -1 gives the unit-scale reduction", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
   args <- list(
-    Glist = selection_s_csr_glist(),
-    stats = selection_s_csr_stats(),
-    ld_prefix = make_selection_s_csr_prefix(),
+    Glist = maf_effect_s_csr_glist(),
+    stats = maf_effect_s_csr_stats(),
+    ld_prefix = make_maf_effect_s_csr_prefix(),
     method = "sbayesc",
     nit = 8,
     nburn = 2,
@@ -271,7 +271,7 @@ test_that("summary BayesC selection_s -1 gives the unit-scale reduction", {
   )
   fit_omitted <- do.call(stblr_csr, args)
   fit_null <- do.call(stblr_csr, c(args, list(
-    selection_s = -1, allow_reference_maf_for_selection_s = TRUE)))
+    maf_effect_s = -1, allow_reference_maf_for_maf_effect_s = TRUE)))
 
   expect_equal(fit_null$dm, fit_omitted$dm)
   expect_equal(fit_null$bm, fit_omitted$bm)
@@ -280,53 +280,53 @@ test_that("summary BayesC selection_s -1 gives the unit-scale reduction", {
   expect_equal(fit_null$ves, fit_omitted$ves)
   expect_identical(fit_null$model, "sbayesc")
   expect_identical(fit_null$input$effect_scale, "maf_s")
-  expect_identical(fit_null$input$selection_s, -1)
+  expect_identical(fit_null$input$maf_effect_s, -1)
 })
 
-test_that("fixed selection_s CSR BayesC fits return finite outputs and metadata", {
+test_that("fixed maf_effect_s CSR BayesC fits return finite outputs and metadata", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
   for (s in c(0, -0.25)) {
-    fit <- make_selection_s_csr_fit(selection_s = s, seed = 110 + round(100 * s))
+    fit <- make_maf_effect_s_csr_fit(maf_effect_s = s, seed = 110 + round(100 * s))
     expect_true(all(is.finite(fit$dm)))
     expect_true(all(is.finite(fit$bm)))
     expect_true(all(is.finite(fit$vle)))
     expect_true(all(is.finite(fit$vld)))
-    expect_equal(fit$input$selection_s, s)
-    expect_true(fit$input$selection_s_fixed)
-    expect_equal(fit$input$selection_s_exponent, s + 1)
-    expect_equal(fit$input$selection_s_scale, "standardized_genotype_effect")
+    expect_equal(fit$input$maf_effect_s, s)
+    expect_true(fit$input$maf_effect_s_fixed)
+    expect_equal(fit$input$maf_effect_s_exponent, s + 1)
+    expect_equal(fit$input$maf_effect_s_scale, "standardized_genotype_effect")
   }
 })
 
-test_that("SBayesC selection_s = -1 records unit prior scale", {
+test_that("SBayesC maf_effect_s = -1 records unit prior scale", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
-  fit_s_minus_one <- make_selection_s_csr_fit(selection_s = -1, seed = 121)
+  fit_s_minus_one <- make_maf_effect_s_csr_fit(maf_effect_s = -1, seed = 121)
 
   expect_true(all(is.finite(fit_s_minus_one$dm)))
   expect_true(all(is.finite(fit_s_minus_one$bm)))
   expect_true(all(is.finite(fit_s_minus_one$vbs)))
   expect_true(all(is.finite(fit_s_minus_one$ves)))
-  expect_equal(fit_s_minus_one$input$selection_s, -1)
-  expect_true(fit_s_minus_one$input$selection_s_fixed)
-  expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
+  expect_equal(fit_s_minus_one$input$maf_effect_s, -1)
+  expect_true(fit_s_minus_one$input$maf_effect_s_fixed)
+  expect_equal(fit_s_minus_one$input$maf_effect_s_exponent, 0)
 })
 
-test_that("summary BayesR omitted selection_s leaves MAF scaling inactive", {
+test_that("summary BayesR omitted maf_effect_s leaves MAF scaling inactive", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
-  fit_omitted <- make_selection_s_csr_bayesr_fit(seed = 141)
-  fit_null <- make_selection_s_csr_bayesr_fit(selection_s = NULL, seed = 141)
+  fit_omitted <- make_maf_effect_s_csr_bayesr_fit(seed = 141)
+  fit_null <- make_maf_effect_s_csr_bayesr_fit(maf_effect_s = NULL, seed = 141)
 
   expect_equal(fit_null$dm, fit_omitted$dm)
   expect_equal(fit_null$bm, fit_omitted$bm)
@@ -336,37 +336,37 @@ test_that("summary BayesR omitted selection_s leaves MAF scaling inactive", {
   expect_equal(fit_null$component_probabilities, fit_omitted$component_probabilities)
   expect_identical(fit_null$model, "sbayesr")
   expect_identical(fit_null$input$effect_scale, "component")
-  expect_null(fit_null$input$selection_s)
-  expect_false(fit_null$input$selection_s_fixed)
-  expect_null(fit_null$input$selection_s_exponent)
+  expect_null(fit_null$input$maf_effect_s)
+  expect_false(fit_null$input$maf_effect_s_fixed)
+  expect_null(fit_null$input$maf_effect_s_exponent)
 })
 
-test_that("SBayesR selection_s = -1 records unit prior scale", {
+test_that("SBayesR maf_effect_s = -1 records unit prior scale", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
-  fit_s_minus_one <- make_selection_s_csr_bayesr_fit(selection_s = -1, seed = 142)
+  fit_s_minus_one <- make_maf_effect_s_csr_bayesr_fit(maf_effect_s = -1, seed = 142)
 
   expect_true(all(is.finite(fit_s_minus_one$dm)))
   expect_true(all(is.finite(fit_s_minus_one$bm)))
   expect_true(all(is.finite(fit_s_minus_one$vbs)))
   expect_true(all(is.finite(fit_s_minus_one$vle)))
   expect_true(all(is.finite(fit_s_minus_one$vld)))
-  expect_equal(fit_s_minus_one$input$selection_s, -1)
-  expect_true(fit_s_minus_one$input$selection_s_fixed)
-  expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
+  expect_equal(fit_s_minus_one$input$maf_effect_s, -1)
+  expect_true(fit_s_minus_one$input$maf_effect_s_fixed)
+  expect_equal(fit_s_minus_one$input$maf_effect_s_exponent, 0)
 })
 
-test_that("fixed selection_s CSR BayesR fits return finite outputs and component probabilities", {
+test_that("fixed maf_effect_s CSR BayesR fits return finite outputs and component probabilities", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
   for (s in c(0, -0.25)) {
-    fit <- make_selection_s_csr_bayesr_fit(selection_s = s, seed = 150 + round(100 * s))
+    fit <- make_maf_effect_s_csr_bayesr_fit(maf_effect_s = s, seed = 150 + round(100 * s))
     expect_true(all(is.finite(fit$dm)))
     expect_true(all(is.finite(fit$bm)))
     expect_true(all(is.finite(fit$vle)))
@@ -375,84 +375,84 @@ test_that("fixed selection_s CSR BayesR fits return finite outputs and component
     expect_true(all(vapply(fit$component_probabilities, function(cp) {
       all(abs(rowSums(cp) - 1) < 1e-8)
     }, logical(1))))
-    expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
-    expect_equal(fit$input$selection_s, s)
-    expect_true(fit$input$selection_s_fixed)
-    expect_equal(fit$input$selection_s_exponent, s + 1)
-    expect_equal(fit$input$selection_s_scale, "standardized_genotype_effect")
+    expect_maf_effect_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
+    expect_equal(fit$input$maf_effect_s, s)
+    expect_true(fit$input$maf_effect_s_fixed)
+    expect_equal(fit$input$maf_effect_s_exponent, s + 1)
+    expect_equal(fit$input$maf_effect_s_scale, "standardized_genotype_effect")
   }
 })
 
-test_that("selection_s validates fixed-S inputs and unsupported CSR backends", {
+test_that("maf_effect_s validates fixed-S inputs and unsupported CSR backends", {
   expect_error(
-    make_selection_s_csr_fit(selection_s = c(0, 1)),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_fit(maf_effect_s = c(0, 1)),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_fit(selection_s = NA_real_),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_fit(maf_effect_s = NA_real_),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_fit(selection_s = NaN),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_fit(maf_effect_s = NaN),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_fit(selection_s = Inf),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_fit(maf_effect_s = Inf),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_fit(selection_s = "0"),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_fit(maf_effect_s = "0"),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(selection_s = c(0, 1)),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_bayesr_fit(maf_effect_s = c(0, 1)),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(selection_s = NA_real_),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_bayesr_fit(maf_effect_s = NA_real_),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
     stblr_csr(
-      Glist = selection_s_csr_glist(),
-      stats = selection_s_csr_stats(),
-      ld_prefix = make_selection_s_csr_prefix(),
+      Glist = maf_effect_s_csr_glist(),
+      stats = maf_effect_s_csr_stats(),
+      ld_prefix = make_maf_effect_s_csr_prefix(),
       method = "sbayesc",
       scheduled = TRUE,
-      selection_s = 0,
-      allow_reference_maf_for_selection_s = TRUE,
+      maf_effect_s = 0,
+      allow_reference_maf_for_maf_effect_s = TRUE,
       nit = 2,
       nburn = 0
     ),
-    "selection_s is currently supported only for unscheduled CSR BayesC/BayesR"
+    "maf_effect_s is currently supported only for unscheduled CSR BayesC/BayesR"
   )
 })
 
-test_that("selection_s validates MAF alignment to CSR LD marker order", {
-  bad_glist <- selection_s_csr_glist()
+test_that("maf_effect_s validates MAF alignment to CSR LD marker order", {
+  bad_glist <- maf_effect_s_csr_glist()
   bad_glist$rsids[[1]] <- c("m3", "m1", "missing")
   expect_error(
     stblr_csr(
       Glist = bad_glist,
-      stats = selection_s_csr_stats(),
-      ld_prefix = make_selection_s_csr_prefix(),
+      stats = maf_effect_s_csr_stats(),
+      ld_prefix = make_maf_effect_s_csr_prefix(),
       method = "sbayesc",
-      selection_s = 0,
-      allow_reference_maf_for_selection_s = TRUE,
+      maf_effect_s = 0,
+      allow_reference_maf_for_maf_effect_s = TRUE,
       nit = 2,
       nburn = 0
     ),
-    "Could not align MAF to LD marker order for selection_s"
+    "Could not align MAF to LD marker order for maf_effect_s"
   )
 })
 
-test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
+test_that("maf_effect_s works with CSR BayesC LD-swap and backend consistency", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_fit(selection_s = 0, updateLDswap = TRUE, seed = 131)
+  fit <- make_maf_effect_s_csr_fit(maf_effect_s = 0, updateLDswap = TRUE, seed = 131)
 
   expect_true(all(is.finite(fit$dm)))
   expect_true(all(is.finite(fit$bm)))
@@ -466,15 +466,15 @@ test_that("selection_s works with CSR BayesC LD-swap and backend consistency", {
   expect_true(all(chk$checks$ok))
 })
 
-test_that("sampled selection_s runs for CSR BayesC and returns mechanics", {
+test_that("sampled maf_effect_s runs for CSR BayesC and returns mechanics", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_fit(
-    estimate_selection_s = TRUE,
-    selection_s_init = 0,
+  fit <- make_maf_effect_s_csr_fit(
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_init = 0,
     seed = 201
   )
 
@@ -484,60 +484,60 @@ test_that("sampled selection_s runs for CSR BayesC and returns mechanics", {
   expect_true(all(is.finite(fit$vgs)))
   expect_true(all(is.finite(fit$vle)))
   expect_true(all(is.finite(fit$vld)))
-  expect_true(is.matrix(fit$selection_s_trace))
-  expect_equal(ncol(fit$selection_s_trace), length(selection_s_csr_stats()$yy))
-  expect_length(fit$selection_s, length(selection_s_csr_stats()$yy))
-  expect_true(all(is.finite(fit$selection_s)))
-  expect_true(all(fit$selection_s_trace >= -3 & fit$selection_s_trace <= 2))
-  expect_true(all(is.finite(fit$selection_s_acceptance)))
-  expect_true(all(fit$selection_s_acceptance >= 0 & fit$selection_s_acceptance <= 1))
-  expect_false(all(as.numeric(fit$selection_s_trace[, 1]) ==
-                     as.numeric(fit$selection_s_trace[1, 1])))
-  expect_false(fit$input$selection_s_fixed)
-  expect_true(fit$input$estimate_selection_s)
-  expect_null(fit$input$selection_s)
-  expect_equal(fit$input$selection_s_init, 0)
-  expect_equal(fit$input$selection_s_prior, c(-3, 2))
-  expect_equal(fit$input$selection_s_proposal_sd, 0.35)
+  expect_true(is.matrix(fit$maf_effect_s_trace))
+  expect_equal(ncol(fit$maf_effect_s_trace), length(maf_effect_s_csr_stats()$yy))
+  expect_length(fit$maf_effect_s, length(maf_effect_s_csr_stats()$yy))
+  expect_true(all(is.finite(fit$maf_effect_s)))
+  expect_true(all(fit$maf_effect_s_trace >= -3 & fit$maf_effect_s_trace <= 2))
+  expect_true(all(is.finite(fit$maf_effect_s_acceptance)))
+  expect_true(all(fit$maf_effect_s_acceptance >= 0 & fit$maf_effect_s_acceptance <= 1))
+  expect_false(all(as.numeric(fit$maf_effect_s_trace[, 1]) ==
+                     as.numeric(fit$maf_effect_s_trace[1, 1])))
+  expect_false(fit$input$maf_effect_s_fixed)
+  expect_true(fit$input$estimate_maf_effect_s)
+  expect_null(fit$input$maf_effect_s)
+  expect_equal(fit$input$maf_effect_s_init, 0)
+  expect_equal(fit$input$maf_effect_s_prior, c(-3, 2))
+  expect_equal(fit$input$maf_effect_s_proposal_sd, 0.35)
 })
 
-test_that("sampled selection_s supports keep_chains and is reproducible", {
+test_that("sampled maf_effect_s supports keep_chains and is reproducible", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
   args <- list(
-    estimate_selection_s = TRUE,
-    selection_s_proposal_sd = 0.25,
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_proposal_sd = 0.25,
     seed = 202,
     nchains = 2,
     keep_chains = TRUE
   )
-  fit1 <- do.call(make_selection_s_csr_fit, args)
-  fit2 <- do.call(make_selection_s_csr_fit, args)
+  fit1 <- do.call(make_maf_effect_s_csr_fit, args)
+  fit2 <- do.call(make_maf_effect_s_csr_fit, args)
 
-  expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
-  expect_equal(fit1$selection_s, fit2$selection_s)
+  expect_equal(fit1$maf_effect_s_trace, fit2$maf_effect_s_trace)
+  expect_equal(fit1$maf_effect_s, fit2$maf_effect_s)
   expect_equal(length(fit1$chains), 2L)
   expect_true(all(vapply(fit1$chains, function(ch) {
-    is.numeric(ch$selection_s) &&
-      length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
-      is.finite(ch$selection_s_acceptance) &&
-      ch$selection_s_acceptance >= 0 &&
-      ch$selection_s_acceptance <= 1
+    is.numeric(ch$maf_effect_s) &&
+      length(ch$maf_effect_s) == nrow(fit1$maf_effect_s_trace) &&
+      is.finite(ch$maf_effect_s_acceptance) &&
+      ch$maf_effect_s_acceptance >= 0 &&
+      ch$maf_effect_s_acceptance <= 1
   }, logical(1))))
 })
 
-test_that("sampled selection_s runs for CSR BayesR and returns mechanics", {
+test_that("sampled maf_effect_s runs for CSR BayesR and returns mechanics", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_bayesr_fit(
-    estimate_selection_s = TRUE,
-    selection_s_init = 0,
+  fit <- make_maf_effect_s_csr_bayesr_fit(
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_init = 0,
     seed = 211
   )
 
@@ -551,148 +551,148 @@ test_that("sampled selection_s runs for CSR BayesR and returns mechanics", {
   expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
-  expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-12)
-  expect_true(is.matrix(fit$selection_s_trace))
-  expect_equal(ncol(fit$selection_s_trace), length(selection_s_csr_stats()$yy))
-  expect_length(fit$selection_s, length(selection_s_csr_stats()$yy))
-  expect_true(all(is.finite(fit$selection_s)))
-  expect_true(all(fit$selection_s_trace >= -3 & fit$selection_s_trace <= 2))
-  expect_true(all(is.finite(fit$selection_s_acceptance)))
-  expect_true(all(fit$selection_s_acceptance >= 0 & fit$selection_s_acceptance <= 1))
-  expect_false(all(as.numeric(fit$selection_s_trace[, 1]) ==
-                     as.numeric(fit$selection_s_trace[1, 1])))
-  expect_false(fit$input$selection_s_fixed)
-  expect_true(fit$input$estimate_selection_s)
-  expect_null(fit$input$selection_s)
-  expect_equal(fit$input$selection_s_init, 0)
-  expect_equal(fit$input$selection_s_prior, c(-3, 2))
-  expect_equal(fit$input$selection_s_proposal_sd, 0.35)
+  expect_maf_effect_s_bayesr_dm_matches_component0(fit, tolerance = 1e-12)
+  expect_true(is.matrix(fit$maf_effect_s_trace))
+  expect_equal(ncol(fit$maf_effect_s_trace), length(maf_effect_s_csr_stats()$yy))
+  expect_length(fit$maf_effect_s, length(maf_effect_s_csr_stats()$yy))
+  expect_true(all(is.finite(fit$maf_effect_s)))
+  expect_true(all(fit$maf_effect_s_trace >= -3 & fit$maf_effect_s_trace <= 2))
+  expect_true(all(is.finite(fit$maf_effect_s_acceptance)))
+  expect_true(all(fit$maf_effect_s_acceptance >= 0 & fit$maf_effect_s_acceptance <= 1))
+  expect_false(all(as.numeric(fit$maf_effect_s_trace[, 1]) ==
+                     as.numeric(fit$maf_effect_s_trace[1, 1])))
+  expect_false(fit$input$maf_effect_s_fixed)
+  expect_true(fit$input$estimate_maf_effect_s)
+  expect_null(fit$input$maf_effect_s)
+  expect_equal(fit$input$maf_effect_s_init, 0)
+  expect_equal(fit$input$maf_effect_s_prior, c(-3, 2))
+  expect_equal(fit$input$maf_effect_s_proposal_sd, 0.35)
 })
 
-test_that("sampled selection_s CSR BayesR supports keep_chains and is reproducible", {
+test_that("sampled maf_effect_s CSR BayesR supports keep_chains and is reproducible", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
   args <- list(
-    estimate_selection_s = TRUE,
-    selection_s_proposal_sd = 0.25,
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_proposal_sd = 0.25,
     seed = 212,
     nchains = 2,
     keep_chains = TRUE
   )
-  fit1 <- do.call(make_selection_s_csr_bayesr_fit, args)
-  fit2 <- do.call(make_selection_s_csr_bayesr_fit, args)
+  fit1 <- do.call(make_maf_effect_s_csr_bayesr_fit, args)
+  fit2 <- do.call(make_maf_effect_s_csr_bayesr_fit, args)
 
   expect_equal(fit1$dm, fit2$dm)
   expect_equal(fit1$bm, fit2$bm)
-  expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
-  expect_equal(fit1$selection_s, fit2$selection_s)
+  expect_equal(fit1$maf_effect_s_trace, fit2$maf_effect_s_trace)
+  expect_equal(fit1$maf_effect_s, fit2$maf_effect_s)
   expect_equal(length(fit1$chains), 2L)
   expect_true(all(vapply(fit1$chains, function(ch) {
-    is.numeric(ch$selection_s) &&
-      length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
-      is.finite(ch$selection_s_acceptance) &&
-      ch$selection_s_acceptance >= 0 &&
-      ch$selection_s_acceptance <= 1
+    is.numeric(ch$maf_effect_s) &&
+      length(ch$maf_effect_s) == nrow(fit1$maf_effect_s_trace) &&
+      is.finite(ch$maf_effect_s_acceptance) &&
+      ch$maf_effect_s_acceptance >= 0 &&
+      ch$maf_effect_s_acceptance <= 1
   }, logical(1))))
 })
 
-test_that("sampled selection_s validates inputs and unsupported combinations", {
+test_that("sampled maf_effect_s validates inputs and unsupported combinations", {
   expect_error(
-    make_selection_s_csr_fit(selection_s = 0, estimate_selection_s = TRUE),
-    "selection_s and estimate_selection_s = TRUE cannot both be requested"
+    make_maf_effect_s_csr_fit(maf_effect_s = 0, estimate_maf_effect_s = TRUE),
+    "maf_effect_s and estimate_maf_effect_s = TRUE cannot both be requested"
   )
   expect_error(
-    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_init = 3),
-    "selection_s_init must lie within selection_s_prior"
+    make_maf_effect_s_csr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_init = 3),
+    "maf_effect_s_init must lie within maf_effect_s_prior"
   )
   expect_error(
-    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_prior = c(-2, 0, 2)),
-    "selection_s_prior must be a finite numeric vector of length 2"
+    make_maf_effect_s_csr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_prior = c(-2, 0, 2)),
+    "maf_effect_s_prior must be a finite numeric vector of length 2"
   )
   expect_error(
-    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_prior = c(2, -2)),
-    "selection_s_prior lower bound must be less than upper bound"
+    make_maf_effect_s_csr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_prior = c(2, -2)),
+    "maf_effect_s_prior lower bound must be less than upper bound"
   )
   expect_error(
-    make_selection_s_csr_fit(estimate_selection_s = TRUE, selection_s_proposal_sd = 0),
-    "selection_s_proposal_sd must be a finite positive numeric scalar"
+    make_maf_effect_s_csr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_proposal_sd = 0),
+    "maf_effect_s_proposal_sd must be a finite positive numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(selection_s = 0, estimate_selection_s = TRUE),
-    "selection_s and estimate_selection_s = TRUE cannot both be requested"
+    make_maf_effect_s_csr_bayesr_fit(maf_effect_s = 0, estimate_maf_effect_s = TRUE),
+    "maf_effect_s and estimate_maf_effect_s = TRUE cannot both be requested"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(estimate_selection_s = TRUE, selection_s_init = 3),
-    "selection_s_init must lie within selection_s_prior"
+    make_maf_effect_s_csr_bayesr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_init = 3),
+    "maf_effect_s_init must lie within maf_effect_s_prior"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(estimate_selection_s = TRUE, selection_s_prior = c(-2, 0, 2)),
-    "selection_s_prior must be a finite numeric vector of length 2"
+    make_maf_effect_s_csr_bayesr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_prior = c(-2, 0, 2)),
+    "maf_effect_s_prior must be a finite numeric vector of length 2"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(estimate_selection_s = TRUE, selection_s_prior = c(2, -2)),
-    "selection_s_prior lower bound must be less than upper bound"
+    make_maf_effect_s_csr_bayesr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_prior = c(2, -2)),
+    "maf_effect_s_prior lower bound must be less than upper bound"
   )
   expect_error(
-    make_selection_s_csr_bayesr_fit(estimate_selection_s = TRUE, selection_s_proposal_sd = 0),
-    "selection_s_proposal_sd must be a finite positive numeric scalar"
+    make_maf_effect_s_csr_bayesr_fit(estimate_maf_effect_s = TRUE, maf_effect_s_proposal_sd = 0),
+    "maf_effect_s_proposal_sd must be a finite positive numeric scalar"
   )
   expect_error(
     stblr_csr(
-      Glist = selection_s_csr_glist(),
-      stats = selection_s_csr_stats(),
-      ld_prefix = make_selection_s_csr_prefix(),
+      Glist = maf_effect_s_csr_glist(),
+      stats = maf_effect_s_csr_stats(),
+      ld_prefix = make_maf_effect_s_csr_prefix(),
       method = "sbayesc",
       scheduled = TRUE,
-      estimate_selection_s = TRUE,
-      allow_reference_maf_for_selection_s = TRUE,
+      estimate_maf_effect_s = TRUE,
+      allow_reference_maf_for_maf_effect_s = TRUE,
       nit = 2,
       nburn = 0
     ),
-    "estimate_selection_s is currently supported only for unscheduled CSR BayesC"
+    "estimate_maf_effect_s is currently supported only for unscheduled CSR BayesC"
   )
 })
 
-test_that("sampled selection_s works with CSR BayesR LD-swap", {
+test_that("sampled maf_effect_s works with CSR BayesR LD-swap", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_bayesr_fit(
-    estimate_selection_s = TRUE,
-    selection_s_proposal_sd = 0.25,
+  fit <- make_maf_effect_s_csr_bayesr_fit(
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_proposal_sd = 0.25,
     updateLDswap = TRUE,
     seed = 213
   )
 
-  expect_true(all(is.finite(fit$selection_s_trace)))
+  expect_true(all(is.finite(fit$maf_effect_s_trace)))
   expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$diagnostics$ld_swap)))
   expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
-  expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-12)
+  expect_maf_effect_s_bayesr_dm_matches_component0(fit, tolerance = 1e-12)
 })
 
-test_that("sampled selection_s works with CSR BayesC LD-swap", {
+test_that("sampled maf_effect_s works with CSR BayesC LD-swap", {
   skip_if_not(
     exists("stblr_cpg_omp_csr", mode = "function"),
     "native BayesC CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_fit(
-    estimate_selection_s = TRUE,
-    selection_s_proposal_sd = 0.25,
+  fit <- make_maf_effect_s_csr_fit(
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_proposal_sd = 0.25,
     updateLDswap = TRUE,
     seed = 203
   )
 
-  expect_true(all(is.finite(fit$selection_s_trace)))
+  expect_true(all(is.finite(fit$maf_effect_s_trace)))
   expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$diagnostics$ld_swap)))
@@ -700,14 +700,14 @@ test_that("sampled selection_s works with CSR BayesC LD-swap", {
   expect_null(fit$diagnostics$ld_swap_chains)
 })
 
-test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
+test_that("maf_effect_s works with CSR BayesR LD-swap and backend consistency", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_bayesr", mode = "function"),
     "native BayesR CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_bayesr_fit(
-    selection_s = 0,
+  fit <- make_maf_effect_s_csr_bayesr_fit(
+    maf_effect_s = 0,
     updateLDswap = TRUE,
     seed = 161
   )
@@ -722,20 +722,20 @@ test_that("selection_s works with CSR BayesR LD-swap and backend consistency", {
   expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
-  expect_selection_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
+  expect_maf_effect_s_bayesr_dm_matches_component0(fit, tolerance = 1e-8)
 
   chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
 })
 
-test_that("summary BayesRC omitted selection_s leaves MAF scaling inactive", {
+test_that("summary BayesRC omitted maf_effect_s leaves MAF scaling inactive", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
-  fit_omitted <- make_selection_s_csr_sbayesrc_fit(seed = 171)
-  fit_null <- make_selection_s_csr_sbayesrc_fit(selection_s = NULL, seed = 171)
+  fit_omitted <- make_maf_effect_s_csr_sbayesrc_fit(seed = 171)
+  fit_null <- make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = NULL, seed = 171)
 
   expect_equal(fit_null$dm, fit_omitted$dm)
   expect_equal(fit_null$bm, fit_omitted$bm)
@@ -743,271 +743,271 @@ test_that("summary BayesRC omitted selection_s leaves MAF scaling inactive", {
   expect_equal(fit_null$vle, fit_omitted$vle)
   expect_equal(fit_null$vld, fit_omitted$vld)
   expect_equal(fit_null$component_probabilities, fit_omitted$component_probabilities)
-  expect_null(fit_null$input$selection_s)
-  expect_false(fit_null$input$selection_s_fixed)
-  expect_null(fit_null$input$selection_s_exponent)
+  expect_null(fit_null$input$maf_effect_s)
+  expect_false(fit_null$input$maf_effect_s_fixed)
+  expect_null(fit_null$input$maf_effect_s_exponent)
 })
 
-test_that("SBayesRC selection_s = -1 records unit prior scale", {
+test_that("SBayesRC maf_effect_s = -1 records unit prior scale", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
-  fit_s_minus_one <- make_selection_s_csr_sbayesrc_fit(selection_s = -1, seed = 172)
+  fit_s_minus_one <- make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = -1, seed = 172)
 
-  expect_selection_s_sbayesrc_finite(fit_s_minus_one)
-  expect_selection_s_sbayesrc_component_consistency(fit_s_minus_one)
-  expect_equal(fit_s_minus_one$input$selection_s, -1)
-  expect_true(fit_s_minus_one$input$selection_s_fixed)
-  expect_equal(fit_s_minus_one$input$selection_s_exponent, 0)
+  expect_maf_effect_s_sbayesrc_finite(fit_s_minus_one)
+  expect_maf_effect_s_sbayesrc_component_consistency(fit_s_minus_one)
+  expect_equal(fit_s_minus_one$input$maf_effect_s, -1)
+  expect_true(fit_s_minus_one$input$maf_effect_s_fixed)
+  expect_equal(fit_s_minus_one$input$maf_effect_s_exponent, 0)
 })
 
-test_that("fixed selection_s CSR SBayesRC fits return finite outputs and component probabilities", {
+test_that("fixed maf_effect_s CSR SBayesRC fits return finite outputs and component probabilities", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
   for (s in c(0, -0.25)) {
-    fit <- make_selection_s_csr_sbayesrc_fit(selection_s = s, seed = 180 + round(100 * s))
-    expect_selection_s_sbayesrc_finite(fit)
-    expect_selection_s_sbayesrc_component_consistency(fit)
-    expect_equal(fit$input$selection_s, s)
-    expect_true(fit$input$selection_s_fixed)
-    expect_equal(fit$input$selection_s_exponent, s + 1)
-    expect_equal(fit$input$selection_s_scale, "standardized_genotype_effect")
+    fit <- make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = s, seed = 180 + round(100 * s))
+    expect_maf_effect_s_sbayesrc_finite(fit)
+    expect_maf_effect_s_sbayesrc_component_consistency(fit)
+    expect_equal(fit$input$maf_effect_s, s)
+    expect_true(fit$input$maf_effect_s_fixed)
+    expect_equal(fit$input$maf_effect_s_exponent, s + 1)
+    expect_equal(fit$input$maf_effect_s_scale, "standardized_genotype_effect")
   }
 
-  fit_update_b <- make_selection_s_csr_sbayesrc_fit(
-    selection_s = 0,
+  fit_update_b <- make_maf_effect_s_csr_sbayesrc_fit(
+    maf_effect_s = 0,
     updateB = TRUE,
     seed = 183
   )
-  expect_selection_s_sbayesrc_finite(fit_update_b)
+  expect_maf_effect_s_sbayesrc_finite(fit_update_b)
 })
 
-test_that("selection_s validates fixed-S inputs for CSR SBayesRC and annotation routing", {
+test_that("maf_effect_s validates fixed-S inputs for CSR SBayesRC and annotation routing", {
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(selection_s = c(0, 1)),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = c(0, 1)),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(selection_s = NA_real_),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = NA_real_),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(selection_s = NaN),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = NaN),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(selection_s = Inf),
-    "selection_s must be NULL or a finite numeric scalar"
+    make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = Inf),
+    "maf_effect_s must be NULL or a finite numeric scalar"
   )
 
   for (annotation_model in c("fixed_marker", "learned_logistic", "group")) {
     expect_error(
       stblr_csr_annot(
-        Glist = selection_s_sbayesrc_glist(),
-        stats = selection_s_csr_stats(),
-        annotations = selection_s_sbayesrc_annotations(),
+        Glist = maf_effect_s_sbayesrc_glist(),
+        stats = maf_effect_s_csr_stats(),
+        annotations = maf_effect_s_sbayesrc_annotations(),
         annotation_model = annotation_model,
-        selection_s = 0,
+        maf_effect_s = 0,
         nit = 2,
         nburn = 0
       ),
-      "selection_s is currently supported only for annotation_model = \"annotation_probit_stick\""
+      "maf_effect_s is currently supported only for annotation_model = \"annotation_probit_stick\""
     )
   }
 })
 
-test_that("selection_s works with CSR SBayesRC LD-swap and backend consistency", {
+test_that("maf_effect_s works with CSR SBayesRC LD-swap and backend consistency", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_sbayesrc_fit(
-    selection_s = 0,
+  fit <- make_maf_effect_s_csr_sbayesrc_fit(
+    maf_effect_s = 0,
     updateLDswap = TRUE,
     seed = 191
   )
 
-  expect_selection_s_sbayesrc_finite(fit)
+  expect_maf_effect_s_sbayesrc_finite(fit)
   expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$diagnostics$ld_swap)))
-  expect_selection_s_sbayesrc_component_consistency(fit)
+  expect_maf_effect_s_sbayesrc_component_consistency(fit)
 
   chk <- check_stblr_consistency(fit, require_ld_swap = TRUE, verbose = FALSE)
   expect_true(all(chk$checks$ok))
 })
 
-test_that("multi-chain CSR SBayesRC selection_s metadata and chains are stable", {
+test_that("multi-chain CSR SBayesRC maf_effect_s metadata and chains are stable", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
   seeds <- c(211L, 212L)
-  fit_default <- make_selection_s_csr_sbayesrc_fit(
+  fit_default <- make_maf_effect_s_csr_sbayesrc_fit(
     seed = 201,
     nchains = 2,
     chain_seeds = seeds
   )
-  fit_s_minus_one <- make_selection_s_csr_sbayesrc_fit(
-    selection_s = -1,
+  fit_s_minus_one <- make_maf_effect_s_csr_sbayesrc_fit(
+    maf_effect_s = -1,
     seed = 201,
     nchains = 2,
     chain_seeds = seeds
   )
 
-  expect_null(fit_default$input$selection_s)
-  expect_equal(fit_s_minus_one$input$selection_s, -1)
+  expect_null(fit_default$input$maf_effect_s)
+  expect_equal(fit_s_minus_one$input$maf_effect_s, -1)
   expect_true(all(is.finite(fit_s_minus_one$dm)))
 
-  fit_keep <- make_selection_s_csr_sbayesrc_fit(
-    selection_s = 0,
+  fit_keep <- make_maf_effect_s_csr_sbayesrc_fit(
+    maf_effect_s = 0,
     seed = 202,
     nchains = 2,
     keep_chains = TRUE,
     chain_seeds = seeds
   )
-  expect_selection_s_sbayesrc_finite(fit_keep)
+  expect_maf_effect_s_sbayesrc_finite(fit_keep)
   expect_true(!is.null(fit_keep$chains))
-  expect_selection_s_sbayesrc_component_consistency(fit_keep)
+  expect_maf_effect_s_sbayesrc_component_consistency(fit_keep)
 })
 
-test_that("sampled selection_s runs for CSR SBayesRC and returns mechanics", {
+test_that("sampled maf_effect_s runs for CSR SBayesRC and returns mechanics", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_sbayesrc_fit(
-    estimate_selection_s = TRUE,
-    selection_s_init = 0,
+  fit <- make_maf_effect_s_csr_sbayesrc_fit(
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_init = 0,
     updateB = TRUE,
     seed = 221
   )
 
-  expect_selection_s_sbayesrc_finite(fit)
+  expect_maf_effect_s_sbayesrc_finite(fit)
   expect_true(all(vapply(fit$component_probabilities, function(cp) {
     all(abs(rowSums(cp) - 1) < 1e-8)
   }, logical(1))))
-  expect_selection_s_sbayesrc_component_consistency(fit, tolerance = 1e-12)
-  expect_true(is.matrix(fit$selection_s_trace))
-  expect_equal(ncol(fit$selection_s_trace), length(selection_s_csr_stats()$yy))
-  expect_length(fit$selection_s, length(selection_s_csr_stats()$yy))
-  expect_true(all(is.finite(fit$selection_s)))
-  expect_true(all(is.finite(fit$selection_s_chain_mean_sd)))
-  expect_true(all(is.finite(fit$selection_s_chain_mean_min)))
-  expect_true(all(is.finite(fit$selection_s_chain_mean_max)))
-  expect_true(all(fit$selection_s_trace >= -3 & fit$selection_s_trace <= 2))
-  expect_true(all(is.finite(fit$selection_s_acceptance)))
-  expect_true(all(fit$selection_s_acceptance >= 0 & fit$selection_s_acceptance <= 1))
-  expect_false(all(as.numeric(fit$selection_s_trace[, 1]) ==
-                     as.numeric(fit$selection_s_trace[1, 1])))
-  expect_false(fit$input$selection_s_fixed)
-  expect_true(fit$input$estimate_selection_s)
-  expect_null(fit$input$selection_s)
-  expect_equal(fit$input$selection_s_init, 0)
-  expect_equal(fit$input$selection_s_prior, c(-3, 2))
-  expect_equal(fit$input$selection_s_proposal_sd, 0.35)
+  expect_maf_effect_s_sbayesrc_component_consistency(fit, tolerance = 1e-12)
+  expect_true(is.matrix(fit$maf_effect_s_trace))
+  expect_equal(ncol(fit$maf_effect_s_trace), length(maf_effect_s_csr_stats()$yy))
+  expect_length(fit$maf_effect_s, length(maf_effect_s_csr_stats()$yy))
+  expect_true(all(is.finite(fit$maf_effect_s)))
+  expect_true(all(is.finite(fit$maf_effect_s_chain_mean_sd)))
+  expect_true(all(is.finite(fit$maf_effect_s_chain_mean_min)))
+  expect_true(all(is.finite(fit$maf_effect_s_chain_mean_max)))
+  expect_true(all(fit$maf_effect_s_trace >= -3 & fit$maf_effect_s_trace <= 2))
+  expect_true(all(is.finite(fit$maf_effect_s_acceptance)))
+  expect_true(all(fit$maf_effect_s_acceptance >= 0 & fit$maf_effect_s_acceptance <= 1))
+  expect_false(all(as.numeric(fit$maf_effect_s_trace[, 1]) ==
+                     as.numeric(fit$maf_effect_s_trace[1, 1])))
+  expect_false(fit$input$maf_effect_s_fixed)
+  expect_true(fit$input$estimate_maf_effect_s)
+  expect_null(fit$input$maf_effect_s)
+  expect_equal(fit$input$maf_effect_s_init, 0)
+  expect_equal(fit$input$maf_effect_s_prior, c(-3, 2))
+  expect_equal(fit$input$maf_effect_s_proposal_sd, 0.35)
 })
 
-test_that("sampled selection_s CSR SBayesRC supports keep_chains and is reproducible", {
+test_that("sampled maf_effect_s CSR SBayesRC supports keep_chains and is reproducible", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
   args <- list(
-    estimate_selection_s = TRUE,
-    selection_s_proposal_sd = 0.25,
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_proposal_sd = 0.25,
     updateB = TRUE,
     seed = 222,
     nchains = 2,
     keep_chains = TRUE,
     chain_seeds = c(301L, 302L)
   )
-  fit1 <- do.call(make_selection_s_csr_sbayesrc_fit, args)
-  fit2 <- do.call(make_selection_s_csr_sbayesrc_fit, args)
+  fit1 <- do.call(make_maf_effect_s_csr_sbayesrc_fit, args)
+  fit2 <- do.call(make_maf_effect_s_csr_sbayesrc_fit, args)
 
   expect_equal(fit1$dm, fit2$dm)
   expect_equal(fit1$bm, fit2$bm)
-  expect_equal(fit1$selection_s_trace, fit2$selection_s_trace)
-  expect_equal(fit1$selection_s, fit2$selection_s)
+  expect_equal(fit1$maf_effect_s_trace, fit2$maf_effect_s_trace)
+  expect_equal(fit1$maf_effect_s, fit2$maf_effect_s)
   expect_equal(length(fit1$chains), 2L)
   expect_true(all(vapply(fit1$chains, function(ch) {
-    is.numeric(ch$selection_s) &&
-      length(ch$selection_s) == nrow(fit1$selection_s_trace) &&
-      is.finite(ch$selection_s_acceptance) &&
-      ch$selection_s_acceptance >= 0 &&
-      ch$selection_s_acceptance <= 1
+    is.numeric(ch$maf_effect_s) &&
+      length(ch$maf_effect_s) == nrow(fit1$maf_effect_s_trace) &&
+      is.finite(ch$maf_effect_s_acceptance) &&
+      ch$maf_effect_s_acceptance >= 0 &&
+      ch$maf_effect_s_acceptance <= 1
   }, logical(1))))
 })
 
-test_that("sampled selection_s validates inputs for CSR SBayesRC and annotation routing", {
+test_that("sampled maf_effect_s validates inputs for CSR SBayesRC and annotation routing", {
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(selection_s = 0, estimate_selection_s = TRUE),
-    "selection_s and estimate_selection_s = TRUE cannot both be requested"
+    make_maf_effect_s_csr_sbayesrc_fit(maf_effect_s = 0, estimate_maf_effect_s = TRUE),
+    "maf_effect_s and estimate_maf_effect_s = TRUE cannot both be requested"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(estimate_selection_s = TRUE, selection_s_init = 3),
-    "selection_s_init must lie within selection_s_prior"
+    make_maf_effect_s_csr_sbayesrc_fit(estimate_maf_effect_s = TRUE, maf_effect_s_init = 3),
+    "maf_effect_s_init must lie within maf_effect_s_prior"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(estimate_selection_s = TRUE, selection_s_prior = c(-2, 0, 2)),
-    "selection_s_prior must be a finite numeric vector of length 2"
+    make_maf_effect_s_csr_sbayesrc_fit(estimate_maf_effect_s = TRUE, maf_effect_s_prior = c(-2, 0, 2)),
+    "maf_effect_s_prior must be a finite numeric vector of length 2"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(estimate_selection_s = TRUE, selection_s_prior = c(2, -2)),
-    "selection_s_prior lower bound must be less than upper bound"
+    make_maf_effect_s_csr_sbayesrc_fit(estimate_maf_effect_s = TRUE, maf_effect_s_prior = c(2, -2)),
+    "maf_effect_s_prior lower bound must be less than upper bound"
   )
   expect_error(
-    make_selection_s_csr_sbayesrc_fit(estimate_selection_s = TRUE, selection_s_proposal_sd = 0),
-    "selection_s_proposal_sd must be a finite positive numeric scalar"
+    make_maf_effect_s_csr_sbayesrc_fit(estimate_maf_effect_s = TRUE, maf_effect_s_proposal_sd = 0),
+    "maf_effect_s_proposal_sd must be a finite positive numeric scalar"
   )
 
   for (annotation_model in c("fixed_marker", "learned_logistic", "group")) {
     expect_error(
       stblr_csr_annot(
-        Glist = selection_s_sbayesrc_glist(),
-        stats = selection_s_csr_stats(),
-        annotations = selection_s_sbayesrc_annotations(),
+        Glist = maf_effect_s_sbayesrc_glist(),
+        stats = maf_effect_s_csr_stats(),
+        annotations = maf_effect_s_sbayesrc_annotations(),
         annotation_model = annotation_model,
-        estimate_selection_s = TRUE,
+        estimate_maf_effect_s = TRUE,
         nit = 2,
         nburn = 0
       ),
-      "estimate_selection_s is currently supported only for annotation_model = \"annotation_probit_stick\""
+      "estimate_maf_effect_s is currently supported only for annotation_model = \"annotation_probit_stick\""
     )
   }
 })
 
-test_that("sampled selection_s works with CSR SBayesRC LD-swap", {
+test_that("sampled maf_effect_s works with CSR SBayesRC LD-swap", {
   skip_if_not(
     exists("stblr_cpg_omp_csr_sbayesrc", mode = "function"),
     "native SBayesRC CSR symbol is not loaded"
   )
 
-  fit <- make_selection_s_csr_sbayesrc_fit(
-    estimate_selection_s = TRUE,
-    selection_s_proposal_sd = 0.25,
+  fit <- make_maf_effect_s_csr_sbayesrc_fit(
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_proposal_sd = 0.25,
     updateB = TRUE,
     updateLDswap = TRUE,
     seed = 223
   )
 
-  expect_true(all(is.finite(fit$selection_s_trace)))
+  expect_true(all(is.finite(fit$maf_effect_s_trace)))
   expect_s3_class(fit$diagnostics$ld_swap, "data.frame")
   expect_true(all(c("attempted", "accepted", "acceptance_rate") %in%
                     names(fit$diagnostics$ld_swap)))
-  expect_selection_s_sbayesrc_component_consistency(fit, tolerance = 1e-12)
+  expect_maf_effect_s_sbayesrc_component_consistency(fit, tolerance = 1e-12)
 })
 
-make_selection_s_subset_fit <- function(n_markers = 20) {
+make_maf_effect_s_subset_fit <- function(n_markers = 20) {
   markers <- paste0("m", seq_len(n_markers))
   trait_names <- c("D1", "D2")
   pip_d1 <- seq(0.001, 0.2, length.out = n_markers)
@@ -1028,7 +1028,7 @@ make_selection_s_subset_fit <- function(n_markers = 20) {
 }
 
 test_that("summarise_architecture works for a small CSR fit", {
-  fit <- make_selection_s_csr_fit()
+  fit <- make_maf_effect_s_csr_fit()
 
   out <- summarise_architecture(
     fit,
@@ -1041,7 +1041,7 @@ test_that("summarise_architecture works for a small CSR fit", {
   expect_equal(out$response, "log_pip_weighted_bm2")
   expect_equal(out$n_markers, 3)
   expect_equal(out$n_effective_markers, 3)
-  expect_true(is.na(out$selection_s_posthoc))
+  expect_true(is.na(out$maf_effect_s_posthoc))
   expect_true(is.na(out$intercept))
 })
 
@@ -1062,18 +1062,18 @@ test_that("summarise_architecture handles h and unweighted response", {
 
   expect_equal(out$method, "posthoc_regression")
   expect_equal(out$response, "log_bm2")
-  expect_true(all(is.finite(out$selection_s_posthoc)))
+  expect_true(all(is.finite(out$maf_effect_s_posthoc)))
   expect_identical(fit, fit_before)
 })
 
 test_that("summarise_architecture supports all-marker and filtered subsets", {
-  fit <- make_selection_s_subset_fit()
+  fit <- make_maf_effect_s_subset_fit()
 
   out_all <- summarise_architecture(fit, maf = fit$maf)
   expect_equal(out_all$n_markers, c(20L, 20L))
   expect_equal(out_all$marker_filter, c("all", "all"))
   expect_true(all(c("se", "p_value", "r2", "marker_filter") %in% names(out_all)))
-  expect_true(all(is.finite(out_all$selection_s_posthoc)))
+  expect_true(all(is.finite(out_all$maf_effect_s_posthoc)))
 
   out_min <- summarise_architecture(fit, maf = fit$maf, min_pip = 0.01)
   expect_equal(out_min$marker_filter, rep("min_pip=0.01", 2))
@@ -1086,7 +1086,7 @@ test_that("summarise_architecture supports all-marker and filtered subsets", {
 })
 
 test_that("summarise_architecture supports character marker subsets", {
-  fit <- make_selection_s_subset_fit()
+  fit <- make_maf_effect_s_subset_fit()
   marker_subset <- paste0("m", 1:8)
 
   out <- summarise_architecture(
@@ -1098,11 +1098,11 @@ test_that("summarise_architecture supports character marker subsets", {
   expect_equal(out$n_markers, c(8L, 8L))
   expect_equal(out$n_effective_markers, c(8L, 8L))
   expect_equal(out$marker_filter, rep("markers=character", 2))
-  expect_true(all(is.finite(out$selection_s_posthoc)))
+  expect_true(all(is.finite(out$maf_effect_s_posthoc)))
 })
 
 test_that("summarise_architecture supports trait-specific marker subsets", {
-  fit <- make_selection_s_subset_fit()
+  fit <- make_maf_effect_s_subset_fit()
   causal_by_trait <- list(
     D1 = paste0("m", 1:6),
     D2 = paste0("m", 7:14)
@@ -1116,11 +1116,11 @@ test_that("summarise_architecture supports trait-specific marker subsets", {
 
   expect_equal(out$n_markers, c(6L, 8L))
   expect_equal(out$marker_filter, rep("markers=list", 2))
-  expect_true(all(is.finite(out$selection_s_posthoc)))
+  expect_true(all(is.finite(out$maf_effect_s_posthoc)))
 })
 
 test_that("summarise_architecture combines marker and min_pip filters", {
-  fit <- make_selection_s_subset_fit()
+  fit <- make_maf_effect_s_subset_fit()
   marker_subset <- paste0("m", 1:12)
 
   out <- summarise_architecture(
@@ -1137,7 +1137,7 @@ test_that("summarise_architecture combines marker and min_pip filters", {
 })
 
 test_that("summarise_architecture returns NA statistics with fewer than five markers", {
-  fit <- make_selection_s_subset_fit()
+  fit <- make_maf_effect_s_subset_fit()
 
   out <- summarise_architecture(
     fit,
@@ -1146,14 +1146,14 @@ test_that("summarise_architecture returns NA statistics with fewer than five mar
   )
 
   expect_equal(out$n_markers, c(4L, 4L))
-  expect_true(all(is.na(out$selection_s_posthoc)))
+  expect_true(all(is.na(out$maf_effect_s_posthoc)))
   expect_true(all(is.na(out$se)))
   expect_true(all(is.na(out$p_value)))
   expect_true(all(is.na(out$r2)))
 })
 
 test_that("summarise_architecture validates marker filter inputs", {
-  fit <- make_selection_s_subset_fit()
+  fit <- make_maf_effect_s_subset_fit()
 
   expect_error(
     summarise_architecture(fit, maf = fit$maf, min_pip = -0.1),

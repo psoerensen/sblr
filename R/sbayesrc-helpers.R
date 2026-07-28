@@ -352,8 +352,8 @@ format_sbayesrc_csr_fit <- function(
    "-slot SBayesRC CSR return object."
   )
  }
- has_selection_s_trace <- length(fit) %in% sampled_lens
- base_fit_len <- if (has_selection_s_trace) {
+ has_maf_effect_s_trace <- length(fit) %in% sampled_lens
+ base_fit_len <- if (has_maf_effect_s_trace) {
   if (isTRUE(keep_chains)) length(fit) - 4L else length(fit) - 2L
  } else {
   length(fit)
@@ -362,10 +362,10 @@ format_sbayesrc_csr_fit <- function(
  summary_start <- if (has_ld_swap) 26L else 25L
  summary_end <- if (has_ld_swap) 31L else 30L
  chain_start <- if (has_ld_swap) 32L else 31L
- selection_s_trace_slot <- base_fit_len + 1L
- selection_s_acceptance_slot <- base_fit_len + 2L
- chain_selection_s_slot <- base_fit_len + 3L
- chain_selection_s_acceptance_slot <- base_fit_len + 4L
+ maf_effect_s_trace_slot <- base_fit_len + 1L
+ maf_effect_s_acceptance_slot <- base_fit_len + 2L
+ chain_maf_effect_s_slot <- base_fit_len + 3L
+ chain_maf_effect_s_acceptance_slot <- base_fit_len + 4L
 
  if (!is.numeric(gamma) || length(gamma) < 2 ||
      any(!is.finite(gamma))) {
@@ -440,27 +440,27 @@ format_sbayesrc_csr_fit <- function(
    validate_trait_list(fit[[chain_start + 4L]], nchains * nstep, paste0("fit[[", chain_start + 4L, "]]"))
   }
  }
- if (has_selection_s_trace) {
+ if (has_maf_effect_s_trace) {
   validate_trait_list(
-   fit[[selection_s_trace_slot]],
+   fit[[maf_effect_s_trace_slot]],
    length(fit[[8L]][[1L]]),
-   paste0("fit[[", selection_s_trace_slot, "]]")
+   paste0("fit[[", maf_effect_s_trace_slot, "]]")
   )
   validate_trait_list(
-   fit[[selection_s_acceptance_slot]],
+   fit[[maf_effect_s_acceptance_slot]],
    1L,
-   paste0("fit[[", selection_s_acceptance_slot, "]]")
+   paste0("fit[[", maf_effect_s_acceptance_slot, "]]")
   )
   if (isTRUE(keep_chains)) {
    validate_trait_list(
-    fit[[chain_selection_s_slot]],
+    fit[[chain_maf_effect_s_slot]],
     nchains * length(fit[[8L]][[1L]]),
-    paste0("fit[[", chain_selection_s_slot, "]]")
+    paste0("fit[[", chain_maf_effect_s_slot, "]]")
    )
    validate_trait_list(
-    fit[[chain_selection_s_acceptance_slot]],
+    fit[[chain_maf_effect_s_acceptance_slot]],
     nchains,
-    paste0("fit[[", chain_selection_s_acceptance_slot, "]]")
+    paste0("fit[[", chain_maf_effect_s_acceptance_slot, "]]")
    )
   }
  }
@@ -490,12 +490,12 @@ format_sbayesrc_csr_fit <- function(
   if (has_ld_swap) "ld_swap_raw" else character(),
   if (length(fit) >= summary_end) summary_names else character(),
   if (isTRUE(keep_chains)) chain_names else character(),
-  if (has_selection_s_trace) {
+  if (has_maf_effect_s_trace) {
    c(
-    "selection_s_trace_raw",
-    "selection_s_acceptance_raw",
+    "maf_effect_s_trace_raw",
+    "maf_effect_s_acceptance_raw",
     if (isTRUE(keep_chains)) {
-     c("chain_selection_s_raw", "chain_selection_s_acceptance_raw")
+     c("chain_maf_effect_s_raw", "chain_maf_effect_s_acceptance_raw")
     } else {
      character()
     }
@@ -609,12 +609,12 @@ format_sbayesrc_csr_fit <- function(
   out$ld_swap <- ld_swap
  }
 
- if (has_selection_s_trace) {
-  out$selection_s_trace <- as.matrix(as.data.frame(fit$selection_s_trace_raw))
-  rownames(out$selection_s_trace) <- paste0("Iter", seq_len(nrow(out$selection_s_trace)))
-  colnames(out$selection_s_trace) <- trait_names
-  out$selection_s_acceptance <- stats::setNames(
-   as.numeric(unlist(fit$selection_s_acceptance_raw, use.names = FALSE)),
+ if (has_maf_effect_s_trace) {
+  out$maf_effect_s_trace <- as.matrix(as.data.frame(fit$maf_effect_s_trace_raw))
+  rownames(out$maf_effect_s_trace) <- paste0("Iter", seq_len(nrow(out$maf_effect_s_trace)))
+  colnames(out$maf_effect_s_trace) <- trait_names
+  out$maf_effect_s_acceptance <- stats::setNames(
+   as.numeric(unlist(fit$maf_effect_s_acceptance_raw, use.names = FALSE)),
    trait_names
   )
  }
@@ -635,13 +635,13 @@ format_sbayesrc_csr_fit <- function(
    comp_raw <- as.numeric(fit$chain_comp_prob_raw[[t]])
    alpha_raw <- as.numeric(fit$chain_alpha_raw[[t]])
    sigma_raw <- as.numeric(fit$chain_sigmaSqAlpha_raw[[t]])
-   selection_raw <- if (has_selection_s_trace) {
-    as.numeric(fit$chain_selection_s_raw[[t]])
+   selection_raw <- if (has_maf_effect_s_trace) {
+    as.numeric(fit$chain_maf_effect_s_raw[[t]])
    } else {
     NULL
    }
-   selection_acc_raw <- if (has_selection_s_trace) {
-    as.numeric(fit$chain_selection_s_acceptance_raw[[t]])
+   selection_acc_raw <- if (has_maf_effect_s_trace) {
+    as.numeric(fit$chain_maf_effect_s_acceptance_raw[[t]])
    } else {
     NULL
    }
@@ -655,7 +655,7 @@ format_sbayesrc_csr_fit <- function(
     comp_idx <- ((chain - 1L) * m * Kgamma + 1L):(chain * m * Kgamma)
     alpha_idx <- ((chain - 1L) * n_anno * nstep + 1L):(chain * n_anno * nstep)
     sigma_idx <- ((chain - 1L) * nstep + 1L):(chain * nstep)
-    selection_idx <- if (has_selection_s_trace) {
+    selection_idx <- if (has_maf_effect_s_trace) {
      trace_n <- if (nchains > 0L) length(selection_raw) %/% nchains else 0L
      ((chain - 1L) * trace_n + 1L):(chain * trace_n)
     } else {
@@ -692,9 +692,9 @@ format_sbayesrc_csr_fit <- function(
       c("attempted", "accepted", "acceptance_rate")
      )
     }
-    if (has_selection_s_trace) {
-     chain_out$selection_s <- selection_raw[selection_idx]
-     chain_out$selection_s_acceptance <- selection_acc_raw[chain]
+    if (has_maf_effect_s_trace) {
+     chain_out$maf_effect_s <- selection_raw[selection_idx]
+     chain_out$maf_effect_s_acceptance <- selection_acc_raw[chain]
     }
     chain_out
    })

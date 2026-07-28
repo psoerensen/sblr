@@ -1,6 +1,6 @@
 # Model capability matrix
 
-| Public route | Supported models | Annotation policy | Fixed `selection_s` | Sampled `selection_s` |
+| Public route | Supported models | Annotation policy | Fixed `maf_effect_s` | Sampled `maf_effect_s` |
 |---|---|---|---|---|
 | `stblr_bed()` | `bayesc`, `bayesr`, `bayesrc` | global or probit-stick BayesRC | model-dependent | supported where the scalar kernel implements it |
 | `stblr_csr()` | `sbayesc`, `sbayesr` | global | supported | supported by validated scalar routes |

@@ -1,8 +1,8 @@
-## selection_s_workflow.R
+## maf_effect_s_workflow.R
 ##
-## Fixed and sampled selection_s examples.
+## Fixed and sampled maf_effect_s examples.
 ##
-## selection_s is currently supported for CSR BayesC, CSR BayesR, and
+## maf_effect_s is currently supported for CSR BayesC, CSR BayesR, and
 ## SBayesRC-style CSR models. It is not supported by the prior, learned, or
 ## group annotation-aware BayesC backends.
 ##
@@ -38,7 +38,7 @@ y <- as.matrix(scale(sim$y))
 stats <- make_summary_stats(Glist = Glist, y = y, chr = chr, nthreads = nthreads)
 Glist <- make_sparse_ld(
   Glist = Glist,
-  out_prefix = file.path(data_dir, "ld_selection_s"),
+  out_prefix = file.path(data_dir, "ld_maf_effect_s"),
   chr = chr,
   pos_bp = NULL,
   max_distance_bp = 0,
@@ -58,28 +58,28 @@ base_args <- list(
 )
 
 ## -------------------------------------------------------------------------
-## 1. BayesC fixed selection_s sanity checks
+## 1. BayesC fixed maf_effect_s sanity checks
 ## -------------------------------------------------------------------------
 
-fit_c_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = NULL)))
-fit_c_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = -1)))
+fit_c_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effect_s = NULL)))
+fit_c_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effect_s = -1)))
 
-## selection_s = -1 should reproduce the ordinary model because exponent = 0.
+## maf_effect_s = -1 should reproduce the ordinary model because exponent = 0.
 max(abs(fit_c_null$dm - fit_c_minus1$dm))
 max(abs(fit_c_null$bm - fit_c_minus1$bm))
 max(abs(fit_c_null$vle - fit_c_minus1$vle))
 max(abs(fit_c_null$vld - fit_c_minus1$vld))
 
-fit_c_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = 0)))
-fit_c_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = -0.5)))
-fit_c_spos1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", selection_s = 1)))
+fit_c_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effect_s = 0)))
+fit_c_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effect_s = -0.5)))
+fit_c_spos1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effect_s = 1)))
 
 ## -------------------------------------------------------------------------
-## 2. BayesR fixed selection_s sanity checks
+## 2. BayesR fixed maf_effect_s sanity checks
 ## -------------------------------------------------------------------------
 
-fit_r_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = NULL)))
-fit_r_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = -1)))
+fit_r_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = NULL)))
+fit_r_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = -1)))
 
 max(abs(fit_r_null$dm - fit_r_minus1$dm))
 max(abs(fit_r_null$bm - fit_r_minus1$bm))
@@ -88,11 +88,11 @@ max(abs(fit_r_null$vld - fit_r_minus1$vld))
 max(abs(fit_r_null$component_probabilities[[1]] -
         fit_r_minus1$component_probabilities[[1]]))
 
-fit_r_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = 0)))
-fit_r_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = -0.5)))
+fit_r_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = 0)))
+fit_r_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = -0.5)))
 
 ## -------------------------------------------------------------------------
-## 3. Sampled selection_s for CSR BayesC
+## 3. Sampled maf_effect_s for CSR BayesC
 ## -------------------------------------------------------------------------
 
 fit_c_sampled_s <- do.call(
@@ -101,10 +101,10 @@ fit_c_sampled_s <- do.call(
     base_args,
     list(
       method = "sbayesc",
-      estimate_selection_s = TRUE,
-      selection_s_init = 0,
-      selection_s_prior = c(-3, 2),
-      selection_s_proposal_sd = 0.35
+      estimate_maf_effect_s = TRUE,
+      maf_effect_s_init = 0,
+      maf_effect_s_prior = c(-3, 2),
+      maf_effect_s_proposal_sd = 0.35
     )
   )
 )
@@ -123,20 +123,20 @@ fits <- list(
 invisible(lapply(fits, check_fit))
 
 ## -------------------------------------------------------------------------
-## 4. Inspect selection_s metadata and traces
+## 4. Inspect maf_effect_s metadata and traces
 ## -------------------------------------------------------------------------
 
 lapply(fits, function(fit) {
   fit$input[c(
-    "selection_s", "selection_s_fixed", "selection_s_exponent",
-    "selection_s_scale", "estimate_selection_s"
+    "maf_effect_s", "maf_effect_s_fixed", "maf_effect_s_exponent",
+    "maf_effect_s_scale", "estimate_maf_effect_s"
   )]
 })
 
 fit_c_sampled_s[c(
-  "selection_s", "selection_s_trace", "selection_s_acceptance",
-  "selection_s_chain_mean_sd", "selection_s_chain_mean_min",
-  "selection_s_chain_mean_max"
+  "maf_effect_s", "maf_effect_s_trace", "maf_effect_s_acceptance",
+  "maf_effect_s_chain_mean_sd", "maf_effect_s_chain_mean_min",
+  "maf_effect_s_chain_mean_max"
 )]
 
 ## -------------------------------------------------------------------------

@@ -9,16 +9,16 @@
 #'
 #' This is the SBayesRC CSR backend wrapper used by
 #' `stblr_csr_annot(annotation_model = "annotation_probit_stick")`. It supports
-#' annotation-dependent component probabilities, fixed global `selection_s`,
-#' sampled trait-specific `selection_s`, native multi-chain output, and
+#' annotation-dependent component probabilities, fixed global `maf_effect_s`,
+#' sampled trait-specific `maf_effect_s`, native multi-chain output, and
 #' LD-swap/fine-mapping diagnostics when `updateLDswap = TRUE`.
 #'
 #' @param stats Sufficient statistics returned by [bed_xtx_xty()].
 #' @param ld_prefix Prefix of the disk-backed CSR LD files.
 #' @param A An `m` by `K` numeric marker annotation matrix. Rows must correspond
 #'   to the markers in `stats` and the sparse LD files.
-#' @param Glist Optional genotype/LD metadata. Required when `selection_s` is
-#'   non-`NULL` or `estimate_selection_s = TRUE` so MAF can be aligned to the
+#' @param Glist Optional genotype/LD metadata. Required when `maf_effect_s` is
+#'   non-`NULL` or `estimate_maf_effect_s = TRUE` so MAF can be aligned to the
 #'   CSR LD marker order using `Glist$rsidsLD`, `Glist$rsids`, and `Glist$maf`.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
@@ -28,24 +28,24 @@
 #' @param pi_init,pi_vb_init,pi_prior_mean,pi_prior_strength,pi_prior_a,pi_prior_b
 #'   Active-marker probability and marker-variance prior controls.
 #' @param h2 Initial heritability.
-#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
-#'   The default `selection_s = NULL` with `estimate_selection_s = FALSE` fits
+#' @param maf_effect_s Optional fixed global BayesS-style MAF-scaling parameter.
+#'   The default `maf_effect_s = NULL` with `estimate_maf_effect_s = FALSE` fits
 #'   the ordinary SBayesRC model. A finite numeric scalar with
-#'   `estimate_selection_s = FALSE` fits a fixed global-S model. `selection_s`
-#'   must remain `NULL` when `estimate_selection_s = TRUE`; fixed and sampled S
+#'   `estimate_maf_effect_s = FALSE` fits a fixed global-S model. `maf_effect_s`
+#'   must remain `NULL` when `estimate_maf_effect_s = TRUE`; fixed and sampled S
 #'   cannot both be requested.
-#' @param estimate_selection_s Logical; estimate one trait-specific
-#'   BayesS-style `selection_s` by Metropolis-Hastings for CSR SBayesRC. Fixed
-#'   `selection_s` and sampled `selection_s` are mutually exclusive. Sampled S
+#' @param estimate_maf_effect_s Logical; estimate one trait-specific
+#'   BayesS-style `maf_effect_s` by Metropolis-Hastings for CSR SBayesRC. Fixed
+#'   `maf_effect_s` and sampled `maf_effect_s` are mutually exclusive. Sampled S
 #'   is supported for CSR SBayesRC, but not for the BayesC-like annotation-aware
 #'   CSR backends.
-#' @param selection_s_init Initial value for sampled `selection_s`. Defaults to
-#'   0 and is used only when `estimate_selection_s = TRUE`.
-#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
-#'   uniform sampled-`selection_s` prior. Only used when
-#'   `estimate_selection_s = TRUE`. Defaults to `c(-3, 2)`.
-#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
-#'   sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.
+#' @param maf_effect_s_init Initial value for sampled `maf_effect_s`. Defaults to
+#'   0 and is used only when `estimate_maf_effect_s = TRUE`.
+#' @param maf_effect_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`maf_effect_s` prior. Only used when
+#'   `estimate_maf_effect_s = TRUE`. Defaults to `c(-3, 2)`.
+#' @param maf_effect_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `maf_effect_s`. Only used when `estimate_maf_effect_s = TRUE`.
 #'   Defaults to 0.35.
 #' @param nub,nue Prior degrees of freedom.
 #' @param B,E Optional initial marker-effect and residual covariance matrices.
@@ -100,8 +100,8 @@
 #'   `keep_chains = TRUE`, compact per-chain summaries are returned in
 #'   `chains`.
 #'
-#'   Sampled-S output uses `selection_s_final`, `selection_s_mean`,
-#'   `selection_s_trace`, `selection_s_acceptance`, and explicit chain-mean
+#'   Sampled-S output uses `maf_effect_s_final`, `maf_effect_s_mean`,
+#'   `maf_effect_s_trace`, `maf_effect_s_acceptance`, and explicit chain-mean
 #'   stability fields. The trace is iteration by trait.
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
@@ -112,14 +112,14 @@
 #'
 #' @details
 #' CSR effects are on the standardized-genotype scale. The BayesS-style
-#' MAF-dependent prior scale used by fixed and sampled `selection_s` is
+#' MAF-dependent prior scale used by fixed and sampled `maf_effect_s` is
 #' `q_j(S) = h_j^(S + 1)`, where `h_j = 2 p_j (1 - p_j)` and `p_j` is the
 #' minor allele frequency. The `+1` exponent appears because the sampler effects
 #' are standardized-genotype-scale effects rather than allele-scale effects.
 #'
-#' For fixed `selection_s`, CSR SBayesRC uses
+#' For fixed `maf_effect_s`, CSR SBayesRC uses
 #' `b_j | component_j = m, vb, S ~ N(0, vb * mixture_var_m * q_j(S))`.
-#' Annotations affect component probabilities, while `selection_s` affects
+#' Annotations affect component probabilities, while `maf_effect_s` affects
 #' marker-specific effect-size prior variance. Component zero is null, and
 #' `dm` is the posterior non-null probability.
 #'
@@ -143,9 +143,9 @@
 #'   Glist = Glist,
 #'   annotations = annotations,
 #'   annotation_model = "annotation_probit_stick",
-#'   estimate_selection_s = TRUE,
-#'   selection_s_prior = c(-3, 2),
-#'   selection_s_proposal_sd = 0.35
+#'   estimate_maf_effect_s = TRUE,
+#'   maf_effect_s_prior = c(-3, 2),
+#'   maf_effect_s_proposal_sd = 0.35
 #' )
 #' }
 #' @noRd
@@ -167,9 +167,9 @@ stblr_csr_sbayesrc_generic <- function(
   active_comp_weights = NULL, alpha_init = NULL,
   sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
   sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
-  alpha_update_every = 10, selection_s = NULL,
-  estimate_selection_s = FALSE, selection_s_init = 0,
-  selection_s_prior = c(-3, 2), selection_s_proposal_sd = 0.35,
+  alpha_update_every = 10, maf_effect_s = NULL,
+  estimate_maf_effect_s = FALSE, maf_effect_s_init = 0,
+  maf_effect_s_prior = c(-3, 2), maf_effect_s_proposal_sd = 0.35,
   Glist = NULL, .convergence_spec = NULL
 ) {
  args <- as.list(environment(), all.names = TRUE)
@@ -231,11 +231,11 @@ stblr_csr_sbayesrc_generic <- function(
   sigmaSqAlpha_b = 2,
   pi_floor = 1e-12,
   alpha_update_every = 10,
-  selection_s = NULL,
-  estimate_selection_s = FALSE,
-  selection_s_init = 0,
-  selection_s_prior = c(-3, 2),
-  selection_s_proposal_sd = 0.35,
+  maf_effect_s = NULL,
+  estimate_maf_effect_s = FALSE,
+  maf_effect_s_init = 0,
+  maf_effect_s_prior = c(-3, 2),
+  maf_effect_s_proposal_sd = 0.35,
   Glist = NULL,
   .native_fun = stblr_cpg_omp_csr_sbayesrc,
   .native_args = list(),
@@ -273,20 +273,20 @@ stblr_csr_sbayesrc_generic <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- .stblr_validate_sampled_selection_s(
-  estimate_selection_s = estimate_selection_s,
-  selection_s = selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd
+ .stblr_validate_sampled_maf_effect_s(
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s = maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
  )
- selection_s_info <- .stblr_prepare_csr_selection_s(
-  selection_s = selection_s,
+ maf_effect_s_info <- .stblr_prepare_csr_maf_effect_s(
+  maf_effect_s = maf_effect_s,
   Glist = Glist,
   m = m,
   scheduled = FALSE,
   backend = "sbayesrc",
-  return_log_h = estimate_selection_s
+  return_log_h = estimate_maf_effect_s
  )
 
  arch <- .stblr_resolve_architecture(
@@ -429,12 +429,12 @@ stblr_csr_sbayesrc_generic <- function(
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
-  selection_s_prior_scale = selection_s_info$prior_scale,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd,
-  selection_s_log_h = selection_s_info$log_h,
+  maf_effect_s_prior_scale = maf_effect_s_info$prior_scale,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd,
+  maf_effect_s_log_h = maf_effect_s_info$log_h,
   convergence_markers = .convergence_spec$markers %||% integer(),
   convergence_annotations = isTRUE(.convergence_spec$annotations),
   convergence_b = isTRUE(.convergence_spec$b),
@@ -448,21 +448,21 @@ stblr_csr_sbayesrc_generic <- function(
 
  if (.is_stblr_raw(raw_fit)) {
   raw_fit$annotation$annotation_names <- colnames(A)
-  if (isTRUE(selection_s_info$fixed)) {
-   raw_fit$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  if (isTRUE(maf_effect_s_info$fixed)) {
+   raw_fit$selection$mean <- stats::setNames(rep(maf_effect_s_info$maf_effect_s, nt), trait_names)
   }
   fit <- .as_stblr_fit(raw_fit, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("csr_sbayesrc")
  }
 
- if (isTRUE(estimate_selection_s)) {
-  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
-  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
-  fit$selection_s <- colMeans(s_trace_keep)
-  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
-  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
-  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ if (isTRUE(estimate_maf_effect_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$maf_effect_s_trace))
+  s_trace_keep <- fit$maf_effect_s_trace[keep_idx, , drop = FALSE]
+  fit$maf_effect_s <- colMeans(s_trace_keep)
+  fit$maf_effect_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$maf_effect_s_min <- apply(s_trace_keep, 2L, min)
+  fit$maf_effect_s_max <- apply(s_trace_keep, 2L, max)
  }
 
  fit$input <- c(
@@ -492,14 +492,14 @@ stblr_csr_sbayesrc_generic <- function(
    standardize_annotations = standardize_annotations,
    center_binary_annotations = center_binary_annotations,
    h2 = h2,
-   estimate_selection_s = estimate_selection_s,
-   selection_s = selection_s_info$selection_s,
-   selection_s_fixed = selection_s_info$fixed,
-   selection_s_exponent = selection_s_info$exponent,
-   selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
-   selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
-   selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
-   selection_s_scale = "standardized_genotype_effect",
+   estimate_maf_effect_s = estimate_maf_effect_s,
+   maf_effect_s = maf_effect_s_info$maf_effect_s,
+   maf_effect_s_fixed = maf_effect_s_info$fixed,
+   maf_effect_s_exponent = maf_effect_s_info$exponent,
+   maf_effect_s_init = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_init else NULL,
+   maf_effect_s_prior = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_prior else NULL,
+   maf_effect_s_proposal_sd = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_proposal_sd else NULL,
+   maf_effect_s_scale = "standardized_genotype_effect",
    nub = nub,
    nue = nue,
    vy = pri$vy,

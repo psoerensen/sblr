@@ -45,7 +45,7 @@ compact_input <- function(fit) {
   x <- fit$input
   x[c(
     "prior_kernel", "probability_policy", "effect_scale_policy",
-    "selection_s", "estimate_selection_s", "updateLDswap", "ld_swap_prob", "ld_swap_r2",
+    "maf_effect_s", "estimate_maf_effect_s", "updateLDswap", "ld_swap_prob", "ld_swap_r2",
     "ld_swap_moves", "nchains", "keep_chains", "n", "m", "nt", "nit",
     "nburn", "nthin", "seed"
   )]

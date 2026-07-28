@@ -166,7 +166,7 @@ make_stblr_csr_interface_sbayesrc_raw <- function(nit = 3L, nburn = 1L,
                                                   nchains = 1L,
                                                   keep_chains = FALSE,
                                                   updateLDswap = FALSE,
-                                                  estimate_selection_s = FALSE) {
+                                                  estimate_maf_effect_s = FALSE) {
   stats <- make_stblr_csr_interface_stats()
   nt <- length(stats$yy)
   m <- stats$m
@@ -231,12 +231,12 @@ make_stblr_csr_interface_sbayesrc_raw <- function(nit = 3L, nburn = 1L,
     ld_swap_r2 = 0.01,
     ld_swap_max_friends = 10L,
     ld_swap_moves = 1L,
-    selection_s_prior_scale = numeric(),
-    estimate_selection_s = estimate_selection_s,
-    selection_s_init = 0,
-    selection_s_prior = c(-3, 2),
-    selection_s_proposal_sd = 0.25,
-    selection_s_log_h = if (estimate_selection_s) rep(log(0.3), m) else numeric()
+    maf_effect_s_prior_scale = numeric(),
+    estimate_maf_effect_s = estimate_maf_effect_s,
+    maf_effect_s_init = 0,
+    maf_effect_s_prior = c(-3, 2),
+    maf_effect_s_proposal_sd = 0.25,
+    maf_effect_s_log_h = if (estimate_maf_effect_s) rep(log(0.3), m) else numeric()
   )
 }
 

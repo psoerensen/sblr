@@ -13,11 +13,11 @@
 .mtblr_bayesr_spec <- function(prior_kernel, pattern_spec, marker_frequency,
                                marker_count, mixture_var,
                                joint_pi = NULL, joint_pi_prior = NULL,
-                               component = NULL, selection_s = NULL,
-                               estimate_selection_s = FALSE,
-                               selection_s_init = NULL,
-                               selection_s_prior = NULL,
-                               selection_s_proposal_sd = NULL) {
+                               component = NULL, maf_effect_s = NULL,
+                               estimate_maf_effect_s = FALSE,
+                               maf_effect_s_init = NULL,
+                               maf_effect_s_prior = NULL,
+                               maf_effect_s_proposal_sd = NULL) {
   if (!is.character(prior_kernel) || length(prior_kernel) != 1L ||
       is.na(prior_kernel) || !prior_kernel %in% c("bayesc", "bayesr", "bayesrc")) {
     stop("prior_kernel must be exactly 'bayesc', 'bayesr', or 'bayesrc'.",
@@ -26,11 +26,11 @@
   if (prior_kernel == "bayesc") {
     supplied <- list(mixture_var = mixture_var, joint_pi = joint_pi,
       joint_pi_prior = joint_pi_prior, component = component,
-      selection_s = selection_s, selection_s_init = selection_s_init,
-      selection_s_prior = selection_s_prior,
-      selection_s_proposal_sd = selection_s_proposal_sd)
+      maf_effect_s = maf_effect_s, maf_effect_s_init = maf_effect_s_init,
+      maf_effect_s_prior = maf_effect_s_prior,
+      maf_effect_s_proposal_sd = maf_effect_s_proposal_sd)
     if (any(!vapply(supplied, is.null, logical(1))) ||
-        !identical(estimate_selection_s, FALSE)) {
+        !identical(estimate_maf_effect_s, FALSE)) {
       stop("BayesR component and selection-S controls require the BayesR prior kernel.",
            call. = FALSE)
     }
@@ -38,7 +38,7 @@
       joint_component = integer(), joint_multiplier = numeric(),
       joint_names = character(), component_count = 0L,
       marker_scale = numeric(), component_init = integer(),
-      pi_prior = numeric(), selection_s = NULL,
+      pi_prior = numeric(), maf_effect_s = NULL,
       mixture_var = NULL, model_parameters = NULL))
   }
   if (is.null(mixture_var)) mixture_var <- c(0, 0.01, 0.1, 1)
@@ -49,30 +49,30 @@
     stop("mixture_var must contain one leading zero and unique ascending positive multipliers.",
          call. = FALSE)
   }
-  if (!is.logical(estimate_selection_s) || length(estimate_selection_s) != 1L ||
-      is.na(estimate_selection_s)) stop("estimate_selection_s must be TRUE or FALSE.", call. = FALSE)
-  if (estimate_selection_s) {
-    stop("Sampled selection_s is not implemented for the joint MT prior; supply a fixed scalar selection_s.",
+  if (!is.logical(estimate_maf_effect_s) || length(estimate_maf_effect_s) != 1L ||
+      is.na(estimate_maf_effect_s)) stop("estimate_maf_effect_s must be TRUE or FALSE.", call. = FALSE)
+  if (estimate_maf_effect_s) {
+    stop("Sampled maf_effect_s is not implemented for the joint MT prior; supply a fixed scalar maf_effect_s.",
          call. = FALSE)
   }
-  if (!is.null(selection_s_init) || !is.null(selection_s_prior) ||
-      !is.null(selection_s_proposal_sd)) {
-    stop("selection_s_init, selection_s_prior, and selection_s_proposal_sd require estimate_selection_s = TRUE, which is unsupported for MTBLR.",
+  if (!is.null(maf_effect_s_init) || !is.null(maf_effect_s_prior) ||
+      !is.null(maf_effect_s_proposal_sd)) {
+    stop("maf_effect_s_init, maf_effect_s_prior, and maf_effect_s_proposal_sd require estimate_maf_effect_s = TRUE, which is unsupported for MTBLR.",
          call. = FALSE)
   }
-  selection_s_active <- !is.null(selection_s)
-  if (selection_s_active) {
-    if (!is.numeric(selection_s) || length(selection_s) != 1L ||
-        !is.finite(selection_s)) stop("selection_s must be one finite scalar.", call. = FALSE)
+  maf_effect_s_active <- !is.null(maf_effect_s)
+  if (maf_effect_s_active) {
+    if (!is.numeric(maf_effect_s) || length(maf_effect_s) != 1L ||
+        !is.finite(maf_effect_s)) stop("maf_effect_s must be one finite scalar.", call. = FALSE)
     if (is.null(marker_frequency) || length(marker_frequency) != marker_count ||
         any(!is.finite(marker_frequency)) || any(marker_frequency <= 0 | marker_frequency >= 1)) {
-      stop("Fixed selection_s requires aligned allele frequencies strictly inside (0, 1).",
+      stop("Fixed maf_effect_s requires aligned allele frequencies strictly inside (0, 1).",
            call. = FALSE)
     }
     marker_scale <- (2 * marker_frequency * (1 - marker_frequency)) ^
-      (selection_s + 1)
+      (maf_effect_s + 1)
   } else {
-    selection_s <- NULL
+    maf_effect_s <- NULL
     marker_scale <- rep(1, marker_count)
   }
   patterns <- pattern_spec$matrix
@@ -124,7 +124,7 @@
     joint_multiplier = state_multiplier, joint_names = state_names,
     component_count = as.integer(length(mixture_var)),
     marker_scale = marker_scale, component_init = component,
-    pi_prior = as.numeric(joint_pi_prior), selection_s = selection_s,
+    pi_prior = as.numeric(joint_pi_prior), maf_effect_s = maf_effect_s,
     mixture_var = mixture_var,
     model_parameters = list(mixture = list(
       component_multipliers = mixture_var,
@@ -132,8 +132,8 @@
       trait_patterns = patterns, joint_state_names = state_names,
       joint_pattern_index = as.integer(state_pattern_index),
       joint_component_index = as.integer(state_component),
-      selection_s = selection_s, selection_s_active = selection_s_active,
-      selection_s_estimated = FALSE)))
+      maf_effect_s = maf_effect_s, maf_effect_s_active = maf_effect_s_active,
+      maf_effect_s_estimated = FALSE)))
 }
 
 .mtblr_bayesr_format_fit <- function(fit, model_parameters) {
@@ -195,15 +195,15 @@
   else as.numeric(marker_metadata$allele_frequency)
 }
 
-.mtblr_resolve_selection_maf <- function(
-    selection_maf, selection_s_active, marker_count,
+.mtblr_resolve_effect_maf <- function(
+    effect_maf, maf_effect_s_active, marker_count,
     summary_marker_metadata = NULL, analysis_frequency = NULL,
     reference_marker_metadata = NULL,
-    allow_reference_maf_for_selection_s = FALSE) {
-  if (!is.logical(allow_reference_maf_for_selection_s) ||
-      length(allow_reference_maf_for_selection_s) != 1L ||
-      is.na(allow_reference_maf_for_selection_s)) {
-    stop("allow_reference_maf_for_selection_s must be TRUE or FALSE.",
+    allow_reference_maf_for_maf_effect_s = FALSE) {
+  if (!is.logical(allow_reference_maf_for_maf_effect_s) ||
+      length(allow_reference_maf_for_maf_effect_s) != 1L ||
+      is.na(allow_reference_maf_for_maf_effect_s)) {
+    stop("allow_reference_maf_for_maf_effect_s must be TRUE or FALSE.",
          call. = FALSE)
   }
   validate <- function(x, source) {
@@ -219,16 +219,16 @@
   population <- "not_applicable"
   fallback <- FALSE
   value <- NULL
-  if (!isTRUE(selection_s_active) && is.null(selection_maf)) {
+  if (!isTRUE(maf_effect_s_active) && is.null(effect_maf)) {
     return(list(
-      values = NULL, selection_maf_source = source,
-      selection_maf_population = population,
-      selection_maf_alignment_status = "not_requested",
-      selection_maf_fallback_used = FALSE))
+      values = NULL, effect_maf_source = source,
+      effect_maf_population = population,
+      effect_maf_alignment_status = "not_requested",
+      effect_maf_fallback_used = FALSE))
   }
-  if (!is.null(selection_maf)) {
-    value <- validate(selection_maf, "Explicit")
-    source <- "explicit_selection_maf"
+  if (!is.null(effect_maf)) {
+    value <- validate(effect_maf, "Explicit")
+    source <- "explicit_effect_maf"
     population <- "user_declared"
   } else if (!is.null(summary_marker_metadata) &&
              "allele_frequency" %in% names(summary_marker_metadata) &&
@@ -240,13 +240,13 @@
     value <- validate(analysis_frequency, "Analysis-genotype")
     source <- "analysis_genotype_frequency"
     population <- "analysis_sample"
-  } else if (isTRUE(selection_s_active)) {
+  } else if (isTRUE(maf_effect_s_active)) {
     reference <- .mtblr_bayesr_frequency(reference_marker_metadata)
-    if (is.null(reference) || !isTRUE(allow_reference_maf_for_selection_s)) {
+    if (is.null(reference) || !isTRUE(allow_reference_maf_for_maf_effect_s)) {
       stop(paste0(
-        "selection_s requires explicit selection_maf or aligned GWAS-summary ",
+        "maf_effect_s requires explicit effect_maf or aligned GWAS-summary ",
         "allele frequency. Reference-panel MAF fallback is disabled unless ",
-        "allow_reference_maf_for_selection_s = TRUE."), call. = FALSE)
+        "allow_reference_maf_for_maf_effect_s = TRUE."), call. = FALSE)
     }
     value <- validate(reference, "Reference-panel")
     source <- "reference_panel_frequency"
@@ -254,11 +254,11 @@
     fallback <- TRUE
   }
   list(
-    values = value, selection_maf_source = source,
-    selection_maf_population = population,
-    selection_maf_alignment_status = if (is.null(value)) "not_requested" else
+    values = value, effect_maf_source = source,
+    effect_maf_population = population,
+    effect_maf_alignment_status = if (is.null(value)) "not_requested" else
       "aligned_to_final_marker_order",
-    selection_maf_fallback_used = fallback)
+    effect_maf_fallback_used = fallback)
 }
 
 .mtblr_bayesr_initialization <- function(beta, b, state, component,

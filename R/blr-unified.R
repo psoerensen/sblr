@@ -148,13 +148,13 @@
   stop(sprintf(
     paste0("method = '%s' is invalid for operator = '%s' and data_level = ",
            "'%s'. Valid method values: %s. The 's' prefix denotes summary ",
-           "statistics; it does not activate selection_s scaling."),
+           "statistics; it does not activate maf_effect_s scaling."),
     paste(method, collapse = ","), operator, data_level,
     paste(sprintf("'%s'", valid), collapse = ", ")), call. = FALSE)
 }
 
-.blr_model_semantics <- function(method, operator, selection_s = NULL,
-                                 estimate_selection_s = FALSE,
+.blr_model_semantics <- function(method, operator, maf_effect_s = NULL,
+                                 estimate_maf_effect_s = FALSE,
                                  probability_policy = NULL) {
   stopifnot(length(method) == 1L, length(operator) == 1L)
   data_level <- if (operator == "packed_bed") "individual" else
@@ -163,16 +163,16 @@
     bayesc = "bayesc", sbayesc = "bayesc",
     bayesr = "bayesr", sbayesr = "bayesr",
     bayesrc = "bayesrc", sbayesrc = "bayesrc")
-  selection_s_active <- !is.null(selection_s) || isTRUE(estimate_selection_s)
+  maf_effect_s_active <- !is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s)
   effect_scale_policy <- if (prior_kernel == "bayesc") {
-    if (selection_s_active) "maf_s" else "unit"
+    if (maf_effect_s_active) "maf_s" else "unit"
   } else {
-    if (selection_s_active) "component_maf_s" else "component"
+    if (maf_effect_s_active) "component_maf_s" else "component"
   }
   list(
     model = method, prior_kernel = prior_kernel, data_level = data_level,
     effect_scale_policy = effect_scale_policy,
-    selection_s_active = selection_s_active,
+    maf_effect_s_active = maf_effect_s_active,
     probability_policy = probability_policy %||%
       if (prior_kernel == "bayesrc") "annotation_probit_stick" else "global",
     model_semantics_version = 2L,
@@ -185,27 +185,27 @@
       !method %in% supported) {
     .blr_public_model_error(method, operator, supported)
   }
-  if (!is.null(dots$selection_s) &&
-      (!is.numeric(dots$selection_s) || length(dots$selection_s) != 1L ||
-       !is.finite(dots$selection_s))) {
-    stop("selection_s must be NULL or a finite numeric scalar.", call. = FALSE)
+  if (!is.null(dots$maf_effect_s) &&
+      (!is.numeric(dots$maf_effect_s) || length(dots$maf_effect_s) != 1L ||
+       !is.finite(dots$maf_effect_s))) {
+    stop("maf_effect_s must be NULL or a finite numeric scalar.", call. = FALSE)
   }
-  estimate <- isTRUE(dots$estimate_selection_s %||% FALSE)
+  estimate <- isTRUE(dots$estimate_maf_effect_s %||% FALSE)
   semantics <- .blr_model_semantics(
-    method, operator, dots$selection_s, estimate)
+    method, operator, dots$maf_effect_s, estimate)
   internal_kernel <- switch(method,
     sbayesc = "bayesc", sbayesr = "bayesr", sbayesrc = "sbayesrc", method)
   c(semantics, list(kernel = internal_kernel, dots = dots,
                     effect_scale = semantics$effect_scale_policy))
 }
 
-.blr_resolve_st_selection_maf <- function(
-    selection_maf, allow_reference_maf_for_selection_s,
-    selection_s_active, stats, Glist) {
-  if (!is.logical(allow_reference_maf_for_selection_s) ||
-      length(allow_reference_maf_for_selection_s) != 1L ||
-      is.na(allow_reference_maf_for_selection_s)) {
-    stop("allow_reference_maf_for_selection_s must be TRUE or FALSE.",
+.blr_resolve_st_effect_maf <- function(
+    effect_maf, allow_reference_maf_for_maf_effect_s,
+    maf_effect_s_active, stats, Glist) {
+  if (!is.logical(allow_reference_maf_for_maf_effect_s) ||
+      length(allow_reference_maf_for_maf_effect_s) != 1L ||
+      is.na(allow_reference_maf_for_maf_effect_s)) {
+    stop("allow_reference_maf_for_maf_effect_s must be TRUE or FALSE.",
          call. = FALSE)
   }
   ids <- unlist(Glist$rsidsLD %||% list(), use.names = FALSE)
@@ -213,7 +213,7 @@
     x <- as.numeric(x)
     if (!length(ids) || length(x) != length(ids) || any(!is.finite(x)) ||
         any(x <= 0 | x > 0.5)) {
-      stop(source, " selection_maf must be aligned to the final LD order and lie in (0, 0.5].",
+      stop(source, " effect_maf must be aligned to the final LD order and lie in (0, 0.5].",
            call. = FALSE)
     }
     x
@@ -224,7 +224,7 @@
       count <- length(Glist$rsidsLD[[chr]])
       values <- x[seq.int(offset + 1L, offset + count)]
       idx <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
-      if (anyNA(idx)) stop("Could not align selection_maf to Glist$rsids.", call. = FALSE)
+      if (anyNA(idx)) stop("Could not align effect_maf to Glist$rsids.", call. = FALSE)
       target <- Glist$maf[[chr]] %||% rep(NA_real_, length(Glist$rsids[[chr]]))
       target[idx] <- values
       Glist$maf[[chr]] <- target
@@ -233,44 +233,44 @@
     Glist
   }
   result <- list(
-    Glist = Glist, selection_maf_source = "not_requested",
-    selection_maf_population = "not_applicable",
-    selection_maf_alignment_status = "not_requested",
-    selection_maf_fallback_used = FALSE)
-  if (!isTRUE(selection_s_active) && is.null(selection_maf)) return(result)
+    Glist = Glist, effect_maf_source = "not_requested",
+    effect_maf_population = "not_applicable",
+    effect_maf_alignment_status = "not_requested",
+    effect_maf_fallback_used = FALSE)
+  if (!isTRUE(maf_effect_s_active) && is.null(effect_maf)) return(result)
   summary_maf <- NULL
   metadata <- stats$marker_metadata
   if (is.data.frame(metadata) && "allele_frequency" %in% names(metadata)) {
     summary_maf <- pmin(metadata$allele_frequency,
                         1 - metadata$allele_frequency)
   }
-  if (!is.null(selection_maf)) {
-    value <- validate(selection_maf, "Explicit")
-    result$selection_maf_source <- "explicit_selection_maf"
-    result$selection_maf_population <- "user_declared"
+  if (!is.null(effect_maf)) {
+    value <- validate(effect_maf, "Explicit")
+    result$effect_maf_source <- "explicit_effect_maf"
+    result$effect_maf_population <- "user_declared"
   } else if (!is.null(summary_maf) && all(is.finite(summary_maf))) {
     value <- validate(summary_maf, "GWAS-summary")
-    result$selection_maf_source <- "gwas_summary_allele_frequency"
-    result$selection_maf_population <- "gwas_summary_population"
+    result$effect_maf_source <- "gwas_summary_allele_frequency"
+    result$effect_maf_population <- "gwas_summary_population"
   } else if (identical(stats$source %||% NULL, "make_summary_stats")) {
-    result$selection_maf_source <- "analysis_genotype_frequency"
-    result$selection_maf_population <- "analysis_sample"
-    result$selection_maf_alignment_status <- "by_construction"
+    result$effect_maf_source <- "analysis_genotype_frequency"
+    result$effect_maf_population <- "analysis_sample"
+    result$effect_maf_alignment_status <- "by_construction"
     return(result)
-  } else if (isTRUE(allow_reference_maf_for_selection_s)) {
-    result$selection_maf_source <- "reference_panel_frequency"
-    result$selection_maf_population <- "reference_panel"
-    result$selection_maf_alignment_status <- "aligned_to_final_marker_order"
-    result$selection_maf_fallback_used <- TRUE
+  } else if (isTRUE(allow_reference_maf_for_maf_effect_s)) {
+    result$effect_maf_source <- "reference_panel_frequency"
+    result$effect_maf_population <- "reference_panel"
+    result$effect_maf_alignment_status <- "aligned_to_final_marker_order"
+    result$effect_maf_fallback_used <- TRUE
     return(result)
   } else {
     stop(paste0(
-      "selection_s requires explicit selection_maf or aligned GWAS-summary ",
+      "maf_effect_s requires explicit effect_maf or aligned GWAS-summary ",
       "MAF. Reference-panel fallback requires ",
-      "allow_reference_maf_for_selection_s = TRUE."), call. = FALSE)
+      "allow_reference_maf_for_maf_effect_s = TRUE."), call. = FALSE)
   }
   result$Glist <- apply_to_glist(value)
-  result$selection_maf_alignment_status <- "aligned_to_final_marker_order"
+  result$effect_maf_alignment_status <- "aligned_to_final_marker_order"
   result
 }
 
@@ -618,8 +618,8 @@
   fit$input$model <- model
   fit$input$operator <- operator
   semantics <- .blr_model_semantics(
-    model, operator, fit$input$selection_s %||% NULL,
-    fit$input$estimate_selection_s %||% FALSE,
+    model, operator, fit$input$maf_effect_s %||% NULL,
+    fit$input$estimate_maf_effect_s %||% FALSE,
     fit$input$probability_policy %||% NULL)
   fit$input$prior_kernel <- semantics$prior_kernel
   fit$input$data_level <- semantics$data_level
@@ -655,14 +655,14 @@
   fit$data$effect_scale <- semantics$effect_scale_policy
   fit$data$model_semantics_version <- semantics$model_semantics_version
   fit$data$model_semantics <- semantics$model_semantics
-  fit$data$selection_maf_source <- fit$data$selection_maf_source %||%
-    fit$input$selection_maf_source %||% "not_requested"
-  fit$data$selection_maf_alignment_status <-
-    fit$data$selection_maf_alignment_status %||%
-    fit$input$selection_maf_alignment_status %||% "not_requested"
-  fit$data$selection_maf_fallback_used <- isTRUE(
-    fit$data$selection_maf_fallback_used %||%
-      fit$input$selection_maf_fallback_used %||% FALSE)
+  fit$data$effect_maf_source <- fit$data$effect_maf_source %||%
+    fit$input$effect_maf_source %||% "not_requested"
+  fit$data$effect_maf_alignment_status <-
+    fit$data$effect_maf_alignment_status %||%
+    fit$input$effect_maf_alignment_status %||% "not_requested"
+  fit$data$effect_maf_fallback_used <- isTRUE(
+    fit$data$effect_maf_fallback_used %||%
+      fit$input$effect_maf_fallback_used %||% FALSE)
   fit$data$phenotype_scale <- fit$data$phenotype_scale %||%
     if (operator == "packed_bed") "centered_unscaled" else
       "summary_crossproduct"
@@ -699,9 +699,9 @@
     bm_sd = "bm_chain_mean_sd", bm_min = "bm_chain_mean_min",
     bm_max = "bm_chain_mean_max", dm_sd = "dm_chain_mean_sd",
     dm_min = "dm_chain_mean_min", dm_max = "dm_chain_mean_max",
-    selection_s_sd = "selection_s_chain_mean_sd",
-    selection_s_min = "selection_s_chain_mean_min",
-    selection_s_max = "selection_s_chain_mean_max")
+    maf_effect_s_sd = "maf_effect_s_chain_mean_sd",
+    maf_effect_s_min = "maf_effect_s_chain_mean_min",
+    maf_effect_s_max = "maf_effect_s_chain_mean_max")
   for (old in names(rename)) if (old %in% names(fit)) {
     fit[[rename[[old]]]] <- fit[[old]]
     fit[[old]] <- NULL

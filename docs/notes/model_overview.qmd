@@ -11,7 +11,7 @@ STBLR fits traits independently; MTBLR jointly models a small trait set.
 | Summary statistics | `sbayesc` | `sbayesr` | `sbayesrc` |
 
 The `s` prefix means summary statistics, not MAF scaling. Optional
-`selection_s` controls MAF-dependent effect-variance scaling independently.
+`maf_effect_s` controls MAF-dependent effect-variance scaling independently.
 
 Public fitters are `stblr_csr()`, `stblr_csr_annot()`,
 `stblr_block_eigen()`, `stblr_bed()`, `mtblr_csr()`,

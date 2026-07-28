@@ -80,7 +80,7 @@ set cross-block LD to zero.
 - `mtblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`.
 
 The `sbayesrc` ST route uses its public `annotation` input; the MT route uses
-`annotations`. Fixed `selection_s` requires aligned allele frequencies and
+`annotations`. Fixed `maf_effect_s` requires aligned allele frequencies and
 explicit provenance. Exact unfiltered construction is used in permanent
 reductions against CSR when both represent the same LD operator.
 

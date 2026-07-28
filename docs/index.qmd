@@ -60,10 +60,10 @@ shared across deterministic logical chains.
 The `s` prefix means **summary statistics**. It does not activate MAF-dependent
 effect scaling.
 
-`selection_s` is a separate, optional MAF-dependent effect-variance control.
+`maf_effect_s` is a separate, optional MAF-dependent effect-variance control.
 It can be used only on routes that explicitly support it; its value and MAF
 provenance are recorded independently of the public model name. See the
-[`selection_s` guide](notes/selection_s.qmd) for the scale definition and
+[`maf_effect_s` guide](notes/maf_effect_s.qmd) for the scale definition and
 support limits.
 
 ## Data representations and diagnostics
@@ -75,7 +75,7 @@ explains their scales, alignment requirements, and provenance.
 
 Core convergence diagnostics cover the five trait-level variance traces.
 Extended diagnostics cover applicable low-dimensional covariance,
-probability, annotation, and sampled `selection_s` parameters. Explicitly
+probability, annotation, and sampled `maf_effect_s` parameters. Explicitly
 selected markers can additionally retain effective-effect, binary-activity,
 and mixture-component mixing diagnostics under a pre-execution memory guard.
 

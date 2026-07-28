@@ -108,14 +108,14 @@ inline void sample_marker_unscaled(
   d(iu) = di;
 }
 
-inline void fill_selection_scale(int m, double s, const arma::rowvec& log_h,
+inline void fill_maf_effect_scale(int m, double s, const arma::rowvec& log_h,
                           arma::rowvec& scale) {
   scale.set_size(static_cast<arma::uword>(m));
   for (int i = 0; i < m; ++i) {
     const arma::uword iu = static_cast<arma::uword>(i);
     const double value = std::exp((s + 1.0) * log_h(iu));
     if (!std::isfinite(value) || value <= 0.0) {
-      throw std::runtime_error("dynamic selection_s prior scale became invalid.");
+      throw std::runtime_error("dynamic maf_effect_s prior scale became invalid.");
     }
     scale(iu) = value;
   }
@@ -187,7 +187,7 @@ inline double selection_log_posterior(
   return value;
 }
 
-inline bool update_selection_s(
+inline bool update_maf_effect_s(
   double& current, const arma::rowvec& effects,
   const arma::Row<int>& state, double variance,
   const arma::rowvec& log_h, double lower, double upper,
@@ -332,7 +332,7 @@ inline void set_marker_effect(
 inline bool attempt_ld_swap(
   int m, double vei, double marker_variance, double yy,
   const arma::rowvec& diagonal, const arma::rowvec& wy,
-  const arma::rowvec* selection_scale, arma::rowvec& residual,
+  const arma::rowvec* maf_effect_scale, arma::rowvec& residual,
   arma::rowvec& effects, arma::Row<int>& state,
   const CsrBayesCDataView& op, const CsrBayesCLdFriendsView& friends,
   std::mt19937& gen
@@ -404,12 +404,12 @@ inline bool attempt_ld_swap(
         -std::log(static_cast<double>(reverse_candidate_count)) -
         std::log(static_cast<double>(reverse_friend_count));
       double log_prior_ratio = 0.0;
-      if (selection_scale != nullptr) {
+      if (maf_effect_scale != nullptr) {
         const double variance_old = std::max(
-          marker_variance * (*selection_scale)(old_u), 1e-300
+          marker_variance * (*maf_effect_scale)(old_u), 1e-300
         );
         const double variance_new = std::max(
-          marker_variance * (*selection_scale)(new_u), 1e-300
+          marker_variance * (*maf_effect_scale)(new_u), 1e-300
         );
         log_prior_ratio = -0.5 * (
           std::log(variance_new / variance_old) +
@@ -474,15 +474,15 @@ void validate_csr_bayesc_execution_input(
       controls.chain_seeds.size() != static_cast<std::size_t>(controls.nchains)) {
     throw std::invalid_argument("csr_bayesc chain seeds must match nchains");
   }
-  if (controls.use_fixed_selection_scale &&
-      (controls.fixed_selection_scale == nullptr ||
-       controls.fixed_selection_scale->n_elem != markers)) {
+  if (controls.use_fixed_maf_effect_scale &&
+      (controls.fixed_maf_effect_scale == nullptr ||
+       controls.fixed_maf_effect_scale->n_elem != markers)) {
     throw std::invalid_argument("csr_bayesc fixed selection scale is invalid");
   }
-  if (controls.estimate_selection_s &&
-      (controls.selection_s_log_h == nullptr ||
-       controls.selection_s_log_h->n_elem != markers)) {
-    throw std::invalid_argument("csr_bayesc selection_s log-h view is invalid");
+  if (controls.estimate_maf_effect_s &&
+      (controls.maf_effect_s_log_h == nullptr ||
+       controls.maf_effect_s_log_h->n_elem != markers)) {
+    throw std::invalid_argument("csr_bayesc maf_effect_s log-h view is invalid");
   }
   if (controls.update_ld_swap &&
       (input.ld_friends.row_ptr == nullptr ||
@@ -614,24 +614,24 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       output.inclusion_trace.zeros(n_trace);
       output.le_variance_trace.zeros(n_trace);
       output.ld_variance_trace.zeros(n_trace);
-      output.selection_s_trace.zeros(n_trace);
+      output.maf_effect_s_trace.zeros(n_trace);
       const arma::uword selected_count=static_cast<arma::uword>(input.controls.convergence_markers.size());
       if (input.controls.convergence_b && selected_count>0) output.convergence_b.zeros(input.controls.nit,selected_count);
       if (input.controls.convergence_d && selected_count>0) output.convergence_d.zeros(input.controls.nit,selected_count);
-      arma::rowvec dynamic_selection_scale;
-      double selection_s = input.controls.selection_s_initial;
+      arma::rowvec dynamic_maf_effect_scale;
+      double maf_effect_s = input.controls.maf_effect_s_initial;
 
       for (int iteration = 0; iteration < n_trace; ++iteration) {
-        if (input.controls.estimate_selection_s) {
-          fill_selection_scale(
-            m, selection_s, *input.controls.selection_s_log_h,
-            dynamic_selection_scale
+        if (input.controls.estimate_maf_effect_s) {
+          fill_maf_effect_scale(
+            m, maf_effect_s, *input.controls.maf_effect_s_log_h,
+            dynamic_maf_effect_scale
           );
         }
-        if (input.controls.estimate_selection_s ||
-            input.controls.use_fixed_selection_scale) {
-          const arma::rowvec& active_scale = input.controls.estimate_selection_s
-            ? dynamic_selection_scale : *input.controls.fixed_selection_scale;
+        if (input.controls.estimate_maf_effect_s ||
+            input.controls.use_fixed_maf_effect_scale) {
+          const arma::rowvec& active_scale = input.controls.estimate_maf_effect_s
+            ? dynamic_maf_effect_scale : *input.controls.fixed_maf_effect_scale;
           // Marker sweep begin.
           for (int sorted = 0; sorted < m; ++sorted) {
             const int marker =
@@ -661,10 +661,10 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
             for (int move = 0; move < input.controls.ld_swap_moves; ++move) {
               output.ld_swap_attempted += 1.0;
               const arma::rowvec* active_scale = nullptr;
-              if (input.controls.estimate_selection_s) {
-                active_scale = &dynamic_selection_scale;
-              } else if (input.controls.use_fixed_selection_scale) {
-                active_scale = input.controls.fixed_selection_scale;
+              if (input.controls.estimate_maf_effect_s) {
+                active_scale = &dynamic_maf_effect_scale;
+              } else if (input.controls.use_fixed_maf_effect_scale) {
+                active_scale = input.controls.fixed_maf_effect_scale;
               }
               if (attempt_ld_swap(
                     m, adjusted_residual, marker_variance,
@@ -677,10 +677,10 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
           }
         }
         if (input.controls.update_marker_variance) {
-          if (input.controls.estimate_selection_s ||
-              input.controls.use_fixed_selection_scale) {
-            const arma::rowvec& active_scale = input.controls.estimate_selection_s
-              ? dynamic_selection_scale : *input.controls.fixed_selection_scale;
+          if (input.controls.estimate_maf_effect_s ||
+              input.controls.use_fixed_maf_effect_scale) {
+            const arma::rowvec& active_scale = input.controls.estimate_maf_effect_s
+              ? dynamic_maf_effect_scale : *input.controls.fixed_maf_effect_scale;
             sample_marker_variance_scaled(
               m, input.priors.marker_degrees_freedom, marker_variance,
               effects, state, active_scale,
@@ -701,15 +701,15 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
             );
           }
         }
-        if (input.controls.estimate_selection_s) {
-          output.selection_s_attempted += 1.0;
-          if (update_selection_s(
-                selection_s, effects, state, marker_variance,
-                *input.controls.selection_s_log_h,
-                input.controls.selection_s_prior_lower,
-                input.controls.selection_s_prior_upper,
-                input.controls.selection_s_proposal_sd, gen)) {
-            output.selection_s_accepted += 1.0;
+        if (input.controls.estimate_maf_effect_s) {
+          output.maf_effect_s_attempted += 1.0;
+          if (update_maf_effect_s(
+                maf_effect_s, effects, state, marker_variance,
+                *input.controls.maf_effect_s_log_h,
+                input.controls.maf_effect_s_prior_lower,
+                input.controls.maf_effect_s_prior_upper,
+                input.controls.maf_effect_s_proposal_sd, gen)) {
+            output.maf_effect_s_accepted += 1.0;
           }
         }
         if (input.controls.update_residual_variance) {
@@ -781,7 +781,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         output.inclusion_trace(iteration_u) = pi[1];
         output.le_variance_trace(iteration_u) = le_variance;
         output.ld_variance_trace(iteration_u) = ld_variance;
-        output.selection_s_trace(iteration_u) = selection_s;
+        output.maf_effect_s_trace(iteration_u) = maf_effect_s;
         if (iteration >= input.controls.nburn) {
           const arma::uword draw=static_cast<arma::uword>(iteration-input.controls.nburn);
           for (arma::uword s=0;s<selected_count;++s) {
@@ -877,7 +877,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
   result.inclusion_trace.zeros(nt, n_trace);
   result.le_variance_trace.zeros(nt, n_trace);
   result.ld_variance_trace.zeros(nt, n_trace);
-  result.selection_s_trace.zeros(nt, n_trace);
+  result.maf_effect_s_trace.zeros(nt, n_trace);
   result.final_marker_variance.zeros(nt);
   result.final_genetic_variance.zeros(nt);
   result.final_residual_variance.zeros(nt);
@@ -887,8 +887,8 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
   result.retained_samples.zeros(nt);
   result.ld_swap_attempted.zeros(nt);
   result.ld_swap_accepted.zeros(nt);
-  result.selection_s_attempted.zeros(nt);
-  result.selection_s_accepted.zeros(nt);
+  result.maf_effect_s_attempted.zeros(nt);
+  result.maf_effect_s_accepted.zeros(nt);
   result.chains = std::move(chains);
   const double inverse_chains = 1.0 / static_cast<double>(input.controls.nchains);
   for (int trait = 0; trait < nt; ++trait) {
@@ -925,7 +925,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       result.inclusion_trace.row(trait_u) += current.inclusion_trace;
       result.le_variance_trace.row(trait_u) += current.le_variance_trace;
       result.ld_variance_trace.row(trait_u) += current.ld_variance_trace;
-      result.selection_s_trace.row(trait_u) += current.selection_s_trace;
+      result.maf_effect_s_trace.row(trait_u) += current.maf_effect_s_trace;
       result.final_marker_variance(trait_u) += current.final_marker_variance;
       result.final_genetic_variance(trait_u) += current.final_genetic_variance;
       result.final_residual_variance(trait_u) += current.final_residual_variance;
@@ -936,8 +936,8 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       result.retained_samples(trait_u) += current.retained_samples;
       result.ld_swap_attempted(trait_u) += current.ld_swap_attempted;
       result.ld_swap_accepted(trait_u) += current.ld_swap_accepted;
-      result.selection_s_attempted(trait_u) += current.selection_s_attempted;
-      result.selection_s_accepted(trait_u) += current.selection_s_accepted;
+      result.maf_effect_s_attempted(trait_u) += current.maf_effect_s_attempted;
+      result.maf_effect_s_accepted(trait_u) += current.maf_effect_s_accepted;
       for (int marker = 0; marker < m; ++marker) {
         const arma::uword marker_u = static_cast<arma::uword>(marker);
         result.marker_mean_min(trait_u, marker_u) = std::min(
@@ -969,7 +969,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
     result.inclusion_trace.row(trait_u) *= inverse_chains;
     result.le_variance_trace.row(trait_u) *= inverse_chains;
     result.ld_variance_trace.row(trait_u) *= inverse_chains;
-    result.selection_s_trace.row(trait_u) *= inverse_chains;
+    result.maf_effect_s_trace.row(trait_u) *= inverse_chains;
     result.final_marker_variance(trait_u) *= inverse_chains;
     result.final_genetic_variance(trait_u) *= inverse_chains;
     result.final_residual_variance(trait_u) *= inverse_chains;

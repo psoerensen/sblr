@@ -592,7 +592,7 @@ test_that("block-eigen SBayesRC validates block and filter arguments", {
   )
 })
 
-test_that("sampled selection_s works with block-eigen SBayesRC", {
+test_that("sampled maf_effect_s works with block-eigen SBayesRC", {
   skip_if_no_block_eigen_sbayesrc_native()
   fixture <- make_stblr_block_eigen_fixture()
   fit <- sblr:::.stblr_csr_sbayesrc_block_eigen(
@@ -600,9 +600,9 @@ test_that("sampled selection_s works with block-eigen SBayesRC", {
     Glist = fixture$Glist,
     annotation = make_stblr_block_eigen_annotation(fixture),
     block_start = 1L,
-    estimate_selection_s = TRUE,
-    selection_s_init = 0,
-    selection_s_proposal_sd = 0.25,
+    estimate_maf_effect_s = TRUE,
+    maf_effect_s_init = 0,
+    maf_effect_s_proposal_sd = 0.25,
     updateAlpha = FALSE,
     updateB = FALSE,
     updateE = FALSE,
@@ -611,10 +611,10 @@ test_that("sampled selection_s works with block-eigen SBayesRC", {
     ncores = 1L,
     seed = 105L
   )
-  expect_true("selection_s" %in% names(fit))
-  expect_true("selection_s_trace" %in% names(fit))
-  expect_true(all(is.finite(fit$selection_s)))
-  expect_true(all(is.finite(fit$selection_s_trace)))
+  expect_true("maf_effect_s" %in% names(fit))
+  expect_true("maf_effect_s_trace" %in% names(fit))
+  expect_true(all(is.finite(fit$maf_effect_s)))
+  expect_true(all(is.finite(fit$maf_effect_s_trace)))
 })
 
 test_that("block-eigen SBayesRC rejects LD-swap clearly", {

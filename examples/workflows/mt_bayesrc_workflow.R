@@ -22,7 +22,7 @@ fit_block <- mtblr_block_eigen(
 
 fit_bed <- mtblr_bed(
   y, Glist, method = "bayesrc", annotations = annotation,
-  mixture_var = c(0, 0.01, 0.1, 1), selection_s = -1
+  mixture_var = c(0, 0.01, 0.1, 1), maf_effect_s = -1
 )
 
 # Posterior state probabilities and annotation-driven prior probabilities are

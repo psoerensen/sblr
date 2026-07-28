@@ -38,15 +38,15 @@ test_that("MT BayesRC annotation diagnostics retain column-major identities", {
 
 test_that("sampled ST selection-S uses chain-private unthinned states", {
   chains <- list(T1 = list(
-    chain1 = list(selection_s = seq(-1, 0, length.out = 10)),
-    chain2 = list(selection_s = seq(-.8, .2, length.out = 10))))
+    chain1 = list(maf_effect_s = seq(-1, 0, length.out = 10)),
+    chain2 = list(maf_effect_s = seq(-.8, .2, length.out = 10))))
   controls <- .blr_convergence_controls(
-    "extended", list(warn = FALSE, extended_groups = "selection_s"), 2L)
+    "extended", list(warn = FALSE, extended_groups = "maf_effect_s"), 2L)
   bundle <- .blr_st_extended_bundle(
     chains, "T1", "sbayesc", "csr", 8L, 2L,
     list(input = list(prior_kernel = "bayesc",
-                      estimate_selection_s = TRUE)), controls)
-  expect_identical(bundle$quantities$group, "selection_s")
-  expect_equal(bundle$values[, 1L, 1L], chains$T1$chain1$selection_s[3:10])
-  expect_equal(bundle$values[, 2L, 1L], chains$T1$chain2$selection_s[3:10])
+                      estimate_maf_effect_s = TRUE)), controls)
+  expect_identical(bundle$quantities$group, "maf_effect_s")
+  expect_equal(bundle$values[, 1L, 1L], chains$T1$chain1$maf_effect_s[3:10])
+  expect_equal(bundle$values[, 2L, 1L], chains$T1$chain2$maf_effect_s[3:10])
 })

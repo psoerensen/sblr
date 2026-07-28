@@ -41,7 +41,7 @@ fit_csr <- stblr_csr(
 ```
 
 The `s` prefix identifies summary-statistics models. It does not activate
-`selection_s`. Use `sbayesr` instead of `sbayesc` for the summary-statistics
+`maf_effect_s`. Use `sbayesr` instead of `sbayesc` for the summary-statistics
 BayesR prior kernel.
 
 ## Alignment contract
@@ -52,7 +52,7 @@ The following order must agree exactly:
 2. rows and columns of the sparse-LD operator;
 3. `fit$data$marker_metadata`;
 4. annotation rows when annotations are used;
-5. marker-indexed starting states and optional `selection_maf`.
+5. marker-indexed starting states and optional `effect_maf`.
 
 Use stable marker IDs. Never silently intersect or reorder external statistics,
 LD, or annotations without an exact identifier match. The same analysed
@@ -100,8 +100,8 @@ fit_probit <- stblr_csr_annot(
 ```
 
 The other BayesC annotation policies are `group` and `learned_logistic`.
-Annotations and `selection_s` are separate dimensions: annotations affect
-probability policies, while `selection_s` optionally scales effect variance by
+Annotations and `maf_effect_s` are separate dimensions: annotations affect
+probability policies, while `maf_effect_s` optionally scales effect variance by
 MAF.
 
 ## Multi-trait routes

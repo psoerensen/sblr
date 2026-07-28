@@ -357,15 +357,15 @@
 #' @param pi_floor Probability floor used by probit stick-breaking.
 #' @param alpha_update_every Positive iteration interval for coefficient updates.
 #' @param updateAlpha Update annotation coefficients and their variances.
-#' @param selection_s Optional fixed scalar MAF-S exponent for BayesR; the BED
+#' @param maf_effect_s Optional fixed scalar MAF-S exponent for BayesR; the BED
 #'   model name remains `bayesr` because the data are individual-level.
-#' @param selection_maf Optional allele frequencies aligned to the selected
-#'   marker order for the independent `selection_s` scale policy.
-#' @param allow_reference_maf_for_selection_s Logical fallback control. Packed
+#' @param effect_maf Optional allele frequencies aligned to the selected
+#'   marker order for the independent `maf_effect_s` scale policy.
+#' @param allow_reference_maf_for_maf_effect_s Logical fallback control. Packed
 #'   BED uses analysis-genotype frequencies by construction when this is NULL.
-#' @param estimate_selection_s Logical; sampled MT S is currently unsupported.
-#' @param selection_s_init,selection_s_prior,selection_s_proposal_sd Reserved
-#'   sampled-S controls, rejected while `estimate_selection_s` is unsupported.
+#' @param estimate_maf_effect_s Logical; sampled MT S is currently unsupported.
+#' @param maf_effect_s_init,maf_effect_s_prior,maf_effect_s_proposal_sd Reserved
+#'   sampled-S controls, rejected while `estimate_maf_effect_s` is unsupported.
 #' @param vg,vb,ve Initial genetic, marker-effect, and residual covariance.
 #' @param ssb_prior,sse_prior Covariance prior scale matrices.
 #' @param updateB,updateE,updatePi Scalar logical update controls.
@@ -441,10 +441,10 @@ mtblr_bed <- function(
   standardize_annotations = TRUE, center_binary_annotations = FALSE,
   alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
   sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
-  alpha_update_every = 1L, updateAlpha = TRUE, selection_s = NULL,
-  selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
-  estimate_selection_s = FALSE, selection_s_init = NULL,
-  selection_s_prior = NULL, selection_s_proposal_sd = NULL,
+  alpha_update_every = 1L, updateAlpha = TRUE, maf_effect_s = NULL,
+  effect_maf = NULL, allow_reference_maf_for_maf_effect_s = FALSE,
+  estimate_maf_effect_s = FALSE, maf_effect_s_init = NULL,
+  maf_effect_s_prior = NULL, maf_effect_s_proposal_sd = NULL,
   vg = NULL, vb = NULL, ve = NULL,
   ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
@@ -550,15 +550,15 @@ mtblr_bed <- function(
   }
   marker_metadata <- .mtblr_bed_marker_metadata(dat, Glist)
   pattern_spec <- .mtblr_models(models, pimodels, pi, dat$nt)
-  maf_info <- .mtblr_resolve_selection_maf(
-    selection_maf, !is.null(selection_s) || isTRUE(estimate_selection_s),
+  maf_info <- .mtblr_resolve_effect_maf(
+    effect_maf, !is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s),
     dat$m, analysis_frequency = frequencies,
-    allow_reference_maf_for_selection_s =
-      allow_reference_maf_for_selection_s)
+    allow_reference_maf_for_maf_effect_s =
+      allow_reference_maf_for_maf_effect_s)
   mixture <- .mtblr_bayesr_spec(
     semantics$prior_kernel,pattern_spec,maf_info$values,dat$m,mixture_var,joint_pi,
-    joint_pi_prior,component,selection_s,estimate_selection_s,
-    selection_s_init,selection_s_prior,selection_s_proposal_sd)
+    joint_pi_prior,component,maf_effect_s,estimate_maf_effect_s,
+    maf_effect_s_init,maf_effect_s_prior,maf_effect_s_proposal_sd)
   if (identical(semantics$prior_kernel, "bayesrc")) {
     if (!is.null(joint_pi) || !is.null(joint_pi_prior))
       stop("joint_pi and joint_pi_prior are not BayesRC controls; use pimodels for conditional pattern initialization.", call. = FALSE)
@@ -701,7 +701,7 @@ mtblr_bed <- function(
     individual_policy = "shared_individual_level",
     input_sample_count = input_sample_count,
     selected_sample_count = dat$n_used,
-    row_selection_status = row_status,
+    row_maf_effect_status = row_status,
     selected_rows = selected_rows,
     sample_order_status = "phenotype_order_preserved",
     unmatched_input_ids = unmatched,
@@ -709,7 +709,7 @@ mtblr_bed <- function(
     duplicate_policy = "error",
     phenotype_missingness_status = "complete",
     phenotype_centering_status = centering_status,
-    marker_selection_status = if (explicit_cls) "explicit_cls" else
+    marker_maf_effect_status = if (explicit_cls) "explicit_cls" else
       "default_rsidsLD",
     marker_order_status = "selected_glist_order_preserved",
     genotype_orientation_status = "by_construction_same_glist",
@@ -845,10 +845,10 @@ mtblr_bed <- function(
     selected_rows = selected_rows, allele_frequencies = frequencies,
     genotype_scale = "standardized_genotype",
     data_level = "individual",
-    selection_maf_source = maf_info$selection_maf_source,
-    selection_maf_population = maf_info$selection_maf_population,
-    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
-    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    effect_maf_source = maf_info$effect_maf_source,
+    effect_maf_population = maf_info$effect_maf_population,
+    effect_maf_alignment_status = maf_info$effect_maf_alignment_status,
+    effect_maf_fallback_used = maf_info$effect_maf_fallback_used,
     annotation_source = bayesrc$metadata$annotation_source %||% "not_applicable",
     annotation_marker_alignment_status =
       bayesrc$metadata$annotation_marker_alignment_status %||% "not_applicable",
@@ -882,7 +882,7 @@ mtblr_bed <- function(
     backend = paste0("mt_bed_", semantics$prior_kernel),
     prior_kernel = semantics$prior_kernel,
     data_level = "individual",
-    effect_scale_policy = if (!is.null(selection_s))
+    effect_scale_policy = if (!is.null(maf_effect_s))
       if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component_maf_s" else "maf_s"
       else if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component" else "unit",
     model_semantics_version = 2L,
@@ -904,12 +904,12 @@ mtblr_bed <- function(
     sse_prior = sse_prior, nub = nub, nue = nue,
     models = model_spec$matrix, model_names = model_spec$names,
     pimodels = model_spec$probabilities, mixture_var = mixture$mixture_var,
-    joint_pi_prior = mixture$pi_prior, selection_s = mixture$selection_s,
-    estimate_selection_s = estimate_selection_s,
-    selection_maf_source = maf_info$selection_maf_source,
-    selection_maf_population = maf_info$selection_maf_population,
-    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
-    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    joint_pi_prior = mixture$pi_prior, maf_effect_s = mixture$maf_effect_s,
+    estimate_maf_effect_s = estimate_maf_effect_s,
+    effect_maf_source = maf_info$effect_maf_source,
+    effect_maf_population = maf_info$effect_maf_population,
+    effect_maf_alignment_status = maf_info$effect_maf_alignment_status,
+    effect_maf_fallback_used = maf_info$effect_maf_fallback_used,
     initialization_policy = initialization$policy,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     updateAlpha = bayesrc$updateAlpha,
@@ -967,8 +967,8 @@ mtblr_bed <- function(
   fit$memory_estimate <- memory
   fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
   fit <- .mtblr_bayesrc_format_fit(fit, raw$annotations, bayesrc)
-  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(selection_s))
-    warning("MAF-derived annotations and selection_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
+  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(maf_effect_s))
+    warning("MAF-derived annotations and maf_effect_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
   fit["convergence_traces"] <- list(convergence_traces)
   if (isTRUE(input$convergence_warning_emitted)) {
     warning(raw$diagnostics$convergence$warning_messages[1L], call. = FALSE)

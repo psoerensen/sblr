@@ -41,13 +41,13 @@ mtblr_bed(
   pi_floor = 1e-12,
   alpha_update_every = 1L,
   updateAlpha = TRUE,
-  selection_s = NULL,
-  selection_maf = NULL,
-  allow_reference_maf_for_selection_s = FALSE,
-  estimate_selection_s = FALSE,
-  selection_s_init = NULL,
-  selection_s_prior = NULL,
-  selection_s_proposal_sd = NULL,
+  maf_effect_s = NULL,
+  effect_maf = NULL,
+  allow_reference_maf_for_maf_effect_s = FALSE,
+  estimate_maf_effect_s = FALSE,
+  maf_effect_s_init = NULL,
+  maf_effect_s_prior = NULL,
+  maf_effect_s_proposal_sd = NULL,
   vg = NULL,
   vb = NULL,
   ve = NULL,
@@ -148,19 +148,19 @@ hyperparameters.}
 
 \item{updateAlpha}{Update annotation coefficients and their variances.}
 
-\item{selection_s}{Optional fixed scalar MAF-S exponent for BayesR; the BED
+\item{maf_effect_s}{Optional fixed scalar MAF-S exponent for BayesR; the BED
 model name remains `bayesr` because the data are individual-level.}
 
-\item{selection_maf}{Optional allele frequencies aligned to the selected
-marker order for the independent `selection_s` scale policy.}
+\item{effect_maf}{Optional allele frequencies aligned to the selected
+marker order for the independent `maf_effect_s` scale policy.}
 
-\item{allow_reference_maf_for_selection_s}{Logical fallback control. Packed
+\item{allow_reference_maf_for_maf_effect_s}{Logical fallback control. Packed
 BED uses analysis-genotype frequencies by construction when this is NULL.}
 
-\item{estimate_selection_s}{Logical; sampled MT S is currently unsupported.}
+\item{estimate_maf_effect_s}{Logical; sampled MT S is currently unsupported.}
 
-\item{selection_s_init, selection_s_prior, selection_s_proposal_sd}{Reserved
-sampled-S controls, rejected while `estimate_selection_s` is unsupported.}
+\item{maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd}{Reserved
+sampled-S controls, rejected while `estimate_maf_effect_s` is unsupported.}
 
 \item{vg, vb, ve}{Initial genetic, marker-effect, and residual covariance.}
 

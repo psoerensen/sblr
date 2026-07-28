@@ -15,7 +15,7 @@ annotation-informed BayesRC. See [stblr_csr()], [stblr_csr_annot()],
 }
 \details{
 The public `s` model prefix denotes summary-statistics data and is
-independent of the optional MAF-dependent `selection_s` effect scale.
+independent of the optional MAF-dependent `maf_effect_s` effect scale.
 }
 \seealso{
 Useful links:

@@ -19,17 +19,17 @@
 #'   and diagnostic trace-memory guards.
 #' @param memory_warning_gb Analytical warning threshold.
 #' @param verbose Print resolved controls.
-#' @param selection_maf Optional MAF aligned to the final summary-marker order
-#'   for the independent `selection_s` policy.
-#' @param allow_reference_maf_for_selection_s Allow explicit reference-panel
+#' @param effect_maf Optional MAF aligned to the final summary-marker order
+#'   for the independent `maf_effect_s` policy.
+#' @param allow_reference_maf_for_maf_effect_s Allow explicit reference-panel
 #'   MAF fallback when GWAS-summary or by-construction analysis MAF is absent.
 #' @param ... Model-specific controls accepted by the canonical implementation.
 #' @return A `stblr_fit` and `blr_fit` object.
 #' @export
 stblr_csr <- function(
   stats, Glist = NULL, ld_prefix = NULL,
-  method = c("sbayesc", "sbayesr"), selection_maf = NULL,
-  allow_reference_maf_for_selection_s = FALSE, ...,
+  method = c("sbayesc", "sbayesr"), effect_maf = NULL,
+  allow_reference_maf_for_maf_effect_s = FALSE, ...,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
   keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
@@ -40,9 +40,9 @@ stblr_csr <- function(
     method, dots, c("sbayesc", "sbayesr"), "csr")
   method <- resolved_model$model
   dots <- resolved_model$dots
-  maf_info <- .blr_resolve_st_selection_maf(
-    selection_maf, allow_reference_maf_for_selection_s,
-    resolved_model$selection_s_active, stats, Glist)
+  maf_info <- .blr_resolve_st_effect_maf(
+    effect_maf, allow_reference_maf_for_maf_effect_s,
+    resolved_model$maf_effect_s_active, stats, Glist)
   Glist <- maf_info$Glist
   chain <- .blr_chain_controls(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
@@ -77,18 +77,18 @@ stblr_csr <- function(
   fit$input$effect_scale <- resolved_model$effect_scale
   fit$input$prior_kernel <- resolved_model$prior_kernel
   fit$input$probability_policy <- resolved_model$probability_policy
-  fit$input$selection_maf_source <- maf_info$selection_maf_source
-  fit$input$selection_maf_population <- maf_info$selection_maf_population
-  fit$input$selection_maf_alignment_status <-
-    maf_info$selection_maf_alignment_status
-  fit$input$selection_maf_fallback_used <-
-    maf_info$selection_maf_fallback_used
+  fit$input$effect_maf_source <- maf_info$effect_maf_source
+  fit$input$effect_maf_population <- maf_info$effect_maf_population
+  fit$input$effect_maf_alignment_status <-
+    maf_info$effect_maf_alignment_status
+  fit$input$effect_maf_fallback_used <-
+    maf_info$effect_maf_fallback_used
   fit$data$effect_scale <- resolved_model$effect_scale
-  fit$data$selection_maf_source <- maf_info$selection_maf_source
-  fit$data$selection_maf_population <- maf_info$selection_maf_population
-  fit$data$selection_maf_alignment_status <-
-    maf_info$selection_maf_alignment_status
-  fit$data$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
+  fit$data$effect_maf_source <- maf_info$effect_maf_source
+  fit$data$effect_maf_population <- maf_info$effect_maf_population
+  fit$data$effect_maf_alignment_status <-
+    maf_info$effect_maf_alignment_status
+  fit$data$effect_maf_fallback_used <- maf_info$effect_maf_fallback_used
   fit
 }
 

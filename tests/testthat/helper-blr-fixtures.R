@@ -434,7 +434,7 @@ blr_block_public_call <- function(case, operator_sharing = "auto", ...) {
 }
 
 .mt_bayesrc_common <- function(method = "sbayesrc", alpha_init = NULL,
-                               selection_s = NULL) {
+                               maf_effect_s = NULL) {
   list(
     method = method,
     annotations = NULL,
@@ -443,7 +443,7 @@ blr_block_public_call <- function(case, operator_sharing = "auto", ...) {
     mixture_var = c(0, .1, 1),
     models = matrix(c(0L, 1L), 2L, 1L),
     alpha_init = alpha_init,
-    selection_s = selection_s,
+    maf_effect_s = maf_effect_s,
     vb = matrix(.1),
     ve = matrix(.5),
     updateB = FALSE,

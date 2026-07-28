@@ -8,7 +8,7 @@ format:
 Use `convergence = "auto"` for the default core-only behavior, `"none"` to
 disable formal capture, `"core"` to explicitly request the five trait traces,
 or `"extended"` for applicable covariance, probability, sampled
-`selection_s`, annotation, and selected-marker quantities.
+`maf_effect_s`, annotation, and selected-marker quantities.
 
 The core quantities are `vbs`, `vgs`, `ves`, `vle`, and `vld`. Formal traces
 are genuine unpooled logical-chain states captured after burn-in at every
@@ -26,7 +26,7 @@ fit <- stblr_csr(
   nchains = 4,
   convergence = "extended",
   convergence_control = list(
-    extended_groups = c("probability", "selection_s"),
+    extended_groups = c("probability", "maf_effect_s"),
     selected_markers = c("rs1", "rs25"),
     selected_marker_quantities = c("b", "d", "component"),
     keep_traces = TRUE,

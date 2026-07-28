@@ -504,7 +504,7 @@ test_that("BED BayesRC rejects deferred features and warns on scheduling control
     y = fixture$y, Glist = fixture$Glist, method = "bayesrc",
     annotation = matrix(c(0, 1), 2L), nit = 1L, nburn = 0L, updateE = FALSE
   )
-  expect_error(do.call(stblr_bed, c(common, list(selection_s = 0))), "Unsupported argument")
+  expect_error(do.call(stblr_bed, c(common, list(maf_effect_s = 0))), "Unsupported argument")
   expect_error(do.call(stblr_bed, c(common, list(updateLDswap = TRUE))), "Unsupported argument")
   expect_error(do.call(stblr_bed, c(common, list(eigen_filter = "hard_truncate"))), "Unsupported argument")
   expect_warning(

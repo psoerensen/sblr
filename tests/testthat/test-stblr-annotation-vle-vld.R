@@ -108,14 +108,14 @@ fit_tiny_annotation_vle_vld <- function(annotation_model,
     ld_swap_moves = 1L
   )
 
-  if (annotation_model == "prior") {
+  if (annotation_model == "fixed_marker") {
     common$annotations <- list(
       A = A,
       fixed_pi_marker = list(rep(0.35, stats$m)),
       fixed_vb_multiplier = list(c(1, 1.2, 0.8, 1))
     )
     common$updatePi <- FALSE
-  } else if (annotation_model == "learned") {
+  } else if (annotation_model == "learned_logistic") {
     common$updatePi <- FALSE
     common$learn_pi_annot <- TRUE
     common$learn_vb_annot <- TRUE
@@ -132,13 +132,13 @@ fit_tiny_annotation_vle_vld <- function(annotation_model,
     common$group_vb_multiplier_init <- c(1.2, 0.8)
     common$updatePi <- FALSE
     common$updateGroupVb <- FALSE
-  } else if (annotation_model == "sbayesrc") {
+  } else if (annotation_model == "annotation_probit_stick") {
     common$Glist <- list(
       rsidsLD = list(stats$marker_names),
       rsids = list(stats$marker_names),
       maf = list(rep(0.2, stats$m))
     )
-    common$gamma <- c(0, 0.1, 1)
+    common$mixture_var <- c(0, 0.1, 1)
     common$updateAlpha <- FALSE
   }
 
@@ -147,27 +147,33 @@ fit_tiny_annotation_vle_vld <- function(annotation_model,
 
 test_that("annotation-aware CSR models expose vle and vld", {
   required <- c(
-    prior = "stblr_cpg_omp_csr_prior",
-    learned = "stblr_cpg_omp_csr_annot",
+    fixed_marker = "stblr_cpg_omp_csr_prior",
+    learned_logistic = "stblr_cpg_omp_csr_annot",
     group = "stblr_cpg_omp_csr_group_annot",
-    sbayesrc = "stblr_cpg_omp_csr_sbayesrc"
+    annotation_probit_stick = "stblr_cpg_omp_csr_sbayesrc"
   )
   stats <- tiny_annotation_vle_vld_stats()
+  backend_names <- c(
+    fixed_marker = "prior",
+    learned_logistic = "learned",
+    group = "group",
+    annotation_probit_stick = "sbayesrc"
+  )
 
   for (model in names(required)) {
     skip_if_not(exists(required[[model]], mode = "function"))
     fit <- fit_tiny_annotation_vle_vld(model)
-    expect_equal(fit$input$annotation_model, model)
+    expect_equal(fit$input$annotation_model, unname(backend_names[[model]]))
     expect_vle_vld_trace_contract(fit, stats)
   }
 })
 
 test_that("annotation-aware vle and vld survive chains and LD-swap", {
   required <- c(
-    prior = "stblr_cpg_omp_csr_prior",
-    learned = "stblr_cpg_omp_csr_annot",
+    fixed_marker = "stblr_cpg_omp_csr_prior",
+    learned_logistic = "stblr_cpg_omp_csr_annot",
     group = "stblr_cpg_omp_csr_group_annot",
-    sbayesrc = "stblr_cpg_omp_csr_sbayesrc"
+    annotation_probit_stick = "stblr_cpg_omp_csr_sbayesrc"
   )
   stats <- tiny_annotation_vle_vld_stats()
 

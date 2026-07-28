@@ -83,14 +83,14 @@ struct CsrBayesCControls {
   bool update_ld_swap = false;
   double ld_swap_probability = 0.0;
   int ld_swap_moves = 0;
-  bool use_fixed_selection_scale = false;
-  const arma::rowvec* fixed_selection_scale = nullptr;
-  bool estimate_selection_s = false;
-  double selection_s_initial = 0.0;
-  double selection_s_prior_lower = -3.0;
-  double selection_s_prior_upper = 2.0;
-  double selection_s_proposal_sd = 0.35;
-  const arma::rowvec* selection_s_log_h = nullptr;
+  bool use_fixed_maf_effect_scale = false;
+  const arma::rowvec* fixed_maf_effect_scale = nullptr;
+  bool estimate_maf_effect_s = false;
+  double maf_effect_s_initial = 0.0;
+  double maf_effect_s_prior_lower = -3.0;
+  double maf_effect_s_prior_upper = 2.0;
+  double maf_effect_s_proposal_sd = 0.35;
+  const arma::rowvec* maf_effect_s_log_h = nullptr;
   std::vector<int> convergence_markers;
   bool convergence_b = false;
   bool convergence_d = false;
@@ -133,7 +133,7 @@ struct CsrBayesCChainResult {
   arma::rowvec inclusion_trace;
   arma::rowvec le_variance_trace;
   arma::rowvec ld_variance_trace;
-  arma::rowvec selection_s_trace;
+  arma::rowvec maf_effect_s_trace;
   arma::mat convergence_b;
   arma::imat convergence_d;
   double final_marker_variance = 0.0;
@@ -145,8 +145,8 @@ struct CsrBayesCChainResult {
   double retained_samples = 0.0;
   double ld_swap_attempted = 0.0;
   double ld_swap_accepted = 0.0;
-  double selection_s_attempted = 0.0;
-  double selection_s_accepted = 0.0;
+  double maf_effect_s_attempted = 0.0;
+  double maf_effect_s_accepted = 0.0;
   int thread_used = 0;
   double seconds = 0.0;
 };
@@ -177,7 +177,7 @@ struct CsrBayesCResult : BlrResult {
   arma::mat inclusion_trace;
   arma::mat le_variance_trace;
   arma::mat ld_variance_trace;
-  arma::mat selection_s_trace;
+  arma::mat maf_effect_s_trace;
   arma::vec final_marker_variance;
   arma::vec final_genetic_variance;
   arma::vec final_residual_variance;
@@ -187,8 +187,8 @@ struct CsrBayesCResult : BlrResult {
   arma::vec retained_samples;
   arma::vec ld_swap_attempted;
   arma::vec ld_swap_accepted;
-  arma::vec selection_s_attempted;
-  arma::vec selection_s_accepted;
+  arma::vec maf_effect_s_attempted;
+  arma::vec maf_effect_s_accepted;
   std::vector<CsrBayesCChainResult> chains;
 };
 

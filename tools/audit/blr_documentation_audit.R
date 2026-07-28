@@ -17,7 +17,7 @@ bad <- obsolete[vapply(obsolete, grepl, logical(1), x = txt, fixed = TRUE)]
 if (length(bad)) stop("obsolete documentation terms: ", paste(bad, collapse = ", "),
                       call. = FALSE)
 required <- c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc",
-              "sbayesrc", "selection_s", "extended", "credible sets",
+              "sbayesrc", "maf_effect_s", "extended", "credible sets",
               "block-eigen", "prior_component_probabilities")
 if (!all(vapply(required, grepl, logical(1), x = txt, fixed = TRUE)))
   stop("canonical documentation terminology incomplete", call. = FALSE)

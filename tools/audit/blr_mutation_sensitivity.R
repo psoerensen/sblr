@@ -3,7 +3,7 @@ guard <- function(spec) {
     "stblr_bed", "mtblr_csr", "mtblr_block_eigen", "mtblr_bed")) &&
   setequal(spec$models, c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc", "sbayesrc")) &&
   identical(spec$s_prefix, "summary_statistics") &&
-  identical(spec$selection_s, "independent") &&
+  identical(spec$maf_effect_s, "independent") &&
   identical(spec$raw_schema, 1L) && identical(spec$model_semantics, 2L) &&
   identical(spec$convergence_engine_count, 1L) &&
   identical(spec$selected_b, "effective") && identical(spec$selected_d, "binary") &&
@@ -21,7 +21,7 @@ base <- list(
   fitters = c("stblr_csr", "stblr_csr_annot", "stblr_block_eigen", "stblr_bed",
     "mtblr_csr", "mtblr_block_eigen", "mtblr_bed"),
   models = c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc", "sbayesrc"),
-  s_prefix = "summary_statistics", selection_s = "independent",
+  s_prefix = "summary_statistics", maf_effect_s = "independent",
   raw_schema = 1L, model_semantics = 2L, convergence_engine_count = 1L,
   selected_b = "effective", selected_d = "binary", all_marker_default = FALSE,
   package_check = TRUE,
@@ -37,7 +37,7 @@ mutations <- list(
   alias_fitter = function(x) { x$fitters[[1L]] <- "sblr"; x },
   mixed_case_model = function(x) { x$models[[1L]] <- "BayesC"; x },
   s_means_maf = function(x) { x$s_prefix <- "maf_s"; x },
-  implicit_selection_s = function(x) { x$selection_s <- "model_name"; x },
+  implicit_maf_effect_s = function(x) { x$maf_effect_s <- "model_name"; x },
   raw_schema_bump = function(x) { x$raw_schema <- 2L; x },
   semantic_version_removed = function(x) { x$model_semantics <- NULL; x },
   second_convergence_engine = function(x) { x$convergence_engine_count <- 2L; x },

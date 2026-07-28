@@ -12,7 +12,7 @@ Common controls are `warn`, `rhat_threshold`, `ess_per_chain_threshold`,
 `mcse_mean_over_sd_threshold`, and `keep_traces`. Extended controls are
 `extended_groups`, `selected_markers`, `selected_marker_quantities`,
 `full_probability_states`, `max_trace_gb`, and `allow_large_traces`.
-`extended_groups` selects covariance, probability, sampled `selection_s`, and
+`extended_groups` selects covariance, probability, sampled `maf_effect_s`, and
 annotation groups. Selected marker IDs or one-based indices must be explicit;
 `NULL` never means all markers and no all-marker shortcut exists.
 
@@ -60,7 +60,7 @@ Requests above `max_trace_gb` fail before sampling unless
 does not thin or truncate the request.
 
 The summary has one scalar row per diagnostic key and group overviews for core,
-covariance, probability, `selection_s`, annotations, and selected markers.
+covariance, probability, `maf_effect_s`, annotations, and selected markers.
 Advisories aggregate R-hat, ESS-per-chain, tail ESS, and relative-MCSE flags at
 most once per fit. Status is `ok`, `warning`, `partial`, `unavailable`, or
 `not_requested`—never a claim that a model has definitively converged.

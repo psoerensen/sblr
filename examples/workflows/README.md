@@ -11,11 +11,11 @@ helpers.
 | [`st_annotation_workflow.R`](st_annotation_workflow.R) | `stblr_csr_annot()` with all four canonical annotation policies |
 | [`mt_models_workflow.R`](mt_models_workflow.R) | MT BayesC/BayesR across packed BED, CSR, and block eigen |
 | [`mt_bayesrc_workflow.R`](mt_bayesrc_workflow.R) | MT BayesRC/SBayesRC annotation preprocessing and probability outputs |
-| [`selection_s_workflow.R`](selection_s_workflow.R) | Independent fixed and supported sampled MAF-dependent scaling |
+| [`maf_effect_s_workflow.R`](maf_effect_s_workflow.R) | Independent fixed and supported sampled MAF-dependent scaling |
 | [`convergence_workflow.R`](convergence_workflow.R) | Core/extended convergence, selected markers, retained traces, and memory preflight |
 | [`operator_comparison_workflow.R`](operator_comparison_workflow.R) | Construction and comparison of CSR, block-eigen, and packed-BED routes |
 | [`workflow_helpers.R`](workflow_helpers.R) | Small deterministic fixture and output-inspection helpers |
 
 The public `s` model prefix denotes summary-statistics data. It is unrelated
-to whether `selection_s` is active. Demonstration MCMC lengths are intentionally
+to whether `maf_effect_s` is active. Demonstration MCMC lengths are intentionally
 small and are not recommendations for scientific analyses.

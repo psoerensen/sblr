@@ -56,18 +56,18 @@ annotation coefficients are fitted separately by trait. The formatted fit
 therefore stores one `alpha` matrix and one set of marker component summaries
 per trait.
 
-## Optional BayesS-Style `selection_s`
+## Optional BayesS-Style `maf_effect_s`
 
-The package argument is `selection_s`. It corresponds to the BayesS-style MAF
+The package argument is `maf_effect_s`. It corresponds to the BayesS-style MAF
 architecture parameter `S`.
 
-Current CSR SBayesRC supports both fixed global `selection_s` and sampled
-trait-specific `selection_s` by Metropolis-Hastings. SBayesRC annotations and
-`selection_s` affect different parts of the prior:
+Current CSR SBayesRC supports both fixed global `maf_effect_s` and sampled
+trait-specific `maf_effect_s` by Metropolis-Hastings. SBayesRC annotations and
+`maf_effect_s` affect different parts of the prior:
 
 - annotations affect marker-specific component probabilities through
   $A\alpha$ and probit stick-breaking;
-- `selection_s` affects marker-specific effect-size prior variance.
+- `maf_effect_s` affects marker-specific effect-size prior variance.
 
 CSR effects are on the standardized-genotype scale. The MAF-dependent prior
 scale is
@@ -82,7 +82,7 @@ where $p_j$ is the minor allele frequency. The `+1` exponent is used because
 the CSR sampler effects are standardized-genotype-scale effects rather than
 allele-scale effects.
 
-With fixed `selection_s`, the active SBayesRC component prior is
+With fixed `maf_effect_s`, the active SBayesRC component prior is
 
 $$
 b_j \mid \mathrm{component}_j=m,v_b,S
@@ -90,7 +90,7 @@ b_j \mid \mathrm{component}_j=m,v_b,S
 N\{0, v_b\gamma_m q_j(S)\}.
 $$
 
-With sampled `selection_s`, the current implementation samples one $S_t$ per
+With sampled `maf_effect_s`, the current implementation samples one $S_t$ per
 trait and chain using the active-component MH log posterior contribution
 
 ```text
@@ -104,14 +104,14 @@ log p(S_t | b_t, gamma_t, vb_t)
 The sampled-S defaults are:
 
 ```r
-selection_s_init = 0
-selection_s_prior = c(-3, 2)
-selection_s_proposal_sd = 0.35
+maf_effect_s_init = 0
+maf_effect_s_prior = c(-3, 2)
+maf_effect_s_proposal_sd = 0.35
 ```
 
-Fixed `selection_s` is available only where the public capability contract
-marks it supported. Sampled `selection_s` remains an ST-only capability on
-validated routes. See [`selection_s`](../notes/selection_s.qmd) and the
+Fixed `maf_effect_s` is available only where the public capability contract
+marks it supported. Sampled `maf_effect_s` remains an ST-only capability on
+validated routes. See [`maf_effect_s`](../notes/maf_effect_s.qmd) and the
 [model capability matrix](../dev/blr_model_capability_matrix.md) for the
 current support matrix.
 

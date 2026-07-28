@@ -48,7 +48,7 @@ Public model names encode data level:
 | `sbayesrc` | annotation-informed BayesR | summary statistics |
 
 The `s` prefix means **summary statistics**. It never activates
-`selection_s`, which is an independent optional MAF-dependent effect-variance
+`maf_effect_s`, which is an independent optional MAF-dependent effect-variance
 scale.
 
 ## Model and operator support
@@ -70,7 +70,7 @@ Unsupported combinations fail before numerical execution.
 `convergence = "auto"` preserves the core five trait-level diagnostics when
 multiple chains are available. `"core"` requests `vbs`, `vgs`, `ves`, `vle`,
 and `vld`; `"extended"` can additionally diagnose covariance, probability,
-sampled `selection_s`, and annotation parameters. Explicitly selected marker
+sampled `maf_effect_s`, and annotation parameters. Explicitly selected marker
 IDs or indices can retain mixing diagnostics for effective effects (`b`),
 binary activity (`d`), and mixture components where defined. Diagnostic trace
 capture is post-burn, unthinned, chain-private, RNG-neutral, and protected by

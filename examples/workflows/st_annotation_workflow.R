@@ -11,7 +11,7 @@
 ##   - posterior/component/annotation summaries
 ##
 ## This file is intentionally focused on model fitting and summaries. LD-swap,
-## fine-mapping, multi-chain diagnostics, and selection_s have separate workflows.
+## fine-mapping, multi-chain diagnostics, and maf_effect_s have separate workflows.
 
 library(sblr)
 source("./examples/workflows/workflow_helpers.R")

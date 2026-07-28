@@ -6,7 +6,7 @@ format: html
 Maintained scripts under
 [`examples/workflows/`](https://github.com/psoerensen/sblr/tree/master/examples/workflows)
 cover ST summary and individual models, annotations, MT mixtures,
-`selection_s`, convergence, selected markers, and operator comparison.
+`maf_effect_s`, convergence, selected markers, and operator comparison.
 
 All fits identify `family`, public `model`, and `operator`. `input` contains
 resolved controls and prior/effect-scale policies; `data` owns marker/trait

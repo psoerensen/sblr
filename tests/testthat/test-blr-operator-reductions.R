@@ -230,9 +230,9 @@ test_that("S models reuse BayesC and BayesR kernels across exact operators", {
   on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
   cases <- list(
     list(method = "sbayesc", pi_init = .5, pi_prior_mean = .5,
-         pi_prior_strength = 2, selection_s = 0),
+         pi_prior_strength = 2, maf_effect_s = 0),
     list(method = "sbayesr", mixture_var = c(0, .01, .1),
-         pi = c(.7, .2, .1), alpha = c(1, 1, 1), selection_s = 0))
+         pi = c(.7, .2, .1), alpha = c(1, 1, 1), maf_effect_s = 0))
   for (case in cases) {
     common <- c(.blr_reduction_st_common(), case)
     csr <- do.call(stblr_csr, c(list(

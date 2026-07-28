@@ -4,7 +4,7 @@
 
 The supported, reviewed examples live in [`workflows/`](workflows/README.md).
 They cover the canonical STBLR and MTBLR interfaces, all three operator
-families, annotation models, `selection_s`, convergence diagnostics, and
+families, annotation models, `maf_effect_s`, convergence diagnostics, and
 operator comparisons. These are the examples promised by the package.
 
 ## Exploratory scripts

@@ -11,14 +11,14 @@ test_that("public model semantics separate data level from effect scale", {
     expect_identical(resolved$prior_kernel, case[[3L]])
     expect_identical(resolved$data_level, case[[4L]])
     expect_identical(resolved$effect_scale_policy, case[[5L]])
-    expect_false(resolved$selection_s_active)
+    expect_false(resolved$maf_effect_s_active)
     expect_identical(resolved$model_semantics_version, 2L)
   }
   expect_identical(
-    sblr:::.blr_model_semantics("sbayesr", "csr", selection_s = 0)$effect_scale_policy,
+    sblr:::.blr_model_semantics("sbayesr", "csr", maf_effect_s = 0)$effect_scale_policy,
     "component_maf_s")
   expect_identical(
-    sblr:::.blr_model_semantics("sbayesc", "csr", selection_s = -1)$effect_scale_policy,
+    sblr:::.blr_model_semantics("sbayesc", "csr", maf_effect_s = -1)$effect_scale_policy,
     "maf_s")
 })
 
@@ -45,36 +45,36 @@ test_that("operator model matrices are failure-closed before preparation", {
                "s.*prefix denotes summary statistics")
 })
 
-test_that("selection_s NULL and minus one are numerically equal but semantic distinct", {
+test_that("maf_effect_s NULL and minus one are numerically equal but semantic distinct", {
   patterns <- sblr:::.mtblr_models(matrix(c(0L, 1L), 2L, 1L),
                                     c(.8, .2), .2, 1L)
   base <- sblr:::.mtblr_bayesr_spec(
     "bayesr", patterns, NULL, 2L, c(0, 1))
   unit <- sblr:::.mtblr_bayesr_spec(
-    "bayesr", patterns, c(.2, .4), 2L, c(0, 1), selection_s = -1)
+    "bayesr", patterns, c(.2, .4), 2L, c(0, 1), maf_effect_s = -1)
   expect_equal(base$marker_scale, unit$marker_scale, tolerance = 0)
-  expect_null(base$selection_s)
-  expect_identical(unit$selection_s, -1)
-  expect_false(base$model_parameters$mixture$selection_s_active)
-  expect_true(unit$model_parameters$mixture$selection_s_active)
+  expect_null(base$maf_effect_s)
+  expect_identical(unit$maf_effect_s, -1)
+  expect_false(base$model_parameters$mixture$maf_effect_s_active)
+  expect_true(unit$model_parameters$mixture$maf_effect_s_active)
 })
 
 test_that("selection MAF provenance is explicit and fallback is opt-in", {
-  explicit <- sblr:::.mtblr_resolve_selection_maf(
+  explicit <- sblr:::.mtblr_resolve_effect_maf(
     c(.1, .2), TRUE, 2L)
-  expect_identical(explicit$selection_maf_source, "explicit_selection_maf")
-  expect_false(explicit$selection_maf_fallback_used)
+  expect_identical(explicit$effect_maf_source, "explicit_effect_maf")
+  expect_false(explicit$effect_maf_fallback_used)
   reference <- data.frame(marker_id = c("a", "b"),
                           allele_frequency = c(.1, .2))
-  expect_error(sblr:::.mtblr_resolve_selection_maf(
+  expect_error(sblr:::.mtblr_resolve_effect_maf(
     NULL, TRUE, 2L, reference_marker_metadata = reference),
     "fallback is disabled")
-  fallback <- sblr:::.mtblr_resolve_selection_maf(
+  fallback <- sblr:::.mtblr_resolve_effect_maf(
     NULL, TRUE, 2L, reference_marker_metadata = reference,
-    allow_reference_maf_for_selection_s = TRUE)
-  expect_identical(fallback$selection_maf_source,
+    allow_reference_maf_for_maf_effect_s = TRUE)
+  expect_identical(fallback$effect_maf_source,
                    "reference_panel_frequency")
-  expect_true(fallback$selection_maf_fallback_used)
+  expect_true(fallback$effect_maf_fallback_used)
 })
 
 test_that("ambiguous old fits are not silently reinterpreted", {

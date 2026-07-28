@@ -154,10 +154,10 @@ static std::vector<int> stblr_sbayesrc_copy_rows0_or_empty(
 //   34 chain comp_prob, optional when keep_chains = true, chain-major
 //   35 chain alpha, optional when keep_chains = true, chain-major
 //   36 chain sigmaSqAlpha, optional when keep_chains = true, chain-major
-//   37 selection_s trace, optional when estimate_selection_s = true
-//   38 selection_s acceptance, optional when estimate_selection_s = true
-//   39 chain selection_s trace, optional when estimate_selection_s and keep_chains
-//   40 chain selection_s acceptance, optional when estimate_selection_s and keep_chains
+//   37 maf_effect_s trace, optional when estimate_maf_effect_s = true
+//   38 maf_effect_s acceptance, optional when estimate_maf_effect_s = true
+//   39 chain maf_effect_s trace, optional when estimate_maf_effect_s and keep_chains
+//   40 chain maf_effect_s acceptance, optional when estimate_maf_effect_s and keep_chains
 //
 // Recommended R extraction for slot 18:
 //   alpha <- matrix(fit[[18]][[t]], nrow=ncol(A), ncol=length(gamma)-1)
@@ -1000,7 +1000,7 @@ inline void sampleB_SBayesRC_ST_csr_scaled(
     throw std::runtime_error("sampleB_SBayesRC_ST_csr_scaled: invalid prior_scale value.");
    }
 
-   // vb is the global variance; fixed selection_s enters the sufficient
+   // vb is the global variance; fixed maf_effect_s enters the sufficient
    // statistic as b_j^2 / (gamma_m * prior_scale_j).
    ssb_scaled += b(iu) * b(iu) / (gk * scale_i);
    dfb += 1.0;
@@ -1019,9 +1019,9 @@ inline void sampleB_SBayesRC_ST_csr_scaled(
  vb = std::max(scale / chi2, 1e-12);
 }
 
-inline void fill_selection_s_prior_scale_sbayesrc(
+inline void fill_maf_effect_s_prior_scale_sbayesrc(
   int m,
-  double selection_s,
+  double maf_effect_s,
   const arma::rowvec& log_h,
   arma::rowvec& prior_scale
 ) {
@@ -1031,16 +1031,16 @@ inline void fill_selection_s_prior_scale_sbayesrc(
 
  for (int i = 0; i < m; ++i) {
   const arma::uword iu = static_cast<arma::uword>(i);
-  const double scale_i = std::exp((selection_s + 1.0) * log_h(iu));
+  const double scale_i = std::exp((maf_effect_s + 1.0) * log_h(iu));
   if (!std::isfinite(scale_i) || scale_i <= 0.0) {
-   throw std::runtime_error("fill_selection_s_prior_scale_sbayesrc: invalid dynamic prior scale.");
+   throw std::runtime_error("fill_maf_effect_s_prior_scale_sbayesrc: invalid dynamic prior scale.");
   }
   prior_scale(iu) = scale_i;
  }
 }
 
-inline double logpost_selection_s_sbayesrc(
-  double selection_s,
+inline double logpost_maf_effect_s_sbayesrc(
+  double maf_effect_s,
   const arma::rowvec& b,
   const arma::Row<int>& comp,
   double vb,
@@ -1049,9 +1049,9 @@ inline double logpost_selection_s_sbayesrc(
   double prior_lower,
   double prior_upper
 ) {
- if (!std::isfinite(selection_s) ||
-     selection_s < prior_lower ||
-     selection_s > prior_upper) {
+ if (!std::isfinite(maf_effect_s) ||
+     maf_effect_s < prior_lower ||
+     maf_effect_s > prior_upper) {
   return -std::numeric_limits<double>::infinity();
  }
  if (!std::isfinite(vb) || vb <= 0.0) {
@@ -1074,7 +1074,7 @@ inline double logpost_selection_s_sbayesrc(
    return -std::numeric_limits<double>::infinity();
   }
 
-  const double log_q = (selection_s + 1.0) * log_h(iu);
+  const double log_q = (maf_effect_s + 1.0) * log_h(iu);
   const double q = std::exp(log_q);
   if (!std::isfinite(q) || q <= 0.0) {
    return -std::numeric_limits<double>::infinity();
@@ -1087,8 +1087,8 @@ inline double logpost_selection_s_sbayesrc(
  return lp;
 }
 
-inline bool update_selection_s_sbayesrc(
-  double& selection_s,
+inline bool update_maf_effect_s_sbayesrc(
+  double& maf_effect_s,
   const arma::rowvec& b,
   const arma::Row<int>& comp,
   double vb,
@@ -1100,15 +1100,15 @@ inline bool update_selection_s_sbayesrc(
   std::mt19937& gen
 ) {
  std::normal_distribution<double> norm(0.0, proposal_sd);
- const double prop = selection_s + norm(gen);
+ const double prop = maf_effect_s + norm(gen);
  if (!std::isfinite(prop) || prop < prior_lower || prop > prior_upper) {
   return false;
  }
 
- const double lp_current = logpost_selection_s_sbayesrc(
-  selection_s, b, comp, vb, gamma, log_h, prior_lower, prior_upper
+ const double lp_current = logpost_maf_effect_s_sbayesrc(
+  maf_effect_s, b, comp, vb, gamma, log_h, prior_lower, prior_upper
  );
- const double lp_prop = logpost_selection_s_sbayesrc(
+ const double lp_prop = logpost_maf_effect_s_sbayesrc(
   prop, b, comp, vb, gamma, log_h, prior_lower, prior_upper
  );
  const double log_alpha = lp_prop - lp_current;
@@ -1116,7 +1116,7 @@ inline bool update_selection_s_sbayesrc(
 
  std::uniform_real_distribution<double> runif(0.0, 1.0);
  if (std::log(std::max(runif(gen), 1e-300)) < log_alpha) {
-  selection_s = prop;
+  maf_effect_s = prop;
   return true;
  }
 
@@ -1161,8 +1161,8 @@ struct CsrSBayesRCBindingMetadata {
  int chains;
  bool keep_chains;
  bool update_ld_swap;
- bool estimate_selection_s;
- bool use_selection_s_prior_scale;
+ bool estimate_maf_effect_s;
+ bool use_maf_effect_s_prior_scale;
  const std::vector<int>& convergence_markers;
 };
 
@@ -1216,12 +1216,12 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   double ld_swap_r2,
   int ld_swap_max_friends,
   int ld_swap_moves,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale,
-  bool estimate_selection_s,
-  double selection_s_init,
-  Rcpp::NumericVector selection_s_prior,
-  double selection_s_proposal_sd,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale,
+  bool estimate_maf_effect_s,
+  double maf_effect_s_init,
+  Rcpp::NumericVector maf_effect_s_prior,
+  double maf_effect_s_proposal_sd,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h,
   Rcpp::IntegerVector convergence_markers,
   bool convergence_annotations,
   bool convergence_b,
@@ -1278,45 +1278,45 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: ld_swap_moves must be non-negative.");
  }
 
- bool use_selection_s_prior_scale = selection_s_prior_scale.isNotNull();
- Rcpp::NumericVector selection_s_prior_scale_vec;
- if (use_selection_s_prior_scale) {
-  selection_s_prior_scale_vec = Rcpp::NumericVector(selection_s_prior_scale);
-  use_selection_s_prior_scale = selection_s_prior_scale_vec.size() > 0;
+ bool use_maf_effect_s_prior_scale = maf_effect_s_prior_scale.isNotNull();
+ Rcpp::NumericVector maf_effect_s_prior_scale_vec;
+ if (use_maf_effect_s_prior_scale) {
+  maf_effect_s_prior_scale_vec = Rcpp::NumericVector(maf_effect_s_prior_scale);
+  use_maf_effect_s_prior_scale = maf_effect_s_prior_scale_vec.size() > 0;
  }
 
- if (use_selection_s_prior_scale &&
-     static_cast<int>(selection_s_prior_scale_vec.size()) != m) {
-  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_prior_scale must have length m.");
+ if (use_maf_effect_s_prior_scale &&
+     static_cast<int>(maf_effect_s_prior_scale_vec.size()) != m) {
+  throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_prior_scale must have length m.");
  }
 
- if (estimate_selection_s && use_selection_s_prior_scale) {
+ if (estimate_maf_effect_s && use_maf_effect_s_prior_scale) {
   throw std::runtime_error(
-   "stblr_cpg_omp_csr_sbayesrc: fixed selection_s_prior_scale and estimate_selection_s cannot both be used."
+   "stblr_cpg_omp_csr_sbayesrc: fixed maf_effect_s_prior_scale and estimate_maf_effect_s cannot both be used."
   );
  }
 
- if (estimate_selection_s) {
-  if (!std::isfinite(selection_s_init)) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_init must be finite.");
+ if (estimate_maf_effect_s) {
+  if (!std::isfinite(maf_effect_s_init)) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_init must be finite.");
   }
-  if (selection_s_prior.size() != 2 ||
-      !std::isfinite(selection_s_prior[0]) ||
-      !std::isfinite(selection_s_prior[1])) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_prior must be finite length 2.");
+  if (maf_effect_s_prior.size() != 2 ||
+      !std::isfinite(maf_effect_s_prior[0]) ||
+      !std::isfinite(maf_effect_s_prior[1])) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_prior must be finite length 2.");
   }
-  if (selection_s_prior[0] >= selection_s_prior[1]) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_prior lower bound must be less than upper bound.");
+  if (maf_effect_s_prior[0] >= maf_effect_s_prior[1]) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_prior lower bound must be less than upper bound.");
   }
-  if (selection_s_init < selection_s_prior[0] ||
-      selection_s_init > selection_s_prior[1]) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_init must lie within selection_s_prior.");
+  if (maf_effect_s_init < maf_effect_s_prior[0] ||
+      maf_effect_s_init > maf_effect_s_prior[1]) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_init must lie within maf_effect_s_prior.");
   }
-  if (!std::isfinite(selection_s_proposal_sd) || selection_s_proposal_sd <= 0.0) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_proposal_sd must be positive finite.");
+  if (!std::isfinite(maf_effect_s_proposal_sd) || maf_effect_s_proposal_sd <= 0.0) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_proposal_sd must be positive finite.");
   }
-  if (selection_s_log_h.isNull()) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_log_h is required when estimate_selection_s = true.");
+  if (maf_effect_s_log_h.isNull()) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_log_h is required when estimate_maf_effect_s = true.");
   }
  }
 
@@ -1409,32 +1409,32 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
  }
 
  arma::rowvec prior_scale;
- if (use_selection_s_prior_scale) {
+ if (use_maf_effect_s_prior_scale) {
   prior_scale.set_size(static_cast<arma::uword>(m));
   for (int i = 0; i < m; ++i) {
-   const double scale_i = selection_s_prior_scale_vec[static_cast<std::size_t>(i)];
+   const double scale_i = maf_effect_s_prior_scale_vec[static_cast<std::size_t>(i)];
    if (!std::isfinite(scale_i) || scale_i <= 0.0) {
     throw std::runtime_error(
-     "stblr_cpg_omp_csr_sbayesrc: selection_s_prior_scale must contain positive finite values."
+     "stblr_cpg_omp_csr_sbayesrc: maf_effect_s_prior_scale must contain positive finite values."
     );
    }
    prior_scale(static_cast<arma::uword>(i)) = scale_i;
   }
  }
 
- arma::rowvec selection_s_log_h_row;
- if (estimate_selection_s) {
-  Rcpp::NumericVector selection_s_log_h_vec(selection_s_log_h);
-  if (static_cast<int>(selection_s_log_h_vec.size()) != m) {
-   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_log_h must have length m.");
+ arma::rowvec maf_effect_s_log_h_row;
+ if (estimate_maf_effect_s) {
+  Rcpp::NumericVector maf_effect_s_log_h_vec(maf_effect_s_log_h);
+  if (static_cast<int>(maf_effect_s_log_h_vec.size()) != m) {
+   throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_log_h must have length m.");
   }
-  selection_s_log_h_row.set_size(static_cast<arma::uword>(m));
+  maf_effect_s_log_h_row.set_size(static_cast<arma::uword>(m));
   for (int i = 0; i < m; ++i) {
-   const double log_h_i = selection_s_log_h_vec[static_cast<std::size_t>(i)];
+   const double log_h_i = maf_effect_s_log_h_vec[static_cast<std::size_t>(i)];
    if (!std::isfinite(log_h_i)) {
-    throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: selection_s_log_h must contain finite values.");
+    throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: maf_effect_s_log_h must contain finite values.");
    }
-   selection_s_log_h_row(static_cast<arma::uword>(i)) = log_h_i;
+   maf_effect_s_log_h_row(static_cast<arma::uword>(i)) = log_h_i;
   }
  }
 
@@ -1617,7 +1617,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   chain_seeds_vec,
   order,
   prior_scale,
-  selection_s_log_h_row,
+  maf_effect_s_log_h_row,
   annotation_contract,
   component_contract,
   alpha_contract,
@@ -1653,12 +1653,12 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   updateLDswap,
   ld_swap_prob,
   ld_swap_moves,
-  use_selection_s_prior_scale,
-  estimate_selection_s,
-  selection_s_init,
-  selection_s_prior[0],
-  selection_s_prior[1],
-  selection_s_proposal_sd,
+  use_maf_effect_s_prior_scale,
+  estimate_maf_effect_s,
+  maf_effect_s_init,
+  maf_effect_s_prior[0],
+  maf_effect_s_prior[1],
+  maf_effect_s_proposal_sd,
   convergence_markers_cpp,
   convergence_annotations,
   convergence_b,
@@ -1683,8 +1683,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   nchains,
   keep_chains,
   updateLDswap,
-  estimate_selection_s,
-  use_selection_s_prior_scale,
+  estimate_maf_effect_s,
+  use_maf_effect_s_prior_scale,
   convergence_markers_cpp
  };
  return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);
@@ -1708,8 +1708,8 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const int nchains = metadata.chains;
  const bool keep_chains = metadata.keep_chains;
  const bool updateLDswap = metadata.update_ld_swap;
- const bool estimate_selection_s = metadata.estimate_selection_s;
- const bool use_selection_s_prior_scale = metadata.use_selection_s_prior_scale;
+ const bool estimate_maf_effect_s = metadata.estimate_maf_effect_s;
+ const bool use_maf_effect_s_prior_scale = metadata.use_maf_effect_s_prior_scale;
  const std::vector<int>& convergence_markers=metadata.convergence_markers;
 
  const auto& bm_task = execution_result.bm_task;
@@ -1721,15 +1721,15 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& pis_task = execution_result.pis_task;
  const auto& vles_task = execution_result.vles_task;
  const auto& vlds_task = execution_result.vlds_task;
- const auto& selection_s_task = execution_result.selection_s_task;
+ const auto& maf_effect_s_task = execution_result.maf_effect_s_task;
  const auto& final_pi_component_task = execution_result.final_pi_component_task;
- const auto& selection_s_attempted_task = execution_result.selection_s_attempted_task;
+ const auto& maf_effect_s_attempted_task = execution_result.maf_effect_s_attempted_task;
  const auto& convergence_alpha_task=execution_result.convergence_alpha_task;
  const auto& convergence_sigma_task=execution_result.convergence_sigma_task;
  const auto& convergence_b_task=execution_result.convergence_b_task;
  const auto& convergence_d_task=execution_result.convergence_d_task;
  const auto& convergence_component_task=execution_result.convergence_component_task;
- const auto& selection_s_accepted_task = execution_result.selection_s_accepted_task;
+ const auto& maf_effect_s_accepted_task = execution_result.maf_effect_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
  const auto& comp_prob_mean_task = execution_result.comp_prob_mean_task;
@@ -1751,14 +1751,14 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& pis_mat = execution_result.pis_mat;
  const auto& vles_mat = execution_result.vles_mat;
  const auto& vlds_mat = execution_result.vlds_mat;
- const auto& selection_s_mat = execution_result.selection_s_mat;
+ const auto& maf_effect_s_mat = execution_result.maf_effect_s_mat;
  const auto& final_vb = execution_result.final_vb;
  const auto& final_vg = execution_result.final_vg;
  const auto& final_ve = execution_result.final_ve;
  const auto& final_pi_component = execution_result.final_pi_component;
  const auto& nsamples_vec = execution_result.nsamples_vec;
- const auto& selection_s_attempted_vec = execution_result.selection_s_attempted_vec;
- const auto& selection_s_accepted_vec = execution_result.selection_s_accepted_vec;
+ const auto& maf_effect_s_attempted_vec = execution_result.maf_effect_s_attempted_vec;
+ const auto& maf_effect_s_accepted_vec = execution_result.maf_effect_s_accepted_vec;
  const auto& alpha_mean = execution_result.alpha_mean;
  const auto& sigmaSqAlpha_mean = execution_result.sigmaSqAlpha_mean;
  const auto& comp_prob_mean = execution_result.comp_prob_mean;
@@ -1847,23 +1847,23 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  Rcpp::colnames(ncomp_out) = component_names;
  Rcpp::colnames(pi_mean_out) = component_names;
  Rcpp::NumericVector selection_mean(nt);
- Rcpp::NumericVector selection_sd(nt);
+ Rcpp::NumericVector maf_effect_sd(nt);
  Rcpp::NumericVector selection_min(nt);
  Rcpp::NumericVector selection_max(nt);
  Rcpp::NumericVector selection_acceptance(nt);
  for (int t = 0; t < nt; ++t) {
   const arma::uword tu = static_cast<arma::uword>(t);
   selection_acceptance[t] =
-   selection_s_attempted_vec(tu) > 0.0
-   ? selection_s_accepted_vec(tu) / selection_s_attempted_vec(tu)
+   maf_effect_s_attempted_vec(tu) > 0.0
+   ? maf_effect_s_accepted_vec(tu) / maf_effect_s_attempted_vec(tu)
    : 0.0;
-  if (estimate_selection_s) {
+  if (estimate_maf_effect_s) {
    double mean_s = 0.0;
    double min_s = std::numeric_limits<double>::infinity();
    double max_s = -std::numeric_limits<double>::infinity();
    int ns = 0;
    for (int it = nburn; it < n_trace; ++it) {
-    const double val = selection_s_mat(tu, static_cast<arma::uword>(it));
+    const double val = maf_effect_s_mat(tu, static_cast<arma::uword>(it));
     mean_s += val;
     min_s = std::min(min_s, val);
     max_s = std::max(max_s, val);
@@ -1873,19 +1873,19 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
    double ss = 0.0;
    if (ns > 1) {
     for (int it = nburn; it < n_trace; ++it) {
-     const double diff = selection_s_mat(tu, static_cast<arma::uword>(it)) - mean_s;
+     const double diff = maf_effect_s_mat(tu, static_cast<arma::uword>(it)) - mean_s;
      ss += diff * diff;
     }
-    selection_sd[t] = std::sqrt(ss / static_cast<double>(ns - 1));
+    maf_effect_sd[t] = std::sqrt(ss / static_cast<double>(ns - 1));
    } else {
-    selection_sd[t] = NA_REAL;
+    maf_effect_sd[t] = NA_REAL;
    }
    selection_mean[t] = mean_s;
    selection_min[t] = ns > 0 ? min_s : NA_REAL;
    selection_max[t] = ns > 0 ? max_s : NA_REAL;
   } else {
    selection_mean[t] = NA_REAL;
-   selection_sd[t] = NA_REAL;
+   maf_effect_sd[t] = NA_REAL;
    selection_min[t] = NA_REAL;
    selection_max[t] = NA_REAL;
   }
@@ -1993,10 +1993,10 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
      Rcpp::Named("trace") = R_NilValue,
      Rcpp::Named("acceptance") = R_NilValue
     );
-    if (estimate_selection_s) {
-     const double attempted = selection_s_attempted_task(task_u);
-     const double accepted = selection_s_accepted_task(task_u);
-     chain_selection["trace"] = selection_s_task.row(task_u).t();
+    if (estimate_maf_effect_s) {
+     const double attempted = maf_effect_s_attempted_task(task_u);
+     const double accepted = maf_effect_s_accepted_task(task_u);
+     chain_selection["trace"] = maf_effect_s_task.row(task_u).t();
      chain_selection["acceptance"] =
       attempted > 0.0 ? accepted / attempted : 0.0;
     }
@@ -2046,15 +2046,15 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  }
 
  Rcpp::List selection = Rcpp::List::create(
-  Rcpp::Named("enabled") = estimate_selection_s || use_selection_s_prior_scale,
-  Rcpp::Named("fixed") = use_selection_s_prior_scale,
+  Rcpp::Named("enabled") = estimate_maf_effect_s || use_maf_effect_s_prior_scale,
+  Rcpp::Named("fixed") = use_maf_effect_s_prior_scale,
   Rcpp::Named("scale") = "standardized_genotype_effect",
-  Rcpp::Named("trace") = estimate_selection_s ? Rcpp::wrap(trace_matrix(selection_s_mat)) : R_NilValue,
-  Rcpp::Named("mean") = estimate_selection_s ? Rcpp::wrap(selection_mean) : R_NilValue,
-  Rcpp::Named("sd") = estimate_selection_s ? Rcpp::wrap(selection_sd) : R_NilValue,
-  Rcpp::Named("min") = estimate_selection_s ? Rcpp::wrap(selection_min) : R_NilValue,
-  Rcpp::Named("max") = estimate_selection_s ? Rcpp::wrap(selection_max) : R_NilValue,
-  Rcpp::Named("acceptance") = estimate_selection_s ? Rcpp::wrap(selection_acceptance) : R_NilValue
+  Rcpp::Named("trace") = estimate_maf_effect_s ? Rcpp::wrap(trace_matrix(maf_effect_s_mat)) : R_NilValue,
+  Rcpp::Named("mean") = estimate_maf_effect_s ? Rcpp::wrap(selection_mean) : R_NilValue,
+  Rcpp::Named("sd") = estimate_maf_effect_s ? Rcpp::wrap(maf_effect_sd) : R_NilValue,
+  Rcpp::Named("min") = estimate_maf_effect_s ? Rcpp::wrap(selection_min) : R_NilValue,
+  Rcpp::Named("max") = estimate_maf_effect_s ? Rcpp::wrap(selection_max) : R_NilValue,
+  Rcpp::Named("acceptance") = estimate_maf_effect_s ? Rcpp::wrap(selection_acceptance) : R_NilValue
  );
 
  Rcpp::List raw = Rcpp::List::create(
@@ -2131,11 +2131,11 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   bool updateLDswap = false, double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8, int ld_swap_max_friends = 50,
   int ld_swap_moves = 1,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
-  bool estimate_selection_s = false, double selection_s_init = 0.0,
-  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
-  double selection_s_proposal_sd = 0.35,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale = R_NilValue,
+  bool estimate_maf_effect_s = false, double maf_effect_s_init = 0.0,
+  Rcpp::NumericVector maf_effect_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
+  double maf_effect_s_proposal_sd = 0.35,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h = R_NilValue,
   Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
   bool convergence_annotations=false, bool convergence_b=false,
   bool convergence_d=false, bool convergence_component=false
@@ -2163,9 +2163,9 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE,
   alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains,
   keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2,
-  ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale,
-  estimate_selection_s, selection_s_init, selection_s_prior,
-  selection_s_proposal_sd, selection_s_log_h, convergence_markers,
+  ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale,
+  estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
+  maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers,
   convergence_annotations, convergence_b, convergence_d,
   convergence_component, make_csr_operator
  );
@@ -2190,11 +2190,11 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   bool updateLDswap = false, double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8, int ld_swap_max_friends = 50,
   int ld_swap_moves = 1,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_prior_scale = R_NilValue,
-  bool estimate_selection_s = false, double selection_s_init = 0.0,
-  Rcpp::NumericVector selection_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
-  double selection_s_proposal_sd = 0.35,
-  Rcpp::Nullable<Rcpp::NumericVector> selection_s_log_h = R_NilValue,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale = R_NilValue,
+  bool estimate_maf_effect_s = false, double maf_effect_s_init = 0.0,
+  Rcpp::NumericVector maf_effect_s_prior = Rcpp::NumericVector::create(-3.0, 2.0),
+  double maf_effect_s_proposal_sd = 0.35,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h = R_NilValue,
   Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
   bool convergence_annotations=false, bool convergence_b=false,
   bool convergence_d=false, bool convergence_component=false,
@@ -2262,9 +2262,9 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE,
   alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains,
   keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2,
-  ld_swap_max_friends, ld_swap_moves, selection_s_prior_scale,
-  estimate_selection_s, selection_s_init, selection_s_prior,
-  selection_s_proposal_sd, selection_s_log_h, convergence_markers,
+  ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale,
+  estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
+  maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers,
   convergence_annotations, convergence_b, convergence_d,
   convergence_component, make_block_operator
  );

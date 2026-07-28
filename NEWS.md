@@ -7,7 +7,7 @@
 - Added deterministic logical-chain execution, core and extended convergence
   diagnostics, and explicit selected-marker diagnostics.
 - Added annotation-informed ST and MT models and independent fixed or sampled
-  `selection_s` support where scientifically implemented.
+  `maf_effect_s` support where scientifically implemented.
 - Consolidated the framework around permanent scientific owners and removed
   obsolete compatibility, migration, and phase-oriented scaffolding.
 - Repaired and expanded the package help, Notes, Methods, workflows, and

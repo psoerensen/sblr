@@ -27,7 +27,7 @@
 #' @param epsilon Positive scalar added before taking logs.
 #'
 #' @return A data frame with one row per trait and columns `trait`,
-#'   `selection_s_posthoc`, `se`, `p_value`, `r2`, `intercept`, `n_markers`,
+#'   `maf_effect_s_posthoc`, `se`, `p_value`, `r2`, `intercept`, `n_markers`,
 #'   `n_effective_markers`, `method`, `response`, and `marker_filter`.
 #'
 #' @examples
@@ -59,8 +59,8 @@ summarise_architecture <- function(
     stop("fit must be a list-like ST-BLR fit object.")
   }
 
-  dm <- .stblr_selection_s_as_matrix(fit$dm, "fit$dm")
-  bm <- .stblr_selection_s_as_matrix(fit$bm, "fit$bm")
+  dm <- .stblr_maf_effect_s_as_matrix(fit$dm, "fit$dm")
+  bm <- .stblr_maf_effect_s_as_matrix(fit$bm, "fit$bm")
   if (!identical(dim(dm), dim(bm))) {
     stop("fit$dm and fit$bm must have matching dimensions.")
   }
@@ -89,9 +89,9 @@ summarise_architecture <- function(
        !is.finite(top_n) || top_n < 1 || top_n != as.integer(top_n))) {
     stop("top_n must be a positive integer scalar.")
   }
-  markers <- .stblr_selection_s_validate_markers(markers, marker_names)
+  markers <- .stblr_maf_effect_s_validate_markers(markers, marker_names)
 
-  h <- .stblr_selection_s_prepare_h(
+  h <- .stblr_maf_effect_s_prepare_h(
     h = h,
     maf = maf,
     fit = fit,
@@ -113,7 +113,7 @@ summarise_architecture <- function(
       signal <- pmax(pip, 0) * signal
     }
 
-    idx <- .stblr_selection_s_filter_indices(
+    idx <- .stblr_maf_effect_s_filter_indices(
       pip = pip,
       markers = markers,
       trait = trait,
@@ -144,7 +144,7 @@ summarise_architecture <- function(
 
     data.frame(
       trait = trait,
-      selection_s_posthoc = slope,
+      maf_effect_s_posthoc = slope,
       se = se,
       p_value = p_value,
       r2 = r2,
@@ -153,7 +153,7 @@ summarise_architecture <- function(
       n_effective_markers = n_effective,
       method = "posthoc_regression",
       response = response,
-      marker_filter = .stblr_selection_s_marker_filter_label(
+      marker_filter = .stblr_maf_effect_s_marker_filter_label(
         markers = markers,
         min_pip = min_pip,
         top_n = top_n
@@ -165,7 +165,7 @@ summarise_architecture <- function(
   do.call(rbind, rows)
 }
 
-.stblr_selection_s_as_matrix <- function(x, name) {
+.stblr_maf_effect_s_as_matrix <- function(x, name) {
   if (is.null(x)) {
     stop(name, " must be present.")
   }
@@ -179,9 +179,9 @@ summarise_architecture <- function(
   x
 }
 
-.stblr_selection_s_prepare_h <- function(h, maf, fit, markers, n_markers) {
+.stblr_maf_effect_s_prepare_h <- function(h, maf, fit, markers, n_markers) {
   if (is.null(h) && is.null(maf)) {
-    recovered <- .stblr_selection_s_recover_h_or_maf(fit)
+    recovered <- .stblr_maf_effect_s_recover_h_or_maf(fit)
     h <- recovered$h
     maf <- recovered$maf
   }
@@ -202,7 +202,7 @@ summarise_architecture <- function(
   values <- as.numeric(values)
   names(values) <- names(if (source == "h") h else maf)
 
-  values <- .stblr_selection_s_align_vector(
+  values <- .stblr_maf_effect_s_align_vector(
     values = values,
     markers = markers,
     n_markers = n_markers,
@@ -226,7 +226,7 @@ summarise_architecture <- function(
   pmax(values, .Machine$double.eps)
 }
 
-.stblr_selection_s_align_vector <- function(values, markers, n_markers, name) {
+.stblr_maf_effect_s_align_vector <- function(values, markers, n_markers, name) {
   if (is.null(markers)) {
     if (length(values) == 0L) {
       stop(name, " must not be empty.")
@@ -251,7 +251,7 @@ summarise_architecture <- function(
   values
 }
 
-.stblr_selection_s_recover_h_or_maf <- function(fit) {
+.stblr_maf_effect_s_recover_h_or_maf <- function(fit) {
   h_candidates <- list(
     fit$h,
     fit$heterozygosity,
@@ -277,24 +277,24 @@ summarise_architecture <- function(
   list(h = NULL, maf = NULL)
 }
 
-.stblr_selection_s_validate_markers <- function(markers, marker_names) {
+.stblr_maf_effect_s_validate_markers <- function(markers, marker_names) {
   if (is.null(markers)) {
     return(NULL)
   }
   if (is.character(markers)) {
-    .stblr_selection_s_check_marker_vector(markers, marker_names)
+    .stblr_maf_effect_s_check_marker_vector(markers, marker_names)
     return(markers)
   }
   if (is.list(markers) && !is.null(names(markers)) &&
       all(nzchar(names(markers)))) {
-    lapply(markers, .stblr_selection_s_check_marker_vector,
+    lapply(markers, .stblr_maf_effect_s_check_marker_vector,
            marker_names = marker_names)
     return(markers)
   }
   stop("markers must be NULL, a character vector, or a named list of character vectors.")
 }
 
-.stblr_selection_s_check_marker_vector <- function(markers, marker_names) {
+.stblr_maf_effect_s_check_marker_vector <- function(markers, marker_names) {
   if (!is.character(markers) || anyNA(markers)) {
     stop("markers must contain marker names as character values.")
   }
@@ -305,7 +305,7 @@ summarise_architecture <- function(
   invisible(markers)
 }
 
-.stblr_selection_s_filter_indices <- function(pip, markers, trait, marker_names,
+.stblr_maf_effect_s_filter_indices <- function(pip, markers, trait, marker_names,
                                               min_pip, top_n) {
   idx <- seq_along(marker_names)
 
@@ -332,7 +332,7 @@ summarise_architecture <- function(
   idx
 }
 
-.stblr_selection_s_marker_filter_label <- function(markers, min_pip, top_n) {
+.stblr_maf_effect_s_marker_filter_label <- function(markers, min_pip, top_n) {
   parts <- character()
   if (!is.null(markers)) {
     parts <- c(parts, if (is.list(markers)) "markers=list" else "markers=character")

@@ -22,7 +22,7 @@ record("six canonical model semantics", setequal(unique(matrix$model),
   c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc", "sbayesrc")))
 record("three canonical operators", setequal(unique(matrix$operator),
   c("packed_bed", "csr", "block_eigen")))
-record("selection_s independent", !grepl("sbayes.*selection_s = 0",
+record("maf_effect_s independent", !grepl("sbayes.*maf_effect_s = 0",
   text(list.files("R", full.names = TRUE)), ignore.case = TRUE))
 
 phase_tests <- list.files("tests/testthat", "phase[0-9].*[.]R$", ignore.case = TRUE)

@@ -18,20 +18,20 @@ The `s` prefix means summary statistics and never activates MAF scaling.
 
 ## Selection-S policy
 
-`selection_s = NULL` means no MAF scale. A finite scalar activates
+`maf_effect_s = NULL` means no MAF scale. A finite scalar activates
 
 \[
 q_j(S)=\{2p_j(1-p_j)\}^{S+1}.
 \]
 
-`selection_s = -1` records explicit user intent but gives a unit numerical
+`maf_effect_s = -1` records explicit user intent but gives a unit numerical
 scale. BayesC changes from `unit` to `maf_s`; BayesR/BayesRC changes from
 `component` to `component_maf_s`. Valid scalar routes may sample S with the
 documented bounded prior/proposal controls. MT sampled S is unsupported.
 
-Frequency resolution is explicit: aligned `selection_maf`, GWAS-summary MAF,
+Frequency resolution is explicit: aligned `effect_maf`, GWAS-summary MAF,
 analysis-genotype MAF by construction, then reference MAF only under
-`allow_reference_maf_for_selection_s = TRUE`. Source, population, alignment,
+`allow_reference_maf_for_maf_effect_s = TRUE`. Source, population, alignment,
 and fallback metadata are mandatory when the scale is active.
 
 ## Probability policies

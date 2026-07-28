@@ -10,11 +10,11 @@
     source = "make_summary_stats"))
 }
 
-.mt_bayesr_common <- function(method = "sbayesr", selection_s = NULL) {
+.mt_bayesr_common <- function(method = "sbayesr", maf_effect_s = NULL) {
   list(method = method, mixture_var = c(0, .1, 1),
        models = matrix(c(0L, 1L), 2L, 1L),
        joint_pi = c(.7, .15, .15), joint_pi_prior = rep(1, 3),
-       selection_s = selection_s, vb = matrix(.1), ve = matrix(.5),
+       maf_effect_s = maf_effect_s, vb = matrix(.1), ve = matrix(.5),
        updateB = FALSE, updateE = FALSE, updatePi = TRUE,
        nit = 8L, nburn = 2L, nthin = 1L, seed = 42L,
        convergence = "none")
@@ -53,7 +53,7 @@ test_that("MT BayesR executes in CSR and exact block eigen", {
     expect_equal(block[[field]], csr[[field]], tolerance = 1e-7, info = field)
 })
 
-test_that("MT explicit selection_s=-1 uses the unit scale in every operator", {
+test_that("MT explicit maf_effect_s=-1 uses the unit scale in every operator", {
   fixture <- blr_unified_fixture()
   on.exit(blr_unified_cleanup(fixture), add = TRUE)
   prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
@@ -107,7 +107,7 @@ test_that("one-trait ST and MT summary BayesR execute matched null reductions", 
   probability <- c(1 - 2e-12, 1e-12, 1e-12)
   for (selection in list(NULL, -1)) {
     method <- "sbayesr"
-    s_control <- if (is.null(selection)) list() else list(selection_s = selection)
+    s_control <- if (is.null(selection)) list() else list(maf_effect_s = selection)
     st <- do.call(stblr_csr, c(list(stats = inputs$stats,
       Glist = fixture$Glist, ld_prefix = prefix, method = method,
       mixture_var = c(0, .1, 1),
@@ -188,7 +188,7 @@ test_that("MT BayesR logical chains are reproducible and retention-independent",
   expect_identical(length(retained$chains), 2L)
 })
 
-test_that("MT summary BayesR selection_s=-1 reduces exactly to NULL", {
+test_that("MT summary BayesR maf_effect_s=-1 reduces exactly to NULL", {
   fixture <- blr_unified_fixture()
   on.exit(blr_unified_cleanup(fixture), add = TRUE)
   prefix <- blr_unified_exact_ld_prefix(fixture$dosage)

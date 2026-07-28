@@ -17,33 +17,33 @@ struct CsrBayesRExecutionContext {
  const arma::mat* B = nullptr; const arma::mat* E = nullptr;
  const arma::mat* ssb_prior_mat = nullptr; const arma::mat* sse_prior_mat = nullptr;
  const arma::vec* yy_vec = nullptr;
- const arma::rowvec* prior_scale = nullptr; const arma::rowvec* selection_s_log_h_row = nullptr;
+ const arma::rowvec* prior_scale = nullptr; const arma::rowvec* maf_effect_s_log_h_row = nullptr;
  const std::vector<int>* convergence_markers = nullptr;
  int K=0,m=0,nt=0,nchains=1,ncores=1,nit=0,nburn=0,nthin=1,seed=1;
  int updateE_start=0,updateE_every=1,ld_swap_moves=1;
- bool use_comp_init=false,use_r_init=false,estimate_selection_s=false;
- bool use_selection_s_prior_scale=false,updateLDswap=false,updateB=true,updateE=true,updatePi=true;
+ bool use_comp_init=false,use_r_init=false,estimate_maf_effect_s=false;
+ bool use_maf_effect_s_prior_scale=false,updateLDswap=false,updateB=true,updateE=true,updatePi=true;
  bool convergence_probability=false,convergence_b=false,convergence_d=false;
  bool convergence_component=false;
- double ld_swap_prob=0.0,selection_s_init=0.0,selection_s_prior_lower=-3.0;
- double selection_s_prior_upper=2.0,selection_s_proposal_sd=0.35,nub=0.0,nue=0.0,adjE=0.0;
+ double ld_swap_prob=0.0,maf_effect_s_init=0.0,maf_effect_s_prior_lower=-3.0;
+ double maf_effect_s_prior_upper=2.0,maf_effect_s_proposal_sd=0.35,nub=0.0,nue=0.0,adjE=0.0;
 };
 
 struct CsrBayesRExecutionResult {
  arma::vec mixture_var_vec;
  arma::mat bm_task,dm_task,component_mean_task,b_task,r_task,component_task;
- arma::mat vbs_task,vgs_task,ves_task,vles_task,vlds_task,pis_task,selection_s_task;
+ arma::mat vbs_task,vgs_task,ves_task,vles_task,vlds_task,pis_task,maf_effect_s_task;
  arma::mat final_pi_task,mean_pi_task;
  arma::vec final_vb_task,final_vg_task,final_ve_task;
- arma::vec selection_s_attempted_task,selection_s_accepted_task;
+ arma::vec maf_effect_s_attempted_task,maf_effect_s_accepted_task;
  std::vector<arma::mat> comp_prob_task;
  std::vector<arma::mat> convergence_pi_task,convergence_b_task;
  std::vector<arma::imat> convergence_d_task,convergence_component_task;
  std::vector<arma::vec> ncomp_task;
  arma::mat bm,dm,bm_sd,dm_sd,bm_min,dm_min,bm_max,dm_max,component_mean;
- arma::mat b_out,r_out,component_out,vbs,vgs,ves,vle,vld,pis,selection_s;
+ arma::mat b_out,r_out,component_out,vbs,vgs,ves,vle,vld,pis,maf_effect_s;
  arma::mat final_pi,mean_pi,updateE_diagnostics,ld_swap_diagnostics,ld_swap_chain_diagnostics;
- arma::vec final_vb,final_vg,final_ve,selection_s_attempted,selection_s_accepted,nsamples;
+ arma::vec final_vb,final_vg,final_ve,maf_effect_s_attempted,maf_effect_s_accepted,nsamples;
  std::vector<arma::mat> comp_prob;
  arma::mat ncomp,covb,covg,cove,vb,vg,ve;
 };
@@ -63,7 +63,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  const arma::mat& B=*context.B; const arma::mat& E=*context.E;
  const arma::mat& ssb_prior_mat=*context.ssb_prior_mat; const arma::mat& sse_prior_mat=*context.sse_prior_mat;
  const arma::vec& yy_vec=*context.yy_vec; const arma::rowvec& prior_scale=*context.prior_scale;
- const arma::rowvec& selection_s_log_h_row=*context.selection_s_log_h_row;
+ const arma::rowvec& maf_effect_s_log_h_row=*context.maf_effect_s_log_h_row;
  const std::vector<int> empty_convergence_markers;
  const std::vector<int>& convergence_markers = context.convergence_markers ?
   *context.convergence_markers : empty_convergence_markers;
@@ -71,14 +71,14 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  const int nit=context.nit,nburn=context.nburn,nthin=context.nthin,seed=context.seed;
  const int updateE_start=context.updateE_start,updateE_every=context.updateE_every,ld_swap_moves=context.ld_swap_moves;
  const bool use_comp_init=context.use_comp_init,use_r_init=context.use_r_init;
- const bool estimate_selection_s=context.estimate_selection_s,use_selection_s_prior_scale=context.use_selection_s_prior_scale;
+ const bool estimate_maf_effect_s=context.estimate_maf_effect_s,use_maf_effect_s_prior_scale=context.use_maf_effect_s_prior_scale;
  const bool updateLDswap=context.updateLDswap,updateB=context.updateB,updateE=context.updateE,updatePi=context.updatePi;
  const bool convergence_probability=context.convergence_probability;
  const bool convergence_b=context.convergence_b,convergence_d=context.convergence_d;
  const bool convergence_component=context.convergence_component;
- const double ld_swap_prob=context.ld_swap_prob,selection_s_init=context.selection_s_init;
- const double selection_s_proposal_sd=context.selection_s_proposal_sd,nub=context.nub,nue=context.nue,adjE=context.adjE;
- const double selection_s_prior[2]={context.selection_s_prior_lower,context.selection_s_prior_upper};
+ const double ld_swap_prob=context.ld_swap_prob,maf_effect_s_init=context.maf_effect_s_init;
+ const double maf_effect_s_proposal_sd=context.maf_effect_s_proposal_sd,nub=context.nub,nue=context.nue,adjE=context.adjE;
+ const double maf_effect_s_prior[2]={context.maf_effect_s_prior_lower,context.maf_effect_s_prior_upper};
  arma::vec mixture_var_vec(K, arma::fill::zeros);
  for (int k = 0; k < K; ++k) mixture_var_vec(static_cast<arma::uword>(k)) = mixture_var[k];
 
@@ -101,7 +101,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  arma::mat vles_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat vlds_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat pis_task(ntasks, trace_len, arma::fill::zeros);
- arma::mat selection_s_task(ntasks, trace_len, arma::fill::zeros);
+ arma::mat maf_effect_s_task(ntasks, trace_len, arma::fill::zeros);
  arma::mat final_pi_task(ntasks, K, arma::fill::zeros);
  arma::mat mean_pi_task(ntasks, K, arma::fill::zeros);
  arma::vec final_vb_task(ntasks, arma::fill::zeros);
@@ -116,8 +116,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  arma::ivec n_updateE_task(ntasks, arma::fill::zeros);
  arma::vec ld_swap_attempted_task(ntasks, arma::fill::zeros);
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
- arma::vec selection_s_attempted_task(ntasks, arma::fill::zeros);
- arma::vec selection_s_accepted_task(ntasks, arma::fill::zeros);
+ arma::vec maf_effect_s_attempted_task(ntasks, arma::fill::zeros);
+ arma::vec maf_effect_s_accepted_task(ntasks, arma::fill::zeros);
  arma::vec nsamples_task(ntasks, arma::fill::zeros);
  std::vector<arma::mat> comp_prob_task(static_cast<std::size_t>(ntasks));
  const int convergence_pi_count = convergence_probability ? (K == 2 ? 1 : K) : 0;
@@ -209,9 +209,9 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    int n_updateE_t = 0;
    double ld_swap_attempted_t = 0.0;
    double ld_swap_accepted_t = 0.0;
-   double selection_s_current = selection_s_init;
-   double selection_s_attempted_t = 0.0;
-   double selection_s_accepted_t = 0.0;
+   double maf_effect_s_current = maf_effect_s_init;
+   double maf_effect_s_attempted_t = 0.0;
+   double maf_effect_s_accepted_t = 0.0;
    arma::rowvec dynamic_prior_scale;
 
    double vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
@@ -220,17 +220,17 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    double vei_t = ve_t + adjE * vg_t;
 
    for (int it = 0; it < trace_len; ++it) {
-    if (estimate_selection_s) {
-     fill_selection_s_prior_scale_bayesr(
+    if (estimate_maf_effect_s) {
+     fill_maf_effect_s_prior_scale_bayesr(
       m,
-      selection_s_current,
-      selection_s_log_h_row,
+      maf_effect_s_current,
+      maf_effect_s_log_h_row,
       dynamic_prior_scale
      );
     }
-    if (estimate_selection_s || use_selection_s_prior_scale) {
+    if (estimate_maf_effect_s || use_maf_effect_s_prior_scale) {
      const arma::rowvec& current_prior_scale =
-      estimate_selection_s ? dynamic_prior_scale : prior_scale;
+      estimate_maf_effect_s ? dynamic_prior_scale : prior_scale;
      for (int isort = 0; isort < m; ++isort) {
       sampleBetaR_ST_csr(
        order_t[static_cast<std::size_t>(isort)],
@@ -271,7 +271,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      if (runif(gen_t) < ld_swap_prob) {
       for (int move = 0; move < ld_swap_moves; ++move) {
        bool attempted = false;
-       const bool accepted = (estimate_selection_s || use_selection_s_prior_scale) ?
+       const bool accepted = (estimate_maf_effect_s || use_maf_effect_s_prior_scale) ?
         attempt_ld_swap_bayesr_ST_csr(
          m,
          t,
@@ -283,7 +283,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
          ww_t,
          wy_t,
          mixture_var_vec,
-         estimate_selection_s ? dynamic_prior_scale : prior_scale,
+         estimate_maf_effect_s ? dynamic_prior_scale : prior_scale,
          r_t,
          b_t,
          comp_t,
@@ -318,7 +318,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     }
 
     if (updateB) {
-     if (estimate_selection_s || use_selection_s_prior_scale) {
+     if (estimate_maf_effect_s || use_maf_effect_s_prior_scale) {
       sampleB_bayesr_ST_csr(
        m,
        nub,
@@ -326,7 +326,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
        b_t,
        comp_t,
        mixture_var_vec,
-       estimate_selection_s ? dynamic_prior_scale : prior_scale,
+       estimate_maf_effect_s ? dynamic_prior_scale : prior_scale,
        ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
        gen_t
       );
@@ -344,21 +344,21 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      }
     }
 
-    if (estimate_selection_s) {
-     selection_s_attempted_t += 1.0;
-     const bool accepted_s = update_selection_s_bayesr(
-      selection_s_current,
+    if (estimate_maf_effect_s) {
+     maf_effect_s_attempted_t += 1.0;
+     const bool accepted_s = update_maf_effect_s_bayesr(
+      maf_effect_s_current,
       b_t,
       comp_t,
       vb_t,
       mixture_var_vec,
-      selection_s_log_h_row,
-      selection_s_prior[0],
-      selection_s_prior[1],
-      selection_s_proposal_sd,
+      maf_effect_s_log_h_row,
+      maf_effect_s_prior[0],
+      maf_effect_s_prior[1],
+      maf_effect_s_proposal_sd,
       gen_t
      );
-     if (accepted_s) selection_s_accepted_t += 1.0;
+     if (accepted_s) maf_effect_s_accepted_t += 1.0;
     }
 
     const bool do_updateE =
@@ -436,7 +436,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     vles_task(task_u, static_cast<arma::uword>(it)) = vle_t;
     vlds_task(task_u, static_cast<arma::uword>(it)) = vld_t;
     pis_task(task_u, static_cast<arma::uword>(it)) = 1.0 - pi_t[0];
-    selection_s_task(task_u, static_cast<arma::uword>(it)) = selection_s_current;
+    maf_effect_s_task(task_u, static_cast<arma::uword>(it)) = maf_effect_s_current;
 
     if (it >= nburn) {
      const arma::uword draw = static_cast<arma::uword>(it - nburn);
@@ -504,8 +504,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    n_updateE_task(task_u) = n_updateE_t;
    ld_swap_attempted_task(task_u) = ld_swap_attempted_t;
    ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
-   selection_s_attempted_task(task_u) = selection_s_attempted_t;
-   selection_s_accepted_task(task_u) = selection_s_accepted_t;
+   maf_effect_s_attempted_task(task_u) = maf_effect_s_attempted_t;
+   maf_effect_s_accepted_task(task_u) = maf_effect_s_accepted_t;
    nsamples_task(task_u) = nsamples_t;
    comp_prob_task[static_cast<std::size_t>(task)] = comp_prob_t;
    ncomp_task[static_cast<std::size_t>(task)] = arma::sum(comp_prob_t, 0).t();
@@ -548,7 +548,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  arma::mat vle(nt, trace_len, arma::fill::zeros);
  arma::mat vld(nt, trace_len, arma::fill::zeros);
  arma::mat pis(nt, trace_len, arma::fill::zeros);
- arma::mat selection_s(nt, trace_len, arma::fill::zeros);
+ arma::mat maf_effect_s(nt, trace_len, arma::fill::zeros);
  arma::mat final_pi(nt, K, arma::fill::zeros);
  arma::mat mean_pi(nt, K, arma::fill::zeros);
  arma::vec final_vb(nt, arma::fill::zeros);
@@ -557,8 +557,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  arma::mat updateE_diagnostics(ntasks, 9, arma::fill::zeros);
  arma::mat ld_swap_diagnostics(nt, 3, arma::fill::zeros);
  arma::mat ld_swap_chain_diagnostics(ntasks, 5, arma::fill::zeros);
- arma::vec selection_s_attempted(nt, arma::fill::zeros);
- arma::vec selection_s_accepted(nt, arma::fill::zeros);
+ arma::vec maf_effect_s_attempted(nt, arma::fill::zeros);
+ arma::vec maf_effect_s_accepted(nt, arma::fill::zeros);
  arma::vec nsamples(nt, arma::fill::zeros);
  std::vector<arma::mat> comp_prob(static_cast<std::size_t>(nt));
  arma::mat ncomp(nt, K, arma::fill::zeros);
@@ -587,10 +587,10 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    attempted > 0.0 ? accepted / attempted : 0.0;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 0) += attempted;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 1) += accepted;
-  selection_s_attempted(static_cast<arma::uword>(task_trait)) +=
-   selection_s_attempted_task(task_u);
-  selection_s_accepted(static_cast<arma::uword>(task_trait)) +=
-   selection_s_accepted_task(task_u);
+  maf_effect_s_attempted(static_cast<arma::uword>(task_trait)) +=
+   maf_effect_s_attempted_task(task_u);
+  maf_effect_s_accepted(static_cast<arma::uword>(task_trait)) +=
+   maf_effect_s_accepted_task(task_u);
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -624,7 +624,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    vle.row(tu) += vles_task.row(task_u);
    vld.row(tu) += vlds_task.row(task_u);
    pis.row(tu) += pis_task.row(task_u);
-   selection_s.row(tu) += selection_s_task.row(task_u);
+   maf_effect_s.row(tu) += maf_effect_s_task.row(task_u);
    final_pi.row(tu) += final_pi_task.row(task_u);
    mean_pi.row(tu) += mean_pi_task.row(task_u);
    final_vb(tu) += final_vb_task(task_u);
@@ -655,7 +655,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
   vle.row(tu) *= inv_chains;
   vld.row(tu) *= inv_chains;
   pis.row(tu) *= inv_chains;
-  selection_s.row(tu) *= inv_chains;
+  maf_effect_s.row(tu) *= inv_chains;
   final_pi.row(tu) *= inv_chains;
   mean_pi.row(tu) *= inv_chains;
   final_vb(tu) *= inv_chains;
@@ -701,15 +701,15 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  return CsrBayesRExecutionResult{
   std::move(mixture_var_vec),std::move(bm_task),std::move(dm_task),std::move(component_mean_task),
   std::move(b_task),std::move(r_task),std::move(component_task),std::move(vbs_task),std::move(vgs_task),
-  std::move(ves_task),std::move(vles_task),std::move(vlds_task),std::move(pis_task),std::move(selection_s_task),
+  std::move(ves_task),std::move(vles_task),std::move(vlds_task),std::move(pis_task),std::move(maf_effect_s_task),
   std::move(final_pi_task),std::move(mean_pi_task),std::move(final_vb_task),std::move(final_vg_task),std::move(final_ve_task),
-  std::move(selection_s_attempted_task),std::move(selection_s_accepted_task),std::move(comp_prob_task),
+  std::move(maf_effect_s_attempted_task),std::move(maf_effect_s_accepted_task),std::move(comp_prob_task),
   std::move(convergence_pi_task),std::move(convergence_b_task),std::move(convergence_d_task),std::move(convergence_component_task),
   std::move(ncomp_task),
   std::move(bm),std::move(dm),std::move(bm_sd),std::move(dm_sd),std::move(bm_min),std::move(dm_min),std::move(bm_max),std::move(dm_max),
   std::move(component_mean),std::move(b_out),std::move(r_out),std::move(component_out),std::move(vbs),std::move(vgs),std::move(ves),
-  std::move(vle),std::move(vld),std::move(pis),std::move(selection_s),std::move(final_pi),std::move(mean_pi),
+  std::move(vle),std::move(vld),std::move(pis),std::move(maf_effect_s),std::move(final_pi),std::move(mean_pi),
   std::move(updateE_diagnostics),std::move(ld_swap_diagnostics),std::move(ld_swap_chain_diagnostics),
-  std::move(final_vb),std::move(final_vg),std::move(final_ve),std::move(selection_s_attempted),std::move(selection_s_accepted),
+  std::move(final_vb),std::move(final_vg),std::move(final_ve),std::move(maf_effect_s_attempted),std::move(maf_effect_s_accepted),
   std::move(nsamples),std::move(comp_prob),std::move(ncomp),std::move(covb),std::move(covg),std::move(cove),std::move(vb),std::move(vg),std::move(ve)};
 }

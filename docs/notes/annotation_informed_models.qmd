@@ -29,7 +29,7 @@ answer different questions. Fixed marker priors are not formal marker-level
 convergence traces; learned low-dimensional coefficients can be diagnosed in
 extended mode.
 
-`selection_s` is independent of annotation policy. MAF-derived annotations may
+`maf_effect_s` is independent of annotation policy. MAF-derived annotations may
 coexist with it, but their possible overlap is recorded and should be assessed.
 
 See [Annotation-informed methods](../methods/annotation_informed_models.qmd),

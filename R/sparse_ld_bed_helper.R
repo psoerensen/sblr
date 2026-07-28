@@ -151,34 +151,34 @@ NULL
   )
 }
 
-.stblr_prepare_csr_selection_s <- function(selection_s, Glist, m,
+.stblr_prepare_csr_maf_effect_s <- function(maf_effect_s, Glist, m,
                                            scheduled = FALSE,
                                            backend = c("bayesc", "bayesr", "sbayesrc"),
                                            return_log_h = FALSE) {
   backend <- match.arg(backend)
-  if (is.null(selection_s) && !isTRUE(return_log_h)) {
+  if (is.null(maf_effect_s) && !isTRUE(return_log_h)) {
     return(list(
       prior_scale = numeric(),
       log_h = numeric(),
-      selection_s = NULL,
+      maf_effect_s = NULL,
       fixed = FALSE,
       exponent = NULL
     ))
   }
 
   if (isTRUE(scheduled)) {
-    stop("selection_s is currently supported only for unscheduled CSR BayesC/BayesR/SBayesRC.")
+    stop("maf_effect_s is currently supported only for unscheduled CSR BayesC/BayesR/SBayesRC.")
   }
-  if (!is.null(selection_s) &&
-      (!is.numeric(selection_s) || length(selection_s) != 1L ||
-      !is.finite(selection_s))) {
-    stop("selection_s must be NULL or a finite numeric scalar.")
+  if (!is.null(maf_effect_s) &&
+      (!is.numeric(maf_effect_s) || length(maf_effect_s) != 1L ||
+      !is.finite(maf_effect_s))) {
+    stop("maf_effect_s must be NULL or a finite numeric scalar.")
   }
   if (is.null(Glist)) {
-    stop("Glist with rsidsLD, rsids, and maf is required for selection_s.")
+    stop("Glist with rsidsLD, rsids, and maf is required for maf_effect_s.")
   }
   if (is.null(Glist$rsidsLD) || is.null(Glist$rsids) || is.null(Glist$maf)) {
-    stop("Glist must contain rsidsLD, rsids, and maf for selection_s.")
+    stop("Glist must contain rsidsLD, rsids, and maf for maf_effect_s.")
   }
 
   maf_ld <- unlist(lapply(seq_along(Glist$rsidsLD), function(chr) {
@@ -188,57 +188,57 @@ NULL
     }
     idx <- match(Glist$rsidsLD[[chr]], Glist$rsids[[chr]])
     if (anyNA(idx)) {
-      stop("Could not align MAF to LD marker order for selection_s.")
+      stop("Could not align MAF to LD marker order for maf_effect_s.")
     }
     Glist$maf[[chr]][idx]
   }), use.names = FALSE)
 
   if (length(maf_ld) != m) {
-    stop("Aligned MAF length must match the number of CSR markers for selection_s.")
+    stop("Aligned MAF length must match the number of CSR markers for maf_effect_s.")
   }
   if (!all(is.finite(maf_ld))) {
-    stop("Aligned MAF values for selection_s must be finite.")
+    stop("Aligned MAF values for maf_effect_s must be finite.")
   }
   if (any(maf_ld <= 0 | maf_ld > 0.5)) {
-    stop("Aligned MAF values for selection_s must be in (0, 0.5].")
+    stop("Aligned MAF values for maf_effect_s must be in (0, 0.5].")
   }
 
   h_ld <- pmax(2 * maf_ld * (1 - maf_ld), 1e-8)
   if (length(h_ld) != m || !all(is.finite(h_ld)) || any(h_ld <= 0)) {
-    stop("Could not compute positive finite heterozygosity values for selection_s.")
+    stop("Could not compute positive finite heterozygosity values for maf_effect_s.")
   }
 
   log_h <- log(h_ld)
-  if (is.null(selection_s)) {
+  if (is.null(maf_effect_s)) {
     return(list(
       prior_scale = numeric(),
       log_h = log_h,
-      selection_s = NULL,
+      maf_effect_s = NULL,
       fixed = FALSE,
       exponent = NULL
     ))
   } else {
-    exponent <- selection_s + 1
+    exponent <- maf_effect_s + 1
     prior_scale <- h_ld ^ exponent
     if (!all(is.finite(prior_scale)) || any(prior_scale <= 0)) {
-      stop("selection_s prior scale must contain positive finite values.")
+      stop("maf_effect_s prior scale must contain positive finite values.")
     }
   }
 
   list(
     prior_scale = prior_scale,
     log_h = log_h,
-    selection_s = unname(selection_s),
+    maf_effect_s = unname(maf_effect_s),
     fixed = TRUE,
     exponent = unname(exponent)
   )
 }
 
-.stblr_prepare_csr_bayesc_selection_s <- function(selection_s, Glist, m,
+.stblr_prepare_csr_bayesc_maf_effect_s <- function(maf_effect_s, Glist, m,
                                                   scheduled = FALSE,
                                                   return_log_h = FALSE) {
-  .stblr_prepare_csr_selection_s(
-    selection_s = selection_s,
+  .stblr_prepare_csr_maf_effect_s(
+    maf_effect_s = maf_effect_s,
     Glist = Glist,
     m = m,
     scheduled = scheduled,
@@ -247,39 +247,39 @@ NULL
   )
 }
 
-.stblr_validate_sampled_selection_s <- function(estimate_selection_s,
-                                                selection_s,
-                                                selection_s_init,
-                                                selection_s_prior,
-                                                selection_s_proposal_sd) {
-  if (!is.logical(estimate_selection_s) || length(estimate_selection_s) != 1L ||
-      is.na(estimate_selection_s)) {
-    stop("estimate_selection_s must be TRUE or FALSE.", call. = FALSE)
+.stblr_validate_sampled_maf_effect_s <- function(estimate_maf_effect_s,
+                                                maf_effect_s,
+                                                maf_effect_s_init,
+                                                maf_effect_s_prior,
+                                                maf_effect_s_proposal_sd) {
+  if (!is.logical(estimate_maf_effect_s) || length(estimate_maf_effect_s) != 1L ||
+      is.na(estimate_maf_effect_s)) {
+    stop("estimate_maf_effect_s must be TRUE or FALSE.", call. = FALSE)
   }
-  if (!isTRUE(estimate_selection_s)) {
+  if (!isTRUE(estimate_maf_effect_s)) {
     return(invisible(NULL))
   }
-  if (!is.null(selection_s)) {
-    stop("selection_s and estimate_selection_s = TRUE cannot both be requested.", call. = FALSE)
+  if (!is.null(maf_effect_s)) {
+    stop("maf_effect_s and estimate_maf_effect_s = TRUE cannot both be requested.", call. = FALSE)
   }
-  if (!is.numeric(selection_s_init) || length(selection_s_init) != 1L ||
-      !is.finite(selection_s_init)) {
-    stop("selection_s_init must be a finite numeric scalar.", call. = FALSE)
+  if (!is.numeric(maf_effect_s_init) || length(maf_effect_s_init) != 1L ||
+      !is.finite(maf_effect_s_init)) {
+    stop("maf_effect_s_init must be a finite numeric scalar.", call. = FALSE)
   }
-  if (!is.numeric(selection_s_prior) || length(selection_s_prior) != 2L ||
-      anyNA(selection_s_prior) || any(!is.finite(selection_s_prior))) {
-    stop("selection_s_prior must be a finite numeric vector of length 2.", call. = FALSE)
+  if (!is.numeric(maf_effect_s_prior) || length(maf_effect_s_prior) != 2L ||
+      anyNA(maf_effect_s_prior) || any(!is.finite(maf_effect_s_prior))) {
+    stop("maf_effect_s_prior must be a finite numeric vector of length 2.", call. = FALSE)
   }
-  if (selection_s_prior[1L] >= selection_s_prior[2L]) {
-    stop("selection_s_prior lower bound must be less than upper bound.", call. = FALSE)
+  if (maf_effect_s_prior[1L] >= maf_effect_s_prior[2L]) {
+    stop("maf_effect_s_prior lower bound must be less than upper bound.", call. = FALSE)
   }
-  if (selection_s_init < selection_s_prior[1L] ||
-      selection_s_init > selection_s_prior[2L]) {
-    stop("selection_s_init must lie within selection_s_prior.", call. = FALSE)
+  if (maf_effect_s_init < maf_effect_s_prior[1L] ||
+      maf_effect_s_init > maf_effect_s_prior[2L]) {
+    stop("maf_effect_s_init must lie within maf_effect_s_prior.", call. = FALSE)
   }
-  if (!is.numeric(selection_s_proposal_sd) || length(selection_s_proposal_sd) != 1L ||
-      !is.finite(selection_s_proposal_sd) || selection_s_proposal_sd <= 0) {
-    stop("selection_s_proposal_sd must be a finite positive numeric scalar.", call. = FALSE)
+  if (!is.numeric(maf_effect_s_proposal_sd) || length(maf_effect_s_proposal_sd) != 1L ||
+      !is.finite(maf_effect_s_proposal_sd) || maf_effect_s_proposal_sd <= 0) {
+    stop("maf_effect_s_proposal_sd must be a finite positive numeric scalar.", call. = FALSE)
   }
   invisible(NULL)
 }
@@ -389,24 +389,24 @@ NULL
  if (has_chain_details) {
   names(fit)[30:32] <- c("chain_dm_raw", "chain_bm_raw", "chain_ld_swap_raw")
  }
- selection_slots <- integer()
+ maf_effect_slots <- integer()
  if (length(fit) == 25L) {
-  selection_slots <- 24:25
+  maf_effect_slots <- 24:25
  } else if (length(fit) == 31L) {
-  selection_slots <- 30:31
+  maf_effect_slots <- 30:31
  } else if (length(fit) >= 36L) {
-  selection_slots <- 33:36
+  maf_effect_slots <- 33:36
  }
- has_selection_s_trace <- length(selection_slots) >= 2L &&
-  length(fit[[selection_slots[1L]]]) == nt &&
-  length(fit[[selection_slots[2L]]]) == nt
- if (has_selection_s_trace) {
-  names(fit)[selection_slots[1:2]] <- c(
-   "selection_s_trace_raw", "selection_s_acceptance_raw"
+ has_maf_effect_s_trace <- length(maf_effect_slots) >= 2L &&
+  length(fit[[maf_effect_slots[1L]]]) == nt &&
+  length(fit[[maf_effect_slots[2L]]]) == nt
+ if (has_maf_effect_s_trace) {
+  names(fit)[maf_effect_slots[1:2]] <- c(
+   "maf_effect_s_trace_raw", "maf_effect_s_acceptance_raw"
   )
-  if (length(selection_slots) >= 4L) {
-   names(fit)[selection_slots[3:4]] <- c(
-    "chain_selection_s_raw", "chain_selection_s_acceptance_raw"
+  if (length(maf_effect_slots) >= 4L) {
+   names(fit)[maf_effect_slots[3:4]] <- c(
+    "chain_maf_effect_s_raw", "chain_maf_effect_s_acceptance_raw"
    )
   }
  }
@@ -503,27 +503,27 @@ NULL
   out$chains <- chains
   out$ld_swap_chains <- ld_swap_chains
  }
- if (has_selection_s_trace) {
-  out$selection_s_trace <- as.matrix(as.data.frame(fit$selection_s_trace_raw))
-  rownames(out$selection_s_trace) <- paste0("Iter", seq_len(nrow(out$selection_s_trace)))
-  colnames(out$selection_s_trace) <- trait_names
-  out$selection_s_acceptance <- stats::setNames(
-   as.numeric(unlist(fit$selection_s_acceptance_raw, use.names = FALSE)),
+ if (has_maf_effect_s_trace) {
+  out$maf_effect_s_trace <- as.matrix(as.data.frame(fit$maf_effect_s_trace_raw))
+  rownames(out$maf_effect_s_trace) <- paste0("Iter", seq_len(nrow(out$maf_effect_s_trace)))
+  colnames(out$maf_effect_s_trace) <- trait_names
+  out$maf_effect_s_acceptance <- stats::setNames(
+   as.numeric(unlist(fit$maf_effect_s_acceptance_raw, use.names = FALSE)),
    trait_names
   )
-  if (!is.null(fit$chain_selection_s_raw) && !is.null(out$chains)) {
+  if (!is.null(fit$chain_maf_effect_s_raw) && !is.null(out$chains)) {
    for (tt in seq_len(nt)) {
-    raw <- as.numeric(fit$chain_selection_s_raw[[tt]])
-    acc_raw <- as.numeric(fit$chain_selection_s_acceptance_raw[[tt]])
+    raw <- as.numeric(fit$chain_maf_effect_s_raw[[tt]])
+    acc_raw <- as.numeric(fit$chain_maf_effect_s_acceptance_raw[[tt]])
     if (!length(raw)) next
     nch <- length(out$chains[[tt]])
     trace_n <- if (nch > 0L) length(raw) %/% nch else 0L
     if (nch > 0L && trace_n > 0L) {
      for (cc in seq_len(nch)) {
       idx <- ((cc - 1L) * trace_n + 1L):(cc * trace_n)
-      out$chains[[tt]][[cc]]$selection_s <- raw[idx]
-      out$chains[[tt]][[cc]]$selection_s_acceptance <-
-       if (length(acc_raw) >= cc) acc_raw[cc] else out$selection_s_acceptance[[tt]]
+      out$chains[[tt]][[cc]]$maf_effect_s <- raw[idx]
+      out$chains[[tt]][[cc]]$maf_effect_s_acceptance <-
+       if (length(acc_raw) >= cc) acc_raw[cc] else out$maf_effect_s_acceptance[[tt]]
      }
     }
    }
@@ -1210,8 +1210,8 @@ NULL
      trait_ld[cc, ] <- ld
     }
     if (!is.null(ch$selection$trace)) {
-     trait_chains[[cc]]$selection_s <- as.numeric(ch$selection$trace)
-     trait_chains[[cc]]$selection_s_acceptance <-
+     trait_chains[[cc]]$maf_effect_s <- as.numeric(ch$selection$trace)
+     trait_chains[[cc]]$maf_effect_s_acceptance <-
       as.numeric(ch$selection$acceptance)
     }
    }
@@ -1228,14 +1228,14 @@ NULL
  }
 
  if (!is.null(raw$selection$trace)) {
-  out$selection_s_trace <- trace_mat(raw$selection$trace)
-  out$selection_s <- named_trait_vec(raw$selection$mean)
-  out$selection_s_sd <- named_trait_vec(raw$selection$sd)
-  out$selection_s_min <- named_trait_vec(raw$selection$min)
-  out$selection_s_max <- named_trait_vec(raw$selection$max)
-  out$selection_s_acceptance <- named_trait_vec(raw$selection$acceptance)
+  out$maf_effect_s_trace <- trace_mat(raw$selection$trace)
+  out$maf_effect_s <- named_trait_vec(raw$selection$mean)
+  out$maf_effect_s_sd <- named_trait_vec(raw$selection$sd)
+  out$maf_effect_s_min <- named_trait_vec(raw$selection$min)
+  out$maf_effect_s_max <- named_trait_vec(raw$selection$max)
+  out$maf_effect_s_acceptance <- named_trait_vec(raw$selection$acceptance)
  } else if (!is.null(raw$selection$mean)) {
-  out$selection_s <- named_trait_vec(raw$selection$mean)
+  out$maf_effect_s <- named_trait_vec(raw$selection$mean)
  }
 
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
@@ -1706,12 +1706,12 @@ NULL
       c("attempted", "accepted", "acceptance_rate")
      )
     }
-    if (!is.null(ch$selection_s)) {
-     chain$selection_s <- as.numeric(ch$selection_s)
-     names(chain$selection_s) <- paste0("Iter", seq_along(chain$selection_s))
+    if (!is.null(ch$maf_effect_s)) {
+     chain$maf_effect_s <- as.numeric(ch$maf_effect_s)
+     names(chain$maf_effect_s) <- paste0("Iter", seq_along(chain$maf_effect_s))
     }
-    if (!is.null(ch$selection_s_acceptance)) {
-     chain$selection_s_acceptance <- as.numeric(ch$selection_s_acceptance)[1L]
+    if (!is.null(ch$maf_effect_s_acceptance)) {
+     chain$maf_effect_s_acceptance <- as.numeric(ch$maf_effect_s_acceptance)[1L]
     }
     if (!is.null(ch$convergence_trace)) {
      chain$convergence_trace <- ch$convergence_trace
@@ -1739,14 +1739,14 @@ NULL
   }
  }
 
- if (!is.null(fit$selection_s_trace)) {
-  out$selection_s_trace <- set_trace_matrix(
-   fit$selection_s_trace, "selection_s_trace"
+ if (!is.null(fit$maf_effect_s_trace)) {
+  out$maf_effect_s_trace <- set_trace_matrix(
+   fit$maf_effect_s_trace, "maf_effect_s_trace"
   )
  }
- if (!is.null(fit$selection_s_acceptance)) {
-  out$selection_s_acceptance <- stats::setNames(
-   as.numeric(fit$selection_s_acceptance),
+ if (!is.null(fit$maf_effect_s_acceptance)) {
+  out$maf_effect_s_acceptance <- stats::setNames(
+   as.numeric(fit$maf_effect_s_acceptance),
    trait_names
   )
  }
@@ -1812,20 +1812,20 @@ NULL
 #' @param ld_swap_max_friends Maximum number of high-LD friends stored per
 #'   marker for swap proposals.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
-#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter
+#' @param maf_effect_s Optional fixed global BayesS-style MAF-scaling parameter
 #'   for ordinary CSR BayesR. For the standardized-genotype CSR effect scale,
 #'   non-null component prior variances are scaled by
-#'   `h^(selection_s + 1)`, where `h = 2p(1-p)`. `selection_s = NULL`
+#'   `h^(maf_effect_s + 1)`, where `h = 2p(1-p)`. `maf_effect_s = NULL`
 #'   preserves the ordinary BayesR prior.
-#' @param estimate_selection_s Logical; estimate one trait-specific
-#'   BayesS-style `selection_s` by Metropolis-Hastings for CSR BayesR. Fixed
-#'   `selection_s` and sampled `selection_s` are mutually exclusive.
-#' @param selection_s_init Initial value for sampled `selection_s`.
-#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
-#'   uniform sampled-`selection_s` prior. Only used when
-#'   `estimate_selection_s = TRUE`.
-#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
-#'   sampled `selection_s`. Only used when `estimate_selection_s = TRUE`.
+#' @param estimate_maf_effect_s Logical; estimate one trait-specific
+#'   BayesS-style `maf_effect_s` by Metropolis-Hastings for CSR BayesR. Fixed
+#'   `maf_effect_s` and sampled `maf_effect_s` are mutually exclusive.
+#' @param maf_effect_s_init Initial value for sampled `maf_effect_s`.
+#' @param maf_effect_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`maf_effect_s` prior. Only used when
+#'   `estimate_maf_effect_s = TRUE`.
+#' @param maf_effect_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `maf_effect_s`. Only used when `estimate_maf_effect_s = TRUE`.
 #' @param ld_prefix,n,m Optional low-level CSR LD prefix, sample sizes, and
 #'   marker count.
 #' @param nub,nue Prior degrees of freedom.
@@ -1866,11 +1866,11 @@ stblr_csr_bayesr <- function(
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
-  selection_s = NULL,
-  estimate_selection_s = FALSE,
-  selection_s_init = 0,
-  selection_s_prior = c(-3, 2),
-  selection_s_proposal_sd = 0.35,
+  maf_effect_s = NULL,
+  estimate_maf_effect_s = FALSE,
+  maf_effect_s_init = 0,
+  maf_effect_s_prior = c(-3, 2),
+  maf_effect_s_proposal_sd = 0.35,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -1900,12 +1900,12 @@ stblr_csr_bayesr <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- .stblr_validate_sampled_selection_s(
-  estimate_selection_s = estimate_selection_s,
-  selection_s = selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd
+ .stblr_validate_sampled_maf_effect_s(
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s = maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
  )
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -1983,13 +1983,13 @@ stblr_csr_bayesr <- function(
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
  variable_names <- names(stats$ww[[1L]])
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
- selection_s_info <- .stblr_prepare_csr_selection_s(
-  selection_s = selection_s,
+ maf_effect_s_info <- .stblr_prepare_csr_maf_effect_s(
+  maf_effect_s = maf_effect_s,
   Glist = Glist,
   m = m,
   scheduled = FALSE,
   backend = "bayesr",
-  return_log_h = estimate_selection_s
+  return_log_h = estimate_maf_effect_s
  )
 
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
@@ -2053,12 +2053,12 @@ stblr_csr_bayesr <- function(
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
-  selection_s_prior_scale = selection_s_info$prior_scale,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd,
-  selection_s_log_h = selection_s_info$log_h
+  maf_effect_s_prior_scale = maf_effect_s_info$prior_scale,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd,
+  maf_effect_s_log_h = maf_effect_s_info$log_h
   ,convergence_markers = .convergence_spec$markers %||% integer()
   ,convergence_probability = isTRUE(.convergence_spec$probability)
   ,convergence_b = isTRUE(.convergence_spec$b)
@@ -2067,20 +2067,20 @@ stblr_csr_bayesr <- function(
  )
 
  if (.is_stblr_raw(raw)) {
-  if (isTRUE(selection_s_info$fixed)) {
-   raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  if (isTRUE(maf_effect_s_info$fixed)) {
+   raw$selection$mean <- stats::setNames(rep(maf_effect_s_info$maf_effect_s, nt), trait_names)
   }
   fit <- .as_stblr_fit(raw, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("csr_bayesr")
  }
- if (isTRUE(estimate_selection_s)) {
-  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
-  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
-  fit$selection_s <- colMeans(s_trace_keep)
-  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
-  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
-  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ if (isTRUE(estimate_maf_effect_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$maf_effect_s_trace))
+  s_trace_keep <- fit$maf_effect_s_trace[keep_idx, , drop = FALSE]
+  fit$maf_effect_s <- colMeans(s_trace_keep)
+  fit$maf_effect_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$maf_effect_s_min <- apply(s_trace_keep, 2L, min)
+  fit$maf_effect_s_max <- apply(s_trace_keep, 2L, max)
  }
  fit$input <- list(
   method = "bayesr",
@@ -2114,14 +2114,14 @@ stblr_csr_bayesr <- function(
   updatePi = updatePi,
   updateE_start = updateE_start,
   updateE_every = updateE_every,
-  selection_s = selection_s_info$selection_s,
-  selection_s_fixed = selection_s_info$fixed,
-  selection_s_exponent = selection_s_info$exponent,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
-  selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
-  selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
-  selection_s_scale = "standardized_genotype_effect",
+  maf_effect_s = maf_effect_s_info$maf_effect_s,
+  maf_effect_s_fixed = maf_effect_s_info$fixed,
+  maf_effect_s_exponent = maf_effect_s_info$exponent,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_init else NULL,
+  maf_effect_s_prior = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_prior else NULL,
+  maf_effect_s_proposal_sd = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_proposal_sd else NULL,
+  maf_effect_s_scale = "standardized_genotype_effect",
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
  fit
@@ -2219,7 +2219,7 @@ stblr_csr_bayesr <- function(
 #'
 #' The canonical public methods are `method = "sbayesc"` and
 #' `method = "sbayesr"`. Both
-#' support fixed global `selection_s`, sampled trait-specific `selection_s`,
+#' support fixed global `maf_effect_s`, sampled trait-specific `maf_effect_s`,
 #' LD-swap/fine-mapping diagnostics where `updateLDswap = TRUE`, and native
 #' multi-chain posterior summaries.
 #'
@@ -2243,28 +2243,28 @@ stblr_csr_bayesr <- function(
 #' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
 #' @param h2 Initial heritability. Defaults to 0.3.
-#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter
+#' @param maf_effect_s Optional fixed global BayesS-style MAF-scaling parameter
 #'   for ordinary annotation-unaware CSR BayesC and BayesR. The default
-#'   `selection_s = NULL` with `estimate_selection_s = FALSE` fits the ordinary
-#'   model. A finite numeric scalar with `estimate_selection_s = FALSE` fits a
-#'   fixed global-S model. `selection_s` must remain `NULL` when
-#'   `estimate_selection_s = TRUE`; fixed and sampled S cannot both be
+#'   `maf_effect_s = NULL` with `estimate_maf_effect_s = FALSE` fits the ordinary
+#'   model. A finite numeric scalar with `estimate_maf_effect_s = FALSE` fits a
+#'   fixed global-S model. `maf_effect_s` must remain `NULL` when
+#'   `estimate_maf_effect_s = TRUE`; fixed and sampled S cannot both be
 #'   requested.
-#' @param estimate_selection_s Logical; for unscheduled annotation-unaware CSR
-#'   BayesC and BayesR, estimate one trait-specific BayesS-style `selection_s`
-#'   by Metropolis-Hastings. `selection_s = NULL` and
-#'   `estimate_selection_s = TRUE` samples S separately for each trait and
-#'   chain. Sampled `selection_s` is not supported by scheduled CSR BayesC,
+#' @param estimate_maf_effect_s Logical; for unscheduled annotation-unaware CSR
+#'   BayesC and BayesR, estimate one trait-specific BayesS-style `maf_effect_s`
+#'   by Metropolis-Hastings. `maf_effect_s = NULL` and
+#'   `estimate_maf_effect_s = TRUE` samples S separately for each trait and
+#'   chain. Sampled `maf_effect_s` is not supported by scheduled CSR BayesC,
 #'   BayesC-like annotation-aware CSR backends, or BED backends.
-#' @param selection_s_init Initial value for sampled `selection_s`. Defaults to
-#'   0 and is used only when `estimate_selection_s = TRUE`.
-#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
-#'   uniform sampled-`selection_s` prior. Only used when
-#'   `estimate_selection_s = TRUE`; it does not affect ordinary BayesC or fixed
-#'   `selection_s`. Defaults to `c(-3, 2)`, i.e. Uniform(-3, 2).
-#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
-#'   sampled `selection_s`. Only used when `estimate_selection_s = TRUE`; it
-#'   does not affect ordinary BayesC or fixed `selection_s`. Defaults to 0.35.
+#' @param maf_effect_s_init Initial value for sampled `maf_effect_s`. Defaults to
+#'   0 and is used only when `estimate_maf_effect_s = TRUE`.
+#' @param maf_effect_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`maf_effect_s` prior. Only used when
+#'   `estimate_maf_effect_s = TRUE`; it does not affect ordinary BayesC or fixed
+#'   `maf_effect_s`. Defaults to `c(-3, 2)`, i.e. Uniform(-3, 2).
+#' @param maf_effect_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `maf_effect_s`. Only used when `estimate_maf_effect_s = TRUE`; it
+#'   does not affect ordinary BayesC or fixed `maf_effect_s`. Defaults to 0.35.
 #' @param nub,nue Prior degrees of freedom.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param adjE Residual adjustment factor. For sparse-LD summary-statistic
@@ -2330,8 +2330,8 @@ stblr_csr_bayesr <- function(
 #'   probabilities by trait. The BayesR null component is `component_0`, so
 #'   `dm = 1 - P(component_0)`.
 #'
-#'   Sampled-S output uses `selection_s_final`, `selection_s_mean`,
-#'   `selection_s_trace`, `selection_s_acceptance`, and explicit chain-mean
+#'   Sampled-S output uses `maf_effect_s_final`, `maf_effect_s_mean`,
+#'   `maf_effect_s_trace`, `maf_effect_s_acceptance`, and explicit chain-mean
 #'   stability fields. The trace is iteration by trait.
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
@@ -2342,18 +2342,18 @@ stblr_csr_bayesr <- function(
 #'
 #' @details
 #' CSR effects are on the standardized-genotype scale. The BayesS-style
-#' MAF-dependent prior scale used by fixed and sampled `selection_s` is
+#' MAF-dependent prior scale used by fixed and sampled `maf_effect_s` is
 #' `q_j(S) = h_j^(S + 1)`, where `h_j = 2 p_j (1 - p_j)` and `p_j` is the
 #' minor allele frequency. The `+1` exponent appears because the sampler effects
 #' are standardized-genotype-scale effects rather than allele-scale effects.
 #'
-#' For fixed `selection_s`, CSR BayesC uses
+#' For fixed `maf_effect_s`, CSR BayesC uses
 #' `b_j | d_j = 1, vb, S ~ N(0, vb * q_j(S))`. CSR BayesR uses
 #' `b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))`, with
 #' component 0 as the point-mass null. In BayesR output, the null component
 #' column is `component_0` and `dm = 1 - P(component_0)`.
 #'
-#' For sampled `selection_s`, BayesC uses the trait-specific MH log posterior
+#' For sampled `maf_effect_s`, BayesC uses the trait-specific MH log posterior
 #' contribution
 #'
 #' ```text
@@ -2386,23 +2386,23 @@ stblr_csr_bayesr <- function(
 #'   stats = stats,
 #'   Glist = Glist,
 #'   method = "sbayesc",
-#'   selection_s = -0.5
+#'   maf_effect_s = -0.5
 #' )
 #'
 #' fit_sampled_s_bc <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
 #'   method = "sbayesc",
-#'   estimate_selection_s = TRUE
+#'   estimate_maf_effect_s = TRUE
 #' )
 #'
 #' fit_sampled_s_br <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
 #'   method = "sbayesr",
-#'   estimate_selection_s = TRUE,
-#'   selection_s_prior = c(-3, 2),
-#'   selection_s_proposal_sd = 0.35
+#'   estimate_maf_effect_s = TRUE,
+#'   maf_effect_s_prior = c(-3, 2),
+#'   maf_effect_s_proposal_sd = 0.35
 #' )
 #' }
 #' @noRd
@@ -2411,10 +2411,10 @@ stblr_csr_bayesr <- function(
                       pi_init = 0.001, pi_vb_init = NULL,
                       pi_prior_mean = 0.001, pi_prior_strength = 5e5,
                       pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
-                      selection_s = NULL, estimate_selection_s = FALSE,
-                      selection_s_init = 0,
-                      selection_s_prior = c(-3, 2),
-                      selection_s_proposal_sd = 0.35,
+                      maf_effect_s = NULL, estimate_maf_effect_s = FALSE,
+                      maf_effect_s_init = 0,
+                      maf_effect_s_prior = c(-3, 2),
+                      maf_effect_s_proposal_sd = 0.35,
                       nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
                       updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
                       nthin = 1, ncores = 1, seed = 10, nchains = 1L,
@@ -2437,12 +2437,12 @@ stblr_csr_bayesr <- function(
      !method %in% c("bayesc", "bayesr")) {
   stop("method must be one of 'bayesc' or 'bayesr'.")
  }
- .stblr_validate_sampled_selection_s(
-  estimate_selection_s = estimate_selection_s,
-  selection_s = selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd
+ .stblr_validate_sampled_maf_effect_s(
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s = maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
  )
  if (method == "bayesr") {
   bayesc_only <- character()
@@ -2506,11 +2506,11 @@ stblr_csr_bayesr <- function(
    comp_init = comp_init,
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,
-   selection_s = selection_s,
-   estimate_selection_s = estimate_selection_s,
-   selection_s_init = selection_s_init,
-   selection_s_prior = selection_s_prior,
-   selection_s_proposal_sd = selection_s_proposal_sd
+   maf_effect_s = maf_effect_s,
+   estimate_maf_effect_s = estimate_maf_effect_s,
+   maf_effect_s_init = maf_effect_s_init,
+   maf_effect_s_prior = maf_effect_s_prior,
+   maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
    ,.convergence_spec = .convergence_spec
   )
   if (!is.null(mixture_var)) br_args$mixture_var <- mixture_var
@@ -2550,19 +2550,19 @@ stblr_csr_bayesr <- function(
  if (isTRUE(scheduled) && isTRUE(updateLDswap)) {
   stop("updateLDswap is currently implemented only for scheduled = FALSE.")
  }
- if (isTRUE(scheduled) && isTRUE(estimate_selection_s)) {
-  stop("estimate_selection_s is currently supported only for unscheduled CSR BayesC.")
+ if (isTRUE(scheduled) && isTRUE(estimate_maf_effect_s)) {
+  stop("estimate_maf_effect_s is currently supported only for unscheduled CSR BayesC.")
  }
  nt <- length(stats$yy)
  if (is.null(n)) n <- stats$n
  if (is.null(n)) stop("n must be supplied or available as stats$n.")
  if (is.null(m)) m <- if (!is.null(stats$m)) stats$m else length(stats$ww[[1]])
- selection_s_info <- .stblr_prepare_csr_bayesc_selection_s(
-  selection_s = selection_s,
+ maf_effect_s_info <- .stblr_prepare_csr_bayesc_maf_effect_s(
+  maf_effect_s = maf_effect_s,
   Glist = Glist,
   m = m,
   scheduled = scheduled,
-  return_log_h = estimate_selection_s
+  return_log_h = estimate_maf_effect_s
  )
 
  if (is.null(ld_prefix)) {
@@ -2636,32 +2636,32 @@ stblr_csr_bayesr <- function(
    ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
    ld_swap_max_friends = as.integer(ld_swap_max_friends),
    ld_swap_moves = as.integer(ld_swap_moves),
-   selection_s_prior_scale = selection_s_info$prior_scale,
-   estimate_selection_s = estimate_selection_s,
-   selection_s_init = selection_s_init,
-   selection_s_prior = selection_s_prior,
-   selection_s_proposal_sd = selection_s_proposal_sd,
-   selection_s_log_h = selection_s_info$log_h,
+   maf_effect_s_prior_scale = maf_effect_s_info$prior_scale,
+   estimate_maf_effect_s = estimate_maf_effect_s,
+   maf_effect_s_init = maf_effect_s_init,
+   maf_effect_s_prior = maf_effect_s_prior,
+   maf_effect_s_proposal_sd = maf_effect_s_proposal_sd,
+   maf_effect_s_log_h = maf_effect_s_info$log_h,
    convergence_markers = .convergence_spec$markers %||% integer(),
    convergence_b = isTRUE(.convergence_spec$b),
    convergence_d = isTRUE(.convergence_spec$d)
   )))
  }
  if (.is_stblr_raw(raw)) {
-  if (isTRUE(selection_s_info$fixed)) {
-   raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  if (isTRUE(maf_effect_s_info$fixed)) {
+   raw$selection$mean <- stats::setNames(rep(maf_effect_s_info$maf_effect_s, nt), trait_names)
   }
   fit <- .as_stblr_fit(raw, trait_names, variable_names)
  } else {
   .stblr_stop_unsupported_raw_output("csr_bayesc")
  }
- if (isTRUE(estimate_selection_s)) {
-  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
-  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
-  fit$selection_s <- colMeans(s_trace_keep)
-  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
-  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
-  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ if (isTRUE(estimate_maf_effect_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$maf_effect_s_trace))
+  s_trace_keep <- fit$maf_effect_s_trace[keep_idx, , drop = FALSE]
+  fit$maf_effect_s <- colMeans(s_trace_keep)
+  fit$maf_effect_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$maf_effect_s_min <- apply(s_trace_keep, 2L, min)
+  fit$maf_effect_s_max <- apply(s_trace_keep, 2L, max)
  }
  fit$input <- c(list(
   n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue, vy = vy,
@@ -2683,14 +2683,14 @@ stblr_csr_bayesr <- function(
   backend = if (isTRUE(scheduled)) "csr_scheduled_bayesc" else "csr_bayesc",
   data_level = "summary",
   annotations = FALSE,
-  selection_s = selection_s_info$selection_s,
-  selection_s_fixed = selection_s_info$fixed,
-  selection_s_exponent = selection_s_info$exponent,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
-  selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
-  selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
-  selection_s_scale = "standardized_genotype_effect",
+  maf_effect_s = maf_effect_s_info$maf_effect_s,
+  maf_effect_s_fixed = maf_effect_s_info$fixed,
+  maf_effect_s_exponent = maf_effect_s_info$exponent,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_init else NULL,
+  maf_effect_s_prior = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_prior else NULL,
+  maf_effect_s_proposal_sd = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_proposal_sd else NULL,
+  maf_effect_s_scale = "standardized_genotype_effect",
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
@@ -2781,10 +2781,10 @@ stblr_csr_bayesr <- function(
   pi_init = 0.001, pi_vb_init = NULL,
   pi_prior_mean = 0.001, pi_prior_strength = 5e5,
   pi_prior_a = NULL, pi_prior_b = NULL, h2 = 0.3,
-  selection_s = NULL, estimate_selection_s = FALSE,
-  selection_s_init = 0,
-  selection_s_prior = c(-3, 2),
-  selection_s_proposal_sd = 0.35,
+  maf_effect_s = NULL, estimate_maf_effect_s = FALSE,
+  maf_effect_s_init = 0,
+  maf_effect_s_prior = c(-3, 2),
+  maf_effect_s_proposal_sd = 0.35,
   nub = 4, nue = 4, updateB = TRUE, updateE = TRUE,
   updatePi = TRUE, adjE = 0.9, nit = 1000, nburn = 100,
   nthin = 1, ncores = 1, seed = 10, nchains = 1L,
@@ -2816,12 +2816,12 @@ stblr_csr_bayesr <- function(
  if (isTRUE(updateLDswap)) {
   stop("LD-swap is not yet supported with the experimental block-eigen operator.")
  }
- .stblr_validate_sampled_selection_s(
-  estimate_selection_s = estimate_selection_s,
-  selection_s = selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd
+ .stblr_validate_sampled_maf_effect_s(
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s = maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
  )
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
@@ -2851,12 +2851,12 @@ stblr_csr_bayesr <- function(
  if (is.null(n)) stop("stats$n is required for the experimental block-eigen path.")
  m <- stats$m %||% length(stats$ww[[1L]])
  bed <- .stblr_csr_block_eigen_inputs(stats, Glist, block_start)
- selection_s_info <- .stblr_prepare_csr_bayesc_selection_s(
-  selection_s = selection_s,
+ maf_effect_s_info <- .stblr_prepare_csr_bayesc_maf_effect_s(
+  maf_effect_s = maf_effect_s,
   Glist = Glist,
   m = m,
   scheduled = FALSE,
-  return_log_h = estimate_selection_s
+  return_log_h = estimate_maf_effect_s
  )
  arch <- .resolve_pi_prior(
   pi_init = pi_init,
@@ -2904,12 +2904,12 @@ stblr_csr_bayesr <- function(
   ld_swap_prob = ld_swap_prob, ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
-  selection_s_prior_scale = selection_s_info$prior_scale,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd,
-  selection_s_log_h = selection_s_info$log_h,
+  maf_effect_s_prior_scale = maf_effect_s_info$prior_scale,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd,
+  maf_effect_s_log_h = maf_effect_s_info$log_h,
   convergence_markers = .convergence_spec$markers %||% integer(),
   convergence_b = isTRUE(.convergence_spec$b),
   convergence_d = isTRUE(.convergence_spec$d),
@@ -2924,8 +2924,8 @@ stblr_csr_bayesr <- function(
   eigen_eta = eigen_eta
  )
  if (.is_stblr_raw(raw)) {
-  if (isTRUE(selection_s_info$fixed)) {
-   raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+  if (isTRUE(maf_effect_s_info$fixed)) {
+   raw$selection$mean <- stats::setNames(rep(maf_effect_s_info$maf_effect_s, nt), trait_names)
   }
   fit <- .as_stblr_fit(raw, trait_names, variable_names)
  } else {
@@ -2943,14 +2943,14 @@ stblr_csr_bayesr <- function(
   method = "bayesc", model = "bayesc",
   backend = "csr_bayesc", data_level = "summary",
   annotations = FALSE,
-  selection_s = selection_s_info$selection_s,
-  selection_s_fixed = selection_s_info$fixed,
-  selection_s_exponent = selection_s_info$exponent,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = if (isTRUE(estimate_selection_s)) selection_s_init else NULL,
-  selection_s_prior = if (isTRUE(estimate_selection_s)) selection_s_prior else NULL,
-  selection_s_proposal_sd = if (isTRUE(estimate_selection_s)) selection_s_proposal_sd else NULL,
-  selection_s_scale = "standardized_genotype_effect",
+  maf_effect_s = maf_effect_s_info$maf_effect_s,
+  maf_effect_s_fixed = maf_effect_s_info$fixed,
+  maf_effect_s_exponent = maf_effect_s_info$exponent,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_init else NULL,
+  maf_effect_s_prior = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_prior else NULL,
+  maf_effect_s_proposal_sd = if (isTRUE(estimate_maf_effect_s)) maf_effect_s_proposal_sd else NULL,
+  maf_effect_s_scale = "standardized_genotype_effect",
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
@@ -2994,11 +2994,11 @@ stblr_csr_bayesr <- function(
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
-  selection_s = NULL,
-  estimate_selection_s = FALSE,
-  selection_s_init = 0,
-  selection_s_prior = c(-3, 2),
-  selection_s_proposal_sd = 0.35,
+  maf_effect_s = NULL,
+  estimate_maf_effect_s = FALSE,
+  maf_effect_s_init = 0,
+  maf_effect_s_prior = c(-3, 2),
+  maf_effect_s_proposal_sd = 0.35,
   nub = 4,
   nue = 4,
   use_comp_init = FALSE,
@@ -3030,9 +3030,9 @@ stblr_csr_bayesr <- function(
  .validate_ld_swap_args(
   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves
  )
- .stblr_validate_sampled_selection_s(
-  estimate_selection_s, selection_s, selection_s_init,
-  selection_s_prior, selection_s_proposal_sd
+ .stblr_validate_sampled_maf_effect_s(
+  estimate_maf_effect_s, maf_effect_s, maf_effect_s_init,
+  maf_effect_s_prior, maf_effect_s_proposal_sd
  )
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -3097,9 +3097,9 @@ stblr_csr_bayesr <- function(
  if (length(n) == 1L) n <- rep(n, nt)
  m <- stats$m %||% length(stats$ww[[1L]])
  bed <- .stblr_csr_block_eigen_inputs(stats, Glist, block_start)
- selection_s_info <- .stblr_prepare_csr_selection_s(
-  selection_s = selection_s, Glist = Glist, m = m, scheduled = FALSE,
-  backend = "bayesr", return_log_h = estimate_selection_s
+ maf_effect_s_info <- .stblr_prepare_csr_maf_effect_s(
+  maf_effect_s = maf_effect_s, Glist = Glist, m = m, scheduled = FALSE,
+  backend = "bayesr", return_log_h = estimate_maf_effect_s
  )
  trait_names <- names(stats$yy) %||% paste0("T", seq_len(nt))
  variable_names <- names(stats$ww[[1L]]) %||% stats$marker_names
@@ -3142,11 +3142,11 @@ stblr_csr_bayesr <- function(
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2, ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
-  selection_s_prior_scale = selection_s_info$prior_scale,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_init = selection_s_init, selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd,
-  selection_s_log_h = selection_s_info$log_h,
+  maf_effect_s_prior_scale = maf_effect_s_info$prior_scale,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init, maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd,
+  maf_effect_s_log_h = maf_effect_s_info$log_h,
   convergence_markers = .convergence_spec$markers %||% integer(),
   convergence_probability = isTRUE(.convergence_spec$probability),
   convergence_b = isTRUE(.convergence_spec$b),
@@ -3159,17 +3159,17 @@ stblr_csr_bayesr <- function(
  if (!.is_stblr_raw(raw)) {
   .stblr_stop_unsupported_raw_output("csr_bayesr_block_eigen")
  }
- if (isTRUE(selection_s_info$fixed)) {
-  raw$selection$mean <- stats::setNames(rep(selection_s_info$selection_s, nt), trait_names)
+ if (isTRUE(maf_effect_s_info$fixed)) {
+  raw$selection$mean <- stats::setNames(rep(maf_effect_s_info$maf_effect_s, nt), trait_names)
  }
  fit <- .as_stblr_fit(raw, trait_names, variable_names)
- if (isTRUE(estimate_selection_s)) {
-  keep_idx <- seq.int(nburn + 1L, nrow(fit$selection_s_trace))
-  s_trace_keep <- fit$selection_s_trace[keep_idx, , drop = FALSE]
-  fit$selection_s <- colMeans(s_trace_keep)
-  fit$selection_s_sd <- apply(s_trace_keep, 2L, stats::sd)
-  fit$selection_s_min <- apply(s_trace_keep, 2L, min)
-  fit$selection_s_max <- apply(s_trace_keep, 2L, max)
+ if (isTRUE(estimate_maf_effect_s)) {
+  keep_idx <- seq.int(nburn + 1L, nrow(fit$maf_effect_s_trace))
+  s_trace_keep <- fit$maf_effect_s_trace[keep_idx, , drop = FALSE]
+  fit$maf_effect_s <- colMeans(s_trace_keep)
+  fit$maf_effect_s_sd <- apply(s_trace_keep, 2L, stats::sd)
+  fit$maf_effect_s_min <- apply(s_trace_keep, 2L, min)
+  fit$maf_effect_s_max <- apply(s_trace_keep, 2L, max)
  }
  fit$input <- list(
   method = "bayesr", model = "bayesr", backend = "csr_bayesr",
@@ -3187,11 +3187,11 @@ stblr_csr_bayesr <- function(
   updateE = updateE, updateE_start = updateE_start,
   updatePi = updatePi,
   updateE_every = updateE_every,
-  selection_s = selection_s_info$selection_s,
-  selection_s_fixed = selection_s_info$fixed,
-  selection_s_exponent = selection_s_info$exponent,
-  estimate_selection_s = estimate_selection_s,
-  selection_s_scale = "standardized_genotype_effect",
+  maf_effect_s = maf_effect_s_info$maf_effect_s,
+  maf_effect_s_fixed = maf_effect_s_info$fixed,
+  maf_effect_s_exponent = maf_effect_s_info$exponent,
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s_scale = "standardized_genotype_effect",
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
  fit
@@ -3817,7 +3817,7 @@ stblr_bed_marker <- function(
 #' BED BayesRC uses the individual-level packed-BED likelihood with
 #' annotation-dependent probit stick-breaking component probabilities. It
 #' always visits every marker on every iteration: adaptive null-marker
-#' scheduling is disabled. `selection_s`, LD-swap, annotation-dependent
+#' scheduling is disabled. `maf_effect_s`, LD-swap, annotation-dependent
 #' effect-size variance multipliers, BED block-eigen fitting, and covariate
 #' adjustment are not supported. Multiple traits are fitted as separate
 #' trait-specific models.

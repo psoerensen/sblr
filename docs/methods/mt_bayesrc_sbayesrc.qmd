@@ -90,9 +90,9 @@ $$
 
 Annotations change component probabilities only. They do not change $B$,
 the residual covariance, component multipliers, operators, or the optional
-`selection_s` scale. Fixed MT `selection_s` is supported; sampled MT
-`selection_s` is not. When an explicitly identified MAF/heterozygosity
-annotation is combined with `selection_s`, the fit records the overlap and
+`maf_effect_s` scale. Fixed MT `maf_effect_s` is supported; sampled MT
+`maf_effect_s` is not. When an explicitly identified MAF/heterozygosity
+annotation is combined with `maf_effect_s`, the fit records the overlap and
 warns once because both mechanisms may encode related information.
 
 ## Probability outputs
@@ -115,8 +115,8 @@ probabilities. Model-specific quantities live under
 
 - Trait-pattern probabilities are global conditional on non-null status.
 - Annotations do not modify covariance matrices or component scales.
-- Sampled MT `selection_s` is unsupported.
-- MAF-derived annotations and `selection_s` can overlap or be confounded.
+- Sampled MT `maf_effect_s` is unsupported.
+- MAF-derived annotations and `maf_effect_s` can overlap or be confounded.
 - Annotation coefficients diagnose component propensity, not causal
   enrichment by themselves.
 - The current factorization is the model implemented by `sblr`, not a claim of

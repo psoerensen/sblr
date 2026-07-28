@@ -46,16 +46,16 @@ test_that("scientific models are compositional and capability-checked", {
   sbayesc <- sblr:::.blr_resolve_st_model(
     "sbayesc", list(), "sbayesc", operator = "csr")
   sbayesr <- sblr:::.blr_resolve_st_model(
-    "sbayesr", list(selection_s = -.25), "sbayesr",
+    "sbayesr", list(maf_effect_s = -.25), "sbayesr",
     operator = "csr")
   expect_identical(sbayesc$kernel, "bayesc")
-  expect_null(sbayesc$dots$selection_s)
+  expect_null(sbayesc$dots$maf_effect_s)
   expect_identical(sbayesc$effect_scale, "unit")
   expect_identical(sbayesr$kernel, "bayesr")
-  expect_identical(sbayesr$dots$selection_s, -.25)
+  expect_identical(sbayesr$dots$maf_effect_s, -.25)
   expect_identical(sbayesr$effect_scale, "component_maf_s")
   expect_error(sblr:::.blr_resolve_st_model(
-    "bayesc", list(selection_s = 0), "sbayesc", operator = "csr"),
+    "bayesc", list(maf_effect_s = 0), "sbayesc", operator = "csr"),
     "summary statistics")
 })
 

@@ -49,7 +49,7 @@ test_that("MAF annotation overlap is explicit and advisory once", {
   x <- .mt_bayesrc_fixture(); on.exit(.mt_bayesrc_cleanup(x), add = TRUE)
   A <- cbind(intercept = 1, maf = c(.1, .2, .3))
   rownames(A) <- x$stats$marker_names
-  args <- .mt_bayesrc_common(selection_s = -1)
+  args <- .mt_bayesrc_common(maf_effect_s = -1)
   args$annotations <- A
   expect_warning(fit <- do.call(mtblr_csr, c(list(stats = x$stats,
     ld_prefix = x$prefix, ld_metadata = x$ld_metadata), args)),

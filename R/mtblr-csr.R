@@ -603,15 +603,15 @@
 #' @param pi_floor Probability floor used by probit stick-breaking.
 #' @param alpha_update_every Positive iteration interval for coefficient updates.
 #' @param updateAlpha Update annotation coefficients and their variances.
-#' @param selection_s Optional fixed scalar MAF-S exponent, independent of the
+#' @param maf_effect_s Optional fixed scalar MAF-S exponent, independent of the
 #'   summary-statistics `sbayesr` model name.
-#' @param selection_maf Optional allele frequencies aligned to the final marker
-#'   order for the independent `selection_s` scale policy.
-#' @param allow_reference_maf_for_selection_s Allow explicit fallback to
+#' @param effect_maf Optional allele frequencies aligned to the final marker
+#'   order for the independent `maf_effect_s` scale policy.
+#' @param allow_reference_maf_for_maf_effect_s Allow explicit fallback to
 #'   reference-panel MAF when GWAS-summary MAF is unavailable.
-#' @param estimate_selection_s Logical; sampled MT S is currently unsupported.
-#' @param selection_s_init,selection_s_prior,selection_s_proposal_sd Reserved
-#'   sampled-S controls, rejected while `estimate_selection_s` is unsupported.
+#' @param estimate_maf_effect_s Logical; sampled MT S is currently unsupported.
+#' @param maf_effect_s_init,maf_effect_s_prior,maf_effect_s_proposal_sd Reserved
+#'   sampled-S controls, rejected while `estimate_maf_effect_s` is unsupported.
 #' @param vg,vb,ve Initial covariance matrices.
 #' @param ssb_prior,sse_prior Covariance prior scale matrices.
 #' @param updateB,updateE,updatePi Update controls.
@@ -642,10 +642,10 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   standardize_annotations = TRUE, center_binary_annotations = FALSE,
   alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
   sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
-  alpha_update_every = 1L, updateAlpha = TRUE, selection_s = NULL,
-  selection_maf = NULL, allow_reference_maf_for_selection_s = FALSE,
-  estimate_selection_s = FALSE, selection_s_init = NULL,
-  selection_s_prior = NULL, selection_s_proposal_sd = NULL,
+  alpha_update_every = 1L, updateAlpha = TRUE, maf_effect_s = NULL,
+  effect_maf = NULL, allow_reference_maf_for_maf_effect_s = FALSE,
+  estimate_maf_effect_s = FALSE, maf_effect_s_init = NULL,
+  maf_effect_s_prior = NULL, maf_effect_s_proposal_sd = NULL,
   vg = NULL, vb = NULL, ve = NULL, ssb_prior = NULL, sse_prior = NULL,
   updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
@@ -666,17 +666,17 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   sharing <- if (shared && all(vapply(st$ww[-1L], identical, logical(1), st$ww[[1L]]))) "fully_shared_operator" else if (shared) "shared_correlation_reference" else "trait_specific_reference"
   native_prefix <- if (sharing == "shared_correlation_reference") rep(ld$prefixes, st$nt) else ld$prefixes
   pattern_spec <- .mtblr_models(models, pimodels, pi, st$nt)
-  maf_info <- .mtblr_resolve_selection_maf(
-    selection_maf, !is.null(selection_s) || isTRUE(estimate_selection_s),
+  maf_info <- .mtblr_resolve_effect_maf(
+    effect_maf, !is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s),
     st$m, summary_marker_metadata = aligned$marker_metadata,
     reference_marker_metadata = ld$descriptors[[1L]]$marker_metadata,
-    allow_reference_maf_for_selection_s =
-      allow_reference_maf_for_selection_s)
+    allow_reference_maf_for_maf_effect_s =
+      allow_reference_maf_for_maf_effect_s)
   mixture <- .mtblr_bayesr_spec(
     semantics$prior_kernel, pattern_spec, maf_info$values,
-    st$m, mixture_var, joint_pi, joint_pi_prior, component, selection_s,
-    estimate_selection_s, selection_s_init, selection_s_prior,
-    selection_s_proposal_sd)
+    st$m, mixture_var, joint_pi, joint_pi_prior, component, maf_effect_s,
+    estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
+    maf_effect_s_proposal_sd)
   if (identical(semantics$prior_kernel, "bayesrc")) {
     if (!is.null(joint_pi) || !is.null(joint_pi_prior))
       stop("joint_pi and joint_pi_prior are not BayesRC controls; use pimodels for conditional pattern initialization.", call. = FALSE)
@@ -765,10 +765,10 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   raw$data <- list(marker_metadata = aligned$marker_metadata, trait_metadata = trait_metadata,
     sample_size = st$n, ld_prefix = native_prefix, ld_sharing_mode = sharing,
     scale = "standardized_genotype", data_level = "summary_statistics",
-    selection_maf_source = maf_info$selection_maf_source,
-    selection_maf_population = maf_info$selection_maf_population,
-    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
-    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    effect_maf_source = maf_info$effect_maf_source,
+    effect_maf_population = maf_info$effect_maf_population,
+    effect_maf_alignment_status = maf_info$effect_maf_alignment_status,
+    effect_maf_fallback_used = maf_info$effect_maf_fallback_used,
     annotation_source = bayesrc$metadata$annotation_source %||% "not_applicable",
     annotation_marker_alignment_status =
       bayesrc$metadata$annotation_marker_alignment_status %||% "not_applicable")
@@ -778,7 +778,7 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     backend = paste0("mt_csr_", semantics$prior_kernel),
     prior_kernel = semantics$prior_kernel,
     data_level = "summary_statistics",
-    effect_scale_policy = if (!is.null(selection_s))
+    effect_scale_policy = if (!is.null(maf_effect_s))
       if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component_maf_s" else "maf_s"
       else if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component" else "unit",
     model_semantics_version = 2L,
@@ -802,12 +802,12 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
       "annotation_probit_stick",
     models = mod$matrix, model_names = mod$names, pimodels = mod$probabilities,
     mixture_var = mixture$mixture_var, joint_pi_prior = mixture$pi_prior,
-    selection_s = mixture$selection_s,
-    estimate_selection_s = estimate_selection_s,
-    selection_maf_source = maf_info$selection_maf_source,
-    selection_maf_population = maf_info$selection_maf_population,
-    selection_maf_alignment_status = maf_info$selection_maf_alignment_status,
-    selection_maf_fallback_used = maf_info$selection_maf_fallback_used,
+    maf_effect_s = mixture$maf_effect_s,
+    estimate_maf_effect_s = estimate_maf_effect_s,
+    effect_maf_source = maf_info$effect_maf_source,
+    effect_maf_population = maf_info$effect_maf_population,
+    effect_maf_alignment_status = maf_info$effect_maf_alignment_status,
+    effect_maf_fallback_used = maf_info$effect_maf_fallback_used,
     sets = set_spec$public,
     ld_prefix = native_prefix, ld_sharing_mode = sharing, ld_reference = trait_metadata$ld_reference,
     marker_policy = marker_policy, marker_intersection_policy = "error", scale = "standardized_genotype",
@@ -823,8 +823,8 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   fit$input$memory_estimate <- memory
   fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
   fit <- .mtblr_bayesrc_format_fit(fit, raw$annotations, bayesrc)
-  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(selection_s))
-    warning("MAF-derived annotations and selection_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
+  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(maf_effect_s))
+    warning("MAF-derived annotations and maf_effect_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
   messages <- .blr_convergence_warning_messages(
     fit$convergence, if (conv$mode == "core") "core" else "auto",
     "mtblr", "csr")

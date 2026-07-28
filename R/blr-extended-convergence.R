@@ -1,5 +1,5 @@
 .blr_extended_group_values <- c(
-  "covariance", "probability", "selection_s", "annotations")
+  "covariance", "probability", "maf_effect_s", "annotations")
 .blr_selected_marker_values <- c("b", "d", "component")
 
 .blr_validate_extended_controls <- function(resolved, mode) {
@@ -8,7 +8,7 @@
     if (!is.character(groups) || anyNA(groups) || any(!nzchar(groups)) ||
         anyDuplicated(groups) ||
         any(!groups %in% .blr_extended_group_values)) {
-      stop("convergence_control$extended_groups must be NULL or a unique subset of covariance, probability, selection_s, and annotations.",
+      stop("convergence_control$extended_groups must be NULL or a unique subset of covariance, probability, maf_effect_s, and annotations.",
            call. = FALSE)
     }
   }
@@ -173,14 +173,14 @@
 }
 
 .blr_convergence_group_overview <- function(summary) {
-  groups <- c("core", "covariance", "probability", "selection_s",
+  groups <- c("core", "covariance", "probability", "maf_effect_s",
               "annotations", "selected_markers")
   category <- ifelse(summary$tier == 1L, "core",
     ifelse(summary$tier == 3L, "selected_markers",
       ifelse(summary$group %in% c("cov_b", "cov_g", "cov_e"),
              "covariance",
       ifelse(grepl("pi", summary$group, fixed = TRUE), "probability",
-      ifelse(summary$group == "selection_s", "selection_s", "annotations")))))
+      ifelse(summary$group == "maf_effect_s", "maf_effect_s", "annotations")))))
   setNames(lapply(groups, function(group) {
     x <- summary[category == group, , drop = FALSE]
     if (!nrow(x)) return(list(
@@ -434,12 +434,12 @@
       updated = FALSE, derived = FALSE, captured = FALSE,
       stringsAsFactors = FALSE)
   }
-  if ("selection_s" %in% plan$groups) {
+  if ("maf_effect_s" %in% plan$groups) {
     index <- index + 1L
     arrays[[index]] <- array(NA_real_, c(nit, nchains, 1L))
     descriptors[[index]] <- data.frame(
-      quantity_index = index, tier = 2L, group = "selection_s",
-      parameter_name = "selection_s", trait_index = -1L,
+      quantity_index = index, tier = 2L, group = "maf_effect_s",
+      parameter_name = "maf_effect_s", trait_index = -1L,
       updated = FALSE, derived = FALSE, captured = FALSE,
       stringsAsFactors = FALSE)
   }
@@ -746,17 +746,17 @@
       }
     }
   }
-  if ("selection_s" %in% groups) {
-    sampled <- isTRUE(fit$input$estimate_selection_s)
-    if (sampled) append_trait_trace("selection_s", "selection_s", TRUE)
-    else if (!is.null(fit$input$selection_s)) {
+  if ("maf_effect_s" %in% groups) {
+    sampled <- isTRUE(fit$input$estimate_maf_effect_s)
+    if (sampled) append_trait_trace("maf_effect_s", "maf_effect_s", TRUE)
+    else if (!is.null(fit$input$maf_effect_s)) {
       for (trait in seq_along(trait_names)) {
         index <- index + 1L
-        arrays[[index]] <- matrix(rep(fit$input$selection_s[[min(
-          trait, length(fit$input$selection_s))]], nit * nchains), nit, nchains)
+        arrays[[index]] <- matrix(rep(fit$input$maf_effect_s[[min(
+          trait, length(fit$input$maf_effect_s))]], nit * nchains), nit, nchains)
         descriptors[[index]] <- data.frame(
-          quantity_index = index, tier = 2L, group = "selection_s",
-          parameter_name = "selection_s", trait_index = trait,
+          quantity_index = index, tier = 2L, group = "maf_effect_s",
+          parameter_name = "maf_effect_s", trait_index = trait,
           updated = FALSE, derived = FALSE, captured = TRUE,
           stringsAsFactors = FALSE)
       }
@@ -764,8 +764,8 @@
       index <- index + 1L
       arrays[[index]] <- matrix(NA_real_, nit, nchains)
       descriptors[[index]] <- data.frame(
-        quantity_index = index, tier = 2L, group = "selection_s",
-        parameter_name = "selection_s", trait_index = trait,
+        quantity_index = index, tier = 2L, group = "maf_effect_s",
+        parameter_name = "maf_effect_s", trait_index = trait,
         updated = FALSE, derived = FALSE, captured = FALSE,
         stringsAsFactors = FALSE)
     }

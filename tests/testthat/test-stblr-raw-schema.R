@@ -166,22 +166,22 @@ test_that("check_stblr_consistency() flags malformed comp_prob rows", {
   )])
 })
 
-test_that("check_stblr_consistency() validates fit$selection_s against trait count", {
+test_that("check_stblr_consistency() validates fit$maf_effect_s against trait count", {
   raw <- make_fake_stblr_raw(nt = 2L, m = 3L)
   fit <- .as_stblr_fit(
     raw, trait_names = c("trait1", "trait2"), variable_names = paste0("m", 1:3)
   )
-  fit$selection_s <- stats::setNames(c(0.1, 0.2), c("trait1", "trait2"))
+  fit$maf_effect_s <- stats::setNames(c(0.1, 0.2), c("trait1", "trait2"))
   fit$input <- list(nchains = 1L)
 
   chk <- check_stblr_consistency(fit, verbose = FALSE)
   expect_true(chk$ok)
-  expect_true(chk$checks$ok[match("selection_s.length", chk$checks$check)])
+  expect_true(chk$checks$ok[match("maf_effect_s.length", chk$checks$check)])
 
-  fit$selection_s <- c(0.1)
+  fit$maf_effect_s <- c(0.1)
   chk_bad <- check_stblr_consistency(fit, verbose = FALSE)
   expect_false(chk_bad$ok)
-  expect_false(chk_bad$checks$ok[match("selection_s.length", chk_bad$checks$check)])
+  expect_false(chk_bad$checks$ok[match("maf_effect_s.length", chk_bad$checks$check)])
 })
 
 test_that("check_stblr_consistency() checks backend-specific fields when fit$input$backend is known", {

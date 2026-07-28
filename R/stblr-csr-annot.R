@@ -10,8 +10,8 @@
 #' inclusion and variance priors, `annotation_model = "group"` for grouped
 #' annotation architectures, and `annotation_model = "annotation_probit_stick"` for
 #' SBayesRC-style annotation-dependent component probabilities. Only
-#' `annotation_model = "annotation_probit_stick"` supports fixed global `selection_s` and
-#' sampled trait-specific `selection_s`.
+#' `annotation_model = "annotation_probit_stick"` supports fixed global `maf_effect_s` and
+#' sampled trait-specific `maf_effect_s`.
 #'
 #' @param stats Sufficient statistics returned by [bed_xtx_xty()].
 #' @param Glist Optional object containing sparse-LD metadata. When `ld_prefix`
@@ -41,29 +41,29 @@
 #' @param verbose Print resolved execution metadata.
 #' @param updateLDswap Logical; request optional LD-swap/MH. This is supported
 #'   for the current annotation-aware CSR models, including SBayesRC.
-#' @param selection_s Optional fixed global BayesS-style MAF-scaling parameter.
-#' @param selection_maf Optional MAF aligned to the final summary-marker order.
-#' @param allow_reference_maf_for_selection_s Allow explicit reference-panel
+#' @param maf_effect_s Optional fixed global BayesS-style MAF-scaling parameter.
+#' @param effect_maf Optional MAF aligned to the final summary-marker order.
+#' @param allow_reference_maf_for_maf_effect_s Allow explicit reference-panel
 #'   MAF fallback when no GWAS-summary or by-construction analysis MAF exists.
 #'   Currently supported only for `annotation_model = "annotation_probit_stick"` in this
-#'   unified annotation interface. The default `selection_s = NULL` with
-#'   `estimate_selection_s = FALSE` fits the ordinary model. A finite numeric
-#'   scalar with `estimate_selection_s = FALSE` fits a fixed global-S model.
-#'   `selection_s` must remain `NULL` when `estimate_selection_s = TRUE`;
+#'   unified annotation interface. The default `maf_effect_s = NULL` with
+#'   `estimate_maf_effect_s = FALSE` fits the ordinary model. A finite numeric
+#'   scalar with `estimate_maf_effect_s = FALSE` fits a fixed global-S model.
+#'   `maf_effect_s` must remain `NULL` when `estimate_maf_effect_s = TRUE`;
 #'   fixed and sampled S cannot both be requested.
-#' @param estimate_selection_s Logical; estimate one trait-specific
-#'   BayesS-style `selection_s` by Metropolis-Hastings. Currently supported
+#' @param estimate_maf_effect_s Logical; estimate one trait-specific
+#'   BayesS-style `maf_effect_s` by Metropolis-Hastings. Currently supported
 #'   only for `annotation_model = "annotation_probit_stick"`. Sampled
-#'   `selection_s` is not supported for `annotation_model = "fixed_marker"`,
+#'   `maf_effect_s` is not supported for `annotation_model = "fixed_marker"`,
 #'   `"learned_logistic"`, or `"group"`.
-#' @param selection_s_init Initial value for sampled `selection_s`. Defaults to
-#'   0 and is used only when `estimate_selection_s = TRUE`.
-#' @param selection_s_prior Numeric length-2 lower and upper bounds for the
-#'   uniform sampled-`selection_s` prior. Defaults to `c(-3, 2)` and is used
-#'   only when `estimate_selection_s = TRUE`.
-#' @param selection_s_proposal_sd Random-walk proposal standard deviation for
-#'   sampled `selection_s`. Defaults to 0.35 and is used only when
-#'   `estimate_selection_s = TRUE`.
+#' @param maf_effect_s_init Initial value for sampled `maf_effect_s`. Defaults to
+#'   0 and is used only when `estimate_maf_effect_s = TRUE`.
+#' @param maf_effect_s_prior Numeric length-2 lower and upper bounds for the
+#'   uniform sampled-`maf_effect_s` prior. Defaults to `c(-3, 2)` and is used
+#'   only when `estimate_maf_effect_s = TRUE`.
+#' @param maf_effect_s_proposal_sd Random-walk proposal standard deviation for
+#'   sampled `maf_effect_s`. Defaults to 0.35 and is used only when
+#'   `estimate_maf_effect_s = TRUE`.
 #' @param ld_swap_prob Probability per MCMC iteration of attempting LD-swap
 #'   moves when `updateLDswap = TRUE`.
 #' @param ld_swap_r2 Minimum LD r-squared for candidate swap partners.
@@ -100,15 +100,15 @@
 #'   `keep_chains = TRUE`, compact per-chain summaries are returned in
 #'   `chains` for supported CSR annotation backends.
 #'
-#'   For sampled SBayesRC `selection_s`, the fit also contains `selection_s`,
-#'   `selection_s_chain_mean_sd`, `selection_s_chain_mean_min`,
-#'   `selection_s_chain_mean_max`,
-#'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
-#'   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
-#'   and `selection_s_acceptance` is the MH acceptance rate by trait. With
+#'   For sampled SBayesRC `maf_effect_s`, the fit also contains `maf_effect_s`,
+#'   `maf_effect_s_chain_mean_sd`, `maf_effect_s_chain_mean_min`,
+#'   `maf_effect_s_chain_mean_max`,
+#'   `maf_effect_s_trace`, and `maf_effect_s_acceptance`. `maf_effect_s_trace` is
+#'   an iteration x trait matrix, `maf_effect_s` is the posterior mean by trait,
+#'   and `maf_effect_s_acceptance` is the MH acceptance rate by trait. With
 #'   `keep_chains = TRUE`, chain-level sampled-S output is available as
-#'   the matching flat trait-by-chain record's `selection_s` and
-#'   `selection_s_acceptance` fields.
+#'   the matching flat trait-by-chain record's `maf_effect_s` and
+#'   `maf_effect_s_acceptance` fields.
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
 #'   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
@@ -127,21 +127,21 @@
 #' control. The `"fixed_marker"`, `"learned_logistic"`, and `"group"` policies
 #' affect BayesC-like inclusion probabilities and/or marker-effect variance
 #' priors directly.
-#' SBayesRC uses annotations to affect component probabilities; `selection_s`,
+#' SBayesRC uses annotations to affect component probabilities; `maf_effect_s`,
 #' when requested, affects only marker-specific effect-size prior variance.
 #'
 #' The model-specific adapters are internal. `stblr_csr_annot()` is the sole
 #' public annotation-aware CSR fitting entry.
 #'
 #' CSR effects are on the standardized-genotype scale. The BayesS-style
-#' MAF-dependent prior scale used by fixed and sampled `selection_s` is
+#' MAF-dependent prior scale used by fixed and sampled `maf_effect_s` is
 #' `q_j(S) = h_j^(S + 1)`, where `h_j = 2 p_j (1 - p_j)` and `p_j` is the
 #' minor allele frequency. The `+1` exponent appears because the sampler effects
 #' are standardized-genotype-scale effects rather than allele-scale effects.
 #'
 #' For CSR SBayesRC, annotations affect component probabilities and
-#' `selection_s` affects marker-specific effect-size prior variance. Fixed
-#' `selection_s` uses
+#' `maf_effect_s` affects marker-specific effect-size prior variance. Fixed
+#' `maf_effect_s` uses
 #' `b_j | component_j = m, vb, S ~ N(0, vb * mixture_var_m * q_j(S))`. The
 #' null component has multiplier zero, and `dm` is the posterior non-null
 #' probability.
@@ -166,9 +166,9 @@
 #'   Glist = Glist,
 #'   annotations = annotations,
 #'   annotation_model = "annotation_probit_stick",
-#'   estimate_selection_s = TRUE,
-#'   selection_s_prior = c(-3, 2),
-#'   selection_s_proposal_sd = 0.35
+#'   estimate_maf_effect_s = TRUE,
+#'   maf_effect_s_prior = c(-3, 2),
+#'   maf_effect_s_proposal_sd = 0.35
 #' )
 #' }
 #'
@@ -198,13 +198,13 @@ stblr_csr_annot <- function(
   updateE = TRUE,
   updatePi = TRUE,
   updateLDswap = FALSE,
-  selection_s = NULL,
-  selection_maf = NULL,
-  allow_reference_maf_for_selection_s = FALSE,
-  estimate_selection_s = FALSE,
-  selection_s_init = 0,
-  selection_s_prior = c(-3, 2),
-  selection_s_proposal_sd = 0.35,
+  maf_effect_s = NULL,
+  effect_maf = NULL,
+  allow_reference_maf_for_maf_effect_s = FALSE,
+  estimate_maf_effect_s = FALSE,
+  maf_effect_s_init = 0,
+  maf_effect_s_prior = c(-3, 2),
+  maf_effect_s_proposal_sd = 0.35,
   ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
@@ -249,27 +249,27 @@ stblr_csr_annot <- function(
   memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
  .stblr_check_annotation_method(method, annotation_model)
  if (annotation_model %in% c("prior", "learned", "group")) {
-  if (isTRUE(estimate_selection_s)) {
+  if (isTRUE(estimate_maf_effect_s)) {
    stop(
-    "estimate_selection_s is currently supported only for annotation_model = \"annotation_probit_stick\".",
+    "estimate_maf_effect_s is currently supported only for annotation_model = \"annotation_probit_stick\".",
     call. = FALSE)
   }
-  if (!is.null(selection_s)) {
+  if (!is.null(maf_effect_s)) {
    stop(
-    "selection_s is currently supported only for annotation_model = \"annotation_probit_stick\".",
+    "maf_effect_s is currently supported only for annotation_model = \"annotation_probit_stick\".",
     call. = FALSE)
   }
  }
- .stblr_validate_sampled_selection_s(
-  estimate_selection_s = estimate_selection_s,
-  selection_s = selection_s,
-  selection_s_init = selection_s_init,
-  selection_s_prior = selection_s_prior,
-  selection_s_proposal_sd = selection_s_proposal_sd
+ .stblr_validate_sampled_maf_effect_s(
+  estimate_maf_effect_s = estimate_maf_effect_s,
+  maf_effect_s = maf_effect_s,
+  maf_effect_s_init = maf_effect_s_init,
+  maf_effect_s_prior = maf_effect_s_prior,
+  maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
  )
- maf_info <- .blr_resolve_st_selection_maf(
-  selection_maf, allow_reference_maf_for_selection_s,
-  !is.null(selection_s) || isTRUE(estimate_selection_s), stats, Glist)
+ maf_info <- .blr_resolve_st_effect_maf(
+  effect_maf, allow_reference_maf_for_maf_effect_s,
+  !is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s), stats, Glist)
  Glist <- maf_info$Glist
  .stblr_check_annotation_chains(annotation_model, nchains, keep_chains, chain_seeds)
  .validate_ld_swap_args(
@@ -307,23 +307,23 @@ stblr_csr_annot <- function(
    fit, model, "csr", chain, conv, memory_warning_gb, verbose, memory)
   out$input$annotation_policy <- probability_policy
   out$input$probability_policy <- probability_policy
-  active_s <- !is.null(selection_s) || isTRUE(estimate_selection_s)
+  active_s <- !is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s)
   out$input$prior_kernel <- if (model == "sbayesrc") "bayesrc" else "bayesc"
   out$input$effect_scale <- if (model == "sbayesrc") {
     if (active_s) "component_maf_s" else "component"
   } else "unit"
   out$input$effect_scale_policy <- out$input$effect_scale
-  out$input$selection_maf_source <- maf_info$selection_maf_source
-  out$input$selection_maf_population <- maf_info$selection_maf_population
-  out$input$selection_maf_alignment_status <-
-   maf_info$selection_maf_alignment_status
-  out$input$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
+  out$input$effect_maf_source <- maf_info$effect_maf_source
+  out$input$effect_maf_population <- maf_info$effect_maf_population
+  out$input$effect_maf_alignment_status <-
+   maf_info$effect_maf_alignment_status
+  out$input$effect_maf_fallback_used <- maf_info$effect_maf_fallback_used
   out$data$effect_scale <- out$input$effect_scale
-  out$data$selection_maf_source <- maf_info$selection_maf_source
-  out$data$selection_maf_population <- maf_info$selection_maf_population
-  out$data$selection_maf_alignment_status <-
-   maf_info$selection_maf_alignment_status
-  out$data$selection_maf_fallback_used <- maf_info$selection_maf_fallback_used
+  out$data$effect_maf_source <- maf_info$effect_maf_source
+  out$data$effect_maf_population <- maf_info$effect_maf_population
+  out$data$effect_maf_alignment_status <-
+   maf_info$effect_maf_alignment_status
+  out$data$effect_maf_fallback_used <- maf_info$effect_maf_fallback_used
   out
  }
  common$updateLDswap <- updateLDswap
@@ -373,11 +373,11 @@ stblr_csr_annot <- function(
   list(
    Glist = Glist,
    A = annotations,
-   selection_s = selection_s,
-   estimate_selection_s = estimate_selection_s,
-   selection_s_init = selection_s_init,
-   selection_s_prior = selection_s_prior,
-   selection_s_proposal_sd = selection_s_proposal_sd
+   maf_effect_s = maf_effect_s,
+   estimate_maf_effect_s = estimate_maf_effect_s,
+   maf_effect_s_init = maf_effect_s_init,
+   maf_effect_s_prior = maf_effect_s_prior,
+   maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
   ),
   extra
  )

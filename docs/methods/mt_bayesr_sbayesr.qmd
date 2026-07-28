@@ -15,7 +15,7 @@ The public model name identifies the likelihood representation:
 
 Both use the same joint multi-trait BayesR prior kernel. The `s` prefix does
 not activate MAF scaling. Optional MAF-dependent scaling is controlled only by
-`selection_s`.
+`maf_effect_s`.
 
 ## Joint marker state
 
@@ -53,7 +53,7 @@ N\!\left(0,\;\gamma_k q_j(S) B_p\right),
 q_j(S)=\{2p_j(1-p_j)\}^{S+1},
 $$
 
-where $q_j(S)=1$ when `selection_s` is absent and also numerically when the
+where $q_j(S)=1$ when `maf_effect_s` is absent and also numerically when the
 explicit value is $-1$. Inactive traits are masked:
 
 $$
@@ -84,7 +84,7 @@ marginals are deterministic sums of the current joint probabilities.
 For BayesR/SBayesR, `pi_final`, `pi_mean`, and `pi_trace` therefore refer to
 named joint-state probabilities. `model_parameters$mixture` records
 `mixture_var`, component and pattern names, joint-state names, probability
-marginals, and `selection_s` metadata.
+marginals, and `maf_effect_s` metadata.
 
 ## Outputs
 
@@ -114,7 +114,7 @@ logical chains.
 
 ## Current limitations
 
-- MT `selection_s` may be fixed but cannot be sampled.
+- MT `maf_effect_s` may be fixed but cannot be sampled.
 - Joint state count is guarded for memory and practical numerical size.
 - BayesR has no annotation dependence; use BayesRC/SBayesRC for that model.
 - Full marker-by-joint-state posterior probabilities are not retained.

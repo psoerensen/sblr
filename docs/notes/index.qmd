@@ -11,7 +11,7 @@ diagnostic interpretation. Mathematical derivations are collected under
 - [Single-trait models](single_trait_models.qmd)
 - [Multi-trait models](multi_trait_models.qmd)
 - [Annotation-informed models](annotation_informed_models.qmd)
-- [`selection_s`](selection_s.qmd)
+- [`maf_effect_s`](maf_effect_s.qmd)
 - [Data representations and operators](data_representations.qmd)
 - [Sparse-LD workflows](sparse_ld_workflows.qmd)
 - [Credible sets and fine-mapping](credible_sets_and_finemapping.qmd)

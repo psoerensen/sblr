@@ -39,7 +39,7 @@ test_that("fixed-alpha MT SBayesRC reduces exactly to MT SBayesR", {
 test_that("BayesRC update and selection-S controls are independent", {
   x <- .mt_bayesrc_fixture(); on.exit(.mt_bayesrc_cleanup(x), add = TRUE)
   call <- function(selection) {
-    args <- .mt_bayesrc_common(selection_s = selection)
+    args <- .mt_bayesrc_common(maf_effect_s = selection)
     args$annotations <- x$annotations
     do.call(mtblr_csr, c(list(stats = x$stats, ld_prefix = x$prefix,
       ld_metadata = x$ld_metadata), args))
@@ -51,6 +51,6 @@ test_that("BayesRC update and selection-S controls are independent", {
   expect_identical(unit$input$effect_scale_policy, "component_maf_s")
   expect_error(mtblr_csr(x$stats, ld_prefix = x$prefix,
     ld_metadata = x$ld_metadata, method = "sbayesrc",
-    annotations = x$annotations, estimate_selection_s = TRUE),
-    "Sampled selection_s")
+    annotations = x$annotations, estimate_maf_effect_s = TRUE),
+    "Sampled maf_effect_s")
 })

@@ -17,31 +17,31 @@ st_bayesc_csr_reference_metadata <- list(
 st_bayesc_csr_reference_configurations <- list(
   one_trait_one_chain_one_core = list(
     traits = 1L, chains = 1L, cores = 1L, keep_chains = FALSE,
-    chain_seeds = NULL, selection_s = NULL
+    chain_seeds = NULL, maf_effect_s = NULL
   ),
   one_trait_two_chains_one_core = list(
     traits = 1L, chains = 2L, cores = 1L, keep_chains = FALSE,
-    chain_seeds = NULL, selection_s = NULL
+    chain_seeds = NULL, maf_effect_s = NULL
   ),
   one_trait_two_chains_two_cores = list(
     traits = 1L, chains = 2L, cores = 2L, keep_chains = FALSE,
-    chain_seeds = NULL, selection_s = NULL
+    chain_seeds = NULL, maf_effect_s = NULL
   ),
   multiple_traits = list(
     traits = 2L, chains = 2L, cores = 2L, keep_chains = FALSE,
-    chain_seeds = NULL, selection_s = NULL
+    chain_seeds = NULL, maf_effect_s = NULL
   ),
   explicit_chain_seeds = list(
     traits = 1L, chains = 2L, cores = 1L, keep_chains = FALSE,
-    chain_seeds = c(401L, 402L), selection_s = NULL
+    chain_seeds = c(401L, 402L), maf_effect_s = NULL
   ),
   keep_chains = list(
     traits = 1L, chains = 2L, cores = 1L, keep_chains = TRUE,
-    chain_seeds = c(401L, 402L), selection_s = NULL
+    chain_seeds = c(401L, 402L), maf_effect_s = NULL
   ),
-  fixed_selection_s = list(
+  fixed_maf_effect_s = list(
     traits = 1L, chains = 1L, cores = 1L, keep_chains = FALSE,
-    chain_seeds = NULL, selection_s = -0.5
+    chain_seeds = NULL, maf_effect_s = -0.5
   )
 )
 
@@ -99,8 +99,8 @@ st_bayesc_csr_reference_native <- function(config, prefix, inputs) {
   E <- diag(vy * 0.7, nt, nt)
   ssb <- diag(((4 - 2) / 4) * (vy * 0.3) / (m * 0.5), nt, nt)
   sse <- diag(((4 - 2) / 4) * (vy * 0.7), nt, nt)
-  selection <- sblr:::.stblr_prepare_csr_bayesc_selection_s(
-    selection_s = config$selection_s,
+  selection <- sblr:::.stblr_prepare_csr_bayesc_maf_effect_s(
+    maf_effect_s = config$maf_effect_s,
     Glist = inputs$glist,
     m = m,
     scheduled = FALSE,
@@ -123,7 +123,7 @@ st_bayesc_csr_reference_native <- function(config, prefix, inputs) {
     keep_chains = config$keep_chains,
     chain_seeds = if (is.null(config$chain_seeds)) integer() else config$chain_seeds,
     updateLDswap = FALSE,
-    selection_s_prior_scale = selection$prior_scale
+    maf_effect_s_prior_scale = selection$prior_scale
   )
 }
 
@@ -150,9 +150,9 @@ st_bayesc_csr_reference_formatted <- function(config, prefix, inputs) {
     updateLDswap = FALSE,
     scheduled = FALSE
   )
-  if (!is.null(config$selection_s)) {
-    args$selection_s <- config$selection_s
-    args$allow_reference_maf_for_selection_s <- TRUE
+  if (!is.null(config$maf_effect_s)) {
+    args$maf_effect_s <- config$maf_effect_s
+    args$allow_reference_maf_for_maf_effect_s <- TRUE
   }
   do.call(stblr_csr, args)
 }

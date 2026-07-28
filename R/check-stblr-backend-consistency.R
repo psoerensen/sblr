@@ -181,7 +181,7 @@ check_stblr_consistency <- function(
     add_check = add_check
   )
 
-  .stblr_backend_check_selection_s(
+  .stblr_backend_check_maf_effect_s(
     fit = fit,
     dm = dm,
     add_check = add_check
@@ -639,25 +639,25 @@ print.stblr_backend_check <- function(x, ...) {
   invisible(NULL)
 }
 
-.stblr_backend_check_selection_s <- function(fit, dm, add_check) {
-  has_any <- !is.null(fit$selection_s) || !is.null(fit$selection_s_trace)
+.stblr_backend_check_maf_effect_s <- function(fit, dm, add_check) {
+  has_any <- !is.null(fit$maf_effect_s) || !is.null(fit$maf_effect_s_trace)
   if (!has_any) return(invisible(NULL))
 
-  if (!is.null(fit$selection_s_trace)) {
+  if (!is.null(fit$maf_effect_s_trace)) {
     .stblr_backend_check_optional_trace(
-      fit = fit, name = "selection_s_trace", dm = dm, add_check = add_check
+      fit = fit, name = "maf_effect_s_trace", dm = dm, add_check = add_check
     )
   }
-  if (!is.null(fit$selection_s)) {
-    x <- fit$selection_s
+  if (!is.null(fit$maf_effect_s)) {
+    x <- fit$maf_effect_s
     add_check(
-      "selection_s.finite", all(is.finite(x)),
-      "fit$selection_s contains only finite values"
+      "maf_effect_s.finite", all(is.finite(x)),
+      "fit$maf_effect_s contains only finite values"
     )
     if (!is.null(dm)) {
       add_check(
-        "selection_s.length", length(x) == ncol(dm),
-        "length(fit$selection_s) matches number of traits"
+        "maf_effect_s.length", length(x) == ncol(dm),
+        "length(fit$maf_effect_s) matches number of traits"
       )
     }
   }
