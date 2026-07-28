@@ -21,29 +21,29 @@ trait-pattern by positive-component state space described for
 
 ## Factorized annotation prior
 
-Let (A_j) be marker (j)'s processed annotation row and let
+Let $A_j$ be marker $j$'s processed annotation row and let
 
-\[
+$$
 \theta_{jc}=P(c_j=c\mid A_j),\qquad c=0,\ldots,K,
-\]
+$$
 
 be annotation-dependent component probabilities from probit stick breaking.
 Let
 
-\[
+$$
 \omega_p=P(a_j=p\mid c_j>0),\qquad p=1,\ldots,P,
-\]
+$$
 
 be global conditional probabilities for the supplied non-null trait patterns.
 The complete state prior is
 
-\[
+$$
 P(\text{null}\mid A_j)=\theta_{j0},
-\]
+$$
 
-\[
+$$
 P(a_j=p,c_j=k\mid A_j)=\theta_{jk}\omega_p,\qquad k>0.
-\]
+$$
 
 Both simplexes sum to one, so this factorization preserves one null state. It
 does not fit annotation-dependent trait-pattern probabilities.
@@ -65,7 +65,7 @@ not modified.
 
 ## Probit stick breaking
 
-For (K+1) categories (null plus (K) positive components), the coefficient
+For $K+1$ categories (null plus $K$ positive components), the coefficient
 matrix has processed annotations in rows and deterministic sticks in columns.
 Stick order follows component order. Linear predictors are transformed by the
 normal CDF, floored only by `pi_floor`, and renormalized.
@@ -76,19 +76,19 @@ With `updateAlpha = TRUE`, latent probit variables, coefficients, and
 `sigmaSqAlpha` are updated every `alpha_update_every` completed iterations;
 the current values still exist at every iteration. With `FALSE`, coefficients
 remain fixed. `updatePi` separately controls the conditional pattern
-probabilities (omega).
+probabilities $\omega$.
 
 ## Effects and independent MAF scaling
 
 Conditional on a selected state, the effect prior is unchanged from MT
 BayesR:
 
-\[
+$$
 \operatorname{Cov}(\beta_{j,p,k})=
 \gamma_k q_j(S)B_p.
-\]
+$$
 
-Annotations change component probabilities only. They do not change (B),
+Annotations change component probabilities only. They do not change $B$,
 the residual covariance, component multipliers, operators, or the optional
 `selection_s` scale. Fixed MT `selection_s` is supported; sampled MT
 `selection_s` is not. When an explicitly identified MAF/heterozygosity
@@ -98,11 +98,11 @@ warns once because both mechanisms may encode related information.
 ## Probability outputs
 
 - `prior_component_probabilities`: posterior mean annotation-driven prior
-  probabilities (	heta_j), marker by component;
-- `prior_active_probabilities`: (1-\theta_{j0});
+  probabilities $\theta_j$, marker by component;
+- `prior_active_probabilities`: $1-\theta_{j0}$;
 - `component_probabilities`: posterior marker component-state probabilities;
 - `pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`: the conditional
-  non-null pattern probabilities (omega);
+  non-null pattern probabilities $\omega$;
 - annotation coefficient and variance final/mean fields: the probit-stick
   parameter summaries.
 

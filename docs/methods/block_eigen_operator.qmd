@@ -67,9 +67,9 @@ or copy the operator.
 A marker update visits its within-block off-diagonal entries, so the update
 cost is proportional to its block size. Storage is
 
-\[
+$$
 O\!\left(\sum_b m_b(m_b+1)/2\right),
-\]
+$$
 
 not (O(mr)) low-rank storage. Narrower blocks lower memory and update cost but
 set cross-block LD to zero.

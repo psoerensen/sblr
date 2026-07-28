@@ -35,10 +35,10 @@ website:
 format:
   html:
     theme: flatly
+    html-math-method: mathjax
     toc: true
     toc-depth: 3
     number-sections: false
     code-fold: true
     code-tools: true
     highlight-style: github
-    

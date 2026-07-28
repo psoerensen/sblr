@@ -19,20 +19,20 @@ not activate MAF scaling. Optional MAF-dependent scaling is controlled only by
 
 ## Joint marker state
 
-Let the supplied trait-activity patterns contain one null pattern and (P)
-non-null binary patterns (a_p\in\{0,1\}^T). Let
+Let the supplied trait-activity patterns contain one null pattern and $P$
+non-null binary patterns $a_p\in\{0,1\}^T$. Let
 
-\[
+$$
 0=\gamma_0 < \gamma_1 < \cdots < \gamma_K
-\]
+$$
 
-be `mixture_var`, with one null multiplier and (K) positive variance
+be `mixture_var`, with one null multiplier and $K$ positive variance
 components. A marker has one unique null state plus every non-null
 pattern/component combination, so
 
-\[
+$$
 J = 1 + PK.
-\]
+$$
 
 Ordering is deterministic: `null` first, then supplied non-null pattern order,
 and within each pattern ascending positive-component order. Public names follow
@@ -42,26 +42,26 @@ silently drops patterns or components.
 
 ## Latent and effective effects
 
-For marker (j), component (k>0), and active pattern (a_p), the retained
-MT prior uses a shared base marker-effect covariance (B). On the active trait
+For marker $j$, component $k>0$, and active pattern $a_p$, the retained
+MT prior uses a shared base marker-effect covariance $B$. On the active trait
 subspace,
 
-\[
+$$
 \beta_{j,p,k}\mid B,S \sim
 N\!\left(0,\;\gamma_k q_j(S) B_p\right),
 \qquad
 q_j(S)=\{2p_j(1-p_j)\}^{S+1},
-\]
+$$
 
-where (q_j(S)=1) when `selection_s` is absent and also numerically when the
-explicit value is (-1). Inactive traits are masked:
+where $q_j(S)=1$ when `selection_s` is absent and also numerically when the
+explicit value is $-1$. Inactive traits are masked:
 
-\[
+$$
 b_j = a_p \odot \beta_j.
-\]
+$$
 
 Annotations do not enter this BayesR model. Known component and optional
-MAF scales are removed when updating the shared base (B); the sampler does
+MAF scales are removed when updating the shared base $B$; the sampler does
 not maintain component-specific covariance matrices.
 
 Terminology is fixed:
@@ -75,7 +75,7 @@ Terminology is fixed:
 
 ## Joint probabilities
 
-`joint_pi` initializes the probability simplex over the (J) deterministic
+`joint_pi` initializes the probability simplex over the $J$ deterministic
 states and `joint_pi_prior` supplies its positive Dirichlet prior. With
 `updatePi = TRUE`, counts from the complete joint states update that simplex;
 with `FALSE`, the supplied state remains fixed. Component and pattern
@@ -90,7 +90,7 @@ marginals, and `selection_s` metadata.
 
 Marker outputs include `bm`, `dm`, `b_final`, `d_final`, `component_final`,
 and row-normalized marker-by-component `component_probabilities`. Covariance
-outputs are the mean and final full (B), genetic (G), and residual (E)
+outputs are the mean and final full $B$, genetic $G$, and residual $E$
 matrices. The common `vbs`, `vgs`, `ves`, `vle`, and `vld` traces are
 iteration by trait, with `vld = vgs - vle` at each recorded iteration.
 
@@ -98,7 +98,7 @@ No marker-by-joint-state posterior matrix is returned by default.
 
 ## Operator-specific likelihoods
 
-The state descriptor, prior, probability update, base-(B) update, seeds,
+The state descriptor, prior, probability update, base-$B$ update, seeds,
 chain aggregation, and output meanings are shared. The likelihood operator
 differs:
 

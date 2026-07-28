@@ -11,9 +11,9 @@ summary-statistics data, not an active MAF scale.
 
 For allele frequency (p_j), let
 
-\[
+$$
 h_j=2p_j(1-p_j),\qquad q_j(S)=h_j^{S+1}.
-\]
+$$
 
 - `selection_s = NULL`: no MAF-dependent scale is requested;
 - a finite scalar: use fixed (q_j(S));

@@ -16,11 +16,11 @@ $$
 y_{i t_1} \, y_{i t_2},
 $$
 
-where \(y_{i t}\) denotes the phenotype of individual \(i\) for trait \(t\),
-and \(N_{t_1,t_2}\) is the number of individuals jointly observed for traits
-\(t_1\) and \(t_2\).  
+where $y_{i t}$ denotes the phenotype of individual $i$ for trait $t$,
+and $N_{t_1,t_2}$ is the number of individuals jointly observed for traits
+$t_1$ and $t_2$.
 In the univariate case this reduces to the usual
-sum of squares \(\mathrm{SSY}_t = \sum_i y_{it}^2\), but in the multivariate
+sum of squares $\mathrm{SSY}_t = \sum_i y_{it}^2$, but in the multivariate
 case the full matrix
 
 $$
@@ -28,10 +28,10 @@ $$
 $$
 
 is required to estimate or sample from a *residual covariance matrix*
-\(E\) or its inverse.
+$E$ or its inverse.
 
 When individual-level data are unavailable, we must reconstruct or approximate
-SSY and the effective sample-overlap matrix \(N\) from summary statistics,
+SSY and the effective sample-overlap matrix $N$ from summary statistics,
 phenotypic variances, and (estimated or assumed) phenotypic correlations.
 This section describes the statistical foundations of these reconstructed
 matrices and how the helper functions
@@ -42,10 +42,10 @@ implement them.
 
 ## Phenotypic Variance From Summary Statistics
 
-For trait \(t\), let
+For trait $t$, let
 
-- \(yy_t = \sum_i y_{it}^2\) (the univariate summary statistic),
-- \(n_t\) be the number of individuals with observations for trait \(t\).
+- $yy_t = \sum_i y_{it}^2$ (the univariate summary statistic),
+- $n_t$ be the number of individuals with observations for trait $t$.
 
 The empirical phenotypic variance is approximated by
 
@@ -91,9 +91,9 @@ derived from summary statistics.
 
 ---
 
-## The Sample-Overlap Matrix \(N\)
+## The Sample-Overlap Matrix $N$
 
-For two traits \(t_1\) and \(t_2\), define
+For two traits $t_1$ and $t_2$, define
 
 $$
 N_{t_1,t_2}
@@ -123,10 +123,10 @@ N^{\text{frac}}_{t_1,t_2}
 p_{t_1,t_2} \,\min(n_{t_1}, n_{t_2}),
 $$
 
-where \(p_{t_1,t_2} \in [0,1]\) is a user-supplied overlap proportion.
+where $p_{t_1,t_2} \in [0,1]$ is a user-supplied overlap proportion.
 This defines `build_Nmat_frac()`.
 
-The diagonal entries satisfy \(N_{t,t} = n_t\).
+The diagonal entries satisfy $N_{t,t} = n_t$.
 
 ---
 
@@ -162,10 +162,10 @@ $$
 
 This is the key identity used by `build_SSY_full_overlap()`:
 
-- it constructs the covariance matrix using \(R_y\) and the variance estimates,
-- multiplies by the appropriate overlap counts \(N_{t_1,t_2}\),
+- it constructs the covariance matrix using $R_y$ and the variance estimates,
+- multiplies by the appropriate overlap counts $N_{t_1,t_2}$,
 - and forces the diagonals to match the observed univariate summary statistics:
-  \(\mathrm{SSY}_{t,t} = yy_t\).
+  $\mathrm{SSY}_{t,t} = yy_t$.
 
 Thus, the reconstructed SSY matrix is:
 
@@ -175,7 +175,7 @@ $$
 N \odot \widehat{\mathrm{Cov}}(y),
 $$
 
-where \(\odot\) denotes elementwise multiplication.
+where $\odot$ denotes elementwise multiplication.
 
 ---
 
@@ -189,15 +189,15 @@ y = Xb + e,
 e \sim \mathcal{N}(0, E \otimes I),
 $$
 
-the full residual covariance sampler for \(E\) requires access to the cross-trait
+the full residual covariance sampler for $E$ requires access to the cross-trait
 quantities
 
 $$
 \sum_i e_{i t_1} e_{i t_2},
 $$
 
-which, after substituting \(e = y - Xb\), depend on the observed SSY matrix,
-the cross-products involving \(X\), and the current posterior draw of \(b\).
+which, after substituting $e = y - Xb$, depend on the observed SSY matrix,
+the cross-products involving $X$, and the current posterior draw of $b$.
 
 When individual-level data are unavailable, the only way to compute
 these cross-trait sums is through a reconstruction of SSY and Nmat from
@@ -214,10 +214,10 @@ matrix or sample-overlap information is available.
 ## Summary
 
 - `build_Nmat_full()` constructs a full-overlap sample-overlap matrix  
-  \(N_{t_1,t_2} = \min(n_{t_1},n_{t_2})\).
+  $N_{t_1,t_2} = \min(n_{t_1},n_{t_2})$.
 
 - `build_Nmat_frac()` generalizes this using overlap fractions  
-  \(N_{t_1,t_2} = p_{t_1,t_2}\min(n_{t_1},n_{t_2})\).
+  $N_{t_1,t_2} = p_{t_1,t_2}\min(n_{t_1},n_{t_2})$.
 
 - `build_SSY_full_overlap()` combines variances, phenotypic correlations,
   and overlap counts to reconstruct:
@@ -227,12 +227,12 @@ matrix or sample-overlap information is available.
   $$
 
 - These matrices provide the necessary inputs for a full sampler of the
-  residual covariance matrix \(E\) when only summary statistics are available.
+  residual covariance matrix $E$ when only summary statistics are available.
 
 
 ## 5.1 Deriving SSY from first principles
 
-Let \(Y_t\) be an \(n_t\)-dimensional vector of observations for trait \(t\).  
+Let $Y_t$ be an $n_t$-dimensional vector of observations for trait $t$.
 If samples overlap partially, define the set of shared individuals:
 
 $$
@@ -276,7 +276,7 @@ $$
 \approx N_{ts} \, \sigma_{ts}.
 $$
 
-Estimating \(\sigma_{ts}\) by:
+Estimating $\sigma_{ts}$ by:
 
 $$
 \widehat{\sigma}_{ts}
@@ -296,4 +296,4 @@ N \odot \widehat{\mathrm{Cov}}(y).
 $$
 
 This provides a principled summary‑statistic reconstruction of  
-\(Y^\top Y\) suitable for multi‑trait Bayesian models.
+$Y^\top Y$ suitable for multi‑trait Bayesian models.
