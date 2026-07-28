@@ -3,14 +3,29 @@ title: "Data representations and operators"
 format: html
 ---
 
-Packed BED is the individual-level operator. CSR sparse LD and reconstructed
-block eigen are summary-statistics operators. Marker and trait order are
-explicit and preserved throughout preparation, sampling, formatting, and
-diagnostics.
+`sblr` has three canonical operator families.
 
-Operator preparation happens once per fit and is shared immutably across
-logical chains. Block-eigen runtime storage is described by its represented
-blocks and filter settings; it is not assumed to be permanently low rank.
+| Operator | Data level | Practical input |
+|---|---|---|
+| `packed_bed` | individual | selected PLINK BED genotypes and phenotypes |
+| `csr` | summary statistics | `wy`, `ww`, sample metadata, and disk-backed sparse LD correlations |
+| `block_eigen` | summary statistics | aligned scores plus reference BED data and explicit block/filter settings |
 
-Fit metadata records genotype, effect, phenotype, and LD scales plus total,
-used, and per-trait sample sizes.
+Packed-BED routes decode selected markers once and use the actual standardized
+analysis-genotype variance. CSR stores retained upper-triangle off-diagonal
+correlations with an implicit unit correlation diagonal; the sampler combines
+those values with aligned `stats$ww` marker cross-products. Block eigen
+constructs and filters within-block operators, then stores reconstructed dense
+block upper triangles and their filtered runtime diagonal.
+
+Marker identity, order, allele orientation, scale, and sample/frequency
+provenance matter more than matching dimensions. External GWAS summary
+statistics and reference-panel LD describe different populations unless that
+relationship is explicitly justified. Record the summary population, LD
+reference population, selected samples/markers, allele alignment, frequencies,
+and thresholds.
+
+See [Sparse-LD workflows](sparse_ld_workflows.qmd) for construction,
+[Sparse-LD CSR methods](../methods/sparse_ld_csr.qmd) for the disk/operator
+contract, and [Block-eigen methods](../methods/block_eigen_operator.qmd) for
+filter and runtime-diagonal semantics.

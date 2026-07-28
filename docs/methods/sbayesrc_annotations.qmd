@@ -3,13 +3,13 @@ title: "Technical Appendix: SBayesRC-Style Annotation Priors"
 ---
 
 This appendix describes the SBayesRC-style annotation-dependent BayesR prior
-available through `stblr_csr_annot(annotation_model = "sbayesrc")` and the
-compatibility wrapper `stblr_csr_annot(..., annotation_model = "sbayesrc")`. The core prior family is
+available through `stblr_csr_annot(annotation_model =
+"annotation_probit_stick")`. The core prior family is
 closely aligned with published SBayesRC: marker effects follow a multi-normal
 mixture, and marker-specific mixture probabilities are determined by
 conditional probit stick-breaking regressions on annotations. The exposed
 `sblr` model is not an exact reproduction of the published GCTB SBayesRC
-implementation. Its default gamma grid differs, and it uses a CSR sparse-LD
+implementation. Its default component-multiplier grid differs, and it uses a CSR sparse-LD
 likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.
 
 This note focuses on the annotation-dependent prior and its diagnostics. It
@@ -51,7 +51,7 @@ $$
 The remaining components represent increasingly diffuse active-effect
 distributions when their gamma multipliers increase.
 
-For multiple traits supplied to the wrapper, this mixture construction and its
+For multiple traits supplied to the fitter, this mixture construction and its
 annotation coefficients are fitted separately by trait. The formatted fit
 therefore stores one `alpha` matrix and one set of marker component summaries
 per trait.
@@ -109,39 +109,39 @@ selection_s_prior = c(-3, 2)
 selection_s_proposal_sd = 0.35
 ```
 
-The same fixed and sampled `selection_s` support is available for plain CSR
-BayesC and plain CSR BayesR. Scheduled CSR BayesC, BayesC-like
-annotation-aware CSR backends, and BED backends do not support sampler-level
-`selection_s`. See [selection_s implementation status](selection_s_status.md)
-for the complete backend support matrix and BayesC/BayesR kernels.
+Fixed `selection_s` is available only where the public capability contract
+marks it supported. Sampled `selection_s` remains an ST-only capability on
+validated routes. See [`selection_s`](../notes/selection_s.qmd) and the
+[model capability matrix](../dev/blr_model_capability_matrix.md) for the
+current support matrix.
 
-## Gamma Grids
+## Component-Multiplier Grids
 
 The public `sblr` default is:
 
 ```r
-gamma = c(0, 0.01, 0.1, 1)
+mixture_var = c(0, 0.01, 0.1, 1)
 ```
 
 Published SBayesRC uses the five-component grid:
 
 ```r
-gamma = c(0, 0.001, 0.01, 0.1, 1)
+mixture_var = c(0, 0.001, 0.01, 0.1, 1)
 ```
 
-Users can request that published gamma grid explicitly:
+Users can request that published component-multiplier grid explicitly:
 
 ```r
 fit <- stblr_csr_annot(
   stats = stats,
   Glist = Glist,
   annotations = A,
-  annotation_model = "sbayesrc",
-  gamma = c(0, 0.001, 0.01, 0.1, 1)
+  annotation_model = "annotation_probit_stick",
+  mixture_var = c(0, 0.001, 0.01, 0.1, 1)
 )
 ```
 
-Matching the gamma grid aligns this part of the prior specification. It does
+Matching the component-multiplier grid aligns this part of the prior specification. It does
 not make the complete `sblr` model identical to GCTB SBayesRC because the
 likelihood, sparse-LD representation, exposed defaults, and implementation
 details remain distinct.
@@ -218,7 +218,8 @@ Rows of $A$ must be aligned with the markers in the sufficient statistics,
 CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or
 quantitative annotations, and overlap is allowed.
 
-Before fitting, `stblr_csr_annot(..., annotation_model = "sbayesrc")` calls the shared annotation
+Before fitting, `stblr_csr_annot(..., annotation_model =
+"annotation_probit_stick")` calls the shared annotation
 preparation helper using these controls:
 
 - `add_intercept = TRUE` adds an all-ones first column when one is not already
@@ -240,7 +241,7 @@ membership in that annotation, conditional on the remaining columns.
 With `intercept_flat = TRUE`, the first annotation coefficient at every
 stick-breaking step receives a flat prior in the native alpha update. This
 assumes the first column is the intercept, which is the arrangement produced
-when the wrapper adds it. All other annotation coefficients receive the
+when the fitter adds it. All other annotation coefficients receive the
 normal prior described below.
 
 If a custom matrix already contains an intercept, place it first when relying
@@ -407,15 +408,10 @@ contains posterior frequencies of sampled component assignments after burn-in
 and thinning. It is not the same object as the annotation-derived prior
 probability matrix computed from $A\alpha$.
 
-Component probability columns are named by gamma values. The exact null
-component column is `gamma_0.00`, so `dm = 1 - P(gamma_0.00)`. This differs
-from CSR BayesR, which uses `component_0` for the null component column.
-
-### `ncomp`
-
-`fit$ncomp` is a trait-by-component matrix containing posterior mean counts of
-markers assigned to each component. Its row sum should equal the number of
-markers, subject only to numerical representation.
+The first component is the exact null component. Consequently, `dm` is one
+minus its posterior probability. Component identities and multipliers are
+recorded with the model parameters; code should not infer scientific meaning
+from a display label alone.
 
 The usual outputs remain available when returned, including `bm`, `dm`,
 variance traces, covariance summaries, current effects, and residual state.
@@ -470,15 +466,16 @@ prior architecture than standalone annotation-row summaries.
 
 ```r
 alpha_t <- fit$alpha[[1]]
-prior_pi <- sbayesrc_marker_pi(fit$input$A, alpha_t, fit$input$gamma)
-expected_gamma <- sbayesrc_marker_gamma_mean(
-  fit$input$A, alpha_t, fit$input$gamma
+mixture_var <- c(0, 0.01, 0.1, 1)
+prior_pi <- sbayesrc_marker_pi(fit$input$A, alpha_t, mixture_var)
+expected_multiplier <- sbayesrc_marker_gamma_mean(
+  fit$input$A, alpha_t, mixture_var
 )
 ```
 
 Because these diagnostics transform posterior mean alpha coefficients, they do
 not propagate the full posterior uncertainty in alpha. Compact reports can
-show annotation-row expected gamma, `summary(expected_gamma)`, and the
+show annotation-row expected multipliers, `summary(expected_multiplier)`, and the
 correlation between marker expected gamma and PIP. That correlation describes
 the fitted prior-posterior relationship; it is not a calibration statistic or
 causal estimate.
@@ -528,7 +525,8 @@ hyperparameters.
 
 The most accurate description is therefore:
 
-> `stblr_csr_annot(..., annotation_model = "sbayesrc")` implements an SBayesRC-style,
+> `stblr_csr_annot(..., annotation_model = "annotation_probit_stick")`
+> implements an SBayesRC-style,
 > annotation-dependent BayesR prior that is closely aligned with the published
 > SBayesRC prior structure, fitted with the `sblr` CSR sparse-LD likelihood.
 
@@ -541,7 +539,7 @@ Before interpreting an SBayesRC-style fit:
 
 - verify marker alignment among $A$, sufficient statistics, CSR LD, and
   posterior summaries;
-- record the gamma grid and distinguish the `sblr` default from the published
+- record the component-multiplier grid and distinguish the `sblr` default from the published
   grid;
 - record intercept, standardization, and binary-centering choices;
 - inspect annotation prevalence, scaling, overlap, and collinearity;
@@ -557,23 +555,21 @@ Before interpreting an SBayesRC-style fit:
 
 ## Related Notes and Sources
 
-- [Annotation-informed models](annotation_informed_models.html) compares this
+- [Annotation-informed models](annotation_informed_models.qmd) compares this
   model with fixed, learned, and group annotation priors.
-- [Technical annotation priors](technical_annotation_priors.html) develops
+- [Annotation priors](annotation_priors.qmd) develops
   marker-specific inclusion and variance priors outside the BayesR mixture
   construction.
-- [Workflows and outputs](workflows_and_outputs.html) explains compact fit and
+- [Workflows and outputs](../notes/workflows_and_outputs.qmd) explains compact fit and
   expected-gamma reporting.
-- [Model overview](model_overview.html) places the model within the broader
+- [Model overview](../notes/model_overview.qmd) places the model within the broader
   `sblr` model and workflow landscape.
 
-The implementation contracts described here are based on the public wrapper,
-deterministic diagnostic helpers, helper tests, and native CSR sampler. The
-archived annotation draft supplies the broader motivation for direct
-annotation-dependent mixture priors.
+The implementation contracts described here are based on the public fitter,
+deterministic diagnostic helpers, helper tests, and native CSR sampler.
 ## Shared MT extension
 
-Phase 20 reuses the ST probit-stick order and coefficient-prior update for one
-joint MT component state. It does not create trait-, pattern-, operator-, or
+The MT model reuses the ST probit-stick order and coefficient-prior update for
+one joint component state. It does not create trait-, pattern-, operator-, or
 component-covariance-specific coefficient matrices. Global non-null pattern
 probabilities form the second factor of the marker-state prior.

@@ -2,10 +2,29 @@
 % Please edit documentation in R/sblr-package.R
 \docType{package}
 \name{sblr-package}
+\alias{sblr}
 \alias{sblr-package}
-\title{sblr: Scalable Bayesian Linear Regression Models}
+\title{sblr: Scalable Bayesian Linear Regression}
 \description{
-Experimental tools for scalable Bayesian linear regression models in genomic prediction and variable selection. The package includes R wrappers and C++ implementations for Bayesian models using genome-wide association study summary statistics, sparse linkage disequilibrium matrices, PLINK BED genotype files, and annotation-informed priors.
+Experimental STBLR and MTBLR models for individual-level packed-BED data
+and summary statistics represented by CSR sparse-LD or block-eigen
+operators. Canonical prior families are BayesC, BayesR, and
+annotation-informed BayesRC. See [stblr_csr()], [stblr_csr_annot()],
+[stblr_block_eigen()], [stblr_bed()], [mtblr_csr()],
+[mtblr_block_eigen()], and [mtblr_bed()].
+}
+\details{
+The public `s` model prefix denotes summary-statistics data and is
+independent of the optional MAF-dependent `selection_s` effect scale.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/psoerensen/sblr}
+  \item \url{https://psoerensen.github.io/sblr/}
+  \item Report bugs at \url{https://github.com/psoerensen/sblr/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Peter Sørensen \email{peter.sorensen@r-qgg.org}

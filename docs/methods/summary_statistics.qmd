@@ -314,7 +314,7 @@ approximate residual score. This approximation is the principal statistical
 difference between a complete cross-product representation and thresholded
 CSR LD.
 
-See [Technical sparse LD and CSR](technical_sparse_ld_csr.html) for storage,
+See [Sparse LD and CSR](sparse_ld_csr.qmd) for storage,
 thresholding, and disk-contract details.
 
 ## Computing Statistics With `bed_xtx_xty()`
@@ -395,7 +395,7 @@ BED + phenotype
 ```
 
 The complete operational sequence is documented in
-[Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.html).
+[Sparse-LD and individual-level workflows](../notes/sparse_ld_workflows.qmd).
 
 ## How `stblr_csr()` Consumes the Statistics
 
@@ -571,7 +571,7 @@ matrices and therefore different reconstructed likelihood information.
 Missing or incorrect cross-trait information limits residual covariance
 inference even when every trait has valid marginal summary statistics. The
 complete derivation and sensitivity considerations belong in
-[Technical multi-trait sample overlap](technical_multitrait_overlap.html).
+[Multi-trait sample overlap](multitrait_overlap.qmd).
 
 ## Residual and Genetic Covariance From Summary Scores
 
@@ -732,20 +732,19 @@ implementation details.
 
 ## Related Notes and Sources
 
-- [Data representations](data_representations.html) introduces the two data
+- [Data representations](../notes/data_representations.qmd) introduces the two data
   representations and their alignment contracts.
-- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.html) gives the
+- [Sparse-LD and individual-level workflows](../notes/sparse_ld_workflows.qmd) gives the
   practical BED-to-statistics-to-CSR sequence.
-- [Technical sparse LD and CSR](technical_sparse_ld_csr.html) documents the
+- [Sparse LD and CSR](sparse_ld_csr.qmd) documents the
   disk-backed sparse-LD contract.
-- [Technical multi-trait sample overlap](technical_multitrait_overlap.html)
+- [Multi-trait sample overlap](multitrait_overlap.qmd)
   preserves the full `SSY` and overlap reconstruction theory.
-- [Single-trait models](single_trait_models.html) develops the sparse BLR prior
+- [Single-trait models](../notes/single_trait_models.qmd) develops the sparse BLR prior
   and marker-update interpretation.
-- [Multi-trait models](multi_trait_models.html) places cross-trait sufficient
+- [Multi-trait models](../notes/multi_trait_models.qmd) places cross-trait sufficient
   statistics within joint MTBLR models.
 
-This appendix reorganizes the summary-statistic residual identities and
-set-contribution derivations from the archived annotation draft together with
-the `SSY` foundations from the archived theory draft, aligned to the current
-BED sufficient-statistics and CSR implementations.
+This appendix aligns the summary-statistic residual identities,
+set-contribution derivations, and `SSY` foundations with the current BED
+sufficient-statistics and CSR implementations.

@@ -11,3 +11,8 @@ Use `stblr_csr()` for summary-statistics `sbayesc` or `sbayesr`, and
 annotation-probit-stick summary-statistics policies. Effective marker effects
 are reported as `bm` and final `b_final`; `dm` is posterior non-null
 probability. Trait variance traces are `vbs`, `vgs`, `ves`, `vle`, and `vld`.
+
+Use [credible sets and fine-mapping](credible_sets_and_finemapping.qmd) only
+after checking marker identity and PIP meaning. See
+[Annotation-informed models](annotation_informed_models.qmd) for policy choice
+and [Convergence diagnostics](convergence_diagnostics.qmd) for chain review.

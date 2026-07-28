@@ -8,7 +8,8 @@ stblr_csr_annot(
   stats,
   Glist = NULL,
   annotations,
-  annotation_model = c("prior", "learned", "group", "sbayesrc"),
+  annotation_model = c("fixed_marker", "group", "learned_logistic",
+    "annotation_probit_stick"),
   method = NULL,
   nit = 1000,
   nburn = 100,
@@ -49,18 +50,18 @@ stblr_csr_annot(
 \item{Glist}{Optional object containing sparse-LD metadata. When `ld_prefix`
 is not supplied, `Glist$sparseLD$prefix` is used when available.}
 
-\item{annotations}{Annotation input. For `annotation_model = "prior"`, use a
+\item{annotations}{Annotation input. For `annotation_model = "fixed_marker"`, use a
 marker x annotation matrix or a list with optional `A`, `fixed_pi_marker`
 or `pi_marker`, and `fixed_vb_multiplier` or `vb_multiplier` elements. For
-`"learned"` and `"sbayesrc"`, use a marker x annotation matrix. For
+`"learned_logistic"` and `"annotation_probit_stick"`, use a marker x
+annotation matrix. For
 `"group"`, use a length-`m` group vector, factor, or one-column data frame.}
 
-\item{annotation_model}{Annotation model. Synonyms are accepted:
-`"prior"`, `"fixed_prior"`, `"fixed"`; `"learned"`, `"annot"`,
-`"annotation"`; `"group"`, `"groups"`; and `"sbayesrc"`/`"SBayesRC"`.}
+\item{annotation_model}{Annotation policy. Must be one of `"fixed_marker"`,
+`"group"`, `"learned_logistic"`, or `"annotation_probit_stick"`.}
 
 \item{method}{Optional lowercase method override. BayesC-like annotation
-models use `"bayesc"`; SBayesRC uses `"sbayesrc"`.}
+models use `"sbayesc"`; SBayesRC uses `"sbayesrc"`.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 
@@ -101,7 +102,7 @@ for the current annotation-aware CSR models, including SBayesRC.}
 
 \item{allow_reference_maf_for_selection_s}{Allow explicit reference-panel
 MAF fallback when no GWAS-summary or by-construction analysis MAF exists.
-Currently supported only for `annotation_model = "sbayesrc"` in this
+Currently supported only for `annotation_model = "annotation_probit_stick"` in this
 unified annotation interface. The default `selection_s = NULL` with
 `estimate_selection_s = FALSE` fits the ordinary model. A finite numeric
 scalar with `estimate_selection_s = FALSE` fits a fixed global-S model.
@@ -110,8 +111,9 @@ fixed and sampled S cannot both be requested.}
 
 \item{estimate_selection_s}{Logical; estimate one trait-specific
 BayesS-style `selection_s` by Metropolis-Hastings. Currently supported
-only for `annotation_model = "sbayesrc"`. Sampled `selection_s` is not
-supported for `annotation_model = "prior"`, `"learned"`, or `"group"`.}
+only for `annotation_model = "annotation_probit_stick"`. Sampled
+`selection_s` is not supported for `annotation_model = "fixed_marker"`,
+`"learned_logistic"`, or `"group"`.}
 
 \item{selection_s_init}{Initial value for sampled `selection_s`. Defaults to
 0 and is used only when `estimate_selection_s = TRUE`.}
@@ -136,8 +138,9 @@ marker for swap proposals.}
 
 \item{ld_prefix}{Optional prefix of the disk-backed CSR LD files.}
 
-\item{...}{Additional model-specific arguments passed to the existing
-annotation wrapper.}
+\item{...}{Additional model-specific arguments passed to the internal
+annotation backend. For `"annotation_probit_stick"`, use `mixture_var`
+for the ordered component variance multipliers.}
 }
 \value{
 A formatted ST-BLR fit. All returned fits contain `dm`
@@ -145,17 +148,15 @@ A formatted ST-BLR fit. All returned fits contain `dm`
   (marker-by-trait posterior mean effects), `vbs`, `vgs`, `ves`, `vle`,
   `vld`, and `input`, plus standardized metadata fields (`method`, `model`,
   `backend`, `data_level`, `annotation_model`, `annotations`, `nchains`,
-  `keep_chains`). Existing wrapper-specific fields are preserved. The `vle`
-  and `vld` traces follow the same definitions and formatting conventions as
-  annotation-unaware CSR fits.
+  `keep_chains`). The `vle` and `vld` traces follow the same definitions and
+  formatting conventions as annotation-unaware CSR fits.
 
   Annotation-aware outputs are model-specific and may include
   `annotation_summary`, `annotation_pi`, `annotation_effects`,
   `annotation_prior`, `alpha`, and `sigmaSqAlpha`. SBayesRC fits also
-  include BayesR-style `component_probabilities` marker-by-component posterior
-  probabilities by trait, `dm_component_mean`, and `ncomp` where available.
-  The SBayesRC null component column is `gamma_0.00`, so
-  `dm = 1 - P(gamma_0.00)`.
+  include BayesR-style `component_probabilities`: marker-by-component
+  posterior probabilities by trait, including component zero. The `dm`
+  field is the posterior non-null probability.
 
   LD-swap-enabled fits include `fit$diagnostics$ld_swap` and, where chain
   summaries are retained, `fit$diagnostics$ld_swap_chains` or chain-level
@@ -185,13 +186,13 @@ annotation-aware CSR summary-statistics backends. It dispatches to the
 internal model adapters and standardizes fit metadata and annotation output.
 }
 \details{
-Available annotation models are `annotation_model = "prior"` for fixed
+Available annotation policies are `annotation_model = "fixed_marker"` for fixed
 annotation-informed prior probabilities and variance multipliers,
-`annotation_model = "learned"` for learned annotation effects on BayesC-like
+`annotation_model = "learned_logistic"` for learned annotation effects on BayesC-like
 inclusion and variance priors, `annotation_model = "group"` for grouped
-annotation architectures, and `annotation_model = "sbayesrc"` for
+annotation architectures, and `annotation_model = "annotation_probit_stick"` for
 SBayesRC-style annotation-dependent component probabilities. Only
-`annotation_model = "sbayesrc"` supports fixed global `selection_s` and
+`annotation_model = "annotation_probit_stick"` supports fixed global `selection_s` and
 sampled trait-specific `selection_s`.
 
 
@@ -202,8 +203,9 @@ for the fixed-prior, group, and learned annotation-aware CSR BayesC
 backends and the annotation-aware CSR SBayesRC backend.
 
 Annotation-aware BayesC models differ from SBayesRC in what annotations
-control. The `"prior"`, `"learned"`, and `"group"` models affect BayesC-like
-inclusion probabilities and/or marker-effect variance priors directly.
+control. The `"fixed_marker"`, `"learned_logistic"`, and `"group"` policies
+affect BayesC-like inclusion probabilities and/or marker-effect variance
+priors directly.
 SBayesRC uses annotations to affect component probabilities; `selection_s`,
 when requested, affects only marker-specific effect-size prior variance.
 
@@ -219,8 +221,9 @@ are standardized-genotype-scale effects rather than allele-scale effects.
 For CSR SBayesRC, annotations affect component probabilities and
 `selection_s` affects marker-specific effect-size prior variance. Fixed
 `selection_s` uses
-`b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))`. The null
-component column is `gamma_0.00` and `dm = 1 - P(gamma_0.00)`.
+`b_j | component_j = m, vb, S ~ N(0, vb * mixture_var_m * q_j(S))`. The
+null component has multiplier zero, and `dm` is the posterior non-null
+probability.
 
 Sampled CSR SBayesRC uses the trait-specific MH log posterior contribution
 
@@ -241,7 +244,7 @@ fit_sampled_s_sbayesrc <- stblr_csr_annot(
   stats = stats,
   Glist = Glist,
   annotations = annotations,
-  annotation_model = "sbayesrc",
+  annotation_model = "annotation_probit_stick",
   estimate_selection_s = TRUE,
   selection_s_prior = c(-3, 2),
   selection_s_proposal_sd = 0.35

@@ -122,15 +122,15 @@ fits$st_block_sbayesrc <- do.call(stblr_block_eigen, c(list(stats = x$stats, Gli
 fits$st_annot_fixed <- do.call(stblr_csr_annot, c(list(stats = x$stats, Glist = x$Glist,
   ld_prefix = x$prefix, annotations = list(A = x$annotations,
     fixed_pi_marker = list(rep(.3, 3)), fixed_vb_multiplier = list(rep(1, 3))),
-  annotation_model = "prior", use_pi_marker = TRUE, use_vb_multiplier = TRUE), common))
+  annotation_model = "fixed_marker", use_pi_marker = TRUE, use_vb_multiplier = TRUE), common))
 fits$st_annot_group <- do.call(stblr_csr_annot, c(list(stats = x$stats, Glist = x$Glist,
   ld_prefix = x$prefix, annotations = setNames(c("a", "b", "a"), x$stats$marker_names),
   annotation_model = "group", group_names = c("a", "b"), updateGroupVb = FALSE), common))
 fits$st_annot_learned <- do.call(stblr_csr_annot, c(list(stats = x$stats, Glist = x$Glist,
-  ld_prefix = x$prefix, annotations = x$annotations, annotation_model = "learned",
+  ld_prefix = x$prefix, annotations = x$annotations, annotation_model = "learned_logistic",
   learn_pi_annot = TRUE, learn_vb_annot = TRUE, annot_update_every = 1L), common))
 fits$st_annot_sbayesrc <- do.call(stblr_csr_annot, c(list(stats = x$stats, Glist = x$Glist,
-  ld_prefix = x$prefix, annotations = x$annotations, annotation_model = "sbayesrc",
+  ld_prefix = x$prefix, annotations = x$annotations, annotation_model = "annotation_probit_stick",
   updateAlpha = FALSE), ann_common))
 
 models <- matrix(c(0L, 1L), 2L, 1L)

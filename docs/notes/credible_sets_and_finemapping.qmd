@@ -1,0 +1,93 @@
+---
+title: "Credible sets and fine-mapping"
+format:
+  html:
+    toc: true
+    number-sections: true
+---
+
+## Scope
+
+The credible-set helpers post-process marker posterior inclusion probabilities
+(PIPs). They produce marginal-PIP-based sets; they are **not** automatically
+equivalent to SuSiE-style per-effect credible sets and do not represent the
+full posterior distribution over causal configurations.
+
+## Regional PIPs and dense LD
+
+`make_credible_sets_from_ld()` accepts a named PIP vector and a dense regional
+LD/correlation matrix. Names are aligned when available. It repeatedly chooses
+a lead by raw PIP or an LD-smoothed PIP score, keeps candidates with squared
+correlation at least `min_r2`, orders them by PIP, and accumulates them until
+`coverage` is reached.
+
+`pip_cutoff` zeroes very small PIPs before construction. `allow_incomplete`
+controls whether an under-coverage candidate set is returned. `remove` chooses
+whether later leads exclude the complete lead LD neighborhood or only markers
+already placed in the credible set. Multiple sets can be returned.
+
+## Credible sets from fitted models
+
+`make_credible_sets()` reads PIPs from `fit$dm` in current STBLR fit objects.
+Select a trait by name or one-based column index. Supply either:
+
+- predefined marker `sets` plus dense regional `LD`; or
+- a `Glist` containing `Glist$sparseLD$prefix`, allowing regional dense LD to
+  be extracted from the stored CSR.
+
+When `sets = NULL`, the helper defines loci from marker positions using
+`locus_pip_cutoff`, `max_locus_distance`, and `max_loci`. It returns `summary`,
+nested `sets`, complete `locus_sets`, `loci`, resolved `parameters`, and the
+selected `trait`.
+
+Sparse LD must have been constructed with a window and `r2_threshold`
+permissive enough for the requested `min_r2`. Missing edges are treated as
+zero and cannot be recovered during post-processing.
+
+```r
+cs <- make_credible_sets(
+  fit,
+  Glist = Glist,
+  trait = 1,
+  coverage = 0.95,
+  min_r2 = 0.5,
+  pip_cutoff = 0.001
+)
+```
+
+## Multiple signals
+
+`make_multisignal_credible_sets_from_ld()` is an approximate marginal-PIP
+procedure. `min_signal_pip`, `signal_coverage`, `max_signals`, and the marker
+removal rule determine whether additional LD-separated sets are attempted.
+Interpret the result as a post-processing summary, not a fitted per-effect
+model.
+
+## Global extraction and local refitting
+
+A recommended default is to fit the genome-wide summary model once and then
+extract loci:
+
+- `extract_stblr_finemap_loci()` summarizes `fit$dm` and `fit$bm` within
+  supplied loci and optionally constructs single- or multi-signal sets. It does
+  not rerun MCMC.
+- `finemap_stblr_csr()` performs explicit local CSR sensitivity/reference
+  refits. It fixes global `ve`, `vb`, and inclusion probability estimates,
+  optionally residualizes regional summary scores against effects outside the
+  locus, and aggregates independent local runs.
+
+Local refitting is not a replacement for the global fit and may answer a
+different conditional question. Report both the global selection mechanism
+and local controls, including any optional LD-swap proposal settings.
+
+## Alignment and interpretation
+
+Marker IDs in PIPs, LD, `Glist`, locus sets, and map data must refer to the same
+allele orientation and order. Dense LD is intended for regional use;
+`Glist$sparseLD` supports scalable regional extraction. A high credible-set
+coverage value is a cumulative marginal-PIP target, not a calibrated guarantee
+that exactly one causal variant lies in the returned set.
+
+See [`?make_credible_sets`](https://github.com/psoerensen/sblr/blob/master/man/make_credible_sets.Rd),
+[`?make_credible_sets_from_ld`](https://github.com/psoerensen/sblr/blob/master/man/make_credible_sets_from_ld.Rd),
+and the [sparse-LD workflow](sparse_ld_workflows.qmd).

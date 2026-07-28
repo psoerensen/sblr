@@ -74,8 +74,8 @@ fit_tiny_sbayesrc_chains <- function(
     ),
     ld_prefix = make_tiny_sbayesrc_chain_csr_prefix(stats$m),
     annotations = tiny_sbayesrc_chain_matrix(),
-    annotation_model = "sbayesrc",
-    gamma = c(0, 0.1, 1),
+    annotation_model = "annotation_probit_stick",
+    mixture_var = c(0, 0.1, 1),
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -184,14 +184,14 @@ test_that("annotation chain argument validation is shared", {
   expect_error(
     stblr_csr_annot(
       stats = stats, ld_prefix = prefix, annotations = A,
-      annotation_model = "prior", nchains = 0L
+      annotation_model = "fixed_marker", nchains = 0L
     ),
     "nchains"
   )
   expect_error(
     stblr_csr_annot(
       stats = stats, ld_prefix = prefix, annotations = A,
-      annotation_model = "learned", nchains = 2L, chain_seeds = 1L
+      annotation_model = "learned_logistic", nchains = 2L, chain_seeds = 1L
     ),
     "chain_seeds"
   )

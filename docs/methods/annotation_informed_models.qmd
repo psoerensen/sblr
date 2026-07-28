@@ -7,14 +7,18 @@ format:
   html:
     toc: true
     number-sections: true
-  pdf:
-    toc: true
-    number-sections: true
 execute:
   echo: true
   warning: false
   message: false
 ---
+
+::: {.callout-note}
+This page preserves general derivations and conceptual empirical-Bayes
+constructions. Functions whose names end in `_conceptually` are mathematical
+pseudocode, not package APIs. Executable package fits use the seven canonical
+fitters described in the [model overview](../notes/model_overview.qmd).
+:::
 
 # Motivation
 
@@ -881,7 +885,7 @@ This gives a computationally efficient approximate MTBLR analysis while preservi
 
 ```r
 # 1. Run first-stage STBLR.
-fitST <- stblr_cpg_omp_csr(...)
+fitST <- fit_summary_model_conceptually(...)
 
 # 2. Estimate annotation-specific variance contributions.
 vg_ann <- estimate_vg_by_set(fitST, sets, n)
@@ -1277,9 +1281,9 @@ This matrix can be used as the initial global $B$ matrix in the next MTBLR run.
 # ------------------------------------------------------------
 # Round 1: genomic STBLR or MTBLR
 # ------------------------------------------------------------
-fit0 <- stblr_cpg_omp_csr(...)
+fit0 <- fit_summary_model_conceptually(...)
 # or:
-# fit0 <- mtblr_cpg_omp_csr(...)
+# fit0 <- fit_joint_summary_model_conceptually(...)
 
 # Marker-level responses
 S_b   <- fit0$bm
@@ -1290,18 +1294,18 @@ S_vg  <- fit0$bm * (fit0$wy - fit0$r) / n
 # Round 2: annotation-level STBLR or MTBLR
 # ------------------------------------------------------------
 # Here annot is the marker-by-annotation design matrix.
-fitAnn_pip <- stblr_annotation(
+fitAnn_pip <- fit_annotation_summary_conceptually(
   y = S_pip,
   X = annot
 )
 
-fitAnn_vg <- stblr_annotation(
+fitAnn_vg <- fit_annotation_summary_conceptually(
   y = S_vg,
   X = annot
 )
 
 # Optional multi-trait annotation model.
-fitAnn_mt <- mtblr_annotation(
+fitAnn_mt <- fit_joint_annotation_summary_conceptually(
   Y = S_vg,
   X = annot,
   models = models
@@ -1332,13 +1336,13 @@ B_init <- estimate_B_from_annotation_model(
 # ------------------------------------------------------------
 # Round 3: genomic STBLR or MTBLR with annotation-informed priors
 # ------------------------------------------------------------
-fit1 <- stblr_cpg_omp_csr(
+fit1 <- fit_summary_model_conceptually(
   ...,
   pi_marker = pi_marker,
   vb_marker = vb_marker
 )
 
-fit1_mt <- mtblr_cpg_omp_csr(
+fit1_mt <- fit_joint_summary_model_conceptually(
   ...,
   B = B_init,
   pi_marker_model = pi_marker_model,
@@ -1770,13 +1774,13 @@ A good implementation path is incremental.
 First, compute $\pi_{it}$, $v_{b,it}$, and $\pi_{im}$ outside the sampler, then pass them as inputs:
 
 ```r
-fit <- stblr_cpg_omp_csr(
+fit <- fit_summary_model_conceptually(
   ...,
   pi_marker = pi_marker,
   vb_marker = vb_marker
 )
 
-fit_mt <- mtblr_cpg_omp_csr(
+fit_mt <- fit_joint_summary_model_conceptually(
   ...,
   pi_marker_model = pi_marker_model
 )
@@ -1789,7 +1793,7 @@ This only requires small changes to the marker-update functions.
 Instead of passing full marker-specific prior matrices, pass the annotation matrix and annotation coefficients:
 
 ```r
-fit <- stblr_cpg_omp_csr(
+fit <- fit_summary_model_conceptually(
   ...,
   annot = A,
   eta_pi = eta_pi,

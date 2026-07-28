@@ -14,3 +14,19 @@ formatting changes, generated-interface and architecture audits, documentation
 audit, workflow parsing, compilation/roxygen/Rd validation, the fast filter,
 the full source suite, and the built-package check. Remove verified generated
 objects, DLLs, tarballs, check directories, and temporary libraries.
+
+## Documentation ownership
+
+| Owner | Responsibility |
+|---|---|
+| `README.md` | repository and package landing page |
+| `man/*.Rd` | generated function-level public API reference; edit roxygen in `R/*.R` |
+| `docs/notes/` | practical user guidance and interpretation |
+| `docs/methods/` | statistical models, likelihoods, priors, and operator mathematics |
+| `docs/dev/` | implementation, schemas, testing, and maintenance contracts |
+| `examples/workflows/` | executable canonical examples |
+| `NEWS.md` | concise release-level changes |
+
+Scientific derivations belong in a maintained Methods page even when they are
+not workflow instructions. Do not restore historical reports as active
+authorities; transfer enduring content into the owner above.

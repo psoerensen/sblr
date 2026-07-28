@@ -1,8 +1,12 @@
 root <- normalizePath(if (length(commandArgs(TRUE))) commandArgs(TRUE)[[1L]] else ".",
                       winslash = "/", mustWork = TRUE)
 old <- setwd(root); on.exit(setwd(old), add = TRUE)
-docs <- c(list.files("docs/dev", "[.]md$", recursive = TRUE, full.names = TRUE),
+docs <- c("README.md", "NEWS.md", "examples/README.md",
+          "examples/workflows/README.md",
+          list.files("docs/dev", "[.]md$", recursive = TRUE, full.names = TRUE),
           list.files("docs/notes", "[.](md|qmd)$", recursive = TRUE,
+                     full.names = TRUE),
+          list.files("docs/methods", "[.]qmd$", recursive = TRUE,
                      full.names = TRUE))
 active <- docs[!grepl("docs/dev/history", docs, fixed = TRUE) &
                !grepl("blr_cleanup_manifest", docs, fixed = TRUE)]
@@ -13,7 +17,8 @@ bad <- obsolete[vapply(obsolete, grepl, logical(1), x = txt, fixed = TRUE)]
 if (length(bad)) stop("obsolete documentation terms: ", paste(bad, collapse = ", "),
                       call. = FALSE)
 required <- c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc",
-              "sbayesrc", "selection_s", "extended")
+              "sbayesrc", "selection_s", "extended", "credible sets",
+              "block-eigen", "prior_component_probabilities")
 if (!all(vapply(required, grepl, logical(1), x = txt, fixed = TRUE)))
   stop("canonical documentation terminology incomplete", call. = FALSE)
 link_records <- unlist(lapply(docs, function(file) {

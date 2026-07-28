@@ -114,7 +114,7 @@ prior_annotations <- list(
 
 learned_args <- list(
   annotations = A,
-  annotation_model = "learned",
+  annotation_model = "learned_logistic",
   learn_pi_annot = TRUE,
   learn_vb_annot = TRUE,
   rw_sd_eta_pi = 0.02,
@@ -134,20 +134,21 @@ group_args <- list(
 
 sbayesrc_args <- list(
   annotations = A,
-  annotation_model = "sbayesrc",
-  gamma = c(0, 0.01, 0.1, 1)
+  annotation_model = "annotation_probit_stick",
+  mixture_var = c(0, 0.01, 0.1, 1)
 )
 
 ## -------------------------------------------------------------------------
 ## 4. Fit annotation-unaware and annotation-aware models
 ## -------------------------------------------------------------------------
 
-fit_bayesc <- do.call(stblr_csr, c(base_args, list(method = "bayesc")))
-fit_bayesr <- do.call(stblr_csr, c(base_args, list(method = "bayesr")))
+fit_bayesc <- do.call(stblr_csr, c(base_args, list(method = "sbayesc")))
+fit_bayesr <- do.call(stblr_csr, c(base_args, list(method = "sbayesr")))
 
 fit_prior <- do.call(
   stblr_csr_annot,
-  c(base_args, list(annotations = prior_annotations, annotation_model = "prior"))
+  c(base_args, list(annotations = prior_annotations,
+                    annotation_model = "fixed_marker"))
 )
 
 fit_learned <- do.call(stblr_csr_annot, c(base_args, learned_args))

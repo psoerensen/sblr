@@ -138,14 +138,15 @@ make_annotation_raw_common_args <- function() {
 test_that("stblr_csr_annot accepts only canonical annotation policy names", {
   expect_true("stblr_csr_annot" %in% getNamespaceExports("sblr"))
 
-  expect_equal(sblr:::.stblr_match_annotation_model("prior"), "prior")
-  expect_equal(sblr:::.stblr_match_annotation_model("learned"), "learned")
+  expect_equal(sblr:::.stblr_match_annotation_model("fixed_marker"), "fixed_marker")
+  expect_equal(sblr:::.stblr_match_annotation_model("learned_logistic"), "learned_logistic")
   expect_equal(sblr:::.stblr_match_annotation_model("group"), "group")
-  expect_equal(sblr:::.stblr_match_annotation_model("sbayesrc"), "sbayesrc")
-  for (obsolete in c("fixed_prior", "fixed", "annot", "annotation", "groups",
-                     "SBayesRC")) {
+  expect_equal(sblr:::.stblr_match_annotation_model("annotation_probit_stick"),
+               "annotation_probit_stick")
+  for (obsolete in c("prior", "fixed_prior", "fixed", "learned", "annot",
+                     "annotation", "groups", "sbayesrc", "SBayesRC")) {
     expect_error(sblr:::.stblr_match_annotation_model(obsolete),
-                 "must be one of prior")
+                 "must be one of fixed_marker")
   }
 })
 
@@ -273,7 +274,7 @@ test_that("stblr_csr_annot dispatches fixed-prior BayesC annotations", {
       fixed_pi_marker = list(rep(0.35, stats$m)),
       fixed_vb_multiplier = list(c(1, 1.2, 0.8, 1))
     ),
-    annotation_model = "prior",
+    annotation_model = "fixed_marker",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -306,7 +307,7 @@ test_that("stblr_csr_annot dispatches learned BayesC annotations", {
     stats = stats,
     ld_prefix = make_tiny_annotation_interface_csr_prefix(stats$m),
     annotations = A,
-    annotation_model = "learned",
+    annotation_model = "learned_logistic",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -388,9 +389,9 @@ test_that("stblr_csr_annot dispatches SBayesRC annotations", {
                  maf = list(rep(.2, stats$m))),
     ld_prefix = make_tiny_annotation_interface_csr_prefix(stats$m),
     annotations = A,
-    annotation_model = "sbayesrc",
+    annotation_model = "annotation_probit_stick",
     method = "sbayesrc",
-    gamma = gamma,
+    mixture_var = gamma,
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,

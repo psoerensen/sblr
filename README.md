@@ -1,67 +1,94 @@
 # sblr
 
-`sblr` stands for **Scalable Bayesian Linear Regression**.
+`sblr` is an experimental R package for scalable Bayesian genomic prediction
+and variable selection. It implements scalar-trait BLR (STBLR) and joint
+small-trait-count BLR (MTBLR) samplers in R/C++ with deterministic multichain
+execution and optional OpenMP chain dispatch.
 
-## Overview
-
-`sblr` is an experimental R package for Bayesian genomic prediction and
-variable selection. It combines R interfaces with C++/Rcpp implementations of
-scalable Bayesian linear regression models.
-
-This repository is a research snapshot. It is not yet production-ready,
-CRAN-ready, or intended as a stable analysis platform.
-
-## Current status
-
-- The package is experimental and APIs may change.
-- Scripts in `examples/` are exploratory development workflows, not formal
-  automated tests.
-- Documentation, tests, and the intended public API are still being developed.
-- Some workflows require external data, local path configuration, and long
-  runtimes.
-
-## Main ideas
-
-The package explores:
-
-- Bayesian linear regression for genomic prediction and variable selection
-- Sparse mixture priors, including BayesC, BayesR, and SBayesRC-style models
-- Models based on GWAS summary statistics and sparse linkage disequilibrium
-  matrices
-- Workflows using PLINK BED genotype files
-- Annotation-informed prior models
-- C++/Rcpp MCMC samplers with OpenMP parallelization
-
-## Typical workflow
-
-```text
-Genotypes / phenotypes
-  -> summary statistics and LD
-  -> R wrapper initializes priors and MCMC state
-  -> C++ Gibbs sampler
-  -> posterior summaries
-```
-
-Posterior summaries can include marker effects, posterior inclusion
-probabilities, variance components, and covariance estimates.
+The package is a research implementation and is not yet CRAN-ready. Its model
+semantics, operator contracts, fit schema, and seven fitting interfaces are,
+however, deliberately stabilized and tested.
 
 ## Installation
 
-Installation from GitHub requires an R package compilation toolchain because
-the package contains C++ code. On Windows, install a version of Rtools
-compatible with your R version.
+The package contains Rcpp, Armadillo, and OpenMP-aware native code. Install a
+compiler toolchain compatible with your R release (Rtools on Windows), then:
 
 ```r
 install.packages("remotes")
 remotes::install_github("psoerensen/sblr")
 ```
 
-The package is under active research development, so installation or workflows
-may require additional setup.
+R 3.5.0 or newer is declared; current development and validation use a modern
+R toolchain. Some genotype workflows also use qgg-compatible PLINK BED
+metadata.
 
-## Examples
+## Canonical fitting interfaces
 
-See [`examples/README.md`](examples/README.md) before running scripts in
-`examples/`. These scripts include development notebooks, benchmarks, and
-manual testing workflows, and some are machine-specific or computationally
-expensive.
+```r
+stblr_csr()          # scalar-trait summary statistics + sparse LD
+stblr_csr_annot()    # scalar-trait annotation-aware sparse-LD models
+stblr_block_eigen()  # scalar-trait summary statistics + block-eigen LD
+stblr_bed()          # scalar-trait individual-level packed BED
+
+mtblr_csr()          # joint multi-trait summary statistics + sparse LD
+mtblr_block_eigen()  # joint multi-trait summary statistics + block-eigen LD
+mtblr_bed()          # joint multi-trait individual-level packed BED
+```
+
+Public model names encode data level:
+
+| Model | Prior kernel | Data level |
+|---|---|---|
+| `bayesc` | BayesC | individual level |
+| `sbayesc` | BayesC | summary statistics |
+| `bayesr` | BayesR | individual level |
+| `sbayesr` | BayesR | summary statistics |
+| `bayesrc` | annotation-informed BayesR | individual level |
+| `sbayesrc` | annotation-informed BayesR | summary statistics |
+
+The `s` prefix means **summary statistics**. It never activates
+`selection_s`, which is an independent optional MAF-dependent effect-variance
+scale.
+
+## Model and operator support
+
+| Interface | Operator | Supported models |
+|---|---|---|
+| `stblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
+| `stblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr` |
+| `stblr_block_eigen()` | block eigen | `sbayesc`, `sbayesr`, `sbayesrc` |
+| `stblr_csr_annot()` | CSR sparse LD | `sbayesc` with `fixed_marker`, `group`, or `learned_logistic`; `sbayesrc` with `annotation_probit_stick` |
+| `mtblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
+| `mtblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr`, `sbayesrc` |
+| `mtblr_block_eigen()` | block eigen | `sbayesc`, `sbayesr`, `sbayesrc` |
+
+Unsupported combinations fail before numerical execution.
+
+## Diagnostics
+
+`convergence = "auto"` preserves the core five trait-level diagnostics when
+multiple chains are available. `"core"` requests `vbs`, `vgs`, `ves`, `vle`,
+and `vld`; `"extended"` can additionally diagnose covariance, probability,
+sampled `selection_s`, and annotation parameters. Explicitly selected marker
+IDs or indices can retain mixing diagnostics for effective effects (`b`),
+binary activity (`d`), and mixture components where defined. Diagnostic trace
+capture is post-burn, unthinned, chain-private, RNG-neutral, and protected by
+a pre-execution memory guard.
+
+Diagnostics assess MCMC mixing; they do not establish model correctness or
+absolute convergence.
+
+## Documentation
+
+- [GitHub Pages site](https://psoerensen.github.io/sblr/)
+- [Practical Notes](https://psoerensen.github.io/sblr/notes/)
+- [Statistical Methods](https://psoerensen.github.io/sblr/methods/)
+- [Credible sets and fine-mapping](https://psoerensen.github.io/sblr/notes/credible_sets_and_finemapping.html)
+- [Maintained workflows](examples/workflows/README.md)
+- [Generated R help sources](man/) (`help(package = "sblr")` after installation)
+- [Current implementation contracts](docs/dev/blr_architecture.md)
+
+Start with [the workflow index](examples/workflows/README.md). The scripts use
+small deterministic fixtures or clearly identify required external BED/LD
+inputs; production analyses require longer runs and sensitivity checks.

@@ -76,8 +76,9 @@ A list with combined `summary`, nested credible `sets`, `loci`,
 }
 \description{
 Constructs credible sets from marker-level PIPs in `fit$dm` for fitted
-ST-BLR models. This is an R-level post-processing function for fits from
-`stblr_csr()` and `stblr_bed_marker()`.
+ST-BLR models. This is an R-level post-processing function for current fits
+from [stblr_csr()], [stblr_block_eigen()], and [stblr_bed()] when their
+fitted model defines `dm`.
 }
 \details{
 Credible sets can be built from predefined marker sets or from automatically

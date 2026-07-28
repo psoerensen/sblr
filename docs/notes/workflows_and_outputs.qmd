@@ -3,16 +3,31 @@ title: "Workflows and outputs"
 format: html
 ---
 
-Maintained scripts under `examples/workflows/` cover ST summary and individual
-models, annotations, MT mixtures, `selection_s`, convergence, selected markers,
-and operator comparison.
+Maintained scripts under
+[`examples/workflows/`](https://github.com/psoerensen/sblr/tree/master/examples/workflows)
+cover ST summary and individual models, annotations, MT mixtures,
+`selection_s`, convergence, selected markers, and operator comparison.
 
-Formatted fits share `family`, `model`, `operator`, `input`, `data`,
-`model_parameters`, `diagnostics`, `convergence`, `convergence_traces`,
-`chains`, and `memory_estimate`. Scientific model fields appear only where
-defined; common structural fields remain present and may be `NULL`.
+All fits identify `family`, public `model`, and `operator`. `input` contains
+resolved controls and prior/effect-scale policies; `data` owns marker/trait
+order, scales, sample sizes, and provenance. `model_parameters`, `diagnostics`,
+`convergence`, `convergence_traces`, `chains`, and `memory_estimate` have
+distinct responsibilities.
 
-Use compact chains for task-level summaries and `convergence_control$keep_traces`
-for formal diagnostic arrays. These controls are independent. Production
-analyses require appropriate chain lengths, convergence review, and sensitivity
-analysis beyond the small demonstration settings.
+`bm` is posterior mean effective effect and `b_final` is final effective state.
+`dm` is posterior binary activity/non-null probability and `d_final` is final
+binary activity. Latent `beta_final` and mixture `component_final` appear only
+where defined. `component_probabilities` are posterior allocation
+probabilities, not annotation-driven priors.
+
+Trait traces `vbs`, `vgs`, `ves`, `vle`, and `vld` are iteration × trait.
+MT covariance outputs are full trait × trait mean/final matrices. Global
+probability fields distinguish final, posterior mean, and trace states; MT
+BayesRC uses explicit pattern and annotation fields instead of redefining
+`pi_*`.
+
+Posterior means pool retained samples across chains; primary chain 1 owns final
+mutable state. Use `keep_chains` for compact task records and
+`convergence_control$keep_traces` for formal diagnostic arrays. These controls
+are independent. The complete schema is in the
+[developer output contract](../dev/blr_output_schema.md).

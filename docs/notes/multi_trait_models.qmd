@@ -15,3 +15,7 @@ residual-covariance contract.
 Full covariance summaries are distinct from the five iteration × trait
 variance traces. Multichain seeds and results are deterministic and independent
 of worker assignment.
+
+The [MT BayesR/SBayesR](../methods/mt_bayesr_sbayesr.qmd) and
+[MT BayesRC/SBayesRC](../methods/mt_bayesrc_sbayesrc.qmd) pages define the
+joint state space, probability outputs, and annotation factorization.

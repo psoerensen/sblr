@@ -28,7 +28,7 @@ summarise_posterior(
 traces are available.}
 
 \item{include_m_included}{Logical; include `m_included = pi * m` when
-`derived = TRUE`, `pis` is available, and `fit$input$m` is present.}
+`derived = TRUE`, `pi_trace` is available, and `fit$input$m` is present.}
 
 \item{include_diagnostics}{Logical; include effective sample size and lag-1
 autocorrelation diagnostics when possible.}
@@ -68,7 +68,7 @@ fake_fit <- list(
                dimnames = list(NULL, "trait1")),
   ves = matrix(rnorm(40, mean = 0.4, sd = 0.02), ncol = 1,
                dimnames = list(NULL, "trait1")),
-  pis = matrix(runif(40, min = 0.01, max = 0.03), ncol = 1,
+  pi_trace = matrix(runif(40, min = 0.01, max = 0.03), ncol = 1,
                dimnames = list(NULL, "trait1")),
   vle = matrix(rnorm(40, mean = 0.1, sd = 0.01), ncol = 1,
                dimnames = list(NULL, "trait1")),

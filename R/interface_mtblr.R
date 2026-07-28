@@ -24,6 +24,7 @@
 #' @param method Bayesian regression method.
 #' @param verbose Print initial variance and prior summaries.
 #' @return A list containing posterior summaries and fitted model components.
+#' @noRd
 #' @useDynLib sblr, .registration = TRUE
 sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
                   b=NULL,h2=NULL, pi=0.001, models=NULL, pimodels=NULL,

@@ -1,0 +1,127 @@
+---
+title: "Multi-trait BayesRC and SBayesRC"
+format:
+  html:
+    toc: true
+    number-sections: true
+---
+
+This page describes the package-specific multi-trait annotation-informed
+mixture formulation implemented by `sblr`. It should not be read as a claim of
+exact equivalence to a separately published BayesRC implementation.
+
+## Public models and state space
+
+`mtblr_bed(method = "bayesrc")` is individual-level;
+`mtblr_csr(method = "sbayesrc")` and
+`mtblr_block_eigen(method = "sbayesrc")` are summary-statistics routes. All
+use `prior_kernel = "bayesrc"` and the same unique-null, non-null
+trait-pattern by positive-component state space described for
+[MT BayesR](mt_bayesr_sbayesr.qmd).
+
+## Factorized annotation prior
+
+Let (A_j) be marker (j)'s processed annotation row and let
+
+\[
+\theta_{jc}=P(c_j=c\mid A_j),\qquad c=0,\ldots,K,
+\]
+
+be annotation-dependent component probabilities from probit stick breaking.
+Let
+
+\[
+\omega_p=P(a_j=p\mid c_j>0),\qquad p=1,\ldots,P,
+\]
+
+be global conditional probabilities for the supplied non-null trait patterns.
+The complete state prior is
+
+\[
+P(\text{null}\mid A_j)=\theta_{j0},
+\]
+
+\[
+P(a_j=p,c_j=k\mid A_j)=\theta_{jk}\omega_p,\qquad k>0.
+\]
+
+Both simplexes sum to one, so this factorization preserves one null state. It
+does not fit annotation-dependent trait-pattern probabilities.
+
+## Annotation alignment and preprocessing
+
+`annotations` must be a finite numeric matrix or data frame with unique,
+nonempty column names and exact marker identity. External annotations require
+unique marker row names; exact identifier matching may reorder rows, but the
+implementation never intersects or silently drops markers.
+
+Preprocessing happens once per fit and records original/processed names,
+column types, centers, scales, intercept policy, and marker-alignment status.
+An existing intercept is preserved; `add_intercept = TRUE` adds at most one.
+Eligible continuous columns are standardized when requested. Binary columns
+follow the explicit `center_binary_annotations` policy. Constant or nonfinite
+columns fail according to the preprocessing contract. The caller's matrix is
+not modified.
+
+## Probit stick breaking
+
+For (K+1) categories (null plus (K) positive components), the coefficient
+matrix has processed annotations in rows and deterministic sticks in columns.
+Stick order follows component order. Linear predictors are transformed by the
+normal CDF, floored only by `pi_floor`, and renormalized.
+
+`alpha_init` and `sigmaSqAlpha_init` initialize coefficients and their
+positive prior variances. `intercept_flat` distinguishes the intercept prior.
+With `updateAlpha = TRUE`, latent probit variables, coefficients, and
+`sigmaSqAlpha` are updated every `alpha_update_every` completed iterations;
+the current values still exist at every iteration. With `FALSE`, coefficients
+remain fixed. `updatePi` separately controls the conditional pattern
+probabilities (omega).
+
+## Effects and independent MAF scaling
+
+Conditional on a selected state, the effect prior is unchanged from MT
+BayesR:
+
+\[
+\operatorname{Cov}(\beta_{j,p,k})=
+\gamma_k q_j(S)B_p.
+\]
+
+Annotations change component probabilities only. They do not change (B),
+the residual covariance, component multipliers, operators, or the optional
+`selection_s` scale. Fixed MT `selection_s` is supported; sampled MT
+`selection_s` is not. When an explicitly identified MAF/heterozygosity
+annotation is combined with `selection_s`, the fit records the overlap and
+warns once because both mechanisms may encode related information.
+
+## Probability outputs
+
+- `prior_component_probabilities`: posterior mean annotation-driven prior
+  probabilities (	heta_j), marker by component;
+- `prior_active_probabilities`: (1-\theta_{j0});
+- `component_probabilities`: posterior marker component-state probabilities;
+- `pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`: the conditional
+  non-null pattern probabilities (omega);
+- annotation coefficient and variance final/mean fields: the probit-stick
+  parameter summaries.
+
+Because the component prior is marker dependent, `pi_final`, `pi_mean`, and
+`pi_trace` are present but `NULL`; they are not redefined as marker-averaged
+probabilities. Model-specific quantities live under
+`model_parameters$annotations`.
+
+## Limitations and identifiability
+
+- Trait-pattern probabilities are global conditional on non-null status.
+- Annotations do not modify covariance matrices or component scales.
+- Sampled MT `selection_s` is unsupported.
+- MAF-derived annotations and `selection_s` can overlap or be confounded.
+- Annotation coefficients diagnose component propensity, not causal
+  enrichment by themselves.
+- The current factorization is the model implemented by `sblr`, not a claim of
+  a universally standardized external MT BayesRC definition.
+
+See [Annotation-informed models](../notes/annotation_informed_models.qmd) for
+practical selection and [Annotation priors](annotation_priors.qmd) for broader
+prior context.

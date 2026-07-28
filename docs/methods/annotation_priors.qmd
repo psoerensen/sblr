@@ -5,8 +5,8 @@ title: "Technical Appendix: Annotation-Informed Priors"
 This appendix describes how `sblr` transfers marker annotations into sparse
 Bayesian linear-regression priors. It develops marker-specific inclusion
 probabilities and effect-variance scales, explains the fixed, learned, and
-group-prior CSR wrappers, and records empirical-Bayes constructions from the
-original annotation-prior draft. The emphasis is on the prior and its
+group-prior CSR policies, and records useful empirical-Bayes constructions.
+The emphasis is on the prior and its
 implementation contract; the CSR likelihood and sparse-LD representation are
 covered elsewhere.
 
@@ -44,7 +44,7 @@ incorrect analysis.
 
 ### Intercepts, binary columns, and quantitative columns
 
-The annotation-aware wrappers use `.stblr_prepare_annotation_matrix()` to
+The annotation-aware implementation uses a shared preprocessing contract to
 validate and preprocess $A$. Its relevant behavior is:
 
 - values must be numeric and finite;
@@ -116,7 +116,7 @@ where $\pi_0$ is a baseline inclusion probability and $\eta_\pi$ contains
 annotation coefficients. Positive values of $A_i\eta_\pi$ increase prior
 inclusion odds; negative values reduce them.
 
-The fixed-prior helper used by the wrappers centers the linear predictor before
+The fixed-marker policy centers the linear predictor before
 combining it with the baseline:
 
 $$
@@ -145,7 +145,7 @@ $$
 w_i = \exp(A_i\eta_v).
 $$
 
-As with inclusion probabilities, the wrapper centers the linear predictor:
+As with inclusion probabilities, the fixed-marker policy centers the linear predictor:
 
 $$
 \widetilde{\ell}_{v i}
@@ -320,7 +320,7 @@ double-count evidence.
 
 For overlapping annotations, an annotation-level regression or BLR can map
 marker summaries to annotation coefficients. Candidate marker-level responses
-from the archived design include:
+include:
 
 - posterior mean effects, $\widehat b_i$;
 - transformed PIPs, such as a bounded $\operatorname{logit}(dm_i)$;
@@ -349,18 +349,17 @@ Useful safeguards include:
   out of fold; and
 - assess sensitivity to the annotation model and prior bounds.
 
-The current fixed-prior wrapper supports the final marker-prior fitting stage.
+The current `fixed_marker` policy supports the final marker-prior fitting stage.
 Cross-fitting and a full empirical-Bayes pipeline remain analysis-level
 responsibilities rather than a single exported package workflow.
 
-## Fixed Marker-Specific Prior Wrapper
+## Fixed Marker-Specific Prior Policy
 
-`stblr_csr_annot(annotation_model = "prior")` fits a CSR summary-statistics
+`stblr_csr_annot(annotation_model = "fixed_marker")` fits a CSR summary-statistics
 model with fixed marker-specific inclusion probabilities and effect-variance
 multipliers. Users may either supply `fixed_pi_marker` and
 `fixed_vb_multiplier` directly, or supply $A$ and fixed annotation
-coefficients from which the wrapper constructs them. The compatibility wrapper
-`stblr_csr_annot(..., annotation_model = "prior")` exposes the same fixed-prior backend.
+coefficients from which the canonical interface constructs them.
 
 ```r
 fit_fixed <- stblr_csr_annot(
@@ -371,23 +370,23 @@ fit_fixed <- stblr_csr_annot(
     beta_pi = beta_pi,
     beta_vb = beta_vb
   ),
-  annotation_model = "prior"
+  annotation_model = "fixed_marker"
 )
 ```
 
 The annotation-derived marker priors remain fixed during sampling. Marker
 effects, inclusion states, residual variance, global variance parameters, and
-other sampler states may still be updated according to the wrapper's update
+other sampler states may still be updated according to the fitter's update
 flags. Fixed therefore refers to the annotation-to-marker prior mapping, not to
 the whole fitted model.
 
-This wrapper is appropriate when priors come from external evidence, a
+This policy is appropriate when priors come from external evidence, a
 separate training analysis, or a deliberately staged empirical-Bayes
 procedure.
 
 ## Learned Annotation Effects
 
-`stblr_csr_annot(..., annotation_model = "learned")` learns annotation coefficients jointly with the
+`stblr_csr_annot(..., annotation_model = "learned_logistic")` learns annotation coefficients jointly with the
 marker model. For trait $t$, the implemented construction is conceptually
 
 $$
@@ -450,7 +449,7 @@ mutually exclusive strata or when a simpler, more stable model is preferred.
 The preparation helper verifies that every marker has one nonmissing group,
 that requested group names define the ordering, and that every represented
 group is nonempty. The native interface receives a zero-based group index;
-users should supply ordinary R group labels and let the wrapper handle that
+users should supply ordinary R group labels and let the canonical fitter handle that
 conversion.
 
 ## Simulation Helpers and Known-Truth Diagnostics
@@ -512,9 +511,9 @@ coefficients answer different questions and need not agree.
 
 ## Research-Stage Multi-Trait Extensions
 
-The archived annotation draft also develops extensions beyond the currently
-exposed fixed, learned, and group CSR wrappers. They are retained here as
-design directions rather than claims about the public API.
+The following extensions go beyond the currently exposed fixed-marker,
+learned-logistic, and group CSR policies. They are design directions rather
+than claims about the public API.
 
 For multiple traits, marker-specific annotation priors can vary by trait:
 
@@ -533,7 +532,7 @@ sets influence the covariance of active multi-trait effects. These models
 require strong regularization because annotation effects, sharing
 probabilities, and trait covariance can otherwise be difficult to identify.
 
-The draft additionally proposes warm-started regional multi-trait fits:
+One possible extension uses warm-started regional multi-trait fits:
 genome-wide annotation summaries construct priors, and selected regions are
 then fitted with more detailed multi-trait models. Such a workflow may be
 computationally useful, but prior reuse, region selection, and uncertainty
@@ -598,16 +597,14 @@ Before fitting an annotation-informed model:
 
 ## Related Notes and Sources
 
-- [Annotation-informed models](annotation_informed_models.html) gives the main
-  conceptual and practical path through the annotation-aware wrappers.
-- [Technical SBayesRC-style annotations](technical_sbayesrc_annotations.html)
+- [Annotation-informed models](annotation_informed_models.qmd) gives the main
+  conceptual and practical path through the annotation-aware fitter.
+- [SBayesRC-style annotations](sbayesrc_annotations.qmd)
   covers the separate annotation-dependent BayesR mixture prior.
-- [Workflows and outputs](workflows_and_outputs.html) explains compact posterior
+- [Workflows and outputs](../notes/workflows_and_outputs.qmd) explains compact posterior
   summaries and the annotation workflow.
-- [Data representations](data_representations.html) defines the marker-order and
+- [Data representations](../notes/data_representations.qmd) defines the marker-order and
   summary-statistics contracts used here.
 
-This appendix preserves and reorganizes the prior-construction derivations from
-the archived annotation-prior draft. Current wrapper behavior is distinguished
-from empirical-Bayes and multi-trait designs that remain research-stage
-extensions.
+This appendix distinguishes current fitter behavior from empirical-Bayes and
+multi-trait designs that remain research-stage extensions.

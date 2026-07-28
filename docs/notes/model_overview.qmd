@@ -16,3 +16,7 @@ The `s` prefix means summary statistics, not MAF scaling. Optional
 Public fitters are `stblr_csr()`, `stblr_csr_annot()`,
 `stblr_block_eigen()`, `stblr_bed()`, `mtblr_csr()`,
 `mtblr_block_eigen()`, and `mtblr_bed()`.
+
+See the [single-trait](single_trait_models.qmd) and
+[multi-trait](multi_trait_models.qmd) practical pages, or the
+[Methods index](../methods/index.qmd) for likelihood and prior definitions.

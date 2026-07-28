@@ -1768,10 +1768,10 @@ NULL
 #'
 #' Fits a supported exact CSR BayesR model for GWAS summary statistics and a
 #' disk-backed sparse LD matrix. The standard posterior inclusion probability
-#' `dm` is `P(component > 0)`, and `comp_prob` stores marker-by-component
+#' `dm` is `P(component > 0)`, and `component_probabilities` stores marker-by-component
 #' posterior probabilities with `component_0` as the null component. This
 #' explicit convenience wrapper is also available through
-#' `stblr_csr(method = "bayesr")`.
+#' `stblr_csr(method = "sbayesr")`.
 #'
 #' Exact CSR BayesR supports multiple chains, compact per-chain output with
 #' `keep_chains = TRUE`, chain seeds, and `updateE = TRUE` with strict residual
@@ -1836,6 +1836,7 @@ NULL
 #' @param .convergence_spec Internal pre-resolved diagnostic capture plan.
 #'
 #' @return A formatted ST-BLR BayesR fit.
+#' @noRd
 stblr_csr_bayesr <- function(
   stats,
   Glist = NULL,
@@ -2216,7 +2217,8 @@ stblr_csr_bayesr <- function(
 #' using sufficient statistics from [bed_xtx_xty()] and a disk-backed CSR LD
 #' prefix from [sparseLD_stream_CSR()].
 #'
-#' Available methods are `method = "bayesc"` and `method = "bayesr"`. Both
+#' The canonical public methods are `method = "sbayesc"` and
+#' `method = "sbayesr"`. Both
 #' support fixed global `selection_s`, sampled trait-specific `selection_s`,
 #' LD-swap/fine-mapping diagnostics where `updateLDswap = TRUE`, and native
 #' multi-chain posterior summaries.
@@ -2229,10 +2231,8 @@ stblr_csr_bayesr <- function(
 #'   taken from `Glist$sparseLD$prefix`.
 #' @param n Sample size. Defaults to `stats$n` when available.
 #' @param m Number of markers. Inferred from `stats` when omitted.
-#' @param method CSR model to fit. `"bayesc"` keeps the historical BayesC CSR
-#'   behavior and is the default. `"bayesr"` dispatches to the exact CSR BayesR
-#'   backend exposed by [stblr_csr_bayesr()]. Scheduled CSR BayesR is not
-#'   currently implemented.
+#' @param method Internal prior-kernel selector. Public callers use
+#'   `stblr_csr(method = "sbayesc")` or `stblr_csr(method = "sbayesr")`.
 #' @param pi_init Initial marker inclusion probability. Defaults to 0.001.
 #' @param pi_vb_init Inclusion probability used when initializing marker-effect
 #'   variance. Defaults to `pi_init`.
@@ -2308,41 +2308,31 @@ stblr_csr_bayesr <- function(
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
 #' @param mixture_var,pi,alpha BayesR mixture variance multipliers, initial
 #'   mixture probabilities, and Dirichlet prior shapes. Used only when
-#'   `method = "bayesr"` and passed through to [stblr_csr_bayesr()]. BayesR
-#'   defaults are supplied by [stblr_csr_bayesr()] when these are left `NULL`.
+#'   the public `method = "sbayesr"` route. BayesR defaults are supplied by
+#'   the canonical `stblr_csr(method = "sbayesr")` route when these are `NULL`.
 #' @param updateE_start,updateE_every BayesR residual-variance update schedule.
-#'   Used only when `method = "bayesr"`.
+#'   Used only by the public `method = "sbayesr"` route.
 #' @param use_comp_init,comp_init BayesR component-state initialization
-#'   controls. Used only when `method = "bayesr"`.
-#' @return A formatted ST-BLR fit. Common posterior fields include `dm`
-#'   (marker-by-trait posterior inclusion or non-null probability), `bm`
-#'   (marker-by-trait posterior mean effects), `vbs`, `vgs`, `ves`, `vle`,
-#'   `vld`, and `input` model/backend/settings metadata. Chain-capable CSR fits
-#'   provide `dm_sd`, `dm_min`, `dm_max`, `bm_sd`, `bm_min`, and `bm_max`;
-#'   standard traces are averaged by iteration across chains. With
-#'   `keep_chains = TRUE`, compact per-chain summaries are returned in
-#'   `chains` for unscheduled CSR fits.
+#'   controls. Used only by the public `method = "sbayesr"` route.
+#' @return A canonical `stblr_fit`. `bm` and `dm` are marker-by-trait posterior
+#'   mean effective effects and activity probabilities; `b_final` and
+#'   `d_final` are primary-chain final effective effects and binary activity.
+#'   `vbs`, `vgs`, `ves`, `vle`, and `vld` are iteration-by-trait traces.
+#'   Chain-mean stability fields use explicit `*_chain_mean_sd`,
+#'   `*_chain_mean_min`, and `*_chain_mean_max` names.
 #'
-#'   For scheduled CSR fits, `pis` contains the sampled inclusion-probability
-#'   trace for each trait, averaged by iteration across chains when
-#'   `nchains > 1`. LD-swap remains available only for `scheduled = FALSE`;
-#'   enabled fits include `ld_swap` and, where chain summaries are retained,
-#'   `ld_swap_chains` or chain-level LD-swap entries.
+#'   `pi_final`, `pi_mean`, and `pi_trace` distinguish final, posterior-mean,
+#'   and sampled global probability states. LD-swap remains available only for
+#'   `scheduled = FALSE` and is returned under descriptive diagnostics.
 #'
-#'   For `method = "bayesr"`, `dm` is `P(component > 0)`, `comp_prob` contains
-#'   marker-by-component posterior probabilities by trait, and
-#'   `dm_component_mean` contains posterior mean component/effect-class
-#'   summaries. The BayesR null component column is `component_0`, so
+#'   For public `method = "sbayesr"`, `dm` is `P(component > 0)`,
+#'   `component_probabilities` contains marker-by-component posterior
+#'   probabilities by trait. The BayesR null component is `component_0`, so
 #'   `dm = 1 - P(component_0)`.
 #'
-#'   When sampled `selection_s` is enabled, the fit also contains
-#'   `selection_s`, `selection_s_sd`, `selection_s_min`, `selection_s_max`,
-#'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
-#'   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
-#'   and `selection_s_acceptance` is the MH acceptance rate by trait. With
-#'   `keep_chains = TRUE`, chain-level sampled-S output is available as
-#'   `fit$chains[[trait]][[chain]]$selection_s` and
-#'   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+#'   Sampled-S output uses `selection_s_final`, `selection_s_mean`,
+#'   `selection_s_trace`, `selection_s_acceptance`, and explicit chain-mean
+#'   stability fields. The trace is iteration by trait.
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
 #'   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
@@ -2389,27 +2379,27 @@ stblr_csr_bayesr <- function(
 #'
 #' @examples
 #' \dontrun{
-#' fit_bc <- stblr_csr(stats = stats, Glist = Glist, method = "bayesc")
-#' fit_br <- stblr_csr(stats = stats, Glist = Glist, method = "bayesr")
+#' fit_bc <- stblr_csr(stats = stats, Glist = Glist, method = "sbayesc")
+#' fit_br <- stblr_csr(stats = stats, Glist = Glist, method = "sbayesr")
 #'
 #' fit_fixed_s <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
-#'   method = "bayesc",
+#'   method = "sbayesc",
 #'   selection_s = -0.5
 #' )
 #'
 #' fit_sampled_s_bc <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
-#'   method = "bayesc",
+#'   method = "sbayesc",
 #'   estimate_selection_s = TRUE
 #' )
 #'
 #' fit_sampled_s_br <- stblr_csr(
 #'   stats = stats,
 #'   Glist = Glist,
-#'   method = "bayesr",
+#'   method = "sbayesr",
 #'   estimate_selection_s = TRUE,
 #'   selection_s_prior = c(-3, 2),
 #'   selection_s_proposal_sd = 0.35
@@ -3525,6 +3515,7 @@ stblr_csr_bayesr <- function(
 #' @return A formatted ST-BLR fit. Fits from the scheduled multi-chain backend
 #'   include CSR-compatible chain-stability summaries for marker inclusion
 #'   probabilities and posterior effects.
+#' @noRd
 stblr_bed_marker <- function(
     Glist, y, chr = NULL, cls = NULL, block_size = 1000,
     pi_init = 0.001, pi_vb_init = NULL, pi_prior_mean = 0.001,
@@ -3730,9 +3721,9 @@ stblr_bed_marker <- function(
 #'
 #' `method = "bayesc"` fits the BayesC BED scheduled-chain backend.
 #' `method = "bayesr"` fits the BayesR BED scheduled-chain backend. For BayesR,
-#' `dm` is `P(component > 0)`, `comp_prob` contains marker-by-component
-#' posterior probabilities, and `dm_component_mean` contains posterior mean
-#' component indices. BED scheduled-chain fits expose CPO/log-CPO diagnostics.
+#' `dm` is `P(component > 0)` and `component_probabilities` contains
+#' marker-by-component posterior probabilities. BED scheduled-chain fits expose
+#' CPO/log-CPO diagnostics.
 #' `method = "bayesrc"` fits the unscheduled full-sweep BED BayesRC backend.
 #' Annotation rows are matched to the final marker order selected by `chr` and
 #' `cls`; matrices without marker row names are accepted only when already
@@ -3743,8 +3734,8 @@ stblr_bed_marker <- function(
 #'   `rownames(y)` must contain matching IDs unless `nrow(y) == Glist$n`.
 #' @param Glist A BED-backed qgg genotype list containing `bedfiles`, `n`,
 #'   `ids`, `rsids`, `rsidsLD`, and optionally `af`.
-#' @param method Model family. Case-insensitive `"bayesc"` fits BayesC and is
-#'   the default; case-insensitive `"bayesr"` fits BayesR.
+#' @param method Lowercase model identifier: `"bayesc"`, `"bayesr"`, or
+#'   `"bayesrc"`. Other spellings are rejected.
 #' @param covar Optional covariates. Covariates are not currently adjusted by
 #'   this BED interface; pass pre-adjusted phenotypes.
 #' @param chr Chromosome/file indices to fit. If `NULL`, all available
@@ -3817,14 +3808,10 @@ stblr_bed_marker <- function(
 #' @param read_block_size,progress_every Scheduled-chain BED reading and
 #'   progress controls.
 #' @param ... Unsupported arguments.
-#' @return A formatted ST-BLR fit with standard `dm`, `bm`, and `input` fields.
-#'   BayesC fits include `log_cpo`, `mean_log_cpo`, `final_pi`, `mean_pi`, and
-#'   chain-summary matrices. BayesR fits additionally include `comp_prob` and
-#'   `dm_component_mean`. BayesRC fits additionally expose `ncomp`, `alpha`,
-#'   `sigmaSqAlpha`, `annotation_summary`, `annotation_pi`,
-#'   `annotation_effects`, and marker-specific `annotation_prior`. For BayesRC,
-#'   `pi` is the final marker-average component prior, `pim` is its posterior
-#'   mean, and `pis` is the iteration-by-trait mean non-null prior probability.
+#' @return A formatted ST-BLR fit with the canonical common fields. BayesC fits
+#'   include CPO diagnostics and canonical probability fields. BayesR fits add
+#'   `component_probabilities`; BayesRC fits add annotation coefficient,
+#'   variance, prior-probability, and preprocessing metadata where defined.
 #'
 #' @details
 #' BED BayesRC uses the individual-level packed-BED likelihood with

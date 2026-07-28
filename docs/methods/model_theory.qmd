@@ -1,4 +1,8 @@
-## Theory: Constructing Cross-Trait Summary-Statistic Matrices (SSY and Nmat)
+---
+title: "Cross-Trait Summary-Statistic Matrices"
+---
+
+## Constructing SSY and Nmat
 
 ### Overview
 

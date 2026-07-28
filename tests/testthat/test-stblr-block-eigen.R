@@ -643,7 +643,7 @@ test_that("public SBayesRC remains on the sparse CSR path", {
     stats = fixture$stats,
     Glist = fixture$Glist,
     annotations = make_stblr_block_eigen_annotation(fixture),
-    annotation_model = "sbayesrc",
+    annotation_model = "annotation_probit_stick",
     updateAlpha = FALSE,
     updateB = FALSE,
     updateE = FALSE,

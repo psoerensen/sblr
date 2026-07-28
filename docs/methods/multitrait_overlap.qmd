@@ -4,10 +4,9 @@ title: "Technical Appendix: Multi-Trait Sample Overlap"
 
 This appendix develops the cross-trait phenotype and sample-overlap
 information required by multi-trait Bayesian linear regression (MTBLR) from
-summary statistics. It preserves the `SSY` and overlap derivations from the
-archived theory draft, connects them to the current `sblr` multi-trait
-interfaces, and distinguishes mathematically required quantities from current
-implementation constraints.
+summary statistics. It connects the `SSY` and overlap derivations to the
+current `sblr` multi-trait interfaces and distinguishes mathematically required
+quantities from current implementation constraints.
 
 The central issue is simple: separate single-trait summary statistics preserve
 each trait's marginal phenotype sum of squares, but they do not preserve
@@ -200,7 +199,7 @@ The current CSR MTBLR kernel is closest to this setting. It uses shared LD,
 requires equal trait sample sizes and matching `ww` values across traits, and
 accepts a full trait cross-product matrix through its `yy` argument.
 
-The archived theory draft also defines a weaker "full-overlap" approximation
+One weaker "full-overlap" approximation
 for unequal marginal sample sizes:
 
 $$
@@ -301,7 +300,7 @@ $$
 
 Using $n_t-1$ instead gives the usual sample-variance denominator. The
 choice must match the intended likelihood and preprocessing convention. The
-archived reconstruction uses $yy_t/n_t$ as the cross-product-per-observation
+the reconstruction uses $yy_t/n_t$ as the cross-product-per-observation
 quantity.
 
 Collect the marginal variance estimates in:
@@ -612,16 +611,15 @@ information cannot.
 
 ## Connection to Current `sblr` Interfaces
 
-The public `sblr()` wrapper describes `yy` as a trait cross-product matrix,
+The canonical `mtblr_bed()`, `mtblr_csr()`, and `mtblr_block_eigen()`
+interfaces distinguish individual-level and summary-statistics inputs. In the
+underlying mathematical contract, `yy` denotes a trait cross-product matrix,
 `Xy` as marker-trait cross-products, and `XX` as marker cross-product or LD
-matrices. It initializes trait variances from the diagonal of `yy`. However,
-the native contracts differ across its legacy algorithm choices: several
-older generated interfaces expose `yy` as a vector, whereas the CSR MTBLR
-kernel described below explicitly consumes a full matrix. Users and developers
-must verify the exact selected algorithm before assuming that off-diagonal
-`SSY` entries are used.
+matrices. It initializes trait variances from the diagonal of `yy`. The public
+summary-statistics routes use the documented current sufficient-statistics
+contract; they do not infer unavailable cross-trait overlap information.
 
-The generated `mtblr_cpg_omp_csr()` interface accepts:
+Conceptually, the internal MT CSR likelihood requires:
 
 - `wy`, one marker vector per trait;
 - `ww`, marker diagonal cross-products per trait;
@@ -765,18 +763,15 @@ borrowing or covariance estimates.
 
 ## Related Notes and Sources
 
-- [Technical summary statistics](technical_summary_statistics.html) derives the
+- [Summary statistics](summary_statistics.qmd) derives the
   general cross-product and residual-score representation.
-- [Multi-trait models](multi_trait_models.html) provides the conceptual model
+- [Multi-trait models](../notes/multi_trait_models.qmd) provides the conceptual model
   map for covariance and trait-sharing structures.
-- [Data representations](data_representations.html) introduces individual-level
+- [Data representations](../notes/data_representations.qmd) introduces individual-level
   and summary-statistics inputs.
-- [Model overview](model_overview.html) places MTBLR within the broader `sblr`
+- [Model overview](../notes/model_overview.qmd) places MTBLR within the broader `sblr`
   workflow landscape.
 
-This appendix consolidates every mathematical component of the archived
-`SSY` and sample-overlap theory while aligning its claims with the current
-multi-trait wrappers and CSR implementation.
-The Phase 17J public CSR interface accepts only
-`sample_overlap = "not_modeled"` and marginal `yy`. Residual covariance is not
-an implicit GWAS sampling-overlap likelihood.
+This appendix consolidates the `SSY` and sample-overlap theory while aligning
+its claims with the current multi-trait fitters and CSR implementation.
+Residual covariance is not an implicit GWAS sampling-overlap likelihood.

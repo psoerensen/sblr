@@ -6,7 +6,7 @@ This appendix defines the sparse linkage disequilibrium (LD) representation
 used by the current `sblr` BED-to-CSR workflow. It describes the statistical
 matrix, compressed sparse row (CSR) structure, disk-backed construction,
 indexing conventions, alignment requirements, and downstream conversion used
-by `stblr_csr()` and related wrappers.
+by `stblr_csr()` and the other summary-statistics fitters.
 
 The stable user-facing contract is deliberately narrower than the current
 binary-file implementation:
@@ -244,25 +244,12 @@ runs. Do not overwrite an important prefix when changing samples, marker
 sets, allele frequencies, distance windows, or thresholds. Prefer distinct,
 descriptive prefixes and retain construction provenance beside them.
 
-## Exported and Internal Helpers
+## Public construction and inspection
 
-Current `NAMESPACE` and wrapper status distinguish the supported public path
-from lower-level generated functions:
-
-| Helper | Current role | Current status |
-|---|---|---|
-| `sparseLD_stream_CSR()` | Computes BED-derived sparse LD and streams the disk-backed prefix. | Exported lower-level writer used by `make_sparse_ld()`. |
-| `sparseLD_read_CSR()` | Reads a written prefix into R for inspection and validation. | Exported; user-facing reader. |
-| `sparseLD_to_CSR()` | Computes the same upper-triangle sparse representation and returns arrays in memory. | Generated lower-level wrapper; not exported in the current `NAMESPACE`. |
-| `sparseLD_write_CSR()` | Delegates to `sparseLD_stream_CSR()` with an output prefix. | Generated alias/internal wrapper; not exported in the current `NAMESPACE`. |
-
-The lower-level wrappers can be useful during development, but they are not
-the documented model handoff. In particular, `stblr_csr()` accepts
-`ld_prefix`, not an R list returned by `sparseLD_to_CSR()`.
-
-The package also contains older or separate CSR conversion code for other LD
-inputs. Its conventions should not be assumed to be identical to the
-BED-streamed prefix described here.
+Use `make_sparse_ld()` to construct the disk-backed sparse-LD artifact.
+`sparseLD_read_CSR()` can inspect a written prefix. The fitting handoff is the
+prefix recorded by `make_sparse_ld()` (or supplied as `ld_prefix`), not an
+ad-hoc in-memory list assembled from internal native routines.
 
 ## Sparse-LD Construction Settings
 
@@ -495,7 +482,7 @@ The public model handoff is short:
 fit <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  scheduled = FALSE
+  method = "sbayesc"
 )
 ```
 
@@ -515,12 +502,12 @@ $ww_i b_i$, while retained off-diagonal neighbors use the converted
 cross-product values. Missing off-diagonal entries are treated as zero in the
 sparse approximation.
 
-Annotation-aware CSR wrappers use the same LD prefix and marker-order
+Annotation-aware CSR fitters use the same LD prefix and marker-order
 contract. Their differences concern prior structure, not CSR construction.
 
 ## Scheduled Sparse Updates
 
-`stblr_csr(..., scheduled = TRUE)` uses a scheduled marker-update
+The canonical `stblr_csr()` dispatcher owns any scheduled marker-update
 implementation that can revisit likely null markers less frequently and wake
 retained LD neighbors after an effect change. Settings such as
 `full_sweep_every`, `candidate_threshold`, `candidate_lifetime`,
@@ -536,7 +523,7 @@ These controls are separate from CSR construction settings:
 Both can affect finite-run behavior and performance. The statistical prior is
 unchanged by choosing a scheduled path, but aggressive sparse scheduling must
 be checked for adequate mixing and sensitivity. See
-[Single-trait models](single_trait_models.html) for the scheduling controls.
+[Single-trait models](../notes/single_trait_models.qmd) for the scheduling controls.
 
 ## Sparse LD as an Approximation
 
@@ -592,14 +579,17 @@ longer chains, and convergence diagnostics.
 
 ## Related Notes and Sources
 
-- [Sparse-LD and BED workflows](sparse_ld_and_bed_workflows.html)
-- [Data representations](data_representations.html)
-- [Single-trait models](single_trait_models.html)
-- [Workflows and outputs](workflows_and_outputs.html)
-- [Technical summary statistics](technical_summary_statistics.html)
-- [Complete sparse-LD/BED workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/sparse_ld_bed_workflow.R)
-- [Complete annotation workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/annotation_based_models.R)
+- [Sparse-LD and individual-level workflows](../notes/sparse_ld_workflows.qmd)
+- [Data representations](../notes/data_representations.qmd)
+- [Single-trait models](../notes/single_trait_models.qmd)
+- [Workflows and outputs](../notes/workflows_and_outputs.qmd)
+- [Summary statistics](summary_statistics.qmd)
+- [ST summary workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/st_summary_workflow.R)
+- [Operator comparison workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/operator_comparison_workflow.R)
+- [ST annotation workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/st_annotation_workflow.R)
+
 Block-filtered LD is a distinct canonical operator representation: it stores
 dense within-block upper triangles, whereas CSR stores explicit sparse
-off-diagonal cross-products. Future MT bundles may hold one view of either
-representation per trait but must not conflate their storage contracts.
+off-diagonal correlations that are converted to the aligned cross-product
+scale. Current ST and MT fitters may borrow one shared or trait-specific view,
+but never conflate their storage or diagonal contracts.

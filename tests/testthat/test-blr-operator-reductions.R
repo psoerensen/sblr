@@ -121,7 +121,7 @@ test_that("ST CSR and unfiltered block eigen execute SBayesRC reduction", {
   csr <- do.call(stblr_csr_annot, c(list(
     stats = fixture$stats, Glist = fixture$Glist, ld_prefix = prefix,
     annotations = annotation,
-    annotation_model = "sbayesrc"), common))
+    annotation_model = "annotation_probit_stick"), common))
   block <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
     method = "sbayesrc", annotation = annotation,

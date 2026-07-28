@@ -8,7 +8,7 @@
 #' GCTB SBayesRC implementation.
 #'
 #' This is the SBayesRC CSR backend wrapper used by
-#' `stblr_csr_annot(annotation_model = "sbayesrc")`. It supports
+#' `stblr_csr_annot(annotation_model = "annotation_probit_stick")`. It supports
 #' annotation-dependent component probabilities, fixed global `selection_s`,
 #' sampled trait-specific `selection_s`, native multi-chain output, and
 #' LD-swap/fine-mapping diagnostics when `updateLDswap = TRUE`.
@@ -90,25 +90,19 @@
 #' @return A formatted SBayesRC-style ST-BLR fit. Common posterior fields
 #'   include `dm` (marker-by-trait non-null component probability), `bm`
 #'   (marker-by-trait posterior mean effects), `vbs`, `vgs`, `ves`, `vle`,
-#'   `vld`, and `input`. SBayesRC-specific fields include `comp_prob`
-#'   marker-by-component posterior probabilities by trait,
-#'   `dm_component_mean`, `alpha`, `sigmaSqAlpha`, and `ncomp` where
-#'   available. The SBayesRC null component column is `gamma_0.00`, so
-#'   `dm = 1 - P(gamma_0.00)`.
+#'   `vld`, and `input`. SBayesRC-specific fields include
+#'   `component_probabilities`, marker-by-component posterior probabilities by
+#'   trait, plus `alpha` and `sigmaSqAlpha` where available. The first
+#'   component is null, and `dm` is the posterior non-null probability.
 #'
 #'   LD-swap-enabled fits include `ld_swap` and, where chain summaries are
 #'   retained, `ld_swap_chains` or chain-level LD-swap entries. With
 #'   `keep_chains = TRUE`, compact per-chain summaries are returned in
 #'   `chains`.
 #'
-#'   For sampled `selection_s`, the fit also contains `selection_s`,
-#'   `selection_s_sd`, `selection_s_min`, `selection_s_max`,
-#'   `selection_s_trace`, and `selection_s_acceptance`. `selection_s_trace` is
-#'   an iteration x trait matrix, `selection_s` is the posterior mean by trait,
-#'   and `selection_s_acceptance` is the MH acceptance rate by trait. With
-#'   `keep_chains = TRUE`, chain-level sampled-S output is available as
-#'   `fit$chains[[trait]][[chain]]$selection_s` and
-#'   `fit$chains[[trait]][[chain]]$selection_s_acceptance`.
+#'   Sampled-S output uses `selection_s_final`, `selection_s_mean`,
+#'   `selection_s_trace`, `selection_s_acceptance`, and explicit chain-mean
+#'   stability fields. The trace is iteration by trait.
 #'
 #'   Fine-mapping diagnostics are available through PIP summaries in `dm` and
 #'   LD-swap output when `updateLDswap = TRUE`. Credible-set construction is
@@ -124,10 +118,10 @@
 #' are standardized-genotype-scale effects rather than allele-scale effects.
 #'
 #' For fixed `selection_s`, CSR SBayesRC uses
-#' `b_j | component_j = m, vb, S ~ N(0, vb * gamma_m * q_j(S))`.
+#' `b_j | component_j = m, vb, S ~ N(0, vb * mixture_var_m * q_j(S))`.
 #' Annotations affect component probabilities, while `selection_s` affects
-#' marker-specific effect-size prior variance. The null component column is
-#' `gamma_0.00` and `dm = 1 - P(gamma_0.00)`.
+#' marker-specific effect-size prior variance. Component zero is null, and
+#' `dm` is the posterior non-null probability.
 #'
 #' Sampled CSR SBayesRC uses the trait-specific MH log posterior contribution
 #'
@@ -148,12 +142,13 @@
 #'   stats = stats,
 #'   Glist = Glist,
 #'   annotations = annotations,
-#'   annotation_model = "sbayesrc",
+#'   annotation_model = "annotation_probit_stick",
 #'   estimate_selection_s = TRUE,
 #'   selection_s_prior = c(-3, 2),
 #'   selection_s_proposal_sd = 0.35
 #' )
 #' }
+#' @noRd
 stblr_csr_sbayesrc_generic <- function(
   stats, ld_prefix, A, n = NULL, m = NULL,
   gamma = c(0, 0.01, 0.1, 1), pi_marker = 0.001,

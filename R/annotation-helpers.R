@@ -7,12 +7,31 @@
   stop("annotation_model must be a single string.")
  }
 
- valid <- c("prior", "learned", "group", "sbayesrc")
+ valid <- c("fixed_marker", "group", "learned_logistic",
+            "annotation_probit_stick")
  if (!model %in% valid) {
   stop(
-   "annotation_model must be one of prior, learned, group, or sbayesrc.",
+   paste0(
+    "annotation_model must be one of fixed_marker, group, ",
+    "learned_logistic, or annotation_probit_stick."),
    call. = FALSE
   )
+ }
+ model
+}
+
+.stblr_annotation_backend <- function(policy) {
+ switch(policy,
+  fixed_marker = "prior",
+  group = "group",
+  learned_logistic = "learned",
+  annotation_probit_stick = "sbayesrc")
+}
+
+.stblr_match_annotation_backend <- function(model) {
+ valid <- c("prior", "learned", "group", "sbayesrc")
+ if (length(model) != 1L || is.na(model) || !model %in% valid) {
+  stop("Internal annotation backend identifier is invalid.", call. = FALSE)
  }
  model
 }

@@ -1,0 +1,98 @@
+---
+title: "Block-eigen LD operator"
+format:
+  html:
+    toc: true
+    number-sections: true
+---
+
+## Purpose and provenance
+
+The block-eigen operator is a summary-statistics LD representation constructed
+from selected PLINK BED reference genotypes. Public ST and MT fitters require
+the BED source, selected samples and markers, block starts, allele frequencies,
+and summary-statistic provenance needed to prove marker and scale alignment.
+Current MT use requires summary statistics derived from the same selected BED
+genotypes by construction; arbitrary external GWAS projection is not supported.
+
+“Block eigen” describes how within-block LD is constructed and filtered. The
+runtime sampler uses reconstructed dense filtered blocks, stored as packed
+upper triangles, rather than necessarily retaining low-rank eigenfactors.
+
+## Construction
+
+Markers and samples are resolved once from `Glist`, `rows`, and selected BED
+columns. BED genotypes are decoded, missing values are replaced according to
+the aligned allele-frequency/standardization contract, and columns are put on
+the standardized-genotype scale. `block_start` is one-based at the public R
+boundary; blocks must be positive, contiguous, non-overlapping, and cover the
+complete selected marker order.
+
+For each block, the implementation forms the standardized within-block
+cross-product/correlation representation, symmetrizes it, and computes its
+eigendecomposition. The chosen filter changes the represented operator:
+
+- `hard_truncate`: eigenvalues below the nonnegative `eigen_tau` threshold are
+  removed, and the summary score `wy` is projected consistently into the
+  retained eigenspace;
+- `ridge_fixed`: a fixed nonnegative `eigen_eta` ridge/shrinkage policy is
+  applied while `wy` remains on its original aligned score scale;
+- `ridge_lw`: a Ledoit–Wolf-style block shrinkage estimate is used, with the
+  implementation's positive floor and block diagnostics; `wy` is not hard
+  projected.
+
+Filtering parameters and block diagnostics are retained in fit metadata.
+
+## Diagonal meanings
+
+Three diagonals must not be conflated:
+
+- input `ww`: the supplied summary-statistic marker information;
+- unfiltered reference diagonal: the diagonal before spectral filtering;
+- filtered runtime diagonal: the diagonal of the reconstructed operator
+  actually used by marker updates and by `vle`.
+
+The block-eigen summary route validates input `ww` as provenance but does not
+substitute it for the filtered runtime diagonal. The runtime diagonal is
+positive and exactly matches the diagonal stored in each packed block.
+
+## Runtime representation and ownership
+
+Each reconstructed symmetric block stores only its upper triangle in
+single-precision packed order plus marker-to-block/local-index mappings and a
+double-precision diagonal view. Immutable storage is prepared once per fit and
+borrowed by logical chains. Worker tasks own sampler state but do not rebuild
+or copy the operator.
+
+A marker update visits its within-block off-diagonal entries, so the update
+cost is proportional to its block size. Storage is
+
+\[
+O\!\left(\sum_b m_b(m_b+1)/2\right),
+\]
+
+not (O(mr)) low-rank storage. Narrower blocks lower memory and update cost but
+set cross-block LD to zero.
+
+## Public support
+
+- `stblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`;
+- `mtblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`.
+
+The `sbayesrc` ST route uses its public `annotation` input; the MT route uses
+`annotations`. Fixed `selection_s` requires aligned allele frequencies and
+explicit provenance. Exact unfiltered construction is used in permanent
+reductions against CSR when both represent the same LD operator.
+
+## Practical limitations
+
+- Cross-block LD is not represented.
+- Filtering changes the likelihood operator and must be reported.
+- External-GWAS/reference-LD use requires a scale/projection contract not
+  supplied by the current block-eigen API.
+- Runtime storage may be dense within blocks even after eigen filtering.
+- Reference samples, marker order, allele orientation, missing-value policy,
+  frequencies, block boundaries, and filter settings are required provenance.
+
+See [Data representations](../notes/data_representations.qmd) and the
+[operator comparison workflow](https://github.com/psoerensen/sblr/blob/master/examples/workflows/operator_comparison_workflow.R).

@@ -387,8 +387,9 @@ make_multisignal_credible_sets_from_ld <- function(
 #' Construct Credible Sets for Fitted ST-BLR Models
 #'
 #' Constructs credible sets from marker-level PIPs in `fit$dm` for fitted
-#' ST-BLR models. This is an R-level post-processing function for fits from
-#' `stblr_csr()` and `stblr_bed_marker()`.
+#' ST-BLR models. This is an R-level post-processing function for current fits
+#' from [stblr_csr()], [stblr_block_eigen()], and [stblr_bed()] when their
+#' fitted model defines `dm`.
 #'
 #' Credible sets can be built from predefined marker sets or from automatically
 #' defined loci around high-PIP markers. Dense LD can be supplied directly for

@@ -3,14 +3,35 @@ title: "Annotation-informed models"
 format: html
 ---
 
-Annotations must have explicit marker alignment, finite values, unique names,
-and deterministic column order. Preprocessing occurs once per fit.
+Choose the annotation policy according to the parameter that annotations are
+intended to control.
 
-ST summary models provide fixed marker probabilities/scales, group parameters,
-learned logistic effects, and probit-stick component probabilities. MT
-BayesRC/SBayesRC uses annotation-dependent component probabilities with global
-trait-pattern probabilities conditional on being non-null.
+| Route | Policy | Meaning |
+|---|---|---|
+| `stblr_csr_annot(method = "sbayesc")` | `fixed_marker` | fixed marker-specific inclusion probabilities and variance scales |
+| `stblr_csr_annot(method = "sbayesc")` | `group` | sampled low-dimensional group inclusion/variance parameters |
+| `stblr_csr_annot(method = "sbayesc")` | `learned_logistic` | learned annotation coefficients for BayesC-like inclusion/variance priors |
+| `stblr_csr_annot(method = "sbayesrc")` | `annotation_probit_stick` | annotation-dependent mixture-component probabilities |
 
-Prior component probabilities and posterior component-state probabilities are
-separate outputs. Annotations do not create annotation-specific covariance
-matrices or component multipliers.
+ST block-eigen `sbayesrc` and individual-level BED `bayesrc` use their
+documented annotation inputs. MT BayesRC/SBayesRC uses one probit-stick
+component-probability model and global trait-pattern probabilities conditional
+on non-null status.
+
+Annotations require finite numeric values, unique column names, deterministic
+column order, and exact marker alignment. External matrices need unique marker
+row names. Preprocessing records intercept handling, binary/continuous column
+types, centers, scales, and any row reordering.
+
+`prior_component_probabilities` are annotation-driven prior probabilities;
+`component_probabilities` are posterior marker allocation probabilities. They
+answer different questions. Fixed marker priors are not formal marker-level
+convergence traces; learned low-dimensional coefficients can be diagnosed in
+extended mode.
+
+`selection_s` is independent of annotation policy. MAF-derived annotations may
+coexist with it, but their possible overlap is recorded and should be assessed.
+
+See [Annotation-informed methods](../methods/annotation_informed_models.qmd),
+[SBayesRC annotation probabilities](../methods/sbayesrc_annotations.qmd), and
+[MT BayesRC/SBayesRC](../methods/mt_bayesrc_sbayesrc.qmd).

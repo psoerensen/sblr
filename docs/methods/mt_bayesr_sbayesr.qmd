@@ -1,0 +1,124 @@
+---
+title: "Multi-trait BayesR and SBayesR"
+format:
+  html:
+    toc: true
+    number-sections: true
+---
+
+## Data level and prior kernel
+
+The public model name identifies the likelihood representation:
+
+- `bayesr` is the individual-level packed-BED model;
+- `sbayesr` is the summary-statistics model for CSR or block-eigen LD.
+
+Both use the same joint multi-trait BayesR prior kernel. The `s` prefix does
+not activate MAF scaling. Optional MAF-dependent scaling is controlled only by
+`selection_s`.
+
+## Joint marker state
+
+Let the supplied trait-activity patterns contain one null pattern and (P)
+non-null binary patterns (a_p\in\{0,1\}^T). Let
+
+\[
+0=\gamma_0 < \gamma_1 < \cdots < \gamma_K
+\]
+
+be `mixture_var`, with one null multiplier and (K) positive variance
+components. A marker has one unique null state plus every non-null
+pattern/component combination, so
+
+\[
+J = 1 + PK.
+\]
+
+Ordering is deterministic: `null` first, then supplied non-null pattern order,
+and within each pattern ascending positive-component order. Public names follow
+`null`, `pattern_1__component_1`, ..., without exposing zero-based native
+indices. The state-space and memory guard runs before sampling and never
+silently drops patterns or components.
+
+## Latent and effective effects
+
+For marker (j), component (k>0), and active pattern (a_p), the retained
+MT prior uses a shared base marker-effect covariance (B). On the active trait
+subspace,
+
+\[
+\beta_{j,p,k}\mid B,S \sim
+N\!\left(0,\;\gamma_k q_j(S) B_p\right),
+\qquad
+q_j(S)=\{2p_j(1-p_j)\}^{S+1},
+\]
+
+where (q_j(S)=1) when `selection_s` is absent and also numerically when the
+explicit value is (-1). Inactive traits are masked:
+
+\[
+b_j = a_p \odot \beta_j.
+\]
+
+Annotations do not enter this BayesR model. Known component and optional
+MAF scales are removed when updating the shared base (B); the sampler does
+not maintain component-specific covariance matrices.
+
+Terminology is fixed:
+
+- `beta_final`: final latent effects, where exposed;
+- `b_final`: final effective marker effects;
+- `d_final`: final binary trait activity;
+- `component_final`: final component code, with zero as null;
+- `bm`: posterior mean effective effects;
+- `dm`: trait-specific posterior probability of activity.
+
+## Joint probabilities
+
+`joint_pi` initializes the probability simplex over the (J) deterministic
+states and `joint_pi_prior` supplies its positive Dirichlet prior. With
+`updatePi = TRUE`, counts from the complete joint states update that simplex;
+with `FALSE`, the supplied state remains fixed. Component and pattern
+marginals are deterministic sums of the current joint probabilities.
+
+For BayesR/SBayesR, `pi_final`, `pi_mean`, and `pi_trace` therefore refer to
+named joint-state probabilities. `model_parameters$mixture` records
+`mixture_var`, component and pattern names, joint-state names, probability
+marginals, and `selection_s` metadata.
+
+## Outputs
+
+Marker outputs include `bm`, `dm`, `b_final`, `d_final`, `component_final`,
+and row-normalized marker-by-component `component_probabilities`. Covariance
+outputs are the mean and final full (B), genetic (G), and residual (E)
+matrices. The common `vbs`, `vgs`, `ves`, `vle`, and `vld` traces are
+iteration by trait, with `vld = vgs - vle` at each recorded iteration.
+
+No marker-by-joint-state posterior matrix is returned by default.
+
+## Operator-specific likelihoods
+
+The state descriptor, prior, probability update, base-(B) update, seeds,
+chain aggregation, and output meanings are shared. The likelihood operator
+differs:
+
+- `mtblr_bed(method = "bayesr")` uses standardized selected genotypes and may
+  use full or diagonal residual covariance;
+- `mtblr_csr(method = "sbayesr")` uses aligned summary scores and sparse LD,
+  with the summary-data residual policy;
+- `mtblr_block_eigen(method = "sbayesr")` uses reconstructed filtered
+  within-block operators on the same summary scale.
+
+Operator and immutable model data are prepared once per fit and shared across
+logical chains.
+
+## Current limitations
+
+- MT `selection_s` may be fixed but cannot be sampled.
+- Joint state count is guarded for memory and practical numerical size.
+- BayesR has no annotation dependence; use BayesRC/SBayesRC for that model.
+- Full marker-by-joint-state posterior probabilities are not retained.
+- Summary routes do not infer unmodeled cross-trait sample overlap.
+
+See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the annotation-informed
+extension and [Multi-trait models](../notes/multi_trait_models.qmd) for calls.

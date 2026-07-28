@@ -225,6 +225,7 @@
 #' @return A formatted ST-BLR fit with group-level posterior summaries. The
 #'   fit includes `vle` and `vld` traces using the same definitions and
 #'   formatting conventions as annotation-unaware CSR fits.
+#' @noRd
 stblr_csr_group_annot <- function(
   stats,
   ld_prefix,

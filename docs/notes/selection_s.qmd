@@ -1,19 +1,47 @@
 ---
-title: "selection_s"
-format: html
+title: "MAF-dependent effect scaling with selection_s"
+format:
+  html:
+    toc: true
 ---
 
-`selection_s` is an optional MAF-dependent effect-scale policy:
+`selection_s` is an optional effect-variance scaling policy. It is independent
+of the public `s` model prefix: `sbayesc`, `sbayesr`, and `sbayesrc` mean
+summary-statistics data, not an active MAF scale.
 
-```text
-q_j(S) = [2 p_j (1-p_j)]^(S+1)
-```
+For allele frequency (p_j), let
 
-`NULL` means no MAF scaling. A finite value is fixed scaling, while `-1`
-explicitly requests a scale numerically equal to one. Sampled `selection_s` is
-available only on validated ST routes; sampled MT `selection_s` is unsupported.
+\[
+h_j=2p_j(1-p_j),\qquad q_j(S)=h_j^{S+1}.
+\]
 
-MAF provenance and alignment are recorded. Reference-panel fallback requires
-explicit permission. MAF-derived annotations may coexist with `selection_s`,
-but the overlap is reported because it can confound probability and variance
-effects.
+- `selection_s = NULL`: no MAF-dependent scale is requested;
+- a finite scalar: use fixed (q_j(S));
+- `selection_s = -1`: explicitly request the scale while obtaining
+  (q_j(-1)=1), the unit-scale numerical reduction;
+- `estimate_selection_s = TRUE`: sample supported scalar-trait S parameters.
+
+BayesC-like active-effect variance is multiplied by (q_j(S)). BayesR and
+BayesRC multiply their component-scaled covariance by (q_j(S)). The component
+multiplier and MAF scale remain separate metadata. Sampled MT `selection_s` is
+explicitly unsupported; supply a fixed scalar or `NULL`.
+
+## Frequency provenance
+
+Use `selection_maf` to provide an explicitly aligned population frequency when
+available. Otherwise the resolver prefers GWAS-summary frequency, then
+analysis-genotype frequency by construction. Reference-panel MAF for external
+summary statistics is not silently presented as GWAS-population MAF; it
+requires `allow_reference_maf_for_selection_s = TRUE`.
+
+Fits record `selection_maf_source`, population, alignment status, and whether
+fallback was used. Marker IDs, alleles, frequency population, and effect scale
+must all match. Packed-BED routes use the selected analysis-genotype
+frequencies unless an explicit aligned `selection_maf` is supplied.
+
+MAF or heterozygosity annotations may coexist with `selection_s`, but the fit
+records this overlap because component-probability and variance-scaling effects
+may be confounded.
+
+See the [selection-S workflow](https://github.com/psoerensen/sblr/blob/master/examples/workflows/selection_s_workflow.R)
+and the [model contract](../dev/blr_model_contracts.md).

@@ -81,7 +81,7 @@ Glist <- make_sparse_ld(
 fit_csr_bayesc <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesc",
+  method = "sbayesc",
   nit = niter,
   nburn = nburn,
   ncores = nthreads,
@@ -91,7 +91,7 @@ fit_csr_bayesc <- stblr_csr(
 fit_csr_bayesr <- stblr_csr(
   stats = stats,
   Glist = Glist,
-  method = "bayesr",
+  method = "sbayesr",
   nit = niter,
   nburn = nburn,
   ncores = nthreads,

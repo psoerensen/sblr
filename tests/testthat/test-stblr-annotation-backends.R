@@ -197,7 +197,7 @@ test_that("csr_prior_bayesc wrapper returns standard marker summaries", {
       fixed_pi_marker = list(rep(0.35, stats$m)),
       fixed_vb_multiplier = list(c(1, 1.2, 0.8, 1))
     ),
-    annotation_model = "prior",
+    annotation_model = "fixed_marker",
     use_pi_marker = TRUE,
     use_vb_multiplier = TRUE,
     pi_init = 0.35,
@@ -247,7 +247,7 @@ test_that("csr_annot_bayesc wrapper returns learned annotation fields", {
     stats = stats,
     ld_prefix = make_tiny_annotation_csr_prefix(stats$m),
     annotations = A,
-    annotation_model = "learned",
+    annotation_model = "learned_logistic",
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -361,8 +361,8 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
     ),
     ld_prefix = make_tiny_annotation_csr_prefix(stats$m),
     annotations = A,
-    annotation_model = "sbayesrc",
-    gamma = gamma,
+    annotation_model = "annotation_probit_stick",
+    mixture_var = gamma,
     pi_init = 0.35,
     pi_prior_mean = 0.35,
     pi_prior_strength = 2,
@@ -380,7 +380,7 @@ test_that("csr_sbayesrc wrapper returns component and annotation fields", {
   expect_equal(fit$input$model, "sbayesrc")
   expect_equal(fit$input$backend, "csr_sbayesrc")
   expect_equal(fit$input$data_level, "summary_statistics")
-  expect_equal(fit$input$annotation_model, "sbayesrc")
+  expect_equal(fit$input$annotation_policy, "annotation_probit_stick")
   expect_true(isTRUE(fit$input$annotations))
   expect_equal(fit$input$nchains, 1L)
   expect_false(fit$input$keep_chains)
@@ -413,7 +413,7 @@ test_that("ST learned and group extended diagnostics use task-private native tra
     selected_marker_quantities = c("b", "d"), keep_traces = TRUE)
   learned <- stblr_csr_annot(
     stats = stats, ld_prefix = prefix, annotations = A,
-    annotation_model = "learned", learn_pi_annot = TRUE,
+    annotation_model = "learned_logistic", learn_pi_annot = TRUE,
     learn_vb_annot = TRUE, annot_update_every = 2L,
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,
     nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L,
@@ -459,8 +459,9 @@ test_that("ST SBayesRC extended diagnostics preserve alpha and selected states",
     stats = stats,
     Glist = list(rsidsLD = list(stats$marker_names),
       rsids = list(stats$marker_names), maf = list(rep(.2, stats$m))),
-    ld_prefix = prefix, annotations = A, annotation_model = "sbayesrc",
-    gamma = c(0, .1, 1), updateAlpha = TRUE, alpha_update_every = 2L,
+    ld_prefix = prefix, annotations = A,
+    annotation_model = "annotation_probit_stick",
+    mixture_var = c(0, .1, 1), updateAlpha = TRUE, alpha_update_every = 2L,
     updateB = FALSE, updateE = FALSE,
     nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L,
     keep_chains = TRUE, convergence = "extended",
@@ -495,7 +496,7 @@ test_that("ST fixed-marker BayesC captures selected native states only", {
       A = A,
       fixed_pi_marker = list(rep(.35, stats$m)),
       fixed_vb_multiplier = list(c(1, 1.2, .8, 1))),
-    annotation_model = "prior", use_pi_marker = TRUE,
+    annotation_model = "fixed_marker", use_pi_marker = TRUE,
     use_vb_multiplier = TRUE, pi_init = .35,
     pi_prior_mean = .35, pi_prior_strength = 2,
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,
@@ -529,7 +530,7 @@ test_that("ST learned diagnostic capture is RNG-neutral", {
     ".col_idx.u32.0based.bin", ".values.f32.bin", ".meta.txt"))), add = TRUE)
   common <- list(
     stats = stats, ld_prefix = prefix, annotations = A,
-    annotation_model = "learned", learn_pi_annot = TRUE,
+    annotation_model = "learned_logistic", learn_pi_annot = TRUE,
     learn_vb_annot = TRUE, annot_update_every = 2L,
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,
     nit = 6L, nburn = 2L, nchains = 2L, ncores = 1L, seed = 2105L)

@@ -1,17 +1,50 @@
 ---
 title: "Convergence diagnostics"
-format: html
+format:
+  html:
+    toc: true
 ---
 
-`convergence = "auto"` retains core-only behavior, `"none"` disables formal
-capture, `"core"` requests the five trait variance quantities, and
-`"extended"` adds applicable covariance, probability, `selection_s`, and
-annotation quantities.
+Use `convergence = "auto"` for the default core-only behavior, `"none"` to
+disable formal capture, `"core"` to explicitly request the five trait traces,
+or `"extended"` for applicable covariance, probability, sampled
+`selection_s`, annotation, and selected-marker quantities.
 
-Selected-marker diagnostics require explicit IDs or one-based indices and may
-capture effective `b`, binary `d`, and mixture component states where defined.
-There is no all-marker shortcut. Trace memory is guarded before sampling.
+The core quantities are `vbs`, `vgs`, `ves`, `vle`, and `vld`. Formal traces
+are genuine unpooled logical-chain states captured after burn-in at every
+iteration. They are not thinned by `nthin` and are independent of compact
+chain retention.
 
-Diagnostics use rank-normalized split/folded R-hat, bulk/tail/mean ESS, and
-MCSE of the posterior mean. They assess chain mixing; passing thresholds does
-not prove model correctness or absolute convergence.
+The shared summary reports rank-normalized split/folded R-hat, bulk and tail
+ESS, mean ESS where available, posterior SD, MCSE of the posterior mean, and
+relative mean MCSE. Threshold warnings are advisory and aggregated.
+
+```r
+fit <- stblr_csr(
+  stats, Glist,
+  method = "sbayesr",
+  nchains = 4,
+  convergence = "extended",
+  convergence_control = list(
+    extended_groups = c("probability", "selection_s"),
+    selected_markers = c("rs1", "rs25"),
+    selected_marker_quantities = c("b", "d", "component"),
+    keep_traces = TRUE,
+    max_trace_gb = 1,
+    allow_large_traces = FALSE
+  )
+)
+```
+
+`selected_markers` must be explicit IDs or one-based indices; `NULL` is not
+all markers. Trace memory is estimated before sampling. Oversized requests
+fail unless `allow_large_traces = TRUE`, in which case one warning is issued
+without silently dropping or thinning quantities.
+
+Inspect `fit$convergence$overview`, the scalar summary, and—when retained—
+`fit$convergence_traces`. `keep_chains` and `keep_traces` serve different
+purposes. Diagnostics assess chain mixing; passing thresholds does not prove
+model correctness, posterior calibration, or convergence in an absolute sense.
+
+Implementation details are in the
+[convergence contract](../dev/blr_convergence_contract.md).

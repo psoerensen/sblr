@@ -44,8 +44,8 @@ check_fit <- function(fit, require_ld_swap = FALSE, require_chain_summaries = FA
 compact_input <- function(fit) {
   x <- fit$input
   x[c(
-    "method", "model", "backend", "data_level", "annotations",
-    "annotation_model", "updateLDswap", "ld_swap_prob", "ld_swap_r2",
+    "prior_kernel", "probability_policy", "effect_scale_policy",
+    "selection_s", "estimate_selection_s", "updateLDswap", "ld_swap_prob", "ld_swap_r2",
     "ld_swap_moves", "nchains", "keep_chains", "n", "m", "nt", "nit",
     "nburn", "nthin", "seed"
   )]
@@ -56,18 +56,17 @@ fit_metadata_table <- function(fits) {
     rbind,
     lapply(names(fits), function(model_name) {
       fit <- fits[[model_name]]
-      x <- fit$input
       data.frame(
         model_name = model_name,
-        method = x$method %||% NA_character_,
-        model = x$model %||% NA_character_,
-        backend = x$backend %||% NA_character_,
-        data_level = x$data_level %||% NA_character_,
-        annotations = x$annotations %||% FALSE,
-        annotation_model = x$annotation_model %||% NA_character_,
-        updateLDswap = x$updateLDswap %||% FALSE,
-        nchains = x$nchains %||% 1L,
-        keep_chains = x$keep_chains %||% FALSE,
+        family = fit$family %||% NA_character_,
+        model = fit$model %||% NA_character_,
+        operator = fit$operator %||% NA_character_,
+        data_level = fit$data$data_level %||% NA_character_,
+        prior_kernel = fit$input$prior_kernel %||% NA_character_,
+        probability_policy = fit$input$probability_policy %||% NA_character_,
+        updateLDswap = fit$input$updateLDswap %||% FALSE,
+        nchains = fit$input$nchains %||% 1L,
+        keep_chains = fit$input$keep_chains %||% FALSE,
         n_markers = nrow(fit$dm),
         n_traits = ncol(fit$dm),
         stringsAsFactors = FALSE
@@ -82,9 +81,8 @@ fit_field_inventory <- function(fits) {
     "pi_final", "pi_mean", "chains", "bm_chain_mean_sd",
     "bm_chain_mean_min", "bm_chain_mean_max", "dm_chain_mean_sd",
     "dm_chain_mean_min", "dm_chain_mean_max", "component_probabilities",
-    "dm_component_mean",
-    "annotation_summary", "annotation_pi", "annotation_effects",
-    "annotation_prior", "group", "prior", "selection"
+    "model_parameters", "diagnostics", "convergence", "convergence_traces",
+    "chains", "memory_estimate"
   )
 
   do.call(
@@ -93,9 +91,9 @@ fit_field_inventory <- function(fits) {
       fit <- fits[[model_name]]
       out <- data.frame(
         model = model_name,
-        backend = fit$input$backend %||% NA_character_,
-        data_level = fit$input$data_level %||% NA_character_,
-        annotation_model = fit$input$annotation_model %||% NA_character_,
+        operator = fit$operator %||% NA_character_,
+        data_level = fit$data$data_level %||% NA_character_,
+        probability_policy = fit$input$probability_policy %||% NA_character_,
         stringsAsFactors = FALSE
       )
       for (field in fields) {
@@ -155,7 +153,7 @@ ld_swap_summary_table <- function(fits) {
   do.call(rbind, out)
 }
 
-top_markers <- function(fit, model_name = fit$input$backend %||% "model", trait = 1, n = 20) {
+top_markers <- function(fit, model_name = fit$model %||% "model", trait = 1, n = 20) {
   dm <- as.matrix(fit$dm)
   bm <- as.matrix(fit$bm)
   trait_index <- if (is.character(trait)) match(trait, colnames(dm)) else trait

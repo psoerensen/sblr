@@ -3,21 +3,18 @@ title: "Statistical methods"
 format: html
 ---
 
-This section documents the statistical models, likelihoods, priors, and
-computational representations implemented in `sblr`.
+These pages describe the likelihoods, priors, state spaces, and operator
+mathematics implemented by `sblr`. Practical calls and workflow choices belong
+in [Notes](../notes/index.qmd); implementation ownership belongs in
+[developer contracts](../dev/blr_architecture.md).
 
-## General model theory
-
-- [Bayesian linear regression model theory](model_theory.qmd)
+- [General model theory](model_theory.qmd)
 - [Summary-statistics likelihood](summary_statistics.qmd)
 - [Cross-trait sample overlap](multitrait_overlap.qmd)
-
-## Operators
-
-- [Sparse-LD CSR representation](sparse_ld_csr.qmd)
-
-## Annotation-informed models
-
-- [Annotation-informed model formulation](annotation_informed_models.qmd)
-- [Annotation-dependent priors](annotation_priors.qmd)
-- [SBayesRC-style annotation probabilities](sbayesrc_annotations.qmd)
+- [Sparse-LD CSR operator](sparse_ld_csr.qmd)
+- [Block-eigen operator](block_eigen_operator.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [Annotation priors](annotation_priors.qmd)
+- [SBayesRC annotation probabilities](sbayesrc_annotations.qmd)
+- [MT BayesR and SBayesR](mt_bayesr_sbayesr.qmd)
+- [MT BayesRC and SBayesRC](mt_bayesrc_sbayesrc.qmd)

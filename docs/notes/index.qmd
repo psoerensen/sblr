@@ -1,16 +1,19 @@
 ---
-title: "sblr"
+title: "Practical notes"
 format: html
 ---
 
-`sblr` is an experimental research package for scalable Bayesian linear
-regression using individual-level packed genotypes or summary statistics with
-sparse-LD and block-eigen operators.
+Use these pages for model selection, data preparation, fitting, outputs, and
+diagnostic interpretation. Mathematical derivations are collected under
+[Statistical methods](../methods/index.qmd).
 
-Start with [Model overview](model_overview.qmd), then choose
-[single-trait](single_trait_models.qmd) or
-[multi-trait](multi_trait_models.qmd) models. The remaining pages describe
-[annotations](annotation_informed_models.qmd), [`selection_s`](selection_s.qmd),
-[operators](data_representations.qmd),
-[convergence diagnostics](convergence_diagnostics.qmd), and
-[workflows and outputs](workflows_and_outputs.qmd).
+- [Model overview](model_overview.qmd)
+- [Single-trait models](single_trait_models.qmd)
+- [Multi-trait models](multi_trait_models.qmd)
+- [Annotation-informed models](annotation_informed_models.qmd)
+- [`selection_s`](selection_s.qmd)
+- [Data representations and operators](data_representations.qmd)
+- [Sparse-LD workflows](sparse_ld_workflows.qmd)
+- [Credible sets and fine-mapping](credible_sets_and_finemapping.qmd)
+- [Convergence diagnostics](convergence_diagnostics.qmd)
+- [Workflows and outputs](workflows_and_outputs.qmd)

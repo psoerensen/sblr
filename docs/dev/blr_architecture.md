@@ -20,3 +20,9 @@ Native kernels remain separate where sample-space and summary-statistics
 likelihoods genuinely differ. The R layer owns public validation, canonical
 metadata, formatting, convergence planning, warning aggregation, and memory
 preflight.
+
+Raw backends return named `stblr_raw` or `mtblr_raw` schema-version-1 objects.
+Validation precedes one canonical family formatter; positional output and
+legacy schema fallback are not supported. Formatted fits use model-semantics
+version 2. See `blr_output_schema.md` for field ownership and
+`blr_convergence_contract.md` for observational trace capture.

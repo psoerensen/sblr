@@ -1,23 +1,57 @@
 # BLR model contracts
 
+## Model semantics
+
 The public model name combines prior kernel and data level:
 
-| Model | Prior kernel | Data level |
-|---|---|---|
-| `bayesc` | BayesC | individual |
-| `sbayesc` | BayesC | summary statistics |
-| `bayesr` | BayesR | individual |
-| `sbayesr` | BayesR | summary statistics |
-| `bayesrc` | annotation-informed BayesR | individual |
-| `sbayesrc` | annotation-informed BayesR | summary statistics |
+| Model | Prior kernel | Data level | Baseline effect scale |
+|---|---|---|---|
+| `bayesc` | BayesC | individual | unit |
+| `sbayesc` | BayesC | summary statistics | unit |
+| `bayesr` | BayesR | individual | component |
+| `sbayesr` | BayesR | summary statistics | component |
+| `bayesrc` | annotation-informed BayesR | individual | component |
+| `sbayesrc` | annotation-informed BayesR | summary statistics | component |
 
-The `s` prefix means summary statistics. It never activates MAF scaling.
-`selection_s` is an independent effect-scale policy using
-`[2p(1-p)]^(S+1)`; `NULL` means absent and `-1` is an explicitly requested
-unit-scale reduction.
+The `s` prefix means summary statistics and never activates MAF scaling.
+`model_semantics_version = 2` records this convention.
 
-Annotation policies are `global`, `fixed_marker`, `group`,
-`learned_logistic`, and `annotation_probit_stick`. MT BayesRC uses
-annotation-dependent component probabilities and global conditional trait
-pattern probabilities. Annotation values do not alter covariance matrices,
-component multipliers, operators, or residual likelihoods.
+## Selection-S policy
+
+`selection_s = NULL` means no MAF scale. A finite scalar activates
+
+\[
+q_j(S)=\{2p_j(1-p_j)\}^{S+1}.
+\]
+
+`selection_s = -1` records explicit user intent but gives a unit numerical
+scale. BayesC changes from `unit` to `maf_s`; BayesR/BayesRC changes from
+`component` to `component_maf_s`. Valid scalar routes may sample S with the
+documented bounded prior/proposal controls. MT sampled S is unsupported.
+
+Frequency resolution is explicit: aligned `selection_maf`, GWAS-summary MAF,
+analysis-genotype MAF by construction, then reference MAF only under
+`allow_reference_maf_for_selection_s = TRUE`. Source, population, alignment,
+and fallback metadata are mandatory when the scale is active.
+
+## Probability policies
+
+Global BayesC/BayesR models use a global binary or mixture/simplex policy.
+Annotation policies are:
+
+- `fixed_marker`: fixed marker inclusion probabilities/scales;
+- `group`: sampled group-level BayesC parameters;
+- `learned_logistic`: learned inclusion/variance annotation coefficients;
+- `annotation_probit_stick`: annotation-dependent BayesR component
+  probabilities.
+
+MT BayesRC factorizes annotation-dependent component probabilities and global
+conditional non-null trait-pattern probabilities. Annotations do not alter
+covariance matrices, component multipliers, operators, or residual likelihoods.
+
+## State and effect meanings
+
+`beta` is latent effect state where defined; `b` is the effective activity-
+and-component-scaled effect. `d` is binary trait activity. BayesR/BayesRC
+component code is a separate ordered state with zero as null. `dm` is posterior
+trait activity/non-null probability, never a component mean.

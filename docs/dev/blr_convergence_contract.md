@@ -1,17 +1,66 @@
 # BLR convergence contract
 
+## Modes and controls
+
 Modes are `auto`, `none`, `core`, and `extended`. `auto` computes only the
-five core trait quantities when at least two chains are available. Core rows
-are `vbs[trait]`, `vgs[trait]`, `ves[trait]`, `vle[trait]`, and `vld[trait]`.
+five core trait quantities when at least two chains are available; it does not
+allocate extended traces. `none` captures no formal traces. `core` explicitly
+requests `vbs`, `vgs`, `ves`, `vle`, and `vld`. `extended` adds applicable
+low-dimensional groups and explicitly selected markers.
 
-Extended diagnostics add applicable covariance, probability, sampled
-`selection_s`, annotation, and explicitly selected marker quantities. Marker
-selection must be an explicit unique vector of IDs or one-based indices; there
-is no all-marker shortcut. Trace capture is post-burn, every iteration,
-unthinned, chain private, RNG neutral, and independent of `keep_chains`,
-`keep_traces`, worker count, and posterior thinning.
+Common controls are `warn`, `rhat_threshold`, `ess_per_chain_threshold`,
+`mcse_mean_over_sd_threshold`, and `keep_traces`. Extended controls are
+`extended_groups`, `selected_markers`, `selected_marker_quantities`,
+`full_probability_states`, `max_trace_gb`, and `allow_large_traces`.
+`extended_groups` selects covariance, probability, sampled `selection_s`, and
+annotation groups. Selected marker IDs or one-based indices must be explicit;
+`NULL` never means all markers and no all-marker shortcut exists.
 
-All scalar traces use the single rank-normalized split/folded R-hat, Geyer ESS,
-tail ESS, posterior-SD, MCSE-mean, and relative-MCSE implementation. Diagnostic
-memory is resolved and guarded before sampling. Warnings are aggregated and
-advisory; diagnostics assess chain mixing rather than prove model correctness.
+## Trace ownership
+
+Every physical trace is logical-chain-private, post-burn, and captured at the
+completed-iteration posterior-accumulation checkpoint. Capture occurs every
+post-burn iteration without diagnostic thinning, before task state is
+discarded. It is observational: it does not consume RNG, rerun a chain, depend
+on `nthin`, or depend on `keep_chains`. `keep_traces` controls only whether the
+formal array remains in the fit.
+
+The `blr_convergence_trace_bundle` schema remains version 1 with numeric values
+ordered iteration × chain × scalar quantity plus stable identity descriptors.
+
+## Mathematics
+
+One shared scalar engine implements Blom rank normalization with deterministic
+average ranks for ties, rank-normalized split R-hat, folded R-hat, their
+maximum, FFT autocovariances, Geyer initial positive/monotone sequences, bulk
+ESS, tail ESS, mean ESS, posterior SD, MCSE of the posterior mean, and relative
+mean MCSE. Discrete state traces are not jittered. No ESS for posterior SD or
+quantile/median MCSE is claimed.
+
+## Extended quantities
+
+MT covariance diagnostics use strict R column-major lower-triangle order and
+never duplicate diagonal core quantities. Probability diagnostics consume
+sampled low-dimensional simplexes or marginals, not marker-level posterior
+probability matrices. Annotation diagnostics use sampled coefficients and
+variances. Fixed parameters are `not_updated`; absent quantities are
+`not_applicable`; diagonal-policy off-diagonal residual covariances are
+`structural_zero`.
+
+Selected marker quantities are current effective `b`, binary activity `d`,
+and ordered component code where the model defines components. They are direct
+indexed chain-state captures, not posterior means or latent effects.
+
+## Memory, summaries, and warnings
+
+The resolved plan accounts separately for core, extended, selected-state,
+workspace, descriptor, and retained-trace memory before numerical execution.
+Requests above `max_trace_gb` fail before sampling unless
+`allow_large_traces = TRUE`, which produces one explicit memory warning and
+does not thin or truncate the request.
+
+The summary has one scalar row per diagnostic key and group overviews for core,
+covariance, probability, `selection_s`, annotations, and selected markers.
+Advisories aggregate R-hat, ESS-per-chain, tail ESS, and relative-MCSE flags at
+most once per fit. Status is `ok`, `warning`, `partial`, `unavailable`, or
+`not_requested`—never a claim that a model has definitively converged.

@@ -85,7 +85,8 @@ max(abs(fit_r_null$dm - fit_r_minus1$dm))
 max(abs(fit_r_null$bm - fit_r_minus1$bm))
 max(abs(fit_r_null$vle - fit_r_minus1$vle))
 max(abs(fit_r_null$vld - fit_r_minus1$vld))
-max(abs(fit_r_null$dm_component_mean - fit_r_minus1$dm_component_mean))
+max(abs(fit_r_null$component_probabilities[[1]] -
+        fit_r_minus1$component_probabilities[[1]]))
 
 fit_r_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = 0)))
 fit_r_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", selection_s = -0.5)))
@@ -134,7 +135,8 @@ lapply(fits, function(fit) {
 
 fit_c_sampled_s[c(
   "selection_s", "selection_s_trace", "selection_s_acceptance",
-  "selection_s_sd", "selection_s_min", "selection_s_max"
+  "selection_s_chain_mean_sd", "selection_s_chain_mean_min",
+  "selection_s_chain_mean_max"
 )]
 
 ## -------------------------------------------------------------------------

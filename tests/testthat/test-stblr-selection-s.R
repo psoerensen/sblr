@@ -161,7 +161,7 @@ make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
     Glist = selection_s_sbayesrc_glist(),
     stats = selection_s_csr_stats(),
     annotations = selection_s_sbayesrc_annotations(),
-    annotation_model = "sbayesrc",
+    annotation_model = "annotation_probit_stick",
     selection_s = selection_s,
     allow_reference_maf_for_selection_s = TRUE,
     updateLDswap = updateLDswap,
@@ -175,7 +175,7 @@ make_selection_s_csr_sbayesrc_fit <- function(selection_s = NULL,
     nchains = nchains,
     keep_chains = keep_chains,
     chain_seeds = chain_seeds,
-    gamma = c(0, 0.1, 1),
+    mixture_var = c(0, 0.1, 1),
     pi_init = 0.5,
     pi_prior_mean = 0.5,
     pi_prior_strength = 2,
@@ -805,7 +805,7 @@ test_that("selection_s validates fixed-S inputs for CSR SBayesRC and annotation 
     "selection_s must be NULL or a finite numeric scalar"
   )
 
-  for (annotation_model in c("prior", "learned", "group")) {
+  for (annotation_model in c("fixed_marker", "learned_logistic", "group")) {
     expect_error(
       stblr_csr_annot(
         Glist = selection_s_sbayesrc_glist(),
@@ -816,7 +816,7 @@ test_that("selection_s validates fixed-S inputs for CSR SBayesRC and annotation 
         nit = 2,
         nburn = 0
       ),
-      "selection_s is currently supported only for annotation_model = \"sbayesrc\""
+      "selection_s is currently supported only for annotation_model = \"annotation_probit_stick\""
     )
   }
 })
@@ -970,7 +970,7 @@ test_that("sampled selection_s validates inputs for CSR SBayesRC and annotation 
     "selection_s_proposal_sd must be a finite positive numeric scalar"
   )
 
-  for (annotation_model in c("prior", "learned", "group")) {
+  for (annotation_model in c("fixed_marker", "learned_logistic", "group")) {
     expect_error(
       stblr_csr_annot(
         Glist = selection_s_sbayesrc_glist(),
@@ -981,7 +981,7 @@ test_that("sampled selection_s validates inputs for CSR SBayesRC and annotation 
         nit = 2,
         nburn = 0
       ),
-      "estimate_selection_s is currently supported only for annotation_model = \"sbayesrc\""
+      "estimate_selection_s is currently supported only for annotation_model = \"annotation_probit_stick\""
     )
   }
 })
