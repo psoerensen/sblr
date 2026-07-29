@@ -257,3 +257,4 @@ not prove convergence. Extended mode adds applicable low-dimensional and
 explicitly selected-marker scalar diagnostics. Matrix/simplex convergence,
 ESS-for-SD, and quantile/median MCSE remain outside the formal engine.
 }
+

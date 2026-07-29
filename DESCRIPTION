@@ -1,7 +1,7 @@
 Package: sblr
 Type: Package
 Title: Scalable Bayesian Linear Regression Models
-Version: 0.1.0
+Version: 0.1.1
 Depends: R (>= 3.5.0)
 Authors@R: person("Peter", "Sørensen", email = "peter.sorensen@r-qgg.org",
     role = c("aut", "cre"))
