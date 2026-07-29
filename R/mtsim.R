@@ -300,7 +300,12 @@ mtsim <- function(
   stop("Residual correlation matrix re must be positive definite.")
  }
 
- Sigma_e <- diag(sqrt(var_e)) %*% Sigma_e_cor %*% diag(sqrt(var_e))
+ sd_e <- sqrt(var_e)
+
+ # Explicit dimensions prevent a scalar value from being treated as a matrix size.
+ D_e <- diag(as.numeric(sd_e), nrow = nt, ncol = nt)
+
+ Sigma_e <- D_e %*% Sigma_e_cor %*% D_e
 
  Le <- chol(Sigma_e)
 

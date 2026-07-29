@@ -1,7 +1,7 @@
 Package: sblr
 Type: Package
 Title: Scalable Bayesian Linear Regression Models
-Version: 0.1.1
+Version: 0.1.2
 Depends: R (>= 3.5.0)
 Authors@R: person("Peter", "Sørensen", email = "peter.sorensen@r-qgg.org",
     role = c("aut", "cre"))
@@ -17,7 +17,9 @@ License: GPL-3
 Imports:
     Rcpp (>= 1.0.13)
 Suggests:
+    callr,
     coda,
+    pkgload,
     qgg,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
