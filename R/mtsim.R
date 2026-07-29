@@ -942,7 +942,7 @@ mtsim_annotation <- function(
  }
 
  Sigma_e <- diag(sqrt(var_e)) %*% Sigma_e_cor %*% diag(sqrt(var_e))
-
+ 
  Le <- chol(Sigma_e)
 
  E <- matrix(rnorm(n * nt), nrow = n, ncol = nt) %*% Le
