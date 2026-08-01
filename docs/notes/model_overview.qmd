@@ -20,3 +20,19 @@ Public fitters are `stblr_csr()`, `stblr_csr_annot()`,
 See the [single-trait](single_trait_models.qmd) and
 [multi-trait](multi_trait_models.qmd) practical pages, or the
 [Methods index](../methods/index.qmd) for likelihood and prior definitions.
+
+## Prior variance calibration
+
+Across these model families, `h2` is the requested initial expected genetic
+variance fraction after resolving the model's inclusion or joint-state
+probabilities, BayesR component multipliers, fixed or initial sampled MAF-S
+marker scales, and annotation/group variance multipliers. Initial probability
+weights and Beta/Dirichlet prior-mean weights are kept distinct. For learned
+BayesRC annotation coefficients, the inverse-chi-square scale uses the explicitly
+recorded resolved-initial-probability policy because no exact closed-form prior
+expectation over the coefficients is available.
+
+MT automatic calibration is diagonal and uses each trait's joint-pattern
+weight. Supply `vb` explicitly for a full marker-effect covariance; automatic
+elementwise conversion of a full genetic covariance is rejected when it cannot
+be guaranteed positive definite.

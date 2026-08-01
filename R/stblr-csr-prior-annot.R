@@ -232,6 +232,23 @@ stblr_csr_prior_annot <- function(
   vb_multiplier_list <- lapply(seq_len(nt), function(i) rep(1, m))
  }
 
+ prior_marker_probability <- if (isTRUE(use_pi_marker)) {
+  pi_marker_list
+ } else lapply(seq_len(nt), function(i) rep(arch$pi_prior_mean, m))
+ pri <- .stblr_make_csr_variance_priors(
+  stats = stats, n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue,
+  pi_vb_init = arch$pi_vb_init, pi_prior_mean = arch$pi_prior_mean,
+  trait_names = trait_names, B = B, E = E, ssb_prior = ssb_prior,
+  sse_prior = sse_prior,
+  expected_multiplier_initial = pi_marker_list,
+  expected_multiplier_prior = prior_marker_probability,
+  variance_multiplier = vb_multiplier_list,
+  component_probability_source = if (isTRUE(use_pi_marker))
+   "resolved_marker_probabilities" else "beta_initial_and_prior_mean",
+  annotation_probability_policy = if (isTRUE(use_pi_marker))
+   "resolved_initial_marker_probabilities" else "not_applicable"
+ )
+
  raw_fit <- stblr_cpg_omp_csr_prior(
   wy = stats$wy,
   ww = stats$ww,
@@ -337,8 +354,9 @@ stblr_csr_prior_annot <- function(
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,
    ld_prefix = ld_prefix
-  ),
+ ),
   arch
  )
+ fit$input <- c(fit$input, pri$calibration)
  .standardize_stblr_annotation_fit(fit, "prior")
 }

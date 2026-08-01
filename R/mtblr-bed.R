@@ -332,7 +332,9 @@
 #' @param block_size Block size used for default sets within one BED file.
 #' @param beta,b,state Optional latent effects, effective effects, and binary
 #'   inclusion states as marker-by-trait matrices or trait lists.
-#' @param h2 Heritability scalar or one value per trait, strictly in `(0,1)`.
+#' @param h2 Requested initial expected genetic-variance fraction, scalar or
+#'   one value per trait strictly in `(0,1)`, under resolved joint
+#'   trait-pattern, component, annotation, and fixed MAF-S weights.
 #' @param pi Initial non-null probability or full pattern-probability vector.
 #' @param models,pimodels Joint model patterns and probabilities.
 #' @param mixture_var Fixed BayesR component-variance multipliers: one leading
@@ -603,27 +605,22 @@ mtblr_bed <- function(
     }
   }
   vy <- colSums(Y^2) / (nrow(Y) - 1)
-  vg0 <- diag(vy * h2, dat$nt)
-  ve0 <- diag(vy * (1 - h2), dat$nt)
-  vb0 <- vg0 / (dat$m * p_active)
-  vg <- .mtblr_cov(vg, vg0, "vg", dat$nt)
-  vb <- .mtblr_cov(vb, vb0, "vb", dat$nt)
-  if (residual_covariance == "diagonal" && !is.null(ve) &&
-      any(as.matrix(ve)[row(as.matrix(ve)) != col(as.matrix(ve))] != 0)) {
-    stop("ve must be exactly diagonal when residual_covariance = 'diagonal'.",
+  calibration_inputs <- .mtblr_calibration_inputs(mixture, bayesrc, dat$m)
+  calibrated <- .mtblr_prior_calibration(
+   vy, h2, nub, nue, calibration_inputs$patterns,
+   calibration_inputs$initial, calibration_inputs$prior,
+   calibration_inputs$gamma, calibration_inputs$marker_scale,
+   vg, vb, ve, ssb_prior, sse_prior,
+   calibration_inputs$component_probability_source,
+   calibration_inputs$annotation_probability_policy)
+  vg <- calibrated$vg; vb <- calibrated$vb; ve <- calibrated$ve
+  ssb_prior <- calibrated$ssb_prior; sse_prior <- calibrated$sse_prior
+  if (residual_covariance == "diagonal" &&
+      (any(ve[row(ve) != col(ve)] != 0) ||
+       any(sse_prior[row(sse_prior) != col(sse_prior)] != 0))) {
+    stop("ve and sse_prior must be diagonal when residual_covariance = 'diagonal'.",
          call. = FALSE)
   }
-  ve <- .mtblr_cov(ve, ve0, "ve", dat$nt)
-  ssb0 <- ((nub - 2) / nub) * vg / (dat$m * p_active)
-  ssb_prior <- .mtblr_cov(ssb_prior, ssb0, "ssb_prior", dat$nt)
-  if (residual_covariance == "diagonal" && !is.null(sse_prior) &&
-      any(as.matrix(sse_prior)[row(as.matrix(sse_prior)) !=
-                               col(as.matrix(sse_prior))] != 0)) {
-    stop("sse_prior must be exactly diagonal when residual_covariance = 'diagonal'.",
-         call. = FALSE)
-  }
-  sse0 <- ((nue - 2) / nue) * ve
-  sse_prior <- .mtblr_cov(sse_prior, sse0, "sse_prior", dat$nt)
   initialization <- if (semantics$prior_kernel == "bayesc") {
     .mtblr_bed_initialization(beta,b,state,model_spec$matrix,dat$m,dat$nt)
   } else {
@@ -954,6 +951,7 @@ mtblr_bed <- function(
     convergence_status = raw$diagnostics$convergence$overall_status,
     convergence_computed = raw$diagnostics$convergence$computed,
     convergence_memory_estimate = convergence_memory)
+  input <- c(input, calibrated$calibration)
   if (isTRUE(verbose)) {
     print(input[c("backend", "n_used", "m", "nt",
                   "residual_covariance", "seed", "nchains", "ncores",

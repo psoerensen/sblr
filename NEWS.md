@@ -1,5 +1,14 @@
 # sblr 0.2.0
 
+- Aligned prior variance calibration across scalar and multivariate BayesC,
+  BayesR, and BayesRC routes. The requested `h2` now targets the initial/prior
+  expected genetic variance under resolved component probabilities, component
+  multipliers, marker MAF-S scales, annotation/group variance multipliers, and
+  MT trait-pattern probabilities.
+- Separated initial mixture weights from Beta/Dirichlet prior-mean weights and
+  added transparent prior-calibration metadata to fitted-model inputs.
+- Kept explicit variance-prior overrides authoritative and added a validation
+  error for unsafe automatic MT full-covariance conversion.
 - Corrected scalar BayesR prior variance initialization to account for
   component variance multipliers, so `h2` has the same prior expected-genetic-
   variance interpretation as BayesC.

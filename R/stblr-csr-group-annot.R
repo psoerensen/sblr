@@ -365,6 +365,25 @@ stblr_csr_group_annot <- function(
   trait_names = trait_names
  )
 
+ marker_group <- group_info$group_index0 + 1L
+ group_pi_marker <- lapply(seq_len(nt), function(t)
+  group_priors$group_pi_init_matrix[t, marker_group])
+ group_prior_marker <- lapply(seq_len(nt), function(t)
+  group_priors$pi_group_prior_mean[marker_group])
+ group_vb_marker <- lapply(seq_len(nt), function(t)
+  group_priors$group_vb_multiplier_init_matrix[t, marker_group])
+ pri <- .stblr_make_csr_variance_priors(
+  stats = stats, n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue,
+  pi_vb_init = arch$pi_vb_init, pi_prior_mean = arch$pi_prior_mean,
+  trait_names = trait_names, B = B, E = E, ssb_prior = ssb_prior,
+  sse_prior = sse_prior,
+  expected_multiplier_initial = group_pi_marker,
+  expected_multiplier_prior = group_prior_marker,
+  variance_multiplier = group_vb_marker,
+  component_probability_source = "resolved_initial_group_probabilities",
+  annotation_probability_policy = "group_beta_prior_mean"
+ )
+
  raw_fit <- stblr_cpg_omp_csr_group_annot(
   wy = stats$wy,
   ww = stats$ww,
@@ -485,8 +504,9 @@ stblr_csr_group_annot <- function(
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,
    ld_prefix = ld_prefix
-  ),
+ ),
   arch
  )
+ fit$input <- c(fit$input, pri$calibration)
  .standardize_stblr_annotation_fit(fit, "group")
 }

@@ -70,7 +70,9 @@
 #' @param ld_swap_max_friends Maximum number of high-LD friends stored per
 #'   marker for swap proposals.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
-#' @param h2 Initial heritability.
+#' @param h2 Requested initial expected genetic-variance fraction under the
+#'   resolved marker, group, annotation, component, and MAF-S prior weights
+#'   used by the selected model.
 #' @param adjE Residual adjustment factor.
 #' @param updateB,updateE,updatePi Logical sampler update controls. `updatePi`
 #'   is used by the BayesC-like annotation models and ignored by SBayesRC.

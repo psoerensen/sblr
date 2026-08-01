@@ -95,7 +95,9 @@ summary-statistics data and does not activate MAF scaling.}
 \item{beta, b, state}{Optional BayesR latent effects, effective effects, and
 binary trait-pattern states. BayesC accepts `b` only.}
 
-\item{h2}{Heritability scalar or one value per trait.}
+\item{h2}{Requested initial expected genetic-variance fraction, scalar or
+one value per trait, under resolved joint trait-pattern, component,
+annotation, and fixed MAF-S weights.}
 
 \item{pi}{Initial non-null probability or complete pattern probabilities.}
 

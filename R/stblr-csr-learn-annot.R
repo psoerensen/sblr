@@ -370,6 +370,24 @@ stblr_csr_learn_annot <- function(
   stop("eta_vb_init must be ncol(A) x nt.")
  }
 
+ initial_annotation_prior <- .stblr_make_prior_from_annotations(
+  A = A, nt = nt, pi_base = arch$pi_init,
+  beta_pi = eta_pi_init, beta_vb = eta_vb_init,
+  pi_min = pi_min, pi_max = pi_max,
+  vb_multiplier_min = vb_multiplier_min,
+  vb_multiplier_max = vb_multiplier_max)
+ pri <- .stblr_make_csr_variance_priors(
+  stats = stats, n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue,
+  pi_vb_init = arch$pi_vb_init, pi_prior_mean = arch$pi_prior_mean,
+  trait_names = trait_names, B = B, E = E, ssb_prior = ssb_prior,
+  sse_prior = sse_prior,
+  expected_multiplier_initial = initial_annotation_prior$pi_marker,
+  expected_multiplier_prior = initial_annotation_prior$pi_marker,
+  variance_multiplier = initial_annotation_prior$vb_multiplier,
+  component_probability_source = "resolved_initial_annotation_probabilities",
+  annotation_probability_policy = "resolved_initial_annotation_probabilities"
+ )
+
  raw_fit <- stblr_cpg_omp_csr_annot(
   wy = stats$wy,
   ww = stats$ww,
@@ -492,8 +510,9 @@ stblr_csr_learn_annot <- function(
    use_r_init = use_r_init,
    rebuild_r_before_updateE = rebuild_r_before_updateE,
    ld_prefix = ld_prefix
-  ),
+ ),
   arch
  )
+ fit$input <- c(fit$input, pri$calibration)
  .standardize_stblr_annotation_fit(fit, "learned")
 }

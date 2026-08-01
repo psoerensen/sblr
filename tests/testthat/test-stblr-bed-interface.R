@@ -288,11 +288,22 @@ test_that("public fixed-alpha BED BayesRC reduces exactly to public fixed-pi Bay
     updateAlpha = FALSE
   )))
   fit_r <- do.call(stblr_bed, c(common, list(
-    method = "bayesr", alpha = rep(1, 4), updatePi = FALSE,
+    method = "bayesr", alpha = baseline_pi * 1e4, updatePi = FALSE,
     full_sweep_every = 1L, null_skip_base = 1L, null_skip_max = 1L,
     candidate_threshold = 0, candidate_lifetime = 0L,
     skip_nulls_burnin_only = FALSE, progress_every = 0L
   )))
+  expect_equal(fit_rc$input$B, fit_r$input$B, tolerance = 1e-12)
+  expect_equal(
+    fit_rc$input$ssb_prior, fit_r$input$ssb_prior, tolerance = 1e-12)
+  expect_equal(
+    fit_rc$input$prior_weight_initial,
+    fit_r$input$prior_weight_initial,
+    tolerance = 1e-12)
+  expect_equal(
+    fit_rc$input$prior_weight_prior_mean,
+    fit_r$input$prior_weight_prior_mean,
+    tolerance = 1e-12)
   expect_equal(fit_rc$bm, fit_r$bm, tolerance = 1e-12)
   expect_equal(fit_rc$dm, fit_r$dm, tolerance = 1e-12)
   expect_equal(

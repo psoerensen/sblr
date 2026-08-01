@@ -348,6 +348,24 @@ stblr_csr_sbayesrc_generic <- function(
  gamma <- alpha$gamma
  Kgamma <- length(gamma)
 
+ marker_component_probability <- sbayesrc_marker_pi(
+  A, alpha$alpha_init, gamma)
+ marker_expected_gamma <- as.numeric(marker_component_probability %*% gamma)
+ calibration_scale <- .stblr_calibration_maf_scale(
+  maf_effect_s_info, estimate_maf_effect_s, maf_effect_s_init, m)
+ resolved_gamma <- lapply(seq_len(nt), function(t) marker_expected_gamma)
+ pri <- .stblr_make_csr_variance_priors(
+  stats = stats, n = n, m = m, nt = nt, h2 = h2, nub = nub, nue = nue,
+  pi_vb_init = arch$pi_vb_init, pi_prior_mean = arch$pi_prior_mean,
+  trait_names = trait_names, B = B, E = E, ssb_prior = ssb_prior,
+  sse_prior = sse_prior,
+  expected_multiplier_initial = resolved_gamma,
+  expected_multiplier_prior = resolved_gamma,
+  marker_scale = calibration_scale,
+  component_probability_source = "resolved_marker_component_probabilities",
+  annotation_probability_policy = "resolved_initial_annotation_probabilities"
+ )
+
  if (is.null(comp_init)) {
   comp_init <- lapply(seq_len(nt), function(i) rep(0L, m))
  }
@@ -540,6 +558,7 @@ stblr_csr_sbayesrc_generic <- function(
  if (length(.input_extra)) {
   fit$input <- c(.input_extra, fit$input[setdiff(names(fit$input), names(.input_extra))])
  }
+ fit$input <- c(fit$input, pri$calibration)
 
  .standardize_stblr_annotation_fit(fit, "sbayesrc")
 }

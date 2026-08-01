@@ -86,7 +86,9 @@ including extended groups and diagnostic trace-memory guards.}
 
 \item{verbose}{Print resolved execution metadata.}
 
-\item{h2}{Initial heritability.}
+\item{h2}{Requested initial expected genetic-variance fraction under the
+resolved marker, group, annotation, component, and MAF-S prior weights
+used by the selected model.}
 
 \item{adjE}{Residual adjustment factor.}
 

@@ -286,28 +286,22 @@ NULL
 
 
 .make_stblr_priors <- function(y, m, h2, nub, nue, pi_vb_init,
-                               pi_prior_mean, trait_names = NULL) {
+                               pi_prior_mean, trait_names = NULL,
+                               marker_scale = 1,
+                               variance_multiplier = 1) {
  y <- as.matrix(y)
  nt <- ncol(y)
  if (is.null(trait_names)) trait_names <- colnames(y)
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
 
  vy <- colSums(y^2) / (nrow(y) - 1)
- B <- diag((vy * h2) / (m * pi_vb_init), nt, nt)
- E <- diag(vy * (1 - h2), nt, nt)
- ssb_prior <- diag(((nub - 2) / nub) * (vy * h2) / (m * pi_prior_mean), nt, nt)
- sse_prior <- diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
-
- for (x in c("B", "E", "ssb_prior", "sse_prior")) {
-  obj <- get(x)
-  rownames(obj) <- colnames(obj) <- trait_names
-  assign(x, obj)
- }
-
- list(
-  vy = vy, B = B, E = E, ssb_prior = ssb_prior, sse_prior = sse_prior,
-  ssb_prior_list = split(ssb_prior, rep(seq_len(nt), each = nt)),
-  sse_prior_list = split(sse_prior, rep(seq_len(nt), each = nt))
+ .stblr_scalar_prior_calibration(
+  vy = vy, h2 = h2, nub = nub, nue = nue,
+  expected_multiplier_initial = rep(pi_vb_init, m),
+  expected_multiplier_prior = rep(pi_prior_mean, m),
+  marker_scale = marker_scale, variance_multiplier = variance_multiplier,
+  trait_names = trait_names,
+  component_probability_source = "beta_initial_and_prior_mean"
  )
 }
 
@@ -335,32 +329,27 @@ NULL
 }
 
 .make_stblr_bayesr_priors <- function(vy, m, h2, nub, nue, pi,
-                                      mixture_var, trait_names = NULL) {
+                                      mixture_var, trait_names = NULL,
+                                      alpha = NULL, marker_scale = 1) {
  vy <- as.numeric(vy)
  nt <- length(vy)
  if (is.null(trait_names)) trait_names <- names(vy)
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
  mixture_weight <- .stblr_bayesr_mixture_weight(pi, mixture_var)
-
- B <- diag((vy * h2) / (m * mixture_weight), nt, nt)
- E <- diag(vy * (1 - h2), nt, nt)
- ssb_prior <- diag(
-  ((nub - 2) / nub) * (vy * h2) / (m * mixture_weight), nt, nt
+ prior_probability <- if (is.null(alpha)) pi else alpha / sum(alpha)
+ mixture_weight_prior <- .stblr_bayesr_mixture_weight(
+  prior_probability, mixture_var)
+ out <- .stblr_scalar_prior_calibration(
+  vy = vy, h2 = h2, nub = nub, nue = nue,
+  expected_multiplier_initial = rep(mixture_weight, m),
+  expected_multiplier_prior = rep(mixture_weight_prior, m),
+  marker_scale = marker_scale, trait_names = trait_names,
+  component_probability_source = "initial_pi_and_dirichlet_prior_mean"
  )
- sse_prior <- diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
-
- for (x in c("B", "E", "ssb_prior", "sse_prior")) {
-  obj <- get(x)
-  rownames(obj) <- colnames(obj) <- trait_names
-  assign(x, obj)
- }
-
- list(
-  vy = vy, B = B, E = E, ssb_prior = ssb_prior, sse_prior = sse_prior,
-  ssb_prior_list = split(ssb_prior, rep(seq_len(nt), each = nt)),
-  sse_prior_list = split(sse_prior, rep(seq_len(nt), each = nt)),
-  mixture_weight = mixture_weight
- )
+ out$mixture_weight <- mixture_weight
+ out$mixture_weight_initial <- mixture_weight
+ out$mixture_weight_prior_mean <- mixture_weight_prior
+ out
 }
 
 .stblr_ensure_ld_swap_fields <- function(fit) {
@@ -1842,7 +1831,9 @@ NULL
 #'   be zero for the null component and remaining values must be positive.
 #' @param alpha Dirichlet prior shapes for mixture probabilities. Defaults to
 #'   `pi * 5e5`.
-#' @param h2 Initial heritability.
+#' @param h2 Requested initial expected genetic-variance fraction after
+#'   resolving component probabilities, component multipliers, and any fixed
+#'   or initial sampled MAF-S marker scales.
 #' @param adjE Residual adjustment factor.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
@@ -2045,8 +2036,11 @@ stblr_csr_bayesr <- function(
  )
 
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
+ calibration_scale <- .stblr_calibration_maf_scale(
+  maf_effect_s_info, estimate_maf_effect_s, maf_effect_s_init, m)
  pri <- .make_stblr_bayesr_priors(
-  vy, m, h2, nub, nue, pi, mixture_var, trait_names
+  vy, m, h2, nub, nue, pi, mixture_var, trait_names,
+  alpha = alpha, marker_scale = calibration_scale
  )
 
  if (is.null(comp_init)) comp_init <- lapply(seq_len(nt), function(i) rep(0, m))
@@ -2163,6 +2157,7 @@ stblr_csr_bayesr <- function(
   maf_effect_s_scale = "standardized_genotype_effect",
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
+ fit$input <- c(fit$input, pri$calibration)
  fit
 }
 
@@ -2281,7 +2276,8 @@ stblr_csr_bayesr <- function(
 #'   probability. Defaults to 5e5.
 #' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
-#' @param h2 Initial heritability. Defaults to 0.3.
+#' @param h2 Requested initial expected genetic-variance fraction under the
+#'   resolved inclusion probabilities and MAF-S marker scales. Defaults to 0.3.
 #' @param maf_effect_s Optional fixed global BayesS-style MAF-scaling parameter
 #'   for ordinary annotation-unaware CSR BayesC and BayesR. The default
 #'   `maf_effect_s = NULL` with `estimate_maf_effect_s = FALSE` fits the ordinary
@@ -2625,20 +2621,15 @@ stblr_csr_bayesr <- function(
  variable_names <- names(stats$ww[[1]])
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
  vy <- as.numeric(stats$yy) / (n - 1)
- pri <- list(
-  vy = vy,
-  B = diag((vy * h2) / (m * arch$pi_vb_init), nt, nt),
-  E = diag(vy * (1 - h2), nt, nt),
-  ssb_prior = diag(
-   ((nub - 2) / nub) * (vy * h2) / (m * arch$pi_prior_mean), nt, nt
-  ),
-  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ calibration_scale <- .stblr_calibration_maf_scale(
+  maf_effect_s_info, estimate_maf_effect_s, maf_effect_s_init, m)
+ pri <- .stblr_scalar_prior_calibration(
+  vy = vy, h2 = h2, nub = nub, nue = nue,
+  expected_multiplier_initial = rep(arch$pi_vb_init, m),
+  expected_multiplier_prior = rep(arch$pi_prior_mean, m),
+  marker_scale = calibration_scale, trait_names = trait_names,
+  component_probability_source = "beta_initial_and_prior_mean"
  )
- for (x in c("B", "E", "ssb_prior", "sse_prior")) {
-  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
- }
- pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
- pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
  common <- list(
   wy = stats$wy, ww = stats$ww, yy = stats$yy,
   b_init = lapply(seq_len(nt), function(i) rep(0, m)),
@@ -2733,8 +2724,9 @@ stblr_csr_bayesr <- function(
   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
-  ld_swap_moves = as.integer(ld_swap_moves)
+ ld_swap_moves = as.integer(ld_swap_moves)
  ), arch)
+ fit$input <- c(fit$input, pri$calibration)
  fit
 }
 
@@ -2916,20 +2908,15 @@ stblr_csr_bayesr <- function(
  variable_names <- names(stats$ww[[1L]]) %||% stats$marker_names
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
  vy <- as.numeric(stats$yy) / (n - 1)
- pri <- list(
-  vy = vy,
-  B = diag((vy * h2) / (m * arch$pi_vb_init), nt, nt),
-  E = diag(vy * (1 - h2), nt, nt),
-  ssb_prior = diag(
-   ((nub - 2) / nub) * (vy * h2) / (m * arch$pi_prior_mean), nt, nt
-  ),
-  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ calibration_scale <- .stblr_calibration_maf_scale(
+  maf_effect_s_info, estimate_maf_effect_s, maf_effect_s_init, m)
+ pri <- .stblr_scalar_prior_calibration(
+  vy = vy, h2 = h2, nub = nub, nue = nue,
+  expected_multiplier_initial = rep(arch$pi_vb_init, m),
+  expected_multiplier_prior = rep(arch$pi_prior_mean, m),
+  marker_scale = calibration_scale, trait_names = trait_names,
+  component_probability_source = "beta_initial_and_prior_mean"
  )
- for (x in c("B", "E", "ssb_prior", "sse_prior")) {
-  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
- }
- pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
- pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
 
  raw <- stblr_cpg_omp_csr_block_eigen(
   wy = stats$wy, ww = stats$ww, yy = stats$yy,
@@ -3017,6 +3004,7 @@ stblr_csr_bayesr <- function(
   eigen_diagnostics = raw$diagnostics$block_eigen,
   low_rank_residual_rebuild_every = low_rank_residual_rebuild_every
  ), arch)
+ fit$input <- c(fit$input, pri$calibration)
  fit
 }
 
@@ -3166,8 +3154,11 @@ stblr_csr_bayesr <- function(
  variable_names <- names(stats$ww[[1L]]) %||% stats$marker_names
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
+ calibration_scale <- .stblr_calibration_maf_scale(
+  maf_effect_s_info, estimate_maf_effect_s, maf_effect_s_init, m)
  pri <- .make_stblr_bayesr_priors(
-  vy, m, h2, nub, nue, pi, mixture_var, trait_names
+  vy, m, h2, nub, nue, pi, mixture_var, trait_names,
+  alpha = alpha, marker_scale = calibration_scale
  )
  if (is.null(comp_init)) comp_init <- lapply(seq_len(nt), function(i) rep(0, m))
  if (is.null(r_init)) r_init <- stats$wy
@@ -3253,6 +3244,7 @@ stblr_csr_bayesr <- function(
   maf_effect_s_scale = "standardized_genotype_effect",
   chain_seeds = if (length(chain_seeds)) chain_seeds else NULL
  )
+ fit$input <- c(fit$input, pri$calibration)
  fit
 }
 
@@ -3540,7 +3532,8 @@ stblr_csr_bayesr <- function(
 #'   probability. Defaults to 5e5.
 #' @param pi_prior_a,pi_prior_b Optional explicit Beta prior shape parameters.
 #'   When supplied, these override `pi_prior_mean` and `pi_prior_strength`.
-#' @param h2 Initial heritability. Defaults to 0.3.
+#' @param h2 Requested initial expected genetic-variance fraction under the
+#'   resolved inclusion probability. Defaults to 0.3.
 #' @param nub,nue Prior degrees of freedom.
 #' @param scale Standardize BED markers.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
@@ -3759,6 +3752,7 @@ stblr_bed_marker <- function(
   read_block_size = read_block_size, progress_every = progress_every,
   scale = scale, rows = dat$rows
  ), arch)
+ fit$input <- c(fit$input, pri$calibration)
  fit
 }
 
@@ -3823,7 +3817,8 @@ stblr_bed_marker <- function(
 #' @param pi_prior_a,pi_prior_b Optional explicit BayesC Beta prior shape
 #'   parameters. When supplied, these override `pi_prior_mean` and
 #'   `pi_prior_strength`.
-#' @param h2 Initial heritability.
+#' @param h2 Requested initial expected genetic-variance fraction under the
+#'   resolved BayesC, BayesR, or annotation-dependent BayesRC prior weights.
 #' @param adjE Residual adjustment factor.
 #' @param updateB,updateE,updatePi Logical sampler update controls.
 #' @param mixture_var BayesR mixture variance multipliers. The first value must
@@ -4153,9 +4148,19 @@ stblr_bed_marker <- function(
   if (!is.logical(intercept_flat) || length(intercept_flat) != 1L || is.na(intercept_flat)) {
    stop("intercept_flat must be TRUE or FALSE.")
   }
-  pi_active <- sum(prior_init$pi[-1L])
-  pri <- .make_stblr_priors(
-   dat$y, dat$m, h2, nub, nue, pi_active, pi_active, dat$trait_names
+  marker_component_probability <- sbayesrc_marker_pi(
+   annotation_info$A, prior_init$annot_alpha_init, mixture_var)
+  marker_expected_gamma <- as.numeric(
+   marker_component_probability %*% as.numeric(mixture_var))
+  y_matrix <- as.matrix(dat$y)
+  pri <- .stblr_scalar_prior_calibration(
+   vy = colSums(y_matrix^2) / (nrow(y_matrix) - 1),
+   h2 = h2, nub = nub, nue = nue,
+   expected_multiplier_initial = marker_expected_gamma,
+   expected_multiplier_prior = marker_expected_gamma,
+   trait_names = dat$trait_names,
+   component_probability_source = "resolved_marker_component_probabilities",
+   annotation_probability_policy = "resolved_initial_annotation_probabilities"
   )
   raw <- .stblr_bed_bayesrc_native(
    bed_files = dat$bed_files,
@@ -4268,6 +4273,7 @@ stblr_bed_marker <- function(
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor
   )
+  fit$input <- c(fit$input, pri$calibration)
   fit <- .stblr_add_sbayesrc_annotation_metadata(fit)
   return(fit)
  }
@@ -4296,7 +4302,8 @@ stblr_bed_marker <- function(
   y_matrix <- as.matrix(dat$y)
   vy <- colSums(y_matrix^2) / (nrow(y_matrix) - 1)
   pri <- .make_stblr_bayesr_priors(
-   vy, dat$m, h2, nub, nue, pi, mixture_var, dat$trait_names
+   vy, dat$m, h2, nub, nue, pi, mixture_var, dat$trait_names,
+   alpha = alpha
   )
   fit <- .fit_stblr_bed_bayesr(
    bed_files = dat$bed_files,
@@ -4395,6 +4402,7 @@ stblr_bed_marker <- function(
   fit$input$data_level <- "individual"
   fit$input$nchains <- nchains
   fit$input <- fit$input[!duplicated(names(fit$input))]
+  fit$input <- c(fit$input, pri$calibration)
   return(fit)
  }
 
@@ -4510,6 +4518,7 @@ stblr_bed_marker <- function(
   scale = scale,
   rows = dat$rows
  ), arch)
+ fit$input <- c(fit$input, pri$calibration)
  fit
 }
 

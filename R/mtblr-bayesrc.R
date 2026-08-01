@@ -21,6 +21,52 @@
   out / rowSums(out)
 }
 
+.mtblr_calibration_inputs <- function(mixture, bayesrc, marker_count) {
+ patterns <- mixture$patterns$matrix
+ state_count <- nrow(patterns)
+ gamma <- if (length(mixture$joint_multiplier) == state_count) {
+  as.numeric(mixture$joint_multiplier)
+ } else rep(1, state_count)
+ marker_scale <- if (length(mixture$marker_scale) == marker_count) {
+  as.numeric(mixture$marker_scale)
+ } else rep(1, marker_count)
+ if (is.null(bayesrc$model_parameters)) {
+  initial <- as.numeric(mixture$patterns$probabilities)
+  prior <- if (length(mixture$pi_prior) == state_count) {
+   as.numeric(mixture$pi_prior / sum(mixture$pi_prior))
+  } else initial
+  return(list(
+   patterns = patterns, initial = initial, prior = prior, gamma = gamma,
+   marker_scale = marker_scale,
+   component_probability_source = if (length(mixture$pi_prior))
+    "joint_initial_and_dirichlet_prior_mean" else "joint_pattern_initial",
+   annotation_probability_policy = "not_applicable"))
+ }
+ component_probability <- .mtblr_bayesrc_prior_probabilities(
+  bayesrc$annotations, bayesrc$alpha_init, bayesrc$pi_floor)
+ joint <- matrix(0, marker_count, state_count)
+ pattern_index <- mixture$model_parameters$mixture$joint_pattern_index
+ component_index <- mixture$model_parameters$mixture$joint_component_index
+ active_patterns <- which(rowSums(
+  mixture$model_parameters$mixture$trait_patterns) > 0L)
+ for (s in seq_len(state_count)) {
+  component <- component_index[s]
+  if (component == 0L) {
+   joint[, s] <- component_probability[, 1L]
+  } else {
+   conditional_index <- match(pattern_index[s], active_patterns)
+   joint[, s] <- component_probability[, component + 1L] *
+    bayesrc$pattern_pi_init[conditional_index]
+  }
+ }
+ joint <- joint / rowSums(joint)
+ list(
+  patterns = patterns, initial = joint, prior = joint, gamma = gamma,
+  marker_scale = marker_scale,
+  component_probability_source = "resolved_marker_joint_state_probabilities",
+  annotation_probability_policy = "resolved_initial_annotation_probabilities")
+}
+
 .mtblr_bayesrc_controls <- function(
     prior_kernel, annotations, marker_ids, pattern_spec, mixture,
     add_intercept = TRUE, standardize_annotations = TRUE,

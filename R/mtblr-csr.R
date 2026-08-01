@@ -579,7 +579,9 @@
 #' @param sets Optional disjoint complete marker partition (1-based).
 #' @param beta,b,state Optional BayesR latent effects, effective effects, and
 #'   binary trait-pattern states. BayesC accepts `b` only.
-#' @param h2 Heritability scalar or one value per trait.
+#' @param h2 Requested initial expected genetic-variance fraction, scalar or
+#'   one value per trait, under resolved joint trait-pattern, component,
+#'   annotation, and fixed MAF-S weights.
 #' @param pi Initial non-null probability or complete pattern probabilities.
 #' @param models,pimodels Pattern matrix and probabilities.
 #' @param mixture_var Fixed BayesR component-variance multipliers: one leading
@@ -695,12 +697,22 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   mod <- mixture$patterns
   set_spec <- .mtblr_sets(sets, st$m)
   h2 <- rep(h2, length.out = st$nt); if (any(!is.finite(h2)) || any(h2 <= 0 | h2 >= 1)) stop("h2 must be in (0, 1).", call. = FALSE)
-  vy <- st$yy / (st$n - 1); vg0 <- diag(vy * h2, st$nt); ve0 <- diag(vy * (1 - h2), st$nt)
-  vb0 <- diag((vy * h2) / (st$m * max(1e-12, 1 - mod$probabilities[1L])), st$nt)
-  vg <- .mtblr_cov(vg, vg0, "vg", st$nt); vb <- .mtblr_cov(vb, vb0, "vb", st$nt)
-  ve <- .mtblr_cov(ve, ve0, "ve", st$nt, TRUE)
-  ssb_prior <- .mtblr_cov(ssb_prior, ((nub - 2) / nub) * vg / (st$m * max(1e-12, 1 - mod$probabilities[1L])), "ssb_prior", st$nt)
-  sse_prior <- .mtblr_cov(sse_prior, ((nue - 2) / nue) * ve, "sse_prior", st$nt, TRUE)
+  vy <- st$yy / (st$n - 1)
+  calibration_inputs <- .mtblr_calibration_inputs(mixture, bayesrc, st$m)
+  calibrated <- .mtblr_prior_calibration(
+   vy, h2, nub, nue, calibration_inputs$patterns,
+   calibration_inputs$initial, calibration_inputs$prior,
+   calibration_inputs$gamma, calibration_inputs$marker_scale,
+   vg, vb, ve, ssb_prior, sse_prior,
+   calibration_inputs$component_probability_source,
+   calibration_inputs$annotation_probability_policy)
+  vg <- calibrated$vg; vb <- calibrated$vb; ve <- calibrated$ve
+  ssb_prior <- calibrated$ssb_prior; sse_prior <- calibrated$sse_prior
+  if (any(ve[row(ve) != col(ve)] != 0) ||
+      any(sse_prior[row(sse_prior) != col(sse_prior)] != 0)) {
+   stop("ve and sse_prior must be diagonal for the public MT CSR route.",
+        call. = FALSE)
+  }
   initialization <- .mtblr_bayesr_initialization(
     beta,b,state,mixture$component_init,pattern_spec$matrix,st$m,st$nt,
     semantics$prior_kernel)
@@ -813,6 +825,7 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     marker_policy = marker_policy, marker_intersection_policy = "error", scale = "standardized_genotype",
     sample_overlap = "not_modeled", phenotype_crossproduct_policy = "marginal_yy_only",
     residual_covariance_policy = "diagonal", trait_metadata = trait_metadata, alignment = raw$alignment)
+  input <- c(input, calibrated$calibration)
   if (isTRUE(verbose)) print(input[c("backend", "m", "nt", "ld_sharing_mode", "seed", "nchains", "ncores")])
   fit <- .as_mtblr_fit(raw, aligned$marker_ids, st$trait_names,
                        aligned$marker_metadata, trait_metadata,

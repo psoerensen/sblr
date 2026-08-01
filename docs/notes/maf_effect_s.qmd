@@ -26,6 +26,11 @@ BayesRC multiply their component-scaled covariance by (q_j(S)). The component
 multiplier and MAF scale remain separate metadata. Sampled MT `maf_effect_s` is
 explicitly unsupported; supply a fixed scalar or `NULL`.
 
+Prior initialization includes these marker scales. Fixed `maf_effect_s` uses
+its resolved scale vector; sampled scalar models use `maf_effect_s_init` for
+the one-time calibration. `B` is not dynamically renormalized as sampled
+`maf_effect_s` changes during MCMC.
+
 ## Frequency provenance
 
 Use `effect_maf` to provide an explicitly aligned population frequency when

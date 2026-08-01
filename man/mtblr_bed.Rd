@@ -105,7 +105,9 @@ level and therefore rejects summary-statistics `s` model names.}
 \item{beta, b, state}{Optional latent effects, effective effects, and binary
 inclusion states as marker-by-trait matrices or trait lists.}
 
-\item{h2}{Heritability scalar or one value per trait, strictly in `(0,1)`.}
+\item{h2}{Requested initial expected genetic-variance fraction, scalar or
+one value per trait strictly in `(0,1)`, under resolved joint
+trait-pattern, component, annotation, and fixed MAF-S weights.}
 
 \item{pi}{Initial non-null probability or full pattern-probability vector.}
 

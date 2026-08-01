@@ -183,61 +183,33 @@
   B = NULL,
   E = NULL,
   ssb_prior = NULL,
-  sse_prior = NULL
+  sse_prior = NULL,
+  expected_multiplier_initial = NULL,
+  expected_multiplier_prior = NULL,
+  marker_scale = 1,
+  variance_multiplier = 1,
+  component_probability_source = "beta_initial_and_prior_mean",
+  annotation_probability_policy = "not_applicable"
 ) {
  if (is.null(trait_names)) trait_names <- names(stats$yy)
  if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
 
  vy <- as.numeric(stats$yy) / (n - 1)
-
- if (is.null(B)) {
-  B <- diag((vy * h2) / (m * pi_vb_init), nrow = nt, ncol = nt)
+ if (is.null(expected_multiplier_initial)) {
+  expected_multiplier_initial <- rep(pi_vb_init, m)
  }
-
- if (is.null(E)) {
-  E <- diag(vy * (1 - h2), nrow = nt, ncol = nt)
+ if (is.null(expected_multiplier_prior)) {
+  expected_multiplier_prior <- rep(pi_prior_mean, m)
  }
-
- if (is.null(ssb_prior)) {
-  ssb_prior <- diag(
-   ((nub - 2) / nub) * (vy * h2) / (m * pi_prior_mean),
-   nrow = nt,
-   ncol = nt
-  )
- }
-
- if (is.null(sse_prior)) {
-  sse_prior <- diag(
-   ((nue - 2) / nue) * (vy * (1 - h2)),
-   nrow = nt,
-   ncol = nt
-  )
- }
-
- if (!all(dim(B) == c(nt, nt))) stop("B must be nt x nt.")
- if (!all(dim(E) == c(nt, nt))) stop("E must be nt x nt.")
- if (!all(dim(ssb_prior) == c(nt, nt))) stop("ssb_prior must be nt x nt.")
- if (!all(dim(sse_prior) == c(nt, nt))) stop("sse_prior must be nt x nt.")
-
- rownames(B) <- colnames(B) <- trait_names
- rownames(E) <- colnames(E) <- trait_names
- rownames(ssb_prior) <- colnames(ssb_prior) <- trait_names
- rownames(sse_prior) <- colnames(sse_prior) <- trait_names
-
- list(
-  vy = vy,
-  B = B,
-  E = E,
-  ssb_prior = ssb_prior,
+ .stblr_scalar_prior_calibration(
+  vy = vy, h2 = h2, nub = nub, nue = nue,
+  expected_multiplier_initial = expected_multiplier_initial,
+  expected_multiplier_prior = expected_multiplier_prior,
+  marker_scale = marker_scale, variance_multiplier = variance_multiplier,
+  trait_names = trait_names, B = B, E = E, ssb_prior = ssb_prior,
   sse_prior = sse_prior,
-  ssb_prior_list = split(
-   ssb_prior,
-   rep(seq_len(ncol(ssb_prior)), each = nrow(ssb_prior))
-  ),
-  sse_prior_list = split(
-   sse_prior,
-   rep(seq_len(ncol(sse_prior)), each = nrow(sse_prior))
-  )
+  component_probability_source = component_probability_source,
+  annotation_probability_policy = annotation_probability_policy
  )
 }
 

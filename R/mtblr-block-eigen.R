@@ -408,20 +408,21 @@ mtblr_block_eigen <- function(
     stop("h2 must be in (0, 1).", call. = FALSE)
   }
   vy <- st$yy / (st$n - 1)
-  vg0 <- diag(vy * h2, st$nt)
-  ve0 <- diag(vy * (1 - h2), st$nt)
-  vb0 <- diag((vy * h2) /
-    (st$m * max(1e-12, 1 - mod$probabilities[1L])), st$nt)
-  vg <- .mtblr_cov(vg, vg0, "vg", st$nt)
-  vb <- .mtblr_cov(vb, vb0, "vb", st$nt)
-  ve <- .mtblr_cov(ve, ve0, "ve", st$nt, TRUE)
-  ssb_prior <- .mtblr_cov(
-    ssb_prior, ((nub - 2) / nub) * vg /
-      (st$m * max(1e-12, 1 - mod$probabilities[1L])),
-    "ssb_prior", st$nt)
-  sse_prior <- .mtblr_cov(
-    sse_prior, ((nue - 2) / nue) * ve,
-    "sse_prior", st$nt, TRUE)
+  calibration_inputs <- .mtblr_calibration_inputs(mixture, bayesrc, st$m)
+  calibrated <- .mtblr_prior_calibration(
+   vy, h2, nub, nue, calibration_inputs$patterns,
+   calibration_inputs$initial, calibration_inputs$prior,
+   calibration_inputs$gamma, calibration_inputs$marker_scale,
+   vg, vb, ve, ssb_prior, sse_prior,
+   calibration_inputs$component_probability_source,
+   calibration_inputs$annotation_probability_policy)
+  vg <- calibrated$vg; vb <- calibrated$vb; ve <- calibrated$ve
+  ssb_prior <- calibrated$ssb_prior; sse_prior <- calibrated$sse_prior
+  if (any(ve[row(ve) != col(ve)] != 0) ||
+      any(sse_prior[row(sse_prior) != col(sse_prior)] != 0)) {
+   stop("ve and sse_prior must be diagonal for the public MT block-eigen route.",
+        call. = FALSE)
+  }
   initialization <- .mtblr_bayesr_initialization(
     beta,b,state,mixture$component_init,pattern_spec$matrix,st$m,st$nt,
     semantics$prior_kernel)
@@ -590,6 +591,7 @@ mtblr_block_eigen <- function(
     marker_policy = marker_policy, marker_intersection_policy = "error",
     scale = "standardized_genotype", alignment = raw$alignment,
     trait_metadata = trait_metadata)
+  input <- c(input, calibrated$calibration)
   if (isTRUE(verbose)) {
     print(input[c("backend", "m", "nt", "operator_sharing_mode", "seed",
                   "nchains", "ncores")])
