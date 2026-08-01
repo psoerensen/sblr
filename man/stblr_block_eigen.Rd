@@ -17,6 +17,7 @@ stblr_block_eigen(
   eigen_prop = 0.995,
   eigen_tau = 0.01,
   eigen_eta = 0,
+  low_rank_residual_rebuild_every = 100L,
   nit = 1000,
   nburn = 500,
   nthin = 1,
@@ -60,6 +61,10 @@ the representation default.}
 \item{eigen_prop}{Cumulative positive-eigenvalue mass target for low rank.}
 
 \item{eigen_tau, eigen_eta}{Nonnegative reconstructed-dense filter controls.}
+
+\item{low_rank_residual_rebuild_every}{Non-negative integer interval for
+rebuilding retained reduced residuals after completed MCMC iterations.
+The default is 100; zero disables periodic rebuilding after initialization.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 

@@ -378,7 +378,8 @@ Rcpp::List stblr_block_low_rank_contract_internal(
     Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls,
     Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af,
     Rcpp::IntegerVector block_start, Rcpp::NumericMatrix wy,
-    Rcpp::NumericVector effects, double eigen_prop = 0.995) {
+    Rcpp::NumericVector effects, double eigen_prop = 0.995,
+    double yy = 1.0, double residual_perturbation = 0.0) {
   std::vector<std::string> files = Rcpp::as<std::vector<std::string>>(bed_files);
   std::vector<std::vector<int>> columns(static_cast<std::size_t>(cls.size()));
   for (int group = 0; group < cls.size(); ++group) {
@@ -414,9 +415,26 @@ Rcpp::List stblr_block_low_rank_contract_internal(
   arma::rowvec beta(effects.begin(), effects.size(), true);
   arma::rowvec residual;
   storage.rebuild(0, projected_score.row(0), beta, residual);
+  arma::rowvec incremental;
+  arma::rowvec zero_beta(beta.n_elem, arma::fill::zeros);
+  storage.rebuild(0, projected_score.row(0), zero_beta, incremental);
+  for (arma::uword marker = 0; marker < beta.n_elem; ++marker)
+    storage.apply_difference(static_cast<int>(marker), beta(marker), incremental);
+  arma::rowvec corrected_rhs(beta.n_elem);
+  for (arma::uword marker = 0; marker < beta.n_elem; ++marker) {
+    corrected_rhs(marker) = storage.corrected_rhs(
+      static_cast<int>(marker), beta(marker), residual
+    );
+  }
+  arma::rowvec perturbed = residual;
+  if (perturbed.n_elem > 0) perturbed(0) += residual_perturbation;
+  const double measured_drift = storage.rebuild_and_measure_drift(
+    0, projected_score.row(0), beta, perturbed
+  );
   arma::rowvec marker_residual;
   storage.materialize_residual(0, residual, marker_residual);
   Rcpp::List factors(storage.blocks.size()), transformed(storage.blocks.size());
+  Rcpp::List fitted(storage.blocks.size());
   Rcpp::IntegerVector offsets(storage.blocks.size());
   for (std::size_t group = 0; group < storage.blocks.size(); ++group) {
     const sblr::core::BlockLowRankBlock& block = storage.blocks[group];
@@ -428,16 +446,38 @@ Rcpp::List stblr_block_low_rank_contract_internal(
           block.q(k, local);
     factors[group] = Rcpp::wrap(factor);
     transformed[group] = Rcpp::wrap(block.transformed_score);
+    arma::rowvec fitted_block(static_cast<arma::uword>(block.rank));
+    for (int k = 0; k < block.rank; ++k) {
+      fitted_block(static_cast<arma::uword>(k)) =
+        block.transformed_score(0, static_cast<arma::uword>(k)) -
+        residual(block.residual_offset + static_cast<arma::uword>(k));
+    }
+    fitted[group] = Rcpp::wrap(fitted_block);
     offsets[group] = static_cast<int>(block.residual_offset);
   }
   return Rcpp::List::create(
     Rcpp::Named("factor") = factors,
     Rcpp::Named("transformed_score") = transformed,
+    Rcpp::Named("fitted_reduced") = fitted,
     Rcpp::Named("projected_score") = Rcpp::wrap(projected_score),
     Rcpp::Named("diagonal") = Rcpp::wrap(storage.diagonal),
     Rcpp::Named("residual") = Rcpp::wrap(residual),
+    Rcpp::Named("incremental_residual") = Rcpp::wrap(incremental),
+    Rcpp::Named("repaired_residual") = Rcpp::wrap(perturbed),
+    Rcpp::Named("measured_drift") = measured_drift,
+    Rcpp::Named("corrected_rhs") = Rcpp::wrap(corrected_rhs),
     Rcpp::Named("marker_residual") = Rcpp::wrap(marker_residual),
     Rcpp::Named("quadratic_form") = storage.quadratic_form(beta),
+    Rcpp::Named("fitted_quadratic") = storage.fitted_quadratic(
+      0, beta, projected_score.row(0), residual
+    ),
+    Rcpp::Named("genetic_variance") = storage.genetic_variance(
+      0, beta, projected_score.row(0), residual,
+      static_cast<double>(packed.n)
+    ),
+    Rcpp::Named("residual_sse") = storage.residual_sse(
+      0, yy, beta, projected_score.row(0), residual
+    ),
     Rcpp::Named("projected_score_dot") =
       storage.projected_score_dot(0, beta, projected_score.row(0)),
     Rcpp::Named("residual_norm_squared") = arma::dot(residual, residual),

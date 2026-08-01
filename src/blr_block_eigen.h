@@ -159,19 +159,32 @@ struct BlockEigenStorage {
     return arma::dot(b, wy);
   }
   inline double quadratic_form(const arma::rowvec& b) const {
+    // Validation/reference operation. Ordinary operator-aware MCMC iterations
+    // use fitted_quadratic() from the maintained residual state.
     arma::rowvec zero(diagonal.n_elem, arma::fill::zeros);
     arma::rowvec rb;
     view().rebuild(zero, b, rb);
     return -arma::dot(b, rb);
   }
+  inline double fitted_quadratic(int, const arma::rowvec& b,
+                                 const arma::rowvec& wy,
+                                 const arma::rowvec& r) const {
+    double result = 0.0;
+    const double* b_ptr = b.memptr();
+    const double* wy_ptr = wy.memptr();
+    const double* r_ptr = r.memptr();
+    for (arma::uword i = 0; i < b.n_elem; ++i)
+      result += b_ptr[i] * (wy_ptr[i] - r_ptr[i]);
+    return result;
+  }
   inline double residual_sse(int, double yy, const arma::rowvec& b,
                              const arma::rowvec& wy, const arma::rowvec& r) const {
     return yy - arma::dot(b, r + wy);
   }
-  inline double genetic_variance(int, const arma::rowvec& b,
+  inline double genetic_variance(int trait, const arma::rowvec& b,
                                  const arma::rowvec& wy, const arma::rowvec& r,
                                  double n) const {
-    return arma::dot(b, wy - r) / n;
+    return fitted_quadratic(trait, b, wy, r) / n;
   }
   inline void materialize_residual(int, const arma::rowvec& r,
                                    arma::rowvec& marker_residual) const {

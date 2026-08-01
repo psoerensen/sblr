@@ -21,6 +21,7 @@ struct CsrBayesRExecutionContext {
  const std::vector<int>* convergence_markers = nullptr;
  int K=0,m=0,nt=0,nchains=1,ncores=1,nit=0,nburn=0,nthin=1,seed=1;
  int updateE_start=0,updateE_every=1,ld_swap_moves=1;
+ int low_rank_residual_rebuild_every=0;
  bool use_comp_init=false,use_r_init=false,estimate_maf_effect_s=false;
  bool use_maf_effect_s_prior_scale=false,updateLDswap=false,updateB=true,updateE=true,updatePi=true;
  bool convergence_probability=false,convergence_b=false,convergence_d=false;
@@ -43,6 +44,7 @@ struct CsrBayesRExecutionResult {
  arma::mat bm,dm,bm_sd,dm_sd,bm_min,dm_min,bm_max,dm_max,component_mean;
  arma::mat b_out,r_out,component_out,vbs,vgs,ves,vle,vld,pis,maf_effect_s;
  arma::mat final_pi,mean_pi,updateE_diagnostics,ld_swap_diagnostics,ld_swap_chain_diagnostics;
+ arma::mat low_rank_residual_diagnostics,low_rank_residual_chain_diagnostics;
  arma::vec final_vb,final_vg,final_ve,maf_effect_s_attempted,maf_effect_s_accepted,nsamples;
  std::vector<arma::mat> comp_prob;
  arma::mat ncomp,covb,covg,cove,vb,vg,ve;
@@ -70,6 +72,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  const int K=context.K,m=context.m,nt=context.nt,nchains=context.nchains,ncores=context.ncores;
  const int nit=context.nit,nburn=context.nburn,nthin=context.nthin,seed=context.seed;
  const int updateE_start=context.updateE_start,updateE_every=context.updateE_every,ld_swap_moves=context.ld_swap_moves;
+ const int low_rank_residual_rebuild_every=context.low_rank_residual_rebuild_every;
  const bool use_comp_init=context.use_comp_init,use_r_init=context.use_r_init;
  const bool estimate_maf_effect_s=context.estimate_maf_effect_s,use_maf_effect_s_prior_scale=context.use_maf_effect_s_prior_scale;
  const bool updateLDswap=context.updateLDswap,updateB=context.updateB,updateE=context.updateE,updatePi=context.updatePi;
@@ -118,6 +121,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_attempted_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_accepted_task(ntasks, arma::fill::zeros);
+ arma::ivec low_rank_residual_rebuild_count_task(ntasks, arma::fill::zeros);
+ arma::vec low_rank_residual_max_abs_drift_task(ntasks, arma::fill::zeros);
  arma::vec nsamples_task(ntasks, arma::fill::zeros);
  std::vector<arma::mat> comp_prob_task(static_cast<std::size_t>(ntasks));
  const int convergence_pi_count = convergence_probability ? (K == 2 ? 1 : K) : 0;
@@ -212,6 +217,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    double maf_effect_s_current = maf_effect_s_init;
    double maf_effect_s_attempted_t = 0.0;
    double maf_effect_s_accepted_t = 0.0;
+   int low_rank_residual_rebuild_count_t = 0;
+   double low_rank_residual_max_abs_drift_t = 0.0;
    arma::rowvec dynamic_prior_scale;
 
    double vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
@@ -366,9 +373,20 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      it >= updateE_start &&
      ((it - updateE_start) % updateE_every == 0);
 
+    if (op.uses_retained_low_rank() &&
+        low_rank_residual_rebuild_every > 0 &&
+        ((it + 1) % low_rank_residual_rebuild_every == 0)) {
+     const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
+     low_rank_residual_max_abs_drift_t = std::max(
+      low_rank_residual_max_abs_drift_t, drift
+     );
+     ++low_rank_residual_rebuild_count_t;
+    }
+
+    double fitted_quadratic_t = 0.0;
     if (do_updateE) {
      ensure_null_effects_bayesr_ST_csr(m, t, chain, it, b_t, comp_t);
-     op.rebuild(t, wy_t, b_t, r_t);
+     if (!op.uses_retained_low_rank()) op.rebuild(t, wy_t, b_t, r_t);
      const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
       op,
       t,
@@ -388,45 +406,41 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      min_residual_scale_t = std::min(min_residual_scale_t, diag.residual_scale);
      max_nonzero_components_t = std::max(max_nonzero_components_t, diag.nonzero_components);
      max_abs_effect_t = std::max(max_abs_effect_t, diag.max_abs_b);
-     max_fitted_quadratic_t = std::max(max_fitted_quadratic_t, std::abs(diag.bXb));
+     max_fitted_quadratic_t = std::max(
+      max_fitted_quadratic_t, std::abs(diag.fitted_quadratic)
+     );
      ++n_updateE_t;
      check_residual_scale_bayesr_ST_csr(
       op,
-      m,
+      diag,
       t,
       chain,
       it,
-      nue,
       ve_t,
       vb_t,
       mixture_var_vec,
       b_t,
       r_t,
-      comp_t,
-      wy_t,
       sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
       yy_vec(static_cast<arma::uword>(t)),
       n[t],
       adjE
      );
-     sampleE_ST_operator(
-      op,
-      t,
+     sampleE_ST_operator_from_scale(
       nue,
       ve_t,
-      b_t,
-      wy_t,
-      r_t,
-      sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
-      yy_vec(static_cast<arma::uword>(t)),
+      diag.residual_scale,
       n[t],
       gen_t
      );
+     fitted_quadratic_t = diag.fitted_quadratic;
+    } else {
+     fitted_quadratic_t = op.fitted_quadratic(t, b_t, wy_t, r_t);
     }
 
     if (updatePi) samplePi_bayesr_ST_csr(comp_t, pi_t, alpha, gen_t);
 
-    vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
+    vg_t = fitted_quadratic_t / static_cast<double>(n[t]);
     vle_t = computeLE_bayesr_ST_csr(m, b_t, ww_t, n[t]);
     vld_t = vg_t - vle_t;
     vei_t = ve_t + adjE * vg_t;
@@ -476,6 +490,14 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     }
    }
 
+   if (op.uses_retained_low_rank()) {
+    const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
+    low_rank_residual_max_abs_drift_t = std::max(
+     low_rank_residual_max_abs_drift_t, drift
+    );
+    ++low_rank_residual_rebuild_count_t;
+   }
+
    if (nsamples_t <= 0.0) nsamples_t = 1.0;
    bm_t /= nsamples_t;
    dm_t /= nsamples_t;
@@ -512,6 +534,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
    maf_effect_s_attempted_task(task_u) = maf_effect_s_attempted_t;
    maf_effect_s_accepted_task(task_u) = maf_effect_s_accepted_t;
+   low_rank_residual_rebuild_count_task(task_u) = low_rank_residual_rebuild_count_t;
+   low_rank_residual_max_abs_drift_task(task_u) = low_rank_residual_max_abs_drift_t;
    nsamples_task(task_u) = nsamples_t;
    comp_prob_task[static_cast<std::size_t>(task)] = comp_prob_t;
    ncomp_task[static_cast<std::size_t>(task)] = arma::sum(comp_prob_t, 0).t();
@@ -563,6 +587,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  arma::mat updateE_diagnostics(ntasks, 9, arma::fill::zeros);
  arma::mat ld_swap_diagnostics(nt, 3, arma::fill::zeros);
  arma::mat ld_swap_chain_diagnostics(ntasks, 5, arma::fill::zeros);
+ arma::mat low_rank_residual_diagnostics(nt, 3, arma::fill::zeros);
+ arma::mat low_rank_residual_chain_diagnostics(ntasks, 5, arma::fill::zeros);
  arma::vec maf_effect_s_attempted(nt, arma::fill::zeros);
  arma::vec maf_effect_s_accepted(nt, arma::fill::zeros);
  arma::vec nsamples(nt, arma::fill::zeros);
@@ -593,6 +619,25 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    attempted > 0.0 ? accepted / attempted : 0.0;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 0) += attempted;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 1) += accepted;
+  low_rank_residual_chain_diagnostics(task_u, 0) = task_trait;
+  low_rank_residual_chain_diagnostics(task_u, 1) = task_chain;
+  low_rank_residual_chain_diagnostics(task_u, 2) = low_rank_residual_rebuild_every;
+  low_rank_residual_chain_diagnostics(task_u, 3) =
+   low_rank_residual_rebuild_count_task(task_u);
+  low_rank_residual_chain_diagnostics(task_u, 4) =
+   low_rank_residual_max_abs_drift_task(task_u);
+  low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 0) =
+   low_rank_residual_rebuild_every;
+  low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 1) =
+   std::max(
+    low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 1),
+    static_cast<double>(low_rank_residual_rebuild_count_task(task_u))
+   );
+  low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 2) =
+   std::max(
+    low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 2),
+    low_rank_residual_max_abs_drift_task(task_u)
+   );
   maf_effect_s_attempted(static_cast<arma::uword>(task_trait)) +=
    maf_effect_s_attempted_task(task_u);
   maf_effect_s_accepted(static_cast<arma::uword>(task_trait)) +=
@@ -716,6 +761,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
   std::move(component_mean),std::move(b_out),std::move(r_out),std::move(component_out),std::move(vbs),std::move(vgs),std::move(ves),
   std::move(vle),std::move(vld),std::move(pis),std::move(maf_effect_s),std::move(final_pi),std::move(mean_pi),
   std::move(updateE_diagnostics),std::move(ld_swap_diagnostics),std::move(ld_swap_chain_diagnostics),
+  std::move(low_rank_residual_diagnostics),std::move(low_rank_residual_chain_diagnostics),
   std::move(final_vb),std::move(final_vg),std::move(final_ve),std::move(maf_effect_s_attempted),std::move(maf_effect_s_accepted),
   std::move(nsamples),std::move(comp_prob),std::move(ncomp),std::move(covb),std::move(covg),std::move(cove),std::move(vb),std::move(vg),std::move(ve)};
 }

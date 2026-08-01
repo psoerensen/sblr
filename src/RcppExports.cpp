@@ -818,8 +818,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_block_low_rank_contract_internal
-Rcpp::List stblr_block_low_rank_contract_internal(Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, Rcpp::NumericMatrix wy, Rcpp::NumericVector effects, double eigen_prop);
-RcppExport SEXP _sblr_stblr_block_low_rank_contract_internal(SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP wySEXP, SEXP effectsSEXP, SEXP eigen_propSEXP) {
+Rcpp::List stblr_block_low_rank_contract_internal(Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, Rcpp::NumericMatrix wy, Rcpp::NumericVector effects, double eigen_prop, double yy, double residual_perturbation);
+RcppExport SEXP _sblr_stblr_block_low_rank_contract_internal(SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP wySEXP, SEXP effectsSEXP, SEXP eigen_propSEXP, SEXP yySEXP, SEXP residual_perturbationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -832,7 +832,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type wy(wySEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type effects(effectsSEXP);
     Rcpp::traits::input_parameter< double >::type eigen_prop(eigen_propSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_block_low_rank_contract_internal(bed_files, n_bed, cls, rows, af, block_start, wy, effects, eigen_prop));
+    Rcpp::traits::input_parameter< double >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< double >::type residual_perturbation(residual_perturbationSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_block_low_rank_contract_internal(bed_files, n_bed, cls, rows, af, block_start, wy, effects, eigen_prop, yy, residual_perturbation));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -893,8 +895,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_cpg_omp_csr_block_eigen
-Rcpp::List stblr_cpg_omp_csr_block_eigen(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale, bool estimate_maf_effect_s, double maf_effect_s_init, Rcpp::NumericVector maf_effect_s_prior, double maf_effect_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h, Rcpp::IntegerVector convergence_markers, bool convergence_b, bool convergence_d, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string representation, double eigen_prop);
-RcppExport SEXP _sblr_stblr_cpg_omp_csr_block_eigen(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP maf_effect_s_prior_scaleSEXP, SEXP estimate_maf_effect_sSEXP, SEXP maf_effect_s_initSEXP, SEXP maf_effect_s_priorSEXP, SEXP maf_effect_s_proposal_sdSEXP, SEXP maf_effect_s_log_hSEXP, SEXP convergence_markersSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP representationSEXP, SEXP eigen_propSEXP) {
+Rcpp::List stblr_cpg_omp_csr_block_eigen(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale, bool estimate_maf_effect_s, double maf_effect_s_init, Rcpp::NumericVector maf_effect_s_prior, double maf_effect_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h, Rcpp::IntegerVector convergence_markers, bool convergence_b, bool convergence_d, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string representation, double eigen_prop, int low_rank_residual_rebuild_every);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_block_eigen(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP maf_effect_s_prior_scaleSEXP, SEXP estimate_maf_effect_sSEXP, SEXP maf_effect_s_initSEXP, SEXP maf_effect_s_priorSEXP, SEXP maf_effect_s_proposal_sdSEXP, SEXP maf_effect_s_log_hSEXP, SEXP convergence_markersSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP representationSEXP, SEXP eigen_propSEXP, SEXP low_rank_residual_rebuild_everySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -955,7 +957,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type eigen_eta(eigen_etaSEXP);
     Rcpp::traits::input_parameter< std::string >::type representation(representationSEXP);
     Rcpp::traits::input_parameter< double >::type eigen_prop(eigen_propSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_block_eigen(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers, convergence_b, convergence_d, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop));
+    Rcpp::traits::input_parameter< int >::type low_rank_residual_rebuild_every(low_rank_residual_rebuild_everySEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_block_eigen(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers, convergence_b, convergence_d, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stblr_low_rank_bayesc_hot_path_benchmark_internal
+Rcpp::List stblr_low_rank_bayesc_hot_path_benchmark_internal(int markers, int rank, int repetitions, int warmup, int seed);
+RcppExport SEXP _sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal(SEXP markersSEXP, SEXP rankSEXP, SEXP repetitionsSEXP, SEXP warmupSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type markers(markersSEXP);
+    Rcpp::traits::input_parameter< int >::type rank(rankSEXP);
+    Rcpp::traits::input_parameter< int >::type repetitions(repetitionsSEXP);
+    Rcpp::traits::input_parameter< int >::type warmup(warmupSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_low_rank_bayesc_hot_path_benchmark_internal(markers, rank, repetitions, warmup, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1085,8 +1103,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // stblr_cpg_omp_csr_bayesr_block_eigen
-Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, int updateE_start, int updateE_every, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale, bool estimate_maf_effect_s, double maf_effect_s_init, Rcpp::NumericVector maf_effect_s_prior, double maf_effect_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h, Rcpp::IntegerVector convergence_markers, bool convergence_probability, bool convergence_b, bool convergence_d, bool convergence_component, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string representation, double eigen_prop);
-RcppExport SEXP _sblr_stblr_cpg_omp_csr_bayesr_block_eigen(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateE_startSEXP, SEXP updateE_everySEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP maf_effect_s_prior_scaleSEXP, SEXP estimate_maf_effect_sSEXP, SEXP maf_effect_s_initSEXP, SEXP maf_effect_s_priorSEXP, SEXP maf_effect_s_proposal_sdSEXP, SEXP maf_effect_s_log_hSEXP, SEXP convergence_markersSEXP, SEXP convergence_probabilitySEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP convergence_componentSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP representationSEXP, SEXP eigen_propSEXP) {
+Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, int updateE_start, int updateE_every, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale, bool estimate_maf_effect_s, double maf_effect_s_init, Rcpp::NumericVector maf_effect_s_prior, double maf_effect_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h, Rcpp::IntegerVector convergence_markers, bool convergence_probability, bool convergence_b, bool convergence_d, bool convergence_component, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string representation, double eigen_prop, int low_rank_residual_rebuild_every);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_bayesr_block_eigen(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateE_startSEXP, SEXP updateE_everySEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP maf_effect_s_prior_scaleSEXP, SEXP estimate_maf_effect_sSEXP, SEXP maf_effect_s_initSEXP, SEXP maf_effect_s_priorSEXP, SEXP maf_effect_s_proposal_sdSEXP, SEXP maf_effect_s_log_hSEXP, SEXP convergence_markersSEXP, SEXP convergence_probabilitySEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP convergence_componentSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP representationSEXP, SEXP eigen_propSEXP, SEXP low_rank_residual_rebuild_everySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1151,7 +1169,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type eigen_eta(eigen_etaSEXP);
     Rcpp::traits::input_parameter< std::string >::type representation(representationSEXP);
     Rcpp::traits::input_parameter< double >::type eigen_prop(eigen_propSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_bayesr_block_eigen(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop));
+    Rcpp::traits::input_parameter< int >::type low_rank_residual_rebuild_every(low_rank_residual_rebuild_everySEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_bayesr_block_eigen(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stblr_low_rank_bayesr_hot_path_benchmark_internal
+Rcpp::List stblr_low_rank_bayesr_hot_path_benchmark_internal(int markers, int rank, int repetitions, int warmup, int seed);
+RcppExport SEXP _sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal(SEXP markersSEXP, SEXP rankSEXP, SEXP repetitionsSEXP, SEXP warmupSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type markers(markersSEXP);
+    Rcpp::traits::input_parameter< int >::type rank(rankSEXP);
+    Rcpp::traits::input_parameter< int >::type repetitions(repetitionsSEXP);
+    Rcpp::traits::input_parameter< int >::type warmup(warmupSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_low_rank_bayesr_hot_path_benchmark_internal(markers, rank, repetitions, warmup, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1741,12 +1775,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_sparseLD_read_CSR", (DL_FUNC) &_sblr_sparseLD_read_CSR, 2},
     {"_sblr_stblr_color_blocks_from_ld", (DL_FUNC) &_sblr_stblr_color_blocks_from_ld, 7},
     {"_sblr_stblr_block_eigen_contract_internal", (DL_FUNC) &_sblr_stblr_block_eigen_contract_internal, 12},
-    {"_sblr_stblr_block_low_rank_contract_internal", (DL_FUNC) &_sblr_stblr_block_low_rank_contract_internal, 9},
+    {"_sblr_stblr_block_low_rank_contract_internal", (DL_FUNC) &_sblr_stblr_block_low_rank_contract_internal, 11},
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 46},
-    {"_sblr_stblr_cpg_omp_csr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_block_eigen, 57},
+    {"_sblr_stblr_cpg_omp_csr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_block_eigen, 58},
+    {"_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal", (DL_FUNC) &_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal, 5},
     {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 55},
     {"_sblr_stblr_cpg_omp_csr_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr, 50},
-    {"_sblr_stblr_cpg_omp_csr_bayesr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr_block_eigen, 61},
+    {"_sblr_stblr_cpg_omp_csr_bayesr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr_block_eigen, 62},
+    {"_sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal", (DL_FUNC) &_sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal, 5},
     {"_sblr_stblr_cpg_omp_csr_group_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_group_annot, 49},
     {"_sblr_stblr_cpg_omp_csr_prior", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_prior, 44},
     {"_sblr_stblr_cpg_omp_csr_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_scheduled, 44},

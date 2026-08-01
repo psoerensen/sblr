@@ -14,10 +14,12 @@
 
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <numeric>
 #include <random>
@@ -1454,6 +1456,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
   std::vector<int> convergence_markers,
   bool convergence_b,
   bool convergence_d,
+  int low_rank_residual_rebuild_every,
   OperatorFactory make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1724,6 +1727,26 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  );
  const auto& op = operator_context.op;
  const LDLDFriends& ld_swap_friends = operator_context.ld_swap_friends;
+ if (low_rank_residual_rebuild_every < 0) {
+  throw std::runtime_error("low_rank_residual_rebuild_every must be non-negative.");
+ }
+ if (op.uses_retained_low_rank() && use_r_init) {
+  throw std::runtime_error(
+   "r_init is not supported for representation = \"retained_low_rank\"; "
+   "a reduced-residual restart contract has not been implemented."
+  );
+ }
+ if (op.uses_retained_low_rank() && rebuild_r_before_updateE) {
+  throw std::runtime_error(
+   "rebuild_r_before_updateE is incompatible with retained low rank; use "
+   "low_rank_residual_rebuild_every instead."
+  );
+ }
+ if (!op.uses_retained_low_rank() && low_rank_residual_rebuild_every != 0) {
+  throw std::runtime_error(
+   "low_rank_residual_rebuild_every is only supported by retained low rank."
+  );
+ }
 
  // --------------------------------------------------------------------------
  // Marker update order based on max single-trait marginal effect
@@ -1801,6 +1824,8 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_attempted_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_accepted_task(ntasks, arma::fill::zeros);
+ arma::ivec low_rank_residual_rebuild_count_task(ntasks, arma::fill::zeros);
+ arma::vec low_rank_residual_max_abs_drift_task(ntasks, arma::fill::zeros);
  std::vector<arma::mat> convergence_b_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::imat> convergence_d_task(static_cast<std::size_t>(ntasks));
  const arma::uword convergence_marker_count=static_cast<arma::uword>(convergence_markers.size());
@@ -1983,6 +2008,8 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    double maf_effect_s_current = maf_effect_s_init;
    double maf_effect_s_attempted_t = 0.0;
    double maf_effect_s_accepted_t = 0.0;
+   int low_rank_residual_rebuild_count_t = 0;
+   double low_rank_residual_max_abs_drift_t = 0.0;
 
    for (int it = 0; it < nit + nburn; ++it) {
     if (estimate_maf_effect_s) {
@@ -2130,6 +2157,16 @@ Rcpp::List stblr_cpg_omp_csr_impl(
      if (accepted_s) maf_effect_s_accepted_t += 1.0;
     }
 
+    if (op.uses_retained_low_rank() &&
+        low_rank_residual_rebuild_every > 0 &&
+        ((it + 1) % low_rank_residual_rebuild_every == 0)) {
+     const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
+     low_rank_residual_max_abs_drift_t = std::max(
+      low_rank_residual_max_abs_drift_t, drift
+     );
+     ++low_rank_residual_rebuild_count_t;
+    }
+
     if (updateE) {
      if (rebuild_r_before_updateE) {
       op.rebuild(t, wy_t, b_t, r_t);
@@ -2243,6 +2280,14 @@ Rcpp::List stblr_cpg_omp_csr_impl(
     }
    }
 
+   if (op.uses_retained_low_rank()) {
+    const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
+    low_rank_residual_max_abs_drift_t = std::max(
+     low_rank_residual_max_abs_drift_t, drift
+    );
+    ++low_rank_residual_rebuild_count_t;
+   }
+
    if (nsamples_t <= 0.0) nsamples_t = 1.0;
 
    bm_t /= nsamples_t;
@@ -2287,6 +2332,10 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
    maf_effect_s_attempted_task(task_u) = maf_effect_s_attempted_t;
    maf_effect_s_accepted_task(task_u) = maf_effect_s_accepted_t;
+   low_rank_residual_rebuild_count_task(task_u) =
+    low_rank_residual_rebuild_count_t;
+   low_rank_residual_max_abs_drift_task(task_u) =
+    low_rank_residual_max_abs_drift_t;
 
 #ifdef _OPENMP
    task_seconds[static_cast<std::size_t>(task)] = omp_get_wtime() - wall_start;
@@ -2524,6 +2573,8 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  Rcpp::IntegerVector n_used(nt);
  Rcpp::NumericVector seconds_mean(nt);
  Rcpp::NumericVector seconds_max(nt);
+ Rcpp::NumericVector low_rank_residual_rebuild_count(nt);
+ Rcpp::NumericVector low_rank_residual_max_abs_drift(nt);
  for (int t = 0; t < nt; ++t) {
   nsamples[t] = nsamples_vec(static_cast<arma::uword>(t));
   n_used[t] = n[static_cast<std::size_t>(t)];
@@ -2536,7 +2587,18 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    sec_max = std::max(sec_max, sec);
   }
   seconds_mean[t] = sec_sum / static_cast<double>(nchains);
-  seconds_max[t] = sec_max;
+   seconds_max[t] = sec_max;
+  for (int chain = 0; chain < nchains; ++chain) {
+   const arma::uword task_u = static_cast<arma::uword>(t * nchains + chain);
+   low_rank_residual_rebuild_count[t] = std::max(
+    low_rank_residual_rebuild_count[t],
+    static_cast<double>(low_rank_residual_rebuild_count_task(task_u))
+   );
+   low_rank_residual_max_abs_drift[t] = std::max(
+    low_rank_residual_max_abs_drift[t],
+    low_rank_residual_max_abs_drift_task(task_u)
+   );
+  }
  }
 
  Rcpp::List marker = Rcpp::List::create(
@@ -2586,6 +2648,16 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  if (operator_context.diagnostics.size() > 0) {
   diagnostics["block_eigen"] = operator_context.diagnostics;
  }
+ if (op.uses_retained_low_rank()) {
+  diagnostics["low_rank_residual"] = Rcpp::List::create(
+   Rcpp::Named("low_rank_residual_rebuild_every") =
+    Rcpp::IntegerVector(nt, low_rank_residual_rebuild_every),
+   Rcpp::Named("low_rank_residual_rebuild_count") =
+    low_rank_residual_rebuild_count,
+   Rcpp::Named("low_rank_residual_max_abs_drift") =
+    low_rank_residual_max_abs_drift
+  );
+ }
 
  Rcpp::List chains = R_NilValue;
  if (keep_chains) {
@@ -2614,6 +2686,17 @@ Rcpp::List stblr_cpg_omp_csr_impl(
     chain_ld(0, 0) = attempted;
     chain_ld(0, 1) = accepted;
     chain_ld(0, 2) = attempted > 0.0 ? accepted / attempted : 0.0;
+    Rcpp::List chain_low_rank_residual = R_NilValue;
+    if (op.uses_retained_low_rank()) {
+     chain_low_rank_residual = Rcpp::List::create(
+      Rcpp::Named("low_rank_residual_rebuild_every") =
+       low_rank_residual_rebuild_every,
+      Rcpp::Named("low_rank_residual_rebuild_count") =
+       low_rank_residual_rebuild_count_task(task_u),
+      Rcpp::Named("low_rank_residual_max_abs_drift") =
+       low_rank_residual_max_abs_drift_task(task_u)
+     );
+    }
     Rcpp::List chain_selection = Rcpp::List::create(
      Rcpp::Named("trace") = R_NilValue,
      Rcpp::Named("acceptance") = R_NilValue
@@ -2656,7 +2739,8 @@ Rcpp::List stblr_cpg_omp_csr_impl(
       Rcpp::Named("component") = R_NilValue,
       Rcpp::Named("marker_index") = Rcpp::wrap(convergence_markers)),
      Rcpp::Named("diagnostics") = Rcpp::List::create(
-      Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue
+      Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue,
+      Rcpp::Named("low_rank_residual") = chain_low_rank_residual
      )
     );
    }
@@ -2809,7 +2893,7 @@ Rcpp::List stblr_cpg_omp_csr(
   maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers), convergence_b,
   convergence_d,
-  make_csr_operator
+  0, make_csr_operator
  );
 }
 
@@ -2871,7 +2955,8 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   double eigen_tau = 0.01,
   double eigen_eta = 0.0,
   std::string representation = "dense_reconstructed",
-  double eigen_prop = 0.995
+  double eigen_prop = 0.995,
+  int low_rank_residual_rebuild_every = 100
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -2901,7 +2986,10 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
  if (representation != "low_rank" && representation != "dense_reconstructed")
   throw std::runtime_error("unknown block-eigen representation.");
  if (representation == "low_rank" && use_r_init)
-  throw std::runtime_error("marker-space r_init is unavailable for the low-rank representation.");
+  throw std::runtime_error(
+   "r_init is not supported for representation = \"retained_low_rank\"; "
+   "a reduced-residual restart contract has not been implemented."
+  );
 
  auto make_block_eigen_operator = [&](int m,
                                       const std::vector<double>& xx,
@@ -2982,6 +3070,159 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers), convergence_b,
   convergence_d,
-  make_block_eigen_operator
+  low_rank_residual_rebuild_every, make_block_eigen_operator
+ );
+}
+
+// Development-only benchmark of the real retained-low-rank BayesC hot path.
+// Factor construction is intentionally outside every measured region.
+// [[Rcpp::export]]
+Rcpp::List stblr_low_rank_bayesc_hot_path_benchmark_internal(
+  int markers = 1000, int rank = 250, int repetitions = 7,
+  int warmup = 2, int seed = 7301
+) {
+ BlockLowRankOperator op =
+  sblr::core::make_block_low_rank_hot_path_fixture(markers, rank);
+ const arma::rowvec& diagonal = op.diag();
+ arma::rowvec score(static_cast<arma::uword>(markers), arma::fill::zeros);
+ const sblr::core::BlockLowRankBlock& block = op.blocks[0];
+ for (int marker = 0; marker < markers; ++marker) {
+  const float* factor_ptr = block.factor.data() +
+   static_cast<std::size_t>(marker) * static_cast<std::size_t>(rank);
+  for (int k = 0; k < rank; ++k) {
+   score(static_cast<arma::uword>(marker)) +=
+    static_cast<double>(factor_ptr[k]) *
+    block.transformed_score(0, static_cast<arma::uword>(k));
+  }
+ }
+ arma::rowvec zero_effects(static_cast<arma::uword>(markers), arma::fill::zeros);
+ arma::rowvec base_residual;
+ op.rebuild(0, score, zero_effects, base_residual);
+ volatile double sink = 0.0;
+
+ auto measure = [&](const std::function<void()>& operation,
+                    double divisor = 1.0) {
+  if (repetitions <= 0 || warmup < 0)
+   throw std::runtime_error("benchmark repetitions/warmup are invalid.");
+  for (int i = 0; i < warmup; ++i) operation();
+  std::vector<double> seconds(static_cast<std::size_t>(repetitions));
+  for (int i = 0; i < repetitions; ++i) {
+   const auto start = std::chrono::steady_clock::now();
+   operation();
+   const auto stop = std::chrono::steady_clock::now();
+   seconds[static_cast<std::size_t>(i)] =
+    std::chrono::duration<double>(stop - start).count() / divisor;
+  }
+  std::sort(seconds.begin(), seconds.end());
+  return Rcpp::NumericVector::create(
+   Rcpp::Named("median_seconds") =
+    seconds[static_cast<std::size_t>(repetitions / 2)],
+   Rcpp::Named("minimum_seconds") = seconds.front()
+  );
+ };
+
+ const int coordinate_batches = 10000;
+ Rcpp::List timings;
+ timings["corrected_rhs_1000"] = measure([&]() {
+  double value = 0.0;
+  for (int call = 0; call < 1000; ++call)
+   value += op.corrected_rhs(call % markers, 0.0, base_residual);
+  sink = value;
+ });
+ timings["apply_difference_1000"] = measure([&]() {
+  arma::rowvec residual = base_residual;
+  for (int call = 0; call < 1000; ++call)
+   op.apply_difference(call % markers, (call & 1) ? 1e-8 : -1e-8, residual);
+  sink = residual(0);
+ });
+ timings["fitted_quadratic"] = measure([&]() {
+  double value = 0.0;
+  for (int call = 0; call < coordinate_batches; ++call)
+   value += op.fitted_quadratic(0, zero_effects, score, base_residual);
+  sink = value;
+ }, static_cast<double>(coordinate_batches));
+ arma::rowvec reference_effects(static_cast<arma::uword>(markers));
+ for (int marker = 0; marker < markers; ++marker)
+  reference_effects(static_cast<arma::uword>(marker)) =
+   0.001 * std::sin(0.1 * static_cast<double>(marker + 1));
+ timings["quadratic_form_reference"] = measure([&]() {
+  sink = op.quadratic_form(reference_effects);
+ });
+ timings["residual_rebuild"] = measure([&]() {
+  arma::rowvec residual;
+  op.rebuild(0, score, reference_effects, residual);
+  sink = residual(0);
+ });
+
+ auto bayesc_sweep = [&]() {
+  arma::rowvec effects = zero_effects;
+  arma::rowvec residual = base_residual;
+  arma::Row<int> state(static_cast<arma::uword>(markers), arma::fill::zeros);
+  std::vector<double> pi = {0.5, 0.5};
+  std::mt19937 generator(static_cast<unsigned int>(seed));
+  for (int marker = 0; marker < markers; ++marker) {
+   sampleBetaC_ST_csr_unscaled(
+    marker, pi, 0.2, 1.0, diagonal, residual, effects, state, op, generator
+   );
+  }
+  sink = effects(0) + residual(0);
+ };
+ timings["bayesc_marker_sweep"] = measure(bayesc_sweep);
+ timings["bayesc_gibbs_iteration"] = measure([&]() {
+  arma::rowvec effects = zero_effects;
+  arma::rowvec residual = base_residual;
+  arma::Row<int> state(static_cast<arma::uword>(markers), arma::fill::zeros);
+  std::vector<double> pi = {0.5, 0.5};
+  double vb = 0.2;
+  double ve = 1.0;
+  std::mt19937 generator(static_cast<unsigned int>(seed));
+  for (int marker = 0; marker < markers; ++marker) {
+   sampleBetaC_ST_csr_unscaled(
+    marker, pi, vb, ve, diagonal, residual, effects, state, op, generator
+   );
+  }
+  sampleB_ST_csr_unscaled(markers, 4.0, vb, effects, state, 0.1, generator);
+  sampleE_ST_operator(
+   op, 0, 4.0, ve, effects, score, residual, 0.1,
+   2.0 * op.transformed_score_norm_squared(0) + 1.0,
+   markers, generator
+  );
+  samplePi_ST(state, pi, 2.0, 2.0, generator);
+  sink = op.fitted_quadratic(0, effects, score, residual) /
+   static_cast<double>(markers) + vb + ve + pi[1];
+ });
+ timings["bayesc_gibbs_iteration_direct_reference"] = measure([&]() {
+  arma::rowvec effects = zero_effects;
+  arma::rowvec residual = base_residual;
+  arma::Row<int> state(static_cast<arma::uword>(markers), arma::fill::zeros);
+  std::vector<double> pi = {0.5, 0.5};
+  double vb = 0.2;
+  double ve = 1.0;
+  std::mt19937 generator(static_cast<unsigned int>(seed));
+  for (int marker = 0; marker < markers; ++marker) {
+   sampleBetaC_ST_csr_unscaled(
+    marker, pi, vb, ve, diagonal, residual, effects, state, op, generator
+   );
+  }
+  sampleB_ST_csr_unscaled(markers, 4.0, vb, effects, state, 0.1, generator);
+  sampleE_ST_operator(
+   op, 0, 4.0, ve, effects, score, residual, 0.1,
+   2.0 * op.transformed_score_norm_squared(0) + 1.0,
+   markers, generator
+  );
+  samplePi_ST(state, pi, 2.0, 2.0, generator);
+  sink = op.quadratic_form(effects) / static_cast<double>(markers) +
+   vb + ve + pi[1];
+ });
+
+ return Rcpp::List::create(
+  Rcpp::Named("markers") = markers,
+  Rcpp::Named("rank") = rank,
+  Rcpp::Named("repetitions") = repetitions,
+  Rcpp::Named("warmup") = warmup,
+  Rcpp::Named("updates_enabled") =
+   "marker effects/states, effect variance, residual variance, pi, genetic variance",
+  Rcpp::Named("timings") = timings,
+  Rcpp::Named("sink") = static_cast<double>(sink)
  );
 }

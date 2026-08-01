@@ -8,8 +8,10 @@
 #include "st_ld_operator.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <numeric>
 #include <random>
@@ -125,6 +127,7 @@ struct BayesRUpdateEDiagnostics {
  double bwy = 0.0;
  double br = 0.0;
  double bXb = 0.0;
+ double fitted_quadratic = 0.0;
  double sse = 0.0;
  double residual_scale = 0.0;
  int nonzero_components = 0;
@@ -144,6 +147,7 @@ inline BayesRUpdateEDiagnostics residual_diagnostics_bayesr_ST_csr(
 ) {
  BayesRUpdateEDiagnostics out;
  residual_sse_terms_bayesr_ST_csr(m, b, wy, r, yy, out.bwy, out.br, out.bXb, out.sse);
+ out.fitted_quadratic = out.bXb;
  out.residual_scale = out.sse + nue * sse_prior;
 
  for (int i = 0; i < m; ++i) {
@@ -163,10 +167,11 @@ inline BayesRUpdateEDiagnostics residual_diagnostics_bayesr_ST_csr(
   double sse_prior, double yy
 ) {
  BayesRUpdateEDiagnostics out;
- out.bwy = op.projected_score_dot(trait, b, wy);
- out.bXb = op.quadratic_form(b);
- out.br = out.bwy - out.bXb;
  out.sse = op.residual_sse(trait, yy, b, wy, r);
+ out.fitted_quadratic = op.fitted_quadratic(trait, b, wy, r);
+ out.bXb = out.fitted_quadratic;
+ out.bwy = 0.5 * (yy + out.fitted_quadratic - out.sse);
+ out.br = out.bwy - out.fitted_quadratic;
  out.residual_scale = out.sse + nue * sse_prior;
  for (int i = 0; i < m; ++i) {
   const arma::uword iu = static_cast<arma::uword>(i);
@@ -212,34 +217,20 @@ inline void ensure_null_effects_bayesr_ST_csr(
 }
 
 inline void check_residual_scale_bayesr_ST_csr(
-  int m,
+  const BayesRUpdateEDiagnostics& diag,
   int trait,
   int chain,
   int iter,
-  double nue,
   double ve,
   double vb,
   const arma::vec& mixture_var,
   const arma::rowvec& b,
   const arma::rowvec& r,
-  const arma::Row<int>& comp,
-  const arma::rowvec& wy,
   double sse_prior,
   double yy,
   int n,
   double adjE
 ) {
- const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
-  m,
-  nue,
-  b,
-  r,
-  comp,
-  wy,
-  sse_prior,
-  yy
- );
-
  if (std::isfinite(diag.residual_scale) && diag.residual_scale > 0.0) return;
 
  const double b_min = b.n_elem > 0 ? b.min() : std::numeric_limits<double>::quiet_NaN();
@@ -281,14 +272,11 @@ inline void check_residual_scale_bayesr_ST_csr(
 
 template <typename OpT>
 inline void check_residual_scale_bayesr_ST_csr(
-  const OpT& op, int m, int trait, int chain, int iter, double nue,
+  const OpT&, const BayesRUpdateEDiagnostics& diag,
+  int trait, int chain, int iter,
   double, double, const arma::vec&, const arma::rowvec& b,
-  const arma::rowvec& r, const arma::Row<int>& comp, const arma::rowvec& wy,
-  double sse_prior, double yy, int, double
+  const arma::rowvec& r, double, double, int, double
 ) {
- const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
-  op, trait, m, nue, b, r, comp, wy, sse_prior, yy
- );
  if (!std::isfinite(diag.residual_scale) || diag.residual_scale <= 0.0)
   throw std::runtime_error(
    "BayesR operator residual scale is invalid. trait=" + std::to_string(trait) +
@@ -705,13 +693,14 @@ inline void throw_ld_swap_error_bayesr_ST_csr(
 }
 
 inline void check_residual_scale_bayesr_ST_csr(
-  const CsrOperator&, int m, int trait, int chain, int iter, double nue,
+  const CsrOperator&, const BayesRUpdateEDiagnostics& diag,
+  int trait, int chain, int iter,
   double ve, double vb, const arma::vec& mixture_var, const arma::rowvec& b,
-  const arma::rowvec& r, const arma::Row<int>& comp, const arma::rowvec& wy,
+  const arma::rowvec& r,
   double sse_prior, double yy, int n, double adjE
 ) {
  check_residual_scale_bayesr_ST_csr(
-  m, trait, chain, iter, nue, ve, vb, mixture_var, b, r, comp, wy,
+  diag, trait, chain, iter, ve, vb, mixture_var, b, r,
   sse_prior, yy, n, adjE
  );
 }
@@ -1283,6 +1272,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   bool convergence_b,
   bool convergence_d,
   bool convergence_component,
+  int low_rank_residual_rebuild_every,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1484,6 +1474,26 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  );
  const auto& op = operator_context.op;
  const BayesRLDLDFriends& ld_swap_friends = operator_context.ld_swap_friends;
+ if (low_rank_residual_rebuild_every < 0) {
+  throw std::runtime_error("low_rank_residual_rebuild_every must be non-negative.");
+ }
+ if (op.uses_retained_low_rank() && use_r_init) {
+  throw std::runtime_error(
+   "r_init is not supported for representation = \"retained_low_rank\"; "
+   "a reduced-residual restart contract has not been implemented."
+  );
+ }
+ if (op.uses_retained_low_rank() && rebuild_r_before_updateE) {
+  throw std::runtime_error(
+   "rebuild_r_before_updateE is incompatible with retained low rank; use "
+   "low_rank_residual_rebuild_every instead."
+  );
+ }
+ if (!op.uses_retained_low_rank() && low_rank_residual_rebuild_every != 0) {
+  throw std::runtime_error(
+   "low_rank_residual_rebuild_every is only supported by retained low rank."
+  );
+ }
 
  CsrBayesRExecutionContext<typename std::decay<decltype(op)>::type> execution_context;
  execution_context.op=&const_cast<typename std::decay<decltype(op)>::type&>(op);
@@ -1497,6 +1507,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  execution_context.K=K; execution_context.m=m; execution_context.nt=nt; execution_context.nchains=nchains;
  execution_context.ncores=ncores; execution_context.nit=nit; execution_context.nburn=nburn; execution_context.nthin=nthin;
  execution_context.seed=seed; execution_context.updateE_start=updateE_start; execution_context.updateE_every=updateE_every;
+ execution_context.low_rank_residual_rebuild_every=low_rank_residual_rebuild_every;
  execution_context.ld_swap_moves=ld_swap_moves; execution_context.use_comp_init=use_comp_init; execution_context.use_r_init=use_r_init;
  execution_context.estimate_maf_effect_s=estimate_maf_effect_s; execution_context.use_maf_effect_s_prior_scale=use_maf_effect_s_prior_scale;
  execution_context.updateLDswap=updateLDswap; execution_context.updateB=updateB; execution_context.updateE=updateE; execution_context.updatePi=updatePi;
@@ -1527,6 +1538,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  const arma::mat &maf_effect_s=execution_result.maf_effect_s,&final_pi=execution_result.final_pi,&mean_pi=execution_result.mean_pi;
  const arma::mat &updateE_diagnostics=execution_result.updateE_diagnostics,&ld_swap_diagnostics=execution_result.ld_swap_diagnostics;
  const arma::mat& ld_swap_chain_diagnostics=execution_result.ld_swap_chain_diagnostics;
+ const arma::mat& low_rank_residual_diagnostics=
+  execution_result.low_rank_residual_diagnostics;
+ const arma::mat& low_rank_residual_chain_diagnostics=
+  execution_result.low_rank_residual_chain_diagnostics;
  const arma::vec &final_vb=execution_result.final_vb,&final_vg=execution_result.final_vg,&final_ve=execution_result.final_ve;
  const arma::vec &maf_effect_s_attempted=execution_result.maf_effect_s_attempted,&maf_effect_s_accepted=execution_result.maf_effect_s_accepted,&nsamples=execution_result.nsamples;
  const std::vector<arma::mat>& comp_prob=execution_result.comp_prob; const arma::mat& ncomp=execution_result.ncomp;
@@ -1666,6 +1681,16 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  if (operator_context.diagnostics.size() > 0) {
   diagnostics["block_eigen"] = operator_context.diagnostics;
  }
+ if (op.uses_retained_low_rank()) {
+  diagnostics["low_rank_residual"] = Rcpp::List::create(
+   Rcpp::Named("low_rank_residual_rebuild_every") =
+    low_rank_residual_diagnostics.col(0),
+   Rcpp::Named("low_rank_residual_rebuild_count") =
+    low_rank_residual_diagnostics.col(1),
+   Rcpp::Named("low_rank_residual_max_abs_drift") =
+    low_rank_residual_diagnostics.col(2)
+  );
+ }
 
  Rcpp::List chains = R_NilValue;
  if (keep_chains) {
@@ -1698,6 +1723,17 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
     chain_ld(0, 0) = ld_swap_chain_diagnostics(task_u, 2);
     chain_ld(0, 1) = ld_swap_chain_diagnostics(task_u, 3);
     chain_ld(0, 2) = ld_swap_chain_diagnostics(task_u, 4);
+    Rcpp::List chain_low_rank_residual = R_NilValue;
+    if (op.uses_retained_low_rank()) {
+     chain_low_rank_residual = Rcpp::List::create(
+      Rcpp::Named("low_rank_residual_rebuild_every") =
+       low_rank_residual_chain_diagnostics(task_u, 2),
+      Rcpp::Named("low_rank_residual_rebuild_count") =
+       low_rank_residual_chain_diagnostics(task_u, 3),
+      Rcpp::Named("low_rank_residual_max_abs_drift") =
+       low_rank_residual_chain_diagnostics(task_u, 4)
+     );
+    }
 
     Rcpp::List chain_selection = Rcpp::List::create(
      Rcpp::Named("trace") = R_NilValue,
@@ -1744,8 +1780,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
      Rcpp::Named("selection") = chain_selection,
      Rcpp::Named("convergence_trace") = convergence_trace,
      Rcpp::Named("diagnostics") = Rcpp::List::create(
-      Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue,
-      Rcpp::Named("updateE") = updateE_diag
+     Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue,
+      Rcpp::Named("updateE") = updateE_diag,
+      Rcpp::Named("low_rank_residual") = chain_low_rank_residual
      )
     );
    }
@@ -1904,7 +1941,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers),
   convergence_probability, convergence_b, convergence_d,
-  convergence_component, make_csr_operator
+  convergence_component, 0, make_csr_operator
  );
 }
 
@@ -1970,7 +2007,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   double eigen_tau = 0.01,
   double eigen_eta = 0.0,
   std::string representation = "dense_reconstructed",
-  double eigen_prop = 0.995
+  double eigen_prop = 0.995,
+  int low_rank_residual_rebuild_every = 100
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -1997,7 +2035,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
  if (representation != "low_rank" && representation != "dense_reconstructed")
   throw std::runtime_error("unknown block-eigen representation.");
  if (representation == "low_rank" && use_r_init)
-  throw std::runtime_error("marker-space r_init is unavailable for the low-rank representation.");
+  throw std::runtime_error(
+   "r_init is not supported for representation = \"retained_low_rank\"; "
+   "a reduced-residual restart contract has not been implemented."
+  );
 
  auto make_block_eigen_operator = [&](int m,
                                       const std::vector<double>& xx,
@@ -2071,6 +2112,149 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers),
   convergence_probability, convergence_b, convergence_d,
-  convergence_component, make_block_eigen_operator
+  convergence_component, low_rank_residual_rebuild_every,
+  make_block_eigen_operator
+ );
+}
+
+// Development-only benchmark of the real retained-low-rank BayesR hot path.
+// Factor construction is intentionally outside every measured region.
+// [[Rcpp::export]]
+Rcpp::List stblr_low_rank_bayesr_hot_path_benchmark_internal(
+  int markers = 1000, int rank = 250, int repetitions = 7,
+  int warmup = 2, int seed = 7301
+) {
+ BlockLowRankOperator op =
+  sblr::core::make_block_low_rank_hot_path_fixture(markers, rank);
+ const arma::rowvec& diagonal = op.diag();
+ arma::rowvec score(static_cast<arma::uword>(markers), arma::fill::zeros);
+ const sblr::core::BlockLowRankBlock& block = op.blocks[0];
+ for (int marker = 0; marker < markers; ++marker) {
+  const float* factor_ptr = block.factor.data() +
+   static_cast<std::size_t>(marker) * static_cast<std::size_t>(rank);
+  for (int k = 0; k < rank; ++k) {
+   score(static_cast<arma::uword>(marker)) +=
+    static_cast<double>(factor_ptr[k]) *
+    block.transformed_score(0, static_cast<arma::uword>(k));
+  }
+ }
+ arma::rowvec zero_effects(static_cast<arma::uword>(markers), arma::fill::zeros);
+ arma::rowvec base_residual;
+ op.rebuild(0, score, zero_effects, base_residual);
+ arma::vec mixture_var = {0.0, 0.01, 0.1, 1.0};
+ const std::vector<double> base_pi = {0.7, 0.1, 0.1, 0.1};
+ const std::vector<double> alpha = {1.0, 1.0, 1.0, 1.0};
+ volatile double sink = 0.0;
+
+ auto measure = [&](const std::function<void()>& operation) {
+  if (repetitions <= 0 || warmup < 0)
+   throw std::runtime_error("benchmark repetitions/warmup are invalid.");
+  for (int i = 0; i < warmup; ++i) operation();
+  std::vector<double> seconds(static_cast<std::size_t>(repetitions));
+  for (int i = 0; i < repetitions; ++i) {
+   const auto start = std::chrono::steady_clock::now();
+   operation();
+   const auto stop = std::chrono::steady_clock::now();
+   seconds[static_cast<std::size_t>(i)] =
+    std::chrono::duration<double>(stop - start).count();
+  }
+  std::sort(seconds.begin(), seconds.end());
+  return Rcpp::NumericVector::create(
+   Rcpp::Named("median_seconds") =
+    seconds[static_cast<std::size_t>(repetitions / 2)],
+   Rcpp::Named("minimum_seconds") = seconds.front()
+  );
+ };
+
+ auto bayesr_sweep = [&]() {
+  arma::rowvec effects = zero_effects;
+  arma::rowvec residual = base_residual;
+  arma::Row<int> component(
+   static_cast<arma::uword>(markers), arma::fill::zeros
+  );
+  std::vector<double> pi = base_pi;
+  std::mt19937 generator(static_cast<unsigned int>(seed));
+  for (int marker = 0; marker < markers; ++marker) {
+   sampleBetaR_ST_csr_unscaled(
+    marker, pi, mixture_var, 0.2, 1.0, diagonal,
+    residual, effects, component, op, generator
+   );
+  }
+  sink = effects(0) + residual(0);
+ };
+ Rcpp::List timings;
+ timings["bayesr_marker_sweep"] = measure(bayesr_sweep);
+ timings["bayesr_gibbs_iteration"] = measure([&]() {
+  arma::rowvec effects = zero_effects;
+  arma::rowvec residual = base_residual;
+  arma::Row<int> component(
+   static_cast<arma::uword>(markers), arma::fill::zeros
+  );
+  std::vector<double> pi = base_pi;
+  double vb = 0.2;
+  double ve = 1.0;
+  std::mt19937 generator(static_cast<unsigned int>(seed));
+  for (int marker = 0; marker < markers; ++marker) {
+   sampleBetaR_ST_csr_unscaled(
+    marker, pi, mixture_var, vb, ve, diagonal,
+    residual, effects, component, op, generator
+   );
+  }
+  sampleB_bayesr_ST_csr_unscaled(
+   markers, 4.0, vb, effects, component, mixture_var, 0.1, generator
+  );
+  const double sse = op.residual_sse(
+   0, 2.0 * op.transformed_score_norm_squared(0) + 1.0,
+   effects, score, residual
+  );
+  const double fitted = op.fitted_quadratic(0, effects, score, residual);
+  sampleE_ST_operator_from_scale(4.0, ve, sse + 0.4, markers, generator);
+  samplePi_bayesr_ST_csr(component, pi, alpha, generator);
+  sink = fitted / static_cast<double>(markers) + vb + ve + pi[1];
+ });
+ timings["bayesr_gibbs_iteration_direct_reference"] = measure([&]() {
+  arma::rowvec effects = zero_effects;
+  arma::rowvec residual = base_residual;
+  arma::Row<int> component(
+   static_cast<arma::uword>(markers), arma::fill::zeros
+  );
+  std::vector<double> pi = base_pi;
+  double vb = 0.2;
+  double ve = 1.0;
+  std::mt19937 generator(static_cast<unsigned int>(seed));
+  for (int marker = 0; marker < markers; ++marker) {
+   sampleBetaR_ST_csr_unscaled(
+    marker, pi, mixture_var, vb, ve, diagonal,
+    residual, effects, component, op, generator
+   );
+  }
+  sampleB_bayesr_ST_csr_unscaled(
+   markers, 4.0, vb, effects, component, mixture_var, 0.1, generator
+  );
+  op.rebuild(0, score, effects, residual);
+  const double yy = 2.0 * op.transformed_score_norm_squared(0) + 1.0;
+  double reference = 0.0;
+  for (int duplicate = 0; duplicate < 2; ++duplicate) {
+   reference += op.residual_sse(0, yy, effects, score, residual);
+   reference += op.quadratic_form(effects);
+  }
+  sampleE_ST_operator_from_scale(
+   4.0, ve, op.residual_sse(0, yy, effects, score, residual) + 0.4,
+   markers, generator
+  );
+  reference += op.quadratic_form(effects);
+  samplePi_bayesr_ST_csr(component, pi, alpha, generator);
+  sink = reference + vb + ve + pi[1];
+ });
+
+ return Rcpp::List::create(
+  Rcpp::Named("markers") = markers,
+  Rcpp::Named("rank") = rank,
+  Rcpp::Named("repetitions") = repetitions,
+  Rcpp::Named("warmup") = warmup,
+  Rcpp::Named("updates_enabled") =
+   "marker effects/components, effect variance, residual variance, pi, genetic variance",
+  Rcpp::Named("timings") = timings,
+  Rcpp::Named("sink") = static_cast<double>(sink)
  );
 }

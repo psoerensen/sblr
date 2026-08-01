@@ -25,6 +25,9 @@
 #'   the representation default.
 #' @param eigen_prop Cumulative positive-eigenvalue mass target for low rank.
 #' @param eigen_tau,eigen_eta Nonnegative reconstructed-dense filter controls.
+#' @param low_rank_residual_rebuild_every Non-negative integer interval for
+#'   rebuilding retained reduced residuals after completed MCMC iterations.
+#'   The default is 100; zero disables periodic rebuilding after initialization.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param seed Fit-local base seed.
 #' @param nchains Number of logical chains per trait.
@@ -48,12 +51,14 @@ stblr_block_eigen <- function(
   annotation = NULL,
   representation = c("low_rank", "dense_reconstructed"),
   eigen_policy = NULL, eigen_prop = 0.995, eigen_tau = 0.01, eigen_eta = 0,
+  low_rank_residual_rebuild_every = 100L,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
   keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8,
   verbose = FALSE, ...
 ) {
+  rebuild_interval_supplied <- !missing(low_rank_residual_rebuild_every)
   dots <- list(...)
   legacy_filter <- dots$eigen_filter
   dots$eigen_filter <- NULL
@@ -61,6 +66,44 @@ stblr_block_eigen <- function(
     representation <- "dense_reconstructed"
   }
   representation <- match.arg(representation)
+  if (!is.numeric(low_rank_residual_rebuild_every) ||
+      length(low_rank_residual_rebuild_every) != 1L ||
+      !is.finite(low_rank_residual_rebuild_every) ||
+      low_rank_residual_rebuild_every < 0 ||
+      low_rank_residual_rebuild_every != floor(low_rank_residual_rebuild_every)) {
+    stop("low_rank_residual_rebuild_every must be a non-negative integer scalar.",
+         call. = FALSE)
+  }
+  low_rank_residual_rebuild_every <-
+    as.integer(low_rank_residual_rebuild_every)
+  if (identical(representation, "low_rank")) {
+    if (isTRUE(dots$use_r_init)) {
+      stop(
+        paste0(
+          "r_init is not supported for representation = \"retained_low_rank\"; ",
+          "a reduced-residual restart contract has not been implemented."
+        ),
+        call. = FALSE
+      )
+    }
+    if (isTRUE(dots$rebuild_r_before_updateE)) {
+      stop(
+        paste0(
+          "rebuild_r_before_updateE is incompatible with retained low rank; ",
+          "use low_rank_residual_rebuild_every instead."
+        ),
+        call. = FALSE
+      )
+    }
+  } else {
+    if (rebuild_interval_supplied && low_rank_residual_rebuild_every != 0L) {
+      stop(
+        "low_rank_residual_rebuild_every is only supported by representation = 'low_rank'.",
+        call. = FALSE
+      )
+    }
+    low_rank_residual_rebuild_every <- 0L
+  }
   if (!is.null(legacy_filter)) {
     legacy_filter <- match.arg(
       legacy_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))
@@ -134,6 +177,7 @@ stblr_block_eigen <- function(
     representation = representation, eigen_policy = eigen_policy,
     eigen_prop = eigen_prop, eigen_filter = eigen_filter,
     eigen_tau = eigen_tau, eigen_eta = eigen_eta,
+    low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
     nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
     seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))

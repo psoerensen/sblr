@@ -3,9 +3,11 @@
 
 #include <RcppArmadillo.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace sblr {
@@ -69,25 +71,35 @@ struct BlockLowRankStorage {
 
   inline double corrected_rhs(int marker, double beta_old,
                               const arma::rowvec& residual) const {
-    const int group = block_of.at(static_cast<std::size_t>(marker));
-    const int local = local_of.at(static_cast<std::size_t>(marker));
-    const BlockLowRankBlock& block = blocks.at(static_cast<std::size_t>(group));
-    double value = diagonal(static_cast<arma::uword>(marker)) * beta_old;
+    const int group = block_of.data()[marker];
+    const int local = local_of.data()[marker];
+    const BlockLowRankBlock& block = blocks.data()[group];
+    const float* factor_ptr = block.factor.data() +
+      static_cast<std::size_t>(local) * static_cast<std::size_t>(block.rank);
+    const double* residual_ptr = residual.memptr() + block.residual_offset;
+    double value = diagonal.memptr()[marker] * beta_old;
+#ifdef _OPENMP
+#pragma omp simd reduction(+:value)
+#endif
     for (int k = 0; k < block.rank; ++k) {
-      value += block.q(k, local) *
-        residual(block.residual_offset + static_cast<arma::uword>(k));
+      value += static_cast<double>(factor_ptr[k]) * residual_ptr[k];
     }
     return value;
   }
 
   inline void apply_difference(int marker, double difference,
                                arma::rowvec& residual) const {
-    const int group = block_of.at(static_cast<std::size_t>(marker));
-    const int local = local_of.at(static_cast<std::size_t>(marker));
-    const BlockLowRankBlock& block = blocks.at(static_cast<std::size_t>(group));
+    const int group = block_of.data()[marker];
+    const int local = local_of.data()[marker];
+    const BlockLowRankBlock& block = blocks.data()[group];
+    const float* factor_ptr = block.factor.data() +
+      static_cast<std::size_t>(local) * static_cast<std::size_t>(block.rank);
+    double* residual_ptr = residual.memptr() + block.residual_offset;
+#ifdef _OPENMP
+#pragma omp simd
+#endif
     for (int k = 0; k < block.rank; ++k) {
-      residual(block.residual_offset + static_cast<arma::uword>(k)) -=
-        block.q(k, local) * difference;
+      residual_ptr[k] -= static_cast<double>(factor_ptr[k]) * difference;
     }
   }
 
@@ -115,6 +127,8 @@ struct BlockLowRankStorage {
   }
 
   inline double quadratic_form(const arma::rowvec& effects) const {
+    // Validation/reference operation: ordinary retained-low-rank MCMC
+    // iterations must use fitted_quadratic() instead of traversing Q columns.
     double result = 0.0;
     for (const BlockLowRankBlock& block : blocks) {
       for (int k = 0; k < block.rank; ++k) {
@@ -129,16 +143,55 @@ struct BlockLowRankStorage {
     return result;
   }
 
+  inline double fitted_quadratic(int trait, const arma::rowvec&,
+                                 const arma::rowvec&,
+                                 const arma::rowvec& residual) const {
+    if (trait < 0 || trait >= trait_count)
+      throw std::out_of_range("low-rank trait index is out of range.");
+    double result = 0.0;
+    const double* residual_ptr = residual.memptr();
+    for (const BlockLowRankBlock& block : blocks) {
+      const double* transformed_ptr = block.transformed_score.memptr();
+      for (int k = 0; k < block.rank; ++k) {
+        const double fitted = transformed_ptr[
+          static_cast<std::size_t>(trait) +
+          static_cast<std::size_t>(k) * static_cast<std::size_t>(trait_count)
+        ] - residual_ptr[block.residual_offset + static_cast<arma::uword>(k)];
+        result += fitted * fitted;
+      }
+    }
+    return result;
+  }
+
   inline double residual_sse(int trait, double yy, const arma::rowvec&,
                              const arma::rowvec&, const arma::rowvec& residual) const {
     return yy - transformed_score_norm_squared(static_cast<arma::uword>(trait)) +
       arma::dot(residual, residual);
   }
 
-  inline double genetic_variance(int, const arma::rowvec& effects,
-                                 const arma::rowvec&, const arma::rowvec&,
+  inline double genetic_variance(int trait, const arma::rowvec& effects,
+                                 const arma::rowvec& score,
+                                 const arma::rowvec& residual,
                                  double n) const {
-    return quadratic_form(effects) / n;
+    return fitted_quadratic(trait, effects, score, residual) / n;
+  }
+
+  inline double rebuild_and_measure_drift(int trait, const arma::rowvec& score,
+                                          const arma::rowvec& effects,
+                                          arma::rowvec& residual) const {
+    arma::rowvec rebuilt;
+    rebuild(trait, score, effects, rebuilt);
+    if (rebuilt.n_elem != residual.n_elem)
+      throw std::invalid_argument("low-rank residual has an inconsistent size.");
+    double max_abs_drift = 0.0;
+    const double* rebuilt_ptr = rebuilt.memptr();
+    const double* residual_ptr = residual.memptr();
+    for (arma::uword k = 0; k < residual.n_elem; ++k) {
+      max_abs_drift = std::max(max_abs_drift,
+        std::abs(residual_ptr[k] - rebuilt_ptr[k]));
+    }
+    residual = std::move(rebuilt);
+    return max_abs_drift;
   }
 
   inline void materialize_residual(int, const arma::rowvec& residual,
@@ -190,6 +243,56 @@ inline void validate_block_low_rank_storage(const BlockLowRankStorage& storage) 
   }
   if (expected_start != storage.marker_count || expected_offset != storage.reduced_dimension)
     throw std::invalid_argument("low-rank blocks do not cover the operator domain.");
+}
+
+// Development-only synthetic operator used by the native hot-path benchmark.
+// It bypasses factor construction deliberately so benchmark timings contain
+// only sampling-state operations.
+inline BlockLowRankStorage make_block_low_rank_hot_path_fixture(int markers,
+                                                                int rank) {
+  if (markers <= 0 || rank <= 0 || rank > markers)
+    throw std::invalid_argument("benchmark markers/rank are inconsistent.");
+  BlockLowRankStorage storage;
+  storage.marker_count = static_cast<std::size_t>(markers);
+  storage.trait_count = 1;
+  storage.reduced_dimension = static_cast<arma::uword>(rank);
+  storage.block_of.assign(static_cast<std::size_t>(markers), 0);
+  storage.local_of.resize(static_cast<std::size_t>(markers));
+  storage.diagonal.zeros(static_cast<arma::uword>(markers));
+  storage.transformed_score_norm_squared.zeros(1);
+  BlockLowRankBlock block;
+  block.start = 0;
+  block.size = markers;
+  block.rank = rank;
+  block.residual_offset = 0;
+  block.factor.resize(static_cast<std::size_t>(markers) *
+                      static_cast<std::size_t>(rank));
+  block.transformed_score.set_size(1, static_cast<arma::uword>(rank));
+  const double inv_sqrt_rank = 1.0 / std::sqrt(static_cast<double>(rank));
+  for (int local = 0; local < markers; ++local) {
+    double diagonal = 0.0;
+    float* factor_ptr = block.factor.data() +
+      static_cast<std::size_t>(local) * static_cast<std::size_t>(rank);
+    for (int k = 0; k < rank; ++k) {
+      const double value =
+        (std::sin(0.013 * static_cast<double>((local + 1) * (k + 1))) +
+         0.25 * std::cos(0.007 * static_cast<double>(local + k + 2))) *
+        inv_sqrt_rank;
+      factor_ptr[k] = static_cast<float>(value);
+      diagonal += static_cast<double>(factor_ptr[k]) *
+        static_cast<double>(factor_ptr[k]);
+    }
+    storage.local_of[static_cast<std::size_t>(local)] = local;
+    storage.diagonal(static_cast<arma::uword>(local)) = diagonal;
+  }
+  for (int k = 0; k < rank; ++k) {
+    const double value = std::cos(0.017 * static_cast<double>(k + 1));
+    block.transformed_score(0, static_cast<arma::uword>(k)) = value;
+    storage.transformed_score_norm_squared(0) += value * value;
+  }
+  storage.blocks.push_back(std::move(block));
+  validate_block_low_rank_storage(storage);
+  return storage;
 }
 
 }  // namespace core

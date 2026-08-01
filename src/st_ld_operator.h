@@ -34,6 +34,14 @@ struct CsrOperator {
 
   inline arma::uword residual_size() const { return xx.n_elem; }
 
+  inline bool uses_retained_low_rank() const { return false; }
+
+  inline double rebuild_and_measure_drift(int, const arma::rowvec&,
+                                          const arma::rowvec&,
+                                          arma::rowvec&) const {
+    return 0.0;
+  }
+
   inline double corrected_rhs(int i, double beta_old, const arma::rowvec& r) const {
     const arma::uword iu = static_cast<arma::uword>(i);
     return r(iu) + xx(iu) * beta_old;
@@ -84,10 +92,24 @@ struct CsrOperator {
   }
 
   inline double quadratic_form(const arma::rowvec& b) const {
+    // Validation/reference operation. Ordinary operator-aware MCMC iterations
+    // use fitted_quadratic() from the maintained residual state.
     arma::rowvec zero(xx.n_elem, arma::fill::zeros);
     arma::rowvec rb;
     rebuild(zero, b, rb);
     return -arma::dot(b, rb);
+  }
+
+  inline double fitted_quadratic(int, const arma::rowvec& b,
+                                 const arma::rowvec& wy,
+                                 const arma::rowvec& r) const {
+    double result = 0.0;
+    const double* b_ptr = b.memptr();
+    const double* wy_ptr = wy.memptr();
+    const double* r_ptr = r.memptr();
+    for (arma::uword i = 0; i < b.n_elem; ++i)
+      result += b_ptr[i] * (wy_ptr[i] - r_ptr[i]);
+    return result;
   }
 
   inline double residual_sse(int, double yy, const arma::rowvec& b,
@@ -98,13 +120,10 @@ struct CsrOperator {
     return yy - b_dot_r_plus_wy;
   }
 
-  inline double genetic_variance(int, const arma::rowvec& b,
+  inline double genetic_variance(int trait, const arma::rowvec& b,
                                  const arma::rowvec& wy, const arma::rowvec& r,
                                  double n) const {
-    double ssg = 0.0;
-    for (arma::uword i = 0; i < b.n_elem; ++i)
-      ssg += b(i) * (wy(i) - r(i));
-    return ssg / n;
+    return fitted_quadratic(trait, b, wy, r) / n;
   }
 
   inline void materialize_residual(int, const arma::rowvec& r,
@@ -128,6 +147,7 @@ struct BlockEigenDispatchOperator {
   inline arma::uword residual_size() const {
     return low_rank ? retained.residual_size() : dense.residual_size();
   }
+  inline bool uses_retained_low_rank() const { return low_rank; }
   inline double corrected_rhs(int i, double beta, const arma::rowvec& r) const {
     return low_rank ? retained.corrected_rhs(i, beta, r) : dense.corrected_rhs(i, beta, r);
   }
@@ -140,6 +160,12 @@ struct BlockEigenDispatchOperator {
     if (low_rank) retained.rebuild(trait, wy, b, r);
     else dense.rebuild(trait, wy, b, r);
   }
+  inline double rebuild_and_measure_drift(int trait, const arma::rowvec& wy,
+                                          const arma::rowvec& b,
+                                          arma::rowvec& r) const {
+    if (!low_rank) return 0.0;
+    return retained.rebuild_and_measure_drift(trait, wy, b, r);
+  }
   inline double projected_score_dot(int trait, const arma::rowvec& b,
                                     const arma::rowvec& wy) const {
     return low_rank ? retained.projected_score_dot(trait, b, wy) :
@@ -147,6 +173,12 @@ struct BlockEigenDispatchOperator {
   }
   inline double quadratic_form(const arma::rowvec& b) const {
     return low_rank ? retained.quadratic_form(b) : dense.quadratic_form(b);
+  }
+  inline double fitted_quadratic(int trait, const arma::rowvec& b,
+                                 const arma::rowvec& wy,
+                                 const arma::rowvec& r) const {
+    return low_rank ? retained.fitted_quadratic(trait, b, wy, r) :
+      dense.fitted_quadratic(trait, b, wy, r);
   }
   inline double residual_sse(int trait, double yy, const arma::rowvec& b,
                              const arma::rowvec& wy, const arma::rowvec& r) const {
@@ -166,6 +198,18 @@ struct BlockEigenDispatchOperator {
   }
 };
 
+inline void sampleE_ST_operator_from_scale(
+    double nue, double& ve, double residual_scale, int n, std::mt19937& gen) {
+  if (!std::isfinite(residual_scale) || residual_scale <= 0.0)
+    throw std::runtime_error("sampleE_ST_operator: invalid projected residual scale.");
+  std::chi_squared_distribution<double> rchisq(n + nue);
+  const double chi2 = std::max(rchisq(gen), 1e-300);
+  const double ve_new = residual_scale / chi2;
+  if (!std::isfinite(ve_new) || ve_new <= 0.0)
+    throw std::runtime_error("sampleE_ST_operator: sampled ve is invalid.");
+  ve = std::max(ve_new, 1e-12);
+}
+
 template <typename OpT>
 inline void sampleE_ST_operator(
     const OpT& op, int trait, double nue, double& ve,
@@ -173,14 +217,7 @@ inline void sampleE_ST_operator(
     double sse_prior, double yy, int n, std::mt19937& gen) {
   const double sse = op.residual_sse(trait, yy, b, wy, r);
   const double scale = sse + nue * sse_prior;
-  if (!std::isfinite(scale) || scale <= 0.0)
-    throw std::runtime_error("sampleE_ST_operator: invalid projected residual scale.");
-  std::chi_squared_distribution<double> rchisq(n + nue);
-  const double chi2 = std::max(rchisq(gen), 1e-300);
-  const double ve_new = scale / chi2;
-  if (!std::isfinite(ve_new) || ve_new <= 0.0)
-    throw std::runtime_error("sampleE_ST_operator: sampled ve is invalid.");
-  ve = std::max(ve_new, 1e-12);
+  sampleE_ST_operator_from_scale(nue, ve, scale, n, gen);
 }
 
 template <typename OpT>

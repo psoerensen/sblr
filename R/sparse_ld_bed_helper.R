@@ -2833,6 +2833,8 @@ stblr_csr_bayesr <- function(
   keep_chains = FALSE, chain_seeds = NULL,
   use_d_init = FALSE, use_r_init = FALSE,
   rebuild_r_before_updateE = FALSE,
+  low_rank_residual_rebuild_every = if (
+    identical(representation, "low_rank")) 100L else 0L,
   updateLDswap = FALSE, ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8, ld_swap_max_friends = 50,
   ld_swap_moves = 1, .convergence_spec = NULL
@@ -2965,7 +2967,8 @@ stblr_csr_bayesr <- function(
   eigen_tau = eigen_tau,
   eigen_eta = eigen_eta,
   representation = representation,
-  eigen_prop = eigen_prop
+  eigen_prop = eigen_prop,
+  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every
  )
  if (.is_stblr_raw(raw)) {
   if (isTRUE(maf_effect_s_info$fixed)) {
@@ -3011,7 +3014,8 @@ stblr_csr_bayesr <- function(
   eigen_tau = eigen_tau,
   eigen_eta = eigen_eta,
   eigen_blocks = bed$block_start,
-  eigen_diagnostics = raw$diagnostics$block_eigen
+  eigen_diagnostics = raw$diagnostics$block_eigen,
+  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every
  ), arch)
  fit
 }
@@ -3061,6 +3065,8 @@ stblr_csr_bayesr <- function(
   use_r_init = FALSE,
   r_init = NULL,
   rebuild_r_before_updateE = FALSE,
+  low_rank_residual_rebuild_every = if (
+    identical(representation, "low_rank")) 100L else 0L,
   .convergence_spec = NULL
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
@@ -3197,7 +3203,8 @@ stblr_csr_bayesr <- function(
   bed_files = bed$bed_files, n_bed = bed$n_bed, cls = bed$cls,
   rows = bed$rows, af = bed$af, block_start = bed$block_start,
   eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta,
-  representation = representation, eigen_prop = eigen_prop
+  representation = representation, eigen_prop = eigen_prop,
+  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every
  )
  if (!.is_stblr_raw(raw)) {
   .stblr_stop_unsupported_raw_output("csr_bayesr_block_eigen")
@@ -3229,6 +3236,7 @@ stblr_csr_bayesr <- function(
   eigen_tau = eigen_tau, eigen_eta = eigen_eta,
   eigen_blocks = bed$block_start,
   eigen_diagnostics = raw$diagnostics$block_eigen,
+  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
   nchains = nchains, keep_chains = keep_chains,
   updateLDswap = updateLDswap, n = as.integer(n), m = m, nt = nt,
   h2 = h2, nub = nub, nue = nue, adjE = adjE,
