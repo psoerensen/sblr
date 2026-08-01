@@ -1,5 +1,8 @@
 # sblr 0.2.0
 
+- Corrected scalar BayesR prior variance initialization to account for
+  component variance multipliers, so `h2` has the same prior expected-genetic-
+  variance interpretation as BayesC.
 - Added the retained low-rank scalar block-eigen LD operator for SBayesC,
   SBayesR, and SBayesRC and made it the default `stblr_block_eigen()`
   representation.

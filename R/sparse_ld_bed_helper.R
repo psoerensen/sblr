@@ -311,6 +311,58 @@ NULL
  )
 }
 
+.stblr_bayesr_mixture_weight <- function(pi, mixture_var) {
+ if (!is.numeric(pi) || !is.numeric(mixture_var) ||
+     length(pi) != length(mixture_var) || length(pi) < 2L ||
+     any(!is.finite(pi)) || any(!is.finite(mixture_var)) ||
+     any(pi < 0) || sum(pi) <= 0 || mixture_var[1L] != 0 ||
+     any(mixture_var[-1L] <= 0)) {
+  stop(
+   "BayesR pi and mixture_var must define a valid null-plus-active mixture.",
+   call. = FALSE
+  )
+ }
+
+ pi <- pi / sum(pi)
+ weight <- sum(pi * mixture_var)
+ if (!is.finite(weight) || weight <= 0) {
+  stop(
+   "BayesR mixture-weighted prior variance must be positive and finite.",
+   call. = FALSE
+  )
+ }
+ weight
+}
+
+.make_stblr_bayesr_priors <- function(vy, m, h2, nub, nue, pi,
+                                      mixture_var, trait_names = NULL) {
+ vy <- as.numeric(vy)
+ nt <- length(vy)
+ if (is.null(trait_names)) trait_names <- names(vy)
+ if (is.null(trait_names)) trait_names <- paste0("T", seq_len(nt))
+ mixture_weight <- .stblr_bayesr_mixture_weight(pi, mixture_var)
+
+ B <- diag((vy * h2) / (m * mixture_weight), nt, nt)
+ E <- diag(vy * (1 - h2), nt, nt)
+ ssb_prior <- diag(
+  ((nub - 2) / nub) * (vy * h2) / (m * mixture_weight), nt, nt
+ )
+ sse_prior <- diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+
+ for (x in c("B", "E", "ssb_prior", "sse_prior")) {
+  obj <- get(x)
+  rownames(obj) <- colnames(obj) <- trait_names
+  assign(x, obj)
+ }
+
+ list(
+  vy = vy, B = B, E = E, ssb_prior = ssb_prior, sse_prior = sse_prior,
+  ssb_prior_list = split(ssb_prior, rep(seq_len(nt), each = nt)),
+  sse_prior_list = split(sse_prior, rep(seq_len(nt), each = nt)),
+  mixture_weight = mixture_weight
+ )
+}
+
 .stblr_ensure_ld_swap_fields <- function(fit) {
  if (!("ld_swap" %in% names(fit))) fit["ld_swap"] <- list(NULL)
  if (!("ld_swap_chains" %in% names(fit))) fit["ld_swap_chains"] <- list(NULL)
@@ -1993,22 +2045,9 @@ stblr_csr_bayesr <- function(
  )
 
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
- pi_active <- sum(pi[-1L])
- if (!is.finite(pi_active) || pi_active <= 0) {
-  stop("pi must allocate positive probability to non-null components.")
- }
- pri <- list(
-  vy = vy,
-  B = diag((vy * h2) / (m * pi_active), nt, nt),
-  E = diag(vy * (1 - h2), nt, nt),
-  ssb_prior = diag(((nub - 2) / nub) * (vy * h2) / (m * pi_active), nt, nt),
-  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ pri <- .make_stblr_bayesr_priors(
+  vy, m, h2, nub, nue, pi, mixture_var, trait_names
  )
- for (x in c("B", "E", "ssb_prior", "sse_prior")) {
-  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
- }
- pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
- pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
 
  if (is.null(comp_init)) comp_init <- lapply(seq_len(nt), function(i) rep(0, m))
  if (is.null(r_init)) r_init <- stats$wy
@@ -3121,22 +3160,9 @@ stblr_csr_bayesr <- function(
  variable_names <- names(stats$ww[[1L]]) %||% stats$marker_names
  if (is.null(variable_names)) variable_names <- paste0("V", seq_len(m))
  vy <- as.numeric(stats$yy) / (as.numeric(n) - 1)
- pi_active <- sum(pi[-1L])
- if (!is.finite(pi_active) || pi_active <= 0) {
-  stop("pi must allocate positive probability to non-null components.")
- }
- pri <- list(
-  vy = vy,
-  B = diag((vy * h2) / (m * pi_active), nt, nt),
-  E = diag(vy * (1 - h2), nt, nt),
-  ssb_prior = diag(((nub - 2) / nub) * (vy * h2) / (m * pi_active), nt, nt),
-  sse_prior = diag(((nue - 2) / nue) * (vy * (1 - h2)), nt, nt)
+ pri <- .make_stblr_bayesr_priors(
+  vy, m, h2, nub, nue, pi, mixture_var, trait_names
  )
- for (x in c("B", "E", "ssb_prior", "sse_prior")) {
-  rownames(pri[[x]]) <- colnames(pri[[x]]) <- trait_names
- }
- pri$ssb_prior_list <- split(pri$ssb_prior, rep(seq_len(nt), each = nt))
- pri$sse_prior_list <- split(pri$sse_prior, rep(seq_len(nt), each = nt))
  if (is.null(comp_init)) comp_init <- lapply(seq_len(nt), function(i) rep(0, m))
  if (is.null(r_init)) r_init <- stats$wy
 
@@ -4259,12 +4285,10 @@ stblr_bed_marker <- function(
       any(!is.finite(alpha)) || any(alpha <= 0)) {
    stop("alpha must be a positive finite vector matching mixture_var.")
   }
-  pi_active <- sum(pi[-1L])
-  if (!is.finite(pi_active) || pi_active <= 0) {
-   stop("pi must allocate positive probability to non-null components.")
-  }
-  pri <- .make_stblr_priors(
-   dat$y, dat$m, h2, nub, nue, pi_active, pi_active, dat$trait_names
+  y_matrix <- as.matrix(dat$y)
+  vy <- colSums(y_matrix^2) / (nrow(y_matrix) - 1)
+  pri <- .make_stblr_bayesr_priors(
+   vy, dat$m, h2, nub, nue, pi, mixture_var, dat$trait_names
   )
   fit <- .fit_stblr_bed_bayesr(
    bed_files = dat$bed_files,
