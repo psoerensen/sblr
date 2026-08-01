@@ -334,7 +334,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     b_t(static_cast<arma::uword>(i)) = b_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(i));
    }
 
-   arma::rowvec r_t(m, arma::fill::zeros);
+   arma::rowvec r_t(op.residual_size(), arma::fill::zeros);
    arma::Row<int> comp_t(m, arma::fill::zeros);
 
    if (use_comp_init) {
@@ -361,12 +361,12 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      throw std::runtime_error("stblr_cpg_omp_csr_sbayesrc: r_init contains NaN/Inf.");
     }
    } else {
-    op.rebuild(wy_t, b_t, r_t);
+    op.rebuild(t, wy_t, b_t, r_t);
    }
 
    double vb_t = B(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
    double ve_t = E(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
-   double vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
+   double vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
    double vle_t = computeLE_SBayesRC_ST_csr(m, b_t, ww_t, n[t]);
    double vld_t = vg_t - vle_t;
    double vei_t = ve_t + adjE * vg_t;
@@ -579,11 +579,12 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
     if (updateE) {
      if (rebuild_r_before_updateE) {
-      op.rebuild(wy_t, b_t, r_t);
+      op.rebuild(t, wy_t, b_t, r_t);
      }
 
-     sampleE_ST_csr(
-      m,
+     sampleE_ST_operator(
+      op,
+      t,
       nue,
       ve_t,
       b_t,
@@ -596,7 +597,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      );
     }
 
-    vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
+    vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
     vle_t = computeLE_SBayesRC_ST_csr(m, b_t, ww_t, n[t]);
     vld_t = vg_t - vle_t;
 
@@ -706,7 +707,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    bm_task.row(task_u) = bm_t;
    dm_task.row(task_u) = dm_t;
    b_task.row(task_u)  = b_t;
-   r_task.row(task_u)  = r_t;
+   arma::rowvec marker_residual;
+   op.materialize_residual(t, r_t, marker_residual);
+   r_task.row(task_u)  = marker_residual;
    for (int i = 0; i < m; ++i) {
     comp_task_double(task_u, static_cast<arma::uword>(i)) =
      static_cast<double>(comp_t(static_cast<arma::uword>(i)));

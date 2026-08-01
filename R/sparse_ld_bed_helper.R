@@ -2775,6 +2775,9 @@ stblr_csr_bayesr <- function(
   stats,
   Glist,
   block_start,
+  representation = "dense_reconstructed",
+  eigen_policy = "absolute_threshold",
+  eigen_prop = 0.995,
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01,
   eigen_eta = 0.0,
@@ -2921,7 +2924,9 @@ stblr_csr_bayesr <- function(
   block_start = bed$block_start,
   eigen_filter = eigen_filter,
   eigen_tau = eigen_tau,
-  eigen_eta = eigen_eta
+  eigen_eta = eigen_eta,
+  representation = representation,
+  eigen_prop = eigen_prop
  )
  if (.is_stblr_raw(raw)) {
   if (isTRUE(maf_effect_s_info$fixed)) {
@@ -2955,6 +2960,14 @@ stblr_csr_bayesr <- function(
   ld_swap_r2 = ld_swap_r2,
   ld_swap_max_friends = as.integer(ld_swap_max_friends),
   ld_swap_moves = as.integer(ld_swap_moves),
+  operator = "block_eigen",
+  operator_contract = if (identical(representation, "low_rank"))
+   "block_low_rank_v1" else "block_dense_reconstructed_v1",
+  operator_representation = representation,
+  operator_scale_contract = if (identical(representation, "low_rank"))
+   "general_cross_product" else "reconstructed_cross_product",
+  eigen_policy = eigen_policy,
+  eigen_prop = if (identical(representation, "low_rank")) eigen_prop else NULL,
   eigen_filter = eigen_filter,
   eigen_tau = eigen_tau,
   eigen_eta = eigen_eta,
@@ -2968,6 +2981,9 @@ stblr_csr_bayesr <- function(
   stats,
   Glist,
   block_start,
+  representation = "dense_reconstructed",
+  eigen_policy = "absolute_threshold",
+  eigen_prop = 0.995,
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01,
   eigen_eta = 0,
@@ -3154,7 +3170,8 @@ stblr_csr_bayesr <- function(
   convergence_component = isTRUE(.convergence_spec$component),
   bed_files = bed$bed_files, n_bed = bed$n_bed, cls = bed$cls,
   rows = bed$rows, af = bed$af, block_start = bed$block_start,
-  eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta
+  eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta,
+  representation = representation, eigen_prop = eigen_prop
  )
  if (!.is_stblr_raw(raw)) {
   .stblr_stop_unsupported_raw_output("csr_bayesr_block_eigen")
@@ -3174,7 +3191,15 @@ stblr_csr_bayesr <- function(
  fit$input <- list(
   method = "bayesr", model = "bayesr", backend = "csr_bayesr",
   data_level = "summary", annotations = FALSE, scheduled = FALSE,
-  ld_backend = "block_eigen", eigen_filter = eigen_filter,
+  ld_backend = "block_eigen", operator = "block_eigen",
+  operator_contract = if (identical(representation, "low_rank"))
+   "block_low_rank_v1" else "block_dense_reconstructed_v1",
+  operator_representation = representation,
+  operator_scale_contract = if (identical(representation, "low_rank"))
+   "general_cross_product" else "reconstructed_cross_product",
+  eigen_policy = eigen_policy,
+  eigen_prop = if (identical(representation, "low_rank")) eigen_prop else NULL,
+  eigen_filter = eigen_filter,
   eigen_tau = eigen_tau, eigen_eta = eigen_eta,
   eigen_blocks = bed$block_start,
   eigen_diagnostics = raw$diagnostics$block_eigen,

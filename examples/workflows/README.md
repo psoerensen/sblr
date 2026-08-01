@@ -13,7 +13,7 @@ helpers.
 | [`mt_bayesrc_workflow.R`](mt_bayesrc_workflow.R) | MT BayesRC/SBayesRC annotation preprocessing and probability outputs |
 | [`maf_effect_s_workflow.R`](maf_effect_s_workflow.R) | Independent fixed and supported sampled MAF-dependent scaling |
 | [`convergence_workflow.R`](convergence_workflow.R) | Core/extended convergence, selected markers, retained traces, and memory preflight |
-| [`operator_comparison_workflow.R`](operator_comparison_workflow.R) | Construction and comparison of CSR, block-eigen, and packed-BED routes |
+| [`operator_comparison_workflow.R`](operator_comparison_workflow.R) | Construction and comparison of CSR, retained low-rank block eigen, reconstructed-dense reference, and packed-BED routes |
 | [`workflow_helpers.R`](workflow_helpers.R) | Small deterministic fixture and output-inspection helpers |
 
 The public `s` model prefix denotes summary-statistics data. It is unrelated

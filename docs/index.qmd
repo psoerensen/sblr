@@ -5,7 +5,7 @@ subtitle: "Scalable Bayesian Linear Regression"
 
 `sblr` is an experimental R package for Bayesian genomic prediction and
 variable selection. It supports individual-level PLINK BED genotypes, GWAS
-summary statistics, sparse LD matrices, block-eigen LD operators, multi-trait
+summary statistics, sparse LD matrices, retained low-rank block-eigen LD operators, multi-trait
 models, and annotation-informed priors.
 
 ::: {.callout-note title="Research software"}
@@ -45,6 +45,11 @@ mtblr_bed()
 The STBLR functions fit scalar-trait models. The MTBLR functions fit one joint
 multi-trait model per logical chain. Operators are prepared once per fit and
 shared across deterministic logical chains.
+
+The scalar block-eigen API defaults to retained low rank with
+`eigen_prop = 0.995`; request `representation = "dense_reconstructed"` for the
+historical packed reconstructed operator. The retained route is currently
+single-trait only and preserves all priors and states in marker space.
 
 ## Model names
 

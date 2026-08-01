@@ -226,7 +226,7 @@ inline void sampleBeta_SBayesRC_ST_csr(
  }
 
  const double vei_safe = std::max(vei_i, 1e-300);
- const double score = r(iu) + wi * b(iu);
+ const double score = op.corrected_rhs(i, b(iu), r);
 
  std::vector<double> logp(static_cast<std::size_t>(Kgamma));
 
@@ -269,9 +269,7 @@ inline void sampleBeta_SBayesRC_ST_csr(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= wi * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -315,7 +313,7 @@ inline void sampleBeta_SBayesRC_ST_csr_scaled(
  }
 
  const double vei_safe = std::max(vei_i, 1e-300);
- const double score = r(iu) + wi * b(iu);
+ const double score = op.corrected_rhs(i, b(iu), r);
 
  std::vector<double> logp(static_cast<std::size_t>(Kgamma));
 
@@ -358,9 +356,7 @@ inline void sampleBeta_SBayesRC_ST_csr_scaled(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= wi * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -480,9 +476,7 @@ inline void set_marker_state_sbayesrc_ST_csr(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= ww(iu) * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -2204,7 +2198,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   Rcpp::NumericVector af = Rcpp::NumericVector::create(),
   Rcpp::IntegerVector block_start = Rcpp::IntegerVector::create(),
   std::string eigen_filter = "hard_truncate", double eigen_tau = 0.01,
-  double eigen_eta = 0.0
+  double eigen_eta = 0.0, std::string representation = "dense_reconstructed",
+  double eigen_prop = 0.995
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -2224,6 +2219,10 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
  const std::vector<double> af_cpp = Rcpp::as<std::vector<double>>(af);
  const std::vector<int> starts = Rcpp::as<std::vector<int>>(block_start);
  const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
+ if (representation != "low_rank" && representation != "dense_reconstructed")
+  throw std::runtime_error("unknown block-eigen representation.");
+ if (representation == "low_rank" && use_r_init)
+  throw std::runtime_error("marker-space r_init is unavailable for the low-rank representation.");
 
  auto make_block_operator = [&](int m, const std::vector<double>& xx,
                                 const arma::rowvec& xx_row, arma::mat& wy_mat,
@@ -2242,16 +2241,37 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
    static_cast<int>(rows0.size()), cls_cpp
   );
   if (G.m != m) throw std::runtime_error("BED marker count does not match m.");
-  std::vector<BlockEigenDiag> block_diag;
-  BlockEigenOperator op = build_block_eigen(
-   G, af_cpp, starts, mode, eigen_tau, eigen_eta, wy_mat, ncores, &block_diag
-  );
+  BlockEigenDispatchOperator op;
+  op.low_rank = representation == "low_rank";
+  Rcpp::List diag;
+  if (op.low_rank) {
+   std::vector<BlockLowRankDiag> block_diag;
+   op.retained = build_block_low_rank(
+    G, af_cpp, starts, eigen_prop, wy_mat, ncores, &block_diag
+   );
+   diag = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_low_rank_diagnostics_to_data_frame(block_diag),
+    Rcpp::Named("operator_contract") = "block_low_rank_v1",
+    Rcpp::Named("operator_representation") = "low_rank",
+    Rcpp::Named("operator_scale_contract") = "general_cross_product",
+    Rcpp::Named("eigen_policy") = "cumulative_positive_mass",
+    Rcpp::Named("eigen_prop") = eigen_prop,
+    Rcpp::Named("build") = block_low_rank_build_metadata(op.retained)
+   );
+  } else {
+   std::vector<BlockEigenDiag> block_diag;
+   op.dense = build_block_eigen(
+    G, af_cpp, starts, mode, eigen_tau, eigen_eta, wy_mat, ncores, &block_diag
+   );
+   diag = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag),
+    Rcpp::Named("operator_contract") = "block_dense_reconstructed_v1",
+    Rcpp::Named("operator_representation") = "dense_reconstructed"
+   );
+  }
   SBayesRCLDLDFriends friends;
   friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
-  Rcpp::List diag = Rcpp::List::create(
-   Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag)
-  );
-  return SBayesRCOperatorContext<BlockEigenOperator>(
+  return SBayesRCOperatorContext<BlockEigenDispatchOperator>(
    std::move(op), std::move(friends), diag
   );
  };

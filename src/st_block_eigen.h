@@ -10,6 +10,7 @@
 
 using EigenFilterMode = sblr::core::BlockEigenFilterMode;
 using BlockEigenDiag = sblr::core::BlockEigenBlockDiagnostics;
+using BlockLowRankDiag = sblr::core::BlockLowRankDiagnostics;
 
 BlockEigenOperator build_block_eigen(
     const PackedBedMatrix& G,
@@ -21,5 +22,14 @@ BlockEigenOperator build_block_eigen(
     arma::mat& wy_mat,
     int nthreads,
     std::vector<BlockEigenDiag>* diag_out = nullptr);
+
+BlockLowRankOperator build_block_low_rank(
+    const PackedBedMatrix& G,
+    const std::vector<double>& af,
+    const std::vector<int>& block_start,
+    double eigen_prop,
+    arma::mat& wy_mat,
+    int nthreads,
+    std::vector<BlockLowRankDiag>* diag_out = nullptr);
 
 #endif

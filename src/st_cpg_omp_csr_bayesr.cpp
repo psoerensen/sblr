@@ -156,6 +156,38 @@ inline BayesRUpdateEDiagnostics residual_diagnostics_bayesr_ST_csr(
  return out;
 }
 
+template <typename OpT>
+inline BayesRUpdateEDiagnostics residual_diagnostics_bayesr_ST_csr(
+  const OpT& op, int trait, int m, double nue, const arma::rowvec& b,
+  const arma::rowvec& r, const arma::Row<int>& comp, const arma::rowvec& wy,
+  double sse_prior, double yy
+) {
+ BayesRUpdateEDiagnostics out;
+ out.bwy = op.projected_score_dot(trait, b, wy);
+ out.bXb = op.quadratic_form(b);
+ out.br = out.bwy - out.bXb;
+ out.sse = op.residual_sse(trait, yy, b, wy, r);
+ out.residual_scale = out.sse + nue * sse_prior;
+ for (int i = 0; i < m; ++i) {
+  const arma::uword iu = static_cast<arma::uword>(i);
+  if (comp(iu) > 0) ++out.nonzero_components;
+  out.max_abs_b = std::max(out.max_abs_b, std::abs(b(iu)));
+ }
+ for (arma::uword i = 0; i < r.n_elem; ++i)
+  out.max_abs_r = std::max(out.max_abs_r, std::abs(r(i)));
+ return out;
+}
+
+inline BayesRUpdateEDiagnostics residual_diagnostics_bayesr_ST_csr(
+  const CsrOperator&, int, int m, double nue, const arma::rowvec& b,
+  const arma::rowvec& r, const arma::Row<int>& comp, const arma::rowvec& wy,
+  double sse_prior, double yy
+) {
+ return residual_diagnostics_bayesr_ST_csr(
+  m, nue, b, r, comp, wy, sse_prior, yy
+ );
+}
+
 inline void ensure_null_effects_bayesr_ST_csr(
   int m,
   int trait,
@@ -247,6 +279,23 @@ inline void check_residual_scale_bayesr_ST_csr(
  );
 }
 
+template <typename OpT>
+inline void check_residual_scale_bayesr_ST_csr(
+  const OpT& op, int m, int trait, int chain, int iter, double nue,
+  double, double, const arma::vec&, const arma::rowvec& b,
+  const arma::rowvec& r, const arma::Row<int>& comp, const arma::rowvec& wy,
+  double sse_prior, double yy, int, double
+) {
+ const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
+  op, trait, m, nue, b, r, comp, wy, sse_prior, yy
+ );
+ if (!std::isfinite(diag.residual_scale) || diag.residual_scale <= 0.0)
+  throw std::runtime_error(
+   "BayesR operator residual scale is invalid. trait=" + std::to_string(trait) +
+   ", chain=" + std::to_string(chain) + ", iter=" + std::to_string(iter)
+  );
+}
+
 inline double logsumexp_bayesr(const std::vector<double>& x) {
  double mx = -std::numeric_limits<double>::infinity();
  for (double v : x) mx = std::max(mx, v);
@@ -309,7 +358,7 @@ inline void sampleBetaR_ST_csr(
  }
 
  const double vei_safe = std::max(vei_i, 1e-300);
- const double score = r(iu) + wi * b(iu);
+ const double score = op.corrected_rhs(i, b(iu), r);
  const double scale_i = prior_scale(iu);
  if (!std::isfinite(scale_i) || scale_i <= 0.0) {
   throw std::runtime_error("sampleBetaR_ST_csr: invalid prior_scale value.");
@@ -353,9 +402,7 @@ inline void sampleBetaR_ST_csr(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= wi * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -392,7 +439,7 @@ inline void sampleBetaR_ST_csr_unscaled(
  }
 
  const double vei_safe = std::max(vei_i, 1e-300);
- const double score = r(iu) + wi * b(iu);
+ const double score = op.corrected_rhs(i, b(iu), r);
  std::vector<double> logp(static_cast<std::size_t>(K));
 
  for (int k = 0; k < K; ++k) {
@@ -432,9 +479,7 @@ inline void sampleBetaR_ST_csr_unscaled(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= wi * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -575,9 +620,7 @@ inline void set_marker_state_bayesr_ST_csr(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= ww(iu) * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -658,6 +701,18 @@ inline void throw_ld_swap_error_bayesr_ST_csr(
   ", log_q_reverse=" + std::to_string(log_q_reverse) +
   ", b_finite=" + std::to_string(b.is_finite() ? 1 : 0) +
   ", r_finite=" + std::to_string(r.is_finite() ? 1 : 0)
+ );
+}
+
+inline void check_residual_scale_bayesr_ST_csr(
+  const CsrOperator&, int m, int trait, int chain, int iter, double nue,
+  double ve, double vb, const arma::vec& mixture_var, const arma::rowvec& b,
+  const arma::rowvec& r, const arma::Row<int>& comp, const arma::rowvec& wy,
+  double sse_prior, double yy, int n, double adjE
+) {
+ check_residual_scale_bayesr_ST_csr(
+  m, trait, chain, iter, nue, ve, vb, mixture_var, b, r, comp, wy,
+  sse_prior, yy, n, adjE
  );
 }
 
@@ -1913,7 +1968,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   Rcpp::IntegerVector block_start = Rcpp::IntegerVector::create(),
   std::string eigen_filter = "hard_truncate",
   double eigen_tau = 0.01,
-  double eigen_eta = 0.0
+  double eigen_eta = 0.0,
+  std::string representation = "dense_reconstructed",
+  double eigen_prop = 0.995
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -1937,6 +1994,10 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
  const std::vector<int> block_start_cpp =
   Rcpp::as<std::vector<int>>(block_start);
  const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
+ if (representation != "low_rank" && representation != "dense_reconstructed")
+  throw std::runtime_error("unknown block-eigen representation.");
+ if (representation == "low_rank" && use_r_init)
+  throw std::runtime_error("marker-space r_init is unavailable for the low-rank representation.");
 
  auto make_block_eigen_operator = [&](int m,
                                       const std::vector<double>& xx,
@@ -1963,17 +2024,38 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   );
   if (G.m != m) throw std::runtime_error("BED marker count does not match m.");
 
-  std::vector<BlockEigenDiag> block_diag;
-  BlockEigenOperator op = build_block_eigen(
-   G, af_cpp, block_start_cpp, mode, eigen_tau, eigen_eta,
-   wy_mat, ncores, &block_diag
-  );
+  BlockEigenDispatchOperator op;
+  op.low_rank = representation == "low_rank";
+  Rcpp::List diagnostics;
+  if (op.low_rank) {
+   std::vector<BlockLowRankDiag> block_diag;
+   op.retained = build_block_low_rank(
+    G, af_cpp, block_start_cpp, eigen_prop, wy_mat, ncores, &block_diag
+   );
+   diagnostics = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_low_rank_diagnostics_to_data_frame(block_diag),
+    Rcpp::Named("operator_contract") = "block_low_rank_v1",
+    Rcpp::Named("operator_representation") = "low_rank",
+    Rcpp::Named("operator_scale_contract") = "general_cross_product",
+    Rcpp::Named("eigen_policy") = "cumulative_positive_mass",
+    Rcpp::Named("eigen_prop") = eigen_prop,
+    Rcpp::Named("build") = block_low_rank_build_metadata(op.retained)
+   );
+  } else {
+   std::vector<BlockEigenDiag> block_diag;
+   op.dense = build_block_eigen(
+    G, af_cpp, block_start_cpp, mode, eigen_tau, eigen_eta,
+    wy_mat, ncores, &block_diag
+   );
+   diagnostics = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag),
+    Rcpp::Named("operator_contract") = "block_dense_reconstructed_v1",
+    Rcpp::Named("operator_representation") = "dense_reconstructed"
+   );
+  }
   BayesRLDLDFriends friends;
   friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
-  Rcpp::List diagnostics = Rcpp::List::create(
-   Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag)
-  );
-  return BayesROperatorContext<BlockEigenOperator>(
+  return BayesROperatorContext<BlockEigenDispatchOperator>(
    std::move(op), std::move(friends), diagnostics
   );
  };

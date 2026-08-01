@@ -12,7 +12,9 @@ stblr_block_eigen(
   effect_maf = NULL,
   allow_reference_maf_for_maf_effect_s = FALSE,
   annotation = NULL,
-  eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
+  representation = c("low_rank", "dense_reconstructed"),
+  eigen_policy = NULL,
+  eigen_prop = 0.995,
   eigen_tau = 0.01,
   eigen_eta = 0,
   nit = 1000,
@@ -49,9 +51,15 @@ are unavailable. The default is `FALSE`.}
 
 \item{annotation}{Annotation matrix required for `"sbayesrc"`.}
 
-\item{eigen_filter}{Block filter: hard truncation, fixed ridge, or LW ridge.}
+\item{representation}{Operator representation. `"low_rank"` is canonical;
+`"dense_reconstructed"` retains the historical packed dense operator.}
 
-\item{eigen_tau, eigen_eta}{Nonnegative filter controls.}
+\item{eigen_policy}{Representation-specific eigenvalue policy, or `NULL` for
+the representation default.}
+
+\item{eigen_prop}{Cumulative positive-eigenvalue mass target for low rank.}
+
+\item{eigen_tau, eigen_eta}{Nonnegative reconstructed-dense filter controls.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 
@@ -82,7 +90,11 @@ retained traces, and hard trace-memory guards.}
 A `stblr_fit` and `blr_fit` object.
 }
 \description{
-Fits one independent scalar model per trait using the canonical reconstructed
-block-eigen operator. The operator is built from the supplied BED provenance;
-filtering changes the represented LD operator and is recorded in the fit.
+Fits one independent scalar model per trait using the canonical retained
+low-rank block-eigen operator. The reconstructed-dense historical operator is
+retained as an explicit representation for regression and reproducibility.
+The retained factor follows the GCTB/SBayesRC eigenspace likelihood strategy
+in `sblr` cross-product units, but uses `sblr`'s global projected
+residual-variance contract rather than GCTB's block-specific variance
+procedure.
 }

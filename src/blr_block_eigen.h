@@ -137,11 +137,46 @@ struct BlockEigenStorage {
   }
 
   inline const arma::rowvec& diag() const { return view().diag(); }
+  inline arma::uword residual_size() const { return diagonal.n_elem; }
+  inline double corrected_rhs(int i, double beta_old, const arma::rowvec& r) const {
+    const arma::uword iu = static_cast<arma::uword>(i);
+    return r(iu) + diagonal(iu) * beta_old;
+  }
   inline void apply_offdiag(int i, double d, arma::rowvec& r) const { view().apply_offdiag(i, d, r); }
   inline void apply_offdiag(int i, double d, std::vector<double>& r) const { view().apply_offdiag(i, d, r); }
   inline void rebuild(const arma::rowvec& w, const arma::rowvec& b, arma::rowvec& r) const { view().rebuild(w, b, r); }
   inline void rebuild(const std::vector<double>& w, const std::vector<double>& b,
                       std::vector<double>& r) const { view().rebuild(w, b, r); }
+  inline void rebuild(int, const arma::rowvec& w, const arma::rowvec& b,
+                      arma::rowvec& r) const { view().rebuild(w, b, r); }
+  inline void apply_difference(int i, double d, arma::rowvec& r) const {
+    const arma::uword iu = static_cast<arma::uword>(i);
+    r(iu) -= diagonal(iu) * d;
+    view().apply_offdiag(i, d, r);
+  }
+  inline double projected_score_dot(int, const arma::rowvec& b,
+                                    const arma::rowvec& wy) const {
+    return arma::dot(b, wy);
+  }
+  inline double quadratic_form(const arma::rowvec& b) const {
+    arma::rowvec zero(diagonal.n_elem, arma::fill::zeros);
+    arma::rowvec rb;
+    view().rebuild(zero, b, rb);
+    return -arma::dot(b, rb);
+  }
+  inline double residual_sse(int, double yy, const arma::rowvec& b,
+                             const arma::rowvec& wy, const arma::rowvec& r) const {
+    return yy - arma::dot(b, r + wy);
+  }
+  inline double genetic_variance(int, const arma::rowvec& b,
+                                 const arma::rowvec& wy, const arma::rowvec& r,
+                                 double n) const {
+    return arma::dot(b, wy - r) / n;
+  }
+  inline void materialize_residual(int, const arma::rowvec& r,
+                                   arma::rowvec& marker_residual) const {
+    marker_residual = r;
+  }
 };
 
 inline std::size_t block_eigen_packed_length(int size) {

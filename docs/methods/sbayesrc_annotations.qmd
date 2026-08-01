@@ -8,9 +8,13 @@ available through `stblr_csr_annot(annotation_model =
 closely aligned with published SBayesRC: marker effects follow a multi-normal
 mixture, and marker-specific mixture probabilities are determined by
 conditional probit stick-breaking regressions on annotations. The exposed
-`sblr` model is not an exact reproduction of the published GCTB SBayesRC
-implementation. Its default component-multiplier grid differs, and it uses a CSR sparse-LD
-likelihood rather than the GCTB low-rank rotated summary-statistics likelihood.
+`stblr_csr_annot()` model is not an exact reproduction of the published GCTB
+SBayesRC implementation. Its default component-multiplier grid differs, and
+this interface uses a CSR sparse-LD likelihood. The separate scalar
+`stblr_block_eigen(method = "sbayesrc")` route follows the GCTB/SBayesRC
+eigenspace likelihood strategy in `sblr` cross-product units, but uses a
+global projected residual-variance contract rather than GCTB's block-specific
+variance procedure.
 
 This note focuses on the annotation-dependent prior and its diagnostics. It
 does not claim computational equivalence between the two likelihood
@@ -521,7 +525,7 @@ hyperparameters.
 | Scaled inverse-chi-square prior on alpha variance | Uses a scaled-inverse-chi-square/inverse-gamma-family update controlled by `sigmaSqAlpha_a` and `sigmaSqAlpha_b` | Same family; exact published hyperparameters not implied |
 | Probit alpha update | Latent truncated-normal augmentation and conditional normal draws | Closely aligned Gibbs-style update |
 | Component-probability numerical handling | Floors probabilities at `pi_floor` and renormalizes rows | Qualified numerical-stability detail |
-| Summary-statistics likelihood | CSR sparse-LD likelihood | Different from GCTB low-rank rotated likelihood |
+| Summary-statistics likelihood | CSR sparse-LD likelihood for `stblr_csr_annot()`; retained eigenspace likelihood for scalar `stblr_block_eigen()` | The block-eigen route crosswalks retained rank, transformed score, and marker conditionals, but not GCTB's block-specific residual-variance procedure |
 
 The most accurate description is therefore:
 

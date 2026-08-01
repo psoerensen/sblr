@@ -73,8 +73,13 @@ fit_block <- stblr_block_eigen(
 )
 ```
 
-Filtering changes the represented operator. Exact CSR/block-eigen reductions
-therefore require the documented unfiltered reconstruction setup.
+This is the retained low-rank route: it keeps 99.5% cumulative positive
+eigenvalue mass by default and preserves effects, activity/component states,
+annotations, and priors in marker space. Use
+`representation = "dense_reconstructed"` for the historical packed reference
+operator and its threshold/ridge policies. Filtering changes the represented
+operator; exact historical CSR reductions therefore request that dense route
+explicitly. MT retained-factor sampling is not yet available.
 
 ## Annotation-aware summary fitting
 

@@ -14,6 +14,12 @@ order, scales, sample sizes, and provenance. `model_parameters`, `diagnostics`,
 `convergence`, `convergence_traces`, `chains`, and `memory_estimate` have
 distinct responsibilities.
 
+For scalar block eigen, `operator_representation = "low_rank"` is canonical and
+records the versioned `block_low_rank_v1` contract, cumulative-mass policy,
+per-block ranks/masses, and storage/workspace estimates. Historical reproducible
+runs should request `representation = "dense_reconstructed"`, which records the
+distinct `block_dense_reconstructed_v1` contract.
+
 `bm` is posterior mean effective effect and `b_final` is final effective state.
 `dm` is posterior binary activity/non-null probability and `d_final` is final
 binary activity. Latent `beta_final` and mixture `component_final` appear only

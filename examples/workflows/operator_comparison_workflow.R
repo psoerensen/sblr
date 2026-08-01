@@ -17,6 +17,9 @@ fit_st_csr <- do.call(stblr_csr, c(
 fit_st_block <- do.call(stblr_block_eigen, c(
   list(stats = stats, Glist = Glist, block_start = block_start,
        method = "sbayesc"), common))
+fit_st_block_dense_reference <- do.call(stblr_block_eigen, c(
+  list(stats = stats, Glist = Glist, block_start = block_start,
+       method = "sbayesc", representation = "dense_reconstructed"), common))
 fit_st_bed <- do.call(stblr_bed, c(
   list(y = y, Glist = Glist, method = "bayesc"), common))
 

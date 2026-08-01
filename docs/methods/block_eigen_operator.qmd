@@ -15,9 +15,20 @@ and summary-statistic provenance needed to prove marker and scale alignment.
 Current MT use requires summary statistics derived from the same selected BED
 genotypes by construction; arbitrary external GWAS projection is not supported.
 
-“Block eigen” describes how within-block LD is constructed and filtered. The
-runtime sampler uses reconstructed dense filtered blocks, stored as packed
-upper triangles, rather than necessarily retaining low-rank eigenfactors.
+For scalar models, “block eigen” now means a retained rectangular factor by
+default. `representation = "low_rank"` stores an eigen-by-marker factor and a
+transformed score, maintains a reduced residual, and never reconstructs a dense
+SNP-by-SNP matrix during MCMC. The historical packed reconstruction remains
+available as `representation = "dense_reconstructed"`. The MT route is still
+reconstructed dense; MT retained-factor sampling is planned but unavailable.
+
+The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
+strategy, represented in `sblr` cross-product units with a global projected
+residual-variance contract. The retained-rank rule, transformed score, and
+marker conditional have an explicit scale crosswalk to the pinned GCTB code.
+The residual-variance samplers do not: `sblr` uses one global projected SSE,
+whereas GCTB uses a block-specific variance procedure with block sample sizes,
+retained-rank degrees of freedom, and block-specific residual variances.
 
 ## Construction
 
@@ -30,7 +41,12 @@ complete selected marker order.
 
 For each block, the implementation forms the standardized within-block
 cross-product/correlation representation, symmetrizes it, and computes its
-eigendecomposition. The chosen filter changes the represented operator:
+eigendecomposition. Low rank retains the smallest leading rank whose cumulative
+positive-eigenvalue mass is strictly greater than `eigen_prop` (default 0.995),
+using positive eigenvalues above `1e-10`. An exact cumulative boundary therefore
+retains the next eigenvector; zero/negative eigenvalues are omitted and
+rank-zero blocks fail. The reconstructed-dense reference retains its historical
+filters:
 
 - `hard_truncate`: eigenvalues below the nonnegative `eigen_tau` threshold are
   removed, and the summary score `wy` is projected consistently into the
@@ -58,7 +74,14 @@ positive and exactly matches the diagonal stored in each packed block.
 
 ## Runtime representation and ownership
 
-Each reconstructed symmetric block stores only its upper triangle in
+The canonical scalar representation stores `Q` as a column-major float
+`retained rank × marker count` factor after double construction, transformed
+scores and per-chain reduced residuals as double, and runtime diagonals as
+double. Immutable `Q` and transformed scores are shared by chains; each chain
+owns only its reduced residual and sampler state. Marker updates cost retained
+rank for their block, and storage is `O(sum_b m_b k_b)`.
+
+The reconstructed reference representation stores each symmetric block's upper triangle in
 single-precision packed order plus marker-to-block/local-index mappings and a
 double-precision diagonal view. Immutable storage is prepared once per fit and
 borrowed by logical chains. Worker tasks own sampler state but do not rebuild
@@ -71,13 +94,27 @@ $$
 O\!\left(\sum_b m_b(m_b+1)/2\right),
 $$
 
-not (O(mr)) low-rank storage. Narrower blocks lower memory and update cost but
+This is not low-rank storage. Narrower blocks lower memory and update cost but
 set cross-block LD to zero.
 
 ## Public support
 
 - `stblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`;
 - `mtblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`.
+
+```r
+# Canonical scalar route
+fit <- stblr_block_eigen(
+  stats = stats, Glist = Glist, block_start = block_start,
+  method = "sbayesr"
+)
+
+# Historical reconstructed-dense route
+fit_dense_reference <- stblr_block_eigen(
+  stats = stats, Glist = Glist, block_start = block_start,
+  method = "sbayesr", representation = "dense_reconstructed"
+)
+```
 
 The `sbayesrc` ST route uses its public `annotation` input; the MT route uses
 `annotations`. Fixed `maf_effect_s` requires aligned allele frequencies and
@@ -90,7 +127,8 @@ reductions against CSR when both represent the same LD operator.
 - Filtering changes the likelihood operator and must be reported.
 - External-GWAS/reference-LD use requires a scale/projection contract not
   supplied by the current block-eigen API.
-- Runtime storage may be dense within blocks even after eigen filtering.
+- Retained factors help only when retained rank is materially below block size;
+  sparse CSR or packed dense blocks may be preferable otherwise.
 - Reference samples, marker order, allele orientation, missing-value policy,
   frequencies, block boundaries, and filter settings are required provenance.
 

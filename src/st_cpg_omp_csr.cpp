@@ -167,7 +167,7 @@ inline void sampleBetaC_ST_csr(
  const double vbi = std::max(vb * prior_scale(iu), 1e-300);
 
  // score = x_i' residual_without_i
- const double score = r(iu) + wi * b(iu);
+ const double score = op.corrected_rhs(i, b(iu), r);
 
  // Same BayesC scalar marginal likelihood as old sbayes(),
  // but using scalar adjusted residual variance vei_i.
@@ -207,9 +207,7 @@ inline void sampleBetaC_ST_csr(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= wi * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -243,7 +241,7 @@ inline void sampleBetaC_ST_csr_unscaled(
  const double vbi = std::max(vb, 1e-300);
 
  // score = x_i' residual_without_i
- const double score = r(iu) + wi * b(iu);
+ const double score = op.corrected_rhs(i, b(iu), r);
 
  // Same BayesC scalar marginal likelihood as old sbayes(),
  // but using scalar adjusted residual variance vei_i.
@@ -283,8 +281,7 @@ inline void sampleBetaC_ST_csr_unscaled(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= wi * diff;
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -608,9 +605,7 @@ inline void set_marker_effect_st_csr(
  const double diff = b_new - b(iu);
 
  if (diff != 0.0) {
-  r(iu) -= ww(iu) * diff;
-
-  op.apply_offdiag(i, diff, r);
+  op.apply_difference(i, diff, r);
  }
 
  b(iu) = b_new;
@@ -1917,7 +1912,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
     b_t(static_cast<arma::uword>(i)) = b_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(i));
    }
 
-   arma::rowvec r_t(m, arma::fill::zeros);
+   arma::rowvec r_t(op.residual_size(), arma::fill::zeros);
    arma::Row<int> d_t(m, arma::fill::zeros);
 
    if (use_d_init) {
@@ -1940,7 +1935,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
      throw std::runtime_error("stblr_cpg_omp_csr_state: r_init contains NaN/Inf.");
     }
    } else {
-    op.rebuild(wy_t, b_t, r_t);
+    op.rebuild(t, wy_t, b_t, r_t);
    }
 
    double vb_t = B(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
@@ -2137,11 +2132,12 @@ Rcpp::List stblr_cpg_omp_csr_impl(
 
     if (updateE) {
      if (rebuild_r_before_updateE) {
-      op.rebuild(wy_t, b_t, r_t);
+      op.rebuild(t, wy_t, b_t, r_t);
      }
 
-     sampleE_ST_csr(
-      m,
+     sampleE_ST_operator(
+      op,
+      t,
       nue,
       ve_t,
       b_t,
@@ -2168,7 +2164,9 @@ Rcpp::List stblr_cpg_omp_csr_impl(
      }
     }
 
-    vg_t = computeG_ST_csr(
+    vg_t = computeG_ST_operator(
+     op,
+     t,
      b_t,
      wy_t,
      r_t,
@@ -2262,7 +2260,9 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    bm_task.row(task_u) = bm_t;
    dm_task.row(task_u) = dm_t;
    b_task.row(task_u)  = b_t;
-   r_task.row(task_u)  = r_t;
+   arma::rowvec marker_residual;
+   op.materialize_residual(t, r_t, marker_residual);
+   r_task.row(task_u)  = marker_residual;
    for (int i = 0; i < m; ++i) {
     d_task_double(task_u, static_cast<arma::uword>(i)) =
      static_cast<double>(d_t(static_cast<arma::uword>(i)));
@@ -2869,7 +2869,9 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   Rcpp::IntegerVector block_start = Rcpp::IntegerVector::create(),
   std::string eigen_filter = "hard_truncate",
   double eigen_tau = 0.01,
-  double eigen_eta = 0.0
+  double eigen_eta = 0.0,
+  std::string representation = "dense_reconstructed",
+  double eigen_prop = 0.995
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -2896,6 +2898,10 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
  const std::vector<int> block_start_cpp =
   stblr_copy_integer_vector(block_start, "block_start");
  const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
+ if (representation != "low_rank" && representation != "dense_reconstructed")
+  throw std::runtime_error("unknown block-eigen representation.");
+ if (representation == "low_rank" && use_r_init)
+  throw std::runtime_error("marker-space r_init is unavailable for the low-rank representation.");
 
  auto make_block_eigen_operator = [&](int m,
                                       const std::vector<double>& xx,
@@ -2928,24 +2934,38 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
    throw std::runtime_error("BED marker count does not match m.");
   }
 
-  std::vector<BlockEigenDiag> block_diag;
-  BlockEigenOperator op = build_block_eigen(
-   G,
-   af_cpp,
-   block_start_cpp,
-   mode,
-   eigen_tau,
-   eigen_eta,
-   wy_mat,
-   ncores,
-   &block_diag
-  );
+  BlockEigenDispatchOperator op;
+  op.low_rank = representation == "low_rank";
+  Rcpp::List diagnostics;
+  if (op.low_rank) {
+   std::vector<BlockLowRankDiag> block_diag;
+   op.retained = build_block_low_rank(
+    G, af_cpp, block_start_cpp, eigen_prop, wy_mat, ncores, &block_diag
+   );
+   diagnostics = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_low_rank_diagnostics_to_data_frame(block_diag),
+    Rcpp::Named("operator_contract") = "block_low_rank_v1",
+    Rcpp::Named("operator_representation") = "low_rank",
+    Rcpp::Named("operator_scale_contract") = "general_cross_product",
+    Rcpp::Named("eigen_policy") = "cumulative_positive_mass",
+    Rcpp::Named("eigen_prop") = eigen_prop,
+    Rcpp::Named("build") = block_low_rank_build_metadata(op.retained)
+   );
+  } else {
+   std::vector<BlockEigenDiag> block_diag;
+   op.dense = build_block_eigen(
+    G, af_cpp, block_start_cpp, mode, eigen_tau, eigen_eta,
+    wy_mat, ncores, &block_diag
+   );
+   diagnostics = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag),
+    Rcpp::Named("operator_contract") = "block_dense_reconstructed_v1",
+    Rcpp::Named("operator_representation") = "dense_reconstructed"
+   );
+  }
   LDLDFriends ld_swap_friends;
   ld_swap_friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
-  Rcpp::List diagnostics = Rcpp::List::create(
-   Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag)
-  );
-  return BayescOperatorContext<BlockEigenOperator>(
+  return BayescOperatorContext<BlockEigenDispatchOperator>(
    std::move(op),
    std::move(ld_swap_friends),
    diagnostics

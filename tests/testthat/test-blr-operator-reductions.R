@@ -27,6 +27,7 @@ test_that("ST CSR and unfiltered block eigen execute BayesC reduction", {
                                     ld_prefix = prefix), common))
   block <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    representation = "dense_reconstructed",
     eigen_filter = "hard_truncate", eigen_tau = 0), common))
   for (field in c("bm", "dm", "vbs", "vgs", "ves", "vle", "vld",
                   "pi_final", "pi_mean")) {
@@ -45,6 +46,7 @@ test_that("ST CSR and unfiltered block eigen execute BayesC reduction", {
     stats = fixture$stats, ld_prefix = prefix), diagnostic_common))
   block_diagnostic <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    representation = "dense_reconstructed",
     eigen_filter = "hard_truncate", eigen_tau = 0), diagnostic_common))
   block_summary <- block_diagnostic$convergence$summary
   csr_summary <- csr_diagnostic$convergence$summary
@@ -65,6 +67,7 @@ test_that("ST CSR and unfiltered block eigen execute BayesR reduction", {
                                     ld_prefix = prefix), common))
   block <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    representation = "dense_reconstructed",
     eigen_filter = "hard_truncate", eigen_tau = 0), common))
   for (field in c("bm", "dm", "vbs", "vgs", "ves", "vle", "vld",
                   "pi_final", "pi_mean", "dm_component_mean")) {
@@ -94,6 +97,7 @@ test_that("ST CSR and block eigen expose identical native BayesR diagnostics", {
                                     ld_prefix = prefix), common))
   block <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    representation = "dense_reconstructed",
     eigen_filter = "hard_truncate", eigen_tau = 0), common))
   csr_desc <- csr$convergence_traces$quantities
   block_desc <- block$convergence_traces$quantities
@@ -124,6 +128,7 @@ test_that("ST CSR and unfiltered block eigen execute SBayesRC reduction", {
     annotation_model = "annotation_probit_stick"), common))
   block <- do.call(stblr_block_eigen, c(list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+    representation = "dense_reconstructed",
     method = "sbayesrc", annotation = annotation,
     eigen_filter = "hard_truncate", eigen_tau = 0), common))
   for (field in c("bm", "dm", "vbs", "vgs", "ves", "vle", "vld",
@@ -240,6 +245,7 @@ test_that("S models reuse BayesC and BayesR kernels across exact operators", {
       common))
     block <- do.call(stblr_block_eigen, c(list(
       stats = fixture$stats, Glist = fixture$Glist, block_start = 1L,
+      representation = "dense_reconstructed",
       eigen_filter = "hard_truncate", eigen_tau = 0), common))
     expect_identical(csr$model, case$method)
     expect_identical(block$model, case$method)

@@ -28,7 +28,7 @@ metadata.
 ```r
 stblr_csr()          # scalar-trait summary statistics + sparse LD
 stblr_csr_annot()    # scalar-trait annotation-aware sparse-LD models
-stblr_block_eigen()  # scalar-trait summary statistics + block-eigen LD
+stblr_block_eigen()  # scalar summary statistics + retained low-rank block eigen
 stblr_bed()          # scalar-trait individual-level packed BED
 
 mtblr_csr()          # joint multi-trait summary statistics + sparse LD
@@ -57,13 +57,19 @@ scale.
 |---|---|---|
 | `stblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
 | `stblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr` |
-| `stblr_block_eigen()` | block eigen | `sbayesc`, `sbayesr`, `sbayesrc` |
+| `stblr_block_eigen()` | retained low-rank block eigen (default); reconstructed dense by request | `sbayesc`, `sbayesr`, `sbayesrc` |
 | `stblr_csr_annot()` | CSR sparse LD | `sbayesc` with `fixed_marker`, `group`, or `learned_logistic`; `sbayesrc` with `annotation_probit_stick` |
 | `mtblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
 | `mtblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr`, `sbayesrc` |
 | `mtblr_block_eigen()` | block eigen | `sbayesc`, `sbayesr`, `sbayesrc` |
 
 Unsupported combinations fail before numerical execution.
+
+The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
+strategy, represented in `sblr` cross-product units with a global projected
+residual-variance contract. Retained rank, transformed scores, and marker
+conditionals are crosswalked to the pinned GCTB strategy; `sblr` does not
+reproduce GCTB's block-specific residual-variance procedure.
 
 ## Diagnostics
 

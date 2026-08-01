@@ -9,14 +9,23 @@ format: html
 |---|---|---|
 | `packed_bed` | individual | selected PLINK BED genotypes and phenotypes |
 | `csr` | summary statistics | `wy`, `ww`, sample metadata, and disk-backed sparse LD correlations |
-| `block_eigen` | summary statistics | aligned scores plus reference BED data and explicit block/filter settings |
+| `block_eigen` | summary statistics | scalar retained factors by default; historical reconstructed dense blocks explicitly; aligned scores, reference BED data, and block settings |
 
 Packed-BED routes decode selected markers once and use the actual standardized
 analysis-genotype variance. CSR stores retained upper-triangle off-diagonal
 correlations with an implicit unit correlation diagonal; the sampler combines
-those values with aligned `stats$ww` marker cross-products. Block eigen
-constructs and filters within-block operators, then stores reconstructed dense
-block upper triangles and their filtered runtime diagonal.
+those values with aligned `stats$ww` marker cross-products. Scalar block eigen
+defaults to rectangular retained factors selected by 99.5% cumulative positive
+eigenvalue mass. `representation = "dense_reconstructed"` preserves the old
+packed reconstruction and its absolute-threshold/ridge policies. The low-rank
+route stores retained rectangular factors and reduced residuals; only the
+historical route stores reconstructed dense block upper triangles.
+
+The retained route follows the GCTB/SBayesRC eigenspace likelihood strategy in
+`sblr` cross-product units. Its retained-rank rule, transformed score, and
+marker conditionals have a scale crosswalk to GCTB, while residual variance
+uses `sblr`'s global projected contract rather than GCTB's block-specific
+variance procedure.
 
 Marker identity, order, allele orientation, scale, and sample/frequency
 provenance matter more than matching dimensions. External GWAS summary

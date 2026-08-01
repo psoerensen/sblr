@@ -371,3 +371,79 @@ Rcpp::List stblr_block_eigen_contract_internal(
     )
   );
 }
+
+// Development-only inspection of retained factors on small deterministic fixtures.
+// [[Rcpp::export]]
+Rcpp::List stblr_block_low_rank_contract_internal(
+    Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls,
+    Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af,
+    Rcpp::IntegerVector block_start, Rcpp::NumericMatrix wy,
+    Rcpp::NumericVector effects, double eigen_prop = 0.995) {
+  std::vector<std::string> files = Rcpp::as<std::vector<std::string>>(bed_files);
+  std::vector<std::vector<int>> columns(static_cast<std::size_t>(cls.size()));
+  for (int group = 0; group < cls.size(); ++group) {
+    Rcpp::IntegerVector values = cls[group];
+    for (int value : values) {
+      if (value == NA_INTEGER || value <= 0)
+        throw std::runtime_error("cls must be positive and 1-based.");
+      columns[static_cast<std::size_t>(group)].push_back(value);
+    }
+  }
+  std::vector<int> selected_rows;
+  if (rows.isNotNull()) {
+    Rcpp::IntegerVector values(rows);
+    for (int value : values) {
+      if (value == NA_INTEGER || value <= 0 || value > n_bed)
+        throw std::runtime_error("rows must lie in [1, n_bed].");
+      selected_rows.push_back(value - 1);
+    }
+  }
+  PackedBedMatrix packed = read_bedfiles_to_packed_matrix(
+    files, n_bed, selected_rows.empty() ? nullptr : selected_rows.data(),
+    static_cast<int>(selected_rows.size()), columns
+  );
+  std::vector<double> frequencies = Rcpp::as<std::vector<double>>(af);
+  std::vector<int> starts = Rcpp::as<std::vector<int>>(block_start);
+  arma::mat projected_score(wy.begin(), wy.nrow(), wy.ncol(), true);
+  std::vector<BlockLowRankDiag> diagnostics;
+  BlockLowRankOperator storage = build_block_low_rank(
+    packed, frequencies, starts, eigen_prop, projected_score, 1, &diagnostics
+  );
+  if (effects.size() != static_cast<int>(storage.marker_count))
+    throw std::runtime_error("effects length must equal marker count.");
+  arma::rowvec beta(effects.begin(), effects.size(), true);
+  arma::rowvec residual;
+  storage.rebuild(0, projected_score.row(0), beta, residual);
+  arma::rowvec marker_residual;
+  storage.materialize_residual(0, residual, marker_residual);
+  Rcpp::List factors(storage.blocks.size()), transformed(storage.blocks.size());
+  Rcpp::IntegerVector offsets(storage.blocks.size());
+  for (std::size_t group = 0; group < storage.blocks.size(); ++group) {
+    const sblr::core::BlockLowRankBlock& block = storage.blocks[group];
+    arma::mat factor(static_cast<arma::uword>(block.rank),
+                     static_cast<arma::uword>(block.size));
+    for (int local = 0; local < block.size; ++local)
+      for (int k = 0; k < block.rank; ++k)
+        factor(static_cast<arma::uword>(k), static_cast<arma::uword>(local)) =
+          block.q(k, local);
+    factors[group] = Rcpp::wrap(factor);
+    transformed[group] = Rcpp::wrap(block.transformed_score);
+    offsets[group] = static_cast<int>(block.residual_offset);
+  }
+  return Rcpp::List::create(
+    Rcpp::Named("factor") = factors,
+    Rcpp::Named("transformed_score") = transformed,
+    Rcpp::Named("projected_score") = Rcpp::wrap(projected_score),
+    Rcpp::Named("diagonal") = Rcpp::wrap(storage.diagonal),
+    Rcpp::Named("residual") = Rcpp::wrap(residual),
+    Rcpp::Named("marker_residual") = Rcpp::wrap(marker_residual),
+    Rcpp::Named("quadratic_form") = storage.quadratic_form(beta),
+    Rcpp::Named("projected_score_dot") =
+      storage.projected_score_dot(0, beta, projected_score.row(0)),
+    Rcpp::Named("residual_norm_squared") = arma::dot(residual, residual),
+    Rcpp::Named("transformed_score_norm_squared") =
+      storage.transformed_score_norm_squared(0),
+    Rcpp::Named("residual_offset") = offsets,
+    Rcpp::Named("diagnostics") = block_low_rank_diagnostics_to_data_frame(diagnostics)
+  );
+}

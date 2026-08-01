@@ -161,7 +161,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
    const arma::rowvec& ww_t = op.diag();
    arma::rowvec b_t = b_init_mat.row(static_cast<arma::uword>(t));
-   arma::rowvec r_t(m, arma::fill::zeros);
+   arma::rowvec r_t(op.residual_size(), arma::fill::zeros);
    arma::Row<int> comp_t(m, arma::fill::zeros);
 
    if (use_comp_init) {
@@ -184,7 +184,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     }
     if (!r_t.is_finite()) throw std::runtime_error("r_init contains NaN/Inf.");
    } else {
-    op.rebuild(wy_t, b_t, r_t);
+    op.rebuild(t, wy_t, b_t, r_t);
    }
 
    double vb_t = B(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
@@ -214,7 +214,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    double maf_effect_s_accepted_t = 0.0;
    arma::rowvec dynamic_prior_scale;
 
-   double vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
+   double vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
    double vle_t = computeLE_bayesr_ST_csr(m, b_t, ww_t, n[t]);
    double vld_t = vg_t - vle_t;
    double vei_t = ve_t + adjE * vg_t;
@@ -368,8 +368,10 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
 
     if (do_updateE) {
      ensure_null_effects_bayesr_ST_csr(m, t, chain, it, b_t, comp_t);
-     op.rebuild(wy_t, b_t, r_t);
+     op.rebuild(t, wy_t, b_t, r_t);
      const BayesRUpdateEDiagnostics diag = residual_diagnostics_bayesr_ST_csr(
+      op,
+      t,
       m,
       nue,
       b_t,
@@ -389,6 +391,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      max_fitted_quadratic_t = std::max(max_fitted_quadratic_t, std::abs(diag.bXb));
      ++n_updateE_t;
      check_residual_scale_bayesr_ST_csr(
+      op,
       m,
       t,
       chain,
@@ -406,8 +409,9 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
       n[t],
       adjE
      );
-     sampleE_ST_csr(
-      m,
+     sampleE_ST_operator(
+      op,
+      t,
       nue,
       ve_t,
       b_t,
@@ -422,7 +426,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
 
     if (updatePi) samplePi_bayesr_ST_csr(comp_t, pi_t, alpha, gen_t);
 
-    vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
+    vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
     vle_t = computeLE_bayesr_ST_csr(m, b_t, ww_t, n[t]);
     vld_t = vg_t - vle_t;
     vei_t = ve_t + adjE * vg_t;
@@ -483,7 +487,9 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    dm_task.row(task_u) = dm_t;
    component_mean_task.row(task_u) = component_mean_t;
    b_task.row(task_u) = b_t;
-   r_task.row(task_u) = r_t;
+   arma::rowvec marker_residual;
+   op.materialize_residual(t, r_t, marker_residual);
+   r_task.row(task_u) = marker_residual;
    for (int i = 0; i < m; ++i) {
     component_task(task_u, static_cast<arma::uword>(i)) =
      static_cast<double>(comp_t(static_cast<arma::uword>(i)));

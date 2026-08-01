@@ -1,3 +1,19 @@
+# sblr 0.2.0
+
+- Added the retained low-rank scalar block-eigen LD operator for SBayesC,
+  SBayesR, and SBayesRC and made it the default `stblr_block_eigen()`
+  representation.
+- Retained historical reconstructed-dense behavior explicitly through
+  `representation = "dense_reconstructed"`.
+- Made cumulative positive-eigenvalue-mass retention the low-rank policy,
+  with `eigen_prop = 0.995` by default.
+- Kept retained-factor sampling single-trait only; MT block-eigen sampling
+  remains reconstructed dense.
+- The retained low-rank operator follows the GCTB/SBayesRC eigenspace
+  likelihood strategy, represented in sblr cross-product units with a global
+  projected residual-variance contract. GCTB's block-specific variance
+  procedure is not reproduced.
+
 # sblr 0.1.0
 
 - Stabilized the seven canonical STBLR and MTBLR fitting interfaces and the

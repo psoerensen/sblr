@@ -549,6 +549,9 @@ stblr_csr_sbayesrc_generic <- function(
   Glist,
   annotation,
   block_start,
+  representation = "dense_reconstructed",
+  eigen_policy = "absolute_threshold",
+  eigen_prop = 0.995,
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01,
   eigen_eta = 0,
@@ -593,10 +596,20 @@ stblr_csr_sbayesrc_generic <- function(
   block_start = bed$block_start,
   eigen_filter = eigen_filter,
   eigen_tau = eigen_tau,
-  eigen_eta = eigen_eta
+  eigen_eta = eigen_eta,
+  representation = representation,
+  eigen_prop = eigen_prop
  )
  input_extra <- list(
   ld_backend = "block_eigen",
+  operator = "block_eigen",
+  operator_contract = if (identical(representation, "low_rank"))
+   "block_low_rank_v1" else "block_dense_reconstructed_v1",
+  operator_representation = representation,
+  operator_scale_contract = if (identical(representation, "low_rank"))
+   "general_cross_product" else "reconstructed_cross_product",
+  eigen_policy = eigen_policy,
+  eigen_prop = if (identical(representation, "low_rank")) eigen_prop else NULL,
   eigen_filter = eigen_filter,
   eigen_tau = eigen_tau,
   eigen_eta = eigen_eta,
