@@ -34,6 +34,13 @@ relationship is explicitly justified. Record the summary population, LD
 reference population, selected samples/markers, allele alignment, frequencies,
 and thresholds.
 
+The LD representation is part of the fitted likelihood, not only a storage
+choice. Complete aligned cross-products can support an exact summary-data
+likelihood, whereas thresholded/windowed CSR and retained block eigen define
+different approximations. See
+[How LD representation changes summary-statistics BLR](summary_ld_operator_interpretation.qmd)
+for operator integrity, fidelity, study interpretation, and a pre-fit checklist.
+
 See [Sparse-LD workflows](sparse_ld_workflows.qmd) for construction,
 [Sparse-LD CSR methods](../methods/sparse_ld_csr.qmd) for the disk/operator
 contract, and [Block-eigen methods](../methods/block_eigen_operator.qmd) for

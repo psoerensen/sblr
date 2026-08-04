@@ -13,6 +13,7 @@ diagnostic interpretation. Mathematical derivations are collected under
 - [Annotation-informed models](annotation_informed_models.qmd)
 - [`maf_effect_s`](maf_effect_s.qmd)
 - [Data representations and operators](data_representations.qmd)
+- [How LD representation changes summary-statistics BLR](summary_ld_operator_interpretation.qmd)
 - [Retained and reconstructed block-eigen methods](../methods/block_eigen_operator.qmd)
 - [Sparse-LD workflows](sparse_ld_workflows.qmd)
 - [Credible sets and fine-mapping](credible_sets_and_finemapping.qmd)

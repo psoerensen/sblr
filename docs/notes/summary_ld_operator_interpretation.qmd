@@ -1,0 +1,174 @@
+---
+title: "How LD representation changes summary-statistics BLR"
+subtitle: "A practical note on operator integrity, fidelity, and interpretation"
+format: html
+---
+
+## The main point
+
+Summary-statistics Bayesian linear regression is not inherently approximate.
+If the summary scores and LD operator are aligned and the operator is the
+complete genotype cross-product matrix for the analysis sample, the summary
+likelihood contains the same quadratic information used by the corresponding
+individual-level Gaussian regression. Approximation enters when the supplied
+LD operator differs from that target—for example through thresholding,
+windowing, block boundaries, or eigenvalue truncation.
+
+This distinction changes how a fitted model should be described. A result from
+hard-sparse LD is an inference result **conditional on that sparse operator**.
+It should not automatically be interpreted as the result that complete LD,
+packed genotypes, or another LD approximation would have produced.
+
+## Where the LD operator enters
+
+Write `w = X'y` for the marker score vector, `Q = X'X` for the target genotype
+cross-product operator, `b` for marker effects, and `yy = y'y`. Two quantities
+used repeatedly by summary-statistics samplers are
+
+$$
+r = w - Qb
+$$
+
+and
+
+$$
+\operatorname{SSE}(b) = yy - 2b'w + b'Qb.
+$$
+
+The first expression supplies corrected marker scores. The second is the
+residual quadratic used by residual-variance updates. Replacing `Q` by an
+approximation changes both expressions, even when the summary scores, priors,
+seeds, and sampler are unchanged.
+
+Hard sparsification sets many LD entries to zero according to an LD threshold,
+a genomic or marker window, or both. Each removed entry may be small, but its
+quadratic contribution is multiplied by a pair of effects. Across many active
+marker pairs, omitted positive and negative terms can be individually large
+and leave a material net difference. Consequently, hard sparsification can
+change:
+
+- corrected marker scores and conditional effect means;
+- mixture-component probabilities and active-marker allocation;
+- genetic and residual quadratic forms;
+- residual-variance updates; and
+- posterior effect, variance, prediction, and fine-mapping summaries.
+
+The issue is cumulative operator error, not simply the largest omitted LD
+correlation.
+
+## Integrity and fidelity are different checks
+
+**Operator integrity** asks whether the supplied object is internally usable as
+the intended likelihood operator. Examples include correct dimensions and
+ordering, symmetry, finite values, a valid diagonal, consistent scale, and
+positive semidefiniteness where a covariance or cross-product interpretation
+requires it. Residual rebuilds and equivalent evaluations of the same
+quadratic should also agree.
+
+**Operator fidelity** asks how closely that internally valid object reproduces
+the scientifically intended target operator. Useful comparisons include
+corrected-score errors, quadratic-form errors for realistic effect vectors,
+and sensitivity of conditional component probabilities or effect means.
+
+Positive semidefiniteness is therefore necessary for many LD likelihoods but
+is not sufficient. A positive-definite sparse matrix can still omit enough weak
+or cross-block LD to give substantially different corrected scores and
+quadratic forms. Conversely, an indefinite matrix has an integrity problem in
+addition to any fidelity problem.
+
+## Roles of the four routes
+
+| Route | Practical interpretation | Main qualification |
+|---|---|---|
+| Complete or exact CSR | Summary-statistics reference when complete, aligned cross-products are available | Feasibility and memory limit the scale at which complete LD can be retained |
+| Hard-sparse CSR | Explicit approximate summary-statistics likelihood | Results are conditional on the threshold, window, construction sample, and omitted LD |
+| Retained block eigen | Scalable projected summary-statistics likelihood and the canonical scalable scalar SBayesRC route | Omits discarded spectral mass and cross-block LD; it is a projected likelihood, not complete CSR |
+| Packed BED | Individual-level reference for the supplied selected genotypes and samples | It answers the likelihood defined by those genotypes and sample-selection rules |
+
+These roles are not a universal ranking. A carefully chosen sparse operator can
+be useful and computationally efficient, and a retained-eigen operator is also
+an approximation. The important requirement is to identify the likelihood
+that was actually fitted and avoid treating different operators as storage-only
+variants of one likelihood.
+
+## What Studies 05 and 06 established
+
+Study 05 compared operators while holding the simulated data and model class
+fixed. Complete CSR closely reproduced the full-sweep packed-BED BayesR
+reference. The tested hard-sparse operator was positive definite, but it still
+changed corrected scores, quadratic forms, component probabilities, and
+posterior recovery. Retaining 99.5% of positive within-block spectral mass
+improved some comparisons but could not restore omitted weak or cross-block LD.
+This is the clearest demonstration that PSD alone does not establish fidelity.
+
+Study 06 exposed a more extreme case. Its configured hard-sparse operator was
+indefinite, and hard-sparse SBayesRC reached negative residual scales. The
+maintained residual, rebuilt residual, and direct sparse quadratic agreed to
+floating-point precision, while the corresponding complete-genotype
+quadratics gave strongly positive residual scales. Thus the failure was not
+residual-state drift: the fitted sparse operator had both an integrity problem
+and severe quadratic-fidelity loss. A diagnostic retained block-eigen run on
+the same data remained numerically valid under its projected-likelihood
+contract.
+
+## Interpretation of Studies 01–03
+
+Studies 01–03 remain completed and valid evaluations of the workflows they
+specified. They assessed fine-mapping, prediction, and parameter estimation
+using their recorded BED and sparse-CSR inputs, priors, controls, and metrics.
+The later operator studies do not invalidate those empirical results and do
+not imply that the studies must be rerun.
+
+Their CSR findings should be read as performance **conditional on the
+configured sparse-LD construction**. In particular, BED-versus-CSR contrasts
+compare complete fitted workflows: data level, likelihood operator, and prior
+class where applicable. They are not proofs that hard-sparse CSR is equivalent
+to the corresponding packed-BED or complete-CSR likelihood. This interpretation
+is consistent with the limitations already stated in the completed reports.
+
+## A separate BayesRC annotation issue
+
+LD approximation and annotation-prior identification are separate model
+questions. The Study 06 CSR residual failure arose from the LD operator. Its
+packed-BED BayesRC chains did not use sparse LD, yet their annotation parameters
+mixed poorly because later probit sticks were completely separated under a flat
+intercept prior. Changing the LD representation cannot make an unidentified
+annotation-prior conditional proper, and changing the annotation prior cannot
+restore omitted LD quadratic terms.
+
+Diagnose these layers independently:
+
+1. Does the data operator define a valid and sufficiently faithful likelihood?
+2. Does the prior or annotation parameterization define an identified posterior
+   with adequate chain mixing?
+
+## Checks before fitting
+
+Before fitting a summary-statistics BLR model:
+
+1. **Verify semantic alignment.** Match marker IDs, order, effect alleles,
+   frequencies, scaling, sample size, and summary/LD population provenance.
+2. **Record construction policy.** Preserve the LD reference samples,
+   threshold, genomic or marker window, block boundaries, normalization, and
+   eigen-retention policy.
+3. **Check integrity.** Inspect dimensions, diagonal, symmetry, finite values,
+   and PSD or sparse-factorization diagnostics. Treat an indefinite covariance
+   operator as an input-contract problem; do not silently project it to PSD.
+4. **Check residual identities.** On deterministic states, compare maintained,
+   rebuilt, and direct-quadratic residual expressions.
+5. **Probe fidelity when a reference is available.** Compare corrected scores
+   and `b'Qb` for zero, simulated, initialized, and representative posterior
+   effect vectors. Do not infer fidelity from PSD alone.
+6. **Run sensitivity analyses when conclusions matter.** Compare plausible
+   thresholds, windows, blocks, or retained ranks, and use complete CSR or BED
+   on manageable subsets as a reference.
+7. **Monitor the fitted trajectory.** Watch residual-scale margins, residual
+   drift, effect and genetic variance, heritability, active-marker counts, and
+   unusually large joint-to-marginal effects.
+8. **Report the conditional estimand.** Name the operator and approximation in
+   results so readers know which likelihood generated the posterior.
+
+See [Data representations and operators](data_representations.qmd),
+[Sparse-LD workflows](sparse_ld_workflows.qmd), and
+[Retained and reconstructed block-eigen methods](../methods/block_eigen_operator.qmd)
+for construction and implementation details.
