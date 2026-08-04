@@ -21,6 +21,25 @@ likelihoods genuinely differ. The R layer owns public validation, canonical
 metadata, formatting, convergence planning, warning aggregation, and memory
 preflight.
 
+## Scalar operator roles
+
+The scalar SBayesR/SBayesRC routes expose distinct likelihood contracts rather
+than interchangeable storage formats:
+
+| Route | Contract |
+|---|---|
+| packed BED | Individual-level reference for the supplied genotypes and selected samples. |
+| complete CSR | Summary-statistics reference when the complete aligned cross-product operator is computationally feasible. |
+| thresholded or windowed CSR | Explicit approximation. Positive definiteness and internal residual identities do not establish fidelity to the source likelihood. |
+| retained block eigen | Canonical scalable SBayesRC summary-statistics route, using a projected low-rank likelihood and one global projected residual variance. |
+
+The retained route is closest to the original SBayesRC/GCTB eigen-LD
+likelihood, but it is not identical to GCTB's block-specific residual-variance
+implementation. Hard-sparse CSR is retained as a public route; its metadata
+must identify the approximation and must not imply equivalence to complete
+CSR. See `sbayesrc_reference_crosswalk.md` and
+`study06_sbayesrc_stabilization.md` for the evidence and qualifications.
+
 Raw backends return named `stblr_raw` or `mtblr_raw` schema-version-1 objects.
 Validation precedes one canonical family formatter; positional output and
 legacy schema fallback are not supported. Formatted fits use model-semantics

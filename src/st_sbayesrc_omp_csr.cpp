@@ -1157,6 +1157,7 @@ struct CsrSBayesRCBindingMetadata {
  bool update_ld_swap;
  bool estimate_maf_effect_s;
  bool use_maf_effect_s_prior_scale;
+ bool uses_retained_low_rank;
  const std::vector<int>& convergence_markers;
 };
 
@@ -1221,6 +1222,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   bool convergence_b,
   bool convergence_d,
   bool convergence_component,
+  int low_rank_residual_rebuild_every,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1511,6 +1513,20 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
  );
  const auto& op = operator_context.op;
  const SBayesRCLDLDFriends& ld_swap_friends = operator_context.ld_swap_friends;
+ if (low_rank_residual_rebuild_every < 0) {
+  throw std::runtime_error(
+   "low_rank_residual_rebuild_every must be non-negative.");
+ }
+ if (op.uses_retained_low_rank() && rebuild_r_before_updateE) {
+  throw std::runtime_error(
+   "rebuild_r_before_updateE is incompatible with retained low rank; use "
+   "low_rank_residual_rebuild_every instead.");
+ }
+ if (!op.uses_retained_low_rank() &&
+     low_rank_residual_rebuild_every != 0) {
+  throw std::runtime_error(
+   "low_rank_residual_rebuild_every is only supported by retained low rank.");
+ }
 
  std::vector<double> x2(static_cast<std::size_t>(m), 0.0);
  std::vector<int> order(static_cast<std::size_t>(m));
@@ -1633,6 +1649,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   use_comp_init,
   use_r_init,
   rebuild_r_before_updateE,
+  low_rank_residual_rebuild_every,
   intercept_flat,
   sigmaSqAlpha_a,
   sigmaSqAlpha_b,
@@ -1679,6 +1696,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   updateLDswap,
   estimate_maf_effect_s,
   use_maf_effect_s_prior_scale,
+  op.uses_retained_low_rank(),
   convergence_markers_cpp
  };
  return stblr_csr_sbayesrc_result_to_raw(execution_result, binding_metadata);
@@ -1951,6 +1969,16 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  if (metadata.operator_diagnostics.size() > 0) {
   diagnostics["block_eigen"] = metadata.operator_diagnostics;
  }
+ if (metadata.uses_retained_low_rank) {
+  diagnostics["low_rank_residual"] = Rcpp::List::create(
+   Rcpp::Named("low_rank_residual_rebuild_every") =
+    execution_result.low_rank_residual_diagnostics.col(0),
+   Rcpp::Named("low_rank_residual_rebuild_count") =
+    execution_result.low_rank_residual_diagnostics.col(1),
+   Rcpp::Named("low_rank_residual_max_abs_drift") =
+    execution_result.low_rank_residual_diagnostics.col(2)
+  );
+ }
 
  Rcpp::List chains = R_NilValue;
  if (keep_chains) {
@@ -2106,6 +2134,29 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  return raw;
 }
 
+// Internal deterministic regression hook for the shared BED/CSR BayesRC
+// latent-variable kernel.
+// [[Rcpp::export(name = ".st_bayesrc_truncated_normal_draws")]]
+Rcpp::NumericMatrix st_bayesrc_truncated_normal_draws_test(
+ Rcpp::NumericVector location,
+ int draws,
+ int seed
+) {
+ if (location.size() == 0 || draws <= 0)
+  throw std::runtime_error("location and draws must be non-empty and positive.");
+ std::mt19937 generator(static_cast<unsigned int>(seed));
+ Rcpp::NumericMatrix result(draws, 2 * location.size());
+ for (R_xlen_t j = 0; j < location.size(); ++j) {
+  for (int i = 0; i < draws; ++i) {
+   result(i, j) = st_bayesrc_sample_truncated_normal_std(
+    location[j], true, generator);
+   result(i, j + location.size()) = st_bayesrc_sample_truncated_normal_std(
+    location[j], false, generator);
+  }
+ }
+ return result;
+}
+
 // [[Rcpp::export]]
 Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww,
@@ -2161,7 +2212,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
   maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers,
   convergence_annotations, convergence_b, convergence_d,
-  convergence_component, make_csr_operator
+  convergence_component, 0, make_csr_operator
  );
 }
 
@@ -2171,7 +2222,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   std::vector<double> yy, std::vector<std::vector<double>> b_init,
   std::vector<std::vector<double>> comp_init, bool use_comp_init,
   std::vector<std::vector<double>> r_init, bool use_r_init,
-  bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B,
+  bool rebuild_r_before_updateE, arma::mat B,
   arma::mat E, std::vector<std::vector<double>> ssb_prior,
   std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma,
   arma::mat alpha_init, arma::vec sigmaSqAlpha_init, bool intercept_flat,
@@ -2199,7 +2250,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   Rcpp::IntegerVector block_start = Rcpp::IntegerVector::create(),
   std::string eigen_filter = "hard_truncate", double eigen_tau = 0.01,
   double eigen_eta = 0.0, std::string representation = "dense_reconstructed",
-  double eigen_prop = 0.995
+  double eigen_prop = 0.995, int low_rank_residual_rebuild_every = 100
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -2277,7 +2328,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
  };
  return stblr_cpg_omp_csr_sbayesrc_impl(
   wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init,
-  rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma,
+  rebuild_r_before_updateE, "", B, E, ssb_prior, sse_prior, A, gamma,
   alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a,
   sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE,
   alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains,
@@ -2286,8 +2337,40 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
   maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers,
   convergence_annotations, convergence_b, convergence_d,
-  convergence_component, make_block_operator
+  convergence_component, low_rank_residual_rebuild_every, make_block_operator
  );
+}
+
+// [[Rcpp::export(.st_sbayesrc_invalid_scale_diagnostic_fixture)]]
+void st_sbayesrc_invalid_scale_diagnostic_fixture(std::string path) {
+ sblr::core::CsrSBayesRCFailureState state;
+ state.captured = true;
+ state.operator_name = "csr";
+ state.trait = 0; state.chain = 0; state.iteration = 1;
+ state.internal_iteration = 0; state.sample_size = 8;
+ state.residual_df = 4.0; state.yy = 1.0; state.sse_prior = 0.1;
+ state.prior_contribution = 0.4;
+ state.maintained_sse = -1.4; state.rebuilt_sse = -1.4;
+ state.quadratic_sse = -1.4; state.maintained_scale = -1.0;
+ state.rebuilt_scale = -1.0; state.quadratic_scale = -1.0;
+ state.effects = arma::rowvec(1, arma::fill::ones);
+ state.residual = arma::rowvec(1, arma::fill::zeros);
+ state.rebuilt_residual = state.residual;
+ state.score = arma::rowvec(1, arma::fill::ones);
+ state.diagonal = arma::rowvec(1, arma::fill::ones);
+ state.component = arma::Row<int>(1, arma::fill::ones);
+ state.effects_finite = true; state.residual_finite = true;
+ state.rebuilt_residual_finite = true;
+ sblr::core::write_csr_sbayesrc_failure_state(state, path);
+ double ve = 1.0;
+ std::mt19937 generator(718);
+ try {
+  sampleE_ST_operator_from_scale(4.0, ve, -1.0, 8, generator);
+ } catch (const std::exception&) {
+  throw std::runtime_error(
+   "sampleE_ST_operator: invalid projected residual scale at iteration 1 "
+   "(internal 0); maintained_scale=-1.000000");
+ }
 }
 
 // // [[Rcpp::depends(RcppArmadillo)]]

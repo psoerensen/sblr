@@ -23,6 +23,19 @@ fields are present only where defined.
 Marker and trait ordering exactly follow `data$marker_metadata` and
 `data$trait_metadata`.
 
+Scalar fits also record an operator contract in `input$operator_contract`.
+The contract distinguishes an individual-level reference, a complete-CSR
+summary-statistics reference, an explicitly approximate hard-sparse CSR, a
+retained projected block-eigen likelihood, and an unclassified supplied CSR.
+Construction metadata are evidence about how an operator was formed, not a
+source-fidelity measurement. When source probes are unavailable, diagnostics
+say so rather than manufacturing a pass threshold.
+
+Retained low-rank raw diagnostics include the configured residual-rebuild
+interval, rebuild counts, and maximum absolute and relative drift by logical
+task. SBayesRC invalid-scale diagnostics are failure-only and opt-in; they add
+context to the error without changing the raw or formatted scientific fields.
+
 ## Marker fields
 
 | Field | Dimensions | Meaning and applicability |

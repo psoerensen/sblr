@@ -326,7 +326,7 @@ stblr_csr_annot <- function(
   out$data$effect_maf_alignment_status <-
    maf_info$effect_maf_alignment_status
   out$data$effect_maf_fallback_used <- maf_info$effect_maf_fallback_used
-  out
+  .stblr_attach_csr_operator_contract(out, Glist, ld_prefix)
  }
  common$updateLDswap <- updateLDswap
  common$ld_swap_prob <- ld_swap_prob

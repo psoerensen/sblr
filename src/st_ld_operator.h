@@ -36,6 +36,8 @@ struct CsrOperator {
 
   inline bool uses_retained_low_rank() const { return false; }
 
+  inline const char* diagnostic_name() const { return "csr"; }
+
   inline double rebuild_and_measure_drift(int, const arma::rowvec&,
                                           const arma::rowvec&,
                                           arma::rowvec&) const {
@@ -148,6 +150,9 @@ struct BlockEigenDispatchOperator {
     return low_rank ? retained.residual_size() : dense.residual_size();
   }
   inline bool uses_retained_low_rank() const { return low_rank; }
+  inline const char* diagnostic_name() const {
+    return low_rank ? "retained_block_eigen" : "dense_block_eigen";
+  }
   inline double corrected_rhs(int i, double beta, const arma::rowvec& r) const {
     return low_rank ? retained.corrected_rhs(i, beta, r) : dense.corrected_rhs(i, beta, r);
   }

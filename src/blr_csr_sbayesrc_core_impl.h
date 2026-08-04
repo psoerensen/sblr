@@ -1,6 +1,11 @@
 #ifndef SBLR_BLR_CSR_SBAYESRC_CORE_IMPL_H
 #define SBLR_BLR_CSR_SBAYESRC_CORE_IMPL_H
 
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+
 // Implementation detail only. This header is included by
 // st_sbayesrc_omp_csr.cpp after the package's Armadillo configuration and the
 // concrete operator types have been established. All borrowed objects in the
@@ -8,6 +13,92 @@
 // the canonical storage_outlives_execution ownership contract.
 
 namespace sblr { namespace core {
+
+struct CsrSBayesRCFailureState {
+ bool captured = false;
+ int trait = -1, chain = -1, iteration = -1, internal_iteration = -1;
+ int sample_size = 0, active_marker_count = 0;
+ double residual_df = 0.0, yy = 0.0, sse_prior = 0.0;
+ double prior_contribution = 0.0, maintained_sse = 0.0;
+ double rebuilt_sse = 0.0, quadratic_sse = 0.0;
+ double maintained_scale = 0.0, rebuilt_scale = 0.0, quadratic_scale = 0.0;
+ double b_wy = 0.0, b_r = 0.0, fitted_quadratic = 0.0;
+ double independent_quadratic = 0.0, marker_variance = 0.0;
+ double genetic_variance = 0.0, genic_variance = 0.0, ld_variance = 0.0;
+ double residual_variance = 0.0, adjusted_residual_variance = 0.0;
+ double heritability = 0.0, maximum_absolute_effect = 0.0;
+ double effect_norm = 0.0, residual_norm = 0.0, rebuilt_residual_norm = 0.0;
+ double maximum_residual_drift = 0.0, relative_residual_drift = 0.0;
+ bool effects_finite = false, residual_finite = false, rebuilt_residual_finite = false;
+ std::string operator_name;
+ arma::rowvec effects, residual, rebuilt_residual, score, diagonal;
+ arma::Row<int> component;
+ std::vector<double> preceding_marker_variance, preceding_genetic_variance;
+ std::vector<double> preceding_residual_variance, preceding_heritability;
+ std::vector<double> preceding_maximum_effect;
+};
+
+inline void write_csr_sbayesrc_failure_state(
+ const CsrSBayesRCFailureState& x,
+ const std::string& path
+) {
+ if (!x.captured || path.empty()) return;
+ std::ofstream out(path.c_str(), std::ios::out | std::ios::trunc);
+ if (!out) throw std::runtime_error(
+  "could not open SBayesRC failure-state diagnostic path: " + path);
+ out << std::setprecision(17);
+ const auto scalar = [&out](const char* key, const auto& value) {
+  out << "meta\t" << key << "\t" << value << '\n';
+ };
+ scalar("operator", x.operator_name);
+ scalar("trait", x.trait); scalar("chain", x.chain);
+ scalar("iteration", x.iteration); scalar("internal_iteration", x.internal_iteration);
+ scalar("sample_size", x.sample_size); scalar("residual_df", x.residual_df);
+ scalar("yy", x.yy); scalar("sse_prior", x.sse_prior);
+ scalar("prior_contribution", x.prior_contribution);
+ scalar("maintained_sse", x.maintained_sse); scalar("rebuilt_sse", x.rebuilt_sse);
+ scalar("quadratic_sse", x.quadratic_sse);
+ scalar("maintained_scale", x.maintained_scale); scalar("rebuilt_scale", x.rebuilt_scale);
+ scalar("quadratic_scale", x.quadratic_scale);
+ scalar("b_wy", x.b_wy); scalar("b_r", x.b_r);
+ scalar("fitted_quadratic", x.fitted_quadratic);
+ scalar("independent_quadratic", x.independent_quadratic);
+ scalar("marker_variance", x.marker_variance);
+ scalar("genetic_variance", x.genetic_variance);
+ scalar("genic_variance", x.genic_variance); scalar("ld_variance", x.ld_variance);
+ scalar("residual_variance", x.residual_variance);
+ scalar("adjusted_residual_variance", x.adjusted_residual_variance);
+ scalar("heritability", x.heritability);
+ scalar("active_marker_count", x.active_marker_count);
+ scalar("maximum_absolute_effect", x.maximum_absolute_effect);
+ scalar("effect_norm", x.effect_norm); scalar("residual_norm", x.residual_norm);
+ scalar("rebuilt_residual_norm", x.rebuilt_residual_norm);
+ scalar("maximum_residual_drift", x.maximum_residual_drift);
+ scalar("relative_residual_drift", x.relative_residual_drift);
+ scalar("effects_finite", static_cast<int>(x.effects_finite));
+ scalar("residual_finite", static_cast<int>(x.residual_finite));
+ scalar("rebuilt_residual_finite", static_cast<int>(x.rebuilt_residual_finite));
+ const int maximum_component = x.component.is_empty() ? -1 : x.component.max();
+ for (int k = 0; k <= maximum_component; ++k)
+  scalar(("component_count_" + std::to_string(k)).c_str(),
+         arma::accu(x.component == k));
+ const auto trajectory = [&out](const char* key, const std::vector<double>& value) {
+  for (std::size_t i = 0; i < value.size(); ++i)
+   out << "trajectory\t" << key << '\t' << i << '\t' << value[i] << '\n';
+ };
+ trajectory("marker_variance", x.preceding_marker_variance);
+ trajectory("genetic_variance", x.preceding_genetic_variance);
+ trajectory("residual_variance", x.preceding_residual_variance);
+ trajectory("heritability", x.preceding_heritability);
+ trajectory("maximum_absolute_effect", x.preceding_maximum_effect);
+ out << "marker\tindex\teffect\tresidual\trebuilt_residual\tscore\tdiagonal\tcomponent\n";
+ for (arma::uword i = 0; i < x.effects.n_elem; ++i)
+  out << "marker\t" << (i + 1) << '\t' << x.effects(i) << '\t' << x.residual(i)
+      << '\t' << x.rebuilt_residual(i) << '\t' << x.score(i) << '\t'
+      << x.diagonal(i) << '\t' << x.component(i) << '\n';
+ if (!out) throw std::runtime_error(
+  "failed while writing SBayesRC failure-state diagnostic: " + path);
+}
 
 template <class Operator>
 struct CsrSBayesRCExecutionContext {
@@ -59,6 +150,7 @@ struct CsrSBayesRCExecutionContext {
  bool use_component_initialization;
  bool use_residual_initialization;
  bool rebuild_residual_before_update;
+ int low_rank_residual_rebuild_every;
  bool intercept_flat;
  double alpha_variance_prior_a;
  double alpha_variance_prior_b;
@@ -94,6 +186,8 @@ struct CsrSBayesRCExecutionResult {
  arma::vec final_pi_active_task, final_vle_task, final_vld_task;
  arma::mat final_pi_component_task;
  arma::vec nsamples_task, ld_swap_attempted_task, ld_swap_accepted_task;
+ arma::vec low_rank_residual_rebuild_count_task;
+ arma::vec low_rank_residual_max_abs_drift_task;
  arma::vec maf_effect_s_attempted_task, maf_effect_s_accepted_task;
  std::vector<arma::mat> alpha_mean_task, comp_prob_mean_task;
  std::vector<arma::vec> sigmaSqAlpha_mean_task, ncomp_mean_task;
@@ -116,6 +210,7 @@ struct CsrSBayesRCExecutionResult {
  std::vector<std::string> errors;
  std::vector<double> task_seconds;
  arma::mat ld_swap_diagnostics, ld_swap_chain_diagnostics;
+ arma::mat low_rank_residual_diagnostics, low_rank_residual_chain_diagnostics;
 };
 
 template <class Operator>
@@ -158,6 +253,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const bool use_comp_init = context.use_component_initialization;
  const bool use_r_init = context.use_residual_initialization;
  const bool rebuild_r_before_updateE = context.rebuild_residual_before_update;
+ const int low_rank_residual_rebuild_every =
+  context.low_rank_residual_rebuild_every;
  const bool intercept_flat = context.intercept_flat;
  const double sigmaSqAlpha_a = context.alpha_variance_prior_a;
  const double sigmaSqAlpha_b = context.alpha_variance_prior_b;
@@ -180,6 +277,11 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const double maf_effect_s_proposal_sd = context.maf_effect_s_proposal_sd;
  const std::vector<int>& convergence_markers=context.convergence_markers;
  const int ntasks = stblr_num_chain_tasks(nt, nchains);
+ const char* failure_path_env = std::getenv("SBLR_SBAYESRC_FAILURE_STATE_PATH");
+ const std::string failure_state_path = failure_path_env == nullptr
+  ? std::string()
+  : std::string(failure_path_env);
+ const bool capture_failure_state = !failure_state_path.empty();
 
  arma::mat bm_task(ntasks, m, arma::fill::zeros);
  arma::mat dm_task(ntasks, m, arma::fill::zeros);
@@ -205,6 +307,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  arma::vec nsamples_task(ntasks, arma::fill::zeros);
  arma::vec ld_swap_attempted_task(ntasks, arma::fill::zeros);
  arma::vec ld_swap_accepted_task(ntasks, arma::fill::zeros);
+ arma::vec low_rank_residual_rebuild_count_task(ntasks, arma::fill::zeros);
+ arma::vec low_rank_residual_max_abs_drift_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_attempted_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_accepted_task(ntasks, arma::fill::zeros);
 
@@ -287,6 +391,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<std::string> errors(static_cast<std::size_t>(ntasks));
  std::vector<int> thread_used(static_cast<std::size_t>(ntasks), 0);
  std::vector<double> task_seconds(static_cast<std::size_t>(ntasks), 0.0);
+ std::vector<CsrSBayesRCFailureState> failure_states(
+  static_cast<std::size_t>(ntasks));
 
  int nthreads = 1;
 
@@ -400,10 +506,15 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    double nsamples_t = 0.0;
    double ld_swap_attempted_t = 0.0;
    double ld_swap_accepted_t = 0.0;
+   double low_rank_residual_rebuild_count_t = 0.0;
+   double low_rank_residual_max_abs_drift_t = 0.0;
    double maf_effect_s_current = maf_effect_s_init;
    double maf_effect_s_attempted_t = 0.0;
    double maf_effect_s_accepted_t = 0.0;
    arma::rowvec dynamic_prior_scale;
+   std::vector<double> maximum_effect_history;
+   if (capture_failure_state)
+    maximum_effect_history.reserve(static_cast<std::size_t>(nit + nburn));
 
    for (int it = 0; it < nit + nburn; ++it) {
     const bool use_scaled_prior = use_maf_effect_s_prior_scale || estimate_maf_effect_s;
@@ -577,24 +688,116 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      if (maf_effect_s_accepted) maf_effect_s_accepted_t += 1.0;
     }
 
+    if (capture_failure_state)
+     maximum_effect_history.push_back(arma::abs(b_t).max());
+
+    if (op.uses_retained_low_rank() &&
+        low_rank_residual_rebuild_every > 0 &&
+        ((it + 1) % low_rank_residual_rebuild_every == 0)) {
+     const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
+     low_rank_residual_max_abs_drift_t = std::max(
+      low_rank_residual_max_abs_drift_t, drift);
+     low_rank_residual_rebuild_count_t += 1.0;
+    }
+
     if (updateE) {
      if (rebuild_r_before_updateE) {
       op.rebuild(t, wy_t, b_t, r_t);
      }
 
-     sampleE_ST_operator(
-      op,
-      t,
-      nue,
-      ve_t,
-      b_t,
-      wy_t,
-      r_t,
-      sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
-      yy_vec(static_cast<arma::uword>(t)),
-      n[t],
-       gen_t
-     );
+     const double yy_t = yy_vec(static_cast<arma::uword>(t));
+     const double sse_prior_t =
+      sse_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t));
+     const double maintained_sse = op.residual_sse(t, yy_t, b_t, wy_t, r_t);
+     const double residual_scale = maintained_sse + nue * sse_prior_t;
+     if (!std::isfinite(residual_scale) || residual_scale <= 0.0) {
+      if (capture_failure_state) {
+       CsrSBayesRCFailureState& state =
+        failure_states[static_cast<std::size_t>(task)];
+       arma::rowvec rebuilt = r_t;
+       op.rebuild(t, wy_t, b_t, rebuilt);
+       arma::rowvec marker_residual, marker_rebuilt_residual;
+       op.materialize_residual(t, r_t, marker_residual);
+       op.materialize_residual(t, rebuilt, marker_rebuilt_residual);
+       const double b_wy = op.projected_score_dot(t, b_t, wy_t);
+       const double independent_quadratic = op.quadratic_form(b_t);
+       const double rebuilt_sse = op.residual_sse(
+        t, yy_t, b_t, wy_t, rebuilt);
+       const double quadratic_sse =
+        yy_t - 2.0 * b_wy + independent_quadratic;
+       const arma::rowvec residual_difference =
+        marker_residual - marker_rebuilt_residual;
+       const double maximum_residual_drift = residual_difference.is_empty()
+        ? 0.0
+        : arma::abs(residual_difference).max();
+       const double rebuilt_norm = arma::norm(marker_rebuilt_residual, 2);
+       const double independent_vg = independent_quadratic /
+        static_cast<double>(n[t]);
+       const double le = computeLE_SBayesRC_ST_csr(m, b_t, ww_t, n[t]);
+       state.captured = true;
+       state.trait = t;
+       state.chain = chain;
+       state.iteration = it + 1;
+       state.internal_iteration = it;
+       state.sample_size = n[t];
+       state.residual_df = nue;
+       state.yy = yy_t;
+       state.sse_prior = sse_prior_t;
+       state.prior_contribution = nue * sse_prior_t;
+       state.maintained_sse = maintained_sse;
+       state.rebuilt_sse = rebuilt_sse;
+       state.quadratic_sse = quadratic_sse;
+       state.maintained_scale = residual_scale;
+       state.rebuilt_scale = rebuilt_sse + state.prior_contribution;
+       state.quadratic_scale = quadratic_sse + state.prior_contribution;
+       state.b_wy = b_wy;
+       state.b_r = arma::dot(b_t, marker_residual);
+       state.fitted_quadratic = op.fitted_quadratic(t, b_t, wy_t, r_t);
+       state.independent_quadratic = independent_quadratic;
+       state.marker_variance = vb_t;
+       state.genetic_variance = independent_vg;
+       state.genic_variance = le;
+       state.ld_variance = independent_vg - le;
+       state.residual_variance = ve_t;
+       state.adjusted_residual_variance = vei_t;
+       state.heritability = independent_vg / (independent_vg + ve_t);
+       state.active_marker_count = arma::accu(comp_t > 0);
+       state.maximum_absolute_effect = arma::abs(b_t).max();
+       state.effect_norm = arma::norm(b_t, 2);
+       state.residual_norm = arma::norm(marker_residual, 2);
+       state.rebuilt_residual_norm = rebuilt_norm;
+       state.maximum_residual_drift = maximum_residual_drift;
+       state.relative_residual_drift = maximum_residual_drift /
+        std::max(1.0, rebuilt_norm);
+       state.effects_finite = b_t.is_finite();
+       state.residual_finite = marker_residual.is_finite();
+       state.rebuilt_residual_finite = marker_rebuilt_residual.is_finite();
+       state.operator_name = op.diagnostic_name();
+       state.effects = b_t;
+       state.residual = marker_residual;
+       state.rebuilt_residual = marker_rebuilt_residual;
+       state.score = wy_t;
+       state.diagonal = ww_t;
+       state.component = comp_t;
+       const int trajectory_start = std::max(0, it - 20);
+       for (int previous = trajectory_start; previous < it; ++previous) {
+        const arma::uword previous_u = static_cast<arma::uword>(previous);
+        state.preceding_marker_variance.push_back(vbs_t(previous_u));
+        state.preceding_genetic_variance.push_back(vgs_t(previous_u));
+        state.preceding_residual_variance.push_back(ves_t(previous_u));
+        const double previous_total = vgs_t(previous_u) + ves_t(previous_u);
+        state.preceding_heritability.push_back(
+         previous_total > 0.0 ? vgs_t(previous_u) / previous_total : NA_REAL);
+        state.preceding_maximum_effect.push_back(
+         maximum_effect_history[static_cast<std::size_t>(previous)]);
+       }
+      }
+      throw std::runtime_error(
+       "sampleE_ST_operator: invalid projected residual scale at iteration " +
+       std::to_string(it + 1) + " (internal " + std::to_string(it) +
+       "); maintained_scale=" + std::to_string(residual_scale));
+     }
+     sampleE_ST_operator_from_scale(nue, ve_t, residual_scale, n[t], gen_t);
     }
 
     vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
@@ -687,6 +890,13 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     }
    }
 
+   if (op.uses_retained_low_rank()) {
+    const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
+    low_rank_residual_max_abs_drift_t = std::max(
+     low_rank_residual_max_abs_drift_t, drift);
+    low_rank_residual_rebuild_count_t += 1.0;
+   }
+
    if (nsamples_t <= 0.0) nsamples_t = 1.0;
 
    bm_t /= nsamples_t;
@@ -735,6 +945,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    nsamples_task(task_u) = nsamples_t;
    ld_swap_attempted_task(task_u) = ld_swap_attempted_t;
    ld_swap_accepted_task(task_u) = ld_swap_accepted_t;
+   low_rank_residual_rebuild_count_task(task_u) =
+    low_rank_residual_rebuild_count_t;
+   low_rank_residual_max_abs_drift_task(task_u) =
+    low_rank_residual_max_abs_drift_t;
    maf_effect_s_attempted_task(task_u) = maf_effect_s_attempted_t;
    maf_effect_s_accepted_task(task_u) = maf_effect_s_accepted_t;
 
@@ -764,6 +978,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
  for (int task = 0; task < ntasks; ++task) {
   if (failed[static_cast<std::size_t>(task)]) {
+   if (capture_failure_state &&
+       failure_states[static_cast<std::size_t>(task)].captured)
+    write_csr_sbayesrc_failure_state(
+     failure_states[static_cast<std::size_t>(task)], failure_state_path);
    throw std::runtime_error(
      "stblr_cpg_omp_csr_sbayesrc failed for trait " +
       std::to_string(stblr_task_trait(task, nchains)) +
@@ -778,6 +996,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const double inv_chains = 1.0 / static_cast<double>(nchains);
  arma::mat ld_swap_diagnostics(nt, 3, arma::fill::zeros);
  arma::mat ld_swap_chain_diagnostics(ntasks, 5, arma::fill::zeros);
+ arma::mat low_rank_residual_diagnostics(nt, 3, arma::fill::zeros);
+ arma::mat low_rank_residual_chain_diagnostics(ntasks, 5, arma::fill::zeros);
 
  for (int task = 0; task < ntasks; ++task) {
   const arma::uword task_u = static_cast<arma::uword>(task);
@@ -795,6 +1015,22 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 0) += attempted;
   ld_swap_diagnostics(static_cast<arma::uword>(task_trait), 1) += accepted;
+  low_rank_residual_chain_diagnostics(task_u, 0) = task_trait;
+  low_rank_residual_chain_diagnostics(task_u, 1) = task_chain;
+  low_rank_residual_chain_diagnostics(task_u, 2) =
+   low_rank_residual_rebuild_every;
+  low_rank_residual_chain_diagnostics(task_u, 3) =
+   low_rank_residual_rebuild_count_task(task_u);
+  low_rank_residual_chain_diagnostics(task_u, 4) =
+   low_rank_residual_max_abs_drift_task(task_u);
+  low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 0) =
+   low_rank_residual_rebuild_every;
+  low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 1) +=
+   low_rank_residual_rebuild_count_task(task_u);
+  low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 2) =
+   std::max(
+    low_rank_residual_diagnostics(static_cast<arma::uword>(task_trait), 2),
+    low_rank_residual_max_abs_drift_task(task_u));
  }
 
  for (int t = 0; t < nt; ++t) {
@@ -923,6 +1159,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.nsamples_task = std::move(nsamples_task);
  result.ld_swap_attempted_task = std::move(ld_swap_attempted_task);
  result.ld_swap_accepted_task = std::move(ld_swap_accepted_task);
+ result.low_rank_residual_rebuild_count_task =
+  std::move(low_rank_residual_rebuild_count_task);
+ result.low_rank_residual_max_abs_drift_task =
+  std::move(low_rank_residual_max_abs_drift_task);
  result.maf_effect_s_attempted_task = std::move(maf_effect_s_attempted_task);
  result.maf_effect_s_accepted_task = std::move(maf_effect_s_accepted_task);
  result.alpha_mean_task = std::move(alpha_mean_task);
@@ -972,6 +1212,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.task_seconds = std::move(task_seconds);
  result.ld_swap_diagnostics = std::move(ld_swap_diagnostics);
  result.ld_swap_chain_diagnostics = std::move(ld_swap_chain_diagnostics);
+ result.low_rank_residual_diagnostics =
+  std::move(low_rank_residual_diagnostics);
+ result.low_rank_residual_chain_diagnostics =
+  std::move(low_rank_residual_chain_diagnostics);
  return result;
 }
 

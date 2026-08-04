@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -26,18 +27,41 @@ inline double st_bayesrc_sample_truncated_normal_std(
   bool positive,
   std::mt19937& gen
 ) {
- std::uniform_real_distribution<double> runif(0.0, 1.0);
- const double u = runif(gen);
-
- if (positive) {
-  const double a = st_bayesrc_safe_pnorm(-mu);
-  const double p = a + u * (1.0 - a);
-  return mu + st_bayesrc_safe_qnorm(p);
+ if (!std::isfinite(mu)) {
+  throw std::runtime_error(
+   "BayesRC truncated-normal location must be finite.");
  }
 
- const double b = st_bayesrc_safe_pnorm(-mu);
- const double p = u * b;
- return mu + st_bayesrc_safe_qnorm(p);
+ // Work with Z ~ N(0, 1), Z > -mu. For a non-positive lower bound,
+ // direct rejection accepts at least half of proposals. For a positive bound,
+ // use the exact exponential-envelope rejection kernel; unlike clipped
+ // inverse-CDF sampling, it remains valid in the far tail.
+ const auto sample_lower = [&gen](double location) {
+  const double lower = -location;
+  std::normal_distribution<double> normal(0.0, 1.0);
+  if (lower <= 0.0) {
+   double z = 0.0;
+   do z = normal(gen); while (z <= lower);
+   const double draw = location + z;
+   return draw > 0.0 ? draw : std::nextafter(0.0, 1.0);
+  }
+
+  const double rate = 0.5 * (lower + std::hypot(lower, 2.0));
+  std::exponential_distribution<double> exponential(rate);
+  std::uniform_real_distribution<double> uniform(0.0, 1.0);
+  for (;;) {
+   const double z = lower + exponential(gen);
+   const double log_acceptance = -0.5 * (z - rate) * (z - rate);
+   const double u = std::max(uniform(gen),
+    std::numeric_limits<double>::min());
+   if (std::log(u) <= log_acceptance) {
+    const double draw = location + z;
+    return draw > 0.0 ? draw : std::nextafter(0.0, 1.0);
+   }
+  }
+ };
+
+ return positive ? sample_lower(mu) : -sample_lower(-mu);
 }
 
 inline arma::mat st_bayesrc_compute_snp_pi(

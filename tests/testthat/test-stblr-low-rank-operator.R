@@ -168,7 +168,7 @@ test_that("all scalar block-eigen models run with reduced residual state", {
     expect_true(all(is.finite(fit$bm)))
     expect_true("r" %in% names(fit))
   }
-  for (fit in list(bayesc, bayesr)) {
+  for (fit in list(bayesc, bayesr, sbayesrc)) {
     expect_identical(fit$input$low_rank_residual_rebuild_every, 100L)
     drift <- fit$diagnostics$native$low_rank_residual
     expect_true(is.list(drift))
@@ -186,6 +186,32 @@ test_that("all scalar block-eigen models run with reduced residual state", {
                     "eigenvalue_tolerance") %in% names(diagnostic$blocks)))
   expect_gt(diagnostic$build$operator_storage_bytes, 0)
   expect_gt(diagnostic$build$chain_residual_storage_bytes, 0)
+})
+
+test_that("retained SBayesRC rebuilds reduced residuals without changing draws", {
+  fixture <- make_stblr_low_rank_fixture()
+  annotation <- cbind(intercept = 1, informative = c(0, 0, 1, 1))
+  common <- list(
+    stats = fixture$stats, Glist = fixture$Glist, block_start = c(1L, 3L),
+    method = "sbayesrc", annotation = annotation,
+    representation = "low_rank", eigen_prop = 0.999999,
+    updateAlpha = FALSE, updateB = TRUE, updateE = TRUE,
+    nit = 10L, nburn = 2L, seed = 916L, ncores = 1L)
+  rebuilt <- do.call(stblr_block_eigen, c(common,
+    list(low_rank_residual_rebuild_every = 1L)))
+  incremental <- do.call(stblr_block_eigen, c(common,
+    list(low_rank_residual_rebuild_every = 0L)))
+
+  for (field in c("bm", "dm", "b", "vbs", "vgs", "ves", "vle", "vld",
+      "pis", "component_final"))
+    expect_equal(rebuilt[[field]], incremental[[field]], tolerance = 2e-10,
+      info = field)
+  diagnostic <- rebuilt$diagnostics$native$low_rank_residual
+  expect_equal(diagnostic$low_rank_residual_rebuild_every, 1)
+  expect_equal(diagnostic$low_rank_residual_rebuild_count, 13)
+  expect_true(all(is.finite(
+    diagnostic$low_rank_residual_max_abs_drift)))
+  expect_gte(diagnostic$low_rank_residual_max_abs_drift, 0)
 })
 
 test_that("projected residual variance updates remain finite", {

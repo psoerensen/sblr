@@ -25,6 +25,16 @@
   likelihood strategy, represented in sblr cross-product units with a global
   projected residual-variance contract. GCTB's block-specific variance
   procedure is not reproduced.
+- Classified scalar LD operators in fit metadata: packed BED is the supplied-
+  genotype reference, complete CSR construction is the summary-statistics
+  reference, thresholded/windowed CSR is explicitly approximate, and retained
+  block eigen is the scalable projected SBayesRC route.
+- Added opt-in, failure-only SBayesRC residual-scale diagnostics. Invalid
+  scales still fail without clamping, absolute-value substitution, stale-
+  variance fallback, or an operator switch.
+- Corrected extreme-tail truncated-normal draws used by BayesRC annotation
+  updates and connected the public low-rank residual-rebuild interval to the
+  scalar SBayesRC retained-eigen kernel.
 
 # sblr 0.1.0
 

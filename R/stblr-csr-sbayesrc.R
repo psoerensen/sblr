@@ -403,7 +403,7 @@ stblr_csr_sbayesrc_generic <- function(
   stop("alpha_update_every must be a positive integer.")
  }
 
- raw_fit <- do.call(.native_fun, c(list(
+ native_call <- c(list(
   wy = stats$wy,
   ww = stats$ww,
   yy = stats$yy,
@@ -458,7 +458,12 @@ stblr_csr_sbayesrc_generic <- function(
   convergence_b = isTRUE(.convergence_spec$b),
   convergence_d = isTRUE(.convergence_spec$d),
   convergence_component = isTRUE(.convergence_spec$component)
- ), .native_args))
+ ), .native_args)
+ # The block-eigen entry point constructs its operator from packed genotypes;
+ # unlike the CSR entry point it has no LD-prefix input. Keeping that unused
+ # argument would exceed R's native-call argument limit for SBayesRC.
+ if ("block_start" %in% names(.native_args)) native_call$ld_prefix <- NULL
+ raw_fit <- do.call(.native_fun, native_call)
 
  if (!is.null(raw_fit$diagnostics$block_eigen)) {
   .input_extra$eigen_diagnostics <- raw_fit$diagnostics$block_eigen
@@ -574,6 +579,7 @@ stblr_csr_sbayesrc_generic <- function(
   eigen_filter = c("hard_truncate", "ridge_fixed", "ridge_lw"),
   eigen_tau = 0.01,
   eigen_eta = 0,
+  low_rank_residual_rebuild_every = 100L,
   updateLDswap = FALSE,
   ...
 ) {
@@ -617,7 +623,10 @@ stblr_csr_sbayesrc_generic <- function(
   eigen_tau = eigen_tau,
   eigen_eta = eigen_eta,
   representation = representation,
-  eigen_prop = eigen_prop
+  eigen_prop = eigen_prop,
+  low_rank_residual_rebuild_every = if (
+   identical(representation, "low_rank"))
+    as.integer(low_rank_residual_rebuild_every) else 0L
  )
  input_extra <- list(
   ld_backend = "block_eigen",
@@ -632,6 +641,9 @@ stblr_csr_sbayesrc_generic <- function(
   eigen_filter = eigen_filter,
   eigen_tau = eigen_tau,
   eigen_eta = eigen_eta,
+  low_rank_residual_rebuild_every = if (
+   identical(representation, "low_rank"))
+    as.integer(low_rank_residual_rebuild_every) else 0L,
   eigen_blocks = bed$block_start
  )
  args <- c(

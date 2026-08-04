@@ -1,3 +1,58 @@
+.stblr_csr_operator_contract <- function(Glist = NULL, ld_prefix = NULL) {
+  sparse <- Glist$sparseLD %||% list()
+  r2 <- sparse$r2_threshold %||% NA_real_
+  distance_variants <- sparse$max_distance_variants %||% NA_integer_
+  distance_bp <- sparse$max_distance_bp %||% NA_real_
+  source <- sparse$source %||% NA_character_
+  has_policy <- is.finite(r2) && is.finite(distance_variants) &&
+    is.finite(distance_bp)
+  hard_sparse <- has_policy &&
+    (r2 > 0 || distance_variants > 0 || distance_bp > 0)
+  complete <- has_policy && identical(source, "make_sparse_ld") &&
+    r2 <= 0 && distance_variants <= 0 && distance_bp <= 0
+  role <- if (complete) "summary_statistics_reference" else if (hard_sparse)
+    "approximate_summary_statistics" else "supplied_csr_unclassified"
+  contract <- if (complete) "exact_full_csr_v1" else if (hard_sparse)
+    "hard_sparse_csr_v1" else "supplied_csr_v1"
+  list(
+    operator_role = role,
+    operator_contract = contract,
+    operator_representation = "disk_csr",
+    operator_approximate = if (complete) FALSE else if (hard_sparse) TRUE else NA,
+    fidelity_evidence = if (has_policy) "construction_policy_only" else
+      "unavailable",
+    source = source,
+    prefix = ld_prefix %||% sparse$prefix %||% NA_character_,
+    r2_threshold = r2,
+    max_distance_variants = distance_variants,
+    max_distance_bp = distance_bp,
+    block_size = sparse$block_size %||% NA_integer_,
+    limitation = if (hard_sparse) paste(
+      "Positive semidefiniteness is not sufficient for likelihood fidelity;",
+      "omitted LD can change corrected scores and quadratic residual scales.")
+      else if (complete) "Complete pairwise LD by recorded construction policy."
+      else "Exactness and source-versus-CSR fidelity were not established."
+  )
+}
+
+.stblr_attach_csr_operator_contract <- function(fit, Glist = NULL,
+                                                 ld_prefix = NULL) {
+  contract <- .stblr_csr_operator_contract(Glist, ld_prefix)
+  for (name in c("operator_role", "operator_contract",
+      "operator_representation", "operator_approximate"))
+    fit$input[[name]] <- contract[[name]]
+  fit$data$operator <- contract
+  fit$diagnostics$operator_fidelity <- list(
+    classification = contract$operator_role,
+    construction_metadata_available =
+      !identical(contract$fidelity_evidence, "unavailable"),
+    source_comparison_available = FALSE,
+    source_quadratic_probe = NULL,
+    source_corrected_score_probe = NULL,
+    limitation = contract$limitation)
+  fit
+}
+
 #' Scalar-trait BLR with sparse-LD CSR operators
 #'
 #' @param stats Scalar-trait summary statistics.
@@ -89,7 +144,7 @@ stblr_csr <- function(
   fit$data$effect_maf_alignment_status <-
     maf_info$effect_maf_alignment_status
   fit$data$effect_maf_fallback_used <- maf_info$effect_maf_fallback_used
-  fit
+  .stblr_attach_csr_operator_contract(fit, Glist, ld_prefix)
 }
 
 #' Scalar-trait BLR with packed-BED genotypes
@@ -158,5 +213,14 @@ stblr_bed <- function(
   fit$input$probability_policy <- if (method == "bayesrc")
     "annotation_probit_stick" else "global"
   fit$data$effect_scale <- fit$input$effect_scale
+  fit$input$operator_role <- "individual_level_reference"
+  fit$input$operator_contract <- "packed_bed_selected_samples_v1"
+  fit$input$operator_approximate <- FALSE
+  fit$data$operator <- list(
+    operator_role = fit$input$operator_role,
+    operator_contract = fit$input$operator_contract,
+    operator_representation = "packed_bed",
+    operator_approximate = FALSE,
+    limitation = "Exact for the supplied packed genotypes and selected samples.")
   fit
 }

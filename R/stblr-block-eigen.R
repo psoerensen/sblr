@@ -195,7 +195,8 @@ stblr_block_eigen <- function(
       do.call(.stblr_csr_sbayesrc_block_eigen,
               c(common[c("stats", "Glist", "block_start", "representation",
                          "eigen_policy", "eigen_prop", "eigen_filter",
-                         "eigen_tau", "eigen_eta")],
+                         "eigen_tau", "eigen_eta",
+                         "low_rank_residual_rebuild_every")],
                 list(annotation = annotation),
                 common[c("nit", "nburn", "nthin", "seed", "nchains",
                          "ncores", "chain_seeds", "keep_chains",
@@ -207,6 +208,17 @@ stblr_block_eigen <- function(
   fit$data$operator <- fit$input[c(
     "operator_representation", "operator_contract", "operator_scale_contract",
     "eigen_policy", "eigen_prop", "eigen_tau", "eigen_eta", "eigen_blocks")]
+  fit$input$operator_role <- if (identical(representation, "low_rank"))
+    "canonical_scalable_summary_statistics" else
+      "historical_reconstructed_block_operator"
+  fit$input$operator_approximate <- TRUE
+  fit$data$operator$operator_role <- fit$input$operator_role
+  fit$data$operator$operator_approximate <- TRUE
+  fit$data$operator$limitation <- if (identical(representation, "low_rank"))
+    paste("Projected block likelihood retaining the configured positive",
+      "spectral mass; cross-block LD is omitted and residual variance is global.")
+    else paste("Block-reconstructed approximation retained for regression",
+      "and reproducibility, not an exact full-LD reference.")
   fit$diagnostics$block_eigen <-
     fit$input$eigen_diagnostics %||% fit$diagnostics$block_eigen %||% NULL
   fit$input$effect_scale <- resolved_model$effect_scale
