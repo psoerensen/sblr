@@ -1,5 +1,14 @@
 # sblr 0.2.0
 
+* BayesRC/SBayesRC now use a proper normal prior for every probit-stick
+  intercept by default. Prior means reproduce the resolved global mixture and
+  the default SD is 1. `alpha_init` remains an initialization only. The former
+  flat prior is available only through explicit `intercept_flat = TRUE` and
+  fails for empty or completely separated sticks.
+* Empty annotation sticks now receive posterior-valid prior-only Gibbs updates
+  instead of retaining stale coefficients. BED, CSR, retained block-eigen, and
+  multitrait annotation routes share the same resolved intercept-prior kernel.
+
 - Aligned prior variance calibration across scalar and multivariate BayesC,
   BayesR, and BayesRC routes. The requested `h2` now targets the initial/prior
   expected genetic variance under resolved component probabilities, component

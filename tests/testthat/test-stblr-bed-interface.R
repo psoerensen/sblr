@@ -473,7 +473,12 @@ test_that("public BED BayesRC formatting preserves direct internal raw values", 
     A = fit$input$A, gamma = fit$input$mixture_var,
     annot_alpha_init = fit$input$annot_alpha_init,
     annot_sigma_sq_alpha_init = fit$input$annot_sigma_sq_alpha_init,
-    intercept_flat = fit$input$intercept_flat,
+    intercept_prior_resolved = rbind(
+      type = rep(as.numeric(fit$input$annotation_intercept_prior$legacy_flat),
+                 length(fit$input$annotation_intercept_prior$mean)),
+      mean = fit$input$annotation_intercept_prior$mean,
+      precision = fit$input$annotation_intercept_prior$precision
+    ),
     sigmaSqAlpha_a = fit$input$sigmaSqAlpha_a,
     sigmaSqAlpha_b = fit$input$sigmaSqAlpha_b, pi_floor = fit$input$pi_floor,
     nub = fit$input$nub, nue = fit$input$nue, updateAlpha = FALSE,

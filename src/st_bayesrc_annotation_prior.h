@@ -128,12 +128,50 @@ inline void st_bayesrc_build_step_indicators(
  }
 }
 
-inline void st_bayesrc_update_annotation_prior(
+// Resolved at the R boundary.  The intercept prior is deliberately separate
+// from alpha_init and from the hierarchical prior on non-intercept effects.
+struct StBayesRCInterceptPrior {
+ bool legacy_flat;
+ arma::vec mean;
+ arma::vec precision;
+};
+
+inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
+  const arma::mat& resolved,
+  int nstep
+) {
+ if (resolved.n_rows != 3 ||
+     resolved.n_cols != static_cast<arma::uword>(nstep) ||
+     !resolved.is_finite()) {
+  throw std::runtime_error(
+   "BayesRC resolved intercept prior must be a finite 3 by nstep matrix.");
+ }
+ const bool legacy_flat = resolved(0, 0) == 1.0;
+ for (int j = 0; j < nstep; ++j) {
+  if (resolved(0, static_cast<arma::uword>(j)) != (legacy_flat ? 1.0 : 0.0)) {
+   throw std::runtime_error("BayesRC intercept prior type must be consistent across sticks.");
+  }
+  if (!legacy_flat && resolved(2, static_cast<arma::uword>(j)) <= 0.0) {
+   throw std::runtime_error("BayesRC proper intercept prior precisions must be positive.");
+  }
+ }
+ return StBayesRCInterceptPrior{
+  legacy_flat, resolved.row(1).t(), resolved.row(2).t()
+ };
+}
+
+struct StBayesRCAnnotationUpdateDiagnostics {
+ std::vector<int> eligible;
+ std::vector<int> continuation;
+ std::vector<int> prior_only;
+};
+
+inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
   const arma::mat& annotation_matrix,
   const arma::Row<int>& component,
   arma::mat& annot_alpha,
   arma::vec& annot_sigma_sq_alpha,
-  bool intercept_flat,
+  const StBayesRCInterceptPrior& intercept_prior,
   double annot_sigma_sq_alpha_a,
   double annot_sigma_sq_alpha_b,
   std::mt19937& gen
@@ -144,6 +182,11 @@ inline void st_bayesrc_update_annotation_prior(
 
  arma::Mat<int> step_indicators(m, nstep, arma::fill::zeros);
  st_bayesrc_build_step_indicators(component, step_indicators);
+ StBayesRCAnnotationUpdateDiagnostics diagnostics{
+  std::vector<int>(static_cast<std::size_t>(nstep), 0),
+  std::vector<int>(static_cast<std::size_t>(nstep), 0),
+  std::vector<int>(static_cast<std::size_t>(nstep), 0)
+ };
 
  for (int j = 0; j < nstep; ++j) {
   std::vector<int> idx;
@@ -156,9 +199,40 @@ inline void st_bayesrc_update_annotation_prior(
    }
   }
 
-  if (idx.empty()) continue;
-
   const int nj = static_cast<int>(idx.size());
+  diagnostics.eligible[static_cast<std::size_t>(j)] = nj;
+  int n_continuation = 0;
+  for (int i : idx) {
+   n_continuation += step_indicators(static_cast<arma::uword>(i),
+                                     static_cast<arma::uword>(j));
+  }
+  diagnostics.continuation[static_cast<std::size_t>(j)] = n_continuation;
+
+  if (idx.empty()) {
+   if (intercept_prior.legacy_flat) {
+    throw std::runtime_error(
+     "BayesRC legacy flat intercept prior is improper for an empty eligible stick.");
+   }
+   diagnostics.prior_only[static_cast<std::size_t>(j)] = 1;
+   std::normal_distribution<double> intercept_norm(
+    intercept_prior.mean(static_cast<arma::uword>(j)),
+    1.0 / std::sqrt(intercept_prior.precision(static_cast<arma::uword>(j))));
+   annot_alpha(0, static_cast<arma::uword>(j)) = intercept_norm(gen);
+   const double sig = annot_sigma_sq_alpha(static_cast<arma::uword>(j));
+   if (!std::isfinite(sig) || sig <= 0.0) {
+    throw std::runtime_error("BayesRC sigmaSqAlpha must remain positive and finite.");
+   }
+   std::normal_distribution<double> coefficient_norm(0.0, std::sqrt(sig));
+   for (int k = 1; k < n_annot; ++k) {
+    annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) =
+     coefficient_norm(gen);
+   }
+  } else if (intercept_prior.legacy_flat &&
+             (n_continuation == 0 || n_continuation == nj)) {
+   throw std::runtime_error(
+    "BayesRC legacy flat intercept prior is unsafe under complete separation; use the proper normal prior.");
+  }
+
   arma::vec mu(nj, arma::fill::zeros);
 
   for (int ii = 0; ii < nj; ++ii) {
@@ -185,7 +259,7 @@ inline void st_bayesrc_update_annotation_prior(
   arma::vec resid = latent - mu;
 
   for (int k = 0; k < n_annot; ++k) {
-   const bool flat_prior = intercept_flat && (k == 0);
+   const bool intercept = k == 0;
    double diag_k = 0.0;
    double rhs = 0.0;
    const double old = annot_alpha(static_cast<arma::uword>(k),
@@ -203,16 +277,24 @@ inline void st_bayesrc_update_annotation_prior(
    if (diag_k <= 0.0) continue;
 
    double inv_lhs;
-   if (flat_prior) {
+   double prior_rhs = 0.0;
+   if (intercept && intercept_prior.legacy_flat) {
     inv_lhs = 1.0 / diag_k;
+   } else if (intercept) {
+    const double prior_precision =
+     intercept_prior.precision(static_cast<arma::uword>(j));
+    inv_lhs = 1.0 / (diag_k + prior_precision);
+    prior_rhs = prior_precision *
+     intercept_prior.mean(static_cast<arma::uword>(j));
    } else {
-    const double sig = std::max(
-     annot_sigma_sq_alpha(static_cast<arma::uword>(j)), 1e-12
-    );
+    const double sig = annot_sigma_sq_alpha(static_cast<arma::uword>(j));
+    if (!std::isfinite(sig) || sig <= 0.0) {
+     throw std::runtime_error("BayesRC sigmaSqAlpha must remain positive and finite.");
+    }
     inv_lhs = 1.0 / (diag_k + 1.0 / sig);
    }
 
-   const double mean = inv_lhs * rhs;
+   const double mean = inv_lhs * (rhs + prior_rhs);
    const double sd = std::sqrt(inv_lhs);
    std::normal_distribution<double> norm(mean, sd);
    const double annot_alpha_new = norm(gen);
@@ -234,22 +316,24 @@ inline void st_bayesrc_update_annotation_prior(
   double ss = 0.0;
   int ncoef = 0;
   for (int k = 0; k < n_annot; ++k) {
-   if (intercept_flat && k == 0) continue;
+   if (k == 0) continue;
    const double ak = annot_alpha(static_cast<arma::uword>(k),
                                  static_cast<arma::uword>(j));
    ss += ak * ak;
    ++ncoef;
   }
 
-  if (ncoef > 0) {
-   const double df = static_cast<double>(ncoef) + annot_sigma_sq_alpha_a;
-   const double scale = ss + annot_sigma_sq_alpha_b;
-   std::chi_squared_distribution<double> rchisq(df);
-   const double chi2 = std::max(rchisq(gen), 1e-300);
-   annot_sigma_sq_alpha(static_cast<arma::uword>(j)) =
-    std::max(scale / chi2, 1e-12);
+  const double df = static_cast<double>(ncoef) + annot_sigma_sq_alpha_a;
+  const double scale = ss + annot_sigma_sq_alpha_b;
+  std::chi_squared_distribution<double> rchisq(df);
+  const double chi2 = std::max(rchisq(gen), 1e-300);
+  const double sigma_new = scale / chi2;
+  if (!std::isfinite(sigma_new) || sigma_new <= 0.0) {
+   throw std::runtime_error("BayesRC sigmaSqAlpha update produced an invalid value.");
   }
+  annot_sigma_sq_alpha(static_cast<arma::uword>(j)) = sigma_new;
  }
+ return diagnostics;
 }
 
 #endif

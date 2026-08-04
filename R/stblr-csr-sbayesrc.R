@@ -80,7 +80,10 @@
 #'   the active mixture components.
 #' @param alpha_init Optional initial annotation coefficient matrix.
 #' @param sigmaSqAlpha_init Optional initial annotation-effect variances.
-#' @param intercept_flat Use a flat prior for the intercept coefficients.
+#' @param annotation_intercept_prior Proper normal probit-stick intercept prior.
+#'   The default is centred on the resolved initial mixture with SD 1.
+#' @param intercept_flat Deprecated opt-in legacy flat prior. `NULL` uses the
+#'   proper prior; `TRUE` is unsafe under separation and retained for reference.
 #' @param sigmaSqAlpha_a,sigmaSqAlpha_b Annotation-effect variance prior
 #'   controls.
 #' @param pi_floor Lower probability bound used by the sampler.
@@ -165,7 +168,8 @@ stblr_csr_sbayesrc_generic <- function(
   rebuild_r_before_updateE = FALSE, add_intercept = TRUE,
   standardize_annotations = TRUE, center_binary_annotations = FALSE,
   active_comp_weights = NULL, alpha_init = NULL,
-  sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  sigmaSqAlpha_init = NULL, annotation_intercept_prior = NULL,
+  intercept_flat = NULL,
   sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
   alpha_update_every = 10, maf_effect_s = NULL,
   estimate_maf_effect_s = FALSE, maf_effect_s_init = 0,
@@ -226,7 +230,8 @@ stblr_csr_sbayesrc_generic <- function(
   active_comp_weights = NULL,
   alpha_init = NULL,
   sigmaSqAlpha_init = NULL,
-  intercept_flat = TRUE,
+  annotation_intercept_prior = NULL,
+  intercept_flat = NULL,
   sigmaSqAlpha_a = 2,
   sigmaSqAlpha_b = 2,
   pi_floor = 1e-12,
@@ -347,6 +352,8 @@ stblr_csr_sbayesrc_generic <- function(
  )
  gamma <- alpha$gamma
  Kgamma <- length(gamma)
+ intercept_prior <- .sbayesrc_resolve_intercept_prior(
+  alpha$component_prob_init, annotation_intercept_prior, intercept_flat)
 
  marker_component_probability <- sbayesrc_marker_pi(
   A, alpha$alpha_init, gamma)
@@ -422,7 +429,7 @@ stblr_csr_sbayesrc_generic <- function(
   gamma = gamma,
   alpha_init = alpha$alpha_init,
   sigmaSqAlpha_init = alpha$sigmaSqAlpha_init,
-  intercept_flat = intercept_flat,
+  intercept_prior_resolved = intercept_prior$native,
   sigmaSqAlpha_a = sigmaSqAlpha_a,
   sigmaSqAlpha_b = sigmaSqAlpha_b,
   pi_floor = pi_floor,
@@ -505,7 +512,8 @@ stblr_csr_sbayesrc_generic <- function(
    sigmaSqAlpha_init = alpha$sigmaSqAlpha_init,
    comp_init = comp_init,
    use_comp_init = use_comp_init,
-   intercept_flat = intercept_flat,
+   annotation_intercept_prior = intercept_prior[names(intercept_prior) != "native"],
+   intercept_flat = intercept_prior$legacy_flat,
    sigmaSqAlpha_a = sigmaSqAlpha_a,
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor,

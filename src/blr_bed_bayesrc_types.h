@@ -4,6 +4,7 @@
 #include "blr_bed_family_types.h"
 
 #include <armadillo>
+#include "st_bayesrc_annotation_prior.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -31,7 +32,7 @@ struct BedBayesRCAnnotationSpec {
 struct BedBayesRCCoefficientPriorSpec {
  const arma::mat& initial_alpha;
  const arma::vec& initial_step_variances;
- bool intercept_flat;
+ StBayesRCInterceptPrior intercept_prior;
  double inverse_chisq_df;
  double inverse_chisq_scale;
  bool update_coefficients;

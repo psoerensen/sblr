@@ -720,7 +720,7 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
         arma::Row<int> component_row(result.component);
         st_bayesrc_update_annotation_prior(
           *bayesrc->annotations,component_row,annotation_alpha,
-          annotation_sigma,bayesrc->intercept_flat,
+          annotation_sigma,bayesrc->intercept_prior,
           bayesrc->sigma_alpha_a,bayesrc->sigma_alpha_b,rng);
         marker_component_prior=st_bayesrc_compute_snp_pi(
           *bayesrc->annotations,annotation_alpha,bayesrc->pi_floor);

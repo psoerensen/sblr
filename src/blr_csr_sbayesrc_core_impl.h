@@ -151,7 +151,7 @@ struct CsrSBayesRCExecutionContext {
  bool use_residual_initialization;
  bool rebuild_residual_before_update;
  int low_rank_residual_rebuild_every;
- bool intercept_flat;
+ StBayesRCInterceptPrior intercept_prior;
  double alpha_variance_prior_a;
  double alpha_variance_prior_b;
  double probability_floor;
@@ -255,7 +255,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const bool rebuild_r_before_updateE = context.rebuild_residual_before_update;
  const int low_rank_residual_rebuild_every =
   context.low_rank_residual_rebuild_every;
- const bool intercept_flat = context.intercept_flat;
+ const auto& intercept_prior = context.intercept_prior;
  const double sigmaSqAlpha_a = context.alpha_variance_prior_a;
  const double sigmaSqAlpha_b = context.alpha_variance_prior_b;
  const double pi_floor = context.probability_floor;
@@ -627,7 +627,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
       comp_t,
       alpha_t,
       sigmaSqAlpha_t,
-      intercept_flat,
+      intercept_prior,
       sigmaSqAlpha_a,
       sigmaSqAlpha_b,
       gen_t

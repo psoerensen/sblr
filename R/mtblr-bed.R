@@ -353,7 +353,8 @@
 #'   standardization is enabled.
 #' @param alpha_init Optional processed-annotation-by-stick coefficient matrix.
 #' @param sigmaSqAlpha_init Optional positive variance initialization per stick.
-#' @param intercept_flat Use a flat prior for the first intercept coefficient.
+#' @param annotation_intercept_prior Proper normal probit-stick intercept prior.
+#' @param intercept_flat Deprecated opt-in legacy flat prior.
 #' @param sigmaSqAlpha_a,sigmaSqAlpha_b Positive annotation-variance prior
 #'   hyperparameters.
 #' @param pi_floor Probability floor used by probit stick-breaking.
@@ -441,7 +442,8 @@ mtblr_bed <- function(
   joint_pi_prior = NULL, component = NULL,
   annotations = NULL, add_intercept = TRUE,
   standardize_annotations = TRUE, center_binary_annotations = FALSE,
-  alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  alpha_init = NULL, sigmaSqAlpha_init = NULL,
+  annotation_intercept_prior = NULL, intercept_flat = NULL,
   sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
   alpha_update_every = 1L, updateAlpha = TRUE, maf_effect_s = NULL,
   effect_maf = NULL, allow_reference_maf_for_maf_effect_s = FALSE,
@@ -570,7 +572,8 @@ mtblr_bed <- function(
     semantics$prior_kernel, annotations, marker_metadata$marker_id,
     pattern_spec, mixture, add_intercept, standardize_annotations,
     center_binary_annotations, alpha_init, sigmaSqAlpha_init,
-    intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor,
+    annotation_intercept_prior, intercept_flat, sigmaSqAlpha_a,
+    sigmaSqAlpha_b, pi_floor,
     alpha_update_every, updateAlpha)
   model_spec <- mixture$patterns
   null_index <- which(rowSums(model_spec$matrix) == 0L)
@@ -747,7 +750,7 @@ mtblr_bed <- function(
     pattern_pi_init = bayesrc$pattern_pi_init,
     pattern_pi_prior = bayesrc$pattern_pi_prior,
     updateAlpha = bayesrc$updateAlpha,
-    intercept_flat = bayesrc$intercept_flat,
+    intercept_prior_resolved = bayesrc$intercept_prior_resolved,
     sigma_alpha_a = bayesrc$sigma_alpha_a,
     sigma_alpha_b = bayesrc$sigma_alpha_b,
     pi_floor = bayesrc$pi_floor,

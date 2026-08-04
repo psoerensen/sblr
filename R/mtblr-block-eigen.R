@@ -281,7 +281,8 @@ mtblr_block_eigen <- function(
   joint_pi_prior = NULL, component = NULL,
   annotations = NULL, add_intercept = TRUE,
   standardize_annotations = TRUE, center_binary_annotations = FALSE,
-  alpha_init = NULL, sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+  alpha_init = NULL, sigmaSqAlpha_init = NULL,
+  annotation_intercept_prior = NULL, intercept_flat = NULL,
   sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
   alpha_update_every = 1L, updateAlpha = TRUE, maf_effect_s = NULL,
   effect_maf = NULL, allow_reference_maf_for_maf_effect_s = FALSE,
@@ -395,7 +396,8 @@ mtblr_block_eigen <- function(
     semantics$prior_kernel, annotations, aligned$marker_ids, pattern_spec,
     mixture, add_intercept, standardize_annotations,
     center_binary_annotations, alpha_init, sigmaSqAlpha_init,
-    intercept_flat, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor,
+    annotation_intercept_prior, intercept_flat, sigmaSqAlpha_a,
+    sigmaSqAlpha_b, pi_floor,
     alpha_update_every, updateAlpha)
   extended_plan <- .blr_mtblr_extended_plan(
     conv, aligned$marker_ids, st$trait_names, method, mixture, bayesrc,
@@ -474,7 +476,7 @@ mtblr_block_eigen <- function(
     lapply(seq_len(st$nt), function(t) initialization$state[,t]),
     bayesrc$annotations,bayesrc$alpha_init,bayesrc$sigma_alpha_init,
     bayesrc$pattern_pi_init,bayesrc$pattern_pi_prior,bayesrc$updateAlpha,
-    bayesrc$intercept_flat,bayesrc$sigma_alpha_a,bayesrc$sigma_alpha_b,
+    bayesrc$intercept_prior_resolved,bayesrc$sigma_alpha_a,bayesrc$sigma_alpha_b,
     bayesrc$pi_floor,bayesrc$alpha_update_every,
     extended_plan$native$convergence_covariance,
     extended_plan$native$convergence_probability,

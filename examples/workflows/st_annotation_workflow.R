@@ -135,7 +135,9 @@ group_args <- list(
 sbayesrc_args <- list(
   annotations = A,
   annotation_model = "annotation_probit_stick",
-  mixture_var = c(0, 0.01, 0.1, 1)
+  mixture_var = c(0, 0.01, 0.1, 1),
+  annotation_intercept_prior = list(
+    distribution = "normal", mean = "initial_mixture", sd = 1)
 )
 
 ## -------------------------------------------------------------------------

@@ -242,15 +242,21 @@ membership in that annotation, conditional on the remaining columns.
 
 ### Intercept prior
 
-With `intercept_flat = TRUE`, the first annotation coefficient at every
-stick-breaking step receives a flat prior in the native alpha update. This
-assumes the first column is the intercept, which is the arrangement produced
-when the fitter adds it. All other annotation coefficients receive the
-normal prior described below.
+The first annotation coefficient at step $j$ has the proper prior
 
-If a custom matrix already contains an intercept, place it first when relying
-on `intercept_flat = TRUE`. An all-ones column elsewhere in the matrix is not
-treated as the flat-prior intercept by the native update.
+$$
+\alpha_{0j}\sim N(\mu_{0j},\tau_{0j}^2).
+$$
+
+By default, $\mu_{0j}=\Phi^{-1}(p_j)$, where $p_j$ is the continuation
+probability implied by the resolved global component mixture, and
+$\tau_{0j}=1$. `annotation_intercept_prior` supports finite scalar or
+stick-specific means and standard deviations. This prior specification is
+independent of `alpha_init`, which controls only the initial MCMC state.
+
+The historical flat prior is available only through explicit
+`intercept_flat = TRUE`. It is a legacy reference mode and fails for empty or
+completely separated sticks because those targets are improper.
 
 ## Alpha and SigmaSqAlpha Priors
 
@@ -265,8 +271,8 @@ $$
 
 Each step has its own annotation-effect variance
 $\sigma_{\alpha,j}^2$, represented by `sigmaSqAlpha[j]`. Under
-`intercept_flat = TRUE`, the first coefficient is excluded from this normal
-shrinkage prior and from the variance update.
+the intercept is excluded from this hierarchical shrinkage prior and from the
+variance update because it has the separate proper prior above.
 
 The variance update has scaled-inverse-chi-square or inverse-gamma family form:
 
@@ -289,7 +295,8 @@ annotation-coefficient priors and a scaled-inverse-chi-square-family variance
 prior. The exact published hyperparameter specification should not be inferred
 from the `sblr` defaults. Users should report the values supplied to
 `sigmaSqAlpha_a`, `sigmaSqAlpha_b`, `sigmaSqAlpha_init`, and
-`intercept_flat`.
+`annotation_intercept_prior`. Historical fits should additionally report
+whether they used the legacy `intercept_flat` mode.
 
 ## Gibbs-Style Alpha Updating
 
@@ -312,9 +319,15 @@ at or below zero when it stops at that step.
 Conditional on the latent variables and the other coefficients, each
 annotation coefficient has a normal full conditional. For a non-intercept
 coefficient, the prior precision $1/\sigma_{\alpha,j}^2$ is added to the
-data precision. With `intercept_flat = TRUE`, the first coefficient omits that
-prior precision. After the coefficients for a step are updated,
+data precision. For the intercept, $1/\tau_{0j}^2$ is added to the data
+precision and $\mu_{0j}/\tau_{0j}^2$ is added to the conditional right-hand
+side. After the coefficients for a step are updated,
 `sigmaSqAlpha[j]` is drawn from the scaled-inverse-chi-square-family update.
+
+If no marker reaches a stick, there is no latent-data likelihood. The sampler
+then draws the intercept from its proper prior, draws non-intercept
+coefficients from their hierarchical conditional prior, and performs the
+unchanged `sigmaSqAlpha` conditional update.
 
 This is a Gibbs-style conditional update using truncated-normal augmentation
 and normal draws. It is not a random-walk Metropolis-Hastings alpha update.
@@ -547,8 +560,8 @@ Before interpreting an SBayesRC-style fit:
   grid;
 - record intercept, standardization, and binary-centering choices;
 - inspect annotation prevalence, scaling, overlap, and collinearity;
-- report `sigmaSqAlpha_a`, `sigmaSqAlpha_b`, `intercept_flat`, `pi_floor`, and
-  `alpha_update_every`;
+- report `annotation_intercept_prior`, `sigmaSqAlpha_a`, `sigmaSqAlpha_b`,
+  `pi_floor`, and `alpha_update_every` (and any explicit legacy-flat use);
 - check component counts, PIPs, variance traces, and chain behavior;
 - distinguish annotation-derived prior probabilities from posterior component
   frequencies in `component_probabilities`;

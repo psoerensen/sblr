@@ -123,7 +123,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
   std::vector<std::vector<double>> ssb_prior,
   std::vector<std::vector<double>> sse_prior, arma::mat A,
   std::vector<double> gamma, arma::mat annot_alpha_init,
-  arma::vec annot_sigma_sq_alpha_init, bool intercept_flat = true,
+  arma::vec annot_sigma_sq_alpha_init, arma::mat intercept_prior_resolved,
   double sigmaSqAlpha_a = 2.0, double sigmaSqAlpha_b = 2.0,
   double pi_floor = 1e-12, double nub = 4.0, double nue = 4.0,
   bool updateAlpha = true, bool updateB = true, bool updateE = true,
@@ -198,13 +198,15 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
    sblr::core::resolve_bed_family_logical_chain_seed(seed,trait,chain) :
    static_cast<unsigned int>(chain_seeds[static_cast<std::size_t>(chain)]+
                              1000003*(trait+1));
+  const StBayesRCInterceptPrior intercept_prior =
+   st_bayesrc_parse_intercept_prior(intercept_prior_resolved, K - 1);
   const sblr::core::BedBayesRCChainExecutionContext<
    FastPackedBedMatrixBR,arma::mat,MarkerMapBayesR
   > context{
    {G,static_cast<std::size_t>(m),static_cast<std::size_t>(n_used),G.nbytes},
    {A,static_cast<std::size_t>(m),static_cast<std::size_t>(A.n_cols),0u},
    {gamma,0u,static_cast<std::size_t>(K-1)},
-   {annot_alpha_init,annot_sigma_sq_alpha_init,intercept_flat,
+   {annot_alpha_init,annot_sigma_sq_alpha_init,intercept_prior,
     sigmaSqAlpha_a,sigmaSqAlpha_b,updateAlpha,annot_alpha_update_every},
    maps,order,y_mat,b_init,B,E,ssb,sse,pi_floor,nub,nue,adjE,
    updateB,updateE,nit,nburn,nthin,rebuild_every,chain_seed,trait,chain,

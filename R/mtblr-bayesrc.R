@@ -2,7 +2,10 @@
   annotations = matrix(numeric(), 0L, 0L),
   alpha_init = matrix(numeric(), 0L, 0L), sigma_alpha_init = numeric(),
   pattern_pi_init = numeric(), pattern_pi_prior = numeric(),
-  updateAlpha = FALSE, intercept_flat = TRUE, sigma_alpha_a = 2,
+  updateAlpha = FALSE,
+  intercept_prior_resolved = matrix(numeric(), 0L, 0L),
+  annotation_intercept_prior = NULL, intercept_flat = FALSE,
+  sigma_alpha_a = 2,
   sigma_alpha_b = 2, pi_floor = 1e-12, alpha_update_every = 1L,
   metadata = NULL, model_parameters = NULL, maf_annotation_overlap = FALSE)
 
@@ -71,7 +74,8 @@
     prior_kernel, annotations, marker_ids, pattern_spec, mixture,
     add_intercept = TRUE, standardize_annotations = TRUE,
     center_binary_annotations = FALSE, alpha_init = NULL,
-    sigmaSqAlpha_init = NULL, intercept_flat = TRUE,
+    sigmaSqAlpha_init = NULL, annotation_intercept_prior = NULL,
+    intercept_flat = NULL,
     sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
     alpha_update_every = 1L, updateAlpha = TRUE) {
   supplied <- list(annotations, alpha_init, sigmaSqAlpha_init)
@@ -80,7 +84,8 @@
         !identical(add_intercept, TRUE) ||
         !identical(standardize_annotations, TRUE) ||
         !identical(center_binary_annotations, FALSE) ||
-        !identical(intercept_flat, TRUE) || !identical(sigmaSqAlpha_a, 2) ||
+        !is.null(annotation_intercept_prior) || !is.null(intercept_flat) ||
+        !identical(sigmaSqAlpha_a, 2) ||
         !identical(sigmaSqAlpha_b, 2) || !identical(pi_floor, 1e-12) ||
         !identical(as.integer(alpha_update_every), 1L) ||
         !identical(updateAlpha, TRUE)) {
@@ -92,7 +97,7 @@
   if (is.null(annotations))
     stop("annotations is required for MT BayesRC/SBayesRC.", call. = FALSE)
   for (name in c("add_intercept", "standardize_annotations",
-                 "center_binary_annotations", "intercept_flat", "updateAlpha")) {
+                 "center_binary_annotations", "updateAlpha")) {
     value <- get(name)
     if (!is.logical(value) || length(value) != 1L || is.na(value))
       stop(name, " must be TRUE or FALSE.", call. = FALSE)
@@ -145,6 +150,8 @@
     annot_alpha_init = alpha_init,
     annot_sigma_sq_alpha_init = sigmaSqAlpha_init,
     pi_floor = pi_floor)
+  intercept_prior <- .sbayesrc_resolve_intercept_prior(
+    component_probability, annotation_intercept_prior, intercept_flat)
   maf_names <- c("maf", "allele_frequency", "heterozygosity",
                  "log_heterozygosity")
   overlap <- any(tolower(colnames(A)) %in% maf_names)
@@ -173,14 +180,18 @@
     annotations = A, alpha_init = initialized$annot_alpha_init,
     sigma_alpha_init = initialized$annot_sigma_sq_alpha_init,
     pattern_pi_init = omega, pattern_pi_prior = rep(1, length(omega)),
-    updateAlpha = updateAlpha, intercept_flat = intercept_flat,
+    updateAlpha = updateAlpha,
+    intercept_prior_resolved = intercept_prior$native,
+    annotation_intercept_prior = intercept_prior[names(intercept_prior) != "native"],
+    intercept_flat = intercept_prior$legacy_flat,
     sigma_alpha_a = sigmaSqAlpha_a, sigma_alpha_b = sigmaSqAlpha_b,
     pi_floor = pi_floor, alpha_update_every = alpha_update_every,
     metadata = metadata, maf_annotation_overlap = overlap,
     model_parameters = list(annotations = c(metadata, list(
       component_names = component_names,
       stick_names = paste0("step_", seq_len(mixture$component_count - 1L)),
-      pattern_names = pattern_spec$names[active]))))
+      pattern_names = pattern_spec$names[active],
+      annotation_intercept_prior = intercept_prior[names(intercept_prior) != "native"]))))
 }
 
 .mtblr_bayesrc_enrich_raw <- function(raw, bayesrc, method, updatePi) {

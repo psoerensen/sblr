@@ -384,7 +384,7 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
      arma::Row<int> component_row(component);
      st_bayesrc_update_annotation_prior(
       *model.bayesrc->annotations,component_row,annotation_alpha,
-      annotation_sigma,model.bayesrc->intercept_flat,
+      annotation_sigma,model.bayesrc->intercept_prior,
       model.bayesrc->sigma_alpha_a,model.bayesrc->sigma_alpha_b,gen);
      marker_component_prior=st_bayesrc_compute_snp_pi(
       *model.bayesrc->annotations,annotation_alpha,model.bayesrc->pi_floor);

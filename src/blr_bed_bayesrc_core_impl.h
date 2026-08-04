@@ -73,7 +73,7 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
  const auto& gamma=context.components.scales;
  const auto& annot_alpha_init=context.coefficient_prior.initial_alpha;
  const auto& annot_sigma_init=context.coefficient_prior.initial_step_variances;
- const bool intercept_flat=context.coefficient_prior.intercept_flat;
+ const auto& intercept_prior=context.coefficient_prior.intercept_prior;
  const double sigma_a=context.coefficient_prior.inverse_chisq_df;
  const double sigma_b=context.coefficient_prior.inverse_chisq_scale;
  const double pi_floor=context.pi_floor;
@@ -149,7 +149,7 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
     sampleE_bayesr(nue, ve, residual, sse_prior(trait, trait), gen);
    if (update_alpha && ((it + 1) % alpha_every == 0)) {
     st_bayesrc_update_annotation_prior(
-     annotation, component_t, annot_alpha, annot_sigma, intercept_flat,
+     annotation, component_t, annot_alpha, annot_sigma, intercept_prior,
      sigma_a, sigma_b, gen
     );
     snp_pi = st_bayesrc_compute_snp_pi(annotation, annot_alpha, pi_floor);

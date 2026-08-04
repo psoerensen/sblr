@@ -219,6 +219,121 @@ make_sbayesrc_alpha_init <- function(
  out
 }
 
+.sbayesrc_component_to_stick_prob <- function(component_probability) {
+ if (!is.numeric(component_probability) || length(component_probability) < 2L ||
+     any(!is.finite(component_probability)) ||
+     any(component_probability < 0) || sum(component_probability) <= 0) {
+  stop("component_probability must be a finite non-negative vector with positive sum.")
+ }
+ probability <- as.numeric(component_probability) / sum(component_probability)
+ remaining <- rev(cumsum(rev(probability)))
+ denominator <- remaining[-length(remaining)]
+ out <- ifelse(denominator > 0, remaining[-1L] / denominator, 0.5)
+ pmin(pmax(out, .Machine$double.eps), 1 - .Machine$double.eps)
+}
+
+.sbayesrc_stick_to_component_prob <- function(stick_probability) {
+ if (!is.numeric(stick_probability) || length(stick_probability) < 1L ||
+     any(!is.finite(stick_probability)) ||
+     any(stick_probability <= 0 | stick_probability >= 1)) {
+  stop("stick_probability must be a finite numeric vector in (0, 1).")
+ }
+ remaining <- 1
+ out <- numeric(length(stick_probability) + 1L)
+ for (j in seq_along(stick_probability)) {
+  out[j] <- remaining * (1 - stick_probability[j])
+  remaining <- remaining * stick_probability[j]
+ }
+ out[length(out)] <- remaining
+ out
+}
+
+.sbayesrc_resolve_intercept_prior <- function(
+  component_probability,
+  annotation_intercept_prior = NULL,
+  intercept_flat = NULL
+) {
+ stick_probability <- .sbayesrc_component_to_stick_prob(component_probability)
+ nstep <- length(stick_probability)
+
+ if (!is.null(intercept_flat)) {
+  if (!is.logical(intercept_flat) || length(intercept_flat) != 1L ||
+      is.na(intercept_flat)) {
+   stop("intercept_flat must be NULL, TRUE, or FALSE.")
+  }
+  if (!is.null(annotation_intercept_prior)) {
+   stop("Specify annotation_intercept_prior or intercept_flat, not both.")
+  }
+  if (!isTRUE(intercept_flat)) {
+   stop(
+    "intercept_flat = FALSE used the historical zero-centred hierarchical ",
+    "intercept prior and is no longer supported; specify ",
+    "annotation_intercept_prior explicitly."
+   )
+  }
+  warning(
+   "intercept_flat = TRUE selects the legacy improper reference prior; ",
+   "it fails for empty or completely separated sticks.", call. = FALSE
+  )
+  type <- "legacy_flat"
+  mean <- stats::qnorm(stick_probability)
+  sd <- rep(Inf, nstep)
+ } else {
+  specification <- annotation_intercept_prior %||% list()
+  if (!is.list(specification)) {
+   stop("annotation_intercept_prior must be NULL or a list.")
+  }
+  distribution <- specification$distribution %||% "normal"
+  if (!identical(distribution, "normal")) {
+   stop("annotation_intercept_prior$distribution must be 'normal'.")
+  }
+  requested_mean <- specification$mean %||% "initial_mixture"
+  if (is.character(requested_mean)) {
+   if (!identical(requested_mean, "initial_mixture")) {
+    stop("The only supported symbolic intercept-prior mean is 'initial_mixture'.")
+   }
+   mean <- stats::qnorm(stick_probability)
+   mean_source <- "initial_mixture"
+  } else {
+   if (!is.numeric(requested_mean) ||
+       !length(requested_mean) %in% c(1L, nstep) ||
+       any(!is.finite(requested_mean))) {
+    stop("annotation_intercept_prior$mean must be finite and scalar or stick-specific.")
+   }
+   mean <- rep(as.numeric(requested_mean), length.out = nstep)
+   mean_source <- "user"
+  }
+  requested_sd <- specification$sd %||% 1
+  if (!is.numeric(requested_sd) ||
+      !length(requested_sd) %in% c(1L, nstep) ||
+      any(!is.finite(requested_sd)) || any(requested_sd <= 0)) {
+   stop("annotation_intercept_prior$sd must be positive, finite, and scalar or stick-specific.")
+  }
+  sd <- rep(as.numeric(requested_sd), length.out = nstep)
+  type <- "normal"
+ }
+
+ precision <- if (identical(type, "normal")) 1 / sd^2 else rep(0, nstep)
+ native <- rbind(
+  type = rep(if (identical(type, "legacy_flat")) 1 else 0, nstep),
+  mean = mean,
+  precision = precision
+ )
+ colnames(native) <- paste0("step_", seq_len(nstep))
+ list(
+  distribution = type,
+  mean = stats::setNames(mean, colnames(native)),
+  sd = stats::setNames(sd, colnames(native)),
+  variance = stats::setNames(sd^2, colnames(native)),
+  precision = stats::setNames(precision, colnames(native)),
+  mean_source = if (identical(type, "legacy_flat")) "not_applicable" else mean_source,
+  legacy_flat = identical(type, "legacy_flat"),
+  component_probability = as.numeric(component_probability) / sum(component_probability),
+  stick_probability = stats::setNames(stick_probability, colnames(native)),
+  native = native
+ )
+}
+
 #' Convert SBayesRC-Style Annotation Coefficients to Component Probabilities
 #'
 #' Applies the generalized probit stick-breaking transform to annotation

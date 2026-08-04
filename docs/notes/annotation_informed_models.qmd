@@ -32,6 +32,27 @@ extended mode.
 `maf_effect_s` is independent of annotation policy. MAF-derived annotations may
 coexist with it, but their possible overlap is recorded and should be assessed.
 
+## Probit-stick intercept identification
+
+BayesRC and SBayesRC now give every probit-stick intercept a proper normal
+prior. Its default mean is the probit transform of the continuation probability
+implied by the resolved global mixture, and its default standard deviation is
+1. This is an intentional model change from the historical flat prior.
+
+The prior is not initialization. Supplying `alpha_init` changes only the MCMC
+starting state. Users can configure a scalar or stick-specific prior with
+`annotation_intercept_prior`, for example
+`list(distribution = "normal", mean = "initial_mixture", sd = 1)`.
+
+The proper prior keeps the posterior finite when every eligible marker makes
+the same stick decision. If no marker reaches a later stick, its coefficients
+receive a prior-only update. Explicit `intercept_flat = TRUE` is retained only
+for historical reference and fails for empty or completely separated sticks.
+
+LD-operator approximation and annotation-prior identification are separate.
+BED, exact or approximate CSR, and retained block eigen use different data
+likelihoods but the same annotation-prior kernel.
+
 See [Annotation-informed methods](../methods/annotation_informed_models.qmd),
 [SBayesRC annotation probabilities](../methods/sbayesrc_annotations.qmd), and
 [MT BayesRC/SBayesRC](../methods/mt_bayesrc_sbayesrc.qmd).

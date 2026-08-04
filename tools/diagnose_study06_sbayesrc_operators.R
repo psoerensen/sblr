@@ -154,6 +154,11 @@ cat("LD:", normalizePath(evidence_paths[2L], winslash = "/"), "\n")
 cat("diagnostic output:", args$output, "\n")
 
 if (identical(args$route, "retained")) {
+  # This is a post-identification diagnostic, not an authoritative replay of
+  # the historical flat-prior qualification coordinate.
+  controls$intercept_flat <- NULL
+  controls$annotation_intercept_prior <- list(
+    distribution = "normal", mean = "initial_mixture", sd = 1)
   controls$nit <- args$diagnostic_iterations
   controls$nburn <- 0L
   controls$nthin <- 1L

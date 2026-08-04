@@ -71,7 +71,8 @@ Stick order follows component order. Linear predictors are transformed by the
 normal CDF, floored only by `pi_floor`, and renormalized.
 
 `alpha_init` and `sigmaSqAlpha_init` initialize coefficients and their
-positive prior variances. `intercept_flat` distinguishes the intercept prior.
+positive prior variances. `annotation_intercept_prior` specifies the separate
+proper normal intercept prior; initialization does not recenter that prior.
 With `updateAlpha = TRUE`, latent probit variables, coefficients, and
 `sigmaSqAlpha` are updated every `alpha_update_every` completed iterations;
 the current values still exist at every iteration. With `FALSE`, coefficients

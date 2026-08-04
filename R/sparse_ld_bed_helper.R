@@ -3839,8 +3839,10 @@ stblr_bed_marker <- function(
 #' @param updateAlpha Logical; update BayesRC annotation coefficients.
 #' @param annot_alpha_update_every Positive number of iterations between
 #'   BayesRC annotation-prior updates.
-#' @param intercept_flat Logical; use a flat prior for the first, intercept
-#'   annotation coefficient in each stick.
+#' @param annotation_intercept_prior Proper normal probit-stick intercept
+#'   prior. The default is centred on the resolved mixture with SD 1.
+#' @param intercept_flat Deprecated opt-in legacy flat prior. `NULL` uses the
+#'   proper prior; `TRUE` is unsafe under separation and retained for reference.
 #' @param sigmaSqAlpha_a,sigmaSqAlpha_b Positive BayesRC annotation-variance
 #'   prior controls.
 #' @param pi_floor Finite probability floor in `(0, 0.5)` for BayesRC
@@ -3949,7 +3951,8 @@ stblr_bed_marker <- function(
   annot_sigma_sq_alpha_init = NULL,
   updateAlpha = TRUE,
   annot_alpha_update_every = 10L,
-  intercept_flat = TRUE,
+  annotation_intercept_prior = NULL,
+  intercept_flat = NULL,
   sigmaSqAlpha_a = 2,
   sigmaSqAlpha_b = 2,
   pi_floor = 1e-12,
@@ -4145,9 +4148,8 @@ stblr_bed_marker <- function(
   if (!is.logical(updateAlpha) || length(updateAlpha) != 1L || is.na(updateAlpha)) {
    stop("updateAlpha must be TRUE or FALSE.")
   }
-  if (!is.logical(intercept_flat) || length(intercept_flat) != 1L || is.na(intercept_flat)) {
-   stop("intercept_flat must be TRUE or FALSE.")
-  }
+  intercept_prior <- .sbayesrc_resolve_intercept_prior(
+   pi, annotation_intercept_prior, intercept_flat)
   marker_component_probability <- sbayesrc_marker_pi(
    annotation_info$A, prior_init$annot_alpha_init, mixture_var)
   marker_expected_gamma <- as.numeric(
@@ -4180,7 +4182,7 @@ stblr_bed_marker <- function(
    gamma = as.numeric(mixture_var),
    annot_alpha_init = prior_init$annot_alpha_init,
    annot_sigma_sq_alpha_init = prior_init$annot_sigma_sq_alpha_init,
-   intercept_flat = intercept_flat,
+   intercept_prior_resolved = intercept_prior$native,
    sigmaSqAlpha_a = sigmaSqAlpha_a,
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor,
@@ -4268,7 +4270,8 @@ stblr_bed_marker <- function(
    annot_alpha_init = prior_init$annot_alpha_init,
    annot_sigma_sq_alpha_init = prior_init$annot_sigma_sq_alpha_init,
    annot_alpha_update_every = as.integer(annot_alpha_update_every),
-   intercept_flat = intercept_flat,
+   annotation_intercept_prior = intercept_prior[names(intercept_prior) != "native"],
+   intercept_flat = intercept_prior$legacy_flat,
    sigmaSqAlpha_a = sigmaSqAlpha_a,
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor

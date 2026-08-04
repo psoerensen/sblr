@@ -36,7 +36,8 @@ mtblr_block_eigen(
   center_binary_annotations = FALSE,
   alpha_init = NULL,
   sigmaSqAlpha_init = NULL,
-  intercept_flat = TRUE,
+  annotation_intercept_prior = NULL,
+  intercept_flat = NULL,
   sigmaSqAlpha_a = 2,
   sigmaSqAlpha_b = 2,
   pi_floor = 1e-12,
@@ -143,7 +144,9 @@ standardization is enabled.}
 
 \item{sigmaSqAlpha_init}{Optional positive variance initialization per stick.}
 
-\item{intercept_flat}{Use a flat prior for the first intercept coefficient.}
+\item{annotation_intercept_prior}{Proper normal probit-stick intercept prior.}
+
+\item{intercept_flat}{Deprecated opt-in legacy flat prior.}
 
 \item{sigmaSqAlpha_a, sigmaSqAlpha_b}{Positive annotation-variance prior
 hyperparameters.}

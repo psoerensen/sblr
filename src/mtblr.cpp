@@ -4750,7 +4750,7 @@ Rcpp::List mtblr_csr_chains_raw_internal(
   std::vector<double> sigma_alpha_init,
   std::vector<double> pattern_pi_init,
   std::vector<double> pattern_pi_prior,
-  bool updateAlpha, bool intercept_flat,
+  bool updateAlpha, arma::mat intercept_prior_resolved,
   double sigma_alpha_a, double sigma_alpha_b,
   double pi_floor, int alpha_update_every,
   bool convergence_covariance=false, bool convergence_probability=false,
@@ -4811,7 +4811,8 @@ Rcpp::List mtblr_csr_chains_raw_internal(
   bayesrc.annotations=&annotations;
   bayesrc.pattern_prior=pattern_pi_prior;
   bayesrc.update_alpha=updateAlpha;
-  bayesrc.intercept_flat=intercept_flat;
+  bayesrc.intercept_prior=st_bayesrc_parse_intercept_prior(
+   intercept_prior_resolved, static_cast<int>(alpha_init.n_cols));
   bayesrc.sigma_alpha_a=sigma_alpha_a;
   bayesrc.sigma_alpha_b=sigma_alpha_b;
   bayesrc.pi_floor=pi_floor;
@@ -4964,7 +4965,7 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   std::vector<double> sigma_alpha_init,
   std::vector<double> pattern_pi_init,
   std::vector<double> pattern_pi_prior,
-  bool updateAlpha, bool intercept_flat,
+  bool updateAlpha, arma::mat intercept_prior_resolved,
   double sigma_alpha_a, double sigma_alpha_b,
   double pi_floor, int alpha_update_every,
   bool convergence_covariance=false, bool convergence_probability=false,
@@ -5038,7 +5039,8 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
   bayesrc.annotations=&annotations;
   bayesrc.pattern_prior=pattern_pi_prior;
   bayesrc.update_alpha=updateAlpha;
-  bayesrc.intercept_flat=intercept_flat;
+  bayesrc.intercept_prior=st_bayesrc_parse_intercept_prior(
+   intercept_prior_resolved, static_cast<int>(alpha_init.n_cols));
   bayesrc.sigma_alpha_a=sigma_alpha_a;
   bayesrc.sigma_alpha_b=sigma_alpha_b;
   bayesrc.pi_floor=pi_floor;
@@ -5712,7 +5714,7 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  std::vector<double> sigma_alpha_init,
  std::vector<double> pattern_pi_init,
  std::vector<double> pattern_pi_prior,
- bool updateAlpha, bool intercept_flat,
+ bool updateAlpha, arma::mat intercept_prior_resolved,
  double sigma_alpha_a, double sigma_alpha_b,
  double pi_floor, int alpha_update_every,
  bool convergence_covariance, bool convergence_probability,
@@ -5754,7 +5756,8 @@ Rcpp::List mtblr_bed_chains_binding_impl(
   bayesrc.annotations=&annotations;
   bayesrc.pattern_prior=pattern_pi_prior;
   bayesrc.update_alpha=updateAlpha;
-  bayesrc.intercept_flat=intercept_flat;
+  bayesrc.intercept_prior=st_bayesrc_parse_intercept_prior(
+   intercept_prior_resolved, static_cast<int>(alpha_init.n_cols));
   bayesrc.sigma_alpha_a=sigma_alpha_a;
   bayesrc.sigma_alpha_b=sigma_alpha_b;
   bayesrc.pi_floor=pi_floor;
@@ -5986,7 +5989,7 @@ Rcpp::List mtblr_bed_chains_internal(
  std::vector<double> sigma_alpha_init,
  std::vector<double> pattern_pi_init,
  std::vector<double> pattern_pi_prior,
- bool updateAlpha, bool intercept_flat,
+ bool updateAlpha, arma::mat intercept_prior_resolved,
  double sigma_alpha_a, double sigma_alpha_b,
  double pi_floor, int alpha_update_every,
  bool convergence_covariance=false, bool convergence_probability=false,
@@ -6008,7 +6011,7 @@ Rcpp::List mtblr_bed_chains_internal(
   std::move(pi_prior),std::move(component_init),std::move(annotations),
   std::move(alpha_init),std::move(sigma_alpha_init),
   std::move(pattern_pi_init),std::move(pattern_pi_prior),updateAlpha,
-  intercept_flat,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every,
+  intercept_prior_resolved,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every,
   convergence_covariance,convergence_probability,convergence_annotations,
   convergence_full_probability,Rf_isNull(convergence_markers) ?
    std::vector<int>() : Rcpp::as<std::vector<int>>(convergence_markers),
@@ -6043,7 +6046,7 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
  std::vector<double> sigma_alpha_init,
  std::vector<double> pattern_pi_init,
  std::vector<double> pattern_pi_prior,
- bool updateAlpha, bool intercept_flat,
+ bool updateAlpha, arma::mat intercept_prior_resolved,
  double sigma_alpha_a, double sigma_alpha_b,
  double pi_floor, int alpha_update_every,
  bool convergence_covariance=false, bool convergence_probability=false,
@@ -6065,7 +6068,7 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
   std::move(pi_prior),std::move(component_init),std::move(annotations),
   std::move(alpha_init),std::move(sigma_alpha_init),
   std::move(pattern_pi_init),std::move(pattern_pi_prior),updateAlpha,
-  intercept_flat,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every,
+  intercept_prior_resolved,sigma_alpha_a,sigma_alpha_b,pi_floor,alpha_update_every,
   convergence_covariance,convergence_probability,convergence_annotations,
   convergence_full_probability,Rf_isNull(convergence_markers) ?
    std::vector<int>() : Rcpp::as<std::vector<int>>(convergence_markers),

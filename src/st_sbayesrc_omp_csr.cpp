@@ -114,7 +114,7 @@ static std::vector<int> stblr_sbayesrc_copy_rows0_or_empty(
 //
 // This handles overlapping annotations directly through dense A (m x nAnno).
 // If an intercept is desired, include a first column of 1s in A. The first
-// annotation coefficient is updated with a flat prior when intercept_flat=true.
+// intercept coefficient uses the resolved proper prior (or explicit legacy mode).
 //
 // Return structure:
 //   0  bm
@@ -1186,7 +1186,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   arma::vec gamma,
   arma::mat alpha_init,
   arma::vec sigmaSqAlpha_init,
-  bool intercept_flat,
+  arma::mat intercept_prior_resolved,
   double sigmaSqAlpha_a,
   double sigmaSqAlpha_b,
   double pi_floor,
@@ -1564,7 +1564,13 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
  sblr::core::SBayesRCAlphaSpec alpha_contract;
  alpha_contract.annotation_count = static_cast<std::size_t>(nAnno);
  alpha_contract.step_count = static_cast<std::size_t>(nstep);
- alpha_contract.intercept_flat = intercept_flat;
+ const StBayesRCInterceptPrior intercept_prior =
+  st_bayesrc_parse_intercept_prior(intercept_prior_resolved, nstep);
+ alpha_contract.intercept_prior_legacy_flat = intercept_prior.legacy_flat;
+ alpha_contract.intercept_prior_mean.assign(
+  intercept_prior.mean.begin(), intercept_prior.mean.end());
+ alpha_contract.intercept_prior_precision.assign(
+  intercept_prior.precision.begin(), intercept_prior.precision.end());
  alpha_contract.update = updateAlpha;
  alpha_contract.variance_prior_a = sigmaSqAlpha_a;
  alpha_contract.variance_prior_b = sigmaSqAlpha_b;
@@ -1650,7 +1656,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   use_r_init,
   rebuild_r_before_updateE,
   low_rank_residual_rebuild_every,
-  intercept_flat,
+  intercept_prior,
   sigmaSqAlpha_a,
   sigmaSqAlpha_b,
   pi_floor,
@@ -2157,6 +2163,43 @@ Rcpp::NumericMatrix st_bayesrc_truncated_normal_draws_test(
  return result;
 }
 
+// Deterministic internal test hook for the shared BED/CSR/block-eigen/MT
+// annotation kernel. It is deliberately not exported from the R namespace.
+// [[Rcpp::export(name = ".st_bayesrc_annotation_update")]]
+Rcpp::List st_bayesrc_annotation_update_test(
+  arma::mat annotation,
+  arma::rowvec component_numeric,
+  arma::mat alpha,
+  arma::vec sigma_sq_alpha,
+  arma::mat intercept_prior_resolved,
+  double sigma_alpha_a,
+  double sigma_alpha_b,
+  int seed
+) {
+ arma::Row<int> component(component_numeric.n_elem);
+ for (arma::uword i = 0; i < component_numeric.n_elem; ++i) {
+  const double value = component_numeric(i);
+  if (!std::isfinite(value) || value < 0.0 || value != std::floor(value)) {
+   throw std::invalid_argument("component must contain non-negative integer indices.");
+  }
+  component(i) = static_cast<int>(value);
+ }
+ const int nstep = static_cast<int>(alpha.n_cols);
+ const auto prior = st_bayesrc_parse_intercept_prior(
+  intercept_prior_resolved, nstep);
+ std::mt19937 gen(static_cast<std::mt19937::result_type>(seed));
+ const auto diagnostics = st_bayesrc_update_annotation_prior(
+  annotation, component, alpha, sigma_sq_alpha, prior,
+  sigma_alpha_a, sigma_alpha_b, gen);
+ return Rcpp::List::create(
+  Rcpp::Named("alpha") = alpha,
+  Rcpp::Named("sigmaSqAlpha") = sigma_sq_alpha,
+  Rcpp::Named("eligible") = diagnostics.eligible,
+  Rcpp::Named("continuation") = diagnostics.continuation,
+  Rcpp::Named("prior_only") = diagnostics.prior_only
+ );
+}
+
 // [[Rcpp::export]]
 Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww,
@@ -2166,7 +2209,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B,
   arma::mat E, std::vector<std::vector<double>> ssb_prior,
   std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma,
-  arma::mat alpha_init, arma::vec sigmaSqAlpha_init, bool intercept_flat,
+  arma::mat alpha_init, arma::vec sigmaSqAlpha_init,
+  arma::mat intercept_prior_resolved,
   double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub,
   double nue, bool updateAlpha, bool updateB, bool updateE,
   int alpha_update_every, double adjE, std::vector<int> n, int nit,
@@ -2204,7 +2248,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
  return stblr_cpg_omp_csr_sbayesrc_impl(
   wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init,
   rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma,
-  alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a,
+  alpha_init, sigmaSqAlpha_init, intercept_prior_resolved, sigmaSqAlpha_a,
   sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE,
   alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains,
   keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2,
@@ -2225,7 +2269,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   bool rebuild_r_before_updateE, arma::mat B,
   arma::mat E, std::vector<std::vector<double>> ssb_prior,
   std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma,
-  arma::mat alpha_init, arma::vec sigmaSqAlpha_init, bool intercept_flat,
+  arma::mat alpha_init, arma::vec sigmaSqAlpha_init,
+  arma::mat intercept_prior_resolved,
   double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub,
   double nue, bool updateAlpha, bool updateB, bool updateE,
   int alpha_update_every, double adjE, std::vector<int> n, int nit,
@@ -2329,7 +2374,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
  return stblr_cpg_omp_csr_sbayesrc_impl(
   wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init,
   rebuild_r_before_updateE, "", B, E, ssb_prior, sse_prior, A, gamma,
-  alpha_init, sigmaSqAlpha_init, intercept_flat, sigmaSqAlpha_a,
+  alpha_init, sigmaSqAlpha_init, intercept_prior_resolved, sigmaSqAlpha_a,
   sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE,
   alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains,
   keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2,

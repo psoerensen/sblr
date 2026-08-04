@@ -39,7 +39,9 @@ struct SBayesRCAlphaSpec {
   std::size_t annotation_count=0, step_count=0;
   std::vector<double> initial_values;       // column-major annotation x step
   std::vector<double> initial_variance;     // one value per step
-  bool intercept_flat=true, update=true;
+  bool intercept_prior_legacy_flat=false, update=true;
+  std::vector<double> intercept_prior_mean;
+  std::vector<double> intercept_prior_precision;
   double variance_prior_a=2.0, variance_prior_b=2.0;
   int update_every=10;
 };

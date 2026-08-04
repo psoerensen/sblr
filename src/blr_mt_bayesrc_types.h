@@ -2,6 +2,7 @@
 #define SBLR_BLR_MT_BAYESRC_TYPES_H
 
 #include <armadillo>
+#include "st_bayesrc_annotation_prior.h"
 #include <cstddef>
 #include <stdexcept>
 #include <vector>
@@ -16,7 +17,7 @@ struct MtBayesRCSpec {
  const arma::mat* annotations=nullptr;
  std::vector<double> pattern_prior;
  bool update_alpha=true;
- bool intercept_flat=true;
+ StBayesRCInterceptPrior intercept_prior{false, arma::vec(), arma::vec()};
  double sigma_alpha_a=2.0;
  double sigma_alpha_b=2.0;
  double pi_floor=1e-12;

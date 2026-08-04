@@ -12,17 +12,22 @@ fit_csr <- mtblr_csr(
   stats, ld_prefix = ld_prefix, ld_metadata = ld_metadata,
   method = "sbayesrc", annotations = annotation,
   mixture_var = c(0, 0.01, 0.1, 1),
+  annotation_intercept_prior = list(
+    distribution = "normal", mean = "initial_mixture", sd = 1),
   nchains = 2L, ncores = 2L, convergence = "auto"
 )
 
 fit_block <- mtblr_block_eigen(
   stats, Glist, block_start = 1L, method = "sbayesrc",
-  annotations = annotation, mixture_var = c(0, 0.01, 0.1, 1)
+  annotations = annotation, mixture_var = c(0, 0.01, 0.1, 1),
+  annotation_intercept_prior = list(mean = "initial_mixture", sd = 1)
 )
 
 fit_bed <- mtblr_bed(
   y, Glist, method = "bayesrc", annotations = annotation,
-  mixture_var = c(0, 0.01, 0.1, 1), maf_effect_s = -1
+  mixture_var = c(0, 0.01, 0.1, 1),
+  annotation_intercept_prior = list(mean = "initial_mixture", sd = 1),
+  maf_effect_s = -1
 )
 
 # Posterior state probabilities and annotation-driven prior probabilities are

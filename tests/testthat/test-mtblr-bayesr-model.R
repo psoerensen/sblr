@@ -89,7 +89,8 @@ test_that("MT BayesR public controls are aligned and failure-closed", {
   bayesr_controls <- c("mixture_var", "joint_pi", "joint_pi_prior", "component")
   bayesrc_controls <- c("annotations", "add_intercept",
     "standardize_annotations", "center_binary_annotations", "alpha_init",
-    "sigmaSqAlpha_init", "intercept_flat", "sigmaSqAlpha_a",
+    "sigmaSqAlpha_init", "annotation_intercept_prior", "intercept_flat",
+    "sigmaSqAlpha_a",
     "sigmaSqAlpha_b", "pi_floor", "alpha_update_every", "updateAlpha")
   selection_controls <- c(
     "maf_effect_s", "effect_maf", "allow_reference_maf_for_maf_effect_s",

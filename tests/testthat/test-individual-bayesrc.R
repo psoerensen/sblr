@@ -128,6 +128,8 @@ make_individual_bayesrc_args <- function(
       matrix(0, max(0, ncol(A) - 1L), length(fixture$gamma) - 1L)
     ),
     annot_sigma_sq_alpha_init = rep(1, length(fixture$gamma) - 1L),
+    intercept_prior_resolved = sblr:::.sbayesrc_resolve_intercept_prior(
+      fixture$pi)$native,
     updateAlpha = updateAlpha, annot_alpha_update_every = 1L,
     updateB = TRUE, updateE = TRUE, adjE = 0.9,
     nit = nit, nburn = nburn, nthin = nthin, rebuild_every = 1L,
@@ -221,6 +223,8 @@ test_that("individual BayesRC native backend runs and reduces to fixed-pi BayesR
     A = matrix(1, 2L, 1L), gamma = x$gamma,
     annot_alpha_init = intercept,
     annot_sigma_sq_alpha_init = rep(1, length(x$gamma) - 1L),
+    intercept_prior_resolved = sblr:::.sbayesrc_resolve_intercept_prior(
+      x$pi)$native,
     updateAlpha = FALSE, annot_alpha_update_every = 10L
   )))
   expect_s3_class(raw_rc, "stblr_raw_v1")
