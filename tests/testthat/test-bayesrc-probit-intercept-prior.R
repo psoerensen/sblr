@@ -100,6 +100,25 @@ test_that("inactive annotation columns receive their prior conditional", {
   expect_false(any(draws["alpha", ] == 1e6))
 })
 
+test_that("diagnostic fixed annotation variances leave sigmaSqAlpha unchanged", {
+  update <- getFromNamespace(".st_bayesrc_annotation_update", "sblr")
+  prior <- sblr:::.sbayesrc_resolve_intercept_prior(c(0.7, 0.2, 0.1))
+  fixed_native <- rbind(prior$native, update_sigmaSqAlpha = c(0, 0))
+  annotation <- cbind(intercept = 1, signal = seq(-1, 1, length.out = 12))
+  sigma <- c(0.25, 4)
+  out <- update(
+    annotation, rep(c(0L, 1L, 2L), each = 4L), matrix(0, 2, 2), sigma,
+    fixed_native, 2, 2, 811L)
+
+  expect_identical(as.numeric(out$sigmaSqAlpha), sigma)
+  expect_true(all(is.finite(out$alpha)))
+  expect_true(any(out$alpha != 0))
+  expect_error(update(
+    annotation, rep(c(0L, 1L, 2L), each = 4L), matrix(0, 2, 2), sigma,
+    rbind(prior$native, update_sigmaSqAlpha = c(0, 1)), 2, 2, 811L),
+    "policy must be consistent")
+})
+
 test_that("proper prior remains finite under both directions of separation", {
   update <- getFromNamespace(".st_bayesrc_annotation_update", "sblr")
   prior <- sblr:::.sbayesrc_resolve_intercept_prior(c(0.9, 0.1))

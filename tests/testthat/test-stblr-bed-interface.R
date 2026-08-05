@@ -170,6 +170,51 @@ test_that("ST BED BayesR diagnostics use native component and selected states", 
                unname(native$component[, 1L]), tolerance = 0)
 })
 
+test_that("ST BED selected-component traces use the fitted cls marker order", {
+  skip_if_not(
+    exists("stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", mode = "function"),
+    "native BayesR BED scheduled-chain symbol is not loaded"
+  )
+  fixture <- make_stblr_bed_interface_fixture()
+  on.exit(unlink(fixture$bed_file), add = TRUE)
+  fixture$Glist$rsidsLD <- list("rs2")
+  common <- list(
+    y = fixture$y, Glist = fixture$Glist, method = "bayesr",
+    mixture_var = c(0, .1, 1), pi = c(.7, .2, .1),
+    nit = 8L, nburn = 2L, full_sweep_every = 1L,
+    seed = 2112L, nchains = 4L, ncores = 2L, updateE = FALSE,
+    keep_chains = TRUE)
+  baseline <- do.call(stblr_bed, c(common, list(convergence = "none")))
+  traced <- do.call(stblr_bed, c(common, list(
+    convergence = "extended",
+    convergence_control = list(
+      warn = FALSE, extended_groups = "probability",
+      selected_markers = "rs2", selected_marker_quantities = "component",
+      keep_traces = TRUE))))
+
+  selected <- which(
+    traced$convergence$summary$parameter_name == "selected_component")
+  expect_equal(length(selected), 1L)
+  expect_identical(traced$convergence$summary$marker_id[selected], "rs2")
+  expected_component <- vapply(traced$chains, function(chain)
+    as.numeric(chain$convergence_trace$component[, 1L]), numeric(8L))
+  dimnames(expected_component) <- NULL
+  expect_identical(
+    unname(traced$convergence_traces$values[, , selected, drop = TRUE]),
+    expected_component)
+  expect_equal(traced$bm, baseline$bm, tolerance = 0)
+  expect_equal(traced$dm, baseline$dm, tolerance = 0)
+  expect_equal(traced$vbs, baseline$vbs, tolerance = 0)
+  expect_equal(traced$ves, baseline$ves, tolerance = 0)
+
+  expect_error(do.call(stblr_bed, c(common, list(
+    convergence = "extended",
+    convergence_control = list(
+      warn = FALSE, extended_groups = "probability",
+      selected_markers = 2L, selected_marker_quantities = "component")))),
+    "final one-based marker order")
+})
+
 test_that("stblr_bed rejects noncanonical method case", {
   fixture <- make_stblr_bed_interface_fixture()
   on.exit(unlink(fixture$bed_file), add = TRUE)

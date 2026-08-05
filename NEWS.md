@@ -1,5 +1,11 @@
 # sblr 0.2.0
 
+* Repaired selected-marker component traces for packed-BED fits that use a
+  fitted `cls` marker subset. Trace identifiers are now resolved against the
+  fitted marker order, and native BED backends reject out-of-range trace
+  indices before entering parallel chain execution. Trace capture remains RNG
+  neutral and does not change sampler transitions.
+
 * Corrected the shared BayesRC/SBayesRC annotation update for a non-intercept
   design column that is identically zero on a non-empty stick-eligible subset.
   The coefficient is now drawn from its exact hierarchical-prior conditional

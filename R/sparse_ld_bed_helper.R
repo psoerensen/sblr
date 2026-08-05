@@ -3973,6 +3973,7 @@ stblr_bed_marker <- function(
   read_block_size = 64,
   progress_every = 0,
   .convergence_spec = NULL,
+  .diagnostic_updateSigmaSqAlpha = TRUE,
   ...
 ) {
  method <- .normalize_stblr_method(method)
@@ -4148,8 +4149,19 @@ stblr_bed_marker <- function(
   if (!is.logical(updateAlpha) || length(updateAlpha) != 1L || is.na(updateAlpha)) {
    stop("updateAlpha must be TRUE or FALSE.")
   }
-  intercept_prior <- .sbayesrc_resolve_intercept_prior(
+ intercept_prior <- .sbayesrc_resolve_intercept_prior(
    pi, annotation_intercept_prior, intercept_flat)
+  if (!is.logical(.diagnostic_updateSigmaSqAlpha) ||
+      length(.diagnostic_updateSigmaSqAlpha) != 1L ||
+      is.na(.diagnostic_updateSigmaSqAlpha)) {
+   stop(".diagnostic_updateSigmaSqAlpha must be TRUE or FALSE.")
+  }
+  intercept_prior_native <- intercept_prior$native
+  if (!isTRUE(.diagnostic_updateSigmaSqAlpha)) {
+   intercept_prior_native <- rbind(
+    intercept_prior_native,
+    update_sigmaSqAlpha = rep(0, ncol(intercept_prior_native)))
+  }
   marker_component_probability <- sbayesrc_marker_pi(
    annotation_info$A, prior_init$annot_alpha_init, mixture_var)
   marker_expected_gamma <- as.numeric(
@@ -4182,7 +4194,7 @@ stblr_bed_marker <- function(
    gamma = as.numeric(mixture_var),
    annot_alpha_init = prior_init$annot_alpha_init,
    annot_sigma_sq_alpha_init = prior_init$annot_sigma_sq_alpha_init,
-   intercept_prior_resolved = intercept_prior$native,
+   intercept_prior_resolved = intercept_prior_native,
    sigmaSqAlpha_a = sigmaSqAlpha_a,
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor,
@@ -4274,6 +4286,7 @@ stblr_bed_marker <- function(
    intercept_flat = intercept_prior$legacy_flat,
    sigmaSqAlpha_a = sigmaSqAlpha_a,
    sigmaSqAlpha_b = sigmaSqAlpha_b,
+   diagnostic_updateSigmaSqAlpha = isTRUE(.diagnostic_updateSigmaSqAlpha),
    pi_floor = pi_floor
   )
   fit$input <- c(fit$input, pri$calibration)

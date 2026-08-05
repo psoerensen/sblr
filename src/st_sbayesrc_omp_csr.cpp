@@ -2201,6 +2201,162 @@ Rcpp::List st_bayesrc_annotation_update_test(
  );
 }
 
+// Deterministic development hook for alpha conditional moments with fixed
+// Albert--Chib latent responses. It does not mutate a production chain.
+// [[Rcpp::export(name = ".st_bayesrc_alpha_conditional_moments")]]
+arma::mat st_bayesrc_alpha_conditional_moments_test(
+ arma::mat annotation,
+ arma::vec latent,
+ arma::vec alpha,
+ double sigma_sq_alpha,
+ double intercept_mean,
+ double intercept_sd
+) {
+ if (annotation.n_rows != latent.n_elem || annotation.n_cols != alpha.n_elem ||
+     !annotation.is_finite() || !latent.is_finite() || !alpha.is_finite() ||
+     !std::isfinite(sigma_sq_alpha) || sigma_sq_alpha <= 0.0 ||
+     !std::isfinite(intercept_mean) || !std::isfinite(intercept_sd) ||
+     intercept_sd <= 0.0) {
+  throw std::invalid_argument("invalid fixed-latent alpha conditional inputs.");
+ }
+ arma::vec residual = latent - annotation * alpha;
+ arma::mat result(annotation.n_cols, 2, arma::fill::zeros);
+ for (arma::uword k = 0; k < annotation.n_cols; ++k) {
+  const arma::vec x = annotation.col(k);
+  const double diagonal = arma::dot(x, x);
+  const double rhs = arma::dot(x, residual) + diagonal * alpha(k);
+  const double prior_mean = k == 0 ? intercept_mean : 0.0;
+  const double prior_precision = k == 0 ?
+   1.0 / (intercept_sd * intercept_sd) : 1.0 / sigma_sq_alpha;
+  const auto conditional = st_bayesrc_scalar_conditional(
+   diagonal, rhs, prior_mean, prior_precision);
+  result(k, 0) = conditional.mean;
+  result(k, 1) = conditional.variance;
+ }
+ return result;
+}
+
+// Stochastic development hook for the exact sigmaSqAlpha conditional.
+// [[Rcpp::export(name = ".st_bayesrc_sigma_sq_alpha_draws")]]
+Rcpp::NumericVector st_bayesrc_sigma_sq_alpha_draws_test(
+ arma::vec alpha_non_intercept,
+ double prior_a,
+ double prior_b,
+ int draws,
+ int seed
+) {
+ if (!alpha_non_intercept.is_finite() || draws <= 0)
+  throw std::invalid_argument("invalid sigmaSqAlpha draw inputs.");
+ std::mt19937 gen(static_cast<std::mt19937::result_type>(seed));
+ Rcpp::NumericVector result(draws);
+ const double ss = arma::dot(alpha_non_intercept, alpha_non_intercept);
+ for (int i = 0; i < draws; ++i) {
+  result[i] = st_bayesrc_sample_sigma_sq_alpha(
+   ss, static_cast<int>(alpha_non_intercept.n_elem), prior_a, prior_b, gen);
+ }
+ return result;
+}
+
+// Development-only hierarchy sampler with allocations fixed. This isolates
+// the shared probit-stick update from every likelihood and marker-effect
+// transition and returns compact chain traces.
+// [[Rcpp::export(name = ".st_bayesrc_frozen_hierarchy_chains")]]
+Rcpp::List st_bayesrc_frozen_hierarchy_chains_test(
+ arma::mat annotation,
+ arma::rowvec component_numeric,
+ arma::mat alpha_initial,
+ arma::vec sigma_initial,
+ arma::mat intercept_prior_resolved,
+ double sigma_alpha_a,
+ double sigma_alpha_b,
+ double probability_floor,
+ int iterations,
+ Rcpp::IntegerVector chain_seeds,
+ int cores
+) {
+ if (iterations <= 0 || chain_seeds.size() <= 0 || cores <= 0 ||
+     annotation.n_rows != component_numeric.n_elem ||
+     alpha_initial.n_rows != annotation.n_cols ||
+     sigma_initial.n_elem != alpha_initial.n_cols ||
+     !annotation.is_finite() || !alpha_initial.is_finite() ||
+     !sigma_initial.is_finite() || arma::any(sigma_initial <= 0.0)) {
+  throw std::invalid_argument("invalid frozen alpha-hierarchy inputs.");
+ }
+ arma::Row<int> component(component_numeric.n_elem);
+ for (arma::uword i = 0; i < component_numeric.n_elem; ++i) {
+  const double value = component_numeric(i);
+  if (!std::isfinite(value) || value < 0.0 || value != std::floor(value) ||
+      value > static_cast<double>(alpha_initial.n_cols)) {
+   throw std::invalid_argument("component contains an invalid state.");
+  }
+  component(i) = static_cast<int>(value);
+ }
+ const int chain_count = chain_seeds.size();
+ const std::vector<int> chain_seed_values =
+  Rcpp::as<std::vector<int>>(chain_seeds);
+ const int coefficient_count = static_cast<int>(alpha_initial.n_elem);
+ const int step_count = static_cast<int>(alpha_initial.n_cols);
+ const int component_count = step_count + 1;
+ std::vector<arma::mat> alpha_trace(static_cast<std::size_t>(chain_count));
+ std::vector<arma::mat> sigma_trace(static_cast<std::size_t>(chain_count));
+ std::vector<arma::mat> probability_trace(static_cast<std::size_t>(chain_count));
+ std::vector<std::string> error(static_cast<std::size_t>(chain_count));
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(cores) schedule(static)
+#endif
+ for (int chain = 0; chain < chain_count; ++chain) {
+  try {
+   arma::mat alpha = alpha_initial;
+   arma::vec sigma = sigma_initial;
+   const auto prior = st_bayesrc_parse_intercept_prior(
+    intercept_prior_resolved, step_count);
+   std::mt19937 generator(static_cast<std::mt19937::result_type>(
+    chain_seed_values[static_cast<std::size_t>(chain)]));
+   arma::mat alpha_out(iterations, coefficient_count, arma::fill::zeros);
+   arma::mat sigma_out(iterations, step_count, arma::fill::zeros);
+   arma::mat probability_out(
+    iterations, 1 + 3 * component_count, arma::fill::zeros);
+   for (int iteration = 0; iteration < iterations; ++iteration) {
+    st_bayesrc_update_annotation_prior(
+     annotation, component, alpha, sigma, prior,
+     sigma_alpha_a, sigma_alpha_b, generator);
+    alpha_out.row(static_cast<arma::uword>(iteration)) =
+     arma::vectorise(alpha).t();
+    sigma_out.row(static_cast<arma::uword>(iteration)) = sigma.t();
+    const arma::mat marker_probability = st_bayesrc_compute_snp_pi(
+     annotation, alpha, probability_floor);
+    probability_out(iteration, 0) =
+     arma::accu(1.0 - marker_probability.col(0));
+    for (int k = 0; k < component_count; ++k) {
+     const arma::vec column = marker_probability.col(static_cast<arma::uword>(k));
+     probability_out(iteration, 1 + k) = arma::mean(column);
+     probability_out(iteration, 1 + component_count + k) = column.min();
+     probability_out(iteration, 1 + 2 * component_count + k) = column.max();
+    }
+   }
+   alpha_trace[static_cast<std::size_t>(chain)] = std::move(alpha_out);
+   sigma_trace[static_cast<std::size_t>(chain)] = std::move(sigma_out);
+   probability_trace[static_cast<std::size_t>(chain)] =
+    std::move(probability_out);
+  } catch (const std::exception& exception) {
+   error[static_cast<std::size_t>(chain)] = exception.what();
+  }
+ }
+ for (const std::string& message : error) {
+  if (!message.empty()) throw std::runtime_error(message);
+ }
+ Rcpp::List chains(chain_count);
+ for (int chain = 0; chain < chain_count; ++chain) {
+  chains[chain] = Rcpp::List::create(
+   Rcpp::Named("alpha") = alpha_trace[static_cast<std::size_t>(chain)],
+   Rcpp::Named("sigmaSqAlpha") = sigma_trace[static_cast<std::size_t>(chain)],
+   Rcpp::Named("probability_summary") =
+    probability_trace[static_cast<std::size_t>(chain)]);
+ }
+ return chains;
+}
+
 // Deterministic development hook for validating the exact two-marker
 // component conditional. It does not mutate a production chain.
 // [[Rcpp::export(name = ".st_bayesrc_pairwise_conditional")]]

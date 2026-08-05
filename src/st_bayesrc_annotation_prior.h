@@ -132,6 +132,7 @@ inline void st_bayesrc_build_step_indicators(
 // from alpha_init and from the hierarchical prior on non-intercept effects.
 struct StBayesRCInterceptPrior {
  bool legacy_flat;
+ bool update_variance;
  arma::vec mean;
  arma::vec precision;
 };
@@ -140,13 +141,14 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
   const arma::mat& resolved,
   int nstep
 ) {
- if (resolved.n_rows != 3 ||
+ if ((resolved.n_rows != 3 && resolved.n_rows != 4) ||
      resolved.n_cols != static_cast<arma::uword>(nstep) ||
      !resolved.is_finite()) {
   throw std::runtime_error(
-   "BayesRC resolved intercept prior must be a finite 3 by nstep matrix.");
+   "BayesRC resolved intercept prior must be a finite 3 or 4 by nstep matrix.");
  }
  const bool legacy_flat = resolved(0, 0) == 1.0;
+ const bool update_variance = resolved.n_rows == 3 || resolved(3, 0) == 1.0;
  for (int j = 0; j < nstep; ++j) {
   if (resolved(0, static_cast<arma::uword>(j)) != (legacy_flat ? 1.0 : 0.0)) {
    throw std::runtime_error("BayesRC intercept prior type must be consistent across sticks.");
@@ -154,9 +156,15 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
   if (!legacy_flat && resolved(2, static_cast<arma::uword>(j)) <= 0.0) {
    throw std::runtime_error("BayesRC proper intercept prior precisions must be positive.");
   }
+  if (resolved.n_rows == 4 &&
+      resolved(3, static_cast<arma::uword>(j)) !=
+       (update_variance ? 1.0 : 0.0)) {
+   throw std::runtime_error(
+    "BayesRC annotation-variance update policy must be consistent across sticks.");
+  }
  }
  return StBayesRCInterceptPrior{
-  legacy_flat, resolved.row(1).t(), resolved.row(2).t()
+  legacy_flat, update_variance, resolved.row(1).t(), resolved.row(2).t()
  };
 }
 
@@ -165,6 +173,50 @@ struct StBayesRCAnnotationUpdateDiagnostics {
  std::vector<int> continuation;
  std::vector<int> prior_only;
 };
+
+struct StBayesRCScalarConditional {
+ double mean;
+ double variance;
+};
+
+inline StBayesRCScalarConditional st_bayesrc_scalar_conditional(
+ double likelihood_diagonal,
+ double likelihood_rhs,
+ double prior_mean,
+ double prior_precision
+) {
+ if (!std::isfinite(likelihood_diagonal) || likelihood_diagonal < 0.0 ||
+     !std::isfinite(likelihood_rhs) || !std::isfinite(prior_mean) ||
+     !std::isfinite(prior_precision) || prior_precision < 0.0 ||
+     likelihood_diagonal + prior_precision <= 0.0) {
+  throw std::runtime_error("BayesRC alpha conditional parameters are invalid.");
+ }
+ const double variance = 1.0 / (likelihood_diagonal + prior_precision);
+ return StBayesRCScalarConditional{
+  variance * (likelihood_rhs + prior_precision * prior_mean), variance
+ };
+}
+
+inline double st_bayesrc_sample_sigma_sq_alpha(
+ double sum_squares,
+ int coefficient_count,
+ double prior_a,
+ double prior_b,
+ std::mt19937& gen
+) {
+ const double df = static_cast<double>(coefficient_count) + prior_a;
+ const double scale = sum_squares + prior_b;
+ if (!std::isfinite(scale) || scale <= 0.0 || !std::isfinite(df) || df <= 0.0) {
+  throw std::runtime_error("BayesRC sigmaSqAlpha conditional parameters are invalid.");
+ }
+ std::chi_squared_distribution<double> rchisq(df);
+ const double chi2 = std::max(rchisq(gen), 1e-300);
+ const double value = scale / chi2;
+ if (!std::isfinite(value) || value <= 0.0) {
+  throw std::runtime_error("BayesRC sigmaSqAlpha update produced an invalid value.");
+ }
+ return value;
+}
 
 inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
   const arma::mat& annotation_matrix,
@@ -298,27 +350,25 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
     continue;
    }
 
-   double inv_lhs;
-   double prior_rhs = 0.0;
+   double prior_mean = 0.0;
+   double prior_precision = 0.0;
    if (intercept && intercept_prior.legacy_flat) {
-    inv_lhs = 1.0 / diag_k;
+    prior_precision = 0.0;
    } else if (intercept) {
-    const double prior_precision =
-     intercept_prior.precision(static_cast<arma::uword>(j));
-    inv_lhs = 1.0 / (diag_k + prior_precision);
-    prior_rhs = prior_precision *
-     intercept_prior.mean(static_cast<arma::uword>(j));
+    prior_precision = intercept_prior.precision(static_cast<arma::uword>(j));
+    prior_mean = intercept_prior.mean(static_cast<arma::uword>(j));
    } else {
     const double sig = annot_sigma_sq_alpha(static_cast<arma::uword>(j));
     if (!std::isfinite(sig) || sig <= 0.0) {
      throw std::runtime_error("BayesRC sigmaSqAlpha must remain positive and finite.");
     }
-    inv_lhs = 1.0 / (diag_k + 1.0 / sig);
+    prior_precision = 1.0 / sig;
    }
 
-   const double mean = inv_lhs * (rhs + prior_rhs);
-   const double sd = std::sqrt(inv_lhs);
-   std::normal_distribution<double> norm(mean, sd);
+   const auto conditional = st_bayesrc_scalar_conditional(
+    diag_k, rhs, prior_mean, prior_precision);
+   std::normal_distribution<double> norm(
+    conditional.mean, std::sqrt(conditional.variance));
    const double annot_alpha_new = norm(gen);
 
    annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) =
@@ -345,15 +395,11 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
    ++ncoef;
   }
 
-  const double df = static_cast<double>(ncoef) + annot_sigma_sq_alpha_a;
-  const double scale = ss + annot_sigma_sq_alpha_b;
-  std::chi_squared_distribution<double> rchisq(df);
-  const double chi2 = std::max(rchisq(gen), 1e-300);
-  const double sigma_new = scale / chi2;
-  if (!std::isfinite(sigma_new) || sigma_new <= 0.0) {
-   throw std::runtime_error("BayesRC sigmaSqAlpha update produced an invalid value.");
+  if (intercept_prior.update_variance) {
+   annot_sigma_sq_alpha(static_cast<arma::uword>(j)) =
+    st_bayesrc_sample_sigma_sq_alpha(
+     ss, ncoef, annot_sigma_sq_alpha_a, annot_sigma_sq_alpha_b, gen);
   }
-  annot_sigma_sq_alpha(static_cast<arma::uword>(j)) = sigma_new;
  }
  return diagnostics;
 }

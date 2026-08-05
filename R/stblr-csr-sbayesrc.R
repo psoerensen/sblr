@@ -245,7 +245,8 @@ stblr_csr_sbayesrc_generic <- function(
   .native_fun = stblr_cpg_omp_csr_sbayesrc,
   .native_args = list(),
   .input_extra = list(),
-  .convergence_spec = NULL
+  .convergence_spec = NULL,
+  .diagnostic_updateSigmaSqAlpha = TRUE
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
@@ -354,6 +355,16 @@ stblr_csr_sbayesrc_generic <- function(
  Kgamma <- length(gamma)
  intercept_prior <- .sbayesrc_resolve_intercept_prior(
   alpha$component_prob_init, annotation_intercept_prior, intercept_flat)
+ if (!is.logical(.diagnostic_updateSigmaSqAlpha) ||
+     length(.diagnostic_updateSigmaSqAlpha) != 1L ||
+     is.na(.diagnostic_updateSigmaSqAlpha)) {
+  stop(".diagnostic_updateSigmaSqAlpha must be TRUE or FALSE.")
+ }
+ intercept_prior_native <- intercept_prior$native
+ if (!isTRUE(.diagnostic_updateSigmaSqAlpha)) {
+  intercept_prior_native <- rbind(
+   intercept_prior_native, update_sigmaSqAlpha = rep(0, ncol(intercept_prior_native)))
+ }
 
  marker_component_probability <- sbayesrc_marker_pi(
   A, alpha$alpha_init, gamma)
@@ -429,7 +440,7 @@ stblr_csr_sbayesrc_generic <- function(
   gamma = gamma,
   alpha_init = alpha$alpha_init,
   sigmaSqAlpha_init = alpha$sigmaSqAlpha_init,
-  intercept_prior_resolved = intercept_prior$native,
+  intercept_prior_resolved = intercept_prior_native,
   sigmaSqAlpha_a = sigmaSqAlpha_a,
   sigmaSqAlpha_b = sigmaSqAlpha_b,
   pi_floor = pi_floor,
@@ -518,6 +529,7 @@ stblr_csr_sbayesrc_generic <- function(
    sigmaSqAlpha_b = sigmaSqAlpha_b,
    pi_floor = pi_floor,
    updateAlpha = updateAlpha,
+   diagnostic_updateSigmaSqAlpha = isTRUE(.diagnostic_updateSigmaSqAlpha),
    alpha_update_every = alpha_update_every,
    add_intercept = add_intercept,
    standardize_annotations = standardize_annotations,

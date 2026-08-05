@@ -1527,6 +1527,58 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// st_bayesrc_alpha_conditional_moments_test
+arma::mat st_bayesrc_alpha_conditional_moments_test(arma::mat annotation, arma::vec latent, arma::vec alpha, double sigma_sq_alpha, double intercept_mean, double intercept_sd);
+RcppExport SEXP _sblr_st_bayesrc_alpha_conditional_moments_test(SEXP annotationSEXP, SEXP latentSEXP, SEXP alphaSEXP, SEXP sigma_sq_alphaSEXP, SEXP intercept_meanSEXP, SEXP intercept_sdSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type latent(latentSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_sq_alpha(sigma_sq_alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type intercept_mean(intercept_meanSEXP);
+    Rcpp::traits::input_parameter< double >::type intercept_sd(intercept_sdSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_alpha_conditional_moments_test(annotation, latent, alpha, sigma_sq_alpha, intercept_mean, intercept_sd));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_bayesrc_sigma_sq_alpha_draws_test
+Rcpp::NumericVector st_bayesrc_sigma_sq_alpha_draws_test(arma::vec alpha_non_intercept, double prior_a, double prior_b, int draws, int seed);
+RcppExport SEXP _sblr_st_bayesrc_sigma_sq_alpha_draws_test(SEXP alpha_non_interceptSEXP, SEXP prior_aSEXP, SEXP prior_bSEXP, SEXP drawsSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type alpha_non_intercept(alpha_non_interceptSEXP);
+    Rcpp::traits::input_parameter< double >::type prior_a(prior_aSEXP);
+    Rcpp::traits::input_parameter< double >::type prior_b(prior_bSEXP);
+    Rcpp::traits::input_parameter< int >::type draws(drawsSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_sigma_sq_alpha_draws_test(alpha_non_intercept, prior_a, prior_b, draws, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_bayesrc_frozen_hierarchy_chains_test
+Rcpp::List st_bayesrc_frozen_hierarchy_chains_test(arma::mat annotation, arma::rowvec component_numeric, arma::mat alpha_initial, arma::vec sigma_initial, arma::mat intercept_prior_resolved, double sigma_alpha_a, double sigma_alpha_b, double probability_floor, int iterations, Rcpp::IntegerVector chain_seeds, int cores);
+RcppExport SEXP _sblr_st_bayesrc_frozen_hierarchy_chains_test(SEXP annotationSEXP, SEXP component_numericSEXP, SEXP alpha_initialSEXP, SEXP sigma_initialSEXP, SEXP intercept_prior_resolvedSEXP, SEXP sigma_alpha_aSEXP, SEXP sigma_alpha_bSEXP, SEXP probability_floorSEXP, SEXP iterationsSEXP, SEXP chain_seedsSEXP, SEXP coresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::rowvec >::type component_numeric(component_numericSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha_initial(alpha_initialSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma_initial(sigma_initialSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type intercept_prior_resolved(intercept_prior_resolvedSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_alpha_a(sigma_alpha_aSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_alpha_b(sigma_alpha_bSEXP);
+    Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
+    Rcpp::traits::input_parameter< int >::type iterations(iterationsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< int >::type cores(coresSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_frozen_hierarchy_chains_test(annotation, component_numeric, alpha_initial, sigma_initial, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, probability_floor, iterations, chain_seeds, cores));
+    return rcpp_result_gen;
+END_RCPP
+}
 // st_bayesrc_pairwise_conditional_test
 Rcpp::List st_bayesrc_pairwise_conditional_test(arma::rowvec prior_i, arma::rowvec prior_j, arma::vec gamma, double marker_variance, double prior_scale_i, double prior_scale_j, double residual_variance, double diagonal_i, double diagonal_j, double cross_product, double score_i, double score_j);
 RcppExport SEXP _sblr_st_bayesrc_pairwise_conditional_test(SEXP prior_iSEXP, SEXP prior_jSEXP, SEXP gammaSEXP, SEXP marker_varianceSEXP, SEXP prior_scale_iSEXP, SEXP prior_scale_jSEXP, SEXP residual_varianceSEXP, SEXP diagonal_iSEXP, SEXP diagonal_jSEXP, SEXP cross_productSEXP, SEXP score_iSEXP, SEXP score_jSEXP) {
@@ -1854,6 +1906,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains, 43},
     {"_sblr_st_bayesrc_truncated_normal_draws_test", (DL_FUNC) &_sblr_st_bayesrc_truncated_normal_draws_test, 3},
     {"_sblr_st_bayesrc_annotation_update_test", (DL_FUNC) &_sblr_st_bayesrc_annotation_update_test, 8},
+    {"_sblr_st_bayesrc_alpha_conditional_moments_test", (DL_FUNC) &_sblr_st_bayesrc_alpha_conditional_moments_test, 6},
+    {"_sblr_st_bayesrc_sigma_sq_alpha_draws_test", (DL_FUNC) &_sblr_st_bayesrc_sigma_sq_alpha_draws_test, 5},
+    {"_sblr_st_bayesrc_frozen_hierarchy_chains_test", (DL_FUNC) &_sblr_st_bayesrc_frozen_hierarchy_chains_test, 11},
     {"_sblr_st_bayesrc_pairwise_conditional_test", (DL_FUNC) &_sblr_st_bayesrc_pairwise_conditional_test, 12},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 54},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 65},

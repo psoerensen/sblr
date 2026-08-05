@@ -173,9 +173,18 @@ stblr_bed <- function(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
                                     chain$nchains)
-  bed_marker_ids <- unlist(Glist$rsids %||% Glist$rsidsLD, use.names = FALSE)
-  if (!length(bed_marker_ids)) bed_marker_ids <- paste0(
-    "V", seq_len(sum(lengths(Glist$cls))))
+  if (length(conv$selected_markers %||% character())) {
+    trace_data <- .make_bed_marker_data(
+      Glist = Glist, y = y, chr = dots$chr %||% NULL,
+      cls = dots$cls %||% NULL, block_size = dots$block_size %||% 1000,
+      rows = dots$rows %||% NULL)
+    bed_marker_ids <- trace_data$variable_names
+  } else {
+    bed_marker_ids <- unlist(Glist$rsids %||% Glist$rsidsLD,
+                             use.names = FALSE)
+    if (!length(bed_marker_ids)) bed_marker_ids <- paste0(
+      "V", seq_len(sum(lengths(Glist$cls))))
+  }
   trace_spec <- .blr_st_native_trace_spec(
     conv, bed_marker_ids, method,
     annotations = identical(method, "bayesrc"),

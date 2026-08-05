@@ -1,0 +1,44 @@
+{
+  "schema": "sblr-study06-alpha-hierarchy-joint-sampling-audit-v1",
+  "sblr_sha": "f2e3647920ed7e8b1ea9d47a6571b3753285682a",
+  "sblrbench_sha": "de31f62e182d8540488d4135df4c58f052a515d9",
+  "specification_hash": "241c15afab8fefc571e38e625130de6e4ab58b958c30cff369e26998ee30fa56",
+  "truth_hash": "169d52bef390022a9106d7e61b200493869b40cbb76f1c8d911eebbc80fea1eb",
+  "dynamic_fit_seed": 701020,
+  "dynamic_chain_seeds": [701121, 701222, 701323, 701424],
+  "frozen_chain_seeds": [860101, 860202, 860303, 860404],
+  "thresholds": {
+    "maximum_rhat": 1.01,
+    "minimum_bulk_ess": 400,
+    "minimum_tail_ess": 400,
+    "maximum_relative_mcse": 0.05
+  },
+  "prior_mapping": {
+    "density": "inverse_gamma(shape=a/2, scale=b/2)",
+    "conditional": "(sum(alpha_non_intercept^2)+b)/chi_square(q+a)",
+    "current": {"a": 2, "b": 2, "nu0": 2, "scale0": 1},
+    "production_equivalent": {"a": 4, "b": 4, "nu0": 4, "scale0": 1},
+    "fixed": {"sigmaSqAlpha": 1}
+  },
+  "frozen": [
+    {"id": "F1_current", "pass": true, "max_rhat": 1.001460, "min_bulk_ess": 2759.794, "min_tail_ess": 5017.615, "max_relative_mcse": 0.019087},
+    {"id": "F2_production", "pass": true, "max_rhat": 1.002226, "min_bulk_ess": 2962.723, "min_tail_ess": 6235.390, "max_relative_mcse": 0.018394},
+    {"id": "F3_fixed", "pass": true, "max_rhat": 1.001482, "min_bulk_ess": 2951.972, "min_tail_ess": 6201.656, "max_relative_mcse": 0.018433},
+    {"id": "F4_true_alpha", "pass": true, "maximum_probability_error": 0}
+  ],
+  "dynamic": [
+    {"id": "D1_bed_fixed", "route": "BED", "pass": false, "failed": 29, "monitored_nonconstant": 32, "max_rhat": 1.099491, "min_bulk_ess": 34.46613, "min_tail_ess": 109.4387, "max_relative_mcse": 0.1722677, "pip_auprc": 0.59129042},
+    {"id": "D2_bed_production", "route": "BED", "pass": false, "failed": 29, "monitored_nonconstant": 35, "max_rhat": 1.085395, "min_bulk_ess": 38.03628, "min_tail_ess": 75.13524, "max_relative_mcse": 0.1629639, "pip_auprc": 0.59564538},
+    {"id": "D1_block_fixed", "route": "retained_block_eigen_0.995", "pass": false, "failed": 29, "monitored_nonconstant": 32, "max_rhat": 1.070290, "min_bulk_ess": 47.00622, "min_tail_ess": 82.62704, "max_relative_mcse": 0.1515838, "pip_auprc": 0.54477690},
+    {"id": "D2_block_production", "route": "retained_block_eigen_0.995", "pass": false, "failed": 32, "monitored_nonconstant": 35, "max_rhat": 1.117535, "min_bulk_ess": 28.36311, "min_tail_ess": 44.52494, "max_relative_mcse": 0.1868967, "pip_auprc": 0.55777478}
+  ],
+  "component_trace_defect_found": true,
+  "component_trace_defect_corrected": true,
+  "annotation_conditional_defect_found": false,
+  "defaults_changed": false,
+  "formal_qualification_rerun": false,
+  "final_benchmark_launched": false,
+  "primary_interpretation": "C_allocation_feedback_is_primary",
+  "secondary_interpretations": ["F_variance_coupling_is_secondary", "later_sticks_are_weak_but_first_stick_also_fails"],
+  "recommended_next_task": "separate posterior-preserving allocation-hierarchy transition design review"
+}

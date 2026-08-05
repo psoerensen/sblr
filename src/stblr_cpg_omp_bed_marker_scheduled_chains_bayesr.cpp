@@ -169,6 +169,13 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesr(
  const int m = G.m;
  const int nt = y.ncol();
 
+ for (int marker : convergence_markers_cpp) {
+  if (marker < 0 || marker >= m) {
+   throw std::runtime_error(
+    "stblr_cpg_omp_bed_marker_scheduled_chains_bayesr: convergence marker index is out of range.");
+  }
+ }
+
  if (nt <= 0) throw std::runtime_error("y must have at least one trait column.");
  if (y.nrow() != n_used)
   throw std::runtime_error("y rows must equal the number of samples used after rows filtering.");

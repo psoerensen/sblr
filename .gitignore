@@ -6,6 +6,7 @@
 /AGENTS.md
 /CLAUDE.md
 /.quarto/
+/results/local/
 *.Rcheck/
 ..Rcheck/
 

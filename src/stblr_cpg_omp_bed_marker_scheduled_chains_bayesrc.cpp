@@ -159,6 +159,12 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
   cls_cpp, read_block_size, std::max(1, ncores)
  );
  const int m = G.m, nt = y.ncol(), n_used = G.n;
+ for (int marker : convergence_markers_cpp) {
+  if (marker < 0 || marker >= m) {
+   throw std::runtime_error(
+    "stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc: convergence marker index is out of range.");
+  }
+ }
  if (y.nrow() != n_used || nt <= 0) throw std::runtime_error("invalid phenotype dimensions.");
  if (A.n_rows != static_cast<arma::uword>(m) || A.n_cols == 0 || !A.is_finite())
   throw std::runtime_error("A must be a finite m by n_annotations matrix aligned to selected BED markers.");
