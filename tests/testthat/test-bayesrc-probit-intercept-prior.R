@@ -79,6 +79,27 @@ test_that("empty sticks are prior-only Gibbs updates", {
   expect_true(all(out$sigmaSqAlpha > 0))
 })
 
+test_that("inactive annotation columns receive their prior conditional", {
+  update <- getFromNamespace(".st_bayesrc_annotation_update", "sblr")
+  prior <- sblr:::.sbayesrc_resolve_intercept_prior(c(0.5, 0.5))
+  annotation <- cbind(intercept = 1, unavailable = 0)
+  component <- rep(c(0L, 1L), each = 8L)
+
+  draws <- vapply(seq_len(400L), function(seed) {
+    out <- update(
+      annotation[rep(1L, length(component)), , drop = FALSE], component,
+      matrix(c(0, 1e6), 2L, 1L), 1, prior$native, 2, 2, seed
+    )
+    c(alpha = out$alpha[2L, 1L], sigma = out$sigmaSqAlpha[1L])
+  }, numeric(2L))
+
+  expect_true(all(is.finite(draws)))
+  expect_true(all(draws["sigma", ] > 0))
+  expect_lt(abs(mean(draws["alpha", ])), 0.15)
+  expect_lt(max(abs(draws["alpha", ])), 5)
+  expect_false(any(draws["alpha", ] == 1e6))
+})
+
 test_that("proper prior remains finite under both directions of separation", {
   update <- getFromNamespace(".st_bayesrc_annotation_update", "sblr")
   prior <- sblr:::.sbayesrc_resolve_intercept_prior(c(0.9, 0.1))

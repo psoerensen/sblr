@@ -274,7 +274,29 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
    }
 
    rhs += diag_k * old;
-   if (diag_k <= 0.0) continue;
+   if (diag_k <= 0.0) {
+    // A non-intercept column can be identically zero on the current
+    // stick-eligible subset even when the stick itself is non-empty.  Its
+    // likelihood is then absent, so its full conditional is its hierarchical
+    // prior.  Leaving the old value in place creates an artificial absorbing
+    // direction and contaminates the following sigmaSqAlpha update.
+    if (intercept && nj == 0) {
+     // The prior-only branch above has already drawn this intercept.
+     continue;
+    }
+    if (intercept) {
+     throw std::runtime_error(
+      "BayesRC non-empty stick has an unavailable intercept column.");
+    }
+    const double sig = annot_sigma_sq_alpha(static_cast<arma::uword>(j));
+    if (!std::isfinite(sig) || sig <= 0.0) {
+     throw std::runtime_error("BayesRC sigmaSqAlpha must remain positive and finite.");
+    }
+    std::normal_distribution<double> coefficient_norm(0.0, std::sqrt(sig));
+    annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) =
+     coefficient_norm(gen);
+    continue;
+   }
 
    double inv_lhs;
    double prior_rhs = 0.0;

@@ -1,5 +1,12 @@
 # sblr 0.2.0
 
+* Corrected the shared BayesRC/SBayesRC annotation update for a non-intercept
+  design column that is identically zero on a non-empty stick-eligible subset.
+  The coefficient is now drawn from its exact hierarchical-prior conditional
+  instead of retaining a stale value. A focused mixing review found that the
+  remaining Study 06 development bottleneck is component-allocation movement,
+  not evidence supporting a blocked or non-centred alpha update.
+
 * BayesRC/SBayesRC now use a proper normal prior for every probit-stick
   intercept by default. Prior means reproduce the resolved global mixture and
   the default SD is 1. `alpha_init` remains an initialization only. The former

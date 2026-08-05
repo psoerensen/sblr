@@ -149,7 +149,9 @@ cat("sblrbench HEAD:", system2("git", c("-C", shQuote(args$sblrbench_root),
   "rev-parse", "HEAD"), stdout = TRUE), "\n")
 cat("scenario:", args$scenario, "replicate: 1 logical chain:", args$chain,
   "seed:", controls$chain_seeds, "\n")
-cat("samples: 1400 markers: 37991 iterations: 9000\n")
+cat("samples: 1400 markers: 37991 iterations:",
+  if (identical(args$route, "retained")) args$diagnostic_iterations else 9000L,
+  "\n")
 cat("LD:", normalizePath(evidence_paths[2L], winslash = "/"), "\n")
 cat("diagnostic output:", args$output, "\n")
 

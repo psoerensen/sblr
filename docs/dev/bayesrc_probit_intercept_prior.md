@@ -155,3 +155,8 @@ The remaining blocker is a longer multi-chain mixing assessment of the proper
 posterior, especially the non-intercept coefficients and `sigmaSqAlpha` on
 late, sparsely occupied sticks. The package change is therefore not by itself
 a Study 06 qualification result.
+
+The subsequent focused review is recorded in
+`docs/dev/bayesrc_annotation_mixing_review.md`. It corrected one prior-only
+conditional for annotation columns unavailable on the current eligible subset,
+but did not change the prior or introduce a blocked/non-centred kernel.
