@@ -3,6 +3,7 @@
 
 #include "st_chain_utils.h"
 #include "st_bayesrc_annotation_prior.h"
+#include "st_bayesrc_pairwise_allocation.h"
 #include "st_block_eigen.h"
 #include "st_block_eigen_rcpp.h"
 #include "st_csr_common.h"
@@ -2198,6 +2199,44 @@ Rcpp::List st_bayesrc_annotation_update_test(
   Rcpp::Named("continuation") = diagnostics.continuation,
   Rcpp::Named("prior_only") = diagnostics.prior_only
  );
+}
+
+// Deterministic development hook for validating the exact two-marker
+// component conditional. It does not mutate a production chain.
+// [[Rcpp::export(name = ".st_bayesrc_pairwise_conditional")]]
+Rcpp::List st_bayesrc_pairwise_conditional_test(
+ arma::rowvec prior_i, arma::rowvec prior_j, arma::vec gamma,
+ double marker_variance, double prior_scale_i, double prior_scale_j,
+ double residual_variance, double diagonal_i, double diagonal_j,
+ double cross_product, double score_i, double score_j
+) {
+ const auto states = st_bayesrc_pairwise_conditional(
+  prior_i, prior_j, gamma, marker_variance, prior_scale_i, prior_scale_j,
+  residual_variance, diagonal_i, diagonal_j, cross_product, score_i, score_j);
+ const arma::uword count = static_cast<arma::uword>(states.size());
+ arma::imat component(count, 2, arma::fill::zeros);
+ arma::vec log_weight(count), probability(count);
+ arma::mat mean(count, 2, arma::fill::zeros);
+ arma::cube covariance(2, 2, count, arma::fill::zeros);
+ for (arma::uword index = 0; index < count; ++index) {
+  const auto& state = states[static_cast<std::size_t>(index)];
+  component(index, 0) = state.component_i;
+  component(index, 1) = state.component_j;
+  log_weight(index) = state.log_weight;
+  probability(index) = state.probability;
+  mean(index, 0) = state.mean_i;
+  mean(index, 1) = state.mean_j;
+  covariance(0, 0, index) = state.covariance_ii;
+  covariance(0, 1, index) = state.covariance_ij;
+  covariance(1, 0, index) = state.covariance_ij;
+  covariance(1, 1, index) = state.covariance_jj;
+ }
+ return Rcpp::List::create(
+  Rcpp::Named("component") = component,
+  Rcpp::Named("log_weight") = log_weight,
+  Rcpp::Named("probability") = probability,
+  Rcpp::Named("mean") = mean,
+  Rcpp::Named("covariance") = covariance);
 }
 
 // [[Rcpp::export]]

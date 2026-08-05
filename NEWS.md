@@ -7,6 +7,11 @@
   remaining Study 06 development bottleneck is component-allocation movement,
   not evidence supporting a blocked or non-centred alpha update.
 
+* Derived and validated an exact two-marker BayesRC allocation conditional.
+  Study 06 development runs found the fixed-pair move too sparse and ineffective
+  to retain in production; a larger collapsed allocation move requires a
+  separate design review. Public samplers and interfaces are unchanged.
+
 * BayesRC/SBayesRC now use a proper normal prior for every probit-stick
   intercept by default. Prior means reproduce the resolved global mixture and
   the default SD is 1. `alpha_init` remains an initialization only. The former

@@ -1527,6 +1527,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// st_bayesrc_pairwise_conditional_test
+Rcpp::List st_bayesrc_pairwise_conditional_test(arma::rowvec prior_i, arma::rowvec prior_j, arma::vec gamma, double marker_variance, double prior_scale_i, double prior_scale_j, double residual_variance, double diagonal_i, double diagonal_j, double cross_product, double score_i, double score_j);
+RcppExport SEXP _sblr_st_bayesrc_pairwise_conditional_test(SEXP prior_iSEXP, SEXP prior_jSEXP, SEXP gammaSEXP, SEXP marker_varianceSEXP, SEXP prior_scale_iSEXP, SEXP prior_scale_jSEXP, SEXP residual_varianceSEXP, SEXP diagonal_iSEXP, SEXP diagonal_jSEXP, SEXP cross_productSEXP, SEXP score_iSEXP, SEXP score_jSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec >::type prior_i(prior_iSEXP);
+    Rcpp::traits::input_parameter< arma::rowvec >::type prior_j(prior_jSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type marker_variance(marker_varianceSEXP);
+    Rcpp::traits::input_parameter< double >::type prior_scale_i(prior_scale_iSEXP);
+    Rcpp::traits::input_parameter< double >::type prior_scale_j(prior_scale_jSEXP);
+    Rcpp::traits::input_parameter< double >::type residual_variance(residual_varianceSEXP);
+    Rcpp::traits::input_parameter< double >::type diagonal_i(diagonal_iSEXP);
+    Rcpp::traits::input_parameter< double >::type diagonal_j(diagonal_jSEXP);
+    Rcpp::traits::input_parameter< double >::type cross_product(cross_productSEXP);
+    Rcpp::traits::input_parameter< double >::type score_i(score_iSEXP);
+    Rcpp::traits::input_parameter< double >::type score_j(score_jSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_pairwise_conditional_test(prior_i, prior_j, gamma, marker_variance, prior_scale_i, prior_scale_j, residual_variance, diagonal_i, diagonal_j, cross_product, score_i, score_j));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_csr_sbayesrc
 Rcpp::List stblr_cpg_omp_csr_sbayesrc(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma, arma::mat alpha_init, arma::vec sigmaSqAlpha_init, arma::mat intercept_prior_resolved, double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub, double nue, bool updateAlpha, bool updateB, bool updateE, int alpha_update_every, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale, bool estimate_maf_effect_s, double maf_effect_s_init, Rcpp::NumericVector maf_effect_s_prior, double maf_effect_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h, Rcpp::IntegerVector convergence_markers, bool convergence_annotations, bool convergence_b, bool convergence_d, bool convergence_component);
 RcppExport SEXP _sblr_stblr_cpg_omp_csr_sbayesrc(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP alpha_initSEXP, SEXP sigmaSqAlpha_initSEXP, SEXP intercept_prior_resolvedSEXP, SEXP sigmaSqAlpha_aSEXP, SEXP sigmaSqAlpha_bSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateAlphaSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP alpha_update_everySEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP maf_effect_s_prior_scaleSEXP, SEXP estimate_maf_effect_sSEXP, SEXP maf_effect_s_initSEXP, SEXP maf_effect_s_priorSEXP, SEXP maf_effect_s_proposal_sdSEXP, SEXP maf_effect_s_log_hSEXP, SEXP convergence_markersSEXP, SEXP convergence_annotationsSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP convergence_componentSEXP) {
@@ -1832,6 +1854,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains, 43},
     {"_sblr_st_bayesrc_truncated_normal_draws_test", (DL_FUNC) &_sblr_st_bayesrc_truncated_normal_draws_test, 3},
     {"_sblr_st_bayesrc_annotation_update_test", (DL_FUNC) &_sblr_st_bayesrc_annotation_update_test, 8},
+    {"_sblr_st_bayesrc_pairwise_conditional_test", (DL_FUNC) &_sblr_st_bayesrc_pairwise_conditional_test, 12},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 54},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 65},
     {"_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture", (DL_FUNC) &_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture, 1},
