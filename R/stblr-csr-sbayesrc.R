@@ -623,6 +623,11 @@ stblr_csr_sbayesrc_generic <- function(
   eigen_tau = 0.01,
   eigen_eta = 0,
   low_rank_residual_rebuild_every = 100L,
+  residual_policy = "global_projected_legacy",
+  block_ve_mode = "fixVe",
+  resam_thresh = 1.1,
+  minimum_ve_ratio = 0.7,
+  block_ve_keep_history = FALSE,
   updateLDswap = FALSE,
   ...
 ) {
@@ -655,7 +660,7 @@ stblr_csr_sbayesrc_generic <- function(
        paste(reserved, collapse = ", "))
  }
  bed <- .stblr_csr_block_eigen_inputs(stats, Glist, block_start)
- native_args <- list(
+native_args <- list(
   bed_files = bed$bed_files,
   n_bed = bed$n_bed,
   cls = bed$cls,
@@ -667,9 +672,19 @@ stblr_csr_sbayesrc_generic <- function(
   eigen_eta = eigen_eta,
   representation = representation,
   eigen_prop = eigen_prop,
-  low_rank_residual_rebuild_every = if (
-   identical(representation, "low_rank"))
-    as.integer(low_rank_residual_rebuild_every) else 0L
+  low_rank_residual_config = list(
+    rebuild_every = if (identical(representation, "low_rank"))
+      as.integer(low_rank_residual_rebuild_every) else 0L,
+    block_residual = list(
+      phenotype_variance = as.numeric(stats$yy) /
+        (rep(as.numeric(stats$n), length.out = length(stats$yy)) - 1),
+      residual_policy = residual_policy,
+      block_ve_mode = block_ve_mode,
+      resam_thresh = resam_thresh,
+      minimum_ve_ratio = minimum_ve_ratio,
+      block_ve_keep_history = block_ve_keep_history
+    )
+  )
  )
  input_extra <- list(
   ld_backend = "block_eigen",
@@ -687,6 +702,17 @@ stblr_csr_sbayesrc_generic <- function(
   low_rank_residual_rebuild_every = if (
    identical(representation, "low_rank"))
     as.integer(low_rank_residual_rebuild_every) else 0L,
+  residual_policy = residual_policy,
+  block_ve_mode = block_ve_mode,
+  resam_thresh = resam_thresh,
+  minimum_ve_ratio = minimum_ve_ratio,
+  block_ve_definition = if (residual_policy %in% c("gctb_block", "fixed_block"))
+   "mean of chain-specific block residual variances" else
+    "legacy global projected residual variance",
+  heritability_definition = if (residual_policy %in% c("gctb_block", "fixed_block"))
+   "sum of block genetic variances divided by phenotype variance" else
+    "genetic variance divided by genetic plus residual variance",
+  phenotype_variance = as.numeric(stats$yy) / (as.numeric(stats$n) - 1),
   eigen_blocks = bed$block_start
  )
  args <- c(

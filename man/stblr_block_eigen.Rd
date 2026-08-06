@@ -18,6 +18,11 @@ stblr_block_eigen(
   eigen_tau = 0.01,
   eigen_eta = 0,
   low_rank_residual_rebuild_every = 100L,
+  residual_policy = NULL,
+  block_ve_mode = c("allMixVe", "mixVe", "samVe", "fixVe"),
+  resam_thresh = 1.1,
+  minimum_ve_ratio = 0.7,
+  block_ve_keep_history = FALSE,
   nit = 1000,
   nburn = 500,
   nthin = 1,
@@ -65,6 +70,21 @@ the representation default.}
 \item{low_rank_residual_rebuild_every}{Non-negative integer interval for
 rebuilding retained reduced residuals after completed MCMC iterations.
 The default is 100; zero disables periodic rebuilding after initialization.}
+
+\item{residual_policy}{Residual-variance contract. `"gctb_block"` is the
+default for retained block-eigen SBayesR/SBayesRC, `"fixed_block"` keeps
+every block at the phenotype variance, and
+`"global_projected_legacy"` reproduces the historical projected-global
+experimental contract.}
+
+\item{block_ve_mode}{Official block update mode for `"gctb_block"`.}
+
+\item{resam_thresh}{Official effect-SS to block-Vg eligibility threshold.}
+
+\item{minimum_ve_ratio}{Official sampled-block-Ve to phenotype-variance
+compatibility threshold.}
+
+\item{block_ve_keep_history}{Retain complete per-chain block-Ve histories.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 

@@ -10,6 +10,7 @@
 #include "st_csr_common.h"
 #include "blr_block_eigen.h"
 #include "blr_block_low_rank.h"
+#include "blr_block_residual_policy.h"
 
 struct CsrOperator {
   STLDCSR ld;
@@ -35,6 +36,18 @@ struct CsrOperator {
   inline arma::uword residual_size() const { return xx.n_elem; }
 
   inline bool uses_retained_low_rank() const { return false; }
+
+  inline int block_count() const { return 0; }
+  inline int marker_block(int) const { return -1; }
+  inline double block_rank(int) const { return 0.0; }
+  inline double block_residual_norm_squared(int, const arma::rowvec&) const {
+    return 0.0;
+  }
+  inline double block_genetic_variance(int, int, const arma::rowvec&,
+                                       const arma::rowvec&, double) const {
+    return 0.0;
+  }
+  inline double block_effect_ss(int, const arma::rowvec&) const { return 0.0; }
 
   inline const char* diagnostic_name() const { return "csr"; }
 
@@ -150,6 +163,29 @@ struct BlockEigenDispatchOperator {
     return low_rank ? retained.residual_size() : dense.residual_size();
   }
   inline bool uses_retained_low_rank() const { return low_rank; }
+  inline int block_count() const {
+    return low_rank ? static_cast<int>(retained.blocks.size()) : 0;
+  }
+  inline int marker_block(int marker) const {
+    return low_rank ? retained.block_of.at(static_cast<std::size_t>(marker)) : -1;
+  }
+  inline double block_rank(int block) const {
+    return low_rank ? retained.blocks.at(static_cast<std::size_t>(block)).rank : 0.0;
+  }
+  inline double block_residual_norm_squared(int block,
+                                            const arma::rowvec& residual) const {
+    return low_rank ? retained.block_residual_norm_squared(block, residual) : 0.0;
+  }
+  inline double block_genetic_variance(int trait, int block,
+                                       const arma::rowvec& effects,
+                                       const arma::rowvec& residual,
+                                       double n) const {
+    return low_rank ? retained.block_genetic_variance(
+      trait, block, effects, residual, n) : 0.0;
+  }
+  inline double block_effect_ss(int block, const arma::rowvec& effects) const {
+    return low_rank ? retained.block_effect_ss(block, effects) : 0.0;
+  }
   inline const char* diagnostic_name() const {
     return low_rank ? "retained_block_eigen" : "dense_block_eigen";
   }

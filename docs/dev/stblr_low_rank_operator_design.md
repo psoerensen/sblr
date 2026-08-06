@@ -174,8 +174,29 @@ The operator must expose `diag`, `corrected_rhs`, `apply_difference`, `rebuild`,
 
 ## Residual-variance contract
 
-Production selects **`sblr_global_projected_variance`**, not GCTB's blockwise
-variance sampler. With compatible same-sample Q, w, score, and `yy = y'y`,
+Retained SBayesR/SBayesRC now selects **`gctb_block`** by default. Each block
+owns its residual variance and marker updates use the value for that marker's
+block. In sblr cross-product units the official scale is
+
+```text
+scale_b = ||r_b||^2 + nue * ((nue - 2) / nue) * Vy
+df_b    = rank_b + nue.
+```
+
+For matched phenotype units, `r_b,sblr = sqrt(n_b) r_b,official`, so this is
+exactly the official `n_b ||r_b,official||^2` term without a second sample-size
+multiplier. The pinned `nbsq` wrapper reports standardized-phenotype units;
+when `sblr` sufficient statistics retain variance `Vy`, effects scale by
+`sqrt(Vy)` and both block `Ve` and block `Vg` scale by `Vy`. Heritability is
+unchanged. `sblr` therefore initializes block `Ve` from the phenotype scale
+encoded by `yy`, rather than forcing the numerical value one.
+The prior scale is fixed once from the initialized phenotype variance. The
+pinned public SBayesRC v0.2.6 boundary accepts a sampled block value only when
+`Ve_b / Vy > 0.7`; equality resets the block to `Vy`.
+
+The historical global projected contract remains available as
+**`global_projected_legacy`**. With compatible same-sample Q, w, score, and
+`yy = y'y`, it uses
 
 ```text
 SSE = yy - sum_b w_b'w_b + sum_b r_b'r_b
@@ -184,21 +205,17 @@ SSE = yy - sum_b w_b'w_b + sum_b r_b'r_b
 
 The first expression is the reduced-space implementation; the second proves
 equivalence to sblr's existing `yy - beta'(s_tilde + residual_score)` update.
-At full positive rank it is exactly `||y - X beta||^2` when the block-diagonal
-operator is the complete X'X model. Under truncation it defines a coherent
-projected likelihood: the retained coordinates are modeled by Q and the
-orthogonal response sum of squares `yy - sum w'w` remains constant. sblr keeps
-its existing inverse-chi-square degrees of freedom `n + nue` and prior scale
-`nue * sse_prior`; it does not import GCTB's per-block degrees of freedom or
-fallback gates. `updateE` cannot be enabled until the construction validates
-finite nonnegative projected constants within a scale-aware tolerance.
+At full positive rank it equals `||y - X beta||^2` only when the block-diagonal
+operator is the complete X'X model. For general overlapping block projections
+it is not a BED-equivalent individual-level SSE. Its historical degrees of
+freedom, failure behavior, and RNG ordering are preserved only under the
+explicit legacy policy.
 
 GCTB instead computes, per block, `sse_b = nGWASblock_b * ||wcorr_b||^2`, uses
 `df + numEigenvalBlock_b`, adds `df * scale`, draws a block residual variance,
-and accepts it only when both `ssqBlocks/vargBlocks` and `sample/vary` pass its
-gates; otherwise it assigns the fixed phenotypic variance. The global value is
-the mean of block values. That complete contract is intentionally not combined
-with sblr's global update.
+and applies block selection and minimum-ratio gates; otherwise it assigns the
+fixed phenotypic variance. The scalar reported `ves` value is the mean of block
+values. The block and legacy-global contracts are never combined.
 
 ## Genetic and reported variance quantities
 

@@ -69,6 +69,44 @@ struct BlockLowRankStorage {
   inline const arma::rowvec& diag() const { return diagonal; }
   inline arma::uword residual_size() const { return reduced_dimension; }
 
+  inline double block_residual_norm_squared(
+      int group, const arma::rowvec& residual) const {
+    const BlockLowRankBlock& block = blocks.at(static_cast<std::size_t>(group));
+    double result = 0.0;
+    for (int k = 0; k < block.rank; ++k) {
+      const double value = residual(
+        block.residual_offset + static_cast<arma::uword>(k));
+      result += value * value;
+    }
+    return result;
+  }
+
+  inline double block_genetic_variance(
+      int trait, int group, const arma::rowvec& effects,
+      const arma::rowvec& residual, double n) const {
+    if (trait < 0 || trait >= trait_count || !std::isfinite(n) || n <= 0.0)
+      throw std::invalid_argument("invalid trait or sample size for block genetic variance.");
+    const BlockLowRankBlock& block = blocks.at(static_cast<std::size_t>(group));
+    double result = 0.0;
+    for (int k = 0; k < block.rank; ++k) {
+      const double fitted = block.transformed_score(
+        static_cast<arma::uword>(trait), static_cast<arma::uword>(k)) -
+        residual(block.residual_offset + static_cast<arma::uword>(k));
+      result += fitted * fitted;
+    }
+    return result / n;
+  }
+
+  inline double block_effect_ss(int group, const arma::rowvec& effects) const {
+    const BlockLowRankBlock& block = blocks.at(static_cast<std::size_t>(group));
+    double result = 0.0;
+    for (int local = 0; local < block.size; ++local) {
+      const double value = effects(static_cast<arma::uword>(block.start + local));
+      result += value * value;
+    }
+    return result;
+  }
+
   inline double corrected_rhs(int marker, double beta_old,
                               const arma::rowvec& residual) const {
     const int group = block_of.data()[marker];

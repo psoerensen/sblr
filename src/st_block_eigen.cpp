@@ -11,6 +11,7 @@
 #include "st_bed_decode.h"
 #include "st_block_eigen.h"
 #include "st_block_eigen_rcpp.h"
+#include "blr_block_residual_policy.h"
 
 static double ledoit_wolf_lambda(
     const float* Z,
@@ -436,6 +437,9 @@ Rcpp::List stblr_block_low_rank_contract_internal(
   Rcpp::List factors(storage.blocks.size()), transformed(storage.blocks.size());
   Rcpp::List fitted(storage.blocks.size());
   Rcpp::IntegerVector offsets(storage.blocks.size());
+  Rcpp::NumericVector block_residual_ss(storage.blocks.size());
+  Rcpp::NumericVector block_vg(storage.blocks.size());
+  Rcpp::NumericVector block_effect_ss(storage.blocks.size());
   for (std::size_t group = 0; group < storage.blocks.size(); ++group) {
     const sblr::core::BlockLowRankBlock& block = storage.blocks[group];
     arma::mat factor(static_cast<arma::uword>(block.rank),
@@ -454,6 +458,13 @@ Rcpp::List stblr_block_low_rank_contract_internal(
     }
     fitted[group] = Rcpp::wrap(fitted_block);
     offsets[group] = static_cast<int>(block.residual_offset);
+    block_residual_ss[group] = storage.block_residual_norm_squared(
+      static_cast<int>(group), residual);
+    block_vg[group] = storage.block_genetic_variance(
+      0, static_cast<int>(group), beta, residual,
+      static_cast<double>(packed.n));
+    block_effect_ss[group] = storage.block_effect_ss(
+      static_cast<int>(group), beta);
   }
   return Rcpp::List::create(
     Rcpp::Named("factor") = factors,
@@ -481,9 +492,51 @@ Rcpp::List stblr_block_low_rank_contract_internal(
     Rcpp::Named("projected_score_dot") =
       storage.projected_score_dot(0, beta, projected_score.row(0)),
     Rcpp::Named("residual_norm_squared") = arma::dot(residual, residual),
+    Rcpp::Named("block_residual_norm_squared") = block_residual_ss,
+    Rcpp::Named("block_genetic_variance") = block_vg,
+    Rcpp::Named("block_effect_ss") = block_effect_ss,
     Rcpp::Named("transformed_score_norm_squared") =
       storage.transformed_score_norm_squared(0),
     Rcpp::Named("residual_offset") = offsets,
     Rcpp::Named("diagnostics") = block_low_rank_diagnostics_to_data_frame(diagnostics)
   );
+}
+
+// Deterministic inspection of the pinned SBayesRC v0.2.6 block-selection
+// boundaries. This helper does not sample and is not exported publicly.
+// [[Rcpp::export(name = ".stblr_block_ve_decision")]]
+Rcpp::List stblr_block_ve_decision_internal(
+    std::string mode, int iteration, double genetic_variance,
+    double effect_ss, double resam_thresh, bool permanent_selected = false) {
+  unsigned char permanent = permanent_selected ? 1u : 0u;
+  const auto parsed = sblr::core::parse_block_ve_mode(mode);
+  const bool selected = sblr::core::block_ve_selected(
+    parsed, iteration, genetic_variance, effect_ss, resam_thresh, permanent);
+  return Rcpp::List::create(
+    Rcpp::Named("eligible") = sblr::core::block_ve_eligible(
+      genetic_variance, effect_ss, resam_thresh),
+    Rcpp::Named("selected") = selected,
+    Rcpp::Named("permanent_selected") = permanent != 0u,
+    Rcpp::Named("sample_ratio_accepted_above") = 0.7,
+    Rcpp::Named("sample_ratio_equal_boundary_accepted") = false
+  );
+}
+
+// [[Rcpp::export(name = ".stblr_block_ve_draw_parameters")]]
+Rcpp::List stblr_block_ve_draw_parameters_internal(
+    double residual_ss, double phenotype_variance, double nue, int rank) {
+  if (!std::isfinite(residual_ss) || residual_ss < 0.0 ||
+      !std::isfinite(phenotype_variance) || phenotype_variance <= 0.0 ||
+      !std::isfinite(nue) || nue <= 2.0 || rank < 0)
+    throw std::invalid_argument("invalid block residual draw parameters.");
+  const double prior_scale = (nue - 2.0) / nue * phenotype_variance;
+  return Rcpp::List::create(
+    Rcpp::Named("prior_scale") = prior_scale,
+    Rcpp::Named("scale") = residual_ss + nue * prior_scale,
+    Rcpp::Named("degrees_freedom") = nue + static_cast<double>(rank));
+}
+
+// [[Rcpp::export(name = ".stblr_block_ve_ratio_accepted")]]
+bool stblr_block_ve_ratio_accepted_internal(double ratio, double minimum) {
+  return sblr::core::block_ve_ratio_accepted(ratio, minimum);
 }

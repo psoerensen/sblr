@@ -1294,6 +1294,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   bool convergence_d,
   bool convergence_component,
   int low_rank_residual_rebuild_every,
+  std::vector<double> phenotype_variance,
+  std::string residual_policy,
+  std::string block_ve_mode,
+  double resam_thresh,
+  double minimum_ve_ratio,
+  bool block_ve_keep_history,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1495,6 +1501,17 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  );
  const auto& op = operator_context.op;
  const BayesRLDLDFriends& ld_swap_friends = operator_context.ld_swap_friends;
+ sblr::core::BlockResidualControl block_residual_control;
+ block_residual_control.policy =
+  sblr::core::parse_block_residual_policy(residual_policy);
+ block_residual_control.mode = sblr::core::parse_block_ve_mode(block_ve_mode);
+ block_residual_control.resam_threshold = resam_thresh;
+ block_residual_control.minimum_ve_ratio = minimum_ve_ratio;
+ block_residual_control.keep_history = block_ve_keep_history;
+ sblr::core::validate_block_residual_control(block_residual_control);
+ if (block_residual_control.uses_block_variance() && !op.uses_retained_low_rank())
+  throw std::runtime_error(
+   "block residual policies require representation = 'low_rank'.");
  if (low_rank_residual_rebuild_every < 0) {
   throw std::runtime_error("low_rank_residual_rebuild_every must be non-negative.");
  }
@@ -1525,6 +1542,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  execution_context.ssb_prior_mat=&ssb_prior_mat; execution_context.sse_prior_mat=&sse_prior_mat; execution_context.yy_vec=&yy_vec;
  execution_context.prior_scale=&prior_scale; execution_context.maf_effect_s_log_h_row=&maf_effect_s_log_h_row;
  execution_context.convergence_markers=&convergence_markers;
+ execution_context.phenotype_variance=&phenotype_variance;
+ execution_context.block_residual_control=block_residual_control;
  execution_context.K=K; execution_context.m=m; execution_context.nt=nt; execution_context.nchains=nchains;
  execution_context.ncores=ncores; execution_context.nit=nit; execution_context.nburn=nburn; execution_context.nthin=nthin;
  execution_context.seed=seed; execution_context.updateE_start=updateE_start; execution_context.updateE_every=updateE_every;
@@ -1564,6 +1583,14 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   execution_result.low_rank_residual_diagnostics;
  const arma::mat& low_rank_residual_chain_diagnostics=
   execution_result.low_rank_residual_chain_diagnostics;
+ const arma::mat& block_ve_posterior_mean_task=
+  execution_result.block_ve_posterior_mean_task;
+ const arma::mat& block_ve_final_task=execution_result.block_ve_final_task;
+ const arma::mat& block_ve_resampled_task=execution_result.block_ve_resampled_task;
+ const arma::mat& block_ve_reset_task=execution_result.block_ve_reset_task;
+ const arma::mat& summary_heritability_task=execution_result.summary_heritability_task;
+ const std::vector<arma::mat>& block_ve_history_task=
+  execution_result.block_ve_history_task;
  const arma::vec &final_vb=execution_result.final_vb,&final_vg=execution_result.final_vg,&final_ve=execution_result.final_ve;
  const arma::vec &maf_effect_s_attempted=execution_result.maf_effect_s_attempted,&maf_effect_s_accepted=execution_result.maf_effect_s_accepted,&nsamples=execution_result.nsamples;
  const std::vector<arma::mat>& comp_prob=execution_result.comp_prob; const arma::mat& ncomp=execution_result.ncomp;
@@ -1680,6 +1707,16 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   Rcpp::Named("vld") = trace_matrix(vld),
   Rcpp::Named("pis") = trace_matrix(pis)
  );
+ if (block_residual_control.uses_block_variance()) {
+  arma::mat summary_h2(nt, n_trace, arma::fill::zeros);
+  for (int t = 0; t < nt; ++t)
+   for (int chain = 0; chain < nchains; ++chain)
+    summary_h2.row(static_cast<arma::uword>(t)) +=
+     summary_heritability_task.row(
+      static_cast<arma::uword>(t * nchains + chain));
+  summary_h2 /= static_cast<double>(nchains);
+  trace["heritability_summary"] = trace_matrix(summary_h2);
+ }
 
  Rcpp::List variance = Rcpp::List::create(
   Rcpp::Named("covb") = covb,
@@ -1711,6 +1748,28 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
     low_rank_residual_diagnostics.col(1),
    Rcpp::Named("low_rank_residual_max_abs_drift") =
     low_rank_residual_diagnostics.col(2)
+  );
+ }
+ if (block_residual_control.uses_block_variance()) {
+  Rcpp::RObject history = R_NilValue;
+  if (block_residual_control.keep_history) {
+   Rcpp::List history_list(block_ve_history_task.size());
+   for (std::size_t task = 0; task < block_ve_history_task.size(); ++task)
+    history_list[task] = block_ve_history_task[task];
+   history = history_list;
+  }
+  diagnostics["block_residual"] = Rcpp::List::create(
+   Rcpp::Named("residual_policy") = residual_policy,
+   Rcpp::Named("block_ve_mode") = block_ve_mode,
+   Rcpp::Named("resam_thresh") = resam_thresh,
+   Rcpp::Named("minimum_ve_ratio") = minimum_ve_ratio,
+   Rcpp::Named("phenotype_variance") = phenotype_variance,
+   Rcpp::Named("posterior_mean_per_chain_block") =
+    block_ve_posterior_mean_task,
+   Rcpp::Named("final_per_chain_block") = block_ve_final_task,
+   Rcpp::Named("resampled_per_chain_block") = block_ve_resampled_task,
+   Rcpp::Named("minimum_ratio_resets_per_chain_block") = block_ve_reset_task,
+   Rcpp::Named("history") = history
   );
  }
 
@@ -1851,7 +1910,16 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
    Rcpp::Named("keep_chains") = keep_chains,
    Rcpp::Named("n_components") = K,
    Rcpp::Named("n_annotations") = 0,
-   Rcpp::Named("n_groups") = 0
+   Rcpp::Named("n_groups") = 0,
+   Rcpp::Named("residual_policy") = residual_policy,
+   Rcpp::Named("block_ve_mode") = block_ve_mode,
+   Rcpp::Named("block_ve_definition") =
+    block_residual_control.uses_block_variance() ?
+     "mean_block_residual_variance" : "global_projected_residual_variance",
+   Rcpp::Named("heritability_definition") =
+    block_residual_control.uses_block_variance() ?
+     "sum_block_genetic_variance_over_phenotype_variance" :
+     "genetic_over_genetic_plus_residual"
   ),
   Rcpp::Named("marker") = marker,
   Rcpp::Named("trace") = trace,
@@ -1968,7 +2036,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers),
   convergence_probability, convergence_b, convergence_d,
-  convergence_component, 0, make_csr_operator
+  convergence_component, 0, std::vector<double>(),
+  "global_projected_legacy", "fixVe", 1.1, 0.7, false,
+  make_csr_operator
  );
 }
 
@@ -2035,8 +2105,24 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   double eigen_eta = 0.0,
   std::string representation = "dense_reconstructed",
   double eigen_prop = 0.995,
-  int low_rank_residual_rebuild_every = 100
+  int low_rank_residual_rebuild_every = 100,
+  Rcpp::List block_residual_config = R_NilValue
 ) {
+ const bool has_block_residual_config = block_residual_config.size() > 0;
+ Rcpp::NumericVector phenotype_variance = has_block_residual_config ?
+  Rcpp::as<Rcpp::NumericVector>(block_residual_config["phenotype_variance"]) :
+  Rcpp::NumericVector::create();
+ const std::string residual_policy = has_block_residual_config ?
+  Rcpp::as<std::string>(block_residual_config["residual_policy"]) :
+  "global_projected_legacy";
+ const std::string block_ve_mode = has_block_residual_config ?
+  Rcpp::as<std::string>(block_residual_config["block_ve_mode"]) : "fixVe";
+ const double resam_thresh = has_block_residual_config ?
+  Rcpp::as<double>(block_residual_config["resam_thresh"]) : 1.1;
+ const double minimum_ve_ratio = has_block_residual_config ?
+  Rcpp::as<double>(block_residual_config["minimum_ve_ratio"]) : 0.7;
+ const bool block_ve_keep_history = has_block_residual_config ?
+  Rcpp::as<bool>(block_residual_config["block_ve_keep_history"]) : false;
  if (updateLDswap) {
   throw std::runtime_error(
    "LD-swap is not yet supported with the experimental block-eigen operator."
@@ -2140,6 +2226,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   Rcpp::as<std::vector<int>>(convergence_markers),
   convergence_probability, convergence_b, convergence_d,
   convergence_component, low_rank_residual_rebuild_every,
+  Rcpp::as<std::vector<double>>(phenotype_variance),
+  residual_policy, block_ve_mode, resam_thresh,
+  minimum_ve_ratio, block_ve_keep_history,
   make_block_eigen_operator
  );
 }

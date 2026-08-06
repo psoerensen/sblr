@@ -6,11 +6,10 @@ This crosswalk is based only on GCTB commit
 not infer unresolved quantities from names.
 
 The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
-strategy, represented in sblr cross-product units with a global projected
-residual-variance contract. Retained rank, transformed score, and marker
-conditionals are compatible under the scale mapping below. GCTB's
-block-specific residual-variance procedure remains a distinct contract and is
-not reproduced by the production sampler.
+strategy in sblr cross-product units. Retained rank, transformed score, marker
+conditionals, and the default block residual update are compatible under the
+scale mapping below. The former global projected update remains an explicit
+legacy policy and is never mixed into the block update.
 
 ## Object map
 
@@ -46,6 +45,13 @@ projected cross-product score. When `D = nI`, GCTB leaves Q normalized and uses
 `nGWASblock/vareBlk`; sblr absorbs `sqrt(n)` into Q and uses `1/ve`. The two
 marker likelihood precisions then agree if block N, diagonal N, and residual
 variance refer to the same sample/units.
+
+The pinned public wrapper's default `nbsq` path standardizes the phenotype and
+sets its numerical variance to one. `sblr` retains the phenotype units encoded
+by `yy`. If `c_y^2 = Vy_sblr / Vy_official`, then effects and transformed
+scores scale by `c_y`, while `Ve` and `Vg` scale by `c_y^2`; summary
+heritability is invariant. Official comparisons must apply this conversion
+instead of forcing `sblr` block `Ve` to one while leaving its scores unchanged.
 
 ## Rank selection
 
@@ -100,14 +106,16 @@ scale_b     = sse_b + df * scale
 sample_b    = InvChiSq(df_tilde_b, scale_b).
 ```
 
-It adopts `sample_b` only when
-`ssqBlocks[b] / vargBlocks[b] > threshold` and
-`sample_b / vary > 0.9`; otherwise it assigns `vary`. The reported global
-residual variance is the mean of block values. This includes block-specific N,
+The pinned public SBayesRC v0.2.6 path adopts `sample_b` only when
+`ssqBlocks[b] / vargBlocks[b] > 1.1` and
+`sample_b / vary > 0.7`; otherwise it assigns `vary`. The separately pinned
+GCTB revision uses 0.9 in its corresponding safeguard. This is a recorded
+version difference, not a blended rule. The reported scalar residual variance
+is the mean of block values. This includes block-specific N,
 rank degrees of freedom, prior scale, fixed fallback, genetic/effect-sum gates,
 and block-to-global aggregation.
 
-sblr intentionally selects `sblr_global_projected_variance`:
+sblr retains `global_projected_legacy` explicitly:
 
 ```text
 SSE = yy - sum ||w_b||^2 + sum ||r_b||^2,
@@ -115,6 +123,7 @@ df  = n + nue,
 scale = SSE + nue * sse_prior.
 ```
 
-It is a coherent same-sample projected likelihood and is not described as
-exact GCTB compatibility. No GCTB block-variance component is silently mixed
-into it.
+It is not a BED-equivalent global SSE for general overlapping block
+projections. The default retained SBayesR/SBayesRC policy instead uses the
+mapped block scale, retained-rank degrees of freedom, fixed phenotype prior
+scale, and pinned public-SBayesRC selection/reset rules.

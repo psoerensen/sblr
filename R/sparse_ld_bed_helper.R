@@ -849,6 +849,7 @@ NULL
   vbs = trace_mat(raw$trace$vbs),
   vgs = trace_mat(raw$trace$vgs),
   ves = trace_mat(raw$trace$ves),
+  heritability_summary = trace_mat(raw$trace$heritability_summary),
   vle = trace_mat(raw$trace$vle),
   vld = trace_mat(raw$trace$vld),
   pis = trace_mat(raw$trace$pis),
@@ -1094,6 +1095,9 @@ NULL
   out$n_used <- named_trait_vec(rep(as.numeric(raw$diagnostics$n_used), length.out = nt))
  }
  out$diagnostics <- raw$diagnostics
+ if (!is.null(raw$diagnostics$block_residual)) {
+  out$block_ve <- raw$diagnostics$block_residual
+ }
 
  ld_swap <- raw$diagnostics$ld_swap
  if (!is.null(ld_swap)) {
@@ -3060,6 +3064,11 @@ stblr_csr_bayesr <- function(
   rebuild_r_before_updateE = FALSE,
   low_rank_residual_rebuild_every = if (
     identical(representation, "low_rank")) 100L else 0L,
+  residual_policy = "global_projected_legacy",
+  block_ve_mode = "fixVe",
+  resam_thresh = 1.1,
+  minimum_ve_ratio = 0.7,
+  block_ve_keep_history = FALSE,
   .convergence_spec = NULL
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
@@ -3200,7 +3209,15 @@ stblr_csr_bayesr <- function(
   rows = bed$rows, af = bed$af, block_start = bed$block_start,
   eigen_filter = eigen_filter, eigen_tau = eigen_tau, eigen_eta = eigen_eta,
   representation = representation, eigen_prop = eigen_prop,
-  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every
+  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
+  block_residual_config = list(
+    phenotype_variance = as.numeric(vy),
+    residual_policy = residual_policy,
+    block_ve_mode = block_ve_mode,
+    resam_thresh = resam_thresh,
+    minimum_ve_ratio = minimum_ve_ratio,
+    block_ve_keep_history = block_ve_keep_history
+  )
  )
  if (!.is_stblr_raw(raw)) {
   .stblr_stop_unsupported_raw_output("csr_bayesr_block_eigen")
@@ -3233,6 +3250,11 @@ stblr_csr_bayesr <- function(
   eigen_blocks = bed$block_start,
   eigen_diagnostics = raw$diagnostics$block_eigen,
   low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
+  residual_policy = residual_policy, block_ve_mode = block_ve_mode,
+  resam_thresh = resam_thresh, minimum_ve_ratio = minimum_ve_ratio,
+  block_ve_definition = raw$meta$block_ve_definition,
+  heritability_definition = raw$meta$heritability_definition,
+  phenotype_variance = vy,
   nchains = nchains, keep_chains = keep_chains,
   updateLDswap = updateLDswap, n = as.integer(n), m = m, nt = nt,
   h2 = h2, nub = nub, nue = nue, adjE = adjE,

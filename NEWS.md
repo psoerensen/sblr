@@ -1,5 +1,17 @@
 # sblr 0.2.0
 
+* Added an official-compatible block-specific residual-variance policy for
+  retained block-eigen SBayesR/SBayesRC. `residual_policy = "gctb_block"` is
+  now the retained-route default, with the pinned `allMixVe`, `mixVe`,
+  `samVe`, and `fixVe` modes. `fixed_block` provides a transparent fixed-Ve
+  sensitivity route. The prior global projected update remains available as
+  `global_projected_legacy` for exact historical reproduction.
+* Under block policies, `ves` is the mean block residual variance and the
+  explicit summary heritability trace is `sum(Vg_b) / Vy`; neither is claimed
+  to be a BED-equivalent individual-level residual quantity. Block-level
+  posterior means, final values, resampling counts, and official minimum-ratio
+  resets are retained as compact diagnostics.
+
 * Added RNG-neutral compact allocation histories for BayesR/BayesRC extended
   diagnostics: component counts, realized active count, and sequential-stick
   eligible/continue/stop counts. Packed BED, CSR, and retained block-eigen
@@ -62,9 +74,9 @@
 - Kept retained-factor sampling single-trait only; MT block-eigen sampling
   remains reconstructed dense.
 - The retained low-rank operator follows the GCTB/SBayesRC eigenspace
-  likelihood strategy, represented in sblr cross-product units with a global
-  projected residual-variance contract. GCTB's block-specific variance
-  procedure is not reproduced.
+  likelihood strategy in sblr cross-product units. Its default residual policy
+  is now the official-compatible block-specific contract; the former global
+  projected contract is explicit legacy behavior.
 - Classified scalar LD operators in fit metadata: packed BED is the supplied-
   genotype reference, complete CSR construction is the summary-statistics
   reference, thresholded/windowed CSR is explicitly approximate, and retained

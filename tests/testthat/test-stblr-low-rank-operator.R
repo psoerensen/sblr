@@ -120,6 +120,7 @@ test_that("near-full retained scalar samplers reduce to reconstructed dense", {
   fixture <- make_stblr_low_rank_fixture()
   common <- list(
     stats = fixture$stats, Glist = fixture$Glist, block_start = c(1L, 3L),
+    residual_policy = "global_projected_legacy",
     updateB = FALSE, updateE = FALSE, updatePi = FALSE,
     nit = 8L, nburn = 2L, ncores = 1L, seed = 611L
   )

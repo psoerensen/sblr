@@ -173,6 +173,8 @@ struct CsrSBayesRCExecutionContext {
  double maf_effect_s_prior_upper;
  double maf_effect_s_proposal_sd;
  const std::vector<int>& convergence_markers;
+ const std::vector<double>& phenotype_variance;
+ BlockResidualControl block_residual_control;
  bool convergence_annotations;
  bool convergence_b;
  bool convergence_d;
@@ -213,6 +215,10 @@ struct CsrSBayesRCExecutionResult {
  std::vector<double> task_seconds;
  arma::mat ld_swap_diagnostics, ld_swap_chain_diagnostics;
  arma::mat low_rank_residual_diagnostics, low_rank_residual_chain_diagnostics;
+ arma::mat block_ve_posterior_mean_task, block_ve_final_task;
+ arma::mat block_ve_resampled_task, block_ve_reset_task;
+ arma::mat summary_heritability_task;
+ std::vector<arma::mat> block_ve_history_task;
 };
 
 template <class Operator>
@@ -239,6 +245,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const std::vector<int>& n = context.sample_size;
  const std::vector<int>& chain_seeds_vec = context.chain_seeds;
  const std::vector<int>& order = context.marker_order;
+ const std::vector<double>& phenotype_variance = context.phenotype_variance;
+ const BlockResidualControl& block_residual_control =
+  context.block_residual_control;
  const arma::rowvec& prior_scale = context.prior_scale;
  const arma::rowvec& maf_effect_s_log_h_row = context.maf_effect_s_log_h;
  const int m = context.marker_count;
@@ -279,6 +288,11 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const double maf_effect_s_proposal_sd = context.maf_effect_s_proposal_sd;
  const std::vector<int>& convergence_markers=context.convergence_markers;
  const int ntasks = stblr_num_chain_tasks(nt, nchains);
+ const int block_count = op.block_count();
+ if (block_residual_control.uses_block_variance() &&
+     (block_count <= 0 || static_cast<int>(phenotype_variance.size()) != nt))
+  throw std::runtime_error(
+   "block residual policy requires retained blocks and one phenotype variance per trait.");
  const char* failure_path_env = std::getenv("SBLR_SBAYESRC_FAILURE_STATE_PATH");
  const std::string failure_state_path = failure_path_env == nullptr
   ? std::string()
@@ -313,6 +327,12 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  arma::vec low_rank_residual_max_abs_drift_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_attempted_task(ntasks, arma::fill::zeros);
  arma::vec maf_effect_s_accepted_task(ntasks, arma::fill::zeros);
+ arma::mat block_ve_posterior_mean_task(ntasks, block_count, arma::fill::zeros);
+ arma::mat block_ve_final_task(ntasks, block_count, arma::fill::zeros);
+ arma::mat block_ve_resampled_task(ntasks, block_count, arma::fill::zeros);
+ arma::mat block_ve_reset_task(ntasks, block_count, arma::fill::zeros);
+ arma::mat summary_heritability_task(ntasks, nit + nburn, arma::fill::zeros);
+ std::vector<arma::mat> block_ve_history_task(static_cast<std::size_t>(ntasks));
 
  std::vector<arma::mat> alpha_mean_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::vec> sigmaSqAlpha_mean_task(static_cast<std::size_t>(ntasks));
@@ -519,6 +539,12 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    double maf_effect_s_attempted_t = 0.0;
    double maf_effect_s_accepted_t = 0.0;
    arma::rowvec dynamic_prior_scale;
+   BlockResidualChainState block_ve_state;
+   if (block_residual_control.uses_block_variance())
+    block_ve_state = make_block_residual_chain_state(
+     block_count, nit + nburn,
+     phenotype_variance[static_cast<std::size_t>(t)],
+     block_residual_control.keep_history);
    std::vector<double> maximum_effect_history;
    if (capture_failure_state)
     maximum_effect_history.reserve(static_cast<std::size_t>(nit + nburn));
@@ -552,7 +578,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
        gamma,
        vb_t,
        current_prior_scale,
-       vei_t,
+       block_residual_variance_for_marker(
+        op, i, vei_t, block_residual_control, block_ve_state),
        ww_t,
        r_t,
        b_t,
@@ -570,7 +597,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
        snpPi_t.row(static_cast<arma::uword>(i)),
        gamma,
        vb_t,
-       vei_t,
+       block_residual_variance_for_marker(
+        op, i, vei_t, block_residual_control, block_ve_state),
        ww_t,
        r_t,
        b_t,
@@ -717,7 +745,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      low_rank_residual_rebuild_count_t += 1.0;
     }
 
-    if (updateE) {
+    if (updateE && !block_residual_control.uses_block_variance()) {
      if (rebuild_r_before_updateE) {
       op.rebuild(t, wy_t, b_t, r_t);
      }
@@ -817,6 +845,16 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      sampleE_ST_operator_from_scale(nue, ve_t, residual_scale, n[t], gen_t);
     }
 
+    if (block_residual_control.uses_block_variance()) {
+     const bool retain_block = allocation_rep + 1 == allocation_repetitions &&
+      it >= nburn && ((it - nburn) % nthin == 0);
+     update_block_residual_variance(
+      op, t, it, retain_block, static_cast<double>(n[t]),
+      phenotype_variance[static_cast<std::size_t>(t)], nue, b_t, r_t,
+      block_residual_control, gen_t, block_ve_state);
+     ve_t = mean_block_residual_variance(block_ve_state);
+    }
+
     vg_t = computeG_ST_operator(op, t, b_t, wy_t, r_t, n[t]);
     vle_t = computeLE_SBayesRC_ST_csr(m, b_t, ww_t, n[t]);
     vld_t = vg_t - vle_t;
@@ -833,7 +871,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      throw std::runtime_error("vld became NaN/Inf after computeLE. iter=" + std::to_string(it));
     }
 
-    vei_t = ve_t + adjE * vg_t;
+    vei_t = block_residual_control.uses_block_variance() ? ve_t :
+     ve_t + adjE * vg_t;
 
     if (!std::isfinite(vei_t) || vei_t <= 0.0) {
      throw std::runtime_error(
@@ -878,6 +917,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     pis_t(static_cast<arma::uword>(it)) = pi_active;
     vles_t(static_cast<arma::uword>(it)) = vle_t;
     vlds_t(static_cast<arma::uword>(it)) = vld_t;
+    summary_heritability_task(task_u, static_cast<arma::uword>(it)) =
+     block_residual_control.uses_block_variance() ?
+      vg_t / phenotype_variance[static_cast<std::size_t>(t)] :
+      vg_t / (vg_t + ve_t);
     if (estimate_maf_effect_s) {
      maf_effect_s_task(task_u, static_cast<arma::uword>(it)) = maf_effect_s_current;
     }
@@ -991,6 +1034,18 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     low_rank_residual_max_abs_drift_t;
    maf_effect_s_attempted_task(task_u) = maf_effect_s_attempted_t;
    maf_effect_s_accepted_task(task_u) = maf_effect_s_accepted_t;
+   if (block_residual_control.uses_block_variance()) {
+    block_ve_posterior_mean_task.row(task_u) =
+     posterior_mean_block_residual_variance(block_ve_state).t();
+    block_ve_final_task.row(task_u) = block_ve_state.value.t();
+    block_ve_resampled_task.row(task_u) =
+     arma::conv_to<arma::rowvec>::from(block_ve_state.resampled.t());
+    block_ve_reset_task.row(task_u) =
+     arma::conv_to<arma::rowvec>::from(block_ve_state.reset_to_phenotype.t());
+    if (block_residual_control.keep_history)
+     block_ve_history_task[static_cast<std::size_t>(task)] =
+      block_ve_state.history;
+   }
 
    alpha_mean_task[static_cast<std::size_t>(task)] = alpha_accum;
    sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = sigmaSqAlpha_accum;
@@ -1257,6 +1312,13 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
   std::move(low_rank_residual_diagnostics);
  result.low_rank_residual_chain_diagnostics =
   std::move(low_rank_residual_chain_diagnostics);
+ result.block_ve_posterior_mean_task =
+  std::move(block_ve_posterior_mean_task);
+ result.block_ve_final_task = std::move(block_ve_final_task);
+ result.block_ve_resampled_task = std::move(block_ve_resampled_task);
+ result.block_ve_reset_task = std::move(block_ve_reset_task);
+ result.summary_heritability_task = std::move(summary_heritability_task);
+ result.block_ve_history_task = std::move(block_ve_history_task);
  return result;
 }
 

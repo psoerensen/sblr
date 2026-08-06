@@ -28,6 +28,16 @@
 #' @param low_rank_residual_rebuild_every Non-negative integer interval for
 #'   rebuilding retained reduced residuals after completed MCMC iterations.
 #'   The default is 100; zero disables periodic rebuilding after initialization.
+#' @param residual_policy Residual-variance contract. `"gctb_block"` is the
+#'   default for retained block-eigen SBayesR/SBayesRC, `"fixed_block"` keeps
+#'   every block at the phenotype variance, and
+#'   `"global_projected_legacy"` reproduces the historical projected-global
+#'   experimental contract.
+#' @param block_ve_mode Official block update mode for `"gctb_block"`.
+#' @param resam_thresh Official effect-SS to block-Vg eligibility threshold.
+#' @param minimum_ve_ratio Official sampled-block-Ve to phenotype-variance
+#'   compatibility threshold.
+#' @param block_ve_keep_history Retain complete per-chain block-Ve histories.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param seed Fit-local base seed.
 #' @param nchains Number of logical chains per trait.
@@ -52,6 +62,10 @@ stblr_block_eigen <- function(
   representation = c("low_rank", "dense_reconstructed"),
   eigen_policy = NULL, eigen_prop = 0.995, eigen_tau = 0.01, eigen_eta = 0,
   low_rank_residual_rebuild_every = 100L,
+  residual_policy = NULL,
+  block_ve_mode = c("allMixVe", "mixVe", "samVe", "fixVe"),
+  resam_thresh = 1.1, minimum_ve_ratio = 0.7,
+  block_ve_keep_history = FALSE,
   nit = 1000, nburn = 500, nthin = 1, seed = 1,
   nchains = 1L, ncores = 1L, chain_seeds = NULL,
   keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
@@ -148,6 +162,58 @@ stblr_block_eigen <- function(
     method, dots, c("sbayesc", "sbayesr", "sbayesrc"), "block_eigen")
   method <- resolved_model$model
   dots <- resolved_model$dots
+  if (is.null(residual_policy)) {
+    residual_policy <- if (
+      identical(representation, "low_rank") &&
+      method %in% c("sbayesr", "sbayesrc")) "gctb_block" else
+        "global_projected_legacy"
+  }
+  residual_policy <- match.arg(
+    residual_policy,
+    c("gctb_block", "fixed_block", "global_projected_legacy"))
+  block_ve_mode <- match.arg(block_ve_mode)
+  if (!identical(representation, "low_rank") &&
+      !identical(residual_policy, "global_projected_legacy")) {
+    stop("Block residual policies require representation = 'low_rank'.",
+         call. = FALSE)
+  }
+  if (identical(method, "sbayesc") &&
+      !identical(residual_policy, "global_projected_legacy")) {
+    stop("Block residual policies currently apply only to SBayesR/SBayesRC.",
+         call. = FALSE)
+  }
+  if (identical(residual_policy, "fixed_block")) block_ve_mode <- "fixVe"
+  if (!is.numeric(resam_thresh) || length(resam_thresh) != 1L ||
+      !is.finite(resam_thresh) || resam_thresh <= 0) {
+    stop("resam_thresh must be a positive finite scalar.", call. = FALSE)
+  }
+  if (!is.numeric(minimum_ve_ratio) || length(minimum_ve_ratio) != 1L ||
+      !is.finite(minimum_ve_ratio) || minimum_ve_ratio <= 0) {
+    stop("minimum_ve_ratio must be a positive finite scalar.", call. = FALSE)
+  }
+  if (!is.logical(block_ve_keep_history) ||
+      length(block_ve_keep_history) != 1L || is.na(block_ve_keep_history)) {
+    stop("block_ve_keep_history must be TRUE or FALSE.", call. = FALSE)
+  }
+  uses_block_ve <- residual_policy %in% c("gctb_block", "fixed_block")
+  if (uses_block_ve) {
+    if ("adjE" %in% names(dots) && !identical(as.numeric(dots$adjE), 0)) {
+      stop("adjE is only available with residual_policy = 'global_projected_legacy'.",
+           call. = FALSE)
+    }
+    if ("updateE_start" %in% names(dots) &&
+        !identical(as.integer(dots$updateE_start), 0L)) {
+      stop("updateE_start is only configurable for the legacy residual policy.",
+           call. = FALSE)
+    }
+    if ("updateE_every" %in% names(dots) &&
+        !identical(as.integer(dots$updateE_every), 1L)) {
+      stop("updateE_every is only configurable for the legacy residual policy.",
+           call. = FALSE)
+    }
+    dots$adjE <- 0
+    if (identical(dots$updateE, FALSE)) block_ve_mode <- "fixVe"
+  }
   maf_info <- .blr_resolve_st_effect_maf(
     effect_maf, allow_reference_maf_for_maf_effect_s,
     resolved_model$maf_effect_s_active, stats, Glist)
@@ -178,6 +244,9 @@ stblr_block_eigen <- function(
     eigen_prop = eigen_prop, eigen_filter = eigen_filter,
     eigen_tau = eigen_tau, eigen_eta = eigen_eta,
     low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
+    residual_policy = residual_policy, block_ve_mode = block_ve_mode,
+    resam_thresh = resam_thresh, minimum_ve_ratio = minimum_ve_ratio,
+    block_ve_keep_history = block_ve_keep_history,
     nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
     seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
@@ -186,7 +255,12 @@ stblr_block_eigen <- function(
     .convergence_spec = trace_spec)
   fit <- switch(
     method,
-    sbayesc = do.call(.stblr_csr_bayesc_block_eigen, c(common, dots)),
+    sbayesc = do.call(
+      .stblr_csr_bayesc_block_eigen,
+      c(common[setdiff(
+        names(common),
+        c("residual_policy", "block_ve_mode", "resam_thresh",
+          "minimum_ve_ratio", "block_ve_keep_history"))], dots)),
     sbayesr = do.call(.stblr_csr_bayesr_block_eigen, c(common, dots)),
     sbayesrc = {
       if (is.null(annotation)) {
@@ -197,6 +271,8 @@ stblr_block_eigen <- function(
                          "eigen_policy", "eigen_prop", "eigen_filter",
                          "eigen_tau", "eigen_eta",
                          "low_rank_residual_rebuild_every")],
+                common[c("residual_policy", "block_ve_mode", "resam_thresh",
+                         "minimum_ve_ratio", "block_ve_keep_history")],
                 list(annotation = annotation),
                 common[c("nit", "nburn", "nthin", "seed", "nchains",
                          "ncores", "chain_seeds", "keep_chains",
@@ -212,15 +288,35 @@ stblr_block_eigen <- function(
     "canonical_scalable_summary_statistics" else
       "historical_reconstructed_block_operator"
   fit$input$operator_approximate <- TRUE
+  fit$input$residual_policy <- residual_policy
+  fit$input$block_ve_mode <- block_ve_mode
+  fit$input$resam_thresh <- resam_thresh
+  fit$input$minimum_ve_ratio <- minimum_ve_ratio
+  fit$input$block_ve_definition <- if (uses_block_ve)
+    "mean of chain-specific block residual variances" else
+      "legacy global projected residual variance"
+  fit$input$heritability_definition <- if (uses_block_ve)
+    "sum of block genetic variances divided by phenotype variance" else
+      "genetic variance divided by genetic plus residual variance"
   fit$data$operator$operator_role <- fit$input$operator_role
   fit$data$operator$operator_approximate <- TRUE
   fit$data$operator$limitation <- if (identical(representation, "low_rank"))
     paste("Projected block likelihood retaining the configured positive",
-      "spectral mass; cross-block LD is omitted and residual variance is global.")
+      "spectral mass; cross-block LD is omitted and residual variance follows",
+      if (uses_block_ve) "the selected block-specific policy." else
+        "the explicit legacy global-projected policy.")
     else paste("Block-reconstructed approximation retained for regression",
       "and reproducibility, not an exact full-LD reference.")
   fit$diagnostics$block_eigen <-
     fit$input$eigen_diagnostics %||% fit$diagnostics$block_eigen %||% NULL
+  block_diag <- fit$diagnostics$block_eigen$blocks %||% NULL
+  if (!is.null(block_diag) && "retained_rank" %in% names(block_diag)) {
+    fit$input$block_retained_ranks <- as.integer(block_diag$retained_rank)
+    fit$input$block_sample_sizes <- matrix(
+      rep(as.integer(stats$n), length.out = length(stats$yy)) %o%
+        rep(1L, nrow(block_diag)),
+      nrow = length(stats$yy))
+  }
   fit$input$effect_scale <- resolved_model$effect_scale
   fit$input$prior_kernel <- resolved_model$prior_kernel
   fit$input$probability_policy <- resolved_model$probability_policy
