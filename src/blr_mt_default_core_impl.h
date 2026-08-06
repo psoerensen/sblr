@@ -214,7 +214,14 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
    extended.selected_d.assign(selected*nt,std::vector<int>(total_iterations));
   if (trace_spec->selected_component && (method==5 || method==6))
    extended.selected_component.assign(selected,std::vector<int>(total_iterations));
+  if (trace_spec->aggregate_component_states && (method==5 || method==6))
+   mt_allocate_aggregate_component_traces(
+    extended,component_count,total_iterations);
  }
+ std::vector<int> aggregate_component_counts;
+ if (trace_spec!=nullptr && trace_spec->aggregate_component_states &&
+     (method==5 || method==6))
+  aggregate_component_counts=mt_component_counts(component,component_count);
 
  std::vector<double> x2t(m);
  std::vector<std::vector<double>> x2(nt, std::vector<double>(m, 0.0));
@@ -368,9 +375,15 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
       {
        const std::vector<double> marker_prior=method==6 ?
         mt_bayesrc_marker_prior(marker_component_prior.row(marker),pattern_pi,joint) : pi;
+       const int previous_component=component[marker];
        const std::size_t selected=sample_mt_bayesr_marker(
         marker,nt,data,joint,scales,cmodel,marker_prior,Ei,Bi,
         r,beta,b,d,component,gen);
+       if (!aggregate_component_counts.empty() &&
+           previous_component!=component[marker]) {
+        --aggregate_component_counts[static_cast<std::size_t>(previous_component)];
+        ++aggregate_component_counts[static_cast<std::size_t>(component[marker])];
+       }
        if (method==6 && selected>0)
         pattern_counts[mt_bayesrc_pattern_index(selected,joint)]+=1.0;
       }
@@ -493,6 +506,9 @@ inline MtDefaultCoreResult run_mt_bayesc_core_impl(
 
   // Observational convergence capture at the completed-iteration checkpoint.
   if (trace_spec!=nullptr) {
+   if (trace_spec->aggregate_component_states && (method==5 || method==6))
+    mt_capture_aggregate_component_state(
+     aggregate_component_counts,m,it,extended);
    if (trace_spec->covariance) {
     int q=0;
     for (int col=0;col<nt;++col) for (int row=col+1;row<nt;++row,++q) {

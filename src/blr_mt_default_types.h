@@ -27,6 +27,7 @@ struct MtExtendedTraceSpec {
  bool selected_b=false;
  bool selected_d=false;
  bool selected_component=false;
+ bool aggregate_component_states=false;
  std::vector<int> selected_markers;
 };
 
@@ -42,7 +43,73 @@ struct MtExtendedTraceResult {
  std::vector<std::vector<double>> selected_b;
  std::vector<std::vector<int>> selected_d;
  std::vector<std::vector<int>> selected_component;
+ std::vector<std::vector<int>> component_count;
+ std::vector<std::vector<int>> realized_active_count;
+ std::vector<std::vector<int>> stick_eligible_count;
+ std::vector<std::vector<int>> stick_continue_count;
+ std::vector<std::vector<int>> stick_stop_count;
 };
+
+inline std::vector<int> mt_component_counts(
+ const std::vector<int>& component, int component_count
+) {
+ if (component_count<2)
+  throw std::invalid_argument("aggregate component tracing requires at least two components");
+ std::vector<int> counts(static_cast<std::size_t>(component_count),0);
+ for (int value:component) {
+  if (value<0 || value>=component_count)
+   throw std::invalid_argument("component state is outside the aggregate trace domain");
+  ++counts[static_cast<std::size_t>(value)];
+ }
+ return counts;
+}
+
+inline void mt_allocate_aggregate_component_traces(
+ MtExtendedTraceResult& trace, int component_count, int iterations
+) {
+ if (component_count<2 || iterations<1)
+  throw std::invalid_argument("invalid aggregate component trace dimensions");
+ trace.component_count.assign(static_cast<std::size_t>(component_count),
+  std::vector<int>(static_cast<std::size_t>(iterations)));
+ trace.realized_active_count.assign(1,
+  std::vector<int>(static_cast<std::size_t>(iterations)));
+ const std::size_t sticks=static_cast<std::size_t>(component_count-1);
+ trace.stick_eligible_count.assign(sticks,
+  std::vector<int>(static_cast<std::size_t>(iterations)));
+ trace.stick_continue_count.assign(sticks,
+  std::vector<int>(static_cast<std::size_t>(iterations)));
+ trace.stick_stop_count.assign(sticks,
+  std::vector<int>(static_cast<std::size_t>(iterations)));
+}
+
+inline void mt_capture_aggregate_component_state(
+ const std::vector<int>& counts, int marker_count, int iteration,
+ MtExtendedTraceResult& trace
+) {
+ if (counts.size()<2 || iteration<0 || marker_count<0 ||
+     trace.component_count.size()!=counts.size())
+  throw std::invalid_argument("invalid aggregate component capture state");
+ int total=0;
+ for (std::size_t component=0;component<counts.size();++component) {
+  const int count=counts[component];
+  if (count<0) throw std::invalid_argument("component count cannot be negative");
+  total+=count;
+  trace.component_count[component][static_cast<std::size_t>(iteration)]=count;
+ }
+ if (total!=marker_count)
+  throw std::invalid_argument("aggregate component counts do not sum to marker count");
+ const int active=marker_count-counts[0];
+ trace.realized_active_count[0][static_cast<std::size_t>(iteration)]=active;
+ int eligible=marker_count;
+ for (std::size_t stick=0;stick+1<counts.size();++stick) {
+  const int stop=counts[stick];
+  const int continued=eligible-stop;
+  trace.stick_eligible_count[stick][static_cast<std::size_t>(iteration)]=eligible;
+  trace.stick_continue_count[stick][static_cast<std::size_t>(iteration)]=continued;
+  trace.stick_stop_count[stick][static_cast<std::size_t>(iteration)]=stop;
+  eligible=continued;
+ }
+}
 
 struct MtDefaultModelSpec {
  const std::vector<std::vector<int>>& models;

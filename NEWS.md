@@ -1,5 +1,11 @@
 # sblr 0.2.0
 
+* Added RNG-neutral compact allocation histories for BayesR/BayesRC extended
+  diagnostics: component counts, realized active count, and sequential-stick
+  eligible/continue/stop counts. Packed BED, CSR, and retained block-eigen
+  scalar routes share the public draw-by-chain contract, avoiding full
+  marker-by-iteration component storage.
+
 * Added development-only scalar BayesRC/SBayesRC controls for auditing fixed
   repetitions of the existing allocation/model and annotation-hierarchy Gibbs
   blocks. Defaults remain one update each and preserve the historical RNG

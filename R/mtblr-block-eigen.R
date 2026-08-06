@@ -571,6 +571,7 @@ mtblr_block_eigen <- function(
       "extended_groups_resolved", "selected_markers",
       "selected_markers_resolved",
       "selected_marker_quantities", "full_probability_states",
+      "aggregate_component_states",
       "max_trace_gb", "allow_large_traces")], memory_warning_gb = memory_warning_gb,
     updateB = updateB, updateE = updateE, updatePi = updatePi,
     updateAlpha = bayesrc$updateAlpha,

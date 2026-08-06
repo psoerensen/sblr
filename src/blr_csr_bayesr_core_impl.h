@@ -2,6 +2,8 @@
 #error "blr_csr_bayesr_core_impl.h is an implementation detail of st_cpg_omp_csr_bayesr.cpp"
 #endif
 
+#include "blr_aggregate_component_trace.h"
+
 template <class Operator>
 struct CsrBayesRExecutionContext {
  Operator* op = nullptr;
@@ -40,6 +42,7 @@ struct CsrBayesRExecutionResult {
  std::vector<arma::mat> comp_prob_task;
  std::vector<arma::mat> convergence_pi_task,convergence_b_task;
  std::vector<arma::imat> convergence_d_task,convergence_component_task;
+ std::vector<sblr::core::AggregateComponentTrace> convergence_aggregate_task;
  std::vector<arma::vec> ncomp_task;
  arma::mat bm,dm,bm_sd,dm_sd,bm_min,dm_min,bm_max,dm_max,component_mean;
  arma::mat b_out,r_out,component_out,vbs,vgs,ves,vle,vld,pis,maf_effect_s;
@@ -131,11 +134,15 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
  std::vector<arma::mat> convergence_b_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::imat> convergence_d_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::imat> convergence_component_task(static_cast<std::size_t>(ntasks));
+ std::vector<sblr::core::AggregateComponentTrace> convergence_aggregate_task(
+  static_cast<std::size_t>(ntasks));
  for (int task = 0; task < ntasks; ++task) {
   if (convergence_pi_count > 0) convergence_pi_task[static_cast<std::size_t>(task)].zeros(nit, convergence_pi_count);
   if (convergence_b && convergence_marker_count > 0) convergence_b_task[static_cast<std::size_t>(task)].zeros(nit, convergence_marker_count);
   if (convergence_d && convergence_marker_count > 0) convergence_d_task[static_cast<std::size_t>(task)].zeros(nit, convergence_marker_count);
   if (convergence_component && convergence_marker_count > 0) convergence_component_task[static_cast<std::size_t>(task)].zeros(nit, convergence_marker_count);
+  if (convergence_component) sblr::core::allocate_aggregate_component_trace(
+   convergence_aggregate_task[static_cast<std::size_t>(task)],nit,K);
  }
  std::vector<arma::vec> ncomp_task(static_cast<std::size_t>(ntasks));
  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
@@ -472,6 +479,9 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
       if (convergence_d) convergence_d_task[static_cast<std::size_t>(task)](draw, static_cast<arma::uword>(s)) = component > 0 ? 1 : 0;
       if (convergence_component) convergence_component_task[static_cast<std::size_t>(task)](draw, static_cast<arma::uword>(s)) = component;
      }
+     if (convergence_component) sblr::core::capture_aggregate_component_trace(
+      comp_t,m,K,static_cast<int>(draw),
+      convergence_aggregate_task[static_cast<std::size_t>(task)]);
     }
 
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
@@ -756,6 +766,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
   std::move(final_pi_task),std::move(mean_pi_task),std::move(final_vb_task),std::move(final_vg_task),std::move(final_ve_task),
   std::move(maf_effect_s_attempted_task),std::move(maf_effect_s_accepted_task),std::move(comp_prob_task),
   std::move(convergence_pi_task),std::move(convergence_b_task),std::move(convergence_d_task),std::move(convergence_component_task),
+  std::move(convergence_aggregate_task),
   std::move(ncomp_task),
   std::move(bm),std::move(dm),std::move(bm_sd),std::move(dm_sd),std::move(bm_min),std::move(dm_min),std::move(bm_max),std::move(dm_max),
   std::move(component_mean),std::move(b_out),std::move(r_out),std::move(component_out),std::move(vbs),std::move(vgs),std::move(ves),

@@ -54,7 +54,8 @@
     mcse_mean_over_sd_threshold = 0.05, keep_traces = FALSE,
     extended_groups = NULL, selected_markers = NULL,
     selected_marker_quantities = c("b", "d"),
-    full_probability_states = FALSE, max_trace_gb = 1,
+    full_probability_states = FALSE, aggregate_component_states = FALSE,
+    max_trace_gb = 1,
     allow_large_traces = FALSE)
   if (is.null(convergence_control)) {
     resolved <- defaults
@@ -391,6 +392,15 @@
                                      operator, chain, conv,
                                      memory_warning_gb,
                                      trace_spec = NULL) {
+  if (isTRUE(conv$aggregate_component_states) && !isTRUE(chain$keep_chains)) {
+    stop(
+      paste0(
+        "aggregate_component_states requires keep_chains = TRUE so retained ",
+        "draws keep an explicit chain dimension."
+      ),
+      call. = FALSE
+    )
+  }
   if (!is.null(stats)) {
     m <- as.integer(stats$m %||% length(stats$wy[[1L]]))
     nt <- as.integer(length(stats$wy %||% stats$yy))
@@ -406,6 +416,7 @@
     convergence_quantities = quantity_count,
     keep_traces = conv$keep_traces)
   if (!is.null(trace_spec) && identical(conv$mode, "extended")) {
+    component_count <- as.integer(trace_spec$component_count %||% 0L)
     nselected <- length(trace_spec$markers %||% integer())
     probability_count <- if (isTRUE(trace_spec$probability))
       as.integer(trace_spec$probability_quantity_count %||% 0L) * nt else 0L
@@ -415,10 +426,12 @@
     selected_d <- if (isTRUE(trace_spec$d)) nselected * nt else 0L
     selected_component <- if (isTRUE(trace_spec$component))
       nselected * nt else 0L
+    aggregate_component <- if (isTRUE(conv$aggregate_component_states))
+      nt * (component_count + 1L + 3L * max(component_count - 1L, 0L)) else 0L
     extended <- .blr_extended_trace_memory(
       chain$nchains, chain$nit,
       probability_count + annotation_count + selected_b,
-      selected_d + selected_component, conv$keep_traces)
+      selected_d + selected_component + aggregate_component, conv$keep_traces)
     extended$st_probability_trace_bytes <- 8 * chain$nchains * chain$nit *
       probability_count
     extended$st_annotation_group_trace_bytes <- 8 * chain$nchains * chain$nit *
@@ -427,11 +440,14 @@
     extended$st_selected_d_trace_bytes <- 4 * chain$nchains * chain$nit * selected_d
     extended$st_selected_component_trace_bytes <- 4 * chain$nchains * chain$nit *
       selected_component
+    extended$st_aggregate_component_trace_bytes <- 4 * chain$nchains * chain$nit *
+      aggregate_component
     counts <- c(
       chains = chain$nchains, draws = chain$nit,
       probability = probability_count, annotations = annotation_count,
       selected_b = selected_b, selected_d = selected_d,
-      selected_component = selected_component)
+      selected_component = selected_component,
+      aggregate_component = aggregate_component)
     .blr_enforce_trace_guard(extended, conv, counts, nselected)
     memory <- .blr_add_extended_memory(
       memory, list(enabled = TRUE, memory = extended))
@@ -464,9 +480,11 @@
     annotations = identical(conv$mode, "extended") && annotations &&
       "annotations" %in% conv$extended_groups_resolved,
     annotation_quantity_count = as.integer(annotation_quantity_count),
+    component_count = as.integer(component_count),
     b = "b" %in% quantities,
     d = "d" %in% quantities,
-    component = "component" %in% quantities)
+    component = isTRUE(conv$aggregate_component_states) ||
+      "component" %in% quantities)
 }
 
 .blr_st_convergence_bundle <- function(chains, trait_names, model, operator,
@@ -601,6 +619,37 @@
   "not_comparable_operator_contract"
 }
 
+.blr_attach_aggregate_component_traces <- function(fit) {
+  bundle <- fit$convergence_traces
+  if (is.null(bundle) || is.null(bundle$values) || is.null(bundle$quantities))
+    return(fit)
+  groups <- c(
+    component_count = "component_count_trace",
+    realized_active_count = "realized_active_count_trace",
+    stick_eligible_count = "stick_eligible_count_trace",
+    stick_continue_count = "stick_continue_count_trace",
+    stick_stop_count = "stick_stop_count_trace")
+  for (group in names(groups)) {
+    index <- which(bundle$quantities$group == group)
+    if (!length(index)) next
+    value <- bundle$values[, , index, drop = FALSE]
+    quantity_names <- bundle$quantities$component_name[index]
+    stick <- bundle$quantities$stick_name[index]
+    missing <- is.na(quantity_names) | !nzchar(quantity_names)
+    quantity_names[missing] <- stick[missing]
+    missing <- is.na(quantity_names) | !nzchar(quantity_names)
+    quantity_names[missing] <- bundle$quantities$parameter_name[index][missing]
+    dimnames(value) <- list(
+      draw = paste0("Iter", seq_len(dim(value)[1L])),
+      chain = paste0("chain", seq_len(dim(value)[2L])),
+      quantity = make.unique(quantity_names))
+    storage.mode(value) <- "integer"
+    attr(value, "quantity_metadata") <- bundle$quantities[index, , drop = FALSE]
+    fit[[groups[[group]]]] <- value
+  }
+  fit
+}
+
 .blr_finalize_fit <- function(fit, family, model, operator,
                               data = NULL, diagnostics = NULL,
                               memory_estimate = NULL) {
@@ -609,6 +658,7 @@
                          "bayesrc", "sbayesrc"),
             operator %in% c("csr", "block_eigen", "packed_bed",
                             "dense_reference"))
+  fit <- .blr_attach_aggregate_component_traces(fit)
   fit$family <- family
   fit$model <- model
   fit$operator <- operator
@@ -787,7 +837,8 @@
     "mcse_mean_over_sd_threshold", "keep_traces",
     "extended_groups_requested", "extended_groups_resolved",
     "selected_markers", "selected_marker_quantities",
-    "full_probability_states", "max_trace_gb", "allow_large_traces")]
+    "full_probability_states", "aggregate_component_states",
+    "max_trace_gb", "allow_large_traces")]
   fit$input$memory_warning_gb <- memory_warning_gb
   if (isTRUE(conv$warn) && conv$mode != "none" &&
       !(conv$mode == "auto" && chain$nchains == 1L)) {

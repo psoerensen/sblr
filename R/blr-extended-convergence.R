@@ -33,7 +33,8 @@
     stop("convergence_control$selected_marker_quantities must be a unique nonempty subset of b, d, and component.",
          call. = FALSE)
   }
-  for (name in c("full_probability_states", "allow_large_traces")) {
+  for (name in c("full_probability_states", "aggregate_component_states",
+                 "allow_large_traces")) {
     resolved[[name]] <- .blr_logical_scalar(
       resolved[[name]], paste0("convergence_control$", name))
   }
@@ -45,6 +46,7 @@
   }
   used_extended <- !is.null(groups) || !is.null(markers) ||
     isTRUE(resolved$full_probability_states) ||
+    isTRUE(resolved$aggregate_component_states) ||
     !identical(quantities, c("b", "d")) ||
     !identical(resolved$max_trace_gb, 1) ||
     isTRUE(resolved$allow_large_traces)
@@ -66,6 +68,10 @@
   }
   if (isTRUE(resolved$full_probability_states) && mode != "extended") {
     stop("full_probability_states requires convergence = 'extended'.",
+         call. = FALSE)
+  }
+  if (isTRUE(resolved$aggregate_component_states) && mode != "extended") {
+    stop("aggregate_component_states requires convergence = 'extended'.",
          call. = FALSE)
   }
   resolved$extended_groups_requested <- groups
@@ -269,10 +275,17 @@
   annotation_names <- annotation_parameters$processed_annotation_names %||%
     annotation_parameters$annotation_column_names %||% character()
   stick_names <- annotation_parameters$stick_names %||% character()
+  if (!length(stick_names) && length(component_names) > 1L)
+    stick_names <- paste0(component_names[-length(component_names)], "_stick")
   selected_quantities <- if (nrow(selected))
     controls$selected_marker_quantities else character()
   if (isTRUE(controls$full_probability_states) && prior_kernel != "bayesr") {
     stop("full_probability_states is available only for MT BayesR/SBayesR.",
+         call. = FALSE)
+  }
+  if (isTRUE(controls$aggregate_component_states) &&
+      !prior_kernel %in% c("bayesr", "bayesrc")) {
+    stop("aggregate_component_states is available only for MT BayesR/SBayesR and BayesRC/SBayesRC.",
          call. = FALSE)
   }
   if ("component" %in% selected_quantities && prior_kernel == "bayesc") {
@@ -295,15 +308,19 @@
   selected_d <- if ("d" %in% selected_quantities) nrow(selected) * nt else 0L
   selected_component <- if ("component" %in% selected_quantities)
     nrow(selected) else 0L
+  aggregate_component <- if (isTRUE(controls$aggregate_component_states)) {
+    length(component_names) + 1L + 3L * max(length(component_names) - 1L, 0L)
+  } else 0L
   numeric_quantities <- covariance_count + probability_count + annotation_count + selected_b
-  state_quantities <- selected_d + selected_component
+  state_quantities <- selected_d + selected_component + aggregate_component
   memory <- .blr_extended_trace_memory(
     nchains, nit, numeric_quantities, state_quantities,
     controls$keep_traces)
   counts <- c(chains = nchains, draws = nit, covariance = covariance_count,
               probability = probability_count, annotations = annotation_count,
               selected_b = selected_b, selected_d = selected_d,
-              selected_component = selected_component)
+              selected_component = selected_component,
+              aggregate_component = aggregate_component)
   .blr_enforce_trace_guard(memory, controls, counts, nrow(selected))
   list(
     enabled = enabled, groups = groups, selected = selected,
@@ -316,6 +333,7 @@
     updatePi = updatePi,
     updateAlpha = isTRUE(bayesrc$updateAlpha),
     residual_covariance = residual_covariance,
+    aggregate_component_states = isTRUE(controls$aggregate_component_states),
     memory = memory, counts = counts,
     native = list(
       convergence_covariance = enabled && "covariance" %in% groups,
@@ -326,7 +344,8 @@
       convergence_markers = as.integer(selected$marker_index - 1L),
       convergence_b = "b" %in% selected_quantities,
       convergence_d = "d" %in% selected_quantities,
-      convergence_component = "component" %in% selected_quantities))
+      convergence_component = isTRUE(controls$aggregate_component_states) ||
+        "component" %in% selected_quantities))
 }
 
 .blr_mtblr_extended_bundle <- function(raws, plan, model, operator,
@@ -381,6 +400,30 @@
         derived = group == "cov_g", structural = structural,
         captured = !structural)
     result
+  }
+  if (isTRUE(plan$aggregate_component_states)) {
+    component_rows <- lapply(seq_along(plan$component_names), function(component)
+      list(tier = 2L, group = "component_count",
+           parameter_name = "component_count", trait_index = -1L,
+           component_index = component,
+           component_name = plan$component_names[[component]], updated = TRUE,
+           derived = TRUE))
+    append_matrix("component_count", component_rows, state = TRUE)
+    append_matrix("realized_active_count", list(list(
+      tier = 2L, group = "realized_active_count",
+      parameter_name = "realized_active_count", trait_index = -1L,
+      updated = TRUE, derived = TRUE)), state = TRUE)
+    stick_rows <- function(group) lapply(seq_along(plan$stick_names), function(stick)
+      list(tier = 2L, group = group, parameter_name = group,
+           trait_index = -1L, stick_index = stick,
+           stick_name = plan$stick_names[[stick]], updated = TRUE,
+           derived = TRUE))
+    append_matrix("stick_eligible_count",
+                  stick_rows("stick_eligible_count"), state = TRUE)
+    append_matrix("stick_continue_count",
+                  stick_rows("stick_continue_count"), state = TRUE)
+    append_matrix("stick_stop_count", stick_rows("stick_stop_count"),
+                  state = TRUE)
   }
   if ("covariance" %in% plan$groups) {
     append_matrix("cov_b", pair_rows("cov_b", plan$updateB))
@@ -568,7 +611,7 @@
   }
   append_native_matrix <- function(field, group, updated, tier = 2L,
                                    state = FALSE, component_names = NULL,
-                                   selected = NULL) {
+                                   stick_names = NULL, selected = NULL) {
     for (trait in seq_along(trait_names)) {
       matrices <- lapply(chains[[trait]], function(chain) {
         value <- (chain$convergence_trace %||% list())[[field]]
@@ -593,6 +636,10 @@
           descriptor$component_index <- quantity
           descriptor$component_name <- component_names[[quantity]]
         }
+        if (!is.null(stick_names)) {
+          descriptor$stick_index <- quantity
+          descriptor$stick_name <- stick_names[[quantity]]
+        }
         if (!is.null(selected)) {
           descriptor$marker_index <- selected$marker_index[[quantity]]
           descriptor$marker_id <- selected$marker_id[[quantity]]
@@ -600,6 +647,29 @@
         descriptors[[index]] <<- descriptor
       }
     }
+  }
+  if (isTRUE(controls$aggregate_component_states)) {
+    component_matrix <- if (is.list(fit$component_probabilities))
+      fit$component_probabilities[[1L]] else fit$component_probabilities
+    mixture_var <- fit$input$mixture_var %||% fit$input$gamma %||%
+      fit$mixture_var
+    component_count <- length(mixture_var)
+    if (!component_count && is.matrix(component_matrix))
+      component_count <- ncol(component_matrix)
+    component_names <- colnames(component_matrix) %||%
+      names(mixture_var) %||%
+      paste0("component_", seq_len(component_count) - 1L)
+    stick_names <- paste0(component_names[-length(component_names)], "_stick")
+    append_native_matrix("component_count", "component_count", TRUE,
+                         state = TRUE, component_names = component_names)
+    append_native_matrix("realized_active_count", "realized_active_count",
+                         TRUE, state = TRUE)
+    append_native_matrix("stick_eligible_count", "stick_eligible_count",
+                         TRUE, state = TRUE, stick_names = stick_names)
+    append_native_matrix("stick_continue_count", "stick_continue_count",
+                         TRUE, state = TRUE, stick_names = stick_names)
+    append_native_matrix("stick_stop_count", "stick_stop_count",
+                         TRUE, state = TRUE, stick_names = stick_names)
   }
   if ("probability" %in% groups) {
     if (prior_kernel == "bayesc") append_trait_trace(

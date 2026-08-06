@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include "blr_aggregate_component_trace.h"
 
 // Implementation detail only. This header is included by
 // st_sbayesrc_omp_csr.cpp after the package's Armadillo configuration and the
@@ -194,6 +195,7 @@ struct CsrSBayesRCExecutionResult {
  std::vector<arma::mat> convergence_alpha_task, convergence_sigma_task;
  std::vector<arma::mat> convergence_b_task;
  std::vector<arma::imat> convergence_d_task, convergence_component_task;
+ std::vector<AggregateComponentTrace> convergence_aggregate_task;
 
  arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
  arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
@@ -321,6 +323,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<arma::mat> convergence_b_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::imat> convergence_d_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::imat> convergence_component_task(static_cast<std::size_t>(ntasks));
+ std::vector<AggregateComponentTrace> convergence_aggregate_task(
+  static_cast<std::size_t>(ntasks));
 
  for (int marker: convergence_markers) if (marker<0 || marker>=m)
   throw std::invalid_argument("SBayesRC convergence marker index is out of range.");
@@ -345,6 +349,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
   if (context.convergence_component)
    convergence_component_task[static_cast<std::size_t>(task)]=
     arma::imat(nit,convergence_markers.size(),arma::fill::zeros);
+  if (context.convergence_component)
+   allocate_aggregate_component_trace(
+    convergence_aggregate_task[static_cast<std::size_t>(task)],nit,Kgamma);
  }
 
  arma::mat bm_mat(nt, m, arma::fill::zeros);
@@ -895,6 +902,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
       if (context.convergence_component)
        convergence_component_task[static_cast<std::size_t>(task)](draw,q)=component;
      }
+     if (context.convergence_component)
+      capture_aggregate_component_trace(
+       comp_t,m,Kgamma,static_cast<int>(draw),
+       convergence_aggregate_task[static_cast<std::size_t>(task)]);
     }
 
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
@@ -1203,6 +1214,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.convergence_b_task=std::move(convergence_b_task);
  result.convergence_d_task=std::move(convergence_d_task);
  result.convergence_component_task=std::move(convergence_component_task);
+ result.convergence_aggregate_task=std::move(convergence_aggregate_task);
  result.bm_mat = std::move(bm_mat);
  result.dm_mat = std::move(dm_mat);
  result.bm_sd_mat = std::move(bm_sd_mat);

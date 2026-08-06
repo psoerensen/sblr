@@ -274,14 +274,35 @@ template <typename OpT>
 inline void check_residual_scale_bayesr_ST_csr(
   const OpT&, const BayesRUpdateEDiagnostics& diag,
   int trait, int chain, int iter,
-  double, double, const arma::vec&, const arma::rowvec& b,
-  const arma::rowvec& r, double, double, int, double
+  double ve, double vb, const arma::vec& mixture_var, const arma::rowvec& b,
+  const arma::rowvec& r, double sse_prior, double yy, int n, double adjE
 ) {
- if (!std::isfinite(diag.residual_scale) || diag.residual_scale <= 0.0)
+ if (!std::isfinite(diag.residual_scale) || diag.residual_scale <= 0.0) {
+  const double b_norm2 = arma::dot(b, b);
+  const double r_norm2 = arma::dot(r, r);
   throw std::runtime_error(
    "BayesR operator residual scale is invalid. trait=" + std::to_string(trait) +
-   ", chain=" + std::to_string(chain) + ", iter=" + std::to_string(iter)
+   ", chain=" + std::to_string(chain) + ", iter=" + std::to_string(iter) +
+   ", yy=" + std::to_string(yy) +
+   ", n=" + std::to_string(n) +
+   ", adjE=" + std::to_string(adjE) +
+   ", ve=" + std::to_string(ve) +
+   ", vb=" + std::to_string(vb) +
+   ", mixture_var_min=" + std::to_string(mixture_var.min()) +
+   ", mixture_var_max=" + std::to_string(mixture_var.max()) +
+   ", sse_prior=" + std::to_string(sse_prior) +
+   ", bwy=" + std::to_string(diag.bwy) +
+   ", br=" + std::to_string(diag.br) +
+   ", fitted_quadratic=" + std::to_string(diag.fitted_quadratic) +
+   ", sse=" + std::to_string(diag.sse) +
+   ", residual_scale=" + std::to_string(diag.residual_scale) +
+   ", b_norm2=" + std::to_string(b_norm2) +
+   ", residual_norm2=" + std::to_string(r_norm2) +
+   ", nonzero_components=" + std::to_string(diag.nonzero_components) +
+   ", max_abs_b=" + std::to_string(diag.max_abs_b) +
+   ", max_abs_r=" + std::to_string(diag.max_abs_r)
   );
+ }
 }
 
 inline double logsumexp_bayesr(const std::vector<double>& x) {
@@ -1531,6 +1552,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  const std::vector<arma::mat>& convergence_b_task=execution_result.convergence_b_task;
  const std::vector<arma::imat>& convergence_d_task=execution_result.convergence_d_task;
  const std::vector<arma::imat>& convergence_component_task=execution_result.convergence_component_task;
+ const auto& convergence_aggregate_task=execution_result.convergence_aggregate_task;
  const arma::mat &bm=execution_result.bm,&dm=execution_result.dm,&bm_sd=execution_result.bm_sd,&dm_sd=execution_result.dm_sd;
  const arma::mat &bm_min=execution_result.bm_min,&dm_min=execution_result.dm_min,&bm_max=execution_result.bm_max,&dm_max=execution_result.dm_max;
  const arma::mat &component_mean=execution_result.component_mean,&b_out=execution_result.b_out,&r_out=execution_result.r_out,&component_out=execution_result.component_out;
@@ -1752,6 +1774,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
      Rcpp::Named("b") = convergence_b_task[static_cast<std::size_t>(task)],
      Rcpp::Named("d") = convergence_d_task[static_cast<std::size_t>(task)],
      Rcpp::Named("component") = convergence_component_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("component_count") = convergence_aggregate_task[static_cast<std::size_t>(task)].component_count,
+     Rcpp::Named("realized_active_count") = convergence_aggregate_task[static_cast<std::size_t>(task)].realized_active_count,
+     Rcpp::Named("stick_eligible_count") = convergence_aggregate_task[static_cast<std::size_t>(task)].stick_eligible_count,
+     Rcpp::Named("stick_continue_count") = convergence_aggregate_task[static_cast<std::size_t>(task)].stick_continue_count,
+     Rcpp::Named("stick_stop_count") = convergence_aggregate_task[static_cast<std::size_t>(task)].stick_stop_count,
      Rcpp::Named("marker_index") = Rcpp::wrap(convergence_markers)
     );
     trait_chains[chain] = Rcpp::List::create(

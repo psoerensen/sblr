@@ -576,7 +576,16 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
     if (convergence->selected_component && (execution.method==5 || execution.method==6))
       extended.selected_component.assign(convergence->selected_markers.size(),
         std::vector<int>(total_iterations));
+    if (convergence->aggregate_component_states &&
+        (execution.method==5 || execution.method==6))
+      mt_allocate_aggregate_component_traces(
+        extended,component_count,total_iterations);
   }
+  std::vector<int> aggregate_component_counts;
+  if (convergence!=nullptr && convergence->aggregate_component_states &&
+      (execution.method==5 || execution.method==6))
+    aggregate_component_counts=mt_component_counts(
+      result.component,component_count);
 
   std::vector<std::vector<double>> beta = initial.beta;
   arma::mat residual = data.phenotype;
@@ -683,8 +692,15 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
           result.b[trait][marker] = effective;
           result.d[trait][marker] = models[selected][trait];
         }
+        const int previous_component=(execution.method==5 || execution.method==6) ?
+          result.component[marker] : 0;
         if (execution.method==5 || execution.method==6)
           result.component[marker]=selected>0 ? joint->component[selected] : 0;
+        if (!aggregate_component_counts.empty() &&
+            previous_component!=result.component[marker]) {
+          --aggregate_component_counts[static_cast<std::size_t>(previous_component)];
+          ++aggregate_component_counts[static_cast<std::size_t>(result.component[marker])];
+        }
         if (execution.method==6 && selected>0)
           pattern_counts[mt_bayesrc_pattern_index(selected,*joint)]+=1.0;
         for (std::size_t trait = 0; trait < nt; ++trait) {
@@ -810,6 +826,10 @@ inline MtBedCoreResult run_mt_bed_bayesc_core(
     }
 
     if (convergence!=nullptr) {
+      if (convergence->aggregate_component_states &&
+          (execution.method==5 || execution.method==6))
+        mt_capture_aggregate_component_state(
+          aggregate_component_counts,static_cast<int>(m),iteration,extended);
       if (convergence->covariance) {
         std::size_t q=0;
         for (std::size_t col=0;col<nt;++col)

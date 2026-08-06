@@ -1748,6 +1748,7 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& convergence_b_task=execution_result.convergence_b_task;
  const auto& convergence_d_task=execution_result.convergence_d_task;
  const auto& convergence_component_task=execution_result.convergence_component_task;
+ const auto& convergence_aggregate_task=execution_result.convergence_aggregate_task;
  const auto& maf_effect_s_accepted_task = execution_result.maf_effect_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
@@ -2060,6 +2061,11 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
       Rcpp::Named("b")=convergence_b_task[static_cast<std::size_t>(task)],
       Rcpp::Named("d")=convergence_d_task[static_cast<std::size_t>(task)],
       Rcpp::Named("component")=convergence_component_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("component_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].component_count,
+      Rcpp::Named("realized_active_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].realized_active_count,
+      Rcpp::Named("stick_eligible_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_eligible_count,
+      Rcpp::Named("stick_continue_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_continue_count,
+      Rcpp::Named("stick_stop_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_stop_count,
       Rcpp::Named("alpha")=convergence_alpha_task[static_cast<std::size_t>(task)],
       Rcpp::Named("sigmaSqAlpha")=convergence_sigma_task[static_cast<std::size_t>(task)]),
      Rcpp::Named("selection") = chain_selection,

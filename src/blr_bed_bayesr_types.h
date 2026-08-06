@@ -5,6 +5,7 @@
 #include "blr_bed_family_types.h"
 
 #include <armadillo>
+#include "blr_aggregate_component_trace.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -53,6 +54,7 @@ struct BedBayesRChainExecutionResult {
  std::vector<double> mean_pi;
  arma::mat convergence_pi, convergence_b;
  arma::imat convergence_d, convergence_component;
+ AggregateComponentTrace convergence_aggregate;
  double nsamples=0.0, seconds=0.0;
  int failed=0;
  std::string error;

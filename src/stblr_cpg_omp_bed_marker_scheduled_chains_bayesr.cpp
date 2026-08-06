@@ -498,6 +498,11 @@ static Rcpp::List stblr_bed_bayesr_result_to_raw(
      Rcpp::Named("b")=value.convergence_b,
      Rcpp::Named("d")=value.convergence_d,
      Rcpp::Named("component")=value.convergence_component,
+     Rcpp::Named("component_count")=value.convergence_aggregate.component_count,
+     Rcpp::Named("realized_active_count")=value.convergence_aggregate.realized_active_count,
+     Rcpp::Named("stick_eligible_count")=value.convergence_aggregate.stick_eligible_count,
+     Rcpp::Named("stick_continue_count")=value.convergence_aggregate.stick_continue_count,
+     Rcpp::Named("stick_stop_count")=value.convergence_aggregate.stick_stop_count,
      Rcpp::Named("marker_index")=convergence_markers),
     Rcpp::Named("diagnostics")=Rcpp::List::create(
      Rcpp::Named("seconds")=value.seconds));

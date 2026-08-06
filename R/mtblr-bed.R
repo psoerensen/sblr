@@ -874,7 +874,8 @@ mtblr_bed <- function(
       "extended_groups_requested", "extended_groups_resolved",
       "selected_markers", "selected_marker_quantities",
       "selected_markers_resolved",
-      "full_probability_states", "max_trace_gb", "allow_large_traces")],
+      "full_probability_states", "aggregate_component_states",
+      "max_trace_gb", "allow_large_traces")],
     convergence_memory_estimate = convergence_memory)
   raw$alignment <- alignment
   input <- list(
@@ -949,7 +950,8 @@ mtblr_bed <- function(
       "extended_groups_requested", "extended_groups_resolved",
       "selected_markers", "selected_marker_quantities",
       "selected_markers_resolved",
-      "full_probability_states", "max_trace_gb", "allow_large_traces")],
+      "full_probability_states", "aggregate_component_states",
+      "max_trace_gb", "allow_large_traces")],
     convergence_thresholds = convergence_controls$thresholds,
     convergence_status = raw$diagnostics$convergence$overall_status,
     convergence_computed = raw$diagnostics$convergence$computed,

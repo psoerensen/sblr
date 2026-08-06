@@ -88,6 +88,30 @@ inline MtBedConvergenceTraceBundle build_mt_bed_convergence_trace_bundle(
     q.tier=2; q.updated=updateAlpha; bundle.quantities.push_back(q);
    }
   }
+  if (extended_spec->aggregate_component_states && (method==5 || method==6)) {
+   const auto& ext=reference.convergence;
+   for (std::size_t component=0;component<ext.component_count.size();++component) {
+    MtBedConvergenceQuantity q; q.group="component_count";
+    q.component=component; q.tier=2; q.updated=true;
+    bundle.quantities.push_back(q);
+   }
+   {
+    MtBedConvergenceQuantity q; q.group="realized_active_count";
+    q.tier=2; q.updated=true; q.derived=true;
+    bundle.quantities.push_back(q);
+   }
+   for (std::size_t stick=0;stick<ext.stick_eligible_count.size();++stick) {
+    MtBedConvergenceQuantity eligible; eligible.group="stick_eligible_count";
+    eligible.stick=stick; eligible.tier=2; eligible.updated=true;
+    eligible.derived=true; bundle.quantities.push_back(eligible);
+    MtBedConvergenceQuantity continued; continued.group="stick_continue_count";
+    continued.stick=stick; continued.tier=2; continued.updated=true;
+    continued.derived=true; bundle.quantities.push_back(continued);
+    MtBedConvergenceQuantity stopped; stopped.group="stick_stop_count";
+    stopped.stick=stick; stopped.tier=2; stopped.updated=true;
+    stopped.derived=true; bundle.quantities.push_back(stopped);
+   }
+  }
   if (extended_spec->selected_b)
    for (int marker:extended_spec->selected_markers)
     for (int trait=0;trait<nt;++trait) {
@@ -143,12 +167,22 @@ pair_found: ;
     else if (quantity.group=="b") traces=&ext.selected_b;
     else if (quantity.group=="d") integer_traces=&ext.selected_d;
     else if (quantity.group=="component") integer_traces=&ext.selected_component;
+    else if (quantity.group=="component_count") integer_traces=&ext.component_count;
+    else if (quantity.group=="realized_active_count") integer_traces=&ext.realized_active_count;
+    else if (quantity.group=="stick_eligible_count") integer_traces=&ext.stick_eligible_count;
+    else if (quantity.group=="stick_continue_count") integer_traces=&ext.stick_continue_count;
+    else if (quantity.group=="stick_stop_count") integer_traces=&ext.stick_stop_count;
     int index=0;
     if (pair>=0) index=pair;
     else if (quantity.group=="component_pi") index=quantity.component;
     else if (quantity.group=="pattern_pi" || quantity.group=="joint_pi") index=quantity.pattern;
     else if (quantity.group=="alpha") index=quantity.annotation;
     else if (quantity.group=="sigmaSqAlpha") index=quantity.stick;
+    else if (quantity.group=="component_count") index=quantity.component;
+    else if (quantity.group=="realized_active_count") index=0;
+    else if (quantity.group=="stick_eligible_count" ||
+             quantity.group=="stick_continue_count" ||
+             quantity.group=="stick_stop_count") index=quantity.stick;
     else {
      auto found=std::find(extended_spec->selected_markers.begin(),
       extended_spec->selected_markers.end(),quantity.marker);

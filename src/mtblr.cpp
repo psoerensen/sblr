@@ -4616,7 +4616,12 @@ Rcpp::List mt_extended_trace_to_list(
   Rcpp::_["sigmaSqAlpha"]=numeric(trace.annotation_sigma),
   Rcpp::_["b"]=numeric(trace.selected_b),
   Rcpp::_["d"]=integer(trace.selected_d),
-  Rcpp::_["component"]=integer(trace.selected_component));
+  Rcpp::_["component"]=integer(trace.selected_component),
+  Rcpp::_["component_count"]=integer(trace.component_count),
+  Rcpp::_["realized_active_count"]=integer(trace.realized_active_count),
+  Rcpp::_["stick_eligible_count"]=integer(trace.stick_eligible_count),
+  Rcpp::_["stick_continue_count"]=integer(trace.stick_continue_count),
+  Rcpp::_["stick_stop_count"]=integer(trace.stick_stop_count));
 }
 
 template <class Runner>
@@ -4828,6 +4833,7 @@ Rcpp::List mtblr_csr_chains_raw_internal(
  convergence_spec.selected_b=convergence_b;
  convergence_spec.selected_d=convergence_d;
  convergence_spec.selected_component=convergence_component;
+ convergence_spec.aggregate_component_states=convergence_component;
  const bool any_extended=convergence_spec.covariance ||
   convergence_spec.probability || convergence_spec.annotations ||
   !convergence_spec.selected_markers.empty();
@@ -5056,6 +5062,7 @@ Rcpp::List mtblr_block_eigen_chains_raw_internal(
  convergence_spec.selected_b=convergence_b;
  convergence_spec.selected_d=convergence_d;
  convergence_spec.selected_component=convergence_component;
+ convergence_spec.aggregate_component_states=convergence_component;
  const bool any_extended=convergence_spec.covariance ||
   convergence_spec.probability || convergence_spec.annotations ||
   !convergence_spec.selected_markers.empty();
@@ -5772,6 +5779,7 @@ Rcpp::List mtblr_bed_chains_binding_impl(
  convergence_spec.selected_b=convergence_b;
  convergence_spec.selected_d=convergence_d;
  convergence_spec.selected_component=convergence_component;
+ convergence_spec.aggregate_component_states=convergence_component;
  const bool any_extended=convergence_spec.covariance ||
   convergence_spec.probability || convergence_spec.annotations ||
   !convergence_spec.selected_markers.empty();

@@ -126,6 +126,9 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_coupling_tempering_chain(
   out.convergence_d.zeros(context.iterations,context.convergence_markers.size());
  if (context.convergence_component)
   out.convergence_component.zeros(context.iterations,context.convergence_markers.size());
+ if (context.convergence_component)
+  allocate_aggregate_component_trace(
+   out.convergence_aggregate,context.iterations,K);
  out.coupling_replica_identity.zeros(context.iterations,3);
  out.coupling_active_count.zeros(context.iterations,3);
  out.coupling_expected_active.zeros(context.iterations,3);
@@ -292,6 +295,10 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_coupling_tempering_chain(
     if (context.convergence_component)
      out.convergence_component(draw,q)=component;
    }
+   if (context.convergence_component)
+    capture_aggregate_component_trace(
+     target.component,static_cast<int>(m),K,static_cast<int>(draw),
+     out.convergence_aggregate);
   }
   if (it>=context.burnin && ((it-context.burnin)%context.thinning==0)) {
    nsamples+=1.0;
@@ -382,6 +389,9 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
   out.convergence_d.zeros(nit,context.convergence_markers.size());
  if (context.convergence_component)
   out.convergence_component.zeros(nit,context.convergence_markers.size());
+ if (context.convergence_component)
+  allocate_aggregate_component_trace(
+   out.convergence_aggregate,nit,K);
  try {
   validate_bed_bayesrc_chain_context(context);
   std::mt19937 gen(static_cast<unsigned int>(context.chain_seed));
@@ -500,6 +510,10 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
      if (context.convergence_component)
       out.convergence_component(draw,q)=component;
     }
+    if (context.convergence_component)
+     capture_aggregate_component_trace(
+      component_t,static_cast<int>(m),K,static_cast<int>(draw),
+      out.convergence_aggregate);
    }
    if (it >= nburn && ((it - nburn) % nthin == 0)) {
     nsamples += 1.0;

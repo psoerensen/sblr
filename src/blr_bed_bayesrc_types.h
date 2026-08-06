@@ -4,6 +4,7 @@
 #include "blr_bed_family_types.h"
 
 #include <armadillo>
+#include "blr_aggregate_component_trace.h"
 #include "st_bayesrc_annotation_prior.h"
 #include <cmath>
 #include <cstddef>
@@ -55,6 +56,7 @@ struct BedBayesRCChainExecutionResult {
  arma::vec annot_sigma_mean, annot_sigma_final;
  arma::mat convergence_alpha, convergence_sigma, convergence_b;
  arma::imat convergence_d, convergence_component;
+ AggregateComponentTrace convergence_aggregate;
  arma::imat coupling_replica_identity;
  arma::mat coupling_active_count, coupling_expected_active, coupling_swap;
  double coupling_transition_seconds=0.0, coupling_swap_seconds=0.0;
