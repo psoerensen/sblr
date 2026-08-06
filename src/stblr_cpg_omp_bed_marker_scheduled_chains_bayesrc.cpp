@@ -192,6 +192,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  if (af_cpp.empty()) af_cpp = br_compute_af(G);
  std::vector<MarkerMapBayesR> maps = br_build_marker_maps(G, af_cpp, scale, std::max(1, ncores));
  std::vector<int> order = br_make_marker_order(sets, m);
+ const StBayesRCInterceptPrior intercept_prior =
+  st_bayesrc_parse_intercept_prior(intercept_prior_resolved, K - 1);
  const int njobs = nt * nchains;
  std::vector<sblr::core::BedBayesRCChainExecutionResult> jobs(static_cast<std::size_t>(njobs));
 #ifdef _OPENMP
@@ -204,8 +206,6 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
    sblr::core::resolve_bed_family_logical_chain_seed(seed,trait,chain) :
    static_cast<unsigned int>(chain_seeds[static_cast<std::size_t>(chain)]+
                              1000003*(trait+1));
-  const StBayesRCInterceptPrior intercept_prior =
-   st_bayesrc_parse_intercept_prior(intercept_prior_resolved, K - 1);
   const sblr::core::BedBayesRCChainExecutionContext<
    FastPackedBedMatrixBR,arma::mat,MarkerMapBayesR
   > context{
@@ -246,7 +246,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(
  }
  const BedBayesRCBindingMetadata metadata{
   gamma,m,nt,ntrace,nit,nburn,nthin,nchains,n_used,static_cast<double>(A.n_cols),
-  updateAlpha ? (nit+nburn)/annot_alpha_update_every : 0,
+  updateAlpha ? ((nit+nburn)/annot_alpha_update_every) *
+   intercept_prior.annotation_updates_per_cycle : 0,
   keep_chains,return_wy,return_r,convergence_markers_cpp
  };
  return stblr_bed_bayesrc_result_to_raw(result,metadata);

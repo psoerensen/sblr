@@ -133,6 +133,8 @@ inline void st_bayesrc_build_step_indicators(
 struct StBayesRCInterceptPrior {
  bool legacy_flat;
  bool update_variance;
+ int allocation_updates_per_cycle;
+ int annotation_updates_per_cycle;
  arma::vec mean;
  arma::vec precision;
 };
@@ -141,14 +143,25 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
   const arma::mat& resolved,
   int nstep
 ) {
- if ((resolved.n_rows != 3 && resolved.n_rows != 4) ||
+ if ((resolved.n_rows != 3 && resolved.n_rows != 4 && resolved.n_rows != 6) ||
      resolved.n_cols != static_cast<arma::uword>(nstep) ||
      !resolved.is_finite()) {
   throw std::runtime_error(
-   "BayesRC resolved intercept prior must be a finite 3 or 4 by nstep matrix.");
+   "BayesRC resolved annotation control must be a finite 3, 4, or 6 by nstep matrix.");
  }
  const bool legacy_flat = resolved(0, 0) == 1.0;
  const bool update_variance = resolved.n_rows == 3 || resolved(3, 0) == 1.0;
+ const int allocation_updates = resolved.n_rows == 6
+  ? static_cast<int>(resolved(4, 0)) : 1;
+ const int annotation_updates = resolved.n_rows == 6
+  ? static_cast<int>(resolved(5, 0)) : 1;
+ if (allocation_updates <= 0 || annotation_updates <= 0 ||
+     (resolved.n_rows == 6 &&
+      (resolved(4, 0) != static_cast<double>(allocation_updates) ||
+       resolved(5, 0) != static_cast<double>(annotation_updates)))) {
+  throw std::runtime_error(
+   "BayesRC diagnostic kernel-update counts must be positive integers.");
+ }
  for (int j = 0; j < nstep; ++j) {
   if (resolved(0, static_cast<arma::uword>(j)) != (legacy_flat ? 1.0 : 0.0)) {
    throw std::runtime_error("BayesRC intercept prior type must be consistent across sticks.");
@@ -162,9 +175,18 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
    throw std::runtime_error(
     "BayesRC annotation-variance update policy must be consistent across sticks.");
   }
+  if (resolved.n_rows == 6 &&
+      (resolved(3, static_cast<arma::uword>(j)) !=
+        (update_variance ? 1.0 : 0.0) ||
+       resolved(4, static_cast<arma::uword>(j)) != allocation_updates ||
+       resolved(5, static_cast<arma::uword>(j)) != annotation_updates)) {
+   throw std::runtime_error(
+    "BayesRC diagnostic annotation controls must be consistent across sticks.");
+  }
  }
  return StBayesRCInterceptPrior{
-  legacy_flat, update_variance, resolved.row(1).t(), resolved.row(2).t()
+  legacy_flat, update_variance, allocation_updates, annotation_updates,
+  resolved.row(1).t(), resolved.row(2).t()
  };
 }
 

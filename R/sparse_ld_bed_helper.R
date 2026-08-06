@@ -3974,6 +3974,8 @@ stblr_bed_marker <- function(
   progress_every = 0,
   .convergence_spec = NULL,
   .diagnostic_updateSigmaSqAlpha = TRUE,
+  .diagnostic_allocation_updates_per_cycle = 1L,
+  .diagnostic_annotation_updates_per_cycle = 1L,
   ...
 ) {
  method <- .normalize_stblr_method(method)
@@ -4156,12 +4158,32 @@ stblr_bed_marker <- function(
       is.na(.diagnostic_updateSigmaSqAlpha)) {
    stop(".diagnostic_updateSigmaSqAlpha must be TRUE or FALSE.")
   }
+  for (control_name in c(
+      ".diagnostic_allocation_updates_per_cycle",
+      ".diagnostic_annotation_updates_per_cycle")) {
+   control_value <- get(control_name, inherits = FALSE)
+   if (!is.numeric(control_value) || length(control_value) != 1L ||
+       !is.finite(control_value) || control_value < 1 ||
+       control_value != floor(control_value)) {
+    stop(control_name, " must be a positive integer.")
+   }
+  }
   intercept_prior_native <- intercept_prior$native
-  if (!isTRUE(.diagnostic_updateSigmaSqAlpha)) {
+  if (nrow(intercept_prior_native) == 3L) {
    intercept_prior_native <- rbind(
     intercept_prior_native,
-    update_sigmaSqAlpha = rep(0, ncol(intercept_prior_native)))
+    update_sigmaSqAlpha = rep(
+     as.integer(isTRUE(.diagnostic_updateSigmaSqAlpha)),
+     ncol(intercept_prior_native)))
   }
+  intercept_prior_native <- rbind(
+   intercept_prior_native,
+   allocation_updates_per_cycle = rep(
+    as.integer(.diagnostic_allocation_updates_per_cycle),
+    ncol(intercept_prior_native)),
+   annotation_updates_per_cycle = rep(
+    as.integer(.diagnostic_annotation_updates_per_cycle),
+    ncol(intercept_prior_native)))
   marker_component_probability <- sbayesrc_marker_pi(
    annotation_info$A, prior_init$annot_alpha_init, mixture_var)
   marker_expected_gamma <- as.numeric(

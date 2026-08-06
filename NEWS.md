@@ -1,5 +1,12 @@
 # sblr 0.2.0
 
+* Added development-only scalar BayesRC/SBayesRC controls for auditing fixed
+  repetitions of the existing allocation/model and annotation-hierarchy Gibbs
+  blocks. Defaults remain one update each and preserve the historical RNG
+  trajectory. Study 06 development evidence found that extra hierarchy updates
+  improve conditional alpha exploration but no tested schedule resolves joint
+  occupancy mixing; no package default changed.
+
 * Repaired selected-marker component traces for packed-BED fits that use a
   fitted `cls` marker subset. Trace identifiers are now resolved against the
   fitted marker order, and native BED backends reject out-of-range trace

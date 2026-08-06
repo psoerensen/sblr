@@ -515,8 +515,14 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    std::vector<double> maximum_effect_history;
    if (capture_failure_state)
     maximum_effect_history.reserve(static_cast<std::size_t>(nit + nburn));
+   const int allocation_updates = intercept_prior.allocation_updates_per_cycle;
+   const int annotation_updates = intercept_prior.annotation_updates_per_cycle;
+   const bool legacy_schedule = allocation_updates == 1 && annotation_updates == 1;
 
    for (int it = 0; it < nit + nburn; ++it) {
+    const int allocation_repetitions = legacy_schedule ? 1 : allocation_updates;
+    for (int allocation_rep = 0; allocation_rep < allocation_repetitions;
+         ++allocation_rep) {
     const bool use_scaled_prior = use_maf_effect_s_prior_scale || estimate_maf_effect_s;
     if (estimate_maf_effect_s) {
      fill_maf_effect_s_prior_scale_sbayesrc(
@@ -621,7 +627,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      }
     }
 
-    if (updateAlpha && ((it + 1) % alpha_update_every == 0)) {
+    if (legacy_schedule && updateAlpha &&
+        ((it + 1) % alpha_update_every == 0)) {
      st_bayesrc_update_annotation_prior(
       A,
       comp_t,
@@ -688,12 +695,15 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      if (maf_effect_s_accepted) maf_effect_s_accepted_t += 1.0;
     }
 
-    if (capture_failure_state)
+    if (capture_failure_state && allocation_rep + 1 == allocation_repetitions)
      maximum_effect_history.push_back(arma::abs(b_t).max());
 
+    const int allocation_index = legacy_schedule
+     ? it + 1
+     : it * allocation_updates + allocation_rep + 1;
     if (op.uses_retained_low_rank() &&
         low_rank_residual_rebuild_every > 0 &&
-        ((it + 1) % low_rank_residual_rebuild_every == 0)) {
+        (allocation_index % low_rank_residual_rebuild_every == 0)) {
      const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
      low_rank_residual_max_abs_drift_t = std::max(
       low_rank_residual_max_abs_drift_t, drift);
@@ -824,6 +834,25 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
         std::to_string(it) +
         ", vei=" + std::to_string(vei_t)
      );
+    }
+    }
+
+    if (!legacy_schedule && updateAlpha &&
+        ((it + 1) % alpha_update_every == 0)) {
+     for (int annotation_rep = 0; annotation_rep < annotation_updates;
+          ++annotation_rep) {
+      st_bayesrc_update_annotation_prior(
+       A,
+       comp_t,
+       alpha_t,
+       sigmaSqAlpha_t,
+       intercept_prior,
+       sigmaSqAlpha_a,
+       sigmaSqAlpha_b,
+       gen_t
+      );
+      snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
+     }
     }
 
     double pi_active = 0.0;

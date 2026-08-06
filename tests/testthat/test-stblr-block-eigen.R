@@ -655,3 +655,90 @@ test_that("public SBayesRC remains on the sparse CSR path", {
   expect_identical(fit$input$backend, "csr_sbayesrc")
   expect_false(identical(fit$input$ld_backend, "block_eigen"))
 })
+
+test_that("low-rank block-eigen SBayesRC diagnostic schedules preserve 1/1", {
+  skip_if_no_block_eigen_sbayesrc_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  common <- list(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    annotation = make_stblr_block_eigen_annotation(fixture),
+    block_start = 1L,
+    representation = "low_rank",
+    eigen_prop = 0.995,
+    low_rank_residual_rebuild_every = 1L,
+    updateAlpha = TRUE,
+    alpha_update_every = 1L,
+    updateB = TRUE,
+    updateE = TRUE,
+    nit = 4L,
+    nburn = 1L,
+    nchains = 1L,
+    keep_chains = TRUE,
+    ncores = 1L,
+    seed = 9631L
+  )
+  ordinary <- do.call(sblr:::.stblr_csr_sbayesrc_block_eigen, common)
+  one_one <- do.call(
+    sblr:::.stblr_csr_sbayesrc_block_eigen,
+    c(common, list(
+      .diagnostic_allocation_updates_per_cycle = 1L,
+      .diagnostic_annotation_updates_per_cycle = 1L
+    ))
+  )
+  for (field in c(
+      "bm", "dm", "b", "d", "vbs", "vgs", "ves", "vle", "vld",
+      "pis", "alpha", "sigmaSqAlpha", "comp_prob")) {
+    expect_identical(one_one[[field]], ordinary[[field]])
+  }
+  expect_identical(one_one$chains, ordinary$chains)
+})
+
+test_that("low-rank block-eigen SBayesRC diagnostic schedules remain finite", {
+  skip_if_no_block_eigen_sbayesrc_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  common <- list(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    annotation = make_stblr_block_eigen_annotation(fixture),
+    block_start = 1L,
+    representation = "low_rank",
+    eigen_prop = 0.995,
+    low_rank_residual_rebuild_every = 1L,
+    updateAlpha = TRUE,
+    alpha_update_every = 1L,
+    updateB = TRUE,
+    updateE = TRUE,
+    nit = 3L,
+    nburn = 1L,
+    nchains = 1L,
+    keep_chains = TRUE,
+    ncores = 1L,
+    seed = 9632L
+  )
+  schedules <- list(c(1L, 5L), c(1L, 20L), c(5L, 1L), c(20L, 1L))
+  for (schedule in schedules) {
+    fit <- do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(
+        .diagnostic_allocation_updates_per_cycle = schedule[1L],
+        .diagnostic_annotation_updates_per_cycle = schedule[2L]
+      ))
+    )
+    expect_true(all(is.finite(fit$alpha[[1L]])))
+    expect_true(all(is.finite(fit$sigmaSqAlpha)))
+    expect_true(all(is.finite(fit$vbs)))
+    expect_true(all(is.finite(fit$ves)))
+    expect_true(all(
+      fit$diagnostics$native$low_rank_residual$
+       low_rank_residual_max_abs_drift <= 1e-10
+    ))
+  }
+  expect_error(
+    do.call(
+      sblr:::.stblr_csr_sbayesrc_block_eigen,
+      c(common, list(.diagnostic_allocation_updates_per_cycle = 0L))
+    ),
+    "positive integer"
+  )
+})

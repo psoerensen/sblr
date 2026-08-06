@@ -490,3 +490,69 @@ test_that("BED BayesRC validates native inputs clearly", {
   check_bad("bed_files", tempfile(fileext = ".bed"), "Could not open BED")
   check_bad("cls", list(integer()), "no markers selected")
 })
+
+bed_bayesrc_schedule_prior <- function(prior, allocation, annotation) {
+  if (nrow(prior) == 3L) {
+    prior <- rbind(prior, update_sigmaSqAlpha = rep(1, ncol(prior)))
+  }
+  rbind(
+    prior,
+    allocation_updates_per_cycle = rep(allocation, ncol(prior)),
+    annotation_updates_per_cycle = rep(annotation, ncol(prior))
+  )
+}
+
+test_that("BED BayesRC diagnostic kernel schedules preserve defaults and trace RNG", {
+  skip_if_no_individual_bayesrc()
+  annotation <- cbind(intercept = 1, binary = c(0, 1))
+  base <- make_individual_bayesrc_args(
+    A = annotation, updateAlpha = TRUE, nit = 5L, nburn = 1L,
+    keep_chains = TRUE, seed = 9621L
+  )
+  explicit <- base
+  explicit$intercept_prior_resolved <- bed_bayesrc_schedule_prior(
+    base$intercept_prior_resolved, 1L, 1L)
+  ordinary <- do.call(sblr:::.stblr_bed_bayesrc_native, base)
+  one_one <- do.call(sblr:::.stblr_bed_bayesrc_native, explicit)
+  for (field in c("marker", "trace", "variance", "pi", "annotation", "component")) {
+    expect_identical(one_one[[field]], ordinary[[field]])
+  }
+
+  traced_args <- explicit
+  traced_args$convergence_markers <- 0:1
+  traced_args$convergence_component <- TRUE
+  traced <- do.call(sblr:::.stblr_bed_bayesrc_native, traced_args)
+  for (field in c("marker", "trace", "variance", "pi", "annotation", "component")) {
+    expect_identical(traced[[field]], one_one[[field]])
+  }
+  expect_equal(
+    dim(traced$chains[[1L]][[1L]]$convergence_trace$component), c(5L, 2L)
+  )
+})
+
+test_that("BED BayesRC diagnostic kernel schedules are finite and validated", {
+  skip_if_no_individual_bayesrc()
+  base <- make_individual_bayesrc_args(
+    A = cbind(intercept = 1, binary = c(0, 1)), updateAlpha = TRUE,
+    nit = 3L, nburn = 1L, keep_chains = TRUE, seed = 9622L
+  )
+  schedules <- list(c(1L, 5L), c(1L, 20L), c(5L, 1L), c(20L, 1L))
+  for (schedule in schedules) {
+    args <- base
+    args$intercept_prior_resolved <- bed_bayesrc_schedule_prior(
+      base$intercept_prior_resolved, schedule[1L], schedule[2L])
+    out <- do.call(sblr:::.stblr_bed_bayesrc_native, args)
+    expect_true(all(is.finite(out$annotation$alpha_final[[1L]])))
+    expect_true(all(is.finite(out$annotation$sigmaSqAlpha_final)))
+    expect_equal(
+      rowSums(out$annotation$marker_prior_final[[1L]]),
+      rep(1, nrow(base$A)), tolerance = 1e-12
+    )
+  }
+  bad <- base
+  bad$intercept_prior_resolved <- bed_bayesrc_schedule_prior(
+    base$intercept_prior_resolved, 0L, 1L)
+  expect_error(
+    do.call(sblr:::.stblr_bed_bayesrc_native, bad), "positive integers"
+  )
+})

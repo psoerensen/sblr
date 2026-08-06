@@ -127,32 +127,71 @@ static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
   arma::vec sigma_acc(K - 1, arma::fill::zeros);
   arma::vec log_inv_cpo(G.n, arma::fill::value(-std::numeric_limits<double>::infinity()));
   double nsamples = 0.0;
+  const int allocation_updates = intercept_prior.allocation_updates_per_cycle;
+  const int annotation_updates = intercept_prior.annotation_updates_per_cycle;
+  const bool legacy_schedule = allocation_updates == 1 && annotation_updates == 1;
 
   for (int it = 0; it < total_it; ++it) {
-   // Exact full sweep: every marker is visited once in marker_order every iteration.
-   for (int marker : marker_order) {
-    const arma::uword ju = static_cast<arma::uword>(marker);
-    double effect = b_t(ju);
-    int component = component_t(ju);
-    sample_marker_bayesrc(
-     G, marker, maps[static_cast<std::size_t>(marker)], snp_pi.row(ju), gamma,
-     vb, vei, residual, effect, component, gen, runif, norm01
-    );
-    b_t(ju) = effect;
-    component_t(ju) = component;
-   }
-   if (update_e && rebuild_every > 0 && ((it + 1) % rebuild_every == 0))
-    residual = y_t - br_xb(G, maps, marker_order, b_t);
-   if (update_b)
-    sampleB_bayesr(m, gamma, nub, vb, b_t, component_t, ssb_prior(trait, trait), gen);
-   if (update_e)
-    sampleE_bayesr(nue, ve, residual, sse_prior(trait, trait), gen);
-   if (update_alpha && ((it + 1) % alpha_every == 0)) {
-    st_bayesrc_update_annotation_prior(
-     annotation, component_t, annot_alpha, annot_sigma, intercept_prior,
-     sigma_a, sigma_b, gen
-    );
-    snp_pi = st_bayesrc_compute_snp_pi(annotation, annot_alpha, pi_floor);
+   if (legacy_schedule) {
+    // Preserve the historical 1/1 transition and RNG order exactly.
+    for (int marker : marker_order) {
+     const arma::uword ju = static_cast<arma::uword>(marker);
+     double effect = b_t(ju);
+     int component = component_t(ju);
+     sample_marker_bayesrc(
+      G, marker, maps[static_cast<std::size_t>(marker)], snp_pi.row(ju), gamma,
+      vb, vei, residual, effect, component, gen, runif, norm01
+     );
+     b_t(ju) = effect;
+     component_t(ju) = component;
+    }
+    if (update_e && rebuild_every > 0 && ((it + 1) % rebuild_every == 0))
+     residual = y_t - br_xb(G, maps, marker_order, b_t);
+    if (update_b)
+     sampleB_bayesr(m, gamma, nub, vb, b_t, component_t, ssb_prior(trait, trait), gen);
+    if (update_e)
+     sampleE_bayesr(nue, ve, residual, sse_prior(trait, trait), gen);
+    if (update_alpha && ((it + 1) % alpha_every == 0)) {
+     st_bayesrc_update_annotation_prior(
+      annotation, component_t, annot_alpha, annot_sigma, intercept_prior,
+      sigma_a, sigma_b, gen
+     );
+     snp_pi = st_bayesrc_compute_snp_pi(annotation, annot_alpha, pi_floor);
+    }
+   } else {
+    for (int allocation_rep = 0; allocation_rep < allocation_updates;
+         ++allocation_rep) {
+     for (int marker : marker_order) {
+      const arma::uword ju = static_cast<arma::uword>(marker);
+      double effect = b_t(ju);
+      int component = component_t(ju);
+      sample_marker_bayesrc(
+       G, marker, maps[static_cast<std::size_t>(marker)], snp_pi.row(ju), gamma,
+       vb, vei, residual, effect, component, gen, runif, norm01
+      );
+      b_t(ju) = effect;
+      component_t(ju) = component;
+     }
+     const int allocation_index = it * allocation_updates + allocation_rep + 1;
+     if (update_e && rebuild_every > 0 && allocation_index % rebuild_every == 0)
+      residual = y_t - br_xb(G, maps, marker_order, b_t);
+     if (update_b)
+      sampleB_bayesr(m, gamma, nub, vb, b_t, component_t, ssb_prior(trait, trait), gen);
+     if (update_e)
+      sampleE_bayesr(nue, ve, residual, sse_prior(trait, trait), gen);
+     vg = br_computeG(y_t, residual);
+     vei = ve + adjE * vg;
+    }
+    if (update_alpha && ((it + 1) % alpha_every == 0)) {
+     for (int annotation_rep = 0; annotation_rep < annotation_updates;
+          ++annotation_rep) {
+      st_bayesrc_update_annotation_prior(
+       annotation, component_t, annot_alpha, annot_sigma, intercept_prior,
+       sigma_a, sigma_b, gen
+      );
+      snp_pi = st_bayesrc_compute_snp_pi(annotation, annot_alpha, pi_floor);
+     }
+    }
    }
    vg = br_computeG(y_t, residual);
    const double vle = br_computeLE(b_t, maps, G.n);
