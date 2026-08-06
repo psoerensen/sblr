@@ -64,20 +64,29 @@ inline double st_bayesrc_sample_truncated_normal_std(
  return positive ? sample_lower(mu) : -sample_lower(-mu);
 }
 
-inline arma::mat st_bayesrc_compute_snp_pi(
+inline arma::mat st_bayesrc_compute_tempered_snp_pi(
   const arma::mat& annotation_matrix,
   const arma::mat& annot_alpha,
+  const arma::vec& baseline_intercept,
+  double coupling,
   double pi_floor
 ) {
  const int m = static_cast<int>(annotation_matrix.n_rows);
  const int nstep = static_cast<int>(annot_alpha.n_cols);
  const int ncomponent = nstep + 1;
+ if (baseline_intercept.n_elem != static_cast<arma::uword>(nstep) ||
+     !baseline_intercept.is_finite() || !std::isfinite(coupling) ||
+     coupling < 0.0 || coupling > 1.0) {
+  throw std::runtime_error("BayesRC tempered coupling inputs are invalid.");
+ }
 
  arma::mat p(m, nstep, arma::fill::zeros);
  arma::mat snp_pi(m, ncomponent, arma::fill::zeros);
 
  for (int j = 0; j < nstep; ++j) {
-  arma::vec eta = annotation_matrix * annot_alpha.col(static_cast<arma::uword>(j));
+  arma::vec eta = (1.0 - coupling) * baseline_intercept(
+   static_cast<arma::uword>(j)) +
+   coupling * annotation_matrix * annot_alpha.col(static_cast<arma::uword>(j));
   for (int i = 0; i < m; ++i) {
    p(static_cast<arma::uword>(i), static_cast<arma::uword>(j)) =
     st_bayesrc_safe_pnorm(eta(static_cast<arma::uword>(i)));
@@ -112,6 +121,42 @@ inline arma::mat st_bayesrc_compute_snp_pi(
  return snp_pi;
 }
 
+inline arma::mat st_bayesrc_compute_snp_pi(
+  const arma::mat& annotation_matrix,
+  const arma::mat& annot_alpha,
+  double pi_floor
+) {
+ return st_bayesrc_compute_tempered_snp_pi(
+  annotation_matrix, annot_alpha,
+  arma::vec(annot_alpha.n_cols, arma::fill::zeros), 1.0, pi_floor);
+}
+
+inline double st_bayesrc_tempered_log_allocation_prior(
+  const arma::mat& annotation_matrix,
+  const arma::mat& annot_alpha,
+  const arma::vec& baseline_intercept,
+  double coupling,
+  double pi_floor,
+  const arma::Row<int>& component
+) {
+ const arma::mat probability = st_bayesrc_compute_tempered_snp_pi(
+  annotation_matrix, annot_alpha, baseline_intercept, coupling, pi_floor);
+ if (component.n_elem != probability.n_rows) {
+  throw std::runtime_error(
+   "BayesRC tempered allocation state has the wrong marker count.");
+ }
+ double result = 0.0;
+ for (arma::uword marker = 0; marker < component.n_elem; ++marker) {
+  const int state = component(marker);
+  if (state < 0 || state >= static_cast<int>(probability.n_cols)) {
+   throw std::runtime_error(
+    "BayesRC tempered allocation state contains an invalid component.");
+  }
+  result += std::log(probability(marker, static_cast<arma::uword>(state)));
+ }
+ return result;
+}
+
 inline void st_bayesrc_build_step_indicators(
   const arma::Row<int>& component,
   arma::Mat<int>& step_indicators
@@ -135,6 +180,8 @@ struct StBayesRCInterceptPrior {
  bool update_variance;
  int allocation_updates_per_cycle;
  int annotation_updates_per_cycle;
+ bool coupling_tempering;
+ int coupling_swap_every;
  arma::vec mean;
  arma::vec precision;
 };
@@ -143,24 +190,35 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
   const arma::mat& resolved,
   int nstep
 ) {
- if ((resolved.n_rows != 3 && resolved.n_rows != 4 && resolved.n_rows != 6) ||
+ if ((resolved.n_rows != 3 && resolved.n_rows != 4 &&
+      resolved.n_rows != 6 && resolved.n_rows != 8) ||
      resolved.n_cols != static_cast<arma::uword>(nstep) ||
      !resolved.is_finite()) {
   throw std::runtime_error(
-   "BayesRC resolved annotation control must be a finite 3, 4, or 6 by nstep matrix.");
+   "BayesRC resolved annotation control must be a finite 3, 4, 6, or 8 by nstep matrix.");
  }
  const bool legacy_flat = resolved(0, 0) == 1.0;
  const bool update_variance = resolved.n_rows == 3 || resolved(3, 0) == 1.0;
- const int allocation_updates = resolved.n_rows == 6
+ const int allocation_updates = resolved.n_rows >= 6
   ? static_cast<int>(resolved(4, 0)) : 1;
- const int annotation_updates = resolved.n_rows == 6
+ const int annotation_updates = resolved.n_rows >= 6
   ? static_cast<int>(resolved(5, 0)) : 1;
+ const bool coupling_tempering = resolved.n_rows == 8 && resolved(6, 0) == 1.0;
+ const int coupling_swap_every = resolved.n_rows == 8
+  ? static_cast<int>(resolved(7, 0)) : 0;
  if (allocation_updates <= 0 || annotation_updates <= 0 ||
-     (resolved.n_rows == 6 &&
+     (resolved.n_rows >= 6 &&
       (resolved(4, 0) != static_cast<double>(allocation_updates) ||
        resolved(5, 0) != static_cast<double>(annotation_updates)))) {
   throw std::runtime_error(
    "BayesRC diagnostic kernel-update counts must be positive integers.");
+ }
+ if (resolved.n_rows == 8 &&
+     ((!coupling_tempering && resolved(6, 0) != 0.0) ||
+      (coupling_tempering && coupling_swap_every <= 0) ||
+      resolved(7, 0) != static_cast<double>(coupling_swap_every))) {
+  throw std::runtime_error(
+   "BayesRC coupling-tempering controls are invalid.");
  }
  for (int j = 0; j < nstep; ++j) {
   if (resolved(0, static_cast<arma::uword>(j)) != (legacy_flat ? 1.0 : 0.0)) {
@@ -175,7 +233,7 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
    throw std::runtime_error(
     "BayesRC annotation-variance update policy must be consistent across sticks.");
   }
-  if (resolved.n_rows == 6 &&
+  if (resolved.n_rows >= 6 &&
       (resolved(3, static_cast<arma::uword>(j)) !=
         (update_variance ? 1.0 : 0.0) ||
        resolved(4, static_cast<arma::uword>(j)) != allocation_updates ||
@@ -183,9 +241,17 @@ inline StBayesRCInterceptPrior st_bayesrc_parse_intercept_prior(
    throw std::runtime_error(
     "BayesRC diagnostic annotation controls must be consistent across sticks.");
   }
+  if (resolved.n_rows == 8 &&
+      (resolved(6, static_cast<arma::uword>(j)) !=
+        (coupling_tempering ? 1.0 : 0.0) ||
+       resolved(7, static_cast<arma::uword>(j)) != coupling_swap_every)) {
+   throw std::runtime_error(
+    "BayesRC coupling-tempering controls must be consistent across sticks.");
+  }
  }
  return StBayesRCInterceptPrior{
   legacy_flat, update_variance, allocation_updates, annotation_updates,
+  coupling_tempering, coupling_swap_every,
   resolved.row(1).t(), resolved.row(2).t()
  };
 }
@@ -240,7 +306,8 @@ inline double st_bayesrc_sample_sigma_sq_alpha(
  return value;
 }
 
-inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
+inline StBayesRCAnnotationUpdateDiagnostics
+st_bayesrc_update_tempered_annotation_prior(
   const arma::mat& annotation_matrix,
   const arma::Row<int>& component,
   arma::mat& annot_alpha,
@@ -248,11 +315,18 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
   const StBayesRCInterceptPrior& intercept_prior,
   double annot_sigma_sq_alpha_a,
   double annot_sigma_sq_alpha_b,
+  const arma::vec& baseline_intercept,
+  double coupling,
   std::mt19937& gen
 ) {
  const int m = static_cast<int>(annotation_matrix.n_rows);
  const int n_annot = static_cast<int>(annotation_matrix.n_cols);
  const int nstep = static_cast<int>(annot_alpha.n_cols);
+ if (baseline_intercept.n_elem != static_cast<arma::uword>(nstep) ||
+     !baseline_intercept.is_finite() || !std::isfinite(coupling) ||
+     coupling < 0.0 || coupling > 1.0) {
+  throw std::runtime_error("BayesRC tempered annotation inputs are invalid.");
+ }
 
  arma::Mat<int> step_indicators(m, nstep, arma::fill::zeros);
  st_bayesrc_build_step_indicators(component, step_indicators);
@@ -311,9 +385,11 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
 
   for (int ii = 0; ii < nj; ++ii) {
    const int i = idx[static_cast<std::size_t>(ii)];
-   double s = 0.0;
+   double s = (1.0 - coupling) * baseline_intercept(
+    static_cast<arma::uword>(j));
    for (int k = 0; k < n_annot; ++k) {
-    s += annotation_matrix(static_cast<arma::uword>(i), static_cast<arma::uword>(k)) *
+    s += coupling * annotation_matrix(
+     static_cast<arma::uword>(i), static_cast<arma::uword>(k)) *
      annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j));
    }
    mu(static_cast<arma::uword>(ii)) = s;
@@ -341,8 +417,8 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
 
    for (int ii = 0; ii < nj; ++ii) {
     const int i = idx[static_cast<std::size_t>(ii)];
-    const double x = annotation_matrix(static_cast<arma::uword>(i),
-                                       static_cast<arma::uword>(k));
+    const double x = coupling * annotation_matrix(
+     static_cast<arma::uword>(i), static_cast<arma::uword>(k));
     diag_k += x * x;
     rhs += x * resid(static_cast<arma::uword>(ii));
    }
@@ -359,16 +435,24 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
      continue;
     }
     if (intercept) {
-     throw std::runtime_error(
-      "BayesRC non-empty stick has an unavailable intercept column.");
+     if (intercept_prior.legacy_flat) {
+      throw std::runtime_error(
+       "BayesRC flat intercept prior is improper at zero coupling.");
+     }
+     std::normal_distribution<double> intercept_norm(
+      intercept_prior.mean(static_cast<arma::uword>(j)),
+      1.0 / std::sqrt(intercept_prior.precision(static_cast<arma::uword>(j))));
+     annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) =
+      intercept_norm(gen);
+    } else {
+     const double sig = annot_sigma_sq_alpha(static_cast<arma::uword>(j));
+     if (!std::isfinite(sig) || sig <= 0.0) {
+      throw std::runtime_error("BayesRC sigmaSqAlpha must remain positive and finite.");
+     }
+     std::normal_distribution<double> coefficient_norm(0.0, std::sqrt(sig));
+     annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) =
+      coefficient_norm(gen);
     }
-    const double sig = annot_sigma_sq_alpha(static_cast<arma::uword>(j));
-    if (!std::isfinite(sig) || sig <= 0.0) {
-     throw std::runtime_error("BayesRC sigmaSqAlpha must remain positive and finite.");
-    }
-    std::normal_distribution<double> coefficient_norm(0.0, std::sqrt(sig));
-    annot_alpha(static_cast<arma::uword>(k), static_cast<arma::uword>(j)) =
-     coefficient_norm(gen);
     continue;
    }
 
@@ -400,8 +484,8 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
    if (diff_old_new != 0.0) {
     for (int ii = 0; ii < nj; ++ii) {
      const int i = idx[static_cast<std::size_t>(ii)];
-     const double x = annotation_matrix(static_cast<arma::uword>(i),
-                                        static_cast<arma::uword>(k));
+     const double x = coupling * annotation_matrix(
+      static_cast<arma::uword>(i), static_cast<arma::uword>(k));
      resid(static_cast<arma::uword>(ii)) += x * diff_old_new;
     }
    }
@@ -424,6 +508,22 @@ inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
   }
  }
  return diagnostics;
+}
+
+inline StBayesRCAnnotationUpdateDiagnostics st_bayesrc_update_annotation_prior(
+  const arma::mat& annotation_matrix,
+  const arma::Row<int>& component,
+  arma::mat& annot_alpha,
+  arma::vec& annot_sigma_sq_alpha,
+  const StBayesRCInterceptPrior& intercept_prior,
+  double annot_sigma_sq_alpha_a,
+  double annot_sigma_sq_alpha_b,
+  std::mt19937& gen
+) {
+ return st_bayesrc_update_tempered_annotation_prior(
+  annotation_matrix, component, annot_alpha, annot_sigma_sq_alpha,
+  intercept_prior, annot_sigma_sq_alpha_a, annot_sigma_sq_alpha_b,
+  intercept_prior.mean, 1.0, gen);
 }
 
 #endif

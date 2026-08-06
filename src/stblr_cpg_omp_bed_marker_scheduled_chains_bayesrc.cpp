@@ -41,7 +41,7 @@ static Rcpp::List stblr_bed_bayesrc_result_to_raw(
    Rcpp::List trait_chains(metadata.nchains);
    for (int ch=0;ch<metadata.nchains;++ch) {
     const auto& z=result.retained_chains[static_cast<std::size_t>(ch*metadata.nt+t)];
-    trait_chains[ch]=Rcpp::List::create(
+    Rcpp::List chain_out=Rcpp::List::create(
      Rcpp::Named("bm")=z.bm,Rcpp::Named("dm")=z.dm,
      Rcpp::Named("b")=z.b,Rcpp::Named("state")=z.state,
      Rcpp::Named("comp_prob")=z.comp_prob,
@@ -57,6 +57,17 @@ static Rcpp::List stblr_bed_bayesrc_result_to_raw(
      Rcpp::Named("ves")=z.ves,Rcpp::Named("vle")=z.vles,
      Rcpp::Named("vld")=z.vlds,Rcpp::Named("pis")=z.pis
     );
+    if (z.coupling_tempering) {
+     chain_out["coupling_tempering"]=Rcpp::List::create(
+      Rcpp::Named("lambda")=Rcpp::NumericVector::create(0.0,0.5,1.0),
+      Rcpp::Named("replica_identity")=z.coupling_replica_identity,
+      Rcpp::Named("active_count")=z.coupling_active_count,
+      Rcpp::Named("expected_active_count")=z.coupling_expected_active,
+      Rcpp::Named("swap")=z.coupling_swap,
+      Rcpp::Named("transition_seconds")=z.coupling_transition_seconds,
+      Rcpp::Named("swap_seconds")=z.coupling_swap_seconds);
+    }
+    trait_chains[ch]=chain_out;
    }
    retained_chains[t]=trait_chains;
   }
@@ -112,6 +123,79 @@ static Rcpp::List stblr_bed_bayesrc_result_to_raw(
  );
  raw.attr("class")=Rcpp::CharacterVector::create("stblr_raw_v1","stblr_raw","list");
  return raw;
+}
+
+// Development-only hooks for validating the coupling target and exchange
+// algebra. They are not exported from the package namespace.
+// [[Rcpp::export(name = ".st_bayesrc_tempered_probabilities")]]
+arma::mat st_bayesrc_tempered_probabilities_test(
+ arma::mat annotation, arma::mat alpha, arma::vec baseline_intercept,
+ double coupling, double probability_floor
+) {
+ return st_bayesrc_compute_tempered_snp_pi(
+  annotation,alpha,baseline_intercept,coupling,probability_floor);
+}
+
+// [[Rcpp::export(name = ".st_bayesrc_tempered_annotation_update")]]
+Rcpp::List st_bayesrc_tempered_annotation_update_test(
+ arma::mat annotation, arma::rowvec component_numeric, arma::mat alpha,
+ arma::vec sigma_sq_alpha, arma::mat intercept_prior_resolved,
+ double sigma_alpha_a, double sigma_alpha_b, arma::vec baseline_intercept,
+ double coupling, int seed
+) {
+ arma::Row<int> component(component_numeric.n_elem);
+ for (arma::uword index=0;index<component_numeric.n_elem;++index) {
+  const double value=component_numeric(index);
+  if (!std::isfinite(value) || value<0.0 || value!=std::floor(value))
+   throw std::invalid_argument("component must contain non-negative integers.");
+  component(index)=static_cast<int>(value);
+ }
+ const auto prior=st_bayesrc_parse_intercept_prior(
+  intercept_prior_resolved,static_cast<int>(alpha.n_cols));
+ std::mt19937 generator(static_cast<std::mt19937::result_type>(seed));
+ const auto diagnostics=st_bayesrc_update_tempered_annotation_prior(
+  annotation,component,alpha,sigma_sq_alpha,prior,sigma_alpha_a,
+  sigma_alpha_b,baseline_intercept,coupling,generator);
+ return Rcpp::List::create(
+  Rcpp::Named("alpha")=alpha,Rcpp::Named("sigmaSqAlpha")=sigma_sq_alpha,
+  Rcpp::Named("eligible")=diagnostics.eligible,
+  Rcpp::Named("continuation")=diagnostics.continuation,
+  Rcpp::Named("prior_only")=diagnostics.prior_only);
+}
+
+// [[Rcpp::export(name = ".st_bayesrc_coupling_swap_log_ratio")]]
+double st_bayesrc_coupling_swap_log_ratio_test(
+ arma::mat annotation, arma::mat alpha_lower, arma::rowvec component_lower_numeric,
+ arma::mat alpha_upper, arma::rowvec component_upper_numeric,
+ arma::vec baseline_intercept, double coupling_lower, double coupling_upper,
+ double probability_floor
+) {
+ if (component_lower_numeric.n_elem!=component_upper_numeric.n_elem)
+  throw std::invalid_argument("coupling swap component states must be aligned.");
+ arma::Row<int> component_lower(component_lower_numeric.n_elem);
+ arma::Row<int> component_upper(component_upper_numeric.n_elem);
+ for (arma::uword index=0;index<component_lower.n_elem;++index) {
+  const double lower=component_lower_numeric(index);
+  const double upper=component_upper_numeric(index);
+  if (!std::isfinite(lower) || !std::isfinite(upper) || lower<0.0 || upper<0.0 ||
+      lower!=std::floor(lower) || upper!=std::floor(upper))
+   throw std::invalid_argument("coupling swap components must be non-negative integers.");
+  component_lower(index)=static_cast<int>(lower);
+  component_upper(index)=static_cast<int>(upper);
+ }
+ return
+  st_bayesrc_tempered_log_allocation_prior(
+   annotation,alpha_upper,baseline_intercept,coupling_lower,
+   probability_floor,component_upper)+
+  st_bayesrc_tempered_log_allocation_prior(
+   annotation,alpha_lower,baseline_intercept,coupling_upper,
+   probability_floor,component_lower)-
+  st_bayesrc_tempered_log_allocation_prior(
+   annotation,alpha_lower,baseline_intercept,coupling_lower,
+   probability_floor,component_lower)-
+  st_bayesrc_tempered_log_allocation_prior(
+   annotation,alpha_upper,baseline_intercept,coupling_upper,
+   probability_floor,component_upper);
 }
 
 // [[Rcpp::export]]

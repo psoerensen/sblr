@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "source_head": "8908267a68a46267fcccb910850b4f6380bfa978",
+  "sblrbench_head": "de31f62e182d8540488d4135df4c58f052a515d9",
+  "specification_hash": "241c15afab8fefc571e38e625130de6e4ab58b958c30cff369e26998ee30fa56",
+  "truth_hash": "169d52bef390022a9106d7e61b200493869b40cbb76f1c8d911eebbc80fea1eb",
+  "recovery_patch": {
+    "path": "results/local/study06_bed_coupling_tempering_screen/pre_partial_exchange_audit.patch",
+    "sha256": "b425a5f20c757bc71d097740ea30c7c0b33cc00dd31312e8436adf2e3d5d5647"
+  },
+  "retained_state": {
+    "target_component": true,
+    "target_effect": true,
+    "target_alpha": true,
+    "target_sigmaSqAlpha": true,
+    "all_slot_identity": true,
+    "all_slot_active_count": true,
+    "all_slot_expected_active_count": true,
+    "recorded_exchange_ratio": true,
+    "lower_slot_component": false,
+    "lower_slot_effect": false,
+    "lower_slot_residual": false,
+    "lower_slot_alpha": false,
+    "lower_slot_sigmaSqAlpha": false,
+    "lower_slot_marker_probability": false
+  },
+  "complete_ratio_reproduction": {
+    "available": false,
+    "reason": "slot-0 and slot-0.5 allocations and alpha were not retained"
+  },
+  "partial_proposals": {
+    "P1": "unavailable",
+    "P2": "unavailable",
+    "P3": "unavailable",
+    "P4": "unavailable",
+    "P5": "unavailable",
+    "P6": "unavailable",
+    "P7": "unavailable",
+    "P8": "unavailable",
+    "P9": "invalid_or_unavailable"
+  },
+  "retained_scalar_evidence": {
+    "pair_0_0.5_median_active_difference": 48.0,
+    "pair_0_0.5_median_log_ratio": -348.1711,
+    "pair_0.5_1_median_active_difference": -7.0,
+    "pair_0.5_1_median_log_ratio": -454.5981,
+    "global_sparsity_is_sole_explanation": false
+  },
+  "matched_endpoint_audit": "unavailable",
+  "mean_preserving_path_audit": "unavailable",
+  "marker_count_scaling": "unavailable",
+  "primary_decision": "F6",
+  "recommendation": "design a compact exchange-attempt state-retention schema before any further short diagnostic run",
+  "proposal_recommended_for_implementation": false,
+  "mcmc_ran": false,
+  "native_sampler_changed": false,
+  "defaults_changed": false,
+  "sibling_modified": false,
+  "formal_qualification_rerun": false,
+  "final_benchmark_launched": false
+}

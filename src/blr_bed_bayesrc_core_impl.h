@@ -4,6 +4,9 @@
 #include "blr_bed_bayesrc_types.h"
 #include "st_bayesrc_annotation_prior.h"
 
+#include <array>
+#include <chrono>
+
 // Implementation detail: included only by the packed-BED BayesRC binding unit.
 namespace sblr { namespace core {
 
@@ -56,10 +59,285 @@ static inline void sample_marker_bayesrc(
  component = component_new;
 }
 
+struct BedBayesRCTemperedReplicaState {
+ arma::rowvec effect;
+ arma::Row<int> component;
+ arma::vec residual;
+ double marker_variance=0.0, genetic_variance=0.0;
+ double residual_variance=0.0, adjusted_residual_variance=0.0;
+ arma::mat alpha, marker_probability;
+ arma::vec sigma_sq_alpha;
+ int identity=0;
+ std::mt19937 generator;
+ std::uniform_real_distribution<double> uniform{0.0,1.0};
+ std::normal_distribution<double> normal{0.0,1.0};
+};
+
+static inline std::uint32_t bed_bayesrc_tempered_seed(
+ std::uint64_t ensemble_seed, std::uint64_t stream
+) {
+ std::uint64_t value = ensemble_seed + 0x9e3779b97f4a7c15ULL * (stream + 1ULL);
+ value = (value ^ (value >> 30U)) * 0xbf58476d1ce4e5b9ULL;
+ value = (value ^ (value >> 27U)) * 0x94d049bb133111ebULL;
+ value ^= value >> 31U;
+ return static_cast<std::uint32_t>(value);
+}
+
+template <class PackedGenotype, class AnnotationMatrix, class MarkerMap>
+static BedBayesRCChainExecutionResult run_bed_bayesrc_coupling_tempering_chain(
+ const BedBayesRCChainExecutionContext<PackedGenotype,AnnotationMatrix,MarkerMap>& context
+) {
+ validate_bed_bayesrc_chain_context(context);
+ const auto& prior = context.coefficient_prior.intercept_prior;
+ if (!prior.coupling_tempering || prior.coupling_swap_every <= 0 ||
+     prior.legacy_flat || !context.coefficient_prior.update_coefficients ||
+     context.coefficient_prior.update_every != 1 ||
+     prior.allocation_updates_per_cycle != 1 ||
+     prior.annotation_updates_per_cycle != 1) {
+  throw std::runtime_error(
+   "BayesRC coupling tempering requires a proper intercept prior, alpha updates every cycle, and a 1/1 kernel schedule.");
+ }
+ const auto& G=context.genotype.storage;
+ const auto& maps=context.marker_maps;
+ const auto& marker_order=context.marker_order;
+ const auto& annotation=context.annotation.matrix;
+ const auto& gamma=context.components.scales;
+ const int trait=context.trait_index;
+ const int m=G.m, K=static_cast<int>(gamma.size());
+ const int total_it=context.iterations+context.burnin;
+ const std::array<double,3> coupling{{0.0,0.5,1.0}};
+ const arma::vec baseline=prior.mean;
+ const arma::vec phenotype=context.phenotype.col(static_cast<arma::uword>(trait));
+
+ BedBayesRCChainExecutionResult out;
+ out.coupling_tempering=true;
+ out.bm.zeros(m); out.dm.zeros(m); out.component_mean.zeros(m);
+ out.b.zeros(m); out.state.zeros(m);
+ out.vbs.zeros(total_it); out.vgs.zeros(total_it); out.ves.zeros(total_it);
+ out.vles.zeros(total_it); out.vlds.zeros(total_it); out.pis.zeros(total_it);
+ out.comp_prob.zeros(m,K); out.mean_prior.zeros(K);
+ if (context.convergence_annotations) {
+  out.convergence_alpha.zeros(context.iterations,annotation.n_cols*(K-1));
+  out.convergence_sigma.zeros(context.iterations,K-1);
+ }
+ if (context.convergence_b)
+  out.convergence_b.zeros(context.iterations,context.convergence_markers.size());
+ if (context.convergence_d)
+  out.convergence_d.zeros(context.iterations,context.convergence_markers.size());
+ if (context.convergence_component)
+  out.convergence_component.zeros(context.iterations,context.convergence_markers.size());
+ out.coupling_replica_identity.zeros(context.iterations,3);
+ out.coupling_active_count.zeros(context.iterations,3);
+ out.coupling_expected_active.zeros(context.iterations,3);
+ const int maximum_attempts=total_it/prior.coupling_swap_every;
+ out.coupling_swap.zeros(maximum_attempts,9);
+
+ std::vector<BedBayesRCTemperedReplicaState> replica(3);
+ for (int slot=0;slot<3;++slot) {
+  auto& state=replica[static_cast<std::size_t>(slot)];
+  state.effect.zeros(m); state.component.zeros(m);
+  for (int marker=0;marker<m;++marker) {
+   state.effect(static_cast<arma::uword>(marker))=
+    context.initial_effects[static_cast<std::size_t>(trait)][static_cast<std::size_t>(marker)];
+   state.component(static_cast<arma::uword>(marker))=
+    state.effect(static_cast<arma::uword>(marker))!=0.0 ? 1 : 0;
+  }
+  state.residual=phenotype-br_xb(G,maps,marker_order,state.effect);
+  state.marker_variance=context.initial_B(trait,trait);
+  state.residual_variance=context.initial_E(trait,trait);
+  state.genetic_variance=br_computeG(phenotype,state.residual);
+  state.adjusted_residual_variance=state.residual_variance+
+   context.adjE*state.genetic_variance;
+  state.alpha=context.coefficient_prior.initial_alpha;
+  state.sigma_sq_alpha=context.coefficient_prior.initial_step_variances;
+  state.marker_probability=st_bayesrc_compute_tempered_snp_pi(
+   annotation,state.alpha,baseline,coupling[static_cast<std::size_t>(slot)],
+   context.pi_floor);
+  state.identity=slot;
+  state.generator.seed(bed_bayesrc_tempered_seed(context.chain_seed,slot));
+ }
+ std::mt19937 swap_generator(bed_bayesrc_tempered_seed(context.chain_seed,17));
+ std::uniform_real_distribution<double> swap_uniform(0.0,1.0);
+ arma::mat alpha_acc(annotation.n_cols,K-1,arma::fill::zeros);
+ arma::vec sigma_acc(K-1,arma::fill::zeros);
+ arma::vec log_inv_cpo(G.n,arma::fill::value(-std::numeric_limits<double>::infinity()));
+ double nsamples=0.0;
+ int attempt=0;
+
+ for (int it=0;it<total_it;++it) {
+  const auto transition_start=std::chrono::steady_clock::now();
+  for (int slot=0;slot<3;++slot) {
+   auto& state=replica[static_cast<std::size_t>(slot)];
+   for (int marker:marker_order) {
+    const arma::uword index=static_cast<arma::uword>(marker);
+    double effect=state.effect(index);
+    int component=state.component(index);
+    sample_marker_bayesrc(
+     G,marker,maps[static_cast<std::size_t>(marker)],
+     state.marker_probability.row(index),gamma,state.marker_variance,
+     state.adjusted_residual_variance,state.residual,effect,component,
+     state.generator,state.uniform,state.normal);
+    state.effect(index)=effect;
+    state.component(index)=component;
+   }
+   if (context.update_residual_variance && context.rebuild_every>0 &&
+       ((it+1)%context.rebuild_every==0))
+    state.residual=phenotype-br_xb(G,maps,marker_order,state.effect);
+   if (context.update_marker_variance)
+    sampleB_bayesr(m,gamma,context.nub,state.marker_variance,state.effect,
+     state.component,context.ssb_prior(trait,trait),state.generator);
+   if (context.update_residual_variance)
+    sampleE_bayesr(context.nue,state.residual_variance,state.residual,
+     context.sse_prior(trait,trait),state.generator);
+   st_bayesrc_update_tempered_annotation_prior(
+    annotation,state.component,state.alpha,state.sigma_sq_alpha,prior,
+    context.coefficient_prior.inverse_chisq_df,
+    context.coefficient_prior.inverse_chisq_scale,baseline,
+    coupling[static_cast<std::size_t>(slot)],state.generator);
+   state.marker_probability=st_bayesrc_compute_tempered_snp_pi(
+    annotation,state.alpha,baseline,coupling[static_cast<std::size_t>(slot)],
+    context.pi_floor);
+   state.genetic_variance=br_computeG(phenotype,state.residual);
+   state.adjusted_residual_variance=state.residual_variance+
+    context.adjE*state.genetic_variance;
+  }
+  out.coupling_transition_seconds+=std::chrono::duration<double>(
+   std::chrono::steady_clock::now()-transition_start).count();
+
+  if ((it+1)%prior.coupling_swap_every==0) {
+   const auto swap_start=std::chrono::steady_clock::now();
+   const int lower=attempt%2;
+   const int upper=lower+1;
+   const auto& lower_state=replica[static_cast<std::size_t>(lower)];
+   const auto& upper_state=replica[static_cast<std::size_t>(upper)];
+   const double log_ratio=
+    st_bayesrc_tempered_log_allocation_prior(
+     annotation,upper_state.alpha,baseline,coupling[static_cast<std::size_t>(lower)],
+     context.pi_floor,upper_state.component)+
+    st_bayesrc_tempered_log_allocation_prior(
+     annotation,lower_state.alpha,baseline,coupling[static_cast<std::size_t>(upper)],
+     context.pi_floor,lower_state.component)-
+    st_bayesrc_tempered_log_allocation_prior(
+     annotation,lower_state.alpha,baseline,coupling[static_cast<std::size_t>(lower)],
+     context.pi_floor,lower_state.component)-
+    st_bayesrc_tempered_log_allocation_prior(
+     annotation,upper_state.alpha,baseline,coupling[static_cast<std::size_t>(upper)],
+     context.pi_floor,upper_state.component);
+   if (!std::isfinite(log_ratio))
+    throw std::runtime_error("BayesRC coupling-tempering swap ratio is non-finite.");
+   const double probability=std::exp(std::min(0.0,log_ratio));
+   const int lower_identity=lower_state.identity;
+   const int upper_identity=upper_state.identity;
+   const double target_before=arma::accu(replica[2].component>0);
+   const bool accepted=swap_uniform(swap_generator)<probability;
+   if (accepted) {
+    std::swap(replica[static_cast<std::size_t>(lower)],
+              replica[static_cast<std::size_t>(upper)]);
+    for (int slot:std::array<int,2>{{lower,upper}}) {
+     auto& state=replica[static_cast<std::size_t>(slot)];
+     state.marker_probability=st_bayesrc_compute_tempered_snp_pi(
+      annotation,state.alpha,baseline,coupling[static_cast<std::size_t>(slot)],
+      context.pi_floor);
+    }
+   }
+   out.coupling_swap(attempt,0)=it+1;
+   out.coupling_swap(attempt,1)=lower;
+   out.coupling_swap(attempt,2)=accepted ? 1.0 : 0.0;
+   out.coupling_swap(attempt,3)=probability;
+   out.coupling_swap(attempt,4)=log_ratio;
+   out.coupling_swap(attempt,5)=lower_identity;
+   out.coupling_swap(attempt,6)=upper_identity;
+   out.coupling_swap(attempt,7)=target_before;
+   out.coupling_swap(attempt,8)=arma::accu(replica[2].component>0);
+   ++attempt;
+   out.coupling_swap_seconds+=std::chrono::duration<double>(
+    std::chrono::steady_clock::now()-swap_start).count();
+  }
+
+  auto& target=replica[2];
+  target.genetic_variance=br_computeG(phenotype,target.residual);
+  target.adjusted_residual_variance=target.residual_variance+
+   context.adjE*target.genetic_variance;
+  out.vbs(static_cast<arma::uword>(it))=target.marker_variance;
+  out.vgs(static_cast<arma::uword>(it))=target.genetic_variance;
+  out.ves(static_cast<arma::uword>(it))=target.residual_variance;
+  const double vle=br_computeLE(target.effect,maps,G.n);
+  out.vles(static_cast<arma::uword>(it))=vle;
+  out.vlds(static_cast<arma::uword>(it))=target.genetic_variance-vle;
+  out.pis(static_cast<arma::uword>(it))=
+   1.0-arma::mean(target.marker_probability.col(0));
+  if (it>=context.burnin) {
+   const arma::uword draw=static_cast<arma::uword>(it-context.burnin);
+   for (int slot=0;slot<3;++slot) {
+    const auto& state=replica[static_cast<std::size_t>(slot)];
+    out.coupling_replica_identity(draw,slot)=state.identity;
+    out.coupling_active_count(draw,slot)=arma::accu(state.component>0);
+    out.coupling_expected_active(draw,slot)=arma::accu(
+     1.0-state.marker_probability.col(0));
+   }
+   if (context.convergence_annotations) {
+    arma::uword q=0;
+    for (int stick=0;stick<K-1;++stick)
+     for (arma::uword annotation_index=0;
+          annotation_index<annotation.n_cols;++annotation_index)
+      out.convergence_alpha(draw,q++)=target.alpha(
+       annotation_index,static_cast<arma::uword>(stick));
+    out.convergence_sigma.row(draw)=target.sigma_sq_alpha.t();
+   }
+   for (std::size_t q=0;q<context.convergence_markers.size();++q) {
+    const arma::uword marker=static_cast<arma::uword>(context.convergence_markers[q]);
+    const int component=target.component(marker);
+    if (context.convergence_b) out.convergence_b(draw,q)=target.effect(marker);
+    if (context.convergence_d) out.convergence_d(draw,q)=component>0 ? 1 : 0;
+    if (context.convergence_component)
+     out.convergence_component(draw,q)=component;
+   }
+  }
+  if (it>=context.burnin && ((it-context.burnin)%context.thinning==0)) {
+   nsamples+=1.0;
+   br_update_log_inv_cpo(target.residual,target.residual_variance,log_inv_cpo);
+   for (int marker=0;marker<m;++marker) {
+    const arma::uword index=static_cast<arma::uword>(marker);
+    out.bm(index)+=target.effect(index);
+    out.dm(index)+=target.component(index)>0 ? 1.0 : 0.0;
+    out.component_mean(index)+=target.component(index);
+    out.comp_prob(index,static_cast<arma::uword>(target.component(index)))+=1.0;
+   }
+   alpha_acc+=target.alpha;
+   sigma_acc+=target.sigma_sq_alpha;
+   out.mean_prior+=arma::mean(target.marker_probability,0);
+  }
+ }
+ if (nsamples<=0.0) nsamples=1.0;
+ out.bm/=nsamples; out.dm/=nsamples; out.component_mean/=nsamples;
+ out.comp_prob/=nsamples; alpha_acc/=nsamples; sigma_acc/=nsamples;
+ out.mean_prior/=nsamples;
+ const auto& target=replica[2];
+ out.b=target.effect;
+ for (int marker=0;marker<m;++marker) out.state(marker)=target.component(marker);
+ out.annot_alpha_mean=alpha_acc; out.annot_alpha_final=target.alpha;
+ out.annot_sigma_mean=sigma_acc; out.annot_sigma_final=target.sigma_sq_alpha;
+ out.residual=target.residual; out.final_vb=target.marker_variance;
+ out.final_vg=target.genetic_variance; out.final_ve=target.residual_variance;
+ out.nsamples=nsamples;
+ out.log_cpo=br_compute_total_log_cpo(log_inv_cpo,nsamples);
+ out.mean_log_cpo=out.log_cpo/G.n;
+ return out;
+}
+
 template <class PackedGenotype, class AnnotationMatrix, class MarkerMap>
 static BedBayesRCChainExecutionResult run_bed_bayesrc_chain(
  const BedBayesRCChainExecutionContext<PackedGenotype,AnnotationMatrix,MarkerMap>& context
 ) {
+ if (context.coefficient_prior.intercept_prior.coupling_tempering) {
+  try {
+   return run_bed_bayesrc_coupling_tempering_chain(context);
+  } catch (const std::exception& exception) {
+   BedBayesRCChainExecutionResult out;
+   out.failed=1; out.error=exception.what();
+   return out;
+  }
+ }
  const auto& G=context.genotype.storage;
  const auto& maps=context.marker_maps;
  const auto& marker_order=context.marker_order;

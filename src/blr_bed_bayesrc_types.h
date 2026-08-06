@@ -55,6 +55,10 @@ struct BedBayesRCChainExecutionResult {
  arma::vec annot_sigma_mean, annot_sigma_final;
  arma::mat convergence_alpha, convergence_sigma, convergence_b;
  arma::imat convergence_d, convergence_component;
+ arma::imat coupling_replica_identity;
+ arma::mat coupling_active_count, coupling_expected_active, coupling_swap;
+ double coupling_transition_seconds=0.0, coupling_swap_seconds=0.0;
+ bool coupling_tempering=false;
  arma::rowvec mean_prior;
  arma::vec residual;
  double final_vb=0.0, final_vg=0.0, final_ve=0.0;

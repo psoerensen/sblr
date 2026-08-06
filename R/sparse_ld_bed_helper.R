@@ -1131,6 +1131,7 @@ NULL
    }
     if (identical(meta$model, "bayesrc") && is.null(ch$marker)) {
      convergence_trace <- ch$convergence_trace
+     coupling_tempering <- ch$coupling_tempering
      ch <- list(
       marker = list(bm = ch$bm, dm = ch$dm, state = ch$state),
       component = list(prob = ch$comp_prob),
@@ -1138,7 +1139,8 @@ NULL
       trace = list(
        vbs = ch$vbs, vgs = ch$vgs, ves = ch$ves,
        vle = ch$vle, vld = ch$vld, pis = ch$pis),
-      convergence_trace = convergence_trace
+      convergence_trace = convergence_trace,
+      coupling_tempering = coupling_tempering
      )
     }
     trait_chains[[cc]] <- list(
@@ -1147,6 +1149,9 @@ NULL
     )
     if (!is.null(ch$convergence_trace)) {
      trait_chains[[cc]]$convergence_trace <- ch$convergence_trace
+    }
+    if (!is.null(ch$coupling_tempering)) {
+     trait_chains[[cc]]$coupling_tempering <- ch$coupling_tempering
     }
     if (!is.null(ch$marker$state)) {
      trait_chains[[cc]]$state <- stats::setNames(
@@ -4184,6 +4189,25 @@ stblr_bed_marker <- function(
    annotation_updates_per_cycle = rep(
     as.integer(.diagnostic_annotation_updates_per_cycle),
     ncol(intercept_prior_native)))
+  coupling_tempering <- getOption(
+   "sblr.development.bed_coupling_tempering", NULL)
+  if (!is.null(coupling_tempering)) {
+   if (!is.list(coupling_tempering) ||
+       !identical(coupling_tempering$enabled, TRUE) ||
+       !is.numeric(coupling_tempering$swap_every) ||
+       length(coupling_tempering$swap_every) != 1L ||
+       !is.finite(coupling_tempering$swap_every) ||
+       coupling_tempering$swap_every < 1 ||
+       coupling_tempering$swap_every != floor(coupling_tempering$swap_every)) {
+    stop("Invalid development-only BED coupling-tempering option.")
+   }
+   intercept_prior_native <- rbind(
+    intercept_prior_native,
+    coupling_tempering = rep(1L, ncol(intercept_prior_native)),
+    coupling_swap_every = rep(
+     as.integer(coupling_tempering$swap_every),
+     ncol(intercept_prior_native)))
+  }
   marker_component_probability <- sbayesrc_marker_pi(
    annotation_info$A, prior_init$annot_alpha_init, mixture_var)
   marker_expected_gamma <- as.numeric(

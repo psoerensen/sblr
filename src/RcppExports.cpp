@@ -1805,6 +1805,60 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// st_bayesrc_tempered_probabilities_test
+arma::mat st_bayesrc_tempered_probabilities_test(arma::mat annotation, arma::mat alpha, arma::vec baseline_intercept, double coupling, double probability_floor);
+RcppExport SEXP _sblr_st_bayesrc_tempered_probabilities_test(SEXP annotationSEXP, SEXP alphaSEXP, SEXP baseline_interceptSEXP, SEXP couplingSEXP, SEXP probability_floorSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type baseline_intercept(baseline_interceptSEXP);
+    Rcpp::traits::input_parameter< double >::type coupling(couplingSEXP);
+    Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_tempered_probabilities_test(annotation, alpha, baseline_intercept, coupling, probability_floor));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_bayesrc_tempered_annotation_update_test
+Rcpp::List st_bayesrc_tempered_annotation_update_test(arma::mat annotation, arma::rowvec component_numeric, arma::mat alpha, arma::vec sigma_sq_alpha, arma::mat intercept_prior_resolved, double sigma_alpha_a, double sigma_alpha_b, arma::vec baseline_intercept, double coupling, int seed);
+RcppExport SEXP _sblr_st_bayesrc_tempered_annotation_update_test(SEXP annotationSEXP, SEXP component_numericSEXP, SEXP alphaSEXP, SEXP sigma_sq_alphaSEXP, SEXP intercept_prior_resolvedSEXP, SEXP sigma_alpha_aSEXP, SEXP sigma_alpha_bSEXP, SEXP baseline_interceptSEXP, SEXP couplingSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::rowvec >::type component_numeric(component_numericSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma_sq_alpha(sigma_sq_alphaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type intercept_prior_resolved(intercept_prior_resolvedSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_alpha_a(sigma_alpha_aSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_alpha_b(sigma_alpha_bSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type baseline_intercept(baseline_interceptSEXP);
+    Rcpp::traits::input_parameter< double >::type coupling(couplingSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_tempered_annotation_update_test(annotation, component_numeric, alpha, sigma_sq_alpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, baseline_intercept, coupling, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_bayesrc_coupling_swap_log_ratio_test
+double st_bayesrc_coupling_swap_log_ratio_test(arma::mat annotation, arma::mat alpha_lower, arma::rowvec component_lower_numeric, arma::mat alpha_upper, arma::rowvec component_upper_numeric, arma::vec baseline_intercept, double coupling_lower, double coupling_upper, double probability_floor);
+RcppExport SEXP _sblr_st_bayesrc_coupling_swap_log_ratio_test(SEXP annotationSEXP, SEXP alpha_lowerSEXP, SEXP component_lower_numericSEXP, SEXP alpha_upperSEXP, SEXP component_upper_numericSEXP, SEXP baseline_interceptSEXP, SEXP coupling_lowerSEXP, SEXP coupling_upperSEXP, SEXP probability_floorSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha_lower(alpha_lowerSEXP);
+    Rcpp::traits::input_parameter< arma::rowvec >::type component_lower_numeric(component_lower_numericSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha_upper(alpha_upperSEXP);
+    Rcpp::traits::input_parameter< arma::rowvec >::type component_upper_numeric(component_upper_numericSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type baseline_intercept(baseline_interceptSEXP);
+    Rcpp::traits::input_parameter< double >::type coupling_lower(coupling_lowerSEXP);
+    Rcpp::traits::input_parameter< double >::type coupling_upper(coupling_upperSEXP);
+    Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_coupling_swap_log_ratio_test(annotation, alpha_lower, component_lower_numeric, alpha_upper, component_upper_numeric, baseline_intercept, coupling_lower, coupling_upper, probability_floor));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc
 Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(Rcpp::CharacterVector bed_files, int n, Rcpp::List cls, Rcpp::NumericMatrix y, std::vector<std::vector<double>> b_init, std::vector<int> sets, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::Nullable<Rcpp::List> af, bool scale, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, std::vector<double> gamma, arma::mat annot_alpha_init, arma::vec annot_sigma_sq_alpha_init, arma::mat intercept_prior_resolved, double sigmaSqAlpha_a, double sigmaSqAlpha_b, double pi_floor, double nub, double nue, bool updateAlpha, bool updateB, bool updateE, int annot_alpha_update_every, double adjE, int nit, int nburn, int nthin, int rebuild_every, bool return_wy, bool return_r, int read_block_size, int nchains, bool keep_chains, int ncores, int seed, Rcpp::IntegerVector chain_seeds, Rcpp::IntegerVector convergence_markers, bool convergence_annotations, bool convergence_b, bool convergence_d, bool convergence_component);
 RcppExport SEXP _sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc(SEXP bed_filesSEXP, SEXP nSEXP, SEXP clsSEXP, SEXP ySEXP, SEXP b_initSEXP, SEXP setsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP scaleSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP annot_alpha_initSEXP, SEXP annot_sigma_sq_alpha_initSEXP, SEXP intercept_prior_resolvedSEXP, SEXP sigmaSqAlpha_aSEXP, SEXP sigmaSqAlpha_bSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateAlphaSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP annot_alpha_update_everySEXP, SEXP adjESEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP rebuild_everySEXP, SEXP return_wySEXP, SEXP return_rSEXP, SEXP read_block_sizeSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP chain_seedsSEXP, SEXP convergence_markersSEXP, SEXP convergence_annotationsSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP convergence_componentSEXP) {
@@ -1914,6 +1968,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 65},
     {"_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture", (DL_FUNC) &_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture, 1},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, 45},
+    {"_sblr_st_bayesrc_tempered_probabilities_test", (DL_FUNC) &_sblr_st_bayesrc_tempered_probabilities_test, 5},
+    {"_sblr_st_bayesrc_tempered_annotation_update_test", (DL_FUNC) &_sblr_st_bayesrc_tempered_annotation_update_test, 10},
+    {"_sblr_st_bayesrc_coupling_swap_log_ratio_test", (DL_FUNC) &_sblr_st_bayesrc_coupling_swap_log_ratio_test, 9},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc, 45},
     {NULL, NULL, 0}
 };

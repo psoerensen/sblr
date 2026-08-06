@@ -209,6 +209,18 @@ stblr_cpg_omp_bed_marker_scheduled_chains_bayesr <- function(bed_files, n, cls, 
     .Call(`_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr`, bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, c, alpha, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, nchains, ncores, seed, chain_seeds, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component)
 }
 
+.st_bayesrc_tempered_probabilities <- function(annotation, alpha, baseline_intercept, coupling, probability_floor) {
+    .Call(`_sblr_st_bayesrc_tempered_probabilities_test`, annotation, alpha, baseline_intercept, coupling, probability_floor)
+}
+
+.st_bayesrc_tempered_annotation_update <- function(annotation, component_numeric, alpha, sigma_sq_alpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, baseline_intercept, coupling, seed) {
+    .Call(`_sblr_st_bayesrc_tempered_annotation_update_test`, annotation, component_numeric, alpha, sigma_sq_alpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, baseline_intercept, coupling, seed)
+}
+
+.st_bayesrc_coupling_swap_log_ratio <- function(annotation, alpha_lower, component_lower_numeric, alpha_upper, component_upper_numeric, baseline_intercept, coupling_lower, coupling_upper, probability_floor) {
+    .Call(`_sblr_st_bayesrc_coupling_swap_log_ratio_test`, annotation, alpha_lower, component_lower_numeric, alpha_upper, component_upper_numeric, baseline_intercept, coupling_lower, coupling_upper, probability_floor)
+}
+
 stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc <- function(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, A, gamma, annot_alpha_init, annot_sigma_sq_alpha_init, intercept_prior_resolved, sigmaSqAlpha_a = 2.0, sigmaSqAlpha_b = 2.0, pi_floor = 1e-12, nub = 4.0, nue = 4.0, updateAlpha = TRUE, updateB = TRUE, updateE = TRUE, annot_alpha_update_every = 10L, adjE = 0.9, nit = 1000L, nburn = 100L, nthin = 1L, rebuild_every = 100L, return_wy = TRUE, return_r = TRUE, read_block_size = 256L, nchains = 1L, keep_chains = FALSE, ncores = 1L, seed = 10L, chain_seeds = as.integer( c()), convergence_markers = as.integer( c()), convergence_annotations = FALSE, convergence_b = FALSE, convergence_d = FALSE, convergence_component = FALSE) {
     .Call(`_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesrc`, bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, A, gamma, annot_alpha_init, annot_sigma_sq_alpha_init, intercept_prior_resolved, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, annot_alpha_update_every, adjE, nit, nburn, nthin, rebuild_every, return_wy, return_r, read_block_size, nchains, keep_chains, ncores, seed, chain_seeds, convergence_markers, convergence_annotations, convergence_b, convergence_d, convergence_component)
 }

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "package_sha": "8908267a68a46267fcccb910850b4f6380bfa978",
+  "sblrbench_sha": "de31f62e182d8540488d4135df4c58f052a515d9",
+  "specification_hash": "241c15afab8fefc571e38e625130de6e4ab58b958c30cff369e26998ee30fa56",
+  "truth_hash": "169d52bef390022a9106d7e61b200493869b40cbb76f1c8d911eebbc80fea1eb",
+  "route": "packed_bed",
+  "coupling_levels": [0.0, 0.5, 1.0],
+  "swap_every_cycles": 5,
+  "ensemble_seeds": [701121, 701222, 701323, 701424],
+  "recorded_iterations": 3000,
+  "burnin": 1000,
+  "retained_target_draws": 2000,
+  "tiny_validation": {
+    "passed": true,
+    "maximum_pip_error": 0.002658649,
+    "active_count_error": 0.006544723,
+    "maximum_alpha_mean_error": 0.007307558,
+    "detailed_balance_passed": true,
+    "endpoints_passed": true
+  },
+  "screen": {
+    "total_runtime_seconds": 317.43491,
+    "total_swap_attempts": 2400,
+    "total_swaps_accepted": 0,
+    "complete_round_trips": 0,
+    "target_active_count_rhat": 1.0739123,
+    "target_active_count_bulk_ess": 74.7563,
+    "target_expected_active_rhat": 1.0735718,
+    "target_expected_active_bulk_ess": 75.1308,
+    "pip_auprc": 0.5897885,
+    "pip_auroc": 0.8483624,
+    "validation_genetic_value_correlation": 0.9174535,
+    "phenotype_prediction_correlation": 0.6543752
+  },
+  "decision": "T4",
+  "interpretation": "exchange_mechanism_fails_three_level_coupling_ladder",
+  "full_length_run_recommended": false,
+  "defaults_changed": false,
+  "formal_qualification_rerun": false,
+  "final_benchmark_launched": false,
+  "block_eigen_or_csr_run": false
+}
