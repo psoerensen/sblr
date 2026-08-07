@@ -538,3 +538,235 @@ R.**
 
 The next permissible task is Phase 3 reference work for inclusion-probability
 and slab-variance learning. It must remain R-only until separately validated.
+
+## Phase 3: hierarchical hyperparameter learning
+
+### Status and production boundary
+
+Phase 3 extends only the standalone observed-outcome R reference. Phase 1 and
+Phase 2 remain validated and unchanged. Standard SBayesRC production code,
+the public API, C++, Rcpp exports, and genomic marker-effect samplers are not
+part of this phase.
+
+Phase 3 was qualified sequentially:
+
+1. **3A:** learn the global annotation inclusion probability while holding
+   stick slab variances fixed;
+2. **3B:** learn one slab variance per stick while holding the inclusion
+   probability fixed;
+3. **3C:** learn both hierarchies jointly only after 3A and 3B passed.
+
+### Phase 3A: inclusion-probability hierarchy
+
+The hierarchy is
+
+\[
+\pi_A\sim\operatorname{Beta}(a_\pi,b_\pi),\qquad
+\pi_A\mid\delta\sim\operatorname{Beta}
+\{a_\pi+M,b_\pi+J-M\},
+\]
+
+where (M=\sum_j\delta_j). Integrating (\pi_A) gives
+
+\[
+p(\delta)=\frac{B(a_\pi+M,b_\pi+J-M)}{B(a_\pi,b_\pi)}.
+\]
+
+Consequently, the collapsed prior log odds for annotation (j), before its
+likelihood Bayes factors, are
+
+\[
+\log(a_\pi+M_{-j})-
+\log\{b_\pi+J-1-M_{-j}\}.
+\]
+
+The reference implements two invariant routes. The explicit route conditions
+each selection update on the current sampled (\pi_A), then draws (\pi_A) from
+its beta full conditional. The collapsed route uses the beta-binomial odds,
+then draws (\pi_A) conditionally only for posterior output. A chain never uses
+both sampled and integrated (\pi_A) in one selection probability.
+
+For fixed z and small J, the exact finite-state oracle replaces the independent
+Bernoulli model prior with the beta-binomial expression above. Explicit and
+collapsed chains reproduce the exact model probabilities and annotation PIPs.
+The identity
+
+\[
+E(M\mid y)=\sum_jP(\delta_j=1\mid y)
+\]
+
+is a permanent numerical invariant.
+
+The primary Phase-3A exact PIPs were 0.999914, 0.999637, and 0.002728.
+Maximum exact-versus-MCMC errors were 0.000161 for the explicit route and
+0.000606 for the collapsed route. Their maximum mutual difference was
+0.000444. On observed outcomes, their maximum PIP difference was 0.00967 and
+maximum q-mean difference was 0.00522. The beta(1,9) sparse prior reduced the
+posterior expected number selected relative to beta(1,1), as expected; this is
+prior sensitivity, not a correctness criterion. **SBS3A-R1 passed.**
+
+### Phase 3B: stick-specific slab-variance hierarchy
+
+The R reference uses the explicit inverse-gamma convention
+
+\[
+p(\tau_k^2)=\frac{b_\tau^{a_\tau}}{\Gamma(a_\tau)}
+(\tau_k^2)^{-a_\tau-1}\exp(-b_\tau/\tau_k^2),
+\]
+
+written `IG(shape, scale)`. Conditional on the selected coefficients,
+
+\[
+\tau_k^2\mid\alpha,\delta\sim\operatorname{IG}
+\left(a_\tau+\frac M2,
+b_\tau+\frac12\sum_{j:\delta_j=1}\alpha_{jk}^2\right).
+\]
+
+Excluded zero coefficients do not enter this conditional. When M=0, the
+conditional is exactly the prior. The qualification prior is IG(3,1.6), whose
+mean is 0.8 and whose variance is finite. A more concentrated IG(10,7.2)
+prior, also with mean 0.8, provides the declared sensitivity comparison.
+
+The schedule is z update, joint selection/regeneration conditional on the
+current tau values, blocked coefficient redraw, then tau updates conditional
+on the selected coefficients. Thus no coefficient is integrated under one
+tau value and subsequently used as if it had been integrated under another.
+
+For J=1 and K=1, deterministic quadrature in log tau integrates the exact
+flat-intercept Gaussian model likelihood against the inverse-gamma prior.
+The quadrature PIP was 0.999512 versus 0.999526 from MCMC; the marginal
+posterior tau mean was 0.65754 versus 0.66316. An empty model produced a mean
+0.79849 under the prior mean 0.8. On the observed-d fixture, posterior tau
+means were 0.661, 0.577, and 0.625, with R-hats below 1.00001 and ESS above
+20,000. **SBS3B-R1 passed.**
+
+Across ten additional observed-d datasets with fixed pi_A and learned tau,
+the mean posterior tau was 0.657. Because these fixtures use fixed generating
+slopes rather than draws from the slab, this is empirical regularization, not
+tau truth recovery. Mean informative and null PIPs were 0.802 and 0.0766, and
+the largest tau R-hat was 1.00284.
+
+### Phase 3C: joint hierarchy and Gibbs schedule
+
+The full reference target is
+
+\[
+p(z,\delta,\alpha,\alpha_0,\pi_A,\tau^2\mid d,A).
+\]
+
+One explicit iteration is:
+
+1. draw z given observed continuation outcomes and current coefficients;
+2. draw each joint (\delta_j,\alpha_{j1:K}) block using current (\pi_A)
+   and (\tau^2);
+3. jointly redraw each stick intercept and all selected slopes;
+4. draw (\pi_A) given the completed selection state;
+5. draw each (\tau_k^2) given the completed selected coefficient state.
+
+The independent collapsed route replaces step 2's sampled-pi prior odds with
+the beta-binomial odds and regenerates (\pi_A) only after the selection sweep.
+Both are compositions of exact Gibbs or partially collapsed/regenerated Gibbs
+blocks and target the same joint posterior.
+
+### Sparsity/scale dependence and diagnostics
+
+The hierarchy can trade fewer, larger annotation effects against more,
+smaller effects. Therefore the reference retains pi_A, tau by stick, M,
+annotation states, and coefficients, and reports chain-specific PIPs, switch
+counts, R-hat/ESS, and correlations among pi_A, tau, and M.
+
+On the three-annotation primary fixture, explicit and collapsed routes differed
+by at most 0.00340 in PIP, 0.00139 in tau means, and 0.00330 in q means.
+Primary PIPs were 0.99696, 0.97028, and 0.01236. The posterior mean pi_A was
+0.59696 with 95% interval [0.185,0.937]; posterior tau means by stick were
+0.659, 0.574, and 0.623. All pi_A, tau, and M R-hats were within 0.00008 of
+one. Correlation(pi_A,M) was 0.203; absolute pi_A/tau and M/tau correlations
+were at most 0.058 on this fixture. These small-fixture values are diagnostic,
+not universal claims about the model.
+
+### Moderate-J and correlated-annotation reference
+
+A second fixture uses J=12, N=260, three informative annotations, eight null
+annotations, and a strong proxy for one informative continuous annotation.
+With beta(1,9), posterior mean pi_A was 0.174, posterior mean M was 2.82, and
+tau means were 0.547, 0.583, and 0.611. Mean PIP for the three generating
+signals exceeded the mean across the null annotations.
+
+For the signal/proxy pair, posterior probabilities were 0.6015 for signal
+only, 0.3709 for proxy only, 0.0276 for both, and zero (at retained precision)
+for neither. This deliberately records substitutable correlated evidence; the
+reference does not force an arbitrary unique annotation.
+
+Pairwise inclusion probabilities and posterior delta correlations are
+reference summaries only. Grouped selection remains deferred.
+
+### Bayesian FDR reference summary
+
+For threshold t and selected set (S_t={j:PIP_j\ge t}), the development-only
+summary is
+
+\[
+\operatorname{BFDR}(t)=|S_t|^{-1}\sum_{j\in S_t}(1-PIP_j),
+\]
+
+when the selected set is nonempty. On the moderate fixture, t=0.8 selected one
+annotation with BFDR 0.0214. No public package API is added.
+
+### Prior predictive and structural guards
+
+For pi_A~Beta(a_pi,b_pi), the implementation checks
+
+\[
+E(\pi_A)=\frac{a_\pi}{a_\pi+b_\pi},\qquad
+E(M)=J\frac{a_\pi}{a_\pi+b_\pi}.
+\]
+
+Duplicate annotation columns remain exchange-symmetric and annotation-column
+permutations preserve the posterior up to the same permutation. With all
+annotations excluded, slopes remain exactly zero, pi_A follows its beta
+conditional based on M=0, tau receives no likelihood contribution and reverts
+to its prior, and the component probabilities normalize.
+
+When pi_A is learned, an exactly zero annotation still has likelihood Bayes
+factor one, but its marginal PIP need not equal a fixed pi_A value. Its odds
+are determined entirely by the posterior sparsity hierarchy induced by the
+other annotations. This replaces, rather than contradicts, the fixed-pi
+Phase-1/2 zero-column identity.
+
+Conditioning all deltas to one yields the corresponding continuous-alpha
+hierarchical probit model with learned tau. This is a model bridge; standard
+SBayesRC production code and its variance-prior parameterization remain
+unchanged.
+
+### Repeated hierarchical simulation
+
+Twenty observed-d datasets used J=10, N=140, four deliberately initialized
+short chains, pi_true=0.25, tau_true=0.8, and coefficients generated from the
+stated hierarchy. Mean informative and null PIPs were 0.8836 and 0.0462.
+Across replicate summaries, mean posterior pi_A was 0.258 and mean posterior
+tau was 0.853. One of 20 deliberately short fits exceeded the preregistered
+PIP-range/tau-R-hat diagnostic; the allowed gate was four. Small J implies
+broad hyperparameter uncertainty, so these results establish coherent
+calibration and exploration rather than high-precision recovery.
+
+Across genuinely included annotation-stick effects, mean conditional-alpha
+bias was -0.0100 and empirical 95% interval coverage was 0.972. The broad
+95% posterior intervals covered pi_true in all 20 datasets and covered each
+stick's tau_true in aggregate for all 20 datasets. These perfect small-sample
+hyperparameter coverage proportions reflect deliberately broad posteriors and
+must not be read as high-precision estimation.
+
+### Phase-3 decision and remaining boundary
+
+All Phase-1 and Phase-2 tests remain required. Phase 3A and 3B exact gates,
+the joint explicit/collapsed comparison, primary and moderate-J diagnostics,
+prior predictive checks, correlated-annotation summaries, and repeated
+hierarchical simulation passed.
+
+**SBS3-R1: the full shared-delta, global-pi_A, stick-specific-tau SBayesRC-S
+hierarchy is validated in standalone R.**
+
+The next permissible task is Phase 4 design of a separate production C++
+SBayesRC-S backend using this R hierarchy as its oracle. This document does
+not create such a backend, a public model identifier, Rcpp exports, or Study
+07. Standard SBayesRC remains a separate validated posterior model.
