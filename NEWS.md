@@ -1,5 +1,13 @@
 # sblr 0.2.0
 
+* Completed an exact-method design audit for a coordinated BayesRC/SBayesRC
+  alpha--allocation transition. A beta-inclusive subset move passed independent
+  tiny-posterior and detailed-balance checks, but fixed global alpha moves lost
+  acceptance extensively with marker count while acceptance-preserving scaling
+  made alpha movement vanish. No production transition, interface, default, or
+  sampler RNG path was changed; the result is retained as a development
+  reference for future collapsed or transport-based method work.
+
 * Added an official-compatible block-specific residual-variance policy for
   retained block-eigen SBayesR/SBayesRC. `residual_policy = "gctb_block"` is
   now the retained-route default, with the pinned `allMixVe`, `mixVe`,
