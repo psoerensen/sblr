@@ -152,6 +152,7 @@
   }
   probability <- exp(log_weight - .sbayesrc_log_sum_exp(log_weight))
   list(states = states, probability = probability,
+       log_normalizer = .sbayesrc_log_sum_exp(log_weight),
        pip = colSums((states > 0L) * probability),
        active_count = vapply(0:marker_count, function(value)
          sum(probability[rowSums(states > 0L) == value]), numeric(1L)))

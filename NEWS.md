@@ -1,5 +1,12 @@
 # sblr 0.2.0
 
+* Added exact development references and a feasibility audit for a
+  block-factorized particle-marginal global alpha transition. Tiny likelihood-
+  scale unbiasedness and selected-path PMMH checks pass, but the short
+  1,500-marker reference does not establish joint convergence and measured
+  76-block cost blocks production integration. No sampler default or public
+  interface changed.
+
 * Added development-only, block-SBayesRC mixing references without changing
   defaults: an exact latent-probit PX/sandwich update and an exact conditional
   particle-Gibbs block allocation/effect reference. The PX transition passed a
