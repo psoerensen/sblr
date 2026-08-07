@@ -4,6 +4,7 @@
 ^Read-and-delete-me$
 ^docs$
 ^examples$
+^tools$
 ^results/local$
 ^\.agents$
 ^\.claude$

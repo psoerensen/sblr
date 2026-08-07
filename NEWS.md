@@ -1,29 +1,6 @@
 # sblr 0.2.0
 
-* Added exact development references and a feasibility audit for a
-  block-factorized particle-marginal global alpha transition. Tiny likelihood-
-  scale unbiasedness and selected-path PMMH checks pass, but the short
-  1,500-marker reference does not establish joint convergence and measured
-  76-block cost blocks production integration. No sampler default or public
-  interface changed.
-
-* Added development-only, block-SBayesRC mixing references without changing
-  defaults: an exact latent-probit PX/sandwich update and an exact conditional
-  particle-Gibbs block allocation/effect reference. The PX transition passed a
-  tiny exact posterior oracle and improved short-run occupancy agreement, but
-  did not resolve joint alpha/occupancy convergence. Conditional SMC passed
-  exact tiny-block enumeration and remained diverse at 100 and 500 markers;
-  its block-local active-count jumps were too small to establish a solution to
-  the global alpha regime problem, so no particle kernel was added to the
-  production sampler.
-
-* Completed an exact-method design audit for a coordinated BayesRC/SBayesRC
-  alpha--allocation transition. A beta-inclusive subset move passed independent
-  tiny-posterior and detailed-balance checks, but fixed global alpha moves lost
-  acceptance extensively with marker count while acceptance-preserving scaling
-  made alpha movement vanish. No production transition, interface, default, or
-  sampler RNG path was changed; the result is retained as a development
-  reference for future collapsed or transport-based method work.
+## User-visible changes
 
 * Added an official-compatible block-specific residual-variance policy for
   retained block-eigen SBayesR/SBayesRC. `residual_policy = "gctb_block"` is
@@ -43,13 +20,6 @@
   scalar routes share the public draw-by-chain contract, avoiding full
   marker-by-iteration component storage.
 
-* Added development-only scalar BayesRC/SBayesRC controls for auditing fixed
-  repetitions of the existing allocation/model and annotation-hierarchy Gibbs
-  blocks. Defaults remain one update each and preserve the historical RNG
-  trajectory. Study 06 development evidence found that extra hierarchy updates
-  improve conditional alpha exploration but no tested schedule resolves joint
-  occupancy mixing; no package default changed.
-
 * Repaired selected-marker component traces for packed-BED fits that use a
   fitted `cls` marker subset. Trace identifiers are now resolved against the
   fitted marker order, and native BED backends reject out-of-range trace
@@ -62,11 +32,6 @@
   instead of retaining a stale value. A focused mixing review found that the
   remaining Study 06 development bottleneck is component-allocation movement,
   not evidence supporting a blocked or non-centred alpha update.
-
-* Derived and validated an exact two-marker BayesRC allocation conditional.
-  Study 06 development runs found the fixed-pair move too sparse and ineffective
-  to retain in production; a larger collapsed allocation move requires a
-  separate design review. Public samplers and interfaces are unchanged.
 
 * BayesRC/SBayesRC now use a proper normal prior for every probit-stick
   intercept by default. Prior means reproduce the resolved global mixture and
@@ -112,6 +77,16 @@
 - Corrected extreme-tail truncated-normal draws used by BayesRC annotation
   updates and connected the public low-rank residual-rebuild interval to the
   scalar SBayesRC retained-eigen kernel.
+
+## Development/reference evidence
+
+* Added development-only posterior-preserving SBayesRC transition references
+  and validation oracles for repeated Gibbs scheduling, exact pair and
+  coordinated subset moves, coupling tempering, PX/sandwich augmentation,
+  conditional particle Gibbs, and particle-marginal alpha updates. These
+  methods document the learned-alpha mixing audit and its PMA-R3 endpoint; no
+  new production sampler option, public interface, default, or ordinary RNG
+  path was introduced.
 
 # sblr 0.1.0
 

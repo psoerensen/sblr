@@ -1,5 +1,6 @@
-# Development references for the exact probit scale-sandwich derivation.
-# Production samplers do not call these R helpers.
+# Development/reference implementation used for posterior-correctness and
+# sampler-feasibility audits. Not a production sampler option and not part of
+# the supported public API. Production samplers do not call these R helpers.
 
 .sbayesrc_px_factor <- function(latent, design, prior_mean, prior_precision) {
   latent <- as.numeric(latent)

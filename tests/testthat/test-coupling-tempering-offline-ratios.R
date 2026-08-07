@@ -1,9 +1,3 @@
-offline_ratio_path <- testthat::test_path(
-  "..", "..", "tools", "study06_partial_exchange_feasibility.R"
-)
-offline_ratio_env <- new.env(parent = asNamespace("stats"))
-sys.source(offline_ratio_path, envir = offline_ratio_env)
-
 test_that("offline complete-state exchange ratio matches four target terms", {
   annotation <- cbind(1, c(0, 1, 0, 1))
   baseline <- qnorm(c(0.7, 0.4))
@@ -12,8 +6,8 @@ test_that("offline complete-state exchange ratio matches four target terms", {
   component_a <- c(0L, 1L, 2L, 0L)
   component_b <- c(1L, 0L, 2L, 1L)
 
-  ell <- offline_ratio_env$log_allocation_prior
-  observed <- offline_ratio_env$complete_exchange_ratio(
+  ell <- .offline_log_allocation_prior
+  observed <- .offline_complete_exchange_ratio(
     annotation, baseline, 0, 0.5,
     component_a, alpha_a, component_b, alpha_b
   )
@@ -25,7 +19,7 @@ test_that("offline complete-state exchange ratio matches four target terms", {
   expect_equal(observed, expected, tolerance = 1e-13)
   expect_equal(
     observed,
-    -offline_ratio_env$complete_exchange_ratio(
+    -.offline_complete_exchange_ratio(
       annotation, baseline, 0, 0.5,
       component_b, alpha_b, component_a, alpha_a
     ),
@@ -42,9 +36,9 @@ test_that("joint alpha-sigma exchange cancels hierarchy-prior factors", {
   sigma_b <- c(2.1, 0.6)
   component_a <- c(0L, 1L, 2L, 0L)
   component_b <- c(1L, 0L, 2L, 1L)
-  ell <- offline_ratio_env$log_allocation_prior
+  ell <- .offline_log_allocation_prior
 
-  observed <- offline_ratio_env$alpha_sigma_exchange_ratio(
+  observed <- .offline_alpha_sigma_exchange_ratio(
     annotation, baseline, 0.5, 1,
     component_a, alpha_a, sigma_a,
     component_b, alpha_b, sigma_b,
@@ -67,10 +61,10 @@ test_that("alpha-only exchange includes destination variance densities", {
   sigma_b <- c(1.5, 0.5)
   component_a <- c(0L, 1L, 2L, 0L)
   component_b <- c(1L, 0L, 2L, 1L)
-  ell <- offline_ratio_env$log_allocation_prior
-  h <- offline_ratio_env$log_nonintercept_prior
+  ell <- .offline_log_allocation_prior
+  h <- .offline_log_nonintercept_prior
 
-  observed <- offline_ratio_env$alpha_only_exchange_ratio(
+  observed <- .offline_alpha_only_exchange_ratio(
     annotation, baseline, 0, 1,
     component_a, alpha_a, sigma_a,
     component_b, alpha_b, sigma_b
@@ -91,7 +85,7 @@ test_that("offline tempered probabilities are finite and normalized", {
   baseline <- qnorm(c(0.9, 0.25))
 
   for (lambda in c(0, 0.5, 1)) {
-    probability <- offline_ratio_env$tempered_component_probability(
+    probability <- .offline_tempered_component_probability(
       annotation, alpha, baseline, lambda
     )
     expect_true(all(is.finite(probability)))

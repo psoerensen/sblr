@@ -1,5 +1,6 @@
-# Exact development references for particle-marginal alpha feasibility.
-# These functions are internal and do not alter a production sampler.
+# Development/reference implementation used for posterior-correctness and
+# sampler-feasibility audits. Not a production sampler option and not part of
+# the supported public API. These functions do not alter a production sampler.
 
 .sbayesrc_particle_auxiliary <- function(particles, markers) {
   list(component = matrix(stats::rnorm(particles * markers), particles, markers),

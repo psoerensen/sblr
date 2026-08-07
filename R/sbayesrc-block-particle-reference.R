@@ -1,6 +1,7 @@
-# Development references for an exact conditional particle-Gibbs block update.
-# These helpers are intentionally internal while scalability and mixing are
-# being qualified for retained block-eigen SBayesRC.
+# Development/reference implementation used for posterior-correctness and
+# sampler-feasibility audits. Not a production sampler option and not part of
+# the supported public API. These helpers implement the exact conditional
+# particle-Gibbs block reference used for retained block-eigen SBayesRC audits.
 
 .sbayesrc_log_sum_exp <- function(x) {
   maximum <- max(x)

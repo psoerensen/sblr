@@ -1,7 +1,7 @@
-# Development references for coordinated BayesRC transition derivations.
-# These helpers are intentionally internal and are not called by production
-# samplers. They provide an independently testable implementation of the exact
-# finite-subset formulas documented in docs/dev/.
+# Development/reference implementation used for posterior-correctness and
+# sampler-feasibility audits. Not a production sampler option and not part of
+# the supported public API. These helpers provide an independently testable
+# implementation of the exact finite-subset formulas documented in docs/dev/.
 
 .bayesrc_coordinated_component_probabilities <- function(annotation, alpha,
                                                            probability_floor = 1e-12) {
