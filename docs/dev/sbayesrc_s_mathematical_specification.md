@@ -374,3 +374,167 @@ uses total marker count `m` in its displayed intercept coordinate update.
 Phase 1 does not adjudicate that separate source contract. Its exact reference
 uses the explicitly specified flat-intercept Gaussian integration on each
 eligible set.
+
+## Phase 2: observed continuation outcomes
+
+### Status and scope
+
+Phase 1 remains the validated fixed-z exact baseline. Phase 2 adds only the
+Albert--Chib latent-variable layer for observed continuation outcomes. The
+shared selection state, fixed `pi_A = 0.35`, fixed `tau2 = 0.8`, flat
+always-included intercept, collapsed annotation update, and blocked Gaussian
+coefficient redraw are unchanged.
+
+Phase 3 hyperparameter learning, production APIs, C++, genomic marker effects,
+LD, and Study 07 remain deferred.
+
+### Observed-d target
+
+For observation (i) eligible at stick (k),
+
+\[
+d_{ik}=I(z_{ik}>0),\qquad
+z_{ik}\mid\eta_{ik}\sim N(\eta_{ik},1),
+\]
+
+where
+
+\[
+\eta_{ik}=\alpha_{0k}+\sum_{j=1}^J A_{ij}\alpha_{jk}.
+\]
+
+The normal distribution is truncated to z>0 when d=1 and to z<=0 when
+d=0. The augmented target is
+
+\[
+p(z,\delta,\alpha,\alpha_0\mid d,A,\pi_A,\tau^2),
+\]
+
+and the required marginal target integrates z.
+
+### Stick eligibility
+
+Stick 1 uses all observations. Stick k+1 uses exactly the rows whose outcome
+at stick k is one. A validation guard reconstructs each later eligible index
+from the preceding outcome and requires exact identity. Outcomes, latent
+variables, annotations, predictors, Bayes factors, and Gaussian redraws all
+use that same index vector.
+
+### Truncated-normal update
+
+The base-R inverse-CDF implementation works on tail probabilities. For d=1,
+it samples a standard-normal survival probability uniformly between zero and
+the survival mass above -eta. For d=0, it samples a lower-tail probability
+between zero and Phi(-eta). It then shifts by eta. Focused tests cover eta
+from -6 to 6 and require finite draws with the exact observed sign.
+
+### Gibbs schedule and invariance
+
+Each iteration applies:
+
+1. draw every z conditional on d and the current coefficients;
+2. for each annotation j, sample the joint block
+   (delta_j, alpha_j1:K) using the validated Phase-1 collapsed/regenerated
+   conditional at the new z;
+3. redraw each stick's intercept and all included slopes jointly from their
+   exact Gaussian conditional.
+
+Step 2 integrates only the coefficient block that it immediately regenerates.
+No marginalized coefficient is conditioned upon before regeneration. Step 3
+is an ordinary Gibbs update conditional on the completed selection sweep.
+The composition therefore preserves the augmented Phase-2 target, and its
+marginal transition preserves the observed-d posterior.
+
+### Independent observed-d comparator
+
+The primary sampler uses the Phase-1 rank-one log Bayes-factor helper and a
+precision-Cholesky coefficient draw. The comparator independently evaluates
+the inclusion marginal as
+
+\[
+-\frac12\log\tau_k^2
+-\frac12\log(s_{jk}+\tau_k^{-2})
++\frac12\frac{t_{jk}^2}{s_{jk}+\tau_k^{-2}},
+\]
+
+and samples coefficients through a covariance-Cholesky construction. These
+routes share only the unavoidable latent-normal generator and low-dimensional
+Gaussian model construction. Their maximum primary-fixture differences were
+0.00890 for annotation PIPs, 0.0312 posterior SD for alpha means, 0.0204 for
+conditional alpha means, 0.00118 for intercept means, and 0.00285 for both q
+and mixture-probability means.
+
+### Nested-model bridges
+
+With all delta values fixed to one, SBayesRC-S reduces to the corresponding
+fixed-tau continuous-alpha probit hierarchy. Comparison with the committed
+standard-SBayesRC R reference gave maximum differences of 0.00932 for alpha
+means, 0.00380 for alpha SDs, 0.00712 for q means, and 0.00446 for mixture
+probability means.
+
+With all delta values fixed to zero, every non-intercept coefficient remained
+exactly zero, intercept draws were finite, q depended only on the intercepts,
+and mixture probabilities normalized to machine precision.
+
+### Primary fixture and diagnostics
+
+The deterministic fixture has 420 observations; three sticks with 420, 215,
+and 128 eligible rows; continuation counts 215, 128, and 65; and the three
+Study-06-analogue annotations. The generating selection state is (1,1,0).
+Four chains start from `000`, `111`, `101`, and `010`, use independent seeds,
+and retain 7,500 of 9,000 iterations.
+
+Pooled annotation PIPs were 0.9991, 0.9579, and 0.0009. Chain-specific ranges
+were 0.0012, 0.0145, and 0.0008. Maximum alpha and intercept R-hats were
+1.00021 and 1.00014. Classical alpha ESS estimates ranged from 6,758 to
+30,000. The intermediate continuous annotation made 92--108 transitions in
+each direction per chain; near-certain annotations appropriately switched
+less often.
+
+The primary and comparator runtimes were 38.96 and 36.08 seconds. Every
+retained q and mixture-probability summary was finite and normalized.
+
+### Structural and signal guards
+
+- An exactly zero column had pooled PIP 0.3525 versus prior 0.35; its four
+  chain PIPs were 0.3620, 0.3598, 0.3470, and 0.3413.
+- Permuting annotation columns changed corresponding PIPs by at most 0.000283
+  and alpha means by at most 0.00265.
+- Two duplicate columns had pooled PIPs 0.5089 and 0.5449. Their difference
+  was 0.0360; chain-specific results exposed the expected redundant-model
+  uncertainty rather than selecting an arbitrary truth.
+- A strong-signal fixture initialized fully excluded reached PIPs 1.000 and
+  1.000 for the informative annotations.
+- A weak-signal fixture produced an intermediate PIP of 0.178 with repeated
+  state switching.
+- Across ten intercept-only datasets with exchangeable standardized null
+  columns, mean PIPs were 0.0028, 0.0049, and 0.0265; the between-column range
+  was 0.0237. Finite-data null evidence moved probabilities below the prior,
+  without a persistent index-specific preference.
+
+### Repeated-simulation calibration
+
+Twenty independently regenerated datasets used 300 observations and four
+chains each. Informative annotation PIPs had mean 0.9389, median 0.9986, 5th
+and 95th percentiles 0.6641 and 1.0000; 95% exceeded 0.5 and 85% exceeded 0.9.
+Null PIPs had mean 0.00631, median 0.00275, and 5th and 95th percentiles
+0.00050 and 0.03376; none exceeded 0.5.
+
+Conditional informative-alpha bias averaged 0.0153 and empirical 95% coverage
+was 0.9667. Conditional null-alpha bias averaged 0.00673. One of 20 short
+replicate fits exceeded the preregistered between-chain PIP-range diagnostic;
+this was within the allowed development gate of two and is retained as a
+finite-chain limitation. The repeated experiment took 105.49 seconds.
+
+### Phase-2 decision
+
+All Phase-1 regression tests, truncated-normal guards, eligibility checks,
+primary/comparator agreement gates, nested-model bridges, zero/permutation/
+duplicate guards, convergence checks, and repeated-simulation gates passed.
+
+**SBS2-R1: the fixed-hyperparameter shared-delta SBayesRC-S posterior is
+validated through the observed continuation/probit hierarchy in standalone
+R.**
+
+The next permissible task is Phase 3 reference work for inclusion-probability
+and slab-variance learning. It must remain R-only until separately validated.
