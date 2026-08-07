@@ -742,3 +742,57 @@ test_that("low-rank block-eigen SBayesRC diagnostic schedules remain finite", {
     "positive integer"
   )
 })
+
+test_that("block PX is optional and ordinary block RNG output is unchanged", {
+  skip_if_no_block_eigen_sbayesrc_native()
+  fixture <- make_stblr_block_eigen_fixture()
+  common <- list(
+    stats = fixture$stats,
+    Glist = fixture$Glist,
+    annotation = make_stblr_block_eigen_annotation(fixture),
+    block_start = 1L,
+    representation = "low_rank",
+    eigen_prop = 0.995,
+    residual_policy = "gctb_block",
+    block_ve_mode = "allMixVe",
+    low_rank_residual_rebuild_every = 1L,
+    updateAlpha = TRUE,
+    alpha_update_every = 1L,
+    updateB = TRUE,
+    updateE = TRUE,
+    nit = 5L,
+    nburn = 1L,
+    nchains = 1L,
+    keep_chains = TRUE,
+    ncores = 1L,
+    seed = 48117L)
+  ordinary <- do.call(sblr:::.stblr_csr_sbayesrc_block_eigen, common)
+  explicit <- do.call(sblr:::.stblr_csr_sbayesrc_block_eigen,
+    c(common, list(.diagnostic_block_px = FALSE)))
+  timing_paths <- c("diagnostics", "input")
+  for (path in timing_paths) {
+    if (path == "diagnostics") {
+      explicit$diagnostics$block_eigen$build <- NULL
+      ordinary$diagnostics$block_eigen$build <- NULL
+    } else {
+      explicit$input$eigen_diagnostics$build <- NULL
+      ordinary$input$eigen_diagnostics$build <- NULL
+    }
+  }
+  explicit$diagnostics$seconds_mean <- NULL
+  explicit$diagnostics$seconds_max <- NULL
+  ordinary$diagnostics$seconds_mean <- NULL
+  ordinary$diagnostics$seconds_max <- NULL
+  expect_identical(explicit, ordinary)
+
+  px <- do.call(sblr:::.stblr_csr_sbayesrc_block_eigen,
+    c(common, list(.diagnostic_block_px = TRUE,
+                   .diagnostic_block_px_log_scale_sd = 0.45)))
+  expect_true(isTRUE(px$input$diagnostic_block_px))
+  expect_equal(px$input$diagnostic_block_px_log_scale_sd, 0.45)
+  expect_true(all(is.finite(px$alpha[[1L]])))
+  expect_true(all(is.finite(px$sigmaSqAlpha)))
+  expect_true(all(is.finite(px$ves)))
+  expect_true(all(px$diagnostics$native$low_rank_residual$
+    low_rank_residual_max_abs_drift <= 1e-10))
+})

@@ -1,5 +1,15 @@
 # sblr 0.2.0
 
+* Added development-only, block-SBayesRC mixing references without changing
+  defaults: an exact latent-probit PX/sandwich update and an exact conditional
+  particle-Gibbs block allocation/effect reference. The PX transition passed a
+  tiny exact posterior oracle and improved short-run occupancy agreement, but
+  did not resolve joint alpha/occupancy convergence. Conditional SMC passed
+  exact tiny-block enumeration and remained diverse at 100 and 500 markers;
+  its block-local active-count jumps were too small to establish a solution to
+  the global alpha regime problem, so no particle kernel was added to the
+  production sampler.
+
 * Completed an exact-method design audit for a coordinated BayesRC/SBayesRC
   alpha--allocation transition. A beta-inclusive subset move passed independent
   tiny-posterior and detailed-balance checks, but fixed global alpha moves lost

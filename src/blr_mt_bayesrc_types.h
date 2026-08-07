@@ -18,7 +18,7 @@ struct MtBayesRCSpec {
  std::vector<double> pattern_prior;
  bool update_alpha=true;
  StBayesRCInterceptPrior intercept_prior{
-  false, true, 1, 1, false, 0, arma::vec(), arma::vec()};
+  false, true, 1, 1, false, 0, false, 0.0, arma::vec(), arma::vec()};
  double sigma_alpha_a=2.0;
  double sigma_alpha_b=2.0;
  double pi_floor=1e-12;

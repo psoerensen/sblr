@@ -248,7 +248,9 @@ stblr_csr_sbayesrc_generic <- function(
   .convergence_spec = NULL,
   .diagnostic_updateSigmaSqAlpha = TRUE,
   .diagnostic_allocation_updates_per_cycle = 1L,
-  .diagnostic_annotation_updates_per_cycle = 1L
+  .diagnostic_annotation_updates_per_cycle = 1L,
+  .diagnostic_block_px = FALSE,
+  .diagnostic_block_px_log_scale_sd = 0.45
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
@@ -372,6 +374,20 @@ stblr_csr_sbayesrc_generic <- function(
    stop(control_name, " must be a positive integer.")
   }
  }
+ if (!is.logical(.diagnostic_block_px) ||
+     length(.diagnostic_block_px) != 1L || is.na(.diagnostic_block_px)) {
+  stop(".diagnostic_block_px must be TRUE or FALSE.")
+ }
+ if (!is.numeric(.diagnostic_block_px_log_scale_sd) ||
+     length(.diagnostic_block_px_log_scale_sd) != 1L ||
+     !is.finite(.diagnostic_block_px_log_scale_sd) ||
+     .diagnostic_block_px_log_scale_sd <= 0) {
+  stop(".diagnostic_block_px_log_scale_sd must be positive and finite.")
+ }
+ if (isTRUE(.diagnostic_block_px) &&
+     !identical(.native_fun, stblr_cpg_omp_csr_sbayesrc_block_eigen)) {
+  stop("The PX sandwich diagnostic is supported only by block SBayesRC.")
+ }
  intercept_prior_native <- intercept_prior$native
  if (nrow(intercept_prior_native) == 3L) {
   intercept_prior_native <- rbind(
@@ -388,6 +404,16 @@ stblr_csr_sbayesrc_generic <- function(
   annotation_updates_per_cycle = rep(
    as.integer(.diagnostic_annotation_updates_per_cycle),
    ncol(intercept_prior_native)))
+ if (isTRUE(.diagnostic_block_px)) {
+  intercept_prior_native <- rbind(
+   intercept_prior_native,
+   coupling_tempering = rep(0, ncol(intercept_prior_native)),
+   coupling_swap_every = rep(0, ncol(intercept_prior_native)),
+   px_sandwich = rep(1, ncol(intercept_prior_native)),
+   px_log_scale_sd = rep(
+    as.numeric(.diagnostic_block_px_log_scale_sd),
+    ncol(intercept_prior_native)))
+ }
 
  marker_component_probability <- sbayesrc_marker_pi(
   A, alpha$alpha_init, gamma)
@@ -553,6 +579,9 @@ stblr_csr_sbayesrc_generic <- function(
    pi_floor = pi_floor,
    updateAlpha = updateAlpha,
    diagnostic_updateSigmaSqAlpha = isTRUE(.diagnostic_updateSigmaSqAlpha),
+   diagnostic_block_px = isTRUE(.diagnostic_block_px),
+   diagnostic_block_px_log_scale_sd = if (isTRUE(.diagnostic_block_px))
+    as.numeric(.diagnostic_block_px_log_scale_sd) else NULL,
    alpha_update_every = alpha_update_every,
    add_intercept = add_intercept,
    standardize_annotations = standardize_annotations,
@@ -629,6 +658,8 @@ stblr_csr_sbayesrc_generic <- function(
   minimum_ve_ratio = 0.7,
   block_ve_keep_history = FALSE,
   updateLDswap = FALSE,
+  .diagnostic_block_px = FALSE,
+  .diagnostic_block_px_log_scale_sd = 0.45,
   ...
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
@@ -721,7 +752,9 @@ native_args <- list(
    ld_prefix = "",
    A = annotation,
    Glist = Glist,
-   updateLDswap = FALSE
+   updateLDswap = FALSE,
+   .diagnostic_block_px = .diagnostic_block_px,
+   .diagnostic_block_px_log_scale_sd = .diagnostic_block_px_log_scale_sd
   ),
   dots,
   list(

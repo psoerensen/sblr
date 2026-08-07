@@ -17,8 +17,10 @@ bench_root <- normalizePath(parse_option("sblrbench-root", "../sblrbench"),
                             winslash = "/", mustWork = TRUE)
 phase <- parse_option("phase", "smoke")
 condition <- parse_option("condition", "")
-if (!phase %in% c("smoke", "fit", "aggregate"))
-  stop("phase must be smoke, fit, or aggregate.")
+if (!phase %in% c("smoke", "fit", "aggregate", "ordinary-screen",
+                  "px-smoke", "px-screen", "px-fit"))
+  stop("phase must be smoke, fit, aggregate, ordinary-screen, px-smoke, ",
+       "px-screen, or px-fit.")
 
 output_root <- file.path(sblr_root, "results", "local",
                          "study06_kernel_composition_audit")
@@ -128,6 +130,10 @@ make_controls <- function(row, smoke = FALSE) {
     spec, markers, 701020L, c(701121L, 701222L, 701323L, 701424L), TRUE, TRUE)
   controls$.diagnostic_allocation_updates_per_cycle <- row$allocation_updates
   controls$.diagnostic_annotation_updates_per_cycle <- row$annotation_updates
+  if (grepl("^px-", phase)) {
+    controls$.diagnostic_block_px <- TRUE
+    controls$.diagnostic_block_px_log_scale_sd <- 0.45
+  }
   controls$convergence_control$selected_marker_quantities <-
     if (smoke) c("b", "d", "component") else c("b", "d", "component")
   controls$convergence_control$allow_large_traces <- TRUE
@@ -135,6 +141,9 @@ make_controls <- function(row, smoke = FALSE) {
   if (smoke) {
     controls$nit <- 20L
     controls$nburn <- 5L
+  } else if (phase %in% c("ordinary-screen", "px-screen")) {
+    controls$nit <- 1000L
+    controls$nburn <- 300L
   }
   controls
 }
@@ -176,10 +185,17 @@ check_fit <- function(result, marker_ids) {
   invisible(component)
 }
 
-if (phase == "smoke") {
-  rows <- vector("list", nrow(fit_registry))
-  for (index in seq_len(nrow(fit_registry))) {
-    row <- fit_registry[index, ]
+if (phase %in% c("smoke", "px-smoke")) {
+  if (phase == "px-smoke") {
+    fit_registry_run <- data.frame(
+      route = "block_eigen", schedule = "PX", allocation_updates = 1L,
+      annotation_updates = 1L, fit_id = "block_eigen_PX")
+  } else {
+    fit_registry_run <- fit_registry
+  }
+  rows <- vector("list", nrow(fit_registry_run))
+  for (index in seq_len(nrow(fit_registry_run))) {
+    row <- fit_registry_run[index, ]
     out <- fit_one(row, smoke = TRUE)
     component <- check_fit(
       out$result, data$markers$marker_ids[seq_len(12L)])
@@ -189,9 +205,11 @@ if (phase == "smoke") {
       component_chains = dim(component)[2L],
       component_markers = dim(component)[3L], passed = TRUE)
   }
-  utils::write.csv(do.call(rbind, rows), file.path(output_root, "smoke.csv"),
+  smoke_name <- if (phase == "px-smoke") "px_smoke.csv" else "smoke.csv"
+  utils::write.csv(do.call(rbind, rows), file.path(output_root, smoke_name),
                    row.names = FALSE)
-  message("All ten kernel-composition smoke fits passed.")
+  message(if (phase == "px-smoke") "Block PX smoke fit passed." else
+    "All ten kernel-composition smoke fits passed.")
   quit(save = "no", status = 0L)
 }
 
@@ -224,8 +242,9 @@ summarise_bands <- function(values, fit_id, quantity) {
   list(summary = do.call(rbind, rows), matrix = do.call(rbind, transitions))
 }
 
-component_diagnostics <- function(component, marker_truth, A, fit_id) {
-  keep <- 3001:9000
+component_diagnostics <- function(component, marker_truth, A, fit_id,
+                                  burn = 3000L, iterations = 9000L) {
+  keep <- seq.int(burn + 1L, iterations)
   component <- component[keep, , , drop = FALSE]
   nchains <- dim(component)[2L]
   causal <- marker_truth$true_nonnull
@@ -272,8 +291,9 @@ component_diagnostics <- function(component, marker_truth, A, fit_id) {
        representative = c(representative_causal, representative_noncausal))
 }
 
-stick_prior_draws <- function(alpha, A, fit_id) {
-  alpha <- alpha[alpha$iteration > 3000L & alpha$iteration <= 9000L, ]
+stick_prior_draws <- function(alpha, A, fit_id, burn = 3000L,
+                              iterations = 9000L) {
+  alpha <- alpha[alpha$iteration > burn & alpha$iteration <= iterations, ]
   alpha_only <- alpha[alpha$parameter == "alpha", ]
   rows <- list()
   groups <- list(enriched = A[, 2L] > 0.5,
@@ -318,10 +338,23 @@ stick_prior_draws <- function(alpha, A, fit_id) {
   do.call(rbind, rows)
 }
 
-if (phase == "fit") {
-  if (!condition %in% fit_registry$fit_id)
-    stop("Unknown --condition: ", condition)
-  row <- fit_registry[fit_registry$fit_id == condition, ]
+if (phase %in% c("fit", "ordinary-screen", "px-screen", "px-fit")) {
+  if (phase == "ordinary-screen") {
+    condition <- "block_eigen_ordinary_screen"
+    row <- data.frame(
+      route = "block_eigen", schedule = "ordinary", allocation_updates = 1L,
+      annotation_updates = 1L, fit_id = condition)
+  } else if (phase %in% c("px-screen", "px-fit")) {
+    condition <- if (phase == "px-screen") "block_eigen_PX_screen" else
+      "block_eigen_PX"
+    row <- data.frame(
+      route = "block_eigen", schedule = "PX", allocation_updates = 1L,
+      annotation_updates = 1L, fit_id = condition)
+  } else {
+    if (!condition %in% fit_registry$fit_id)
+      stop("Unknown --condition: ", condition)
+    row <- fit_registry[fit_registry$fit_id == condition, ]
+  }
   prefix <- file.path(output_root, condition)
   result_checkpoint <- paste0(prefix, "_fit_result.rds")
   if (file.exists(result_checkpoint)) {
@@ -331,13 +364,14 @@ if (phase == "fit") {
     saveRDS(out, result_checkpoint, compress = FALSE)
   }
   component <- check_fit(out$result, data$markers$marker_ids)
-  expected_dimension <- c(9000L, 4L, 1500L)
+  expected_dimension <- c(out$controls$nit, 4L, 1500L)
   if (!identical(dim(component), expected_dimension))
     stop("Full component trace has an invalid dimension.")
   saveRDS(component, paste0(prefix, "_component_trace.rds"), compress = FALSE)
 
   occupancy <- component_diagnostics(
-    component, bundle$marker_truth, annotations, condition)
+    component, bundle$marker_truth, annotations, condition,
+    out$controls$nburn, out$controls$nit)
   alpha <- extract_annotation_coefficient_traces(out$result, ncol(annotations))
   alpha$quantity <- ifelse(alpha$parameter == "alpha",
     paste("alpha", alpha$annotation, alpha$stick, sep = ":"),
@@ -346,7 +380,8 @@ if (phase == "fit") {
     alpha, annotations, spec$controls$simulation$mixture_var,
     marker_truth = bundle$marker_truth, retain_marker_summary = FALSE)
   if (!identical(prior$status, "ok")) stop(prior$reason, call. = FALSE)
-  stick <- stick_prior_draws(alpha, annotations, condition)
+  stick <- stick_prior_draws(alpha, annotations, condition,
+                             out$controls$nburn, out$controls$nit)
   expected <- reshape(
     stick[c("iteration", "chain", "expected_active_count")],
     idvar = "iteration", timevar = "chain", direction = "wide")
@@ -364,7 +399,22 @@ if (phase == "fit") {
   draws <- study06_power_required_traces(
     out$result, component, basic_occupancy, annotations,
     bundle$marker_truth, fit_row, spec)
-  selected <- study06_selected_diagnostics(draws, spec)
+  if (phase %in% c("ordinary-screen", "px-screen")) {
+    retained_draws <- draws[draws$iteration > out$controls$nburn &
+      draws$iteration <= out$controls$nit, , drop = FALSE]
+    diagnostic_rows <- lapply(unique(retained_draws$quantity), function(quantity) {
+      z <- retained_draws[retained_draws$quantity == quantity, , drop = FALSE]
+      diagnostic <- benchmark_scalar_diagnostics(
+        z, spec$qualification$thresholds)
+      cbind(z[1L, c("scenario", "replicate", "method"), drop = FALSE],
+        burnin = out$controls$nburn,
+        retained = out$controls$nit - out$controls$nburn,
+        quantity = quantity, diagnostic, stringsAsFactors = FALSE)
+    })
+    selected <- list(rows = do.call(rbind, diagnostic_rows))
+  } else {
+    selected <- study06_selected_diagnostics(draws, spec)
+  }
 
   probabilities <- extract_marker_probabilities(out$result)$posterior_inclusion
   if (is.matrix(probabilities)) probabilities <- probabilities[, 1L]
@@ -403,9 +453,10 @@ if (phase == "fit") {
     fit_id = condition, route = row$route, schedule = row$schedule,
     allocation_updates = row$allocation_updates,
     annotation_updates = row$annotation_updates,
-    recorded_iterations = 9000L, retained_iterations = 6000L, chains = 4L,
-    kernel_A_applications = 9000L * 4L * row$allocation_updates,
-    kernel_H_applications = 9000L * 4L * row$annotation_updates,
+    recorded_iterations = out$controls$nit,
+    retained_iterations = out$controls$nit - out$controls$nburn, chains = 4L,
+    kernel_A_applications = out$controls$nit * 4L * row$allocation_updates,
+    kernel_H_applications = out$controls$nit * 4L * row$annotation_updates,
     seconds = out$seconds)
   convergence <- selected$rows
   convergence$fit_id <- condition

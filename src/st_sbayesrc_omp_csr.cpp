@@ -2282,7 +2282,11 @@ Rcpp::List st_bayesrc_annotation_update_test(
   Rcpp::Named("sigmaSqAlpha") = sigma_sq_alpha,
   Rcpp::Named("eligible") = diagnostics.eligible,
   Rcpp::Named("continuation") = diagnostics.continuation,
-  Rcpp::Named("prior_only") = diagnostics.prior_only
+  Rcpp::Named("prior_only") = diagnostics.prior_only,
+  Rcpp::Named("px_attempted") = diagnostics.px_attempted,
+  Rcpp::Named("px_accepted") = diagnostics.px_accepted,
+  Rcpp::Named("px_abs_log_scale") = diagnostics.px_abs_log_scale,
+  Rcpp::Named("px_alpha_jump") = diagnostics.px_alpha_jump
  );
 }
 
