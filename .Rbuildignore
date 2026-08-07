@@ -5,6 +5,8 @@
 ^docs$
 ^examples$
 ^tools$
+^local_reference$
+^local_rereference$
 ^results/local$
 ^\.agents$
 ^\.claude$
