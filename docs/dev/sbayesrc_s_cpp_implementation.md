@@ -135,3 +135,47 @@ The next task must be a mathematical Phase-3 model revision deciding on a
 proper intercept prior (and revalidating the R oracle) or another explicitly
 proper empty-stick treatment. C++/genomic qualification must not resume until
 that revised posterior is separately validated.
+
+## Phase 3D / Phase 4 recovery
+
+Phase 3D adopted the same proper normal intercept convention already used by
+standard SBayesRC: centers are derived from the resolved initial component
+mixture and the default probit-scale SD is 1. The exact proper Gaussian
+marginal, observed-d hierarchy, learned `pi_A`/`tau2` hierarchy, empty-stick
+prior-only state, and controlled empty/nonempty transitions passed. The
+decision was `SBS3D-R1`.
+
+The C++ selection component now receives the resolved intercept means and
+precisions explicitly. Its blocked redraw adds the intercept prior precision
+and linear term on every stick; there is no empty-only branch. Empty eligible
+vectors are valid, contribute zero annotation log Bayes factor, and yield the
+same prior-only Gaussian update as R. Deterministic parity now also includes
+the intercept conditional. Refreshed posterior parity gave:
+
+| fixture | max PIP error | max q error | max component-probability error | max normalized alpha error | max tau mean error |
+|---|---:|---:|---:|---:|---:|
+| 3 annotations | 0.00188 | 0.00216 | 0.00141 | 0.0195 | 0.00578 |
+| 12 annotations | 0.0130 | 0.00683 | 0.00683 | 0.0377 | 0.00771 |
+
+**SBS4A2-R1: the revised proper-intercept C++ hierarchy matches the revised R
+oracle.** Standard SBayesRC continues to use its existing implementation and
+unchanged RNG path.
+
+The CSR genomic requalification deliberately began from the formerly failing
+all-null allocation. Both later sticks were recorded as empty initial states,
+then each exited its empty episode; the state is proper and not absorbing.
+The compact fixed-delta and probability/output guards also passed.
+
+The selection-enabled 160-marker four-chain screen nevertheless failed the
+joint-mixing gate. Annotation-PIP ranges were 0.148, 0.367, and 0.227; chain
+mean active counts ranged from 75.8 to 115.1. Maximum alpha R-hat was 1.129,
+active/component-count R-hat was 1.125, minimum alpha ESS was 6.77, and
+minimum active-count ESS was 9.16. SNP effects and PIPs remained
+stable relative to standard SBayesRC (correlations 0.993 and 0.961), and every
+chain made annotation-selection transitions, so this is not the former
+support or implementation discrepancy. It is unresolved joint genomic
+mixing. No tuning or scientific benchmark was started.
+
+**SBS4B2-R2: posterior proper, genomic joint mixing unresolved. Overall:
+SBS4-R3.** The internal backend remains development-only, no public model/API
+is exposed, and Study 07 must not begin from this checkpoint.

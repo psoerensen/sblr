@@ -1623,8 +1623,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // st_bayesrc_selection_math_test
-Rcpp::List st_bayesrc_selection_math_test(arma::mat annotation, Rcpp::List eligible, Rcpp::List latent, arma::mat alpha, Rcpp::IntegerVector delta, double pi_a, arma::vec tau2, double a_pi, double b_pi, double a_tau, double b_tau, double probability_floor);
-RcppExport SEXP _sblr_st_bayesrc_selection_math_test(SEXP annotationSEXP, SEXP eligibleSEXP, SEXP latentSEXP, SEXP alphaSEXP, SEXP deltaSEXP, SEXP pi_aSEXP, SEXP tau2SEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP probability_floorSEXP) {
+Rcpp::List st_bayesrc_selection_math_test(arma::mat annotation, Rcpp::List eligible, Rcpp::List latent, arma::mat alpha, Rcpp::IntegerVector delta, double pi_a, arma::vec tau2, double a_pi, double b_pi, double a_tau, double b_tau, arma::mat intercept_prior_resolved, double probability_floor);
+RcppExport SEXP _sblr_st_bayesrc_selection_math_test(SEXP annotationSEXP, SEXP eligibleSEXP, SEXP latentSEXP, SEXP alphaSEXP, SEXP deltaSEXP, SEXP pi_aSEXP, SEXP tau2SEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP intercept_prior_resolvedSEXP, SEXP probability_floorSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1639,14 +1639,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type b_pi(b_piSEXP);
     Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
     Rcpp::traits::input_parameter< double >::type b_tau(b_tauSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type intercept_prior_resolved(intercept_prior_resolvedSEXP);
     Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
-    rcpp_result_gen = Rcpp::wrap(st_bayesrc_selection_math_test(annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, probability_floor));
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_selection_math_test(annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, intercept_prior_resolved, probability_floor));
     return rcpp_result_gen;
 END_RCPP
 }
 // st_bayesrc_selection_hierarchy_test
-Rcpp::List st_bayesrc_selection_hierarchy_test(arma::mat annotation, Rcpp::List eligible, Rcpp::List outcome, arma::mat alpha_initial, Rcpp::IntegerVector delta_initial, double pi_a_initial, arma::vec tau2_initial, double a_pi, double b_pi, double a_tau, double b_tau, double probability_floor, int iterations, int burn, int seed, Rcpp::IntegerVector fixed_delta);
-RcppExport SEXP _sblr_st_bayesrc_selection_hierarchy_test(SEXP annotationSEXP, SEXP eligibleSEXP, SEXP outcomeSEXP, SEXP alpha_initialSEXP, SEXP delta_initialSEXP, SEXP pi_a_initialSEXP, SEXP tau2_initialSEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP probability_floorSEXP, SEXP iterationsSEXP, SEXP burnSEXP, SEXP seedSEXP, SEXP fixed_deltaSEXP) {
+Rcpp::List st_bayesrc_selection_hierarchy_test(arma::mat annotation, Rcpp::List eligible, Rcpp::List outcome, arma::mat alpha_initial, Rcpp::IntegerVector delta_initial, double pi_a_initial, arma::vec tau2_initial, double a_pi, double b_pi, double a_tau, double b_tau, arma::mat intercept_prior_resolved, double probability_floor, int iterations, int burn, int seed, Rcpp::IntegerVector fixed_delta);
+RcppExport SEXP _sblr_st_bayesrc_selection_hierarchy_test(SEXP annotationSEXP, SEXP eligibleSEXP, SEXP outcomeSEXP, SEXP alpha_initialSEXP, SEXP delta_initialSEXP, SEXP pi_a_initialSEXP, SEXP tau2_initialSEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP intercept_prior_resolvedSEXP, SEXP probability_floorSEXP, SEXP iterationsSEXP, SEXP burnSEXP, SEXP seedSEXP, SEXP fixed_deltaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1661,12 +1662,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type b_pi(b_piSEXP);
     Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
     Rcpp::traits::input_parameter< double >::type b_tau(b_tauSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type intercept_prior_resolved(intercept_prior_resolvedSEXP);
     Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
     Rcpp::traits::input_parameter< int >::type iterations(iterationsSEXP);
     Rcpp::traits::input_parameter< int >::type burn(burnSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type fixed_delta(fixed_deltaSEXP);
-    rcpp_result_gen = Rcpp::wrap(st_bayesrc_selection_hierarchy_test(annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, probability_floor, iterations, burn, seed, fixed_delta));
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_selection_hierarchy_test(annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, intercept_prior_resolved, probability_floor, iterations, burn, seed, fixed_delta));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2107,8 +2109,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_st_bayesrc_alpha_conditional_moments_test", (DL_FUNC) &_sblr_st_bayesrc_alpha_conditional_moments_test, 6},
     {"_sblr_st_bayesrc_sigma_sq_alpha_draws_test", (DL_FUNC) &_sblr_st_bayesrc_sigma_sq_alpha_draws_test, 5},
     {"_sblr_st_bayesrc_frozen_hierarchy_chains_test", (DL_FUNC) &_sblr_st_bayesrc_frozen_hierarchy_chains_test, 11},
-    {"_sblr_st_bayesrc_selection_math_test", (DL_FUNC) &_sblr_st_bayesrc_selection_math_test, 12},
-    {"_sblr_st_bayesrc_selection_hierarchy_test", (DL_FUNC) &_sblr_st_bayesrc_selection_hierarchy_test, 16},
+    {"_sblr_st_bayesrc_selection_math_test", (DL_FUNC) &_sblr_st_bayesrc_selection_math_test, 13},
+    {"_sblr_st_bayesrc_selection_hierarchy_test", (DL_FUNC) &_sblr_st_bayesrc_selection_hierarchy_test, 17},
     {"_sblr_st_bayesrc_pairwise_conditional_test", (DL_FUNC) &_sblr_st_bayesrc_pairwise_conditional_test, 12},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 54},
     {"_sblr_st_sbayesrc_selection_csr_internal", (DL_FUNC) &_sblr_st_sbayesrc_selection_csr_internal, 40},

@@ -36,9 +36,12 @@
     0.18 * (2 * annotation[component == 3L, 1L] - 1)
   sample_size <- 120L
   score <- sample_size * beta + stats::rnorm(marker_count, 0, 1.5)
-  intercept_prior <- suppressWarnings(sblr:::.sbayesrc_resolve_intercept_prior(
-    rep(0.25, 4L), intercept_flat = TRUE
-  ))$native
+  intercept_prior_specification <- sblr:::.sbayesrc_resolve_intercept_prior(
+    rep(0.25, 4L), annotation_intercept_prior = list(
+      mean = "initial_mixture", sd = 1
+    )
+  )
+  intercept_prior <- intercept_prior_specification$native
   intercept_prior <- rbind(
     intercept_prior,
     update_sigmaSqAlpha = rep(1, 3L),
@@ -52,6 +55,7 @@
     A = A, annotation = annotation, gamma = gamma,
     alpha_init = matrix(0, 4L, 3L), delta_init = c(1L, 1L, 0L),
     tau2_init = rep(0.8, 3L), intercept_prior = intercept_prior,
+    intercept_prior_specification = intercept_prior_specification,
     B = matrix(0.08, 1L, 1L), E = matrix(1, 1L, 1L),
     ssb_prior = list(0.08), sse_prior = list(1), n = sample_size
   )

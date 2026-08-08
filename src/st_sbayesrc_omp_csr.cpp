@@ -1788,6 +1788,8 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& selection_alpha_conditional_mean_task =
   execution_result.selection_alpha_conditional_mean_task;
  const auto& selection_delta_final_task = execution_result.selection_delta_final_task;
+ const auto& selection_empty_stick_diagnostics_task =
+  execution_result.selection_empty_stick_diagnostics_task;
  const auto& maf_effect_s_accepted_task = execution_result.maf_effect_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
@@ -2150,7 +2152,10 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
       Rcpp::Named("annotation_included_mean") = selection_enabled ?
        Rcpp::wrap(selection_included_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
       Rcpp::Named("annotation_switches") = selection_enabled ?
-       Rcpp::wrap(selection_switches_task[static_cast<std::size_t>(task)]) : R_NilValue
+       Rcpp::wrap(selection_switches_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("empty_stick_diagnostics") = selection_enabled ?
+       Rcpp::wrap(selection_empty_stick_diagnostics_task[
+        static_cast<std::size_t>(task)]) : R_NilValue
      ),
      Rcpp::Named("convergence_trace")=Rcpp::List::create(
       Rcpp::Named("marker_index")=Rcpp::wrap(convergence_markers),
@@ -2545,6 +2550,7 @@ Rcpp::List st_bayesrc_selection_math_test(
  double b_pi,
  double a_tau,
  double b_tau,
+ arma::mat intercept_prior_resolved,
  double probability_floor
 ) {
  const auto rows = st_bayesrc_selection_rows_from_r(
@@ -2561,7 +2567,13 @@ Rcpp::List st_bayesrc_selection_math_test(
   st_bayesrc_selection_delta_from_r(delta, annotation.n_cols),
   alpha, pi_a, tau2};
  const StBayesRCSelectionHyperParameters hyper{a_pi, b_pi, a_tau, b_tau};
- st_bayesrc_selection_validate(annotation, rows, nullptr, state, hyper);
+ const auto intercept_prior = st_bayesrc_parse_intercept_prior(
+  intercept_prior_resolved, static_cast<int>(rows.size()));
+ if (intercept_prior.legacy_flat) throw std::invalid_argument(
+  "SBayesRC-S requires a proper intercept prior");
+ st_bayesrc_selection_validate(
+  annotation, rows, nullptr, state, hyper,
+  intercept_prior.mean, intercept_prior.precision);
 
  const arma::uword annotation_count = annotation.n_cols;
  const arma::uword stick_count = rows.size();
@@ -2613,6 +2625,23 @@ Rcpp::List st_bayesrc_selection_math_test(
  const arma::mat q = st_bayesrc_selection_compute_q(annotation, state.alpha);
  const arma::mat component_probability = st_bayesrc_selection_compute_pi(
   annotation, state.alpha, probability_floor);
+ arma::mat intercept_conditional(stick_count, 2u, arma::fill::zeros);
+ const arma::uvec selected = arma::find(state.delta == 1u);
+ for (arma::uword stick = 0; stick < stick_count; ++stick) {
+  const arma::uvec& index = rows[static_cast<std::size_t>(stick)];
+  arma::vec residual = latent_values[static_cast<std::size_t>(stick)];
+  for (arma::uword column = 0; column < selected.n_elem; ++column) {
+   const arma::uword j = selected(column);
+   residual -= st_bayesrc_selection_column_rows(annotation, j, index) *
+    state.alpha(j + 1u, stick);
+  }
+  const double precision = static_cast<double>(index.n_elem) +
+   intercept_prior.precision(stick);
+  const double rhs = arma::accu(residual) +
+   intercept_prior.precision(stick) * intercept_prior.mean(stick);
+  intercept_conditional(stick, 0u) = rhs / precision;
+  intercept_conditional(stick, 1u) = 1.0 / precision;
+ }
  return Rcpp::List::create(
   Rcpp::Named("eta") = eta,
   Rcpp::Named("s") = s,
@@ -2624,6 +2653,7 @@ Rcpp::List st_bayesrc_selection_math_test(
   Rcpp::Named("conditional_variance") = conditional_variance,
   Rcpp::Named("beta_parameters") = beta_parameters,
   Rcpp::Named("ig_parameters") = ig_parameters,
+  Rcpp::Named("intercept_conditional") = intercept_conditional,
   Rcpp::Named("q") = q,
   Rcpp::Named("component_probability") = component_probability
  );
@@ -2644,6 +2674,7 @@ Rcpp::List st_bayesrc_selection_hierarchy_test(
  double b_pi,
  double a_tau,
  double b_tau,
+ arma::mat intercept_prior_resolved,
  double probability_floor,
  int iterations,
  int burn,
@@ -2660,7 +2691,13 @@ Rcpp::List st_bayesrc_selection_hierarchy_test(
   st_bayesrc_selection_delta_from_r(delta_initial, annotation.n_cols),
   alpha_initial, pi_a_initial, tau2_initial};
  const StBayesRCSelectionHyperParameters hyper{a_pi, b_pi, a_tau, b_tau};
- st_bayesrc_selection_validate(annotation, rows, &outcomes, state, hyper);
+ const auto intercept_prior = st_bayesrc_parse_intercept_prior(
+  intercept_prior_resolved, static_cast<int>(rows.size()));
+ if (intercept_prior.legacy_flat) throw std::invalid_argument(
+  "SBayesRC-S requires a proper intercept prior");
+ st_bayesrc_selection_validate(
+  annotation, rows, &outcomes, state, hyper,
+  intercept_prior.mean, intercept_prior.precision);
  for (arma::uword j = 0; j < state.delta.n_elem; ++j) {
   if (state.delta(j) == 0u) state.alpha.row(j + 1u).zeros();
  }
@@ -2692,7 +2729,8 @@ Rcpp::List st_bayesrc_selection_hierarchy_test(
   st_bayesrc_selection_delta_sweep(
    annotation, rows, latent, state, generator, fixed_pointer);
   st_bayesrc_selection_blocked_redraw(
-   annotation, rows, latent, state, generator);
+   annotation, rows, latent, state,
+   intercept_prior.mean, intercept_prior.precision, generator);
   st_bayesrc_selection_update_hyperparameters(state, hyper, generator);
   if (iteration >= burn) {
    const arma::uword draw = static_cast<arma::uword>(iteration - burn);
@@ -2867,6 +2905,12 @@ Rcpp::List st_sbayesrc_selection_csr_internal(
  selection_config.tau2_init = tau2_init;
  selection_config.hyper = StBayesRCSelectionHyperParameters{
   a_pi, b_pi, a_tau, b_tau};
+ const auto selection_intercept_prior = st_bayesrc_parse_intercept_prior(
+  intercept_prior_resolved, static_cast<int>(alpha_init.n_cols));
+ if (selection_intercept_prior.legacy_flat) throw std::invalid_argument(
+  "SBayesRC-S requires a proper intercept prior");
+ selection_config.intercept_mean = selection_intercept_prior.mean;
+ selection_config.intercept_precision = selection_intercept_prior.precision;
  if (fixed_delta.size() > 0) {
   selection_config.fixed_delta = true;
   selection_config.fixed_delta_value = Rcpp::as<arma::ivec>(fixed_delta);

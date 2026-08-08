@@ -39,6 +39,8 @@ struct StBayesRCSelectionGenomicConfig {
  double pi_a_init = 0.5;
  arma::vec tau2_init;
  StBayesRCSelectionHyperParameters hyper{1.0, 1.0, 3.0, 1.6};
+ arma::vec intercept_mean;
+ arma::vec intercept_precision;
  bool fixed_delta = false;
  arma::ivec fixed_delta_value;
 };
@@ -168,7 +170,9 @@ inline void st_bayesrc_selection_validate(
  const std::vector<arma::uvec>& eligible,
  const std::vector<arma::ivec>* outcome,
  const StBayesRCSelectionState& state,
- const StBayesRCSelectionHyperParameters& hyper
+ const StBayesRCSelectionHyperParameters& hyper,
+ const arma::vec& intercept_mean,
+ const arma::vec& intercept_precision
 ) {
  const arma::uword annotations = annotation.n_cols;
  const arma::uword sticks = eligible.size();
@@ -181,7 +185,11 @@ inline void st_bayesrc_selection_validate(
      !std::isfinite(hyper.a_pi) || hyper.a_pi <= 0.0 ||
      !std::isfinite(hyper.b_pi) || hyper.b_pi <= 0.0 ||
      !std::isfinite(hyper.a_tau) || hyper.a_tau <= 0.0 ||
-     !std::isfinite(hyper.b_tau) || hyper.b_tau <= 0.0) {
+     !std::isfinite(hyper.b_tau) || hyper.b_tau <= 0.0 ||
+     intercept_mean.n_elem != sticks || !intercept_mean.is_finite() ||
+     intercept_precision.n_elem != sticks ||
+     !intercept_precision.is_finite() ||
+     arma::any(intercept_precision <= 0.0)) {
   throw std::invalid_argument("invalid SBayesRC-S hierarchy dimensions/state");
  }
  if (outcome != nullptr && outcome->size() != sticks) {
@@ -189,7 +197,7 @@ inline void st_bayesrc_selection_validate(
  }
  for (arma::uword stick = 0; stick < sticks; ++stick) {
   const arma::uvec& rows = eligible[static_cast<std::size_t>(stick)];
-  if (rows.n_elem == 0u || arma::any(rows >= annotation.n_rows)) {
+  if (rows.n_elem > 0u && arma::any(rows >= annotation.n_rows)) {
    throw std::invalid_argument("SBayesRC-S eligible rows are invalid");
   }
   if (outcome != nullptr) {
@@ -252,8 +260,6 @@ inline void st_bayesrc_selection_build_observed_sticks(
    if (stick == 0 || indicators(marker, static_cast<arma::uword>(stick - 1)) > 0)
     rows.push_back(marker);
   }
-  if (rows.empty())
-   throw std::runtime_error("SBayesRC-S flat intercept is undefined for an empty eligible stick");
   eligible[static_cast<std::size_t>(stick)] = arma::conv_to<arma::uvec>::from(rows);
   arma::ivec d(rows.size());
   for (std::size_t i = 0; i < rows.size(); ++i)
@@ -350,6 +356,8 @@ inline void st_bayesrc_selection_blocked_redraw(
  const std::vector<arma::uvec>& eligible,
  const std::vector<arma::vec>& latent,
  StBayesRCSelectionState& state,
+ const arma::vec& intercept_mean,
+ const arma::vec& intercept_precision,
  std::mt19937& generator
 ) {
  const arma::uvec selected = arma::find(state.delta == 1u);
@@ -362,6 +370,7 @@ inline void st_bayesrc_selection_blocked_redraw(
     annotation, selected(column), rows);
   }
   arma::vec prior_precision(selected.n_elem + 1u, arma::fill::zeros);
+  prior_precision(0u) = intercept_precision(stick);
   if (selected.n_elem > 0u) {
    prior_precision.subvec(1u, selected.n_elem).fill(1.0 / state.tau2(stick));
   }
@@ -371,7 +380,8 @@ inline void st_bayesrc_selection_blocked_redraw(
   if (!arma::chol(chol_precision, precision)) {
    throw std::runtime_error("SBayesRC-S blocked precision is not positive definite");
   }
-  const arma::vec rhs = design.t() * latent[static_cast<std::size_t>(stick)];
+  arma::vec rhs = design.t() * latent[static_cast<std::size_t>(stick)];
+  rhs(0u) += intercept_precision(stick) * intercept_mean(stick);
   const arma::vec mean = arma::solve(
    arma::trimatu(chol_precision),
    arma::solve(arma::trimatl(chol_precision.t()), rhs));

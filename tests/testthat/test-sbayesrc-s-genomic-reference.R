@@ -2,6 +2,7 @@ test_that("internal CSR SBayesRC-S backend returns coherent genomic state", {
   fixture <- .sbs4b_fixture(48L, 20270901L)
   fit <- .sbs4b_run(fixture, 20270902L, 180L, 40L)
   annotation <- fit$chains[[1L]][[1L]]$annotation
+  empty_diagnostics <- annotation$empty_stick_diagnostics
   expect_identical(fit$meta$model, "sbayesrc_selection")
   expect_identical(fit$meta$backend, "csr_sbayesrc_selection_internal")
   expect_length(annotation$annotation_pip, 3L)
@@ -62,13 +63,22 @@ test_that("disabled selection policy preserves standard SBayesRC RNG", {
   expect_identical(first$component, second$component)
 })
 
-test_that("genomic SBayesRC-S refuses an improper empty flat-intercept stick", {
+test_that("genomic SBayesRC-S supports an empty proper-intercept stick", {
   fixture <- .sbs4b_fixture(40L, 20270930L)
   fixture$comp_init <- list(rep(0L, 40L))
   fixture$b_init <- list(rep(0, 40L))
   fixture$r_init <- fixture$wy
-  expect_error(
-    .sbs4b_run(fixture, 20270931L, 20L, 0L),
-    "flat intercept is undefined for an empty eligible stick"
-  )
+  fit <- .sbs4b_run(fixture, 20270931L, 120L, 20L)
+  annotation <- fit$chains[[1L]][[1L]]$annotation
+  empty_diagnostics <- annotation$empty_stick_diagnostics
+  expect_true(all(is.finite(c(
+    annotation$alpha, annotation$annotation_pip,
+    annotation$annotation_pi_A, annotation$annotation_tau2
+  ))))
+  expect_equal(rowSums(fit$component$prob[[1L]]),
+               rep(1, nrow(fixture$A)), tolerance = 1e-12)
+  expect_equal(dim(empty_diagnostics), c(3L, 4L))
+  expect_true(all(empty_diagnostics[2:3, 1L] >= 1))
+  expect_true(all(empty_diagnostics[2:3, 2L] >= 1))
+  expect_true(all(empty_diagnostics[2:3, 3L] >= 1))
 })

@@ -788,3 +788,81 @@ proper genomic model over the complete allocation state space. A future
 mathematical revision must specify and independently validate a proper
 intercept prior or another genuinely proper empty-stick model before genomic
 implementation resumes.
+
+## Phase 3D: proper intercept over the full allocation state space
+
+The Phase-4B support finding required a model revision, not a numerical
+fallback. SBayesRC-S now specifies, for every stick and every allocation
+state,
+
+\[
+\alpha_{0k}\sim N(\mu_{0k},v_{0k}).
+\]
+
+The default reference convention matches standard SBayesRC's resolved proper
+intercept convention: `mu0` is the probit transform of continuation
+probabilities implied by the initial component probabilities, and the
+probit-scale prior SD is 1. For the uniform four-component reference fixture,
+the component probabilities `(0.25, 0.25, 0.25, 0.25)` imply continuation
+probabilities `(0.75, 2/3, 0.5)` and centers
+`(0.6744898, 0.4307273, 0)`. The prior is an explicit model input; a future
+wrapper must record both its center and variance.
+
+Zero-centering was rejected as the default because it implies continuation
+0.5 at every stick rather than reproducing a stated baseline mixture. SD 0.5,
+1, and 2 were inspected before qualification. SD 2 put 6.7%--12.2% of prior
+mass below continuation 0.01 and 12.2%--20.4% above 0.99, depending on stick.
+SD 1 retains meaningful uncertainty without that concentration at extreme
+probabilities. No qualification result was used to select the scale.
+
+For selected set S, let
+
+\[
+B_{S,k}=\operatorname{diag}(v_{0k}^{-1},\tau_k^{-2},\ldots),\quad
+b_{S,k}=(\mu_{0k}/v_{0k},0,\ldots)^T.
+\]
+
+Then
+
+\[
+P_{S,k}=Z_{S,k}^TZ_{S,k}+B_{S,k},\qquad
+h_{S,k}=Z_{S,k}^Tz_k+b_{S,k},
+\]
+
+and the exact Gaussian conditional is
+
+\[
+\theta_{S,k}\mid z,S\sim
+N(P_{S,k}^{-1}h_{S,k},P_{S,k}^{-1}).
+\]
+
+Writing `m0=(mu0,0,...)` and D for the full prior covariance, the
+model-dependent proper log marginal is
+
+\[
+-\tfrac12\log|D|-\tfrac12\log|P|+
+\tfrac12h^TP^{-1}h-\tfrac12m_0^TD^{-1}m_0.
+\]
+
+It agrees with an independent dense marginal calculation based on
+`I + Z D Z'` to numerical tolerance. When a stick is empty, `Z` has zero
+rows, so the posterior is exactly the prior: the intercept follows
+`N(mu0, v0)`, selected slopes follow their slabs, and each empty-stick
+annotation Bayes-factor contribution is zero. `pi_A` and `tau2` retain their
+ordinary coherent Gibbs conditionals. Mixture probabilities remain defined
+for every SNP and therefore allow a later allocation sweep to repopulate an
+empty stick.
+
+The proper-prior exact-versus-MCMC fixture gave maximum annotation-PIP error
+0.00879, model total-variation distance 0.00889, maximum alpha-mean error
+0.00721, maximum q error 0.00192, and maximum component-probability error
+0.00102. Independent observed-d implementations differed by at most 0.00220
+in annotation PIP. Explicit empty-stick draws matched prior means and
+variances within 0.038 and remained finite through controlled empty/nonempty
+state changes. The 12-annotation and repeated hierarchical fixtures were
+finite and coherent.
+
+**SBS3D-R1: the proper-intercept SBayesRC-S R hierarchy is validated.** The
+original flat-prior Phase-1--3 results remain valid historical conditional
+results for nonempty sticks; the proper-prior specification is authoritative
+for the genomic model.

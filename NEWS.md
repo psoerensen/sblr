@@ -87,6 +87,12 @@
   methods document the learned-alpha mixing audit and its PMA-R3 endpoint; no
   new production sampler option, public interface, default, or ordinary RNG
   path was introduced.
+* Revised the development-only SBayesRC-S reference to use a proper,
+  initial-mixture-centred normal prior for every probit-stick intercept. The
+  R and C++ hierarchy oracles now cover empty eligible sticks exactly. The
+  internal CSR integration resolves the former empty-stick support blocker,
+  but its small multichain genomic screen still shows unresolved joint
+  selection/allocation mixing; no public model option or default was added.
 
 # sblr 0.1.0
 

@@ -59,9 +59,13 @@
 }
 
 .sbs2_draw_coefficients <- function(latent, annotation, selected, tau2,
-                                    method = c("primary", "direct")) {
+                                    method = c("primary", "direct"),
+                                    intercept_mean = 0,
+                                    intercept_variance = 1) {
   method <- match.arg(method)
-  posterior <- .sbs_stick_model(latent, annotation, selected, tau2)
+  posterior <- .sbs_stick_model(
+    latent, annotation, selected, tau2, intercept_mean, intercept_variance
+  )
   if (method == "primary") return(.sbs_draw_from_stick_posterior(posterior))
   chol_covariance <- chol(posterior$covariance)
   draw <- posterior$mean + drop(t(chol_covariance) %*%
@@ -73,12 +77,16 @@
                             iterations, burn, initial_delta,
                             method = c("primary", "direct"),
                             fixed_delta = NULL, initial_alpha = NULL,
-                            initial_intercept = NULL) {
+                            initial_intercept = NULL,
+                            intercept_prior = NULL) {
   method <- match.arg(method)
   annotation <- as.matrix(annotation)
   .sbs2_validate_hierarchy(outcome, annotation, eligible)
   annotation_count <- ncol(annotation)
   stick_count <- length(outcome)
+  if (is.null(intercept_prior)) {
+    intercept_prior <- .sbs_intercept_prior(stick_count)
+  }
   stopifnot(
     length(tau2) == stick_count, all(is.finite(tau2)), all(tau2 > 0),
     pi_a > 0, pi_a < 1, iterations > burn, burn >= 0
@@ -92,8 +100,10 @@
   }
   alpha[delta == 0L, ] <- 0
   intercept <- if (is.null(initial_intercept)) {
-    vapply(outcome, function(d) {
-      stats::qnorm((sum(d) + 0.5) / (length(d) + 1))
+    vapply(seq_len(stick_count), function(stick) {
+      d <- outcome[[stick]]
+      if (!length(d)) intercept_prior$mean[stick] else
+        stats::qnorm((sum(d) + 0.5) / (length(d) + 1))
     }, numeric(1L))
   } else {
     as.numeric(initial_intercept)
@@ -158,7 +168,8 @@
       rows <- eligible[[stick]]
       draw <- .sbs2_draw_coefficients(
         latent[[stick]], annotation[rows, , drop = FALSE], selected,
-        tau2[stick], method
+        tau2[stick], method, intercept_prior$mean[stick],
+        intercept_prior$variance[stick]
       )
       intercept[stick] <- draw$intercept
       alpha[, stick] <- 0
@@ -233,6 +244,7 @@
   list(
     annotation = annotation, eligible = eligible, outcome = outcome,
     latent_true = latent_true, pi_a = 0.35, tau2 = rep(0.8, 3L),
+    intercept_prior = .sbs_intercept_prior(3L),
     true_delta = as.integer(signal != 0), true_alpha = true_alpha,
     true_intercept = intercept
   )
@@ -271,10 +283,14 @@
 }
 
 .sbs2_standard_continuous_chain <- function(outcome, annotation, eligible,
-                                            tau2, iterations, burn) {
+                                            tau2, iterations, burn,
+                                            intercept_prior = NULL) {
   annotation <- as.matrix(annotation)
   .sbs2_validate_hierarchy(outcome, annotation, eligible)
   stick_count <- length(outcome)
+  if (is.null(intercept_prior)) {
+    intercept_prior <- .sbs_intercept_prior(stick_count)
+  }
   coefficient_count <- ncol(annotation) + 1L
   coefficients <- matrix(0, coefficient_count, stick_count)
   retained <- iterations - burn
@@ -288,9 +304,13 @@
       design <- cbind(Intercept = 1, annotation[rows, , drop = FALSE])
       eta <- drop(design %*% coefficients[, stick])
       latent <- .sbs2_rtrunc_probit(eta, outcome[[stick]])
-      coefficients[, stick] <- .sbayesrc_alpha_blocked_draws(
-        latent, annotation[rows, , drop = FALSE], tau2[stick], draws = 1L
-      )[1L, ]
+      posterior <- .sbs_stick_model(
+        latent, annotation[rows, , drop = FALSE],
+        rep(TRUE, ncol(annotation)), tau2[stick],
+        intercept_prior$mean[stick], intercept_prior$variance[stick]
+      )
+      draw <- .sbs_draw_from_stick_posterior(posterior)
+      coefficients[, stick] <- c(draw$intercept, draw$slopes)
     }
     if (iteration > burn) {
       kept <- kept + 1L

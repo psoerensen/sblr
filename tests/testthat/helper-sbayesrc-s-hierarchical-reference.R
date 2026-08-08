@@ -19,9 +19,13 @@
 }
 
 .sbs3_exact_pi_posterior <- function(z, annotation, eligible, tau2,
-                                     a_pi, b_pi) {
+                                     a_pi, b_pi,
+                                     intercept_prior = NULL) {
   annotation <- as.matrix(annotation)
   states <- .sbs_model_states(ncol(annotation))
+  if (is.null(intercept_prior)) {
+    intercept_prior <- .sbs_intercept_prior(length(z))
+  }
   log_weight <- numeric(nrow(states))
   for (model in seq_len(nrow(states))) {
     selected <- states[model, ] == 1L
@@ -31,7 +35,8 @@
     for (stick in seq_along(z)) {
       rows <- eligible[[stick]]
       log_weight[model] <- log_weight[model] + .sbs_stick_model(
-        z[[stick]], annotation[rows, , drop = FALSE], selected, tau2[stick]
+        z[[stick]], annotation[rows, , drop = FALSE], selected, tau2[stick],
+        intercept_prior$mean[stick], intercept_prior$variance[stick]
       )$log_marginal
     }
   }
@@ -87,11 +92,15 @@
                             fixed_delta = NULL,
                             initial_alpha = NULL,
                             initial_intercept = NULL,
-                            method = c("primary", "direct")) {
+                            method = c("primary", "direct"),
+                            intercept_prior = NULL) {
   method <- match.arg(method)
   annotation <- as.matrix(annotation)
   annotation_count <- ncol(annotation)
   stick_count <- length(eligible)
+  if (is.null(intercept_prior)) {
+    intercept_prior <- .sbs_intercept_prior(stick_count)
+  }
   stopifnot(
     iterations > burn, burn >= 0L,
     length(tau2) == stick_count, all(is.finite(tau2)), all(tau2 > 0),
@@ -119,11 +128,16 @@
   intercept <- if (!is.null(initial_intercept)) {
     as.numeric(initial_intercept)
   } else if (!is.null(outcome)) {
-    vapply(outcome, function(d) {
-      stats::qnorm((sum(d) + 0.5) / (length(d) + 1))
+    vapply(seq_len(stick_count), function(stick) {
+      d <- outcome[[stick]]
+      if (!length(d)) intercept_prior$mean[stick] else
+        stats::qnorm((sum(d) + 0.5) / (length(d) + 1))
     }, numeric(1L))
   } else {
-    vapply(fixed_z, mean, numeric(1L))
+    vapply(seq_len(stick_count), function(stick) {
+      if (!length(fixed_z[[stick]])) intercept_prior$mean[stick] else
+        mean(fixed_z[[stick]])
+    }, numeric(1L))
   }
   current_pi <- pi_a
   current_tau <- as.numeric(tau2)
@@ -200,7 +214,8 @@
       rows <- eligible[[stick]]
       draw <- .sbs2_draw_coefficients(
         latent[[stick]], annotation[rows, , drop = FALSE], selected,
-        current_tau[stick], method
+        current_tau[stick], method, intercept_prior$mean[stick],
+        intercept_prior$variance[stick]
       )
       intercept[stick] <- draw$intercept
       alpha[, stick] <- 0
@@ -271,16 +286,20 @@
 
 .sbs3_tau_quadrature <- function(z, annotation, eligible, pi_a,
                                  a_tau, b_tau,
-                                 lower = -12, upper = 12) {
+                                 lower = -12, upper = 12,
+                                 intercept_prior = NULL) {
   stopifnot(ncol(annotation) == 1L, length(z) == 1L)
+  if (is.null(intercept_prior)) intercept_prior <- .sbs_intercept_prior(1L)
   rows <- eligible[[1L]]
   log_m0 <- .sbs_stick_model(
-    z[[1L]], annotation[rows, , drop = FALSE], FALSE, 1
+    z[[1L]], annotation[rows, , drop = FALSE], FALSE, 1,
+    intercept_prior$mean[1L], intercept_prior$variance[1L]
   )$log_marginal
   log_kernel <- function(log_tau, moment = 0) {
     tau <- exp(log_tau)
     log_m1 <- .sbs_stick_model(
-      z[[1L]], annotation[rows, , drop = FALSE], TRUE, tau
+      z[[1L]], annotation[rows, , drop = FALSE], TRUE, tau,
+      intercept_prior$mean[1L], intercept_prior$variance[1L]
     )$log_marginal
     exp(log_m1 + .sbs3_log_ig(tau, a_tau, b_tau) +
           log_tau + moment * log_tau)
@@ -290,18 +309,22 @@
   log_grid <- vapply(grid, function(u) {
     tau <- exp(u)
     .sbs_stick_model(
-      z[[1L]], annotation[rows, , drop = FALSE], TRUE, tau
+      z[[1L]], annotation[rows, , drop = FALSE], TRUE, tau,
+      intercept_prior$mean[1L], intercept_prior$variance[1L]
     )$log_marginal + .sbs3_log_ig(tau, a_tau, b_tau) + u
   }, numeric(1L))
   shift <- max(log_grid)
   integral <- function(power = 0) stats::integrate(
     function(u) {
-      tau <- exp(u)
-      log_m1 <- .sbs_stick_model(
-        z[[1L]], annotation[rows, , drop = FALSE], TRUE, tau
-      )$log_marginal
-      exp(log_m1 + .sbs3_log_ig(tau, a_tau, b_tau) + u - shift) *
-        tau^power
+      vapply(u, function(value) {
+        tau <- exp(value)
+        log_m1 <- .sbs_stick_model(
+          z[[1L]], annotation[rows, , drop = FALSE], TRUE, tau,
+          intercept_prior$mean[1L], intercept_prior$variance[1L]
+        )$log_marginal
+        exp(log_m1 + .sbs3_log_ig(tau, a_tau, b_tau) + value - shift) *
+          tau^power
+      }, numeric(1L))
     }, lower, upper, rel.tol = 1e-9, subdivisions = 1000L
   )$value * exp(shift)
   marginal1 <- integral(0)
@@ -398,6 +421,7 @@
   list(
     annotation = annotation, eligible = eligible, outcome = outcome,
     latent_true = latent_true, true_delta = delta, true_alpha = alpha,
+    intercept_prior = .sbs_intercept_prior(3L),
     true_intercept = intercept, pi_true = pi_true, tau_true = tau_true
   )
 }

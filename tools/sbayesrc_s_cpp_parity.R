@@ -33,7 +33,8 @@ run_pair <- function(fixture, initials, seeds, iterations, burn,
       0.35, initial_tau2, outcome = fixture$outcome,
       learn_pi = TRUE, learn_tau = TRUE,
       a_pi = a_pi, b_pi = b_pi, a_tau = 3, b_tau = 1.6,
-      fixed_delta = fixed_delta
+      fixed_delta = fixed_delta,
+      intercept_prior = fixture$intercept_prior
     )
   })
   list(cpp = cpp, r = r, cpp_summary = .sbs4a_cpp_summary(cpp),
@@ -73,8 +74,10 @@ moderate <- .sbs3_moderate_fixture(
   observations = 260L, annotation_count = 12L, seed = 20270860L
 )
 moderate_pair <- run_pair(
-  moderate, list(rep(0L, 12L), rep(1L, 12L)), 20270861:20270862,
-  6000L, 1000L, a_pi = 1, b_pi = 9
+  moderate,
+  list(rep(0L, 12L), rep(1L, 12L), rep(c(1L, 0L), 6L),
+       rep(c(0L, 1L), 6L)),
+  20270861:20270864, 10000L, 1500L, a_pi = 1, b_pi = 9
 )
 moderate_metrics <- comparison(moderate_pair)
 
@@ -141,7 +144,7 @@ qualification$pass <- isTRUE(
     permutation_error <= 0.03 && duplicate_pip_difference <= 0.05
 )
 
-output_dir <- file.path("results", "local", "sbayesrc_s_reference", "phase4A")
+output_dir <- file.path("results", "local", "sbayesrc_s_reference", "phase4A2")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 saveRDS(qualification, file.path(output_dir, "phase4a_cpp_r_parity.rds"))
 write.csv(

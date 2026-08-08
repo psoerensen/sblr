@@ -6,6 +6,39 @@
   maximum + log(sum(exp(x - maximum)))
 }
 
+.sbs_intercept_prior <- function(stick_count,
+                                 component_probability = NULL,
+                                 mean = "initial_mixture", sd = 1) {
+  if (is.null(component_probability)) {
+    component_probability <- rep(1 / (stick_count + 1L), stick_count + 1L)
+  }
+  stopifnot(
+    length(component_probability) == stick_count + 1L,
+    all(is.finite(component_probability)), all(component_probability >= 0),
+    sum(component_probability) > 0, length(sd) %in% c(1L, stick_count),
+    all(is.finite(sd)), all(sd > 0)
+  )
+  probability <- component_probability / sum(component_probability)
+  remaining <- rev(cumsum(rev(probability)))
+  stick_probability <- remaining[-1L] / remaining[-length(remaining)]
+  center <- if (is.character(mean)) {
+    stopifnot(identical(mean, "initial_mixture"))
+    stats::qnorm(stick_probability)
+  } else {
+    stopifnot(length(mean) %in% c(1L, stick_count), all(is.finite(mean)))
+    rep(as.numeric(mean), length.out = stick_count)
+  }
+  scale <- rep(as.numeric(sd), length.out = stick_count)
+  native <- rbind(
+    type = rep(0, stick_count), mean = center, precision = scale^-2
+  )
+  list(
+    mean = center, sd = scale, variance = scale^2,
+    precision = scale^-2, component_probability = probability,
+    stick_probability = stick_probability, native = native
+  )
+}
+
 .sbs_component_probability <- function(q) {
   q <- as.matrix(q)
   probability <- matrix(0, nrow(q), ncol(q) + 1L)
@@ -26,20 +59,33 @@
   states
 }
 
-.sbs_stick_model <- function(z, annotation, selected, tau2) {
+.sbs_stick_model <- function(z, annotation, selected, tau2,
+                             intercept_mean = 0,
+                             intercept_variance = 1) {
   annotation <- as.matrix(annotation)
   selected <- as.logical(selected)
-  design <- cbind(Intercept = 1, annotation[, selected, drop = FALSE])
-  prior_precision <- c(0, rep(tau2^-1, sum(selected)))
+  design <- cbind(
+    Intercept = rep(1, nrow(annotation)),
+    annotation[, selected, drop = FALSE]
+  )
+  stopifnot(length(intercept_mean) == 1L, is.finite(intercept_mean),
+            length(intercept_variance) == 1L,
+            is.finite(intercept_variance), intercept_variance > 0)
+  prior_precision <- c(intercept_variance^-1,
+                       rep(tau2^-1, sum(selected)))
+  prior_mean <- c(intercept_mean, rep(0, sum(selected)))
   precision <- crossprod(design) + diag(prior_precision, nrow = ncol(design))
-  rhs <- drop(crossprod(design, z))
+  rhs <- drop(crossprod(design, z)) + prior_precision * prior_mean
   chol_precision <- chol(precision)
   mean <- backsolve(chol_precision, forwardsolve(t(chol_precision), rhs))
   covariance <- chol2inv(chol_precision)
   log_det_precision <- 2 * sum(log(diag(chol_precision)))
-  log_det_slab <- sum(selected) * log(tau2)
-  log_marginal <- -0.5 * log_det_slab - 0.5 * log_det_precision +
-    0.5 * sum(rhs * mean)
+  log_det_prior_covariance <- log(intercept_variance) +
+    sum(selected) * log(tau2)
+  prior_quadratic <- sum(prior_precision * prior_mean^2)
+  log_marginal <- -0.5 * log_det_prior_covariance -
+    0.5 * log_det_precision + 0.5 * sum(rhs * mean) -
+    0.5 * prior_quadratic
   list(
     log_marginal = log_marginal,
     mean = mean,
@@ -50,7 +96,51 @@
   )
 }
 
-.sbs_exact_posterior <- function(z, annotation, eligible, pi_a, tau2) {
+.sbs_stick_log_marginal_dense <- function(z, annotation, selected, tau2,
+                                           intercept_mean,
+                                           intercept_variance) {
+  annotation <- as.matrix(annotation)
+  selected <- as.logical(selected)
+  design <- cbind(
+    Intercept = rep(1, nrow(annotation)),
+    annotation[, selected, drop = FALSE]
+  )
+  prior_mean <- c(intercept_mean, rep(0, sum(selected)))
+  prior_variance <- c(intercept_variance, rep(tau2, sum(selected)))
+  covariance <- diag(length(z)) +
+    design %*% diag(prior_variance, nrow = length(prior_variance)) %*%
+    t(design)
+  residual <- z - drop(design %*% prior_mean)
+  if (!length(z)) return(0)
+  chol_covariance <- chol(covariance)
+  solved <- backsolve(
+    chol_covariance, forwardsolve(t(chol_covariance), residual)
+  )
+  -sum(log(diag(chol_covariance))) +
+    0.5 * (sum(z^2) - sum(residual * solved))
+}
+
+.sbs_intercept_prior_predictive <- function(prior) {
+  probability_quantile <- function(p) {
+    stats::pnorm(prior$mean + prior$sd * stats::qnorm(p))
+  }
+  cbind(
+    median = probability_quantile(0.5),
+    lower_50 = probability_quantile(0.25),
+    upper_50 = probability_quantile(0.75),
+    lower_95 = probability_quantile(0.025),
+    upper_95 = probability_quantile(0.975),
+    probability_below_001 = stats::pnorm(
+      (stats::qnorm(0.01) - prior$mean) / prior$sd
+    ),
+    probability_above_099 = stats::pnorm(
+      (prior$mean - stats::qnorm(0.99)) / prior$sd
+    )
+  )
+}
+
+.sbs_exact_posterior <- function(z, annotation, eligible, pi_a, tau2,
+                                 intercept_prior = NULL) {
   annotation <- as.matrix(annotation)
   annotation_count <- ncol(annotation)
   stick_count <- length(z)
@@ -60,6 +150,11 @@
     length(tau2) == stick_count,
     pi_a > 0, pi_a < 1
   )
+  if (is.null(intercept_prior)) {
+    intercept_prior <- .sbs_intercept_prior(stick_count)
+  }
+  stopifnot(length(intercept_prior$mean) == stick_count,
+            length(intercept_prior$variance) == stick_count)
   log_weight <- numeric(nrow(states))
   posterior <- vector("list", nrow(states))
   for (model in seq_len(nrow(states))) {
@@ -69,7 +164,8 @@
     for (stick in seq_len(stick_count)) {
       rows <- eligible[[stick]]
       stick_posterior[[stick]] <- .sbs_stick_model(
-        z[[stick]], annotation[rows, , drop = FALSE], selected, tau2[stick]
+        z[[stick]], annotation[rows, , drop = FALSE], selected, tau2[stick],
+        intercept_prior$mean[stick], intercept_prior$variance[stick]
       )
       log_weight[model] <- log_weight[model] +
         stick_posterior[[stick]]$log_marginal
@@ -143,8 +239,12 @@
     0.5 * sum(residual * solved) + 0.5 * sum(residual^2)
 }
 
-.sbs_draw_stick_coefficients <- function(z, annotation, selected, tau2) {
-  posterior <- .sbs_stick_model(z, annotation, selected, tau2)
+.sbs_draw_stick_coefficients <- function(z, annotation, selected, tau2,
+                                         intercept_mean = 0,
+                                         intercept_variance = 1) {
+  posterior <- .sbs_stick_model(
+    z, annotation, selected, tau2, intercept_mean, intercept_variance
+  )
   .sbs_draw_from_stick_posterior(posterior)
 }
 
@@ -156,10 +256,14 @@
 }
 
 .sbs_mcmc_chain <- function(z, annotation, eligible, pi_a, tau2,
-                            iterations, burn, initial_delta) {
+                            iterations, burn, initial_delta,
+                            intercept_prior = NULL) {
   annotation <- as.matrix(annotation)
   annotation_count <- ncol(annotation)
   stick_count <- length(z)
+  if (is.null(intercept_prior)) {
+    intercept_prior <- .sbs_intercept_prior(stick_count)
+  }
   delta <- as.integer(initial_delta)
   alpha <- matrix(0, annotation_count, stick_count)
   intercept <- numeric(stick_count)
@@ -175,7 +279,8 @@
     lapply(seq_len(stick_count), function(stick) {
       rows <- eligible[[stick]]
       .sbs_stick_model(
-        z[[stick]], annotation[rows, , drop = FALSE], selected, tau2[stick]
+        z[[stick]], annotation[rows, , drop = FALSE], selected, tau2[stick],
+        intercept_prior$mean[stick], intercept_prior$variance[stick]
       )
     })
   })
@@ -264,6 +369,7 @@
   list(
     annotation = annotation, eligible = eligible, z = z,
     pi_a = 0.35, tau2 = c(0.8, 0.8, 0.8),
+    intercept_prior = .sbs_intercept_prior(3L),
     true_delta = c(1L, 1L, 0L), true_alpha = true_alpha,
     true_intercept = true_intercept
   )

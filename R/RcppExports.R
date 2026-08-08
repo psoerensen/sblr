@@ -201,12 +201,12 @@ stblr_cpg_omp_bed_marker_scheduled_chains <- function(bed_files, n, cls, y, b_in
     .Call(`_sblr_st_bayesrc_frozen_hierarchy_chains_test`, annotation, component_numeric, alpha_initial, sigma_initial, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, probability_floor, iterations, chain_seeds, cores)
 }
 
-.st_bayesrc_selection_math <- function(annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, probability_floor) {
-    .Call(`_sblr_st_bayesrc_selection_math_test`, annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, probability_floor)
+.st_bayesrc_selection_math <- function(annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, intercept_prior_resolved, probability_floor) {
+    .Call(`_sblr_st_bayesrc_selection_math_test`, annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, intercept_prior_resolved, probability_floor)
 }
 
-.st_bayesrc_selection_hierarchy <- function(annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, probability_floor, iterations, burn, seed, fixed_delta) {
-    .Call(`_sblr_st_bayesrc_selection_hierarchy_test`, annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, probability_floor, iterations, burn, seed, fixed_delta)
+.st_bayesrc_selection_hierarchy <- function(annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, intercept_prior_resolved, probability_floor, iterations, burn, seed, fixed_delta) {
+    .Call(`_sblr_st_bayesrc_selection_hierarchy_test`, annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, intercept_prior_resolved, probability_floor, iterations, burn, seed, fixed_delta)
 }
 
 .st_bayesrc_pairwise_conditional <- function(prior_i, prior_j, gamma, marker_variance, prior_scale_i, prior_scale_j, residual_variance, diagonal_i, diagonal_j, cross_product, score_i, score_j) {

@@ -7,10 +7,12 @@
 
 .sbs4a_math_reference <- function(annotation, eligible, latent, alpha,
                                   delta, pi_a, tau2,
-                                  a_pi, b_pi, a_tau, b_tau) {
+                                  a_pi, b_pi, a_tau, b_tau,
+                                  intercept_prior = NULL) {
   annotation <- as.matrix(annotation)
   selectable <- ncol(annotation)
   sticks <- length(eligible)
+  if (is.null(intercept_prior)) intercept_prior <- .sbs_intercept_prior(sticks)
   s <- t <- log_bf <- conditional_mean <- conditional_variance <-
     matrix(0, selectable, sticks)
   inclusion_logit <- numeric(selectable)
@@ -54,6 +56,22 @@
   )
   q <- stats::pnorm(sweep(annotation %*% alpha[-1L, , drop = FALSE],
                           2L, alpha[1L, ], `+`))
+  intercept_conditional <- t(vapply(seq_len(sticks), function(stick) {
+    rows <- eligible[[stick]]
+    residual <- latent[[stick]]
+    if (any(delta == 1L)) {
+      residual <- residual - drop(
+        annotation[rows, delta == 1L, drop = FALSE] %*%
+          alpha[which(delta == 1L) + 1L, stick]
+      )
+    }
+    precision <- length(rows) + intercept_prior$precision[stick]
+    c(
+      mean = (sum(residual) + intercept_prior$precision[stick] *
+                intercept_prior$mean[stick]) / precision,
+      variance = 1 / precision
+    )
+  }, numeric(2L)))
   list(
     eta = eta, s = s, t = t, log_bf = log_bf,
     inclusion_logit = inclusion_logit,
@@ -62,6 +80,7 @@
     conditional_variance = conditional_variance,
     beta_parameters = beta_parameters,
     ig_parameters = ig_parameters,
+    intercept_conditional = intercept_conditional,
     q = q,
     component_probability = .sbs_component_probability(q)
   )
@@ -74,7 +93,8 @@
     fixture$annotation, fixture$eligible, fixture$outcome,
     matrix(0, ncol(fixture$annotation) + 1L, length(fixture$eligible)),
     as.integer(initial_delta), 0.35, rep(0.8, length(fixture$eligible)),
-    a_pi, b_pi, a_tau, b_tau, 1e-12,
+    a_pi, b_pi, a_tau, b_tau,
+    fixture$intercept_prior$native, 1e-12,
     iterations, burn, seed, as.integer(fixed_delta)
   )
 }

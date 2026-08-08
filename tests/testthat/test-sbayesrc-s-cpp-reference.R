@@ -7,16 +7,18 @@ test_that("Phase-4A deterministic C++ hierarchy mathematics matches R", {
   delta <- c(1L, 1L, 0L)
   reference <- .sbs4a_math_reference(
     fixture$annotation, fixture$eligible, fixture$latent_true,
-    alpha, delta, 0.35, fixture$tau2, 1, 9, 3, 1.6
+    alpha, delta, 0.35, fixture$tau2, 1, 9, 3, 1.6,
+    fixture$intercept_prior
   )
   native <- .st_bayesrc_selection_math(
     fixture$annotation, fixture$eligible, fixture$latent_true,
-    alpha, delta, 0.35, fixture$tau2, 1, 9, 3, 1.6, 1e-12
+    alpha, delta, 0.35, fixture$tau2, 1, 9, 3, 1.6,
+    fixture$intercept_prior$native, 1e-12
   )
   for (field in c(
     "s", "t", "log_bf", "inclusion_logit", "inclusion_probability",
     "conditional_mean", "conditional_variance", "beta_parameters",
-    "ig_parameters", "q", "component_probability"
+    "ig_parameters", "intercept_conditional", "q", "component_probability"
   )) {
     expect_equal(as.numeric(native[[field]]), as.numeric(reference[[field]]),
                  tolerance = 1e-12, info = field)
@@ -67,7 +69,7 @@ test_that("Phase-4A structural selection guards hold", {
   math <- .st_bayesrc_selection_math(
     fixture$annotation, fixture$eligible, fixture$latent_true,
     alpha, c(1L, 1L, 0L), 0.35, fixture$tau2,
-    1, 9, 3, 1.6, 1e-12
+    1, 9, 3, 1.6, fixture$intercept_prior$native, 1e-12
   )
   expect_equal(math$log_bf[3L, ], rep(0, 3L), tolerance = 1e-14)
   expect_equal(rowSums(math$component_probability),
@@ -105,4 +107,23 @@ test_that("Phase-4A moderate-J C++ hierarchy is finite and exchange coherent", {
              0.20)
   expect_gt(mean(summary$annotation_pip[1:3]),
             mean(summary$annotation_pip[5:12]))
+})
+
+test_that("Phase-4A C++ empty sticks use the proper intercept prior", {
+  fixture <- .sbs2_fixture(observations = 80L, seed = 20271090L)
+  fixture$eligible <- list(seq_len(80L), integer(), integer())
+  fixture$outcome <- list(rep(0L, 80L), integer(), integer())
+  chain <- .sbs4a_cpp_chain(
+    fixture, 20271091L, 5000L, 500L, rep(0L, 3L), rep(0L, 3L)
+  )
+  later <- chain$alpha_draws[, 1L, 2:3, drop = FALSE]
+  later_matrix <- matrix(later, nrow = dim(later)[1L], ncol = 2L)
+  expect_lte(max(abs(colMeans(later_matrix) -
+                       fixture$intercept_prior$mean[2:3])), 0.06)
+  expect_lte(max(abs(apply(later_matrix, 2L, stats::var) -
+                       fixture$intercept_prior$variance[2:3])), 0.08)
+  expect_true(all(is.finite(c(chain$q_mean,
+                              chain$component_probability_mean))))
+  expect_equal(rowSums(chain$component_probability_mean),
+               rep(1, nrow(fixture$annotation)), tolerance = 1e-12)
 })

@@ -204,6 +204,7 @@ struct CsrSBayesRCExecutionResult {
  std::vector<arma::vec> selection_switches_task;
  std::vector<arma::mat> selection_alpha_conditional_mean_task;
  std::vector<arma::uvec> selection_delta_final_task;
+ std::vector<arma::mat> selection_empty_stick_diagnostics_task;
 
  arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
  arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
@@ -362,6 +363,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<arma::mat> selection_alpha_conditional_mean_task(
   static_cast<std::size_t>(ntasks));
  std::vector<arma::uvec> selection_delta_final_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> selection_empty_stick_diagnostics_task(
+  static_cast<std::size_t>(ntasks));
 
  if (selection_config.enabled && selectable_annotation_count <= 0)
   throw std::invalid_argument("SBayesRC-S requires an intercept and at least one selectable annotation");
@@ -387,6 +390,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     arma::vec(selectable_annotation_count, arma::fill::zeros);
    selection_alpha_conditional_mean_task[static_cast<std::size_t>(task)] =
     arma::mat(selectable_annotation_count, nstep, arma::fill::zeros);
+   selection_empty_stick_diagnostics_task[static_cast<std::size_t>(task)] =
+    arma::mat(nstep, 4u, arma::fill::zeros);
   }
   if (context.convergence_annotations) {
    convergence_alpha_task[static_cast<std::size_t>(task)]=
@@ -543,6 +548,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    const arma::mat selection_annotation = selection_config.enabled ?
     A.cols(1u, A.n_cols - 1u) : arma::mat();
    StBayesRCSelectionState selection_state;
+   arma::uvec selection_previous_empty(nstep, arma::fill::zeros);
+   arma::uvec selection_empty_run(nstep, arma::fill::zeros);
+   arma::mat selection_empty_diagnostics(nstep, 4u, arma::fill::zeros);
    if (selection_config.enabled) {
     selection_state.delta = selection_config.delta_init;
     selection_state.alpha = alpha_init;
@@ -552,9 +560,22 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     std::vector<arma::ivec> initial_outcome;
     st_bayesrc_selection_build_observed_sticks(
      comp_t, nstep, initial_eligible, initial_outcome);
+    for (int stick = 0; stick < nstep; ++stick) {
+     const bool empty = initial_eligible[static_cast<std::size_t>(stick)].n_elem == 0u;
+     selection_previous_empty(static_cast<arma::uword>(stick)) = empty ? 1u : 0u;
+     if (empty) {
+      const arma::uword index = static_cast<arma::uword>(stick);
+      selection_empty_diagnostics(index, 0u) = 1.0;
+      selection_empty_diagnostics(index, 1u) = 1.0;
+      selection_empty_diagnostics(index, 3u) = 1.0;
+      selection_empty_run(index) = 1u;
+     }
+    }
     st_bayesrc_selection_validate(
      selection_annotation, initial_eligible, &initial_outcome,
-     selection_state, selection_config.hyper);
+     selection_state, selection_config.hyper,
+     selection_config.intercept_mean,
+     selection_config.intercept_precision);
     alpha_t = selection_state.alpha;
     sigmaSqAlpha_t = selection_state.tau2;
    }
@@ -627,6 +648,23 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     std::vector<arma::ivec> outcome;
     st_bayesrc_selection_build_observed_sticks(
      comp_t, nstep, eligible, outcome);
+    for (int stick = 0; stick < nstep; ++stick) {
+     const arma::uword index = static_cast<arma::uword>(stick);
+     const bool empty = eligible[static_cast<std::size_t>(stick)].n_elem == 0u;
+     const bool was_empty = selection_previous_empty(index) == 1u;
+     if (empty) {
+      selection_empty_diagnostics(index, 0u) += 1.0;
+      if (!was_empty) selection_empty_diagnostics(index, 1u) += 1.0;
+      selection_empty_run(index) += 1u;
+      selection_empty_diagnostics(index, 3u) = std::max(
+       selection_empty_diagnostics(index, 3u),
+       static_cast<double>(selection_empty_run(index)));
+     } else {
+      if (was_empty) selection_empty_diagnostics(index, 2u) += 1.0;
+      selection_empty_run(index) = 0u;
+     }
+     selection_previous_empty(index) = empty ? 1u : 0u;
+    }
     const arma::uvec previous_delta = selection_state.delta;
     const std::vector<arma::vec> latent = st_bayesrc_selection_sample_latent(
      selection_annotation, eligible, outcome, selection_state.alpha, gen_t);
@@ -635,7 +673,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     st_bayesrc_selection_delta_sweep(
      selection_annotation, eligible, latent, selection_state, gen_t, fixed);
     st_bayesrc_selection_blocked_redraw(
-     selection_annotation, eligible, latent, selection_state, gen_t);
+     selection_annotation, eligible, latent, selection_state,
+     selection_config.intercept_mean,
+     selection_config.intercept_precision, gen_t);
     st_bayesrc_selection_update_hyperparameters(
      selection_state, selection_config.hyper, gen_t);
     selection_switches += arma::conv_to<arma::vec>::from(
@@ -1161,6 +1201,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     }
     selection_delta_final_task[static_cast<std::size_t>(task)] =
      selection_state.delta;
+    selection_empty_stick_diagnostics_task[static_cast<std::size_t>(task)] =
+     selection_empty_diagnostics;
    }
 
 #ifdef _OPENMP
@@ -1389,6 +1431,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.selection_alpha_conditional_mean_task =
   std::move(selection_alpha_conditional_mean_task);
  result.selection_delta_final_task = std::move(selection_delta_final_task);
+ result.selection_empty_stick_diagnostics_task =
+  std::move(selection_empty_stick_diagnostics_task);
  result.bm_mat = std::move(bm_mat);
  result.dm_mat = std::move(dm_mat);
  result.bm_sd_mat = std::move(bm_sd_mat);

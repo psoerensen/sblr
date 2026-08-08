@@ -7,11 +7,45 @@ source(file.path("tests", "testthat", "helper-sbayesrc-s-genomic-reference.R"))
 
 annotation_summary <- function(fit) fit$chains[[1L]][[1L]]$annotation
 component_summary <- function(fit) fit$component$prob[[1L]]
+chain_trace <- function(fit) fit$chains[[1L]][[1L]]$convergence_trace
+basic_rhat <- function(chains) {
+  chains <- lapply(chains, as.matrix)
+  n <- min(vapply(chains, nrow, integer(1L)))
+  chains <- lapply(chains, function(x) x[seq_len(n), , drop = FALSE])
+  vapply(seq_len(ncol(chains[[1L]])), function(column) {
+    means <- vapply(chains, function(x) mean(x[, column]), numeric(1L))
+    within <- mean(vapply(chains, function(x) stats::var(x[, column]), numeric(1L)))
+    if (!is.finite(within) || within <= 0) return(NA_real_)
+    between <- n * stats::var(means)
+    sqrt((((n - 1) / n) * within + between / n) / within)
+  }, numeric(1L))
+}
+basic_ess <- function(x) {
+  x <- as.numeric(x)
+  if (length(x) < 4L || stats::var(x) == 0) return(length(x))
+  correlation <- as.numeric(stats::acf(
+    x, plot = FALSE, lag.max = min(500L, floor(length(x) / 2L)),
+    demean = TRUE
+  )$acf)[-1L]
+  pair <- correlation[seq.int(1L, length(correlation) - 1L, by = 2L)] +
+    correlation[seq.int(2L, length(correlation), by = 2L)]
+  positive <- pair[cumprod(pair > 0) == 1]
+  length(x) / max(1, 1 + 2 * sum(positive))
+}
 
 started <- proc.time()[["elapsed"]]
-output_dir <- file.path("results", "local", "sbayesrc_s_reference", "phase4B")
+output_dir <- file.path("results", "local", "sbayesrc_s_reference", "phase4B_resume")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 fixture <- .sbs4b_fixture(160L, 20270930L)
+blocker_fixture <- .sbs4b_fixture(80L, 20270929L)
+blocker_fixture$comp_init <- list(rep(0L, 80L))
+blocker_fixture$b_init <- list(rep(0, 80L))
+blocker_fixture$r_init <- blocker_fixture$wy
+blocker_fit <- .sbs4b_run(
+  blocker_fixture, 20270929L, 500L, 100L,
+  initial_delta = rep(0L, 3L), updateB = TRUE, updateE = FALSE
+)
+blocker_diagnostics <- annotation_summary(blocker_fit)$empty_stick_diagnostics
 initials <- list(c(0L, 0L, 0L), c(1L, 1L, 1L),
                  c(1L, 0L, 1L), c(0L, 1L, 0L))
 fits <- tryCatch(
@@ -58,10 +92,28 @@ tau2 <- do.call(rbind, lapply(annotation, function(x) as.numeric(x$annotation_ta
 included <- vapply(annotation, function(x) {
   x$annotation_included_mean[[1L]]
 }, numeric(1L))
+empty_stick_diagnostics <- lapply(annotation, `[[`, "empty_stick_diagnostics")
 active_count <- vapply(fits, function(x) sum(x$marker$dm[, 1L]), numeric(1L))
 component_occupancy <- do.call(rbind, lapply(fits, function(x) {
   colSums(component_summary(x))
 }))
+traces <- lapply(fits, chain_trace)
+alpha_traces <- lapply(traces, `[[`, "alpha")
+tau_traces <- lapply(traces, `[[`, "sigmaSqAlpha")
+active_traces <- lapply(traces, function(x) as.matrix(x$realized_active_count))
+component_traces <- lapply(traces, `[[`, "component_count")
+mixing_diagnostics <- list(
+  max_alpha_rhat = max(basic_rhat(alpha_traces), na.rm = TRUE),
+  max_tau2_rhat = max(basic_rhat(tau_traces), na.rm = TRUE),
+  active_count_rhat = max(basic_rhat(active_traces), na.rm = TRUE),
+  max_component_count_rhat = max(basic_rhat(component_traces), na.rm = TRUE),
+  min_alpha_ess = min(vapply(alpha_traces, function(x) {
+    min(apply(as.matrix(x), 2L, basic_ess))
+  }, numeric(1L))),
+  min_active_count_ess = min(vapply(active_traces, function(x) {
+    basic_ess(x[, 1L])
+  }, numeric(1L)))
+)
 
 # Fixed-hierarchy standard bridge already has exact automated coverage.  This
 # longer comparison records the SNP-level spread between the learned selection
@@ -125,18 +177,27 @@ result <- list(
   pi_A_chain_mean = pi_A,
   tau2_chain_mean = tau2,
   included_chain_mean = included,
+  blocker_empty_stick_diagnostics = blocker_diagnostics,
+  empty_stick_diagnostics = empty_stick_diagnostics,
   active_count_chain_mean = active_count,
   component_occupancy = component_occupancy,
+  mixing_diagnostics = mixing_diagnostics,
   snp_safeguards = snp_safeguards,
   proxy_pip = proxy_pip,
   proxy_switches = proxy_switches,
   runtime_seconds = runtime_seconds
 )
 result$pass <- isTRUE(
-  max(pip_range) <= 0.10 &&
+  all(blocker_diagnostics[2:3, 1L] >= 1) &&
+    all(blocker_diagnostics[2:3, 2L] >= 1) &&
+    all(blocker_diagnostics[2:3, 3L] >= 1) &&
+    max(pip_range) <= 0.10 &&
     all(rowSums(switches) > 0) &&
     all(is.finite(c(pi_A, tau2, included, active_count,
                     component_occupancy, snp_safeguards, proxy_pip))) &&
+    all(vapply(empty_stick_diagnostics, function(x) {
+      is.matrix(x) && all(is.finite(x)) && ncol(x) == 4L
+    }, logical(1L))) &&
     snp_safeguards[["beta_correlation"]] >= 0.90 &&
     snp_safeguards[["pip_correlation"]] >= 0.80 &&
     all(rowSums(proxy_switches) > 0)
