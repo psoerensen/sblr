@@ -3,6 +3,7 @@
 
 #include "st_chain_utils.h"
 #include "st_bayesrc_annotation_prior.h"
+#include "st_bayesrc_annotation_selection.h"
 #include "st_bayesrc_pairwise_allocation.h"
 #include "st_block_eigen.h"
 #include "st_block_eigen_rcpp.h"
@@ -1159,6 +1160,7 @@ struct CsrSBayesRCBindingMetadata {
  bool estimate_maf_effect_s;
  bool use_maf_effect_s_prior_scale;
  bool uses_retained_low_rank;
+ bool selection_enabled;
  const std::vector<int>& convergence_markers;
  const std::vector<double>& phenotype_variance;
  sblr::core::BlockResidualControl block_residual_control;
@@ -1232,6 +1234,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   double resam_thresh,
   double minimum_ve_ratio,
   bool block_ve_keep_history,
+  StBayesRCSelectionGenomicConfig selection_config,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1661,6 +1664,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   prior_contract,
   control_contract,
   output_contract,
+  selection_config,
   m,
   nt,
   nAnno,
@@ -1725,6 +1729,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   estimate_maf_effect_s,
   use_maf_effect_s_prior_scale,
   op.uses_retained_low_rank(),
+  selection_config.enabled,
   convergence_markers_cpp,
   phenotype_variance,
   block_residual_control
@@ -1752,6 +1757,7 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const bool updateLDswap = metadata.update_ld_swap;
  const bool estimate_maf_effect_s = metadata.estimate_maf_effect_s;
  const bool use_maf_effect_s_prior_scale = metadata.use_maf_effect_s_prior_scale;
+ const bool selection_enabled = metadata.selection_enabled;
  const std::vector<int>& convergence_markers=metadata.convergence_markers;
  const std::vector<double>& phenotype_variance=metadata.phenotype_variance;
  const auto& block_residual_control=metadata.block_residual_control;
@@ -1774,6 +1780,14 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& convergence_d_task=execution_result.convergence_d_task;
  const auto& convergence_component_task=execution_result.convergence_component_task;
  const auto& convergence_aggregate_task=execution_result.convergence_aggregate_task;
+ const auto& selection_pip_task = execution_result.selection_pip_task;
+ const auto& selection_pi_a_mean_task = execution_result.selection_pi_a_mean_task;
+ const auto& selection_tau2_mean_task = execution_result.selection_tau2_mean_task;
+ const auto& selection_included_mean_task = execution_result.selection_included_mean_task;
+ const auto& selection_switches_task = execution_result.selection_switches_task;
+ const auto& selection_alpha_conditional_mean_task =
+  execution_result.selection_alpha_conditional_mean_task;
+ const auto& selection_delta_final_task = execution_result.selection_delta_final_task;
  const auto& maf_effect_s_accepted_task = execution_result.maf_effect_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
@@ -2122,7 +2136,21 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
      ),
      Rcpp::Named("annotation") = Rcpp::List::create(
       Rcpp::Named("alpha") = alpha_mean_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("sigmaSqAlpha") = sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)]
+      Rcpp::Named("sigmaSqAlpha") = sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("annotation_pip") = selection_enabled ?
+       Rcpp::wrap(selection_pip_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("annotation_delta_final") = selection_enabled ?
+       Rcpp::wrap(selection_delta_final_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("alpha_mean_given_inclusion") = selection_enabled ?
+       Rcpp::wrap(selection_alpha_conditional_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("annotation_pi_A") = selection_enabled ?
+       Rcpp::wrap(selection_pi_a_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("annotation_tau2") = selection_enabled ?
+       Rcpp::wrap(selection_tau2_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("annotation_included_mean") = selection_enabled ?
+       Rcpp::wrap(selection_included_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+      Rcpp::Named("annotation_switches") = selection_enabled ?
+       Rcpp::wrap(selection_switches_task[static_cast<std::size_t>(task)]) : R_NilValue
      ),
      Rcpp::Named("convergence_trace")=Rcpp::List::create(
       Rcpp::Named("marker_index")=Rcpp::wrap(convergence_markers),
@@ -2166,8 +2194,9 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
    Rcpp::Named("version") = 1
   ),
   Rcpp::Named("meta") = Rcpp::List::create(
-   Rcpp::Named("model") = "sbayesrc",
-   Rcpp::Named("backend") = "csr_sbayesrc",
+   Rcpp::Named("model") = selection_enabled ? "sbayesrc_selection" : "sbayesrc",
+   Rcpp::Named("backend") = selection_enabled ?
+    "csr_sbayesrc_selection_internal" : "csr_sbayesrc",
    Rcpp::Named("data_level") = "summary",
    Rcpp::Named("prior_type") = "annotation_component",
    Rcpp::Named("m") = m,
@@ -2446,6 +2475,263 @@ Rcpp::List st_bayesrc_frozen_hierarchy_chains_test(
  return chains;
 }
 
+static std::vector<arma::uvec> st_bayesrc_selection_rows_from_r(
+ Rcpp::List eligible,
+ arma::uword marker_count
+) {
+ std::vector<arma::uvec> result(static_cast<std::size_t>(eligible.size()));
+ for (R_xlen_t stick = 0; stick < eligible.size(); ++stick) {
+  Rcpp::IntegerVector input = eligible[stick];
+  arma::uvec rows(static_cast<arma::uword>(input.size()));
+  for (R_xlen_t i = 0; i < input.size(); ++i) {
+   if (input[i] == NA_INTEGER || input[i] <= 0 ||
+       input[i] > static_cast<int>(marker_count)) {
+    throw std::invalid_argument("SBayesRC-S eligible rows must be one-based valid indices.");
+   }
+   rows(static_cast<arma::uword>(i)) = static_cast<arma::uword>(input[i] - 1);
+  }
+  result[static_cast<std::size_t>(stick)] = std::move(rows);
+ }
+ return result;
+}
+
+static std::vector<arma::ivec> st_bayesrc_selection_outcome_from_r(
+ Rcpp::List outcome
+) {
+ std::vector<arma::ivec> result(static_cast<std::size_t>(outcome.size()));
+ for (R_xlen_t stick = 0; stick < outcome.size(); ++stick) {
+  Rcpp::IntegerVector input = outcome[stick];
+  arma::ivec values(static_cast<arma::uword>(input.size()));
+  for (R_xlen_t i = 0; i < input.size(); ++i) {
+   if (input[i] == NA_INTEGER || (input[i] != 0 && input[i] != 1)) {
+    throw std::invalid_argument("SBayesRC-S outcomes must be zero or one.");
+   }
+   values(static_cast<arma::uword>(i)) = input[i];
+  }
+  result[static_cast<std::size_t>(stick)] = std::move(values);
+ }
+ return result;
+}
+
+static arma::uvec st_bayesrc_selection_delta_from_r(
+ Rcpp::IntegerVector delta,
+ arma::uword annotation_count
+) {
+ if (delta.size() != static_cast<R_xlen_t>(annotation_count)) {
+  throw std::invalid_argument("SBayesRC-S delta length mismatch.");
+ }
+ arma::uvec result(annotation_count);
+ for (R_xlen_t j = 0; j < delta.size(); ++j) {
+  if (delta[j] == NA_INTEGER || (delta[j] != 0 && delta[j] != 1)) {
+   throw std::invalid_argument("SBayesRC-S delta must contain zero or one.");
+  }
+  result(static_cast<arma::uword>(j)) = static_cast<arma::uword>(delta[j]);
+ }
+ return result;
+}
+
+// Deterministic internal oracle for every Phase-4A hierarchy calculation.
+// It is deliberately absent from NAMESPACE and cannot run a genomic sampler.
+// [[Rcpp::export(name = ".st_bayesrc_selection_math")]]
+Rcpp::List st_bayesrc_selection_math_test(
+ arma::mat annotation,
+ Rcpp::List eligible,
+ Rcpp::List latent,
+ arma::mat alpha,
+ Rcpp::IntegerVector delta,
+ double pi_a,
+ arma::vec tau2,
+ double a_pi,
+ double b_pi,
+ double a_tau,
+ double b_tau,
+ double probability_floor
+) {
+ const auto rows = st_bayesrc_selection_rows_from_r(
+  eligible, annotation.n_rows);
+ if (latent.size() != eligible.size()) {
+  throw std::invalid_argument("SBayesRC-S latent stick count mismatch.");
+ }
+ std::vector<arma::vec> latent_values(static_cast<std::size_t>(latent.size()));
+ for (R_xlen_t stick = 0; stick < latent.size(); ++stick) {
+  latent_values[static_cast<std::size_t>(stick)] =
+   Rcpp::as<arma::vec>(latent[stick]);
+ }
+ StBayesRCSelectionState state{
+  st_bayesrc_selection_delta_from_r(delta, annotation.n_cols),
+  alpha, pi_a, tau2};
+ const StBayesRCSelectionHyperParameters hyper{a_pi, b_pi, a_tau, b_tau};
+ st_bayesrc_selection_validate(annotation, rows, nullptr, state, hyper);
+
+ const arma::uword annotation_count = annotation.n_cols;
+ const arma::uword stick_count = rows.size();
+ arma::mat s(annotation_count, stick_count, arma::fill::zeros);
+ arma::mat t(annotation_count, stick_count, arma::fill::zeros);
+ arma::mat log_bf(annotation_count, stick_count, arma::fill::zeros);
+ arma::mat conditional_mean(annotation_count, stick_count, arma::fill::zeros);
+ arma::mat conditional_variance(annotation_count, stick_count, arma::fill::zeros);
+ arma::vec inclusion_logit(annotation_count, arma::fill::zeros);
+ Rcpp::List eta(stick_count);
+ for (arma::uword stick = 0; stick < stick_count; ++stick) {
+  arma::vec eta_stick(rows[static_cast<std::size_t>(stick)].n_elem,
+                      arma::fill::zeros);
+  for (arma::uword ii = 0; ii < eta_stick.n_elem; ++ii) {
+   const arma::uword row = rows[static_cast<std::size_t>(stick)](ii);
+   eta_stick(ii) = state.alpha(0u, stick) +
+    arma::dot(annotation.row(row), state.alpha.col(stick).subvec(
+     1u, annotation_count));
+  }
+  eta[stick] = eta_stick;
+ }
+ for (arma::uword j = 0; j < annotation_count; ++j) {
+  double logit = std::log(pi_a) - std::log1p(-pi_a);
+  for (arma::uword stick = 0; stick < stick_count; ++stick) {
+   const arma::uvec& index = rows[static_cast<std::size_t>(stick)];
+   arma::vec residual = latent_values[static_cast<std::size_t>(stick)] -
+    state.alpha(0u, stick);
+   for (arma::uword other = 0; other < annotation_count; ++other) {
+    if (other != j) residual -= st_bayesrc_selection_column_rows(
+     annotation, other, index) *
+     state.alpha(other + 1u, stick);
+   }
+   const auto moments = st_bayesrc_selection_moments(
+    st_bayesrc_selection_column_rows(annotation, j, index),
+    residual, tau2(stick));
+   s(j, stick) = moments.s;
+   t(j, stick) = moments.t;
+   log_bf(j, stick) = moments.log_bf;
+   conditional_mean(j, stick) = moments.mean;
+   conditional_variance(j, stick) = moments.variance;
+   logit += moments.log_bf;
+  }
+  inclusion_logit(j) = logit;
+ }
+ const arma::vec beta_parameters = st_bayesrc_selection_beta_parameters(
+  state.delta, a_pi, b_pi);
+ const arma::mat ig_parameters = st_bayesrc_selection_ig_parameters(
+  state.alpha, state.delta, a_tau, b_tau);
+ const arma::mat q = st_bayesrc_selection_compute_q(annotation, state.alpha);
+ const arma::mat component_probability = st_bayesrc_selection_compute_pi(
+  annotation, state.alpha, probability_floor);
+ return Rcpp::List::create(
+  Rcpp::Named("eta") = eta,
+  Rcpp::Named("s") = s,
+  Rcpp::Named("t") = t,
+  Rcpp::Named("log_bf") = log_bf,
+  Rcpp::Named("inclusion_logit") = inclusion_logit,
+  Rcpp::Named("inclusion_probability") = 1.0 / (1.0 + arma::exp(-inclusion_logit)),
+  Rcpp::Named("conditional_mean") = conditional_mean,
+  Rcpp::Named("conditional_variance") = conditional_variance,
+  Rcpp::Named("beta_parameters") = beta_parameters,
+  Rcpp::Named("ig_parameters") = ig_parameters,
+  Rcpp::Named("q") = q,
+  Rcpp::Named("component_probability") = component_probability
+ );
+}
+
+// Isolated C++ implementation of the validated Phase-3 hierarchy.  This hook
+// has no beta, allocation likelihood, LD, residual, or genomic variance state.
+// [[Rcpp::export(name = ".st_bayesrc_selection_hierarchy")]]
+Rcpp::List st_bayesrc_selection_hierarchy_test(
+ arma::mat annotation,
+ Rcpp::List eligible,
+ Rcpp::List outcome,
+ arma::mat alpha_initial,
+ Rcpp::IntegerVector delta_initial,
+ double pi_a_initial,
+ arma::vec tau2_initial,
+ double a_pi,
+ double b_pi,
+ double a_tau,
+ double b_tau,
+ double probability_floor,
+ int iterations,
+ int burn,
+ int seed,
+ Rcpp::IntegerVector fixed_delta
+) {
+ if (iterations <= burn || burn < 0) {
+  throw std::invalid_argument("SBayesRC-S iterations must exceed burn-in.");
+ }
+ const auto rows = st_bayesrc_selection_rows_from_r(
+  eligible, annotation.n_rows);
+ const auto outcomes = st_bayesrc_selection_outcome_from_r(outcome);
+ StBayesRCSelectionState state{
+  st_bayesrc_selection_delta_from_r(delta_initial, annotation.n_cols),
+  alpha_initial, pi_a_initial, tau2_initial};
+ const StBayesRCSelectionHyperParameters hyper{a_pi, b_pi, a_tau, b_tau};
+ st_bayesrc_selection_validate(annotation, rows, &outcomes, state, hyper);
+ for (arma::uword j = 0; j < state.delta.n_elem; ++j) {
+  if (state.delta(j) == 0u) state.alpha.row(j + 1u).zeros();
+ }
+ arma::ivec fixed;
+ const arma::ivec* fixed_pointer = nullptr;
+ if (fixed_delta.size() > 0) {
+  const arma::uvec fixed_unsigned = st_bayesrc_selection_delta_from_r(
+   fixed_delta, annotation.n_cols);
+  fixed = arma::conv_to<arma::ivec>::from(fixed_unsigned);
+  state.delta = fixed_unsigned;
+  fixed_pointer = &fixed;
+ }
+
+ const int retained = iterations - burn;
+ arma::umat delta_draws(retained, annotation.n_cols, arma::fill::zeros);
+ arma::cube alpha_draws(retained, annotation.n_cols + 1u,
+                        rows.size(), arma::fill::zeros);
+ arma::vec pi_a_draws(retained, arma::fill::zeros);
+ arma::mat tau2_draws(retained, rows.size(), arma::fill::zeros);
+ arma::uvec included_draws(retained, arma::fill::zeros);
+ arma::mat q_sum(annotation.n_rows, rows.size(), arma::fill::zeros);
+ arma::mat pi_sum(annotation.n_rows, rows.size() + 1u, arma::fill::zeros);
+ arma::umat switches(2u, annotation.n_cols, arma::fill::zeros);
+ arma::uvec previous = state.delta;
+ std::mt19937 generator(static_cast<std::mt19937::result_type>(seed));
+ for (int iteration = 0; iteration < iterations; ++iteration) {
+  const auto latent = st_bayesrc_selection_sample_latent(
+   annotation, rows, outcomes, state.alpha, generator);
+  st_bayesrc_selection_delta_sweep(
+   annotation, rows, latent, state, generator, fixed_pointer);
+  st_bayesrc_selection_blocked_redraw(
+   annotation, rows, latent, state, generator);
+  st_bayesrc_selection_update_hyperparameters(state, hyper, generator);
+  if (iteration >= burn) {
+   const arma::uword draw = static_cast<arma::uword>(iteration - burn);
+   delta_draws.row(draw) = state.delta.t();
+   for (arma::uword stick = 0; stick < state.alpha.n_cols; ++stick) {
+    alpha_draws.slice(stick).row(draw) = state.alpha.col(stick).t();
+   }
+   pi_a_draws(draw) = state.pi_a;
+   tau2_draws.row(draw) = state.tau2.t();
+   included_draws(draw) = arma::accu(state.delta);
+   q_sum += st_bayesrc_selection_compute_q(annotation, state.alpha);
+   pi_sum += st_bayesrc_selection_compute_pi(
+    annotation, state.alpha, probability_floor);
+   if (draw > 0u) {
+    for (arma::uword j = 0; j < state.delta.n_elem; ++j) {
+     if (previous(j) == 0u && state.delta(j) == 1u) switches(0u, j)++;
+     if (previous(j) == 1u && state.delta(j) == 0u) switches(1u, j)++;
+    }
+   }
+  }
+  previous = state.delta;
+ }
+ return Rcpp::List::create(
+  Rcpp::Named("delta_draws") = delta_draws,
+  Rcpp::Named("alpha_draws") = alpha_draws,
+  Rcpp::Named("pi_A_draws") = pi_a_draws,
+  Rcpp::Named("tau2_draws") = tau2_draws,
+  Rcpp::Named("included_draws") = included_draws,
+  Rcpp::Named("q_mean") = q_sum / static_cast<double>(retained),
+  Rcpp::Named("component_probability_mean") =
+   pi_sum / static_cast<double>(retained),
+  Rcpp::Named("switches") = switches,
+  Rcpp::Named("delta_final") = state.delta,
+  Rcpp::Named("alpha_final") = state.alpha,
+  Rcpp::Named("pi_A_final") = state.pi_a,
+  Rcpp::Named("tau2_final") = state.tau2
+ );
+}
+
 // Deterministic development hook for validating the exact two-marker
 // component conditional. It does not mutate a production chain.
 // [[Rcpp::export(name = ".st_bayesrc_pairwise_conditional")]]
@@ -2542,8 +2828,73 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   convergence_annotations, convergence_b, convergence_d,
   convergence_component, 0, std::vector<double>(),
   "global_projected_legacy", "fixVe", 1.1, 0.7, false,
+  StBayesRCSelectionGenomicConfig{},
   make_csr_operator
  );
+}
+
+// Internal Phase-4B qualification binding.  This composes the validated CSR
+// genomic engine with the SBayesRC-S annotation policy without exposing a
+// supported public model identifier or wrapper.
+// [[Rcpp::export(name = ".st_sbayesrc_selection_csr")]]
+Rcpp::List st_sbayesrc_selection_csr_internal(
+  std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww,
+  std::vector<double> yy, std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> comp_init, bool use_comp_init,
+  std::vector<std::vector<double>> r_init, bool use_r_init,
+  std::string ld_prefix, arma::mat B, arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma,
+  arma::mat alpha_init, arma::uvec delta_init, double pi_A_init,
+  arma::vec tau2_init, double a_pi, double b_pi, double a_tau, double b_tau,
+  Rcpp::IntegerVector fixed_delta, bool update_hierarchy,
+  arma::mat intercept_prior_resolved,
+  double pi_floor, double nub, double nue, bool updateB, bool updateE,
+  double adjE, std::vector<int> n, int nit, int nburn, int nthin,
+  int ncores, int seed, int nchains = 1,
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
+) {
+ if (A.n_cols < 2u || alpha_init.n_rows != A.n_cols ||
+     alpha_init.n_cols + 1u != gamma.n_elem ||
+     delta_init.n_elem + 1u != A.n_cols ||
+     tau2_init.n_elem != alpha_init.n_cols) {
+  throw std::invalid_argument("invalid internal genomic SBayesRC-S dimensions");
+ }
+ StBayesRCSelectionGenomicConfig selection_config;
+ selection_config.enabled = true;
+ selection_config.delta_init = delta_init;
+ selection_config.pi_a_init = pi_A_init;
+ selection_config.tau2_init = tau2_init;
+ selection_config.hyper = StBayesRCSelectionHyperParameters{
+  a_pi, b_pi, a_tau, b_tau};
+ if (fixed_delta.size() > 0) {
+  selection_config.fixed_delta = true;
+  selection_config.fixed_delta_value = Rcpp::as<arma::ivec>(fixed_delta);
+ }
+ const arma::vec legacy_sigma = tau2_init;
+ auto make_csr_operator = [&](int m, const std::vector<double>& xx,
+                              const arma::rowvec& xx_row, arma::mat& wy_mat,
+                              bool update_ld_swap, double r2, int max_friends) {
+  (void)wy_mat; (void)r2; (void)max_friends;
+  if (update_ld_swap) throw std::runtime_error(
+   "LD-swap is unavailable in the internal SBayesRC-S qualification binding");
+  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
+  CsrOperator op(ld, xx_row);
+  SBayesRCLDLDFriends friends;
+  friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+  return SBayesRCOperatorContext<CsrOperator>(
+   std::move(op), std::move(friends), Rcpp::List::create());
+ };
+ return stblr_cpg_omp_csr_sbayesrc_impl(
+  wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init,
+  false, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init,
+  legacy_sigma, intercept_prior_resolved, 2.0, 2.0, pi_floor, nub, nue,
+  update_hierarchy, updateB, updateE, 1, adjE, n, nit, nburn, nthin, ncores, seed,
+  nchains, true, chain_seeds, false, 0.0, 0.8, 50, 0, R_NilValue,
+  false, 0.0, Rcpp::NumericVector::create(-3.0, 2.0), 0.35, R_NilValue,
+  Rcpp::IntegerVector::create(), true, false, false, true, 0,
+  std::vector<double>(), "global_projected_legacy", "fixVe", 1.1, 0.7,
+  false, selection_config, make_csr_operator);
 }
 
 // [[Rcpp::export]]
@@ -2692,7 +3043,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   convergence_component, low_rank_residual_rebuild_every,
   Rcpp::as<std::vector<double>>(phenotype_variance),
   residual_policy, block_ve_mode, resam_thresh, minimum_ve_ratio,
-  block_ve_keep_history, make_block_operator
+  block_ve_keep_history, StBayesRCSelectionGenomicConfig{}, make_block_operator
  );
 }
 

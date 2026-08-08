@@ -136,6 +136,7 @@ struct CsrSBayesRCExecutionContext {
  const SBayesRCPriors& prior_contract;
  const SBayesRCControls& control_contract;
  const SBayesRCOutputControl& output_contract;
+ const StBayesRCSelectionGenomicConfig& selection_config;
 
  int marker_count;
  int trait_count;
@@ -198,6 +199,11 @@ struct CsrSBayesRCExecutionResult {
  std::vector<arma::mat> convergence_b_task;
  std::vector<arma::imat> convergence_d_task, convergence_component_task;
  std::vector<AggregateComponentTrace> convergence_aggregate_task;
+ std::vector<arma::vec> selection_pip_task, selection_pi_a_mean_task;
+ std::vector<arma::vec> selection_tau2_mean_task, selection_included_mean_task;
+ std::vector<arma::vec> selection_switches_task;
+ std::vector<arma::mat> selection_alpha_conditional_mean_task;
+ std::vector<arma::uvec> selection_delta_final_task;
 
  arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
  arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
@@ -248,6 +254,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  const std::vector<double>& phenotype_variance = context.phenotype_variance;
  const BlockResidualControl& block_residual_control =
   context.block_residual_control;
+ const StBayesRCSelectionGenomicConfig& selection_config =
+  context.selection_config;
  const arma::rowvec& prior_scale = context.prior_scale;
  const arma::rowvec& maf_effect_s_log_h_row = context.maf_effect_s_log_h;
  const int m = context.marker_count;
@@ -345,6 +353,18 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<arma::imat> convergence_component_task(static_cast<std::size_t>(ntasks));
  std::vector<AggregateComponentTrace> convergence_aggregate_task(
   static_cast<std::size_t>(ntasks));
+ const int selectable_annotation_count = selection_config.enabled ? nAnno - 1 : 0;
+ std::vector<arma::vec> selection_pip_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> selection_pi_a_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> selection_tau2_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> selection_included_mean_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> selection_switches_task(static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> selection_alpha_conditional_mean_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::uvec> selection_delta_final_task(static_cast<std::size_t>(ntasks));
+
+ if (selection_config.enabled && selectable_annotation_count <= 0)
+  throw std::invalid_argument("SBayesRC-S requires an intercept and at least one selectable annotation");
 
  for (int marker: convergence_markers) if (marker<0 || marker>=m)
   throw std::invalid_argument("SBayesRC convergence marker index is out of range.");
@@ -354,6 +374,20 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
   sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = arma::vec(nstep, arma::fill::zeros);
   comp_prob_mean_task[static_cast<std::size_t>(task)] = arma::mat(m, Kgamma, arma::fill::zeros);
   ncomp_mean_task[static_cast<std::size_t>(task)] = arma::vec(Kgamma, arma::fill::zeros);
+  if (selection_config.enabled) {
+   selection_pip_task[static_cast<std::size_t>(task)] =
+    arma::vec(selectable_annotation_count, arma::fill::zeros);
+   selection_pi_a_mean_task[static_cast<std::size_t>(task)] =
+    arma::vec(1u, arma::fill::zeros);
+   selection_tau2_mean_task[static_cast<std::size_t>(task)] =
+    arma::vec(nstep, arma::fill::zeros);
+   selection_included_mean_task[static_cast<std::size_t>(task)] =
+    arma::vec(1u, arma::fill::zeros);
+   selection_switches_task[static_cast<std::size_t>(task)] =
+    arma::vec(selectable_annotation_count, arma::fill::zeros);
+   selection_alpha_conditional_mean_task[static_cast<std::size_t>(task)] =
+    arma::mat(selectable_annotation_count, nstep, arma::fill::zeros);
+  }
   if (context.convergence_annotations) {
    convergence_alpha_task[static_cast<std::size_t>(task)]=
     arma::mat(nit,nAnno*nstep,arma::fill::zeros);
@@ -506,6 +540,24 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
    arma::mat alpha_t = alpha_init;
    arma::vec sigmaSqAlpha_t = sigmaSqAlpha_init;
+   const arma::mat selection_annotation = selection_config.enabled ?
+    A.cols(1u, A.n_cols - 1u) : arma::mat();
+   StBayesRCSelectionState selection_state;
+   if (selection_config.enabled) {
+    selection_state.delta = selection_config.delta_init;
+    selection_state.alpha = alpha_init;
+    selection_state.pi_a = selection_config.pi_a_init;
+    selection_state.tau2 = selection_config.tau2_init;
+    std::vector<arma::uvec> initial_eligible;
+    std::vector<arma::ivec> initial_outcome;
+    st_bayesrc_selection_build_observed_sticks(
+     comp_t, nstep, initial_eligible, initial_outcome);
+    st_bayesrc_selection_validate(
+     selection_annotation, initial_eligible, &initial_outcome,
+     selection_state, selection_config.hyper);
+    alpha_t = selection_state.alpha;
+    sigmaSqAlpha_t = selection_state.tau2;
+   }
 
    for (int j = 0; j < nstep; ++j) {
     if (!std::isfinite(sigmaSqAlpha_t(static_cast<arma::uword>(j))) ||
@@ -514,7 +566,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     }
    }
 
-   arma::mat snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
+   arma::mat snpPi_t = selection_config.enabled ?
+    st_bayesrc_selection_compute_pi(selection_annotation, alpha_t, pi_floor) :
+    st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
 
    arma::rowvec bm_t(m, arma::fill::zeros);
    arma::rowvec dm_t(m, arma::fill::zeros);
@@ -529,6 +583,16 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    arma::vec sigmaSqAlpha_accum(nstep, arma::fill::zeros);
    arma::mat comp_prob_accum(m, Kgamma, arma::fill::zeros);
    arma::vec ncomp_accum(Kgamma, arma::fill::zeros);
+   arma::vec selection_delta_accum(selectable_annotation_count,
+                                   arma::fill::zeros);
+   arma::mat selection_alpha_included_accum(selectable_annotation_count,
+                                             nstep, arma::fill::zeros);
+   arma::vec selection_alpha_included_count(selectable_annotation_count,
+                                             arma::fill::zeros);
+   arma::vec selection_tau2_accum(nstep, arma::fill::zeros);
+   arma::vec selection_switches(selectable_annotation_count, arma::fill::zeros);
+   double selection_pi_a_accum = 0.0;
+   double selection_included_accum = 0.0;
 
    double nsamples_t = 0.0;
    double ld_swap_attempted_t = 0.0;
@@ -551,6 +615,36 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    const int allocation_updates = intercept_prior.allocation_updates_per_cycle;
    const int annotation_updates = intercept_prior.annotation_updates_per_cycle;
    const bool legacy_schedule = allocation_updates == 1 && annotation_updates == 1;
+   const auto update_annotation_hierarchy = [&]() {
+    if (!selection_config.enabled) {
+     st_bayesrc_update_annotation_prior(
+      A, comp_t, alpha_t, sigmaSqAlpha_t, intercept_prior,
+      sigmaSqAlpha_a, sigmaSqAlpha_b, gen_t);
+     snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
+     return;
+    }
+    std::vector<arma::uvec> eligible;
+    std::vector<arma::ivec> outcome;
+    st_bayesrc_selection_build_observed_sticks(
+     comp_t, nstep, eligible, outcome);
+    const arma::uvec previous_delta = selection_state.delta;
+    const std::vector<arma::vec> latent = st_bayesrc_selection_sample_latent(
+     selection_annotation, eligible, outcome, selection_state.alpha, gen_t);
+    const arma::ivec* fixed = selection_config.fixed_delta ?
+     &selection_config.fixed_delta_value : nullptr;
+    st_bayesrc_selection_delta_sweep(
+     selection_annotation, eligible, latent, selection_state, gen_t, fixed);
+    st_bayesrc_selection_blocked_redraw(
+     selection_annotation, eligible, latent, selection_state, gen_t);
+    st_bayesrc_selection_update_hyperparameters(
+     selection_state, selection_config.hyper, gen_t);
+    selection_switches += arma::conv_to<arma::vec>::from(
+     selection_state.delta != previous_delta);
+    alpha_t = selection_state.alpha;
+    sigmaSqAlpha_t = selection_state.tau2;
+    snpPi_t = st_bayesrc_selection_compute_pi(
+     selection_annotation, alpha_t, pi_floor);
+   };
 
    for (int it = 0; it < nit + nburn; ++it) {
     const int allocation_repetitions = legacy_schedule ? 1 : allocation_updates;
@@ -664,18 +758,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
     if (legacy_schedule && updateAlpha &&
         ((it + 1) % alpha_update_every == 0)) {
-     st_bayesrc_update_annotation_prior(
-      A,
-      comp_t,
-      alpha_t,
-      sigmaSqAlpha_t,
-      intercept_prior,
-      sigmaSqAlpha_a,
-      sigmaSqAlpha_b,
-      gen_t
-     );
-
-     snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
+     update_annotation_hierarchy();
     }
 
     if (updateB) {
@@ -887,17 +970,7 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
         ((it + 1) % alpha_update_every == 0)) {
      for (int annotation_rep = 0; annotation_rep < annotation_updates;
           ++annotation_rep) {
-      st_bayesrc_update_annotation_prior(
-       A,
-       comp_t,
-       alpha_t,
-       sigmaSqAlpha_t,
-       intercept_prior,
-       sigmaSqAlpha_a,
-       sigmaSqAlpha_b,
-       gen_t
-      );
-      snpPi_t = st_bayesrc_compute_snp_pi(A, alpha_t, pi_floor);
+      update_annotation_hierarchy();
      }
     }
 
@@ -970,6 +1043,21 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
      alpha_accum += alpha_t;
      sigmaSqAlpha_accum += sigmaSqAlpha_t;
+     if (selection_config.enabled) {
+      selection_delta_accum += arma::conv_to<arma::vec>::from(
+       selection_state.delta);
+      selection_pi_a_accum += selection_state.pi_a;
+      selection_tau2_accum += selection_state.tau2;
+      selection_included_accum += arma::accu(selection_state.delta);
+      for (int annotation = 0; annotation < selectable_annotation_count;
+           ++annotation) {
+       if (selection_state.delta(static_cast<arma::uword>(annotation)) == 1u) {
+        selection_alpha_included_accum.row(static_cast<arma::uword>(annotation)) +=
+         selection_state.alpha.row(static_cast<arma::uword>(annotation + 1));
+        selection_alpha_included_count(static_cast<arma::uword>(annotation)) += 1.0;
+       }
+      }
+     }
     }
    }
 
@@ -1051,6 +1139,29 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = sigmaSqAlpha_accum;
    comp_prob_mean_task[static_cast<std::size_t>(task)] = comp_prob_accum;
    ncomp_mean_task[static_cast<std::size_t>(task)] = ncomp_accum;
+   if (selection_config.enabled) {
+    selection_pip_task[static_cast<std::size_t>(task)] =
+     selection_delta_accum / nsamples_t;
+    selection_pi_a_mean_task[static_cast<std::size_t>(task)](0u) =
+     selection_pi_a_accum / nsamples_t;
+    selection_tau2_mean_task[static_cast<std::size_t>(task)] =
+     selection_tau2_accum / nsamples_t;
+    selection_included_mean_task[static_cast<std::size_t>(task)](0u) =
+     selection_included_accum / nsamples_t;
+    selection_switches_task[static_cast<std::size_t>(task)] = selection_switches;
+    for (int annotation = 0; annotation < selectable_annotation_count;
+         ++annotation) {
+     const double count = selection_alpha_included_count(
+      static_cast<arma::uword>(annotation));
+     if (count > 0.0)
+      selection_alpha_conditional_mean_task[static_cast<std::size_t>(task)].row(
+       static_cast<arma::uword>(annotation)) =
+        selection_alpha_included_accum.row(static_cast<arma::uword>(annotation)) /
+        count;
+    }
+    selection_delta_final_task[static_cast<std::size_t>(task)] =
+     selection_state.delta;
+   }
 
 #ifdef _OPENMP
    task_seconds[static_cast<std::size_t>(task)] = omp_get_wtime() - wall_start;
@@ -1270,6 +1381,14 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.convergence_d_task=std::move(convergence_d_task);
  result.convergence_component_task=std::move(convergence_component_task);
  result.convergence_aggregate_task=std::move(convergence_aggregate_task);
+ result.selection_pip_task = std::move(selection_pip_task);
+ result.selection_pi_a_mean_task = std::move(selection_pi_a_mean_task);
+ result.selection_tau2_mean_task = std::move(selection_tau2_mean_task);
+ result.selection_included_mean_task = std::move(selection_included_mean_task);
+ result.selection_switches_task = std::move(selection_switches_task);
+ result.selection_alpha_conditional_mean_task =
+  std::move(selection_alpha_conditional_mean_task);
+ result.selection_delta_final_task = std::move(selection_delta_final_task);
  result.bm_mat = std::move(bm_mat);
  result.dm_mat = std::move(dm_mat);
  result.bm_sd_mat = std::move(bm_sd_mat);

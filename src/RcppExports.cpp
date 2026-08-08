@@ -1622,6 +1622,54 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// st_bayesrc_selection_math_test
+Rcpp::List st_bayesrc_selection_math_test(arma::mat annotation, Rcpp::List eligible, Rcpp::List latent, arma::mat alpha, Rcpp::IntegerVector delta, double pi_a, arma::vec tau2, double a_pi, double b_pi, double a_tau, double b_tau, double probability_floor);
+RcppExport SEXP _sblr_st_bayesrc_selection_math_test(SEXP annotationSEXP, SEXP eligibleSEXP, SEXP latentSEXP, SEXP alphaSEXP, SEXP deltaSEXP, SEXP pi_aSEXP, SEXP tau2SEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP probability_floorSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type eligible(eligibleSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type latent(latentSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_a(pi_aSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type tau2(tau2SEXP);
+    Rcpp::traits::input_parameter< double >::type a_pi(a_piSEXP);
+    Rcpp::traits::input_parameter< double >::type b_pi(b_piSEXP);
+    Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type b_tau(b_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_selection_math_test(annotation, eligible, latent, alpha, delta, pi_a, tau2, a_pi, b_pi, a_tau, b_tau, probability_floor));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_bayesrc_selection_hierarchy_test
+Rcpp::List st_bayesrc_selection_hierarchy_test(arma::mat annotation, Rcpp::List eligible, Rcpp::List outcome, arma::mat alpha_initial, Rcpp::IntegerVector delta_initial, double pi_a_initial, arma::vec tau2_initial, double a_pi, double b_pi, double a_tau, double b_tau, double probability_floor, int iterations, int burn, int seed, Rcpp::IntegerVector fixed_delta);
+RcppExport SEXP _sblr_st_bayesrc_selection_hierarchy_test(SEXP annotationSEXP, SEXP eligibleSEXP, SEXP outcomeSEXP, SEXP alpha_initialSEXP, SEXP delta_initialSEXP, SEXP pi_a_initialSEXP, SEXP tau2_initialSEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP probability_floorSEXP, SEXP iterationsSEXP, SEXP burnSEXP, SEXP seedSEXP, SEXP fixed_deltaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type eligible(eligibleSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type outcome(outcomeSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha_initial(alpha_initialSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type delta_initial(delta_initialSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_a_initial(pi_a_initialSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type tau2_initial(tau2_initialSEXP);
+    Rcpp::traits::input_parameter< double >::type a_pi(a_piSEXP);
+    Rcpp::traits::input_parameter< double >::type b_pi(b_piSEXP);
+    Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type b_tau(b_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type probability_floor(probability_floorSEXP);
+    Rcpp::traits::input_parameter< int >::type iterations(iterationsSEXP);
+    Rcpp::traits::input_parameter< int >::type burn(burnSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type fixed_delta(fixed_deltaSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_bayesrc_selection_hierarchy_test(annotation, eligible, outcome, alpha_initial, delta_initial, pi_a_initial, tau2_initial, a_pi, b_pi, a_tau, b_tau, probability_floor, iterations, burn, seed, fixed_delta));
+    return rcpp_result_gen;
+END_RCPP
+}
 // st_bayesrc_pairwise_conditional_test
 Rcpp::List st_bayesrc_pairwise_conditional_test(arma::rowvec prior_i, arma::rowvec prior_j, arma::vec gamma, double marker_variance, double prior_scale_i, double prior_scale_j, double residual_variance, double diagonal_i, double diagonal_j, double cross_product, double score_i, double score_j);
 RcppExport SEXP _sblr_st_bayesrc_pairwise_conditional_test(SEXP prior_iSEXP, SEXP prior_jSEXP, SEXP gammaSEXP, SEXP marker_varianceSEXP, SEXP prior_scale_iSEXP, SEXP prior_scale_jSEXP, SEXP residual_varianceSEXP, SEXP diagonal_iSEXP, SEXP diagonal_jSEXP, SEXP cross_productSEXP, SEXP score_iSEXP, SEXP score_jSEXP) {
@@ -1705,6 +1753,56 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
     Rcpp::traits::input_parameter< bool >::type convergence_component(convergence_componentSEXP);
     rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_sbayesrc(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, sigmaSqAlpha_init, intercept_prior_resolved, sigmaSqAlpha_a, sigmaSqAlpha_b, pi_floor, nub, nue, updateAlpha, updateB, updateE, alpha_update_every, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers, convergence_annotations, convergence_b, convergence_d, convergence_component));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_sbayesrc_selection_csr_internal
+Rcpp::List st_sbayesrc_selection_csr_internal(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma, arma::mat alpha_init, arma::uvec delta_init, double pi_A_init, arma::vec tau2_init, double a_pi, double b_pi, double a_tau, double b_tau, Rcpp::IntegerVector fixed_delta, bool update_hierarchy, arma::mat intercept_prior_resolved, double pi_floor, double nub, double nue, bool updateB, bool updateE, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds);
+RcppExport SEXP _sblr_st_sbayesrc_selection_csr_internal(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP alpha_initSEXP, SEXP delta_initSEXP, SEXP pi_A_initSEXP, SEXP tau2_initSEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP fixed_deltaSEXP, SEXP update_hierarchySEXP, SEXP intercept_prior_resolvedSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP chain_seedsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type comp_init(comp_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_comp_init(use_comp_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< std::string >::type ld_prefix(ld_prefixSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type A(ASEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha_init(alpha_initSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type delta_init(delta_initSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_A_init(pi_A_initSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type tau2_init(tau2_initSEXP);
+    Rcpp::traits::input_parameter< double >::type a_pi(a_piSEXP);
+    Rcpp::traits::input_parameter< double >::type b_pi(b_piSEXP);
+    Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type b_tau(b_tauSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type fixed_delta(fixed_deltaSEXP);
+    Rcpp::traits::input_parameter< bool >::type update_hierarchy(update_hierarchySEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type intercept_prior_resolved(intercept_prior_resolvedSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_floor(pi_floorSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type chain_seeds(chain_seedsSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_sbayesrc_selection_csr_internal(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, delta_init, pi_A_init, tau2_init, a_pi, b_pi, a_tau, b_tau, fixed_delta, update_hierarchy, intercept_prior_resolved, pi_floor, nub, nue, updateB, updateE, adjE, n, nit, nburn, nthin, ncores, seed, nchains, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2009,8 +2107,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_st_bayesrc_alpha_conditional_moments_test", (DL_FUNC) &_sblr_st_bayesrc_alpha_conditional_moments_test, 6},
     {"_sblr_st_bayesrc_sigma_sq_alpha_draws_test", (DL_FUNC) &_sblr_st_bayesrc_sigma_sq_alpha_draws_test, 5},
     {"_sblr_st_bayesrc_frozen_hierarchy_chains_test", (DL_FUNC) &_sblr_st_bayesrc_frozen_hierarchy_chains_test, 11},
+    {"_sblr_st_bayesrc_selection_math_test", (DL_FUNC) &_sblr_st_bayesrc_selection_math_test, 12},
+    {"_sblr_st_bayesrc_selection_hierarchy_test", (DL_FUNC) &_sblr_st_bayesrc_selection_hierarchy_test, 16},
     {"_sblr_st_bayesrc_pairwise_conditional_test", (DL_FUNC) &_sblr_st_bayesrc_pairwise_conditional_test, 12},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 54},
+    {"_sblr_st_sbayesrc_selection_csr_internal", (DL_FUNC) &_sblr_st_sbayesrc_selection_csr_internal, 40},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 65},
     {"_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture", (DL_FUNC) &_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture, 1},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, 45},

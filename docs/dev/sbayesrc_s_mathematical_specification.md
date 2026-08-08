@@ -770,3 +770,21 @@ The next permissible task is Phase 4 design of a separate production C++
 SBayesRC-S backend using this R hierarchy as its oracle. This document does
 not create such a backend, a public model identifier, Rcpp exports, or Study
 07. Standard SBayesRC remains a separate validated posterior model.
+
+## Phase-4 implementation finding: empty genomic sticks
+
+The isolated C++ hierarchy passed Phase-4A R parity (`SBS4A-R1`). During the
+first selection-enabled CSR genomic screen, however, the allocation sampler
+entered a state with no SNP eligible for a later stick. Under the validated
+flat intercept convention, that stick has zero likelihood precision and zero
+prior precision for its intercept, hence an improper conditional. The native
+implementation correctly refused this state rather than inventing a
+numerical fallback.
+
+Consequently Phase 4B is blocked at `SBS4B-R3` and the overall implementation
+decision is `SBS4-R4`. The fixed-z and observed-d reference results remain
+valid on their nonempty eligible sets, but the Phase-3 posterior is not yet a
+proper genomic model over the complete allocation state space. A future
+mathematical revision must specify and independently validate a proper
+intercept prior or another genuinely proper empty-stick model before genomic
+implementation resumes.
