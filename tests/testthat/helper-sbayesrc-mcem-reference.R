@@ -86,6 +86,108 @@
   prefix
 }
 
+.mcem_write_bed <- function(path, dosage) {
+ dosage_to_code <- c(`0` = 3L, `1` = 2L, `2` = 0L)
+ packed <- unlist(lapply(seq_len(nrow(dosage)), function(marker) {
+  codes <- unname(dosage_to_code[as.character(dosage[marker, ])])
+  codes <- c(codes, rep(0L, (-length(codes)) %% 4L))
+  vapply(seq(1L, length(codes), by = 4L), function(index) {
+   sum(codes[index:(index + 3L)] * c(1L, 4L, 16L, 64L))
+  }, integer(1))
+ }))
+ writeBin(as.raw(c(0x6c, 0x1b, 0x01, packed)), path)
+}
+
+.mcem_block_fixture <- function(seed = 9182L, marker_count = 12L,
+                                sample_count = 80L) {
+ set.seed(seed)
+ allele_frequency <- seq(0.15, 0.42, length.out = marker_count)
+ dosage <- vapply(allele_frequency, function(p) {
+  stats::rbinom(sample_count, 2L, p)
+ }, numeric(sample_count))
+ dosage <- t(dosage)
+ observed_frequency <- rowMeans(dosage) / 2
+ scale <- sqrt(2 * observed_frequency * (1 - observed_frequency))
+ X <- t((dosage - 2 * observed_frequency) / scale)
+ annotation_signal <- as.numeric(scale(seq_len(marker_count)))
+ A <- cbind(intercept = 1, annotation_signal = annotation_signal)
+ gamma <- c(0, 0.05, 0.2)
+ alpha_truth <- matrix(c(-0.7, -0.55, 0.35, -0.2), 2L, 2L)
+ component_prior <- .mcem_ref_component_prior(A, alpha_truth)
+ component <- apply(component_prior, 1L, function(probability) {
+  sample.int(length(probability), 1L, prob = probability) - 1L
+ })
+ beta <- numeric(marker_count)
+ active <- component > 0L
+ beta[active] <- stats::rnorm(
+  sum(active), sd = sqrt(gamma[component[active] + 1L] * 0.08)
+ )
+ y <- drop(X %*% beta + stats::rnorm(sample_count, sd = sqrt(0.7)))
+ diagonal <- colSums(X^2)
+ XtX <- crossprod(X)
+ correlation <- XtX / sqrt(base::outer(diagonal, diagonal))
+ diag(correlation) <- 1
+ prefix <- .mcem_write_csr_correlation(correlation)
+ bed_file <- tempfile("sbayesrc_em_", fileext = ".bed")
+ .mcem_write_bed(bed_file, dosage)
+ marker_names <- paste0("rs", seq_len(marker_count))
+ sample_names <- paste0("id", seq_len(sample_count))
+ stats <- list(
+  wy = list(trait1 = stats::setNames(drop(crossprod(X, y)), marker_names)),
+  ww = list(trait1 = stats::setNames(diagonal, marker_names)),
+  yy = stats::setNames(sum(y^2), "trait1"),
+  n = sample_count, m = marker_count,
+  bed_files = bed_file, cls = list(seq_len(marker_count)),
+  rows = seq_len(sample_count), af = list(observed_frequency),
+  marker_names = marker_names, trait_names = "trait1"
+ )
+ Glist <- list(
+  n = sample_count, ids = sample_names, bedfiles = bed_file,
+  rsids = list(marker_names), rsidsLD = list(marker_names),
+  chr = list(rep(1L, marker_count)), pos = list(seq_len(marker_count) * 100),
+  af = list(observed_frequency), maf = list(pmin(observed_frequency,
+                                                1 - observed_frequency))
+ )
+ phenotype_variance <- sum(y^2) / (sample_count - 1)
+ list(
+  stats = stats, Glist = Glist, A = A, gamma = gamma,
+  alpha_truth = alpha_truth, prefix = prefix, bed_file = bed_file,
+  B = matrix(0.08, 1L, 1L), E = matrix(phenotype_variance, 1L, 1L),
+  ssb_prior = list(0.08), sse_prior = list(phenotype_variance),
+  intercept_prior = rbind(
+   type = c(0, 0), mean = c(-0.6, -0.5), precision = c(1, 1)
+  )
+ )
+}
+
+.mcem_cleanup_block_fixture <- function(fixture) {
+ .mcem_cleanup_csr(fixture$prefix)
+ unlink(fixture$bed_file)
+ invisible(NULL)
+}
+
+.mcem_run_block <- function(fixture, alpha_start, seed,
+                            updateB = FALSE, updateE = FALSE,
+                            inner_sweeps = 600L, inner_burn = 220L,
+                            max_outer = 25L) {
+ sblr:::.stblr_mcem_sbayesrc_block_eigen(
+  stats = fixture$stats, Glist = fixture$Glist,
+  annotation = fixture$A, block_start = 1L,
+  B = fixture$B, E = fixture$E,
+  ssb_prior = fixture$ssb_prior, sse_prior = fixture$sse_prior,
+  gamma = fixture$gamma, alpha_init = alpha_start,
+  sigmaSqAlpha_init = c(1, 1),
+  intercept_prior_resolved = fixture$intercept_prior,
+  representation = "low_rank", eigen_prop = 0.999999,
+  residual_policy = "gctb_block",
+  block_ve_mode = if (isTRUE(updateE)) "allMixVe" else "fixVe",
+  updateB = updateB, updateE = updateE,
+  inner_sweeps = inner_sweeps, inner_burn = inner_burn,
+  final_sweeps = inner_sweeps + 100L, final_burn = inner_burn,
+  max_outer = max_outer, seed = seed, ncores = 1L
+ )
+}
+
 .mcem_cleanup_csr <- function(prefix) {
   unlink(paste0(prefix, c(
     ".row_ptr.u64.bin", ".col_idx.u32.0based.bin", ".values.f32.bin",

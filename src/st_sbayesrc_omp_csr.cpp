@@ -3121,6 +3121,10 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   double eigen_eta = 0.0, std::string representation = "dense_reconstructed",
   double eigen_prop = 0.995, Rcpp::List low_rank_residual_config = R_NilValue
 ) {
+ const bool information_diagnostics =
+  low_rank_residual_config.size() > 0 &&
+  low_rank_residual_config.containsElementNamed("information_diagnostics") ?
+   Rcpp::as<bool>(low_rank_residual_config["information_diagnostics"]) : false;
  const int low_rank_residual_rebuild_every =
   low_rank_residual_config.size() > 0 ? Rcpp::as<int>(
    low_rank_residual_config["rebuild_every"]) : 100;
@@ -3230,7 +3234,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   convergence_component, low_rank_residual_rebuild_every,
   Rcpp::as<std::vector<double>>(phenotype_variance),
   residual_policy, block_ve_mode, resam_thresh, minimum_ve_ratio,
-  block_ve_keep_history, false, StBayesRCSelectionGenomicConfig{},
+  block_ve_keep_history, information_diagnostics,
+  StBayesRCSelectionGenomicConfig{},
   make_block_operator
  );
 }

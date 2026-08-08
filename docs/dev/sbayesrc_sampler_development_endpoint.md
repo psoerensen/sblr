@@ -54,9 +54,11 @@ design belongs to a separate task.
 ## Separate MCEM inference line
 
 The PMA-R3 endpoint applies to full-joint continuous-alpha sampler
-development. Phase 5A subsequently introduced a separate internal
-MCEM-SBayesRC qualification path, documented in
-[`sbayesrc_mcem_phase5a.md`](sbayesrc_mcem_phase5a.md). MCEM estimates an
+development. Phase 5A subsequently introduced the separate SBayesRC-EM
+inference line, initially qualified on CSR in
+[`sbayesrc_mcem_phase5a.md`](sbayesrc_mcem_phase5a.md) and completed for the
+retained block backend in
+[`sbayesrc_em_phase5b.md`](sbayesrc_em_phase5b.md). MCEM estimates an
 observed-data annotation MAP by alternating fixed-prior genomic Monte Carlo
 blocks with a soft-probit M-step. It is not a replacement sampler for the
 joint alpha posterior and does not change ordinary SBayesRC behavior.

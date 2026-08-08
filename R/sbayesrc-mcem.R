@@ -62,6 +62,22 @@
  )
 }
 
+.sbayesrc_mcem_damped_update <- function(alpha, target, damping) {
+ alpha <- as.matrix(alpha)
+ target <- as.matrix(target)
+ if (!identical(dim(alpha), dim(target)) || any(!is.finite(alpha)) ||
+     any(!is.finite(target)) || !is.numeric(damping) || length(damping) != 1L ||
+     !is.finite(damping) || damping <= 0 || damping > 1) {
+  stop("alpha, target, and damping do not define a valid damped update.")
+ }
+ (1 - damping) * alpha + damping * target
+}
+
+.sbayesrc_mcem_has_converged <- function(outer, min_outer, delta_alpha,
+                                         delta_prior, tol_alpha, tol_prior) {
+ outer >= min_outer && delta_alpha < tol_alpha && delta_prior < tol_prior
+}
+
 .sbayesrc_mcem_intercept_prior <- function(intercept_prior_resolved,
                                            stick_count) {
  prior <- as.matrix(intercept_prior_resolved)
@@ -208,6 +224,195 @@
  )
 }
 
+.sbayesrc_mcem_engine <- function(
+  state, B, E, A, gamma, alpha_init, sigmaSqAlpha_init,
+  intercept_prior_resolved, inner_function,
+  inner_sweeps, inner_burn, final_sweeps, final_burn,
+  damping, tol_alpha, tol_prior, min_outer, max_outer,
+  pi_floor, seed, backend, updateB, updateE,
+  return_responsibilities, verbose
+) {
+ alpha <- as.matrix(alpha_init)
+ prior <- .sbayesrc_mcem_component_prior(A, alpha, pi_floor)
+ alpha_history <- array(
+  NA_real_, c(nrow(alpha), ncol(alpha), max_outer + 1L),
+  dimnames = list(
+   annotation = rownames(alpha), stick = colnames(alpha),
+   outer = 0:max_outer
+  )
+ )
+ alpha_history[, , 1L] <- alpha
+ history <- vector("list", max_outer)
+ converged <- FALSE
+ last_responsibility <- NULL
+ completed <- 0L
+
+ for (outer in seq_len(max_outer)) {
+  inner <- inner_function(
+   state, B, E, alpha, inner_sweeps, inner_burn,
+   seed + outer - 1L, TRUE
+  )
+  chain <- inner$chains[[1L]][[1L]]
+  responsibility <- chain$information_flow$rb_comp_prob
+  if (is.null(responsibility)) {
+   stop("The MCEM inner kernel did not return RB responsibilities.")
+  }
+  m_step <- .sbayesrc_mcem_m_step(
+   A, responsibility, alpha, intercept_prior_resolved,
+   sigmaSqAlpha_init, probability_floor = pi_floor
+  )
+  alpha_target <- m_step$alpha
+  alpha_new <- .sbayesrc_mcem_damped_update(alpha, alpha_target, damping)
+  prior_new <- .sbayesrc_mcem_component_prior(A, alpha_new, pi_floor)
+  max_delta_alpha <- max(abs(alpha_new - alpha))
+  max_delta_prior <- max(abs(prior_new - prior))
+  hard_probability <- chain$component$prob
+  rb_hard <- if (is.matrix(hard_probability) &&
+                 identical(dim(hard_probability), dim(responsibility))) {
+   abs(responsibility - hard_probability)
+  } else {
+   NA_real_
+  }
+  rb_hard_mean <- if (all(is.na(rb_hard))) NA_real_ else
+   mean(rb_hard, na.rm = TRUE)
+  rb_hard_max <- if (all(is.na(rb_hard))) NA_real_ else
+   max(rb_hard, na.rm = TRUE)
+  completed <- outer
+  history[[outer]] <- data.frame(
+   outer = outer,
+   max_delta_alpha = max_delta_alpha,
+   max_delta_prior = max_delta_prior,
+   prior_expected_active = sum(1 - prior_new[, 1L]),
+   rb_expected_active = sum(1 - responsibility[, 1L]),
+   B = as.numeric(inner$variance$vb[1L, 1L]),
+   E = as.numeric(inner$variance$ve[1L, 1L]),
+   rb_hard_mean_abs = rb_hard_mean,
+   rb_hard_max_abs = rb_hard_max,
+   m_step_max_convergence = max(m_step$convergence),
+   m_step_objective = sum(m_step$objective),
+   inner_sweeps = inner_sweeps,
+   inner_burn = inner_burn,
+   stringsAsFactors = FALSE
+  )
+  alpha_history[, , outer + 1L] <- alpha_new
+  state <- .sbayesrc_mcem_extract_state(inner, state)
+  if (isTRUE(updateB)) B[1L, 1L] <- history[[outer]]$B
+  if (isTRUE(updateE)) E[1L, 1L] <- history[[outer]]$E
+  alpha <- alpha_new
+  prior <- prior_new
+  last_responsibility <- responsibility
+  if (isTRUE(verbose)) {
+   message(sprintf(
+    "SBayesRC-EM backend=%s outer=%d max_dAlpha=%.6g max_dPrior=%.6g RB_active=%.3f",
+    backend, outer, max_delta_alpha, max_delta_prior,
+    history[[outer]]$rb_expected_active
+   ))
+  }
+  if (.sbayesrc_mcem_has_converged(
+      outer, min_outer, max_delta_alpha, max_delta_prior,
+      tol_alpha, tol_prior)) {
+   converged <- TRUE
+   break
+  }
+ }
+
+ final <- inner_function(
+  state, B, E, alpha, final_sweeps, final_burn,
+  seed + max_outer + 10000L, isTRUE(return_responsibilities)
+ )
+ final_state <- .sbayesrc_mcem_extract_state(final, state)
+ if (is.matrix(final$marker$b)) {
+  final$marker$b[, 1L] <- final_state$b[[1L]]
+ } else {
+  final$marker$b[[1L]] <- final_state$b[[1L]]
+ }
+ history_summary <- do.call(rbind, history[seq_len(completed)])
+ history_alpha <- alpha_history[, , seq_len(completed + 1L), drop = FALSE]
+ mcem <- list(
+  method = "SBayesRC-EM",
+  algorithm = "MCEM",
+  inference = "mcem",
+  target = "observed_data_alpha_MAP_empirical_Bayes",
+  backend = backend,
+  converged = converged,
+  n_outer = completed,
+  alpha_map = alpha,
+  component_prior = prior,
+  history = list(summary = history_summary, alpha = history_alpha),
+  damping = damping,
+  tol_alpha = tol_alpha,
+  tol_prior = tol_prior,
+  min_outer = min_outer,
+  max_outer = max_outer,
+  inner_sweeps = inner_sweeps,
+  inner_burn = inner_burn,
+  final_sweeps = final_sweeps,
+  final_burn = final_burn,
+  sigmaSqAlpha_mode = "fixed_prior_variance",
+  sigmaSqAlpha_fixed = sigmaSqAlpha_init,
+  mixture_prior_mode = "annotation_stick_intercepts_no_global_Pi_update",
+  genomic_hyperparameters = list(
+   updateB = isTRUE(updateB), updateE = isTRUE(updateE),
+   B_final = final$variance$vb, E_final = final$variance$ve
+  ),
+  genomic_hyperparameters_fixed = !isTRUE(updateB) && !isTRUE(updateE),
+  last_estep_responsibilities = if (isTRUE(return_responsibilities)) {
+   last_responsibility
+  } else NULL,
+  final_genomic_responsibilities = if (isTRUE(return_responsibilities)) {
+   final$chains[[1L]][[1L]]$information_flow$rb_comp_prob
+  } else NULL,
+  # Phase-5A compatibility aliases; the explicit names above are preferred.
+  e_step_responsibilities = if (isTRUE(return_responsibilities)) {
+   last_responsibility
+  } else NULL,
+  final_responsibilities = if (isTRUE(return_responsibilities)) {
+   final$chains[[1L]][[1L]]$information_flow$rb_comp_prob
+  } else NULL
+ )
+ structure(
+  list(genomic = final, mcem = mcem),
+  class = c("sblr_sbayesrc_em_phase5b", "list")
+ )
+}
+
+.sbayesrc_mcem_validate_controls <- function(
+  inner_sweeps, inner_burn, final_sweeps, final_burn,
+  min_outer, max_outer, ncores, seed, damping, tol_alpha, tol_prior
+) {
+ integer_scalar <- function(x, name, minimum = 1L) {
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
+      x != as.integer(x) || x < minimum) {
+   stop(name, " must be an integer >= ", minimum, ".")
+  }
+  as.integer(x)
+ }
+ controls <- list(
+  inner_sweeps = integer_scalar(inner_sweeps, "inner_sweeps"),
+  inner_burn = integer_scalar(inner_burn, "inner_burn", 0L),
+  final_sweeps = integer_scalar(final_sweeps, "final_sweeps"),
+  final_burn = integer_scalar(final_burn, "final_burn", 0L),
+  min_outer = integer_scalar(min_outer, "min_outer"),
+  max_outer = integer_scalar(max_outer, "max_outer"),
+  ncores = integer_scalar(ncores, "ncores"),
+  seed = integer_scalar(seed, "seed", 0L)
+ )
+ if (controls$min_outer > controls$max_outer) {
+  stop("min_outer cannot exceed max_outer.")
+ }
+ for (item in list(damping = damping, tol_alpha = tol_alpha,
+                   tol_prior = tol_prior)) {
+  if (!is.numeric(item) || length(item) != 1L || !is.finite(item) || item <= 0) {
+   stop("damping, tol_alpha, and tol_prior must be positive finite scalars.")
+  }
+ }
+ if (damping > 1) stop("damping must be in (0, 1].")
+ c(controls, list(
+  damping = as.numeric(damping), tol_alpha = as.numeric(tol_alpha),
+  tol_prior = as.numeric(tol_prior)
+ ))
+}
+
 .stblr_mcem_sbayesrc_csr <- function(
   wy, ww, yy, b_init, comp_init, r_init, ld_prefix,
   B, E, ssb_prior, sse_prior, A, gamma, alpha_init,
@@ -242,29 +447,10 @@
      any(!is.finite(sigmaSqAlpha_init)) || any(sigmaSqAlpha_init <= 0)) {
   stop("sigmaSqAlpha_init must provide a fixed positive variance per stick.")
  }
- integer_scalar <- function(x, name, minimum = 1L) {
-  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
-      x != as.integer(x) || x < minimum) {
-   stop(name, " must be an integer >= ", minimum, ".")
-  }
-  as.integer(x)
- }
- inner_sweeps <- integer_scalar(inner_sweeps, "inner_sweeps")
- inner_burn <- integer_scalar(inner_burn, "inner_burn", 0L)
- final_sweeps <- integer_scalar(final_sweeps, "final_sweeps")
- final_burn <- integer_scalar(final_burn, "final_burn", 0L)
- min_outer <- integer_scalar(min_outer, "min_outer")
- max_outer <- integer_scalar(max_outer, "max_outer")
- ncores <- integer_scalar(ncores, "ncores")
- seed <- integer_scalar(seed, "seed", 0L)
- if (min_outer > max_outer) stop("min_outer cannot exceed max_outer.")
- for (item in list(damping = damping, tol_alpha = tol_alpha,
-                   tol_prior = tol_prior)) {
-  if (!is.numeric(item) || length(item) != 1L || !is.finite(item) || item <= 0) {
-   stop("damping, tol_alpha, and tol_prior must be positive finite scalars.")
-  }
- }
- if (damping > 1) stop("damping must be in (0, 1].")
+ control <- .sbayesrc_mcem_validate_controls(
+  inner_sweeps, inner_burn, final_sweeps, final_burn,
+  min_outer, max_outer, ncores, seed, damping, tol_alpha, tol_prior
+ )
  if (!is.numeric(adjE) || length(adjE) != 1L || !is.finite(adjE) ||
      adjE != 0) {
   stop("Phase-5A qualification requires adjE = 0 and fixed genomic variances.")
@@ -275,109 +461,118 @@
   component = lapply(comp_init, as.numeric),
   r = lapply(r_init, as.numeric)
  )
- prior <- .sbayesrc_mcem_component_prior(A, alpha, pi_floor)
- alpha_history <- array(
-  NA_real_, c(nrow(alpha), ncol(alpha), max_outer + 1L),
-  dimnames = c(dimnames(alpha), list(outer = 0:max_outer))
- )
- alpha_history[, , 1L] <- alpha
- history <- vector("list", max_outer)
- converged <- FALSE
- last_responsibility <- NULL
- completed <- 0L
-
- for (outer in seq_len(max_outer)) {
-  inner <- .sbayesrc_mcem_inner_csr(
+ inner_function <- function(state, B, E, alpha, sweeps, burn, seed, capture) {
+  .sbayesrc_mcem_inner_csr(
    wy, ww, yy, state, ld_prefix, B, E, ssb_prior, sse_prior,
    A, gamma, alpha, sigmaSqAlpha_init, intercept_prior_resolved, n,
-   inner_sweeps, inner_burn, seed + outer - 1L, ncores, pi_floor,
-   nub, nue, adjE, TRUE
+   sweeps, burn, seed, control$ncores, pi_floor, nub, nue, adjE, capture
   )
-  chain <- inner$chains[[1L]][[1L]]
-  responsibility <- chain$information_flow$rb_comp_prob
-  if (is.null(responsibility)) {
-   stop("The MCEM inner kernel did not return RB responsibilities.")
-  }
-  m_step <- .sbayesrc_mcem_m_step(
-   A, responsibility, alpha, intercept_prior_resolved,
-   sigmaSqAlpha_init, probability_floor = pi_floor
-  )
-  alpha_target <- m_step$alpha
-  alpha_new <- (1 - damping) * alpha + damping * alpha_target
-  prior_new <- .sbayesrc_mcem_component_prior(A, alpha_new, pi_floor)
-  max_delta_alpha <- max(abs(alpha_new - alpha))
-  max_delta_prior <- max(abs(prior_new - prior))
-  completed <- outer
-  history[[outer]] <- data.frame(
-   outer = outer,
-   max_delta_alpha = max_delta_alpha,
-   max_delta_prior = max_delta_prior,
-   prior_expected_active = sum(1 - prior_new[, 1L]),
-   rb_expected_active = sum(1 - responsibility[, 1L]),
-   m_step_max_convergence = max(m_step$convergence),
-   stringsAsFactors = FALSE
-  )
-  alpha_history[, , outer + 1L] <- alpha_new
-  state <- .sbayesrc_mcem_extract_state(inner, state)
-  alpha <- alpha_new
-  prior <- prior_new
-  last_responsibility <- responsibility
-  if (isTRUE(verbose)) {
-   message(sprintf(
-    "MCEM outer=%d max_dAlpha=%.6g max_dPrior=%.6g RB_active=%.3f",
-    outer, max_delta_alpha, max_delta_prior,
-    history[[outer]]$rb_expected_active
-   ))
-  }
-  if (outer >= min_outer && max_delta_alpha < tol_alpha &&
-      max_delta_prior < tol_prior) {
-   converged <- TRUE
-   break
-  }
  }
+ .sbayesrc_mcem_engine(
+  state, B, E, A, gamma, alpha, sigmaSqAlpha_init,
+  intercept_prior_resolved, inner_function,
+  control$inner_sweeps, control$inner_burn,
+  control$final_sweeps, control$final_burn,
+  control$damping, control$tol_alpha, control$tol_prior,
+  control$min_outer, control$max_outer, pi_floor, control$seed,
+  "csr_reference", FALSE, FALSE, return_responsibilities, verbose
+ )
+}
 
- final <- .sbayesrc_mcem_inner_csr(
-  wy, ww, yy, state, ld_prefix, B, E, ssb_prior, sse_prior,
-  A, gamma, alpha, sigmaSqAlpha_init, intercept_prior_resolved, n,
-  final_sweeps, final_burn, seed + max_outer + 10000L, ncores,
- pi_floor, nub, nue, adjE, isTRUE(return_responsibilities)
- )
- final_state <- .sbayesrc_mcem_extract_state(final, state)
- if (is.matrix(final$marker$b)) {
-  final$marker$b[, 1L] <- final_state$b[[1L]]
- } else {
-  final$marker$b[[1L]] <- final_state$b[[1L]]
+.stblr_mcem_sbayesrc_block_eigen <- function(
+  stats, Glist, annotation, block_start,
+  B, E, ssb_prior, sse_prior, gamma, alpha_init,
+  sigmaSqAlpha_init, intercept_prior_resolved,
+  b_init = NULL, comp_init = NULL,
+  representation = "low_rank", eigen_prop = 0.995,
+  eigen_filter = "hard_truncate", eigen_tau = 0.01, eigen_eta = 0,
+  residual_policy = "gctb_block", block_ve_mode = "allMixVe",
+  resam_thresh = 1.1, minimum_ve_ratio = 0.7,
+  low_rank_residual_rebuild_every = 100L,
+  updateB = FALSE, updateE = FALSE,
+  inner_sweeps = 1000L, inner_burn = 300L,
+  final_sweeps = inner_sweeps, final_burn = inner_burn,
+  damping = 0.5, tol_alpha = 1e-3, tol_prior = 1e-3,
+  min_outer = 3L, max_outer = 50L,
+  pi_floor = 1e-12, nub = 4, nue = 4,
+  ncores = 1L, seed = 10L, return_responsibilities = TRUE,
+  verbose = FALSE
+) {
+ A <- as.matrix(annotation)
+ alpha <- .sbayesrc_validate_alpha(as.matrix(alpha_init), gamma)
+ gamma <- .sbayesrc_validate_gamma(gamma)
+ marker_count <- nrow(A)
+ if (marker_count < 1L || ncol(A) < 2L || nrow(alpha) != ncol(A)) {
+  stop("Block MCEM annotation and alpha dimensions are inconsistent.")
  }
- history_summary <- do.call(rbind, history[seq_len(completed)])
- history_alpha <- alpha_history[, , seq_len(completed + 1L), drop = FALSE]
- mcem <- list(
-  method = "MCEM-SBayesRC",
-  target = "observed_data_alpha_MAP_empirical_Bayes",
-  converged = converged,
-  n_outer = completed,
-  alpha_map = alpha,
-  component_prior = prior,
-  history = list(summary = history_summary, alpha = history_alpha),
-  damping = damping,
-  tol_alpha = tol_alpha,
-  tol_prior = tol_prior,
-  min_outer = min_outer,
-  max_outer = max_outer,
-  inner_sweeps = inner_sweeps,
-  inner_burn = inner_burn,
-  final_sweeps = final_sweeps,
-  final_burn = final_burn,
-  sigmaSqAlpha_fixed = sigmaSqAlpha_init,
-  genomic_hyperparameters_fixed = TRUE,
-  e_step_responsibilities = if (isTRUE(return_responsibilities)) {
-   last_responsibility
-  } else NULL,
-  final_responsibilities = if (isTRUE(return_responsibilities)) {
-   final$chains[[1L]][[1L]]$information_flow$rb_comp_prob
-  } else NULL
+ sigmaSqAlpha_init <- as.numeric(sigmaSqAlpha_init)
+ intercept <- .sbayesrc_mcem_intercept_prior(
+  intercept_prior_resolved, ncol(alpha)
  )
- structure(
-  list(genomic = final, mcem = mcem),
-  class = c("sblr_mcem_sbayesrc_phase5a", "list")
+ if (length(sigmaSqAlpha_init) != ncol(alpha) ||
+     any(!is.finite(sigmaSqAlpha_init)) || any(sigmaSqAlpha_init <= 0)) {
+  stop("sigmaSqAlpha_init must provide a fixed positive variance per stick.")
+ }
+ control <- .sbayesrc_mcem_validate_controls(
+  inner_sweeps, inner_burn, final_sweeps, final_burn,
+  min_outer, max_outer, ncores, seed, damping, tol_alpha, tol_prior
+ )
+ if (!identical(residual_policy, "gctb_block")) {
+  stop("Phase-5B block MCEM requires residual_policy = 'gctb_block'.")
+ }
+ resolved_mode <- if (isTRUE(updateE)) "allMixVe" else "fixVe"
+ if (!identical(block_ve_mode, resolved_mode)) {
+  stop("block_ve_mode must be '", resolved_mode,
+       "' for the requested Phase-5B E-update mode.")
+ }
+ if (is.null(b_init)) b_init <- list(rep(0, marker_count))
+ if (is.null(comp_init)) comp_init <- list(rep(0L, marker_count))
+ state <- list(
+  b = lapply(b_init, as.numeric),
+  component = lapply(comp_init, as.numeric),
+  r = list(rep(0, marker_count))
+ )
+ intercept_spec <- list(
+  distribution = "normal", mean = intercept$mean,
+  sd = 1 / sqrt(intercept$precision)
+ )
+ ssb_input <- if (is.list(ssb_prior) && length(ssb_prior) == 1L) {
+  as.numeric(ssb_prior[[1L]])
+ } else ssb_prior
+ sse_input <- if (is.list(sse_prior) && length(sse_prior) == 1L) {
+  as.numeric(sse_prior[[1L]])
+ } else sse_prior
+ inner_function <- function(state, B, E, alpha, sweeps, burn, seed, capture) {
+  .stblr_csr_sbayesrc_block_eigen(
+   stats = stats, Glist = Glist, annotation = A,
+   block_start = block_start, representation = representation,
+   eigen_prop = eigen_prop, eigen_filter = eigen_filter,
+   eigen_tau = eigen_tau, eigen_eta = eigen_eta,
+   low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
+   residual_policy = residual_policy, block_ve_mode = resolved_mode,
+   resam_thresh = resam_thresh, minimum_ve_ratio = minimum_ve_ratio,
+   block_ve_keep_history = FALSE, gamma = gamma, B = B, E = E,
+   ssb_prior = ssb_input, sse_prior = sse_input,
+   updateAlpha = FALSE, updateB = updateB, updateE = updateE, adjE = 0,
+   nit = sweeps, nburn = burn, nthin = 1L, ncores = control$ncores,
+   seed = seed, nchains = 1L, keep_chains = TRUE,
+   b_init = state$b, comp_init = state$component, use_comp_init = TRUE,
+   use_r_init = FALSE, add_intercept = FALSE,
+   standardize_annotations = FALSE, center_binary_annotations = FALSE,
+   alpha_init = alpha, sigmaSqAlpha_init = sigmaSqAlpha_init,
+   annotation_intercept_prior = intercept_spec,
+   pi_floor = pi_floor, nub = nub, nue = nue,
+   .diagnostic_updateSigmaSqAlpha = FALSE,
+   .information_diagnostics = capture, .return_raw = TRUE
+  )
+ }
+ .sbayesrc_mcem_engine(
+  state, as.matrix(B), as.matrix(E), A, gamma, alpha,
+  sigmaSqAlpha_init, intercept_prior_resolved, inner_function,
+  control$inner_sweeps, control$inner_burn,
+  control$final_sweeps, control$final_burn,
+  control$damping, control$tol_alpha, control$tol_prior,
+  control$min_outer, control$max_outer, pi_floor, control$seed,
+  "block_eigen", updateB, updateE, return_responsibilities, verbose
  )
 }

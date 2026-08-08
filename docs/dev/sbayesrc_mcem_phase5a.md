@@ -2,8 +2,8 @@
 
 ## Status and inference target
 
-Phase 5A adds an internal, single-trait CSR qualification path for
-continuous-annotation MCEM-SBayesRC. MCEM-SBayesRC estimates continuous
+Phase 5A added an internal, single-trait CSR qualification path for what is now
+named SBayesRC-EM. SBayesRC-EM estimates continuous
 annotation coefficients at an observed-data MAP / empirical-Bayes solution
 using a Monte Carlo E-step. It is not a sampler from the full joint alpha
 posterior.
@@ -65,7 +65,7 @@ development entry point is `.stblr_mcem_sbayesrc_csr()`. It returns:
 
 - `genomic`: the ordinary raw final CSR genomic block, sampled with the learned
   SNP priors frozen;
-- `mcem$method`: `"MCEM-SBayesRC"`;
+- `mcem$method`: `"SBayesRC-EM"` and `mcem$algorithm`: `"MCEM"`;
 - `mcem$target`: the observed-data alpha MAP / empirical-Bayes target;
 - `mcem$alpha_map` and `mcem$component_prior`;
 - convergence state, iteration count, tolerances, damping, and block lengths;
@@ -120,3 +120,7 @@ live in `tests/testthat/helper-sbayesrc-mcem-reference.R` and
 The next phase should release currently fixed genomic hyperparameters one at a
 time and re-establish reference behavior before any MCEM extension to
 SBayesRC-S annotation selection.
+
+Phase 5B completed that gated block-eigen and genomic-hyperparameter work; see
+[`sbayesrc_em_phase5b.md`](sbayesrc_em_phase5b.md). This document remains the
+CSR reference qualification record.

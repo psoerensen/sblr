@@ -250,7 +250,8 @@ stblr_csr_sbayesrc_generic <- function(
   .diagnostic_allocation_updates_per_cycle = 1L,
   .diagnostic_annotation_updates_per_cycle = 1L,
   .diagnostic_block_px = FALSE,
-  .diagnostic_block_px_log_scale_sd = 0.45
+  .diagnostic_block_px_log_scale_sd = 0.45,
+  .return_raw = FALSE
 ) {
  dims <- .stblr_get_nt_m_names(stats, n = n, m = m)
  nt <- dims$nt
@@ -532,6 +533,14 @@ stblr_csr_sbayesrc_generic <- function(
  if ("block_start" %in% names(.native_args)) native_call$ld_prefix <- NULL
  raw_fit <- do.call(.native_fun, native_call)
 
+ if (isTRUE(.return_raw)) {
+  if (!.is_stblr_raw(raw_fit)) {
+   .stblr_stop_unsupported_raw_output("csr_sbayesrc")
+  }
+  raw_fit$annotation$annotation_names <- colnames(A)
+  return(raw_fit)
+ }
+
  if (!is.null(raw_fit$diagnostics$block_eigen)) {
   .input_extra$eigen_diagnostics <- raw_fit$diagnostics$block_eigen
  }
@@ -660,6 +669,8 @@ stblr_csr_sbayesrc_generic <- function(
   updateLDswap = FALSE,
   .diagnostic_block_px = FALSE,
   .diagnostic_block_px_log_scale_sd = 0.45,
+  .information_diagnostics = FALSE,
+  .return_raw = FALSE,
   ...
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
@@ -684,7 +695,8 @@ stblr_csr_sbayesrc_generic <- function(
  dots <- list(...)
  reserved <- intersect(
   names(dots),
-  c("ld_prefix", ".native_fun", ".native_args", ".input_extra")
+  c("ld_prefix", ".native_fun", ".native_args", ".input_extra",
+    ".return_raw", ".information_diagnostics")
  )
  if (length(reserved)) {
   stop("Internal block-eigen arguments cannot be overridden: ",
@@ -714,7 +726,8 @@ native_args <- list(
       resam_thresh = resam_thresh,
       minimum_ve_ratio = minimum_ve_ratio,
       block_ve_keep_history = block_ve_keep_history
-    )
+    ),
+    information_diagnostics = isTRUE(.information_diagnostics)
   )
  )
  input_extra <- list(
@@ -754,7 +767,8 @@ native_args <- list(
    Glist = Glist,
    updateLDswap = FALSE,
    .diagnostic_block_px = .diagnostic_block_px,
-   .diagnostic_block_px_log_scale_sd = .diagnostic_block_px_log_scale_sd
+   .diagnostic_block_px_log_scale_sd = .diagnostic_block_px_log_scale_sd,
+   .return_raw = .return_raw
   ),
   dots,
   list(
