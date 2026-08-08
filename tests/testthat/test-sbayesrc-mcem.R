@@ -65,6 +65,28 @@ test_that("MCEM proper-prior probit M-step matches the independent R oracle", {
   }
 })
 
+test_that("MCEM objective decomposition matches the optimized M-step target", {
+ fixture <- .mcem_exact_fixture(correlated = TRUE)
+ on.exit(.mcem_cleanup_csr(fixture$prefix), add = TRUE)
+ responsibility <- .mcem_ref_component_prior(
+  fixture$A, matrix(c(-0.3, 0.2, 0.1, -0.1), 2L, 2L)
+ )
+ fit <- .sbayesrc_mcem_m_step(
+  fixture$A, responsibility, fixture$alpha_start,
+  fixture$intercept_prior$native, fixture$sigmaSqAlpha
+ )
+ objective <- .sbayesrc_mcem_objective(
+  fixture$A, responsibility, fit$alpha,
+  fixture$intercept_prior$native, fixture$sigmaSqAlpha
+ )
+ expect_equal(objective$Q_total, -sum(fit$objective), tolerance = 1e-8)
+ expect_equal(
+  objective$Q_total,
+  objective$Q_annotation + objective$log_prior_alpha,
+  tolerance = 1e-12
+ )
+})
+
 test_that("MCEM inner RB capture is RNG-neutral and uses fixed alpha priors", {
   fixture <- .sbs4b_fixture(36L, 20271272L)
   off <- .sbs4b_run(

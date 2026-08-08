@@ -183,6 +183,48 @@
  )
 }
 
+.sbayesrc_mcem_objective <- function(
+  A, responsibility, alpha, intercept_prior_resolved,
+  sigmaSqAlpha, probability_floor = 1e-12
+) {
+ A <- as.matrix(A)
+ responsibility <- as.matrix(responsibility)
+ alpha <- as.matrix(alpha)
+ stick <- .sbayesrc_mcem_soft_stick_information(responsibility)
+ stick_count <- ncol(responsibility) - 1L
+ if (!identical(dim(alpha), c(ncol(A), stick_count))) {
+  stop("alpha has incompatible dimensions for the MCEM objective.")
+ }
+ intercept <- .sbayesrc_mcem_intercept_prior(
+  intercept_prior_resolved, stick_count
+ )
+ q_annotation <- log_prior_alpha <- numeric(stick_count)
+ for (index in seq_len(stick_count)) {
+  probability <- .sbayesrc_mcem_clamp_probability(
+   stats::pnorm(drop(A %*% alpha[, index])), floor = probability_floor
+  )
+  q_annotation[index] <- sum(
+   stick$success[, index] * log(probability) +
+    (stick$eligible[, index] - stick$success[, index]) *
+     log1p(-probability)
+  )
+  prior_mean <- c(intercept$mean[index], rep(0, ncol(A) - 1L))
+  prior_precision <- c(
+   intercept$precision[index], rep(1 / sigmaSqAlpha[index], ncol(A) - 1L)
+  )
+  log_prior_alpha[index] <- -0.5 * sum(
+   prior_precision * (alpha[, index] - prior_mean)^2
+  )
+ }
+ list(
+  Q_annotation_by_stick = q_annotation,
+  log_prior_alpha_by_stick = log_prior_alpha,
+  Q_annotation = sum(q_annotation),
+  log_prior_alpha = sum(log_prior_alpha),
+  Q_total = sum(q_annotation) + sum(log_prior_alpha)
+ )
+}
+
 .sbayesrc_mcem_extract_state <- function(raw, initial_state) {
  if (!inherits(raw, "stblr_raw") || !is.list(raw$marker) ||
      !all(c("b", "r", "state") %in% names(raw$marker))) {
@@ -230,7 +272,8 @@
   inner_sweeps, inner_burn, final_sweeps, final_burn,
   damping, tol_alpha, tol_prior, min_outer, max_outer,
   pi_floor, seed, backend, updateB, updateE,
-  return_responsibilities, verbose
+  return_responsibilities, verbose, objective_diagnostics = FALSE,
+  diagnostic_responsibility_iterations = integer()
 ) {
  alpha <- as.matrix(alpha_init)
  prior <- .sbayesrc_mcem_component_prior(A, alpha, pi_floor)
@@ -246,6 +289,7 @@
  converged <- FALSE
  last_responsibility <- NULL
  completed <- 0L
+ responsibility_checkpoint <- list()
 
  for (outer in seq_len(max_outer)) {
   inner <- inner_function(
@@ -256,6 +300,9 @@
   responsibility <- chain$information_flow$rb_comp_prob
   if (is.null(responsibility)) {
    stop("The MCEM inner kernel did not return RB responsibilities.")
+  }
+  if (outer %in% diagnostic_responsibility_iterations) {
+   responsibility_checkpoint[[as.character(outer)]] <- responsibility
   }
   m_step <- .sbayesrc_mcem_m_step(
    A, responsibility, alpha, intercept_prior_resolved,
@@ -277,6 +324,22 @@
    mean(rb_hard, na.rm = TRUE)
   rb_hard_max <- if (all(is.na(rb_hard))) NA_real_ else
    max(rb_hard, na.rm = TRUE)
+  objective <- if (isTRUE(objective_diagnostics)) {
+   list(
+    current = .sbayesrc_mcem_objective(
+     A, responsibility, alpha, intercept_prior_resolved,
+     sigmaSqAlpha_init, pi_floor
+    ),
+    target = .sbayesrc_mcem_objective(
+     A, responsibility, alpha_target, intercept_prior_resolved,
+     sigmaSqAlpha_init, pi_floor
+    ),
+    updated = .sbayesrc_mcem_objective(
+     A, responsibility, alpha_new, intercept_prior_resolved,
+     sigmaSqAlpha_init, pi_floor
+    )
+   )
+  } else NULL
   completed <- outer
   history[[outer]] <- data.frame(
    outer = outer,
@@ -290,6 +353,20 @@
    rb_hard_max_abs = rb_hard_max,
    m_step_max_convergence = max(m_step$convergence),
    m_step_objective = sum(m_step$objective),
+   Q_annotation_current = if (is.null(objective)) NA_real_ else
+    objective$current$Q_annotation,
+   log_prior_alpha_current = if (is.null(objective)) NA_real_ else
+    objective$current$log_prior_alpha,
+   Q_total_current = if (is.null(objective)) NA_real_ else
+    objective$current$Q_total,
+   Q_annotation_target = if (is.null(objective)) NA_real_ else
+    objective$target$Q_annotation,
+   log_prior_alpha_target = if (is.null(objective)) NA_real_ else
+    objective$target$log_prior_alpha,
+   Q_total_target = if (is.null(objective)) NA_real_ else
+    objective$target$Q_total,
+   Q_total_updated = if (is.null(objective)) NA_real_ else
+    objective$updated$Q_total,
    inner_sweeps = inner_sweeps,
    inner_burn = inner_burn,
    stringsAsFactors = FALSE
@@ -338,7 +415,10 @@
   n_outer = completed,
   alpha_map = alpha,
   component_prior = prior,
-  history = list(summary = history_summary, alpha = history_alpha),
+  history = list(
+   summary = history_summary, alpha = history_alpha,
+   responsibility_checkpoint = responsibility_checkpoint
+  ),
   damping = damping,
   tol_alpha = tol_alpha,
   tol_prior = tol_prior,
@@ -351,6 +431,7 @@
   sigmaSqAlpha_mode = "fixed_prior_variance",
   sigmaSqAlpha_fixed = sigmaSqAlpha_init,
   mixture_prior_mode = "annotation_stick_intercepts_no_global_Pi_update",
+  objective_diagnostics = isTRUE(objective_diagnostics),
   genomic_hyperparameters = list(
    updateB = isTRUE(updateB), updateE = isTRUE(updateE),
    B_final = final$variance$vb, E_final = final$variance$ve
@@ -423,7 +504,8 @@
   min_outer = 3L, max_outer = 50L,
   pi_floor = 1e-12, nub = 4, nue = 4, adjE = 0,
   ncores = 1L, seed = 10L, return_responsibilities = TRUE,
-  verbose = FALSE
+  verbose = FALSE, .objective_diagnostics = FALSE,
+  .diagnostic_responsibility_iterations = integer()
 ) {
  if (length(wy) != 1L || length(ww) != 1L || length(b_init) != 1L ||
      length(comp_init) != 1L || length(r_init) != 1L || length(yy) != 1L ||
@@ -475,7 +557,9 @@
   control$final_sweeps, control$final_burn,
   control$damping, control$tol_alpha, control$tol_prior,
   control$min_outer, control$max_outer, pi_floor, control$seed,
-  "csr_reference", FALSE, FALSE, return_responsibilities, verbose
+  "csr_reference", FALSE, FALSE, return_responsibilities, verbose,
+  .objective_diagnostics,
+  .diagnostic_responsibility_iterations
  )
 }
 
@@ -496,7 +580,8 @@
   min_outer = 3L, max_outer = 50L,
   pi_floor = 1e-12, nub = 4, nue = 4,
   ncores = 1L, seed = 10L, return_responsibilities = TRUE,
-  verbose = FALSE
+  verbose = FALSE, .objective_diagnostics = FALSE,
+  .diagnostic_responsibility_iterations = integer()
 ) {
  A <- as.matrix(annotation)
  alpha <- .sbayesrc_validate_alpha(as.matrix(alpha_init), gamma)
@@ -573,6 +658,8 @@
   control$final_sweeps, control$final_burn,
   control$damping, control$tol_alpha, control$tol_prior,
   control$min_outer, control$max_outer, pi_floor, control$seed,
-  "block_eigen", updateB, updateE, return_responsibilities, verbose
+  "block_eigen", updateB, updateE, return_responsibilities, verbose,
+  .objective_diagnostics,
+  .diagnostic_responsibility_iterations
  )
 }

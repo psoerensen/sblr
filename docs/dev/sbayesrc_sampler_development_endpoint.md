@@ -70,3 +70,11 @@ Laplace model distribution for `annotation_pip_eb`. CSR remains the reference
 backend and retained block-eigen remains the scalable backend. See
 [`sbayesrc_s_em_phase5c.md`](sbayesrc_s_em_phase5c.md). This inference line
 does not replace or alter joint SBayesRC-S posterior sampling.
+
+Phase 5D audits the dispersed-start failure exposed by frozen Study 07 without
+changing either EM method. The frozen case is reproduced exactly; continuous
+SBayesRC-EM shows slow outer contraction plus an E-step Monte Carlo noise floor,
+while exact enumeration shows that SBayesRC-S-EM disagreement comes from outer
+responsibility feedback rather than its eight-state MC3 search. See
+[`sbayesrc_mcem_phase5d_study07_diagnosis.md`](sbayesrc_mcem_phase5d_study07_diagnosis.md).
+Production defaults remain unchanged pending a separate Phase 5E.

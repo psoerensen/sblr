@@ -69,7 +69,7 @@
  full_mode[columns] <- fit$par
  full_covariance <- matrix(0, ncol(A), ncol(A))
  full_covariance[columns, columns] <- covariance
- list(
+  list(
   log_marginal = log_marginal,
   mode = full_mode,
   covariance = full_covariance,
@@ -197,6 +197,7 @@
    `[[`, integer(1L), "convergence"
   )),
   target = "responsibility_conditioned_laplace_model_distribution"
+  , map_log_weight = best$log_weight
  )
 }
 
@@ -207,7 +208,8 @@
   selection_sweeps, selection_burn,
   damping, tol_alpha, tol_prior, min_outer, max_outer,
   pi_floor, seed, backend, updateB, updateE,
-  return_responsibilities, verbose
+  return_responsibilities, verbose,
+  diagnostic_responsibility_iterations = integer()
 ) {
  alpha <- as.matrix(alpha_init)
  delta <- as.integer(delta_init)
@@ -219,6 +221,7 @@
  converged <- FALSE
  last_responsibility <- last_selection <- NULL
  completed <- 0L
+ responsibility_checkpoint <- list()
  for (outer in seq_len(max_outer)) {
   inner <- inner_function(state, B, E, alpha, inner_sweeps, inner_burn,
                           seed + outer - 1L, TRUE)
@@ -226,6 +229,9 @@
   responsibility <- chain$information_flow$rb_comp_prob
   if (is.null(responsibility)) {
    stop("The SBayesRC-S-EM inner kernel did not return RB responsibilities.")
+  }
+  if (outer %in% diagnostic_responsibility_iterations) {
+   responsibility_checkpoint[[as.character(outer)]] <- responsibility
   }
   selection <- .sbayesrc_s_em_selection_update(
    A, responsibility, delta, alpha, pi_a, tau2,
@@ -254,6 +260,7 @@
    selection_models_visited = selection$model_cache_size,
    selection_transitions = sum(selection$transition_count),
    selection_max_convergence = selection$max_convergence,
+   selection_map_log_weight = selection$map_log_weight,
    inner_sweeps = inner_sweeps,
    inner_burn = inner_burn,
    stringsAsFactors = FALSE
@@ -310,7 +317,8 @@
    summary = do.call(rbind, history[seq_len(completed)]),
    alpha = alpha_history[seq_len(completed)],
    delta = delta_history[seq_len(completed)],
-   annotation_pip_eb = pip_history[seq_len(completed)]
+   annotation_pip_eb = pip_history[seq_len(completed)],
+   responsibility_checkpoint = responsibility_checkpoint
   ),
   damping = damping,
   tol_alpha = tol_alpha,
@@ -357,7 +365,8 @@
   min_outer = 3L, max_outer = 50L,
   pi_floor = 1e-12, nub = 4, nue = 4,
   ncores = 1L, seed = 10L, return_responsibilities = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  .diagnostic_responsibility_iterations = integer()
 ) {
  A <- as.matrix(A)
  alpha <- .sbayesrc_validate_alpha(as.matrix(alpha_init), gamma)
@@ -394,7 +403,8 @@
   selection_sweeps, selection_burn,
   control$damping, control$tol_alpha, control$tol_prior,
   control$min_outer, control$max_outer, pi_floor, control$seed,
-  "csr_reference", FALSE, FALSE, return_responsibilities, verbose
+  "csr_reference", FALSE, FALSE, return_responsibilities, verbose,
+  .diagnostic_responsibility_iterations
  )
 }
 
@@ -416,7 +426,8 @@
   min_outer = 3L, max_outer = 50L,
   pi_floor = 1e-12, nub = 4, nue = 4,
   ncores = 1L, seed = 10L, return_responsibilities = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  .diagnostic_responsibility_iterations = integer()
 ) {
  A <- as.matrix(annotation)
  alpha <- .sbayesrc_validate_alpha(as.matrix(alpha_init), gamma)
@@ -490,6 +501,7 @@
   selection_sweeps, selection_burn,
   control$damping, control$tol_alpha, control$tol_prior,
   control$min_outer, control$max_outer, pi_floor, control$seed,
-  "block_eigen", updateB, updateE, return_responsibilities, verbose
+  "block_eigen", updateB, updateE, return_responsibilities, verbose,
+  .diagnostic_responsibility_iterations
  )
 }
