@@ -205,6 +205,9 @@ struct CsrSBayesRCExecutionResult {
  std::vector<arma::mat> selection_alpha_conditional_mean_task;
  std::vector<arma::uvec> selection_delta_final_task;
  std::vector<arma::mat> selection_empty_stick_diagnostics_task;
+ std::vector<arma::umat> selection_delta_trace_task;
+ std::vector<arma::vec> selection_pi_a_trace_task;
+ std::vector<arma::uvec> selection_included_trace_task;
 
  arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
  arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
@@ -365,6 +368,12 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<arma::uvec> selection_delta_final_task(static_cast<std::size_t>(ntasks));
  std::vector<arma::mat> selection_empty_stick_diagnostics_task(
   static_cast<std::size_t>(ntasks));
+ std::vector<arma::umat> selection_delta_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::vec> selection_pi_a_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::uvec> selection_included_trace_task(
+  static_cast<std::size_t>(ntasks));
 
  if (selection_config.enabled && selectable_annotation_count <= 0)
   throw std::invalid_argument("SBayesRC-S requires an intercept and at least one selectable annotation");
@@ -398,6 +407,14 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
     arma::mat(nit,nAnno*nstep,arma::fill::zeros);
    convergence_sigma_task[static_cast<std::size_t>(task)]=
     arma::mat(nit,nstep,arma::fill::zeros);
+   if (selection_config.enabled) {
+    selection_delta_trace_task[static_cast<std::size_t>(task)] =
+     arma::umat(nit, selectable_annotation_count, arma::fill::zeros);
+    selection_pi_a_trace_task[static_cast<std::size_t>(task)] =
+     arma::vec(nit, arma::fill::zeros);
+    selection_included_trace_task[static_cast<std::size_t>(task)] =
+     arma::uvec(nit, arma::fill::zeros);
+   }
   }
   if (context.convergence_b)
    convergence_b_task[static_cast<std::size_t>(task)]=
@@ -677,7 +694,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
      selection_config.intercept_mean,
      selection_config.intercept_precision, gen_t);
     st_bayesrc_selection_update_hyperparameters(
-     selection_state, selection_config.hyper, gen_t);
+     selection_state, selection_config.hyper, gen_t,
+     selection_config.update_pi_a, selection_config.update_tau2);
     selection_switches += arma::conv_to<arma::vec>::from(
      selection_state.delta != previous_delta);
     alpha_t = selection_state.alpha;
@@ -1046,7 +1064,15 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
        for (int annotation=0; annotation<nAnno; ++annotation)
         convergence_alpha_task[static_cast<std::size_t>(task)](draw,q++)=
          alpha_t(static_cast<arma::uword>(annotation),static_cast<arma::uword>(stick));
-      convergence_sigma_task[static_cast<std::size_t>(task)].row(draw)=sigmaSqAlpha_t.t();
+     convergence_sigma_task[static_cast<std::size_t>(task)].row(draw)=sigmaSqAlpha_t.t();
+     if (selection_config.enabled) {
+      selection_delta_trace_task[static_cast<std::size_t>(task)].row(draw) =
+       selection_state.delta.t();
+      selection_pi_a_trace_task[static_cast<std::size_t>(task)](draw) =
+       selection_state.pi_a;
+      selection_included_trace_task[static_cast<std::size_t>(task)](draw) =
+       arma::accu(selection_state.delta);
+     }
      }
      for (std::size_t q=0; q<convergence_markers.size(); ++q) {
       const arma::uword marker=static_cast<arma::uword>(convergence_markers[q]);
@@ -1433,6 +1459,9 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.selection_delta_final_task = std::move(selection_delta_final_task);
  result.selection_empty_stick_diagnostics_task =
   std::move(selection_empty_stick_diagnostics_task);
+ result.selection_delta_trace_task = std::move(selection_delta_trace_task);
+ result.selection_pi_a_trace_task = std::move(selection_pi_a_trace_task);
+ result.selection_included_trace_task = std::move(selection_included_trace_task);
  result.bm_mat = std::move(bm_mat);
  result.dm_mat = std::move(dm_mat);
  result.bm_sd_mat = std::move(bm_sd_mat);

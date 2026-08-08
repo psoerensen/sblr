@@ -179,3 +179,19 @@ mixing. No tuning or scientific benchmark was started.
 **SBS4B2-R2: posterior proper, genomic joint mixing unresolved. Overall:
 SBS4-R3.** The internal backend remains development-only, no public model/API
 is exposed, and Study 07 must not begin from this checkpoint.
+
+## Phase 4C joint-mixing audit
+
+The coupling ladder, chain-length screen, invariant schedule comparison, and
+exact-kernel assessment are recorded in
+[`sbayesrc_s_joint_mixing.md`](sbayesrc_s_joint_mixing.md). The first failing
+rung fixes delta while allowing continuous alpha and genomic allocations to
+interact (`COUPLING-D1`). Fourfold chain length and the compact hierarchy /
+allocation sweep grid did not pass the preregistered mixing gates. Existing
+collapsed and global fixed-z selection blocks are exact but cannot address
+that layer; no scalable exact annotation-plus-allocation proposal was
+established.
+
+The result is **SBS4C-R5 / SBS4-R3**. The target and internal backend remain
+valid, but a practical joint genomic sampler is not qualified and Study 07
+remains blocked.

@@ -82,3 +82,22 @@ test_that("genomic SBayesRC-S supports an empty proper-intercept stick", {
   expect_true(all(empty_diagnostics[2:3, 2L] >= 1))
   expect_true(all(empty_diagnostics[2:3, 3L] >= 1))
 })
+
+test_that("Phase-4C internal controls retain compact hierarchy traces", {
+  fixture <- .sbs4b_fixture(36L, 20270940L)
+  fit <- .sbs4b_run(
+    fixture, 20270941L, 100L, 20L,
+    update_pi_A = FALSE, update_tau2 = FALSE,
+    hierarchy_sweeps = 2L, genomic_sweeps = 1L
+  )
+  trace <- fit$chains[[1L]][[1L]]$convergence_trace
+  expect_equal(dim(trace$annotation_delta), c(100L, 3L))
+  expect_length(trace$annotation_pi_A, 100L)
+  expect_length(trace$annotation_included_count, 100L)
+  expect_identical(as.numeric(trace$annotation_pi_A), rep(0.35, 100L))
+  expect_equal(trace$sigmaSqAlpha, matrix(0.8, 100L, 3L))
+  expect_identical(
+    as.numeric(trace$annotation_included_count),
+    as.numeric(rowSums(trace$annotation_delta))
+  )
+})

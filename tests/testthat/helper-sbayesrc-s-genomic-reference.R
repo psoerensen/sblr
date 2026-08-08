@@ -65,7 +65,12 @@
                        nburn = 200L, fixed_delta = integer(),
                        updateB = FALSE, updateE = FALSE,
                        initial_delta = fixture$delta_init,
-                       update_hierarchy = TRUE) {
+                       update_hierarchy = TRUE,
+                       update_pi_A = TRUE, update_tau2 = TRUE,
+                       hierarchy_sweeps = 1L, genomic_sweeps = 1L) {
+  intercept_prior <- fixture$intercept_prior
+  intercept_prior["allocation_updates_per_cycle", ] <- genomic_sweeps
+  intercept_prior["annotation_updates_per_cycle", ] <- hierarchy_sweeps
   .st_sbayesrc_selection_csr(
     fixture$wy, fixture$ww, fixture$yy, fixture$b_init,
     fixture$comp_init, TRUE, fixture$r_init, TRUE, fixture$prefix,
@@ -73,7 +78,7 @@
     fixture$A, fixture$gamma, fixture$alpha_init,
     as.integer(initial_delta), 0.35, fixture$tau2_init,
     1, 1, 3, 1.6, as.integer(fixed_delta), update_hierarchy,
-    fixture$intercept_prior,
+    update_pi_A, update_tau2, intercept_prior,
     1e-12, 4, 4, updateB, updateE, 0.9, fixture$n,
     nit, nburn, 1L, 1L, seed, 1L, seed
   )

@@ -43,6 +43,8 @@ struct StBayesRCSelectionGenomicConfig {
  arma::vec intercept_precision;
  bool fixed_delta = false;
  arma::ivec fixed_delta_value;
+ bool update_pi_a = true;
+ bool update_tau2 = true;
 };
 
 struct StBayesRCSelectionMoments {
@@ -399,16 +401,22 @@ inline void st_bayesrc_selection_blocked_redraw(
 inline void st_bayesrc_selection_update_hyperparameters(
  StBayesRCSelectionState& state,
  const StBayesRCSelectionHyperParameters& hyper,
- std::mt19937& generator
+ std::mt19937& generator,
+ bool update_pi_a = true,
+ bool update_tau2 = true
 ) {
- const arma::vec beta = st_bayesrc_selection_beta_parameters(
-  state.delta, hyper.a_pi, hyper.b_pi);
- state.pi_a = st_bayesrc_selection_draw_beta(beta(0u), beta(1u), generator);
- const arma::mat inverse_gamma = st_bayesrc_selection_ig_parameters(
-  state.alpha, state.delta, hyper.a_tau, hyper.b_tau);
- for (arma::uword stick = 0; stick < state.tau2.n_elem; ++stick) {
-  state.tau2(stick) = st_bayesrc_selection_draw_ig(
-   inverse_gamma(stick, 0u), inverse_gamma(stick, 1u), generator);
+ if (update_pi_a) {
+  const arma::vec beta = st_bayesrc_selection_beta_parameters(
+   state.delta, hyper.a_pi, hyper.b_pi);
+  state.pi_a = st_bayesrc_selection_draw_beta(beta(0u), beta(1u), generator);
+ }
+ if (update_tau2) {
+  const arma::mat inverse_gamma = st_bayesrc_selection_ig_parameters(
+   state.alpha, state.delta, hyper.a_tau, hyper.b_tau);
+  for (arma::uword stick = 0; stick < state.tau2.n_elem; ++stick) {
+   state.tau2(stick) = st_bayesrc_selection_draw_ig(
+    inverse_gamma(stick, 0u), inverse_gamma(stick, 1u), generator);
+  }
  }
 }
 

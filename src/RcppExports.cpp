@@ -1759,8 +1759,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // st_sbayesrc_selection_csr_internal
-Rcpp::List st_sbayesrc_selection_csr_internal(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma, arma::mat alpha_init, arma::uvec delta_init, double pi_A_init, arma::vec tau2_init, double a_pi, double b_pi, double a_tau, double b_tau, Rcpp::IntegerVector fixed_delta, bool update_hierarchy, arma::mat intercept_prior_resolved, double pi_floor, double nub, double nue, bool updateB, bool updateE, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds);
-RcppExport SEXP _sblr_st_sbayesrc_selection_csr_internal(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP alpha_initSEXP, SEXP delta_initSEXP, SEXP pi_A_initSEXP, SEXP tau2_initSEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP fixed_deltaSEXP, SEXP update_hierarchySEXP, SEXP intercept_prior_resolvedSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP chain_seedsSEXP) {
+Rcpp::List st_sbayesrc_selection_csr_internal(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, arma::mat A, arma::vec gamma, arma::mat alpha_init, arma::uvec delta_init, double pi_A_init, arma::vec tau2_init, double a_pi, double b_pi, double a_tau, double b_tau, Rcpp::IntegerVector fixed_delta, bool update_hierarchy, bool update_pi_A, bool update_tau2, arma::mat intercept_prior_resolved, double pi_floor, double nub, double nue, bool updateB, bool updateE, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds);
+RcppExport SEXP _sblr_st_sbayesrc_selection_csr_internal(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP ASEXP, SEXP gammaSEXP, SEXP alpha_initSEXP, SEXP delta_initSEXP, SEXP pi_A_initSEXP, SEXP tau2_initSEXP, SEXP a_piSEXP, SEXP b_piSEXP, SEXP a_tauSEXP, SEXP b_tauSEXP, SEXP fixed_deltaSEXP, SEXP update_hierarchySEXP, SEXP update_pi_ASEXP, SEXP update_tau2SEXP, SEXP intercept_prior_resolvedSEXP, SEXP pi_floorSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP chain_seedsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1789,6 +1789,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type b_tau(b_tauSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type fixed_delta(fixed_deltaSEXP);
     Rcpp::traits::input_parameter< bool >::type update_hierarchy(update_hierarchySEXP);
+    Rcpp::traits::input_parameter< bool >::type update_pi_A(update_pi_ASEXP);
+    Rcpp::traits::input_parameter< bool >::type update_tau2(update_tau2SEXP);
     Rcpp::traits::input_parameter< arma::mat >::type intercept_prior_resolved(intercept_prior_resolvedSEXP);
     Rcpp::traits::input_parameter< double >::type pi_floor(pi_floorSEXP);
     Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
@@ -1804,7 +1806,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type chain_seeds(chain_seedsSEXP);
-    rcpp_result_gen = Rcpp::wrap(st_sbayesrc_selection_csr_internal(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, delta_init, pi_A_init, tau2_init, a_pi, b_pi, a_tau, b_tau, fixed_delta, update_hierarchy, intercept_prior_resolved, pi_floor, nub, nue, updateB, updateE, adjE, n, nit, nburn, nthin, ncores, seed, nchains, chain_seeds));
+    rcpp_result_gen = Rcpp::wrap(st_sbayesrc_selection_csr_internal(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, ld_prefix, B, E, ssb_prior, sse_prior, A, gamma, alpha_init, delta_init, pi_A_init, tau2_init, a_pi, b_pi, a_tau, b_tau, fixed_delta, update_hierarchy, update_pi_A, update_tau2, intercept_prior_resolved, pi_floor, nub, nue, updateB, updateE, adjE, n, nit, nburn, nthin, ncores, seed, nchains, chain_seeds));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2113,7 +2115,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_st_bayesrc_selection_hierarchy_test", (DL_FUNC) &_sblr_st_bayesrc_selection_hierarchy_test, 17},
     {"_sblr_st_bayesrc_pairwise_conditional_test", (DL_FUNC) &_sblr_st_bayesrc_pairwise_conditional_test, 12},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc, 54},
-    {"_sblr_st_sbayesrc_selection_csr_internal", (DL_FUNC) &_sblr_st_sbayesrc_selection_csr_internal, 40},
+    {"_sblr_st_sbayesrc_selection_csr_internal", (DL_FUNC) &_sblr_st_sbayesrc_selection_csr_internal, 42},
     {"_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_sbayesrc_block_eigen, 65},
     {"_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture", (DL_FUNC) &_sblr_st_sbayesrc_invalid_scale_diagnostic_fixture, 1},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains_bayesr, 45},

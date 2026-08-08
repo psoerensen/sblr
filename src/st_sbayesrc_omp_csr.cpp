@@ -1790,6 +1790,12 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const auto& selection_delta_final_task = execution_result.selection_delta_final_task;
  const auto& selection_empty_stick_diagnostics_task =
   execution_result.selection_empty_stick_diagnostics_task;
+ const auto& selection_delta_trace_task =
+  execution_result.selection_delta_trace_task;
+ const auto& selection_pi_a_trace_task =
+  execution_result.selection_pi_a_trace_task;
+ const auto& selection_included_trace_task =
+  execution_result.selection_included_trace_task;
  const auto& maf_effect_s_accepted_task = execution_result.maf_effect_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
@@ -2114,6 +2120,48 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
      chain_selection["acceptance"] =
       attempted > 0.0 ? accepted / attempted : 0.0;
     }
+    Rcpp::List chain_annotation = Rcpp::List::create(
+     Rcpp::Named("alpha") = alpha_mean_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("sigmaSqAlpha") = sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("annotation_pip") = selection_enabled ?
+      Rcpp::wrap(selection_pip_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("annotation_delta_final") = selection_enabled ?
+      Rcpp::wrap(selection_delta_final_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("alpha_mean_given_inclusion") = selection_enabled ?
+      Rcpp::wrap(selection_alpha_conditional_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("annotation_pi_A") = selection_enabled ?
+      Rcpp::wrap(selection_pi_a_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("annotation_tau2") = selection_enabled ?
+      Rcpp::wrap(selection_tau2_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("annotation_included_mean") = selection_enabled ?
+      Rcpp::wrap(selection_included_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("annotation_switches") = selection_enabled ?
+      Rcpp::wrap(selection_switches_task[static_cast<std::size_t>(task)]) : R_NilValue,
+     Rcpp::Named("empty_stick_diagnostics") = selection_enabled ?
+      Rcpp::wrap(selection_empty_stick_diagnostics_task[
+       static_cast<std::size_t>(task)]) : R_NilValue
+    );
+    Rcpp::List chain_convergence = Rcpp::List::create(
+     Rcpp::Named("marker_index")=Rcpp::wrap(convergence_markers),
+     Rcpp::Named("b")=convergence_b_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("d")=convergence_d_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("component")=convergence_component_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("component_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].component_count,
+     Rcpp::Named("realized_active_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].realized_active_count,
+     Rcpp::Named("stick_eligible_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_eligible_count,
+     Rcpp::Named("stick_continue_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_continue_count,
+     Rcpp::Named("stick_stop_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_stop_count,
+     Rcpp::Named("alpha")=convergence_alpha_task[static_cast<std::size_t>(task)],
+     Rcpp::Named("sigmaSqAlpha")=convergence_sigma_task[static_cast<std::size_t>(task)]
+    );
+    if (selection_enabled) {
+     chain_convergence["annotation_delta"] =
+      selection_delta_trace_task[static_cast<std::size_t>(task)];
+     chain_convergence["annotation_pi_A"] =
+      selection_pi_a_trace_task[static_cast<std::size_t>(task)];
+     chain_convergence["annotation_included_count"] =
+      selection_included_trace_task[static_cast<std::size_t>(task)];
+    }
     trait_chains[chain] = Rcpp::List::create(
      Rcpp::Named("marker") = Rcpp::List::create(
       Rcpp::Named("bm") = chain_bm,
@@ -2136,39 +2184,8 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
       Rcpp::Named("prob") = comp_prob_mean_task[static_cast<std::size_t>(task)],
       Rcpp::Named("ncomp") = ncomp_mean_task[static_cast<std::size_t>(task)].t()
      ),
-     Rcpp::Named("annotation") = Rcpp::List::create(
-      Rcpp::Named("alpha") = alpha_mean_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("sigmaSqAlpha") = sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("annotation_pip") = selection_enabled ?
-       Rcpp::wrap(selection_pip_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("annotation_delta_final") = selection_enabled ?
-       Rcpp::wrap(selection_delta_final_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("alpha_mean_given_inclusion") = selection_enabled ?
-       Rcpp::wrap(selection_alpha_conditional_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("annotation_pi_A") = selection_enabled ?
-       Rcpp::wrap(selection_pi_a_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("annotation_tau2") = selection_enabled ?
-       Rcpp::wrap(selection_tau2_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("annotation_included_mean") = selection_enabled ?
-       Rcpp::wrap(selection_included_mean_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("annotation_switches") = selection_enabled ?
-       Rcpp::wrap(selection_switches_task[static_cast<std::size_t>(task)]) : R_NilValue,
-      Rcpp::Named("empty_stick_diagnostics") = selection_enabled ?
-       Rcpp::wrap(selection_empty_stick_diagnostics_task[
-        static_cast<std::size_t>(task)]) : R_NilValue
-     ),
-     Rcpp::Named("convergence_trace")=Rcpp::List::create(
-      Rcpp::Named("marker_index")=Rcpp::wrap(convergence_markers),
-      Rcpp::Named("b")=convergence_b_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("d")=convergence_d_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("component")=convergence_component_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("component_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].component_count,
-      Rcpp::Named("realized_active_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].realized_active_count,
-      Rcpp::Named("stick_eligible_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_eligible_count,
-      Rcpp::Named("stick_continue_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_continue_count,
-      Rcpp::Named("stick_stop_count")=convergence_aggregate_task[static_cast<std::size_t>(task)].stick_stop_count,
-      Rcpp::Named("alpha")=convergence_alpha_task[static_cast<std::size_t>(task)],
-      Rcpp::Named("sigmaSqAlpha")=convergence_sigma_task[static_cast<std::size_t>(task)]),
+     Rcpp::Named("annotation") = chain_annotation,
+     Rcpp::Named("convergence_trace") = chain_convergence,
      Rcpp::Named("selection") = chain_selection,
      Rcpp::Named("diagnostics") = Rcpp::List::create(
       Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue
@@ -2886,6 +2903,7 @@ Rcpp::List st_sbayesrc_selection_csr_internal(
   arma::mat alpha_init, arma::uvec delta_init, double pi_A_init,
   arma::vec tau2_init, double a_pi, double b_pi, double a_tau, double b_tau,
   Rcpp::IntegerVector fixed_delta, bool update_hierarchy,
+  bool update_pi_A, bool update_tau2,
   arma::mat intercept_prior_resolved,
   double pi_floor, double nub, double nue, bool updateB, bool updateE,
   double adjE, std::vector<int> n, int nit, int nburn, int nthin,
@@ -2915,6 +2933,8 @@ Rcpp::List st_sbayesrc_selection_csr_internal(
   selection_config.fixed_delta = true;
   selection_config.fixed_delta_value = Rcpp::as<arma::ivec>(fixed_delta);
  }
+ selection_config.update_pi_a = update_pi_A;
+ selection_config.update_tau2 = update_tau2;
  const arma::vec legacy_sigma = tau2_init;
  auto make_csr_operator = [&](int m, const std::vector<double>& xx,
                               const arma::rowvec& xx_row, arma::mat& wy_mat,
