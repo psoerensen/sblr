@@ -51,3 +51,12 @@ Future annotation-selection and annotation-PIP work is a different posterior
 model and must not be confused with a sampler fix for standard SBayesRC. Its
 design belongs to a separate task.
 
+## Separate MCEM inference line
+
+The PMA-R3 endpoint applies to full-joint continuous-alpha sampler
+development. Phase 5A subsequently introduced a separate internal
+MCEM-SBayesRC qualification path, documented in
+[`sbayesrc_mcem_phase5a.md`](sbayesrc_mcem_phase5a.md). MCEM estimates an
+observed-data annotation MAP by alternating fixed-prior genomic Monte Carlo
+blocks with a soft-probit M-step. It is not a replacement sampler for the
+joint alpha posterior and does not change ordinary SBayesRC behavior.
