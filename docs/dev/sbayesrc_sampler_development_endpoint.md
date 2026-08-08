@@ -62,3 +62,11 @@ retained block backend in
 observed-data annotation MAP by alternating fixed-prior genomic Monte Carlo
 blocks with a soft-probit M-step. It is not a replacement sampler for the
 joint alpha posterior and does not change ordinary SBayesRC behavior.
+
+Phase 5C adds the separate shared-annotation-selection line SBayesRC-S-EM.
+Its internal implementation uses MCEM for genomic latent states,
+discrete/continuous MAP annotation fitting, and a responsibility-conditioned
+Laplace model distribution for `annotation_pip_eb`. CSR remains the reference
+backend and retained block-eigen remains the scalable backend. See
+[`sbayesrc_s_em_phase5c.md`](sbayesrc_s_em_phase5c.md). This inference line
+does not replace or alter joint SBayesRC-S posterior sampling.
