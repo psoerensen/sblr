@@ -20,7 +20,8 @@
   prefix
 }
 
-.sbs4b_fixture <- function(marker_count = 80L, seed = 20270899L) {
+.sbs4b_fixture <- function(marker_count = 80L, seed = 20270899L,
+                           annotation_contrast = 1) {
   set.seed(seed)
   annotation <- cbind(
     enriched = stats::rbinom(marker_count, 1L, 0.25),
@@ -33,7 +34,8 @@
   beta <- numeric(marker_count)
   beta[component > 0L] <- stats::rnorm(sum(component > 0L), 0, 0.16)
   beta[component == 3L] <- beta[component == 3L] +
-    0.18 * (2 * annotation[component == 3L, 1L] - 1)
+    annotation_contrast * 0.18 *
+      (2 * annotation[component == 3L, 1L] - 1)
   sample_size <- 120L
   score <- sample_size * beta + stats::rnorm(marker_count, 0, 1.5)
   intercept_prior_specification <- sblr:::.sbayesrc_resolve_intercept_prior(
@@ -67,7 +69,9 @@
                        initial_delta = fixture$delta_init,
                        update_hierarchy = TRUE,
                        update_pi_A = TRUE, update_tau2 = TRUE,
-                       hierarchy_sweeps = 1L, genomic_sweeps = 1L) {
+                       hierarchy_sweeps = 1L, genomic_sweeps = 1L,
+                       selection_enabled = TRUE,
+                       information_diagnostics = FALSE) {
   intercept_prior <- fixture$intercept_prior
   intercept_prior["allocation_updates_per_cycle", ] <- genomic_sweeps
   intercept_prior["annotation_updates_per_cycle", ] <- hierarchy_sweeps
@@ -80,7 +84,8 @@
     1, 1, 3, 1.6, as.integer(fixed_delta), update_hierarchy,
     update_pi_A, update_tau2, intercept_prior,
     1e-12, 4, 4, updateB, updateE, 0.9, fixture$n,
-    nit, nburn, 1L, 1L, seed, 1L, seed
+    nit, nburn, 1L, 1L, seed, 1L, seed,
+    selection_enabled, information_diagnostics
   )
 }
 

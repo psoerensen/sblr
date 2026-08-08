@@ -195,3 +195,14 @@ established.
 The result is **SBS4C-R5 / SBS4-R3**. The target and internal backend remain
 valid, but a practical joint genomic sampler is not qualified and Study 07
 remains blocked.
+
+## Phase 4D information-flow audit
+
+The diagnostic-only Rao--Blackwell information audit is recorded in
+[`sbayesrc_s_information_flow.md`](sbayesrc_s_information_flow.md). The
+conditional component probabilities were retained after the unchanged hard
+draw with zero additional RNG. Across fixed-delta, full-hierarchy, standard
+SBayesRC, marker-count, and annotation-strength screens, soft conditional
+allocation information remained almost as chain-separated as hard allocation
+summaries. The decision is **SBS4D-R2 / SCALE-D3**; overall Phase 4 remains
+**SBS4-R3** and no public backend is exposed.

@@ -5,6 +5,7 @@
 #include "st_bayesrc_annotation_prior.h"
 #include "st_bayesrc_annotation_selection.h"
 #include "st_bayesrc_pairwise_allocation.h"
+#include "st_bayesrc_information_diagnostics.h"
 #include "st_block_eigen.h"
 #include "st_block_eigen_rcpp.h"
 #include "st_csr_common.h"
@@ -209,7 +210,8 @@ inline void sampleBeta_SBayesRC_ST_csr(
   arma::rowvec& b,
   arma::Row<int>& comp,
   const OpT& op,
-  std::mt19937& gen
+  std::mt19937& gen,
+  StBayesRCInformationDiagnosticState* information_diagnostics = nullptr
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
  const double wi = ww(iu);
@@ -255,6 +257,9 @@ inline void sampleBeta_SBayesRC_ST_csr(
  }
 
  const int k_new = sample_categorical_logprob(logp, gen);
+ if (information_diagnostics != nullptr && information_diagnostics->enabled)
+  st_bayesrc_information_capture_probability(
+   logp, pi_i, iu, *information_diagnostics);
 
  double b_new = 0.0;
  const double gamma_new = gamma(static_cast<arma::uword>(k_new));
@@ -291,7 +296,8 @@ inline void sampleBeta_SBayesRC_ST_csr_scaled(
   arma::rowvec& b,
   arma::Row<int>& comp,
   const OpT& op,
-  std::mt19937& gen
+  std::mt19937& gen,
+  StBayesRCInformationDiagnosticState* information_diagnostics = nullptr
 ) {
  const arma::uword iu = static_cast<arma::uword>(i);
  const double wi = ww(iu);
@@ -342,6 +348,9 @@ inline void sampleBeta_SBayesRC_ST_csr_scaled(
  }
 
  const int k_new = sample_categorical_logprob(logp, gen);
+ if (information_diagnostics != nullptr && information_diagnostics->enabled)
+  st_bayesrc_information_capture_probability(
+   logp, pi_i, iu, *information_diagnostics);
 
  double b_new = 0.0;
  const double gamma_new = gamma(static_cast<arma::uword>(k_new));
@@ -1161,6 +1170,7 @@ struct CsrSBayesRCBindingMetadata {
  bool use_maf_effect_s_prior_scale;
  bool uses_retained_low_rank;
  bool selection_enabled;
+ bool information_diagnostics;
  const std::vector<int>& convergence_markers;
  const std::vector<double>& phenotype_variance;
  sblr::core::BlockResidualControl block_residual_control;
@@ -1234,6 +1244,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   double resam_thresh,
   double minimum_ve_ratio,
   bool block_ve_keep_history,
+  bool information_diagnostics,
   StBayesRCSelectionGenomicConfig selection_config,
   MakeOperator make_operator
 ) {
@@ -1706,7 +1717,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   convergence_annotations,
   convergence_b,
   convergence_d,
-  convergence_component
+  convergence_component,
+  information_diagnostics
  };
  auto execution_result = sblr::core::run_csr_sbayesrc(execution_context);
 
@@ -1730,6 +1742,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_impl(
   use_maf_effect_s_prior_scale,
   op.uses_retained_low_rank(),
   selection_config.enabled,
+  information_diagnostics,
   convergence_markers_cpp,
   phenotype_variance,
   block_residual_control
@@ -1758,6 +1771,7 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
  const bool estimate_maf_effect_s = metadata.estimate_maf_effect_s;
  const bool use_maf_effect_s_prior_scale = metadata.use_maf_effect_s_prior_scale;
  const bool selection_enabled = metadata.selection_enabled;
+ const bool information_diagnostics = metadata.information_diagnostics;
  const std::vector<int>& convergence_markers=metadata.convergence_markers;
  const std::vector<double>& phenotype_variance=metadata.phenotype_variance;
  const auto& block_residual_control=metadata.block_residual_control;
@@ -1796,6 +1810,26 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
   execution_result.selection_pi_a_trace_task;
  const auto& selection_included_trace_task =
   execution_result.selection_included_trace_task;
+ const auto& information_prior_probability_task =
+  execution_result.information_prior_probability_task;
+ const auto& information_rb_probability_task =
+  execution_result.information_rb_probability_task;
+ const auto& information_prior_component_trace_task =
+  execution_result.information_prior_component_trace_task;
+ const auto& information_rb_component_trace_task =
+  execution_result.information_rb_component_trace_task;
+ const auto& information_hard_component_trace_task =
+  execution_result.information_hard_component_trace_task;
+ const auto& information_hard_stick_trace_task =
+  execution_result.information_hard_stick_trace_task;
+ const auto& information_soft_stick_trace_task =
+  execution_result.information_soft_stick_trace_task;
+ const auto& information_hard_annotation_trace_task =
+  execution_result.information_hard_annotation_trace_task;
+ const auto& information_soft_annotation_trace_task =
+  execution_result.information_soft_annotation_trace_task;
+ const auto& information_gain_trace_task =
+  execution_result.information_gain_trace_task;
  const auto& maf_effect_s_accepted_task = execution_result.maf_effect_s_accepted_task;
  const auto& alpha_mean_task = execution_result.alpha_mean_task;
  const auto& sigmaSqAlpha_mean_task = execution_result.sigmaSqAlpha_mean_task;
@@ -2162,7 +2196,7 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
      chain_convergence["annotation_included_count"] =
       selection_included_trace_task[static_cast<std::size_t>(task)];
     }
-    trait_chains[chain] = Rcpp::List::create(
+    Rcpp::List chain_result = Rcpp::List::create(
      Rcpp::Named("marker") = Rcpp::List::create(
       Rcpp::Named("bm") = chain_bm,
       Rcpp::Named("dm") = chain_dm,
@@ -2191,6 +2225,45 @@ static Rcpp::List stblr_csr_sbayesrc_result_to_raw(
       Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(chain_ld) : R_NilValue
      )
     );
+    if (information_diagnostics) {
+     const arma::mat& rb_probability =
+      information_rb_probability_task[static_cast<std::size_t>(task)];
+     Rcpp::NumericVector rb_dm(m);
+     for (int marker = 0; marker < m; ++marker)
+      rb_dm[marker] = 1.0 - rb_probability(static_cast<arma::uword>(marker), 0u);
+     chain_result["information_flow"] = Rcpp::List::create(
+      Rcpp::Named("sequential_gibbs_conditionals") = true,
+      Rcpp::Named("prior_comp_prob") =
+       information_prior_probability_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("rb_comp_prob") = rb_probability,
+      Rcpp::Named("rb_dm") = rb_dm,
+      Rcpp::Named("prior_component_count_trace") =
+       information_prior_component_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("rb_component_count_trace") =
+       information_rb_component_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("hard_component_count_trace") =
+       information_hard_component_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("hard_stick_trace") =
+       information_hard_stick_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("soft_stick_trace") =
+       information_soft_stick_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("hard_annotation_information") =
+       information_hard_annotation_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("soft_annotation_information") =
+       information_soft_annotation_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("information_gain") =
+       information_gain_trace_task[static_cast<std::size_t>(task)],
+      Rcpp::Named("stick_layout") = Rcpp::CharacterVector::create(
+       "eligible", "success", "continuation_rate"),
+      Rcpp::Named("annotation_layout") = Rcpp::CharacterVector::create(
+       "E=sum(A*eligible)", "S=sum(A*success)",
+       "Q=sum(A^2*eligible)"),
+      Rcpp::Named("information_gain_layout") = Rcpp::CharacterVector::create(
+       "entropy_mean", "entropy_median", "entropy_p90", "kl_mean",
+       "kl_median", "kl_p90", "tv_mean", "tv_median", "tv_p90")
+     );
+    }
+    trait_chains[chain] = chain_result;
    }
    trait_chains.attr("names") = chain_names;
    chains[t] = trait_chains;
@@ -2822,7 +2895,54 @@ Rcpp::List st_bayesrc_pairwise_conditional_test(
   Rcpp::Named("log_weight") = log_weight,
   Rcpp::Named("probability") = probability,
   Rcpp::Named("mean") = mean,
-  Rcpp::Named("covariance") = covariance);
+ Rcpp::Named("covariance") = covariance);
+}
+
+// Development-only deterministic Phase-4D information-flow oracle.
+// [[Rcpp::export(name = ".st_bayesrc_information_summary")]]
+Rcpp::List st_bayesrc_information_summary_internal(
+ arma::mat log_probability, arma::mat prior_probability,
+ arma::ivec component, arma::mat annotation
+) {
+ if (log_probability.n_rows != prior_probability.n_rows ||
+     log_probability.n_cols != prior_probability.n_cols ||
+     component.n_elem != log_probability.n_rows ||
+     annotation.n_rows != log_probability.n_rows ||
+     log_probability.n_cols < 2u) {
+  throw std::invalid_argument("invalid information-summary dimensions");
+ }
+ StBayesRCInformationDiagnosticState state;
+ st_bayesrc_information_initialize(
+  state, true, static_cast<int>(log_probability.n_rows),
+  static_cast<int>(log_probability.n_cols),
+  static_cast<int>(annotation.n_cols), 1);
+ for (arma::uword marker = 0; marker < log_probability.n_rows; ++marker) {
+  std::vector<double> logp(log_probability.n_cols);
+  for (arma::uword k = 0; k < log_probability.n_cols; ++k)
+   logp[static_cast<std::size_t>(k)] = log_probability(marker, k);
+  st_bayesrc_information_capture_probability(
+   logp, prior_probability.row(marker), marker, state);
+ }
+ const arma::Row<int> hard = arma::conv_to<arma::Row<int>>::from(component.t());
+ st_bayesrc_information_capture_iteration(
+  hard, annotation, 0, true, state);
+ Rcpp::NumericVector rb_dm(state.current_rb_probability.n_rows);
+ for (arma::uword marker = 0; marker < state.current_rb_probability.n_rows;
+      ++marker)
+  rb_dm[marker] = 1.0 - state.current_rb_probability(marker, 0u);
+ return Rcpp::List::create(
+  Rcpp::Named("rb_comp_prob") = state.current_rb_probability,
+  Rcpp::Named("rb_dm") = rb_dm,
+  Rcpp::Named("prior_component_count_trace") =
+   state.prior_component_count_trace,
+  Rcpp::Named("rb_component_count_trace") = state.rb_component_count_trace,
+  Rcpp::Named("hard_component_count_trace") = state.hard_component_count_trace,
+  Rcpp::Named("hard_stick_trace") = state.hard_stick_trace,
+  Rcpp::Named("soft_stick_trace") = state.soft_stick_trace,
+  Rcpp::Named("hard_annotation_information") = state.hard_annotation_trace,
+  Rcpp::Named("soft_annotation_information") = state.soft_annotation_trace,
+  Rcpp::Named("information_gain") = state.information_gain_trace
+ );
 }
 
 // [[Rcpp::export]]
@@ -2883,6 +3003,7 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc(
   convergence_annotations, convergence_b, convergence_d,
   convergence_component, 0, std::vector<double>(),
   "global_projected_legacy", "fixVe", 1.1, 0.7, false,
+  false,
   StBayesRCSelectionGenomicConfig{},
   make_csr_operator
  );
@@ -2908,7 +3029,9 @@ Rcpp::List st_sbayesrc_selection_csr_internal(
   double pi_floor, double nub, double nue, bool updateB, bool updateE,
   double adjE, std::vector<int> n, int nit, int nburn, int nthin,
   int ncores, int seed, int nchains = 1,
-  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue
+  Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds = R_NilValue,
+  bool selection_enabled = true,
+  bool information_diagnostics = false
 ) {
  if (A.n_cols < 2u || alpha_init.n_rows != A.n_cols ||
      alpha_init.n_cols + 1u != gamma.n_elem ||
@@ -2917,7 +3040,7 @@ Rcpp::List st_sbayesrc_selection_csr_internal(
   throw std::invalid_argument("invalid internal genomic SBayesRC-S dimensions");
  }
  StBayesRCSelectionGenomicConfig selection_config;
- selection_config.enabled = true;
+ selection_config.enabled = selection_enabled;
  selection_config.delta_init = delta_init;
  selection_config.pi_a_init = pi_A_init;
  selection_config.tau2_init = tau2_init;
@@ -2958,7 +3081,7 @@ Rcpp::List st_sbayesrc_selection_csr_internal(
   false, 0.0, Rcpp::NumericVector::create(-3.0, 2.0), 0.35, R_NilValue,
   Rcpp::IntegerVector::create(), true, false, false, true, 0,
   std::vector<double>(), "global_projected_legacy", "fixVe", 1.1, 0.7,
-  false, selection_config, make_csr_operator);
+  false, information_diagnostics, selection_config, make_csr_operator);
 }
 
 // [[Rcpp::export]]
@@ -3107,7 +3230,8 @@ Rcpp::List stblr_cpg_omp_csr_sbayesrc_block_eigen(
   convergence_component, low_rank_residual_rebuild_every,
   Rcpp::as<std::vector<double>>(phenotype_variance),
   residual_policy, block_ve_mode, resam_thresh, minimum_ve_ratio,
-  block_ve_keep_history, StBayesRCSelectionGenomicConfig{}, make_block_operator
+  block_ve_keep_history, false, StBayesRCSelectionGenomicConfig{},
+  make_block_operator
  );
 }
 

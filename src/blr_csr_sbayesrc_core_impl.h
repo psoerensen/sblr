@@ -180,6 +180,7 @@ struct CsrSBayesRCExecutionContext {
  bool convergence_b;
  bool convergence_d;
  bool convergence_component;
+ bool information_diagnostics;
 };
 
 struct CsrSBayesRCExecutionResult {
@@ -208,6 +209,16 @@ struct CsrSBayesRCExecutionResult {
  std::vector<arma::umat> selection_delta_trace_task;
  std::vector<arma::vec> selection_pi_a_trace_task;
  std::vector<arma::uvec> selection_included_trace_task;
+ std::vector<arma::mat> information_prior_probability_task;
+ std::vector<arma::mat> information_rb_probability_task;
+ std::vector<arma::mat> information_prior_component_trace_task;
+ std::vector<arma::mat> information_rb_component_trace_task;
+ std::vector<arma::mat> information_hard_component_trace_task;
+ std::vector<arma::mat> information_hard_stick_trace_task;
+ std::vector<arma::mat> information_soft_stick_trace_task;
+ std::vector<arma::mat> information_hard_annotation_trace_task;
+ std::vector<arma::mat> information_soft_annotation_trace_task;
+ std::vector<arma::mat> information_gain_trace_task;
 
  arma::mat bm_mat, dm_mat, bm_sd_mat, dm_sd_mat;
  arma::mat bm_min_mat, dm_min_mat, bm_max_mat, dm_max_mat;
@@ -373,6 +384,26 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  std::vector<arma::vec> selection_pi_a_trace_task(
   static_cast<std::size_t>(ntasks));
  std::vector<arma::uvec> selection_included_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_prior_probability_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_rb_probability_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_prior_component_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_rb_component_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_hard_component_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_hard_stick_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_soft_stick_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_hard_annotation_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_soft_annotation_trace_task(
+  static_cast<std::size_t>(ntasks));
+ std::vector<arma::mat> information_gain_trace_task(
   static_cast<std::size_t>(ntasks));
 
  if (selection_config.enabled && selectable_annotation_count <= 0)
@@ -620,6 +651,10 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    arma::mat alpha_accum(nAnno, nstep, arma::fill::zeros);
    arma::vec sigmaSqAlpha_accum(nstep, arma::fill::zeros);
    arma::mat comp_prob_accum(m, Kgamma, arma::fill::zeros);
+   StBayesRCInformationDiagnosticState information_state;
+   st_bayesrc_information_initialize(
+    information_state, context.information_diagnostics,
+    m, Kgamma, nAnno, nit);
    arma::vec ncomp_accum(Kgamma, arma::fill::zeros);
    arma::vec selection_delta_accum(selectable_annotation_count,
                                    arma::fill::zeros);
@@ -737,7 +772,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
        b_t,
        comp_t,
        op,
-       gen_t
+       gen_t,
+       context.information_diagnostics ? &information_state : nullptr
       );
      }
     } else {
@@ -756,7 +792,8 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
        b_t,
        comp_t,
        op,
-       gen_t
+       gen_t,
+       context.information_diagnostics ? &information_state : nullptr
       );
      }
     }
@@ -1058,6 +1095,12 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
 
     if (it>=nburn) {
      const arma::uword draw=static_cast<arma::uword>(it-nburn);
+     if (context.information_diagnostics) {
+      const bool posterior_retain = ((it - nburn) % nthin == 0);
+      st_bayesrc_information_capture_iteration(
+       comp_t, A, static_cast<int>(draw), posterior_retain,
+       information_state);
+     }
      if (context.convergence_annotations) {
       arma::uword q=0;
       for (int stick=0; stick<nstep; ++stick)
@@ -1142,6 +1185,14 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    sigmaSqAlpha_accum /= nsamples_t;
    comp_prob_accum /= nsamples_t;
    ncomp_accum /= nsamples_t;
+   if (context.information_diagnostics) {
+    if (information_state.retained_count <= 0.0)
+     throw std::runtime_error("SBayesRC information diagnostics retained no draws");
+    information_state.prior_probability_accum /=
+     information_state.retained_count;
+    information_state.rb_probability_accum /=
+     information_state.retained_count;
+   }
 
    if (!bm_t.is_finite()) {
     throw std::runtime_error("posterior mean bm contains NaN/Inf.");
@@ -1205,6 +1256,28 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
    sigmaSqAlpha_mean_task[static_cast<std::size_t>(task)] = sigmaSqAlpha_accum;
    comp_prob_mean_task[static_cast<std::size_t>(task)] = comp_prob_accum;
    ncomp_mean_task[static_cast<std::size_t>(task)] = ncomp_accum;
+   if (context.information_diagnostics) {
+    information_prior_probability_task[static_cast<std::size_t>(task)] =
+     information_state.prior_probability_accum;
+    information_rb_probability_task[static_cast<std::size_t>(task)] =
+     information_state.rb_probability_accum;
+    information_prior_component_trace_task[static_cast<std::size_t>(task)] =
+     information_state.prior_component_count_trace;
+    information_rb_component_trace_task[static_cast<std::size_t>(task)] =
+     information_state.rb_component_count_trace;
+    information_hard_component_trace_task[static_cast<std::size_t>(task)] =
+     information_state.hard_component_count_trace;
+    information_hard_stick_trace_task[static_cast<std::size_t>(task)] =
+     information_state.hard_stick_trace;
+    information_soft_stick_trace_task[static_cast<std::size_t>(task)] =
+     information_state.soft_stick_trace;
+    information_hard_annotation_trace_task[static_cast<std::size_t>(task)] =
+     information_state.hard_annotation_trace;
+    information_soft_annotation_trace_task[static_cast<std::size_t>(task)] =
+     information_state.soft_annotation_trace;
+    information_gain_trace_task[static_cast<std::size_t>(task)] =
+     information_state.information_gain_trace;
+   }
    if (selection_config.enabled) {
     selection_pip_task[static_cast<std::size_t>(task)] =
      selection_delta_accum / nsamples_t;
@@ -1462,6 +1535,26 @@ CsrSBayesRCExecutionResult run_csr_sbayesrc(
  result.selection_delta_trace_task = std::move(selection_delta_trace_task);
  result.selection_pi_a_trace_task = std::move(selection_pi_a_trace_task);
  result.selection_included_trace_task = std::move(selection_included_trace_task);
+ result.information_prior_probability_task =
+  std::move(information_prior_probability_task);
+ result.information_rb_probability_task =
+  std::move(information_rb_probability_task);
+ result.information_prior_component_trace_task =
+  std::move(information_prior_component_trace_task);
+ result.information_rb_component_trace_task =
+  std::move(information_rb_component_trace_task);
+ result.information_hard_component_trace_task =
+  std::move(information_hard_component_trace_task);
+ result.information_hard_stick_trace_task =
+  std::move(information_hard_stick_trace_task);
+ result.information_soft_stick_trace_task =
+  std::move(information_soft_stick_trace_task);
+ result.information_hard_annotation_trace_task =
+  std::move(information_hard_annotation_trace_task);
+ result.information_soft_annotation_trace_task =
+  std::move(information_soft_annotation_trace_task);
+ result.information_gain_trace_task =
+  std::move(information_gain_trace_task);
  result.bm_mat = std::move(bm_mat);
  result.dm_mat = std::move(dm_mat);
  result.bm_sd_mat = std::move(bm_sd_mat);
