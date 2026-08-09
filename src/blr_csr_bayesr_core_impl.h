@@ -1,8 +1,5 @@
-#ifndef SBLR_CSR_BAYESR_CORE_IMPL_TRANSLATION_UNIT
-#error "blr_csr_bayesr_core_impl.h is an implementation detail of st_cpg_omp_csr_bayesr.cpp"
-#endif
-
 #include "blr_aggregate_component_trace.h"
+#include "blr_csr_bayesr_policy.h"
 
 template <class Operator>
 struct CsrBayesRExecutionContext {
@@ -58,11 +55,32 @@ struct CsrBayesRExecutionResult {
  arma::mat ncomp,covb,covg,cove,vb,vg,ve;
 };
 
-// Canonical operator-aware implementation. Include only from the BayesR
-// binding translation unit so both operator instantiations share one body and
-// the package's established Armadillo configuration.
-template <class Operator>
-CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& context) {
+// The policy surface is deliberately limited to a marker-scale provider and
+// one post-vb hook. The ordinary policy owns no state and consumes no RNG.
+struct CsrBayesRNoOpPolicy {
+ bool provides_prior_scale() const noexcept { return false; }
+ const arma::rowvec& prior_scale() const {
+  throw std::logic_error("ordinary BayesR has no policy-owned prior scale");
+ }
+ void after_vb_update(
+   const arma::rowvec&, const arma::Row<int>&, double,
+   const arma::vec&, std::mt19937&, int) noexcept {}
+ void capture(int) noexcept {}
+ void retain(int) noexcept {}
+ void finish() noexcept {}
+};
+
+struct CsrBayesRNoOpPolicyFactory {
+ CsrBayesRNoOpPolicy make(int, int, int, int) const noexcept {
+  return CsrBayesRNoOpPolicy{};
+ }
+};
+
+// Canonical binding-neutral, operator-aware implementation.
+template <class Operator, class PolicyFactory>
+CsrBayesRExecutionResult run_csr_bayesr_engine(
+  CsrBayesRExecutionContext<Operator>& context,
+  PolicyFactory& policy_factory) {
  Operator& op=*context.op; const BayesRLDLDFriends& ld_swap_friends=*context.ld_swap_friends;
  const std::vector<double>& mixture_var=*context.mixture_var; const std::vector<double>& pi=*context.pi;
  const std::vector<double>& alpha=*context.alpha; const std::vector<int>& n=*context.n;
@@ -190,6 +208,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
    std::mt19937 gen_t(task_seed);
    std::vector<int> order_t = order;
    std::shuffle(order_t.begin(), order_t.end(), gen_t);
+   auto policy = policy_factory.make(task, t, chain, m);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
    const arma::rowvec& ww_t = op.diag();
@@ -268,9 +287,11 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
       dynamic_prior_scale
      );
     }
-    if (estimate_maf_effect_s || use_maf_effect_s_prior_scale) {
+    if (estimate_maf_effect_s || use_maf_effect_s_prior_scale ||
+        policy.provides_prior_scale()) {
      const arma::rowvec& current_prior_scale =
-     estimate_maf_effect_s ? dynamic_prior_scale : prior_scale;
+     estimate_maf_effect_s ? dynamic_prior_scale :
+      (use_maf_effect_s_prior_scale ? prior_scale : policy.prior_scale());
      for (int isort = 0; isort < m; ++isort) {
       const int marker = order_t[static_cast<std::size_t>(isort)];
       sampleBetaR_ST_csr(
@@ -315,7 +336,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      if (runif(gen_t) < ld_swap_prob) {
       for (int move = 0; move < ld_swap_moves; ++move) {
        bool attempted = false;
-       const bool accepted = (estimate_maf_effect_s || use_maf_effect_s_prior_scale) ?
+       const bool accepted = (estimate_maf_effect_s || use_maf_effect_s_prior_scale ||
+         policy.provides_prior_scale()) ?
         attempt_ld_swap_bayesr_ST_csr(
          m,
          t,
@@ -327,7 +349,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
          ww_t,
          wy_t,
          mixture_var_vec,
-         estimate_maf_effect_s ? dynamic_prior_scale : prior_scale,
+         estimate_maf_effect_s ? dynamic_prior_scale :
+          (use_maf_effect_s_prior_scale ? prior_scale : policy.prior_scale()),
          r_t,
          b_t,
          comp_t,
@@ -362,7 +385,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     }
 
     if (updateB) {
-     if (estimate_maf_effect_s || use_maf_effect_s_prior_scale) {
+     if (estimate_maf_effect_s || use_maf_effect_s_prior_scale ||
+         policy.provides_prior_scale()) {
       sampleB_bayesr_ST_csr(
        m,
        nub,
@@ -370,7 +394,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
        b_t,
        comp_t,
        mixture_var_vec,
-       estimate_maf_effect_s ? dynamic_prior_scale : prior_scale,
+       estimate_maf_effect_s ? dynamic_prior_scale :
+        (use_maf_effect_s_prior_scale ? prior_scale : policy.prior_scale()),
        ssb_prior_mat(static_cast<arma::uword>(t), static_cast<arma::uword>(t)),
        gen_t
       );
@@ -404,6 +429,9 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      );
      if (accepted_s) maf_effect_s_accepted_t += 1.0;
     }
+
+    policy.after_vb_update(
+     b_t, comp_t, vb_t, mixture_var_vec, gen_t, it);
 
     const bool do_updateE =
      !block_residual_control.uses_block_variance() &&
@@ -508,6 +536,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     vlds_task(task_u, static_cast<arma::uword>(it)) = vld_t;
     pis_task(task_u, static_cast<arma::uword>(it)) = 1.0 - pi_t[0];
     maf_effect_s_task(task_u, static_cast<arma::uword>(it)) = maf_effect_s_current;
+    policy.capture(it);
 
     if (it >= nburn) {
      const arma::uword draw = static_cast<arma::uword>(it - nburn);
@@ -531,6 +560,7 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
     }
 
     if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+     policy.retain(it);
      nsamples_t += 1.0;
      for (int k = 0; k < K; ++k) {
       pi_mean_t(static_cast<arma::uword>(k)) += pi_t[static_cast<std::size_t>(k)];
@@ -545,6 +575,8 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
      }
     }
    }
+
+   policy.finish();
 
    if (op.uses_retained_low_rank()) {
     const double drift = op.rebuild_and_measure_drift(t, wy_t, b_t, r_t);
@@ -837,3 +869,12 @@ CsrBayesRExecutionResult run_csr_bayesr(CsrBayesRExecutionContext<Operator>& con
   std::move(final_vb),std::move(final_vg),std::move(final_ve),std::move(maf_effect_s_attempted),std::move(maf_effect_s_accepted),
   std::move(nsamples),std::move(comp_prob),std::move(ncomp),std::move(covb),std::move(covg),std::move(cove),std::move(vb),std::move(vg),std::move(ve)};
 }
+
+#ifdef SBLR_CSR_BAYESR_DEFINE_ORDINARY_RUNNER
+template <class Operator>
+CsrBayesRExecutionResult run_csr_bayesr(
+  CsrBayesRExecutionContext<Operator>& context) {
+ CsrBayesRNoOpPolicyFactory policy_factory;
+ return run_csr_bayesr_engine(context, policy_factory);
+}
+#endif

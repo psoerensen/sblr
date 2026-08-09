@@ -880,6 +880,131 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// stblr_cpg_omp_block_eigen_logvar_bayesc
+Rcpp::List stblr_cpg_omp_block_eigen_logvar_bayesc(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, Rcpp::IntegerVector convergence_markers, bool convergence_b, bool convergence_d, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string representation, double eigen_prop, int low_rank_residual_rebuild_every, arma::mat annotation, arma::mat theta_init, double theta_prior_sd, bool updateTheta);
+RcppExport SEXP _sblr_stblr_cpg_omp_block_eigen_logvar_bayesc(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP convergence_markersSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP representationSEXP, SEXP eigen_propSEXP, SEXP low_rank_residual_rebuild_everySEXP, SEXP annotationSEXP, SEXP theta_initSEXP, SEXP theta_prior_sdSEXP, SEXP updateThetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type d_init(d_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_d_init(use_d_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type rebuild_r_before_updateE(rebuild_r_before_updateESEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_prior_a(pi_prior_aSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_prior_b(pi_prior_bSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type convergence_markers(convergence_markersSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_b(convergence_bSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type bed_files(bed_filesSEXP);
+    Rcpp::traits::input_parameter< int >::type n_bed(n_bedSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type cls(clsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type rows(rowsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type af(afSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type block_start(block_startSEXP);
+    Rcpp::traits::input_parameter< std::string >::type eigen_filter(eigen_filterSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_tau(eigen_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_eta(eigen_etaSEXP);
+    Rcpp::traits::input_parameter< std::string >::type representation(representationSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_prop(eigen_propSEXP);
+    Rcpp::traits::input_parameter< int >::type low_rank_residual_rebuild_every(low_rank_residual_rebuild_everySEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type theta_init(theta_initSEXP);
+    Rcpp::traits::input_parameter< double >::type theta_prior_sd(theta_prior_sdSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateTheta(updateThetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_block_eigen_logvar_bayesc(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, convergence_markers, convergence_b, convergence_d, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every, annotation, theta_init, theta_prior_sd, updateTheta));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stblr_cpg_omp_block_eigen_logvar_bayesr
+Rcpp::List stblr_cpg_omp_block_eigen_logvar_bayesr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, int updateE_start, int updateE_every, Rcpp::IntegerVector convergence_markers, bool convergence_probability, bool convergence_b, bool convergence_d, bool convergence_component, Rcpp::CharacterVector bed_files, int n_bed, Rcpp::List cls, Rcpp::Nullable<Rcpp::IntegerVector> rows, Rcpp::NumericVector af, Rcpp::IntegerVector block_start, std::string eigen_filter, double eigen_tau, double eigen_eta, std::string representation, double eigen_prop, int low_rank_residual_rebuild_every, Rcpp::List block_residual_config, arma::mat annotation, arma::mat theta_init, double theta_prior_sd, bool updateTheta);
+RcppExport SEXP _sblr_stblr_cpg_omp_block_eigen_logvar_bayesr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateE_startSEXP, SEXP updateE_everySEXP, SEXP convergence_markersSEXP, SEXP convergence_probabilitySEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP convergence_componentSEXP, SEXP bed_filesSEXP, SEXP n_bedSEXP, SEXP clsSEXP, SEXP rowsSEXP, SEXP afSEXP, SEXP block_startSEXP, SEXP eigen_filterSEXP, SEXP eigen_tauSEXP, SEXP eigen_etaSEXP, SEXP representationSEXP, SEXP eigen_propSEXP, SEXP low_rank_residual_rebuild_everySEXP, SEXP block_residual_configSEXP, SEXP annotationSEXP, SEXP theta_initSEXP, SEXP theta_prior_sdSEXP, SEXP updateThetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type comp_init(comp_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_comp_init(use_comp_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type rebuild_r_before_updateE(rebuild_r_before_updateESEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type mixture_var(mixture_varSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< int >::type updateE_start(updateE_startSEXP);
+    Rcpp::traits::input_parameter< int >::type updateE_every(updateE_everySEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type convergence_markers(convergence_markersSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_probability(convergence_probabilitySEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_b(convergence_bSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_component(convergence_componentSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type bed_files(bed_filesSEXP);
+    Rcpp::traits::input_parameter< int >::type n_bed(n_bedSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type cls(clsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type rows(rowsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type af(afSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type block_start(block_startSEXP);
+    Rcpp::traits::input_parameter< std::string >::type eigen_filter(eigen_filterSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_tau(eigen_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_eta(eigen_etaSEXP);
+    Rcpp::traits::input_parameter< std::string >::type representation(representationSEXP);
+    Rcpp::traits::input_parameter< double >::type eigen_prop(eigen_propSEXP);
+    Rcpp::traits::input_parameter< int >::type low_rank_residual_rebuild_every(low_rank_residual_rebuild_everySEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type block_residual_config(block_residual_configSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type theta_init(theta_initSEXP);
+    Rcpp::traits::input_parameter< double >::type theta_prior_sd(theta_prior_sdSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateTheta(updateThetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_block_eigen_logvar_bayesr(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every, block_residual_config, annotation, theta_init, theta_prior_sd, updateTheta));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_csr
 Rcpp::List stblr_cpg_omp_csr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale, bool estimate_maf_effect_s, double maf_effect_s_init, Rcpp::NumericVector maf_effect_s_prior, double maf_effect_s_proposal_sd, Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h, Rcpp::IntegerVector convergence_markers, bool convergence_b, bool convergence_d);
 RcppExport SEXP _sblr_stblr_cpg_omp_csr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP maf_effect_s_prior_scaleSEXP, SEXP estimate_maf_effect_sSEXP, SEXP maf_effect_s_initSEXP, SEXP maf_effect_s_priorSEXP, SEXP maf_effect_s_proposal_sdSEXP, SEXP maf_effect_s_log_hSEXP, SEXP convergence_markersSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP) {
@@ -1291,6 +1416,118 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// stblr_cpg_omp_csr_logvar_bayesc
+Rcpp::List stblr_cpg_omp_csr_logvar_bayesc(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, arma::mat annotation, arma::mat theta_init, double theta_prior_sd, bool updateTheta, Rcpp::IntegerVector convergence_markers, bool convergence_b, bool convergence_d);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_logvar_bayesc(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP annotationSEXP, SEXP theta_initSEXP, SEXP theta_prior_sdSEXP, SEXP updateThetaSEXP, SEXP convergence_markersSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type d_init(d_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_d_init(use_d_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type rebuild_r_before_updateE(rebuild_r_before_updateESEXP);
+    Rcpp::traits::input_parameter< std::string >::type ld_prefix(ld_prefixSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_prior_a(pi_prior_aSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_prior_b(pi_prior_bSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateLDswap(updateLDswapSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_prob(ld_swap_probSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_r2(ld_swap_r2SEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_max_friends(ld_swap_max_friendsSEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_moves(ld_swap_movesSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type theta_init(theta_initSEXP);
+    Rcpp::traits::input_parameter< double >::type theta_prior_sd(theta_prior_sdSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateTheta(updateThetaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type convergence_markers(convergence_markersSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_b(convergence_bSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_logvar_bayesc(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, annotation, theta_init, theta_prior_sd, updateTheta, convergence_markers, convergence_b, convergence_d));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stblr_cpg_omp_csr_logvar_bayesr
+Rcpp::List stblr_cpg_omp_csr_logvar_bayesr(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> comp_init, bool use_comp_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, std::vector<double> mixture_var, std::vector<double> alpha, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, int ncores, int seed, int nchains, bool keep_chains, std::vector<int> chain_seeds, int updateE_start, int updateE_every, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, arma::mat annotation, arma::mat theta_init, double theta_prior_sd, bool updateTheta, Rcpp::IntegerVector convergence_markers, bool convergence_probability, bool convergence_b, bool convergence_d, bool convergence_component);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_logvar_bayesr(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP comp_initSEXP, SEXP use_comp_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP mixture_varSEXP, SEXP alphaSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateE_startSEXP, SEXP updateE_everySEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP annotationSEXP, SEXP theta_initSEXP, SEXP theta_prior_sdSEXP, SEXP updateThetaSEXP, SEXP convergence_markersSEXP, SEXP convergence_probabilitySEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP, SEXP convergence_componentSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type wy(wySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yy(yySEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type b_init(b_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type comp_init(comp_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_comp_init(use_comp_initSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type r_init(r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_r_init(use_r_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type rebuild_r_before_updateE(rebuild_r_before_updateESEXP);
+    Rcpp::traits::input_parameter< std::string >::type ld_prefix(ld_prefixSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type ssb_prior(ssb_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>> >::type sse_prior(sse_priorSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type mixture_var(mixture_varSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
+    Rcpp::traits::input_parameter< double >::type nue(nueSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateB(updateBSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateE(updateESEXP);
+    Rcpp::traits::input_parameter< bool >::type updatePi(updatePiSEXP);
+    Rcpp::traits::input_parameter< double >::type adjE(adjESEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type nit(nitSEXP);
+    Rcpp::traits::input_parameter< int >::type nburn(nburnSEXP);
+    Rcpp::traits::input_parameter< int >::type nthin(nthinSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type nchains(nchainsSEXP);
+    Rcpp::traits::input_parameter< bool >::type keep_chains(keep_chainsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type chain_seeds(chain_seedsSEXP);
+    Rcpp::traits::input_parameter< int >::type updateE_start(updateE_startSEXP);
+    Rcpp::traits::input_parameter< int >::type updateE_every(updateE_everySEXP);
+    Rcpp::traits::input_parameter< bool >::type updateLDswap(updateLDswapSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_prob(ld_swap_probSEXP);
+    Rcpp::traits::input_parameter< double >::type ld_swap_r2(ld_swap_r2SEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_max_friends(ld_swap_max_friendsSEXP);
+    Rcpp::traits::input_parameter< int >::type ld_swap_moves(ld_swap_movesSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type theta_init(theta_initSEXP);
+    Rcpp::traits::input_parameter< double >::type theta_prior_sd(theta_prior_sdSEXP);
+    Rcpp::traits::input_parameter< bool >::type updateTheta(updateThetaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type convergence_markers(convergence_markersSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_probability(convergence_probabilitySEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_b(convergence_bSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
+    Rcpp::traits::input_parameter< bool >::type convergence_component(convergence_componentSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_logvar_bayesr(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, annotation, theta_init, theta_prior_sd, updateTheta, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_csr_prior
 Rcpp::List stblr_cpg_omp_csr_prior(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, bool use_pi_marker, std::vector<std::vector<double>> pi_marker, bool use_vb_multiplier, std::vector<std::vector<double>> vb_multiplier, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::IntegerVector convergence_markers, bool convergence_b, bool convergence_d);
 RcppExport SEXP _sblr_stblr_cpg_omp_csr_prior(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP use_pi_markerSEXP, SEXP pi_markerSEXP, SEXP use_vb_multiplierSEXP, SEXP vb_multiplierSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP convergence_markersSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP) {
@@ -1536,6 +1773,70 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type convergence_b(convergence_bSEXP);
     Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
     rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_bed_marker_scheduled_chains(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, pi_prior_a, pi_prior_b, nchains, ncores, seed, chain_seeds, convergence_markers, convergence_b, convergence_d));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_logvar_eta_q_internal
+Rcpp::List st_logvar_eta_q_internal(const arma::mat& annotation, const arma::vec& theta);
+RcppExport SEXP _sblr_st_logvar_eta_q_internal(SEXP annotationSEXP, SEXP thetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta(thetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_logvar_eta_q_internal(annotation, theta));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_logvar_loglik_bayesc_internal
+double st_logvar_loglik_bayesc_internal(const arma::vec& theta, const arma::mat& annotation, const arma::vec& effect, const arma::ivec& state, double marker_variance);
+RcppExport SEXP _sblr_st_logvar_loglik_bayesc_internal(SEXP thetaSEXP, SEXP annotationSEXP, SEXP effectSEXP, SEXP stateSEXP, SEXP marker_varianceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type effect(effectSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< double >::type marker_variance(marker_varianceSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_logvar_loglik_bayesc_internal(theta, annotation, effect, state, marker_variance));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_logvar_loglik_bayesr_internal
+double st_logvar_loglik_bayesr_internal(const arma::vec& theta, const arma::mat& annotation, const arma::vec& effect, const arma::ivec& component, double marker_variance, const arma::vec& gamma);
+RcppExport SEXP _sblr_st_logvar_loglik_bayesr_internal(SEXP thetaSEXP, SEXP annotationSEXP, SEXP effectSEXP, SEXP componentSEXP, SEXP marker_varianceSEXP, SEXP gammaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type effect(effectSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type component(componentSEXP);
+    Rcpp::traits::input_parameter< double >::type marker_variance(marker_varianceSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type gamma(gammaSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_logvar_loglik_bayesr_internal(theta, annotation, effect, component, marker_variance, gamma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// st_logvar_ess_fixture_internal
+Rcpp::List st_logvar_ess_fixture_internal(const arma::vec& theta, const arma::mat& annotation, const arma::vec& effect, const arma::ivec& state, double marker_variance, double theta_prior_sd, int updates, int seed, bool empty_active_set, std::string model, Rcpp::Nullable<Rcpp::NumericVector> gamma);
+RcppExport SEXP _sblr_st_logvar_ess_fixture_internal(SEXP thetaSEXP, SEXP annotationSEXP, SEXP effectSEXP, SEXP stateSEXP, SEXP marker_varianceSEXP, SEXP theta_prior_sdSEXP, SEXP updatesSEXP, SEXP seedSEXP, SEXP empty_active_setSEXP, SEXP modelSEXP, SEXP gammaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type annotation(annotationSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type effect(effectSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< double >::type marker_variance(marker_varianceSEXP);
+    Rcpp::traits::input_parameter< double >::type theta_prior_sd(theta_prior_sdSEXP);
+    Rcpp::traits::input_parameter< int >::type updates(updatesSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< bool >::type empty_active_set(empty_active_setSEXP);
+    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type gamma(gammaSEXP);
+    rcpp_result_gen = Rcpp::wrap(st_logvar_ess_fixture_internal(theta, annotation, effect, state, marker_variance, theta_prior_sd, updates, seed, empty_active_set, model, gamma));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2109,6 +2410,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_block_ve_decision_internal", (DL_FUNC) &_sblr_stblr_block_ve_decision_internal, 6},
     {"_sblr_stblr_block_ve_draw_parameters_internal", (DL_FUNC) &_sblr_stblr_block_ve_draw_parameters_internal, 4},
     {"_sblr_stblr_block_ve_ratio_accepted_internal", (DL_FUNC) &_sblr_stblr_block_ve_ratio_accepted_internal, 2},
+    {"_sblr_stblr_cpg_omp_block_eigen_logvar_bayesc", (DL_FUNC) &_sblr_stblr_cpg_omp_block_eigen_logvar_bayesc, 50},
+    {"_sblr_stblr_cpg_omp_block_eigen_logvar_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_block_eigen_logvar_bayesr, 55},
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 46},
     {"_sblr_stblr_cpg_omp_csr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_block_eigen, 58},
     {"_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal", (DL_FUNC) &_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal, 5},
@@ -2117,11 +2420,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_csr_bayesr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr_block_eigen, 63},
     {"_sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal", (DL_FUNC) &_sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal, 5},
     {"_sblr_stblr_cpg_omp_csr_group_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_group_annot, 49},
+    {"_sblr_stblr_cpg_omp_csr_logvar_bayesc", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_logvar_bayesc, 44},
+    {"_sblr_stblr_cpg_omp_csr_logvar_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_logvar_bayesr, 48},
     {"_sblr_stblr_cpg_omp_csr_prior", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_prior, 44},
     {"_sblr_stblr_cpg_omp_csr_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_scheduled, 44},
     {"_sblr_stblr_cpg_omp_bed_marker_sparse", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_sparse, 31},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled, 36},
     {"_sblr_stblr_cpg_omp_bed_marker_scheduled_chains", (DL_FUNC) &_sblr_stblr_cpg_omp_bed_marker_scheduled_chains, 43},
+    {"_sblr_st_logvar_eta_q_internal", (DL_FUNC) &_sblr_st_logvar_eta_q_internal, 2},
+    {"_sblr_st_logvar_loglik_bayesc_internal", (DL_FUNC) &_sblr_st_logvar_loglik_bayesc_internal, 5},
+    {"_sblr_st_logvar_loglik_bayesr_internal", (DL_FUNC) &_sblr_st_logvar_loglik_bayesr_internal, 6},
+    {"_sblr_st_logvar_ess_fixture_internal", (DL_FUNC) &_sblr_st_logvar_ess_fixture_internal, 11},
     {"_sblr_st_bayesrc_truncated_normal_draws_test", (DL_FUNC) &_sblr_st_bayesrc_truncated_normal_draws_test, 3},
     {"_sblr_st_bayesrc_annotation_update_test", (DL_FUNC) &_sblr_st_bayesrc_annotation_update_test, 8},
     {"_sblr_st_bayesrc_alpha_conditional_moments_test", (DL_FUNC) &_sblr_st_bayesrc_alpha_conditional_moments_test, 6},

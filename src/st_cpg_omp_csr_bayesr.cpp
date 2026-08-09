@@ -3,9 +3,11 @@
 
 #include "st_chain_utils.h"
 #include "st_block_eigen.h"
+#include "st_block_eigen_execution.h"
 #include "st_block_eigen_rcpp.h"
 #include "st_csr_common.h"
 #include "st_ld_operator.h"
+#include "blr_csr_bayesr_rcpp_adapter.h"
 
 #include <algorithm>
 #include <chrono>
@@ -13,6 +15,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <numeric>
 #include <random>
 #include <stdexcept>
@@ -1237,9 +1240,9 @@ inline void normalize_pi_bayesr(std::vector<double>& pi) {
  for (double& p : pi) p /= s;
 }
 
-#define SBLR_CSR_BAYESR_CORE_IMPL_TRANSLATION_UNIT 1
+#define SBLR_CSR_BAYESR_DEFINE_ORDINARY_RUNNER 1
 #include "blr_csr_bayesr_core_impl.h"
-#undef SBLR_CSR_BAYESR_CORE_IMPL_TRANSLATION_UNIT
+#undef SBLR_CSR_BAYESR_DEFINE_ORDINARY_RUNNER
 
 template <class MakeOperator>
 Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
@@ -1300,6 +1303,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   double resam_thresh,
   double minimum_ve_ratio,
   bool block_ve_keep_history,
+  CsrBayesRPolicyFactory* policy_factory,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1557,7 +1561,9 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  execution_context.ld_swap_prob=ld_swap_prob; execution_context.maf_effect_s_init=maf_effect_s_init;
  execution_context.maf_effect_s_prior_lower=maf_effect_s_prior[0]; execution_context.maf_effect_s_prior_upper=maf_effect_s_prior[1];
  execution_context.maf_effect_s_proposal_sd=maf_effect_s_proposal_sd; execution_context.nub=nub; execution_context.nue=nue; execution_context.adjE=adjE;
- CsrBayesRExecutionResult execution_result=run_csr_bayesr(execution_context);
+ CsrBayesRExecutionResult execution_result = policy_factory ?
+  run_csr_bayesr_engine(execution_context, *policy_factory) :
+  run_csr_bayesr(execution_context);
  auto stblr_csr_bayesr_result_to_raw = [&](const CsrBayesRExecutionResult& execution_result) -> Rcpp::List {
  const arma::vec& mixture_var_vec=execution_result.mixture_var_vec;
  const arma::mat &bm_task=execution_result.bm_task,&dm_task=execution_result.dm_task,&component_mean_task=execution_result.component_mean_task;
@@ -1949,6 +1955,99 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  return stblr_csr_bayesr_result_to_raw(execution_result);
 }
 
+Rcpp::List stblr_cpg_omp_csr_bayesr_with_policy(
+  std::vector<std::vector<double>> wy,
+  std::vector<std::vector<double>> ww,
+  std::vector<double> yy,
+  std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> comp_init,
+  bool use_comp_init,
+  std::vector<std::vector<double>> r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  std::string ld_prefix,
+  arma::mat B,
+  arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior,
+  std::vector<double> pi,
+  std::vector<double> mixture_var,
+  std::vector<double> alpha,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  std::vector<int> n,
+  int nit,
+  int nburn,
+  int nthin,
+  int ncores,
+  int seed,
+  int nchains,
+  bool keep_chains,
+  std::vector<int> chain_seeds,
+  int updateE_start,
+  int updateE_every,
+  bool updateLDswap,
+  double ld_swap_prob,
+  double ld_swap_r2,
+  int ld_swap_max_friends,
+  int ld_swap_moves,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale,
+  bool estimate_maf_effect_s,
+  double maf_effect_s_init,
+  Rcpp::NumericVector maf_effect_s_prior,
+  double maf_effect_s_proposal_sd,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h,
+  Rcpp::IntegerVector convergence_markers,
+  bool convergence_probability,
+  bool convergence_b,
+  bool convergence_d,
+  bool convergence_component,
+  CsrBayesRPolicyFactory* policy_factory
+) {
+ auto make_csr_operator = [&](int m,
+                              const std::vector<double>& xx,
+                              const arma::rowvec& xx_row,
+                              arma::mat& wy_mat,
+                              bool update_ld_swap,
+                              double ld_swap_r2_value,
+                              int ld_swap_max_friends_value) {
+  (void)wy_mat;
+  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
+  CsrOperator op(ld, xx_row);
+  BayesRLDLDFriends friends;
+  if (update_ld_swap) {
+   friends = build_ld_swap_friends_bayesr_ST_csr(
+    m, ld, xx, ld_swap_r2_value, ld_swap_max_friends_value
+   );
+  } else {
+   friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+  }
+  return BayesROperatorContext<CsrOperator>(
+   std::move(op), std::move(friends), Rcpp::List::create()
+  );
+ };
+
+ return stblr_cpg_omp_csr_bayesr_impl(
+  wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init,
+  rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
+  mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n,
+  nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds,
+  updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2,
+  ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale,
+  estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
+  maf_effect_s_proposal_sd, maf_effect_s_log_h,
+  Rcpp::as<std::vector<int>>(convergence_markers),
+  convergence_probability, convergence_b, convergence_d,
+  convergence_component, 0, std::vector<double>(),
+  "global_projected_legacy", "fixVe", 1.1, 0.7, false, policy_factory,
+  make_csr_operator
+ );
+}
+
 // [[Rcpp::export]]
 Rcpp::List stblr_cpg_omp_csr_bayesr(
   std::vector<std::vector<double>> wy,
@@ -2002,26 +2101,192 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   bool convergence_d = false,
   bool convergence_component = false
 ) {
- auto make_csr_operator = [&](int m,
-                              const std::vector<double>& xx,
-                              const arma::rowvec& xx_row,
-                              arma::mat& wy_mat,
-                              bool update_ld_swap,
-                              double ld_swap_r2_value,
-                              int ld_swap_max_friends_value) {
-  (void)wy_mat;
-  STLDCSR ld = read_and_build_st_ld_csr(ld_prefix, m, xx);
-  CsrOperator op(ld, xx_row);
-  BayesRLDLDFriends friends;
+ return stblr_cpg_omp_csr_bayesr_with_policy(
+  std::move(wy), std::move(ww), std::move(yy), std::move(b_init),
+  std::move(comp_init), use_comp_init, std::move(r_init), use_r_init,
+  rebuild_r_before_updateE, std::move(ld_prefix), std::move(B), std::move(E),
+  std::move(ssb_prior), std::move(sse_prior), std::move(pi),
+  std::move(mixture_var), std::move(alpha), nub, nue, updateB, updateE,
+  updatePi, adjE, std::move(n), nit, nburn, nthin, ncores, seed, nchains,
+  keep_chains, std::move(chain_seeds), updateE_start, updateE_every,
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends,
+  ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s,
+  maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd,
+  maf_effect_s_log_h, convergence_markers, convergence_probability,
+  convergence_b, convergence_d, convergence_component, nullptr);
+}
+
+Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
+  std::vector<std::vector<double>> wy,
+  std::vector<std::vector<double>> ww,
+  std::vector<double> yy,
+  std::vector<std::vector<double>> b_init,
+  std::vector<std::vector<double>> comp_init,
+  bool use_comp_init,
+  std::vector<std::vector<double>> r_init,
+  bool use_r_init,
+  bool rebuild_r_before_updateE,
+  std::string ld_prefix,
+  arma::mat B,
+  arma::mat E,
+  std::vector<std::vector<double>> ssb_prior,
+  std::vector<std::vector<double>> sse_prior,
+  std::vector<double> pi,
+  std::vector<double> mixture_var,
+  std::vector<double> alpha,
+  double nub,
+  double nue,
+  bool updateB,
+  bool updateE,
+  bool updatePi,
+  double adjE,
+  std::vector<int> n,
+  int nit,
+  int nburn,
+  int nthin,
+  int ncores,
+  int seed,
+  int nchains,
+  bool keep_chains,
+  std::vector<int> chain_seeds,
+  int updateE_start,
+  int updateE_every,
+  bool updateLDswap,
+  double ld_swap_prob,
+  double ld_swap_r2,
+  int ld_swap_max_friends,
+  int ld_swap_moves,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_prior_scale,
+  bool estimate_maf_effect_s,
+  double maf_effect_s_init,
+  Rcpp::NumericVector maf_effect_s_prior,
+  double maf_effect_s_proposal_sd,
+  Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h,
+  Rcpp::IntegerVector convergence_markers,
+  bool convergence_probability,
+  bool convergence_b,
+  bool convergence_d,
+  bool convergence_component,
+  Rcpp::CharacterVector bed_files,
+  int n_bed,
+  Rcpp::List cls,
+  Rcpp::Nullable<Rcpp::IntegerVector> rows,
+  Rcpp::NumericVector af,
+  Rcpp::IntegerVector block_start,
+  std::string eigen_filter,
+  double eigen_tau,
+  double eigen_eta,
+  std::string representation,
+  double eigen_prop,
+  int low_rank_residual_rebuild_every,
+  Rcpp::List block_residual_config,
+  CsrBayesRPolicyFactory* policy_factory
+) {
+ const bool has_block_residual_config = block_residual_config.size() > 0;
+ Rcpp::NumericVector phenotype_variance = has_block_residual_config ?
+  Rcpp::as<Rcpp::NumericVector>(block_residual_config["phenotype_variance"]) :
+  Rcpp::NumericVector::create();
+ const std::string residual_policy = has_block_residual_config ?
+  Rcpp::as<std::string>(block_residual_config["residual_policy"]) :
+  "global_projected_legacy";
+ const std::string block_ve_mode = has_block_residual_config ?
+  Rcpp::as<std::string>(block_residual_config["block_ve_mode"]) : "fixVe";
+ const double resam_thresh = has_block_residual_config ?
+  Rcpp::as<double>(block_residual_config["resam_thresh"]) : 1.1;
+ const double minimum_ve_ratio = has_block_residual_config ?
+  Rcpp::as<double>(block_residual_config["minimum_ve_ratio"]) : 0.7;
+ const bool block_ve_keep_history = has_block_residual_config ?
+  Rcpp::as<bool>(block_residual_config["block_ve_keep_history"]) : false;
+ if (updateLDswap) {
+  throw std::runtime_error(
+   "LD-swap is not yet supported with the experimental block-eigen operator."
+  );
+ }
+ if (bed_files.size() <= 0) {
+  throw std::runtime_error("bed_files must contain at least one BED file.");
+ }
+ if (n_bed <= 0) throw std::runtime_error("n_bed must be positive.");
+ if (cls.size() != bed_files.size()) {
+  throw std::runtime_error("cls must have one element per BED file.");
+ }
+
+ const std::vector<std::string> bed_files_cpp =
+  stblr_bayesr_copy_character_vector(bed_files, "bed_files");
+ const std::vector<std::vector<int>> cls_cpp =
+  stblr_bayesr_copy_int_list(cls, "cls");
+ const std::vector<int> rows0 = stblr_bayesr_copy_rows0_or_empty(rows, n_bed);
+ const std::vector<double> af_cpp = Rcpp::as<std::vector<double>>(af);
+ const std::vector<int> block_start_cpp =
+  Rcpp::as<std::vector<int>>(block_start);
+ const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
+ if (representation != "low_rank" && representation != "dense_reconstructed")
+  throw std::runtime_error("unknown block-eigen representation.");
+ if (representation == "low_rank" && use_r_init)
+  throw std::runtime_error(
+   "r_init is not supported for representation = \"retained_low_rank\"; "
+   "a reduced-residual restart contract has not been implemented."
+  );
+
+ BlockEigenExecutionInput block_input;
+ block_input.bed_files = bed_files_cpp;
+ block_input.n_bed = n_bed;
+ block_input.cls = cls_cpp;
+ block_input.rows0 = rows0;
+ block_input.af = af_cpp;
+ block_input.block_start = block_start_cpp;
+ block_input.filter_mode = mode;
+ block_input.eigen_tau = eigen_tau;
+ block_input.eigen_eta = eigen_eta;
+ block_input.low_rank = representation == "low_rank";
+ block_input.eigen_prop = eigen_prop;
+ block_input.ncores = ncores;
+
+ auto make_block_eigen_operator = [&](int m,
+                                      const std::vector<double>& xx,
+                                      const arma::rowvec& xx_row,
+                                      arma::mat& wy_mat,
+                                      bool update_ld_swap,
+                                      double ld_swap_r2_value,
+                                      int ld_swap_max_friends_value) {
+  (void)xx;
+  (void)xx_row;
+  (void)ld_swap_r2_value;
+  (void)ld_swap_max_friends_value;
   if (update_ld_swap) {
-   friends = build_ld_swap_friends_bayesr_ST_csr(
-    m, ld, xx, ld_swap_r2_value, ld_swap_max_friends_value
+   throw std::runtime_error(
+    "LD-swap is not yet supported with the experimental block-eigen operator."
+   );
+  }
+  if (static_cast<int>(af_cpp.size()) != m) {
+   throw std::runtime_error("af length must equal m for block-eigen BayesR.");
+  }
+  PreparedBlockEigenOperator prepared = prepare_block_eigen_operator(
+   block_input, m, wy_mat
+  );
+  Rcpp::List diagnostics;
+  if (prepared.op.low_rank) {
+   diagnostics = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_low_rank_diagnostics_to_data_frame(
+     prepared.low_rank_diagnostics),
+    Rcpp::Named("operator_contract") = "block_low_rank_v1",
+    Rcpp::Named("operator_representation") = "low_rank",
+    Rcpp::Named("operator_scale_contract") = "general_cross_product",
+    Rcpp::Named("eigen_policy") = "cumulative_positive_mass",
+    Rcpp::Named("eigen_prop") = eigen_prop,
+    Rcpp::Named("build") = block_low_rank_build_metadata(prepared.op.retained)
    );
   } else {
-   friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+   diagnostics = Rcpp::List::create(
+    Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(
+     prepared.dense_diagnostics),
+    Rcpp::Named("operator_contract") = "block_dense_reconstructed_v1",
+    Rcpp::Named("operator_representation") = "dense_reconstructed"
+   );
   }
-  return BayesROperatorContext<CsrOperator>(
-   std::move(op), std::move(friends), Rcpp::List::create()
+  BayesRLDLDFriends friends;
+  friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
+  return BayesROperatorContext<BlockEigenDispatchOperator>(
+   std::move(prepared.op), std::move(friends), diagnostics
   );
  };
 
@@ -2036,9 +2301,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers),
   convergence_probability, convergence_b, convergence_d,
-  convergence_component, 0, std::vector<double>(),
-  "global_projected_legacy", "fixVe", 1.1, 0.7, false,
-  make_csr_operator
+  convergence_component, low_rank_residual_rebuild_every,
+  Rcpp::as<std::vector<double>>(phenotype_variance),
+  residual_policy, block_ve_mode, resam_thresh,
+  minimum_ve_ratio, block_ve_keep_history, policy_factory,
+  make_block_eigen_operator
  );
 }
 
@@ -2108,128 +2375,22 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   int low_rank_residual_rebuild_every = 100,
   Rcpp::List block_residual_config = R_NilValue
 ) {
- const bool has_block_residual_config = block_residual_config.size() > 0;
- Rcpp::NumericVector phenotype_variance = has_block_residual_config ?
-  Rcpp::as<Rcpp::NumericVector>(block_residual_config["phenotype_variance"]) :
-  Rcpp::NumericVector::create();
- const std::string residual_policy = has_block_residual_config ?
-  Rcpp::as<std::string>(block_residual_config["residual_policy"]) :
-  "global_projected_legacy";
- const std::string block_ve_mode = has_block_residual_config ?
-  Rcpp::as<std::string>(block_residual_config["block_ve_mode"]) : "fixVe";
- const double resam_thresh = has_block_residual_config ?
-  Rcpp::as<double>(block_residual_config["resam_thresh"]) : 1.1;
- const double minimum_ve_ratio = has_block_residual_config ?
-  Rcpp::as<double>(block_residual_config["minimum_ve_ratio"]) : 0.7;
- const bool block_ve_keep_history = has_block_residual_config ?
-  Rcpp::as<bool>(block_residual_config["block_ve_keep_history"]) : false;
- if (updateLDswap) {
-  throw std::runtime_error(
-   "LD-swap is not yet supported with the experimental block-eigen operator."
-  );
- }
- if (bed_files.size() <= 0) {
-  throw std::runtime_error("bed_files must contain at least one BED file.");
- }
- if (n_bed <= 0) throw std::runtime_error("n_bed must be positive.");
- if (cls.size() != bed_files.size()) {
-  throw std::runtime_error("cls must have one element per BED file.");
- }
-
- const std::vector<std::string> bed_files_cpp =
-  stblr_bayesr_copy_character_vector(bed_files, "bed_files");
- const std::vector<std::vector<int>> cls_cpp =
-  stblr_bayesr_copy_int_list(cls, "cls");
- const std::vector<int> rows0 = stblr_bayesr_copy_rows0_or_empty(rows, n_bed);
- const std::vector<double> af_cpp = Rcpp::as<std::vector<double>>(af);
- const std::vector<int> block_start_cpp =
-  Rcpp::as<std::vector<int>>(block_start);
- const EigenFilterMode mode = parse_block_eigen_filter_mode(eigen_filter);
- if (representation != "low_rank" && representation != "dense_reconstructed")
-  throw std::runtime_error("unknown block-eigen representation.");
- if (representation == "low_rank" && use_r_init)
-  throw std::runtime_error(
-   "r_init is not supported for representation = \"retained_low_rank\"; "
-   "a reduced-residual restart contract has not been implemented."
-  );
-
- auto make_block_eigen_operator = [&](int m,
-                                      const std::vector<double>& xx,
-                                      const arma::rowvec& xx_row,
-                                      arma::mat& wy_mat,
-                                      bool update_ld_swap,
-                                      double ld_swap_r2_value,
-                                      int ld_swap_max_friends_value) {
-  (void)xx;
-  (void)xx_row;
-  (void)ld_swap_r2_value;
-  (void)ld_swap_max_friends_value;
-  if (update_ld_swap) {
-   throw std::runtime_error(
-    "LD-swap is not yet supported with the experimental block-eigen operator."
-   );
-  }
-  if (static_cast<int>(af_cpp.size()) != m) {
-   throw std::runtime_error("af length must equal m for block-eigen BayesR.");
-  }
-  PackedBedMatrix G = read_bedfiles_to_packed_matrix(
-   bed_files_cpp, n_bed, rows0.empty() ? nullptr : rows0.data(),
-   static_cast<int>(rows0.size()), cls_cpp
-  );
-  if (G.m != m) throw std::runtime_error("BED marker count does not match m.");
-
-  BlockEigenDispatchOperator op;
-  op.low_rank = representation == "low_rank";
-  Rcpp::List diagnostics;
-  if (op.low_rank) {
-   std::vector<BlockLowRankDiag> block_diag;
-   op.retained = build_block_low_rank(
-    G, af_cpp, block_start_cpp, eigen_prop, wy_mat, ncores, &block_diag
-   );
-   diagnostics = Rcpp::List::create(
-    Rcpp::Named("blocks") = block_low_rank_diagnostics_to_data_frame(block_diag),
-    Rcpp::Named("operator_contract") = "block_low_rank_v1",
-    Rcpp::Named("operator_representation") = "low_rank",
-    Rcpp::Named("operator_scale_contract") = "general_cross_product",
-    Rcpp::Named("eigen_policy") = "cumulative_positive_mass",
-    Rcpp::Named("eigen_prop") = eigen_prop,
-    Rcpp::Named("build") = block_low_rank_build_metadata(op.retained)
-   );
-  } else {
-   std::vector<BlockEigenDiag> block_diag;
-   op.dense = build_block_eigen(
-    G, af_cpp, block_start_cpp, mode, eigen_tau, eigen_eta,
-    wy_mat, ncores, &block_diag
-   );
-   diagnostics = Rcpp::List::create(
-    Rcpp::Named("blocks") = block_eigen_diagnostics_to_data_frame(block_diag),
-    Rcpp::Named("operator_contract") = "block_dense_reconstructed_v1",
-    Rcpp::Named("operator_representation") = "dense_reconstructed"
-   );
-  }
-  BayesRLDLDFriends friends;
-  friends.ptr.assign(static_cast<std::size_t>(m) + 1, 0);
-  return BayesROperatorContext<BlockEigenDispatchOperator>(
-   std::move(op), std::move(friends), diagnostics
-  );
- };
-
- return stblr_cpg_omp_csr_bayesr_impl(
-  wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init,
-  rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
-  mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n,
-  nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds,
-  updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2,
-  ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale,
-  estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
-  maf_effect_s_proposal_sd, maf_effect_s_log_h,
-  Rcpp::as<std::vector<int>>(convergence_markers),
-  convergence_probability, convergence_b, convergence_d,
-  convergence_component, low_rank_residual_rebuild_every,
-  Rcpp::as<std::vector<double>>(phenotype_variance),
-  residual_policy, block_ve_mode, resam_thresh,
-  minimum_ve_ratio, block_ve_keep_history,
-  make_block_eigen_operator
+ return stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
+  std::move(wy), std::move(ww), std::move(yy), std::move(b_init),
+  std::move(comp_init), use_comp_init, std::move(r_init), use_r_init,
+  rebuild_r_before_updateE, std::move(ld_prefix), std::move(B), std::move(E),
+  std::move(ssb_prior), std::move(sse_prior), std::move(pi),
+  std::move(mixture_var), std::move(alpha), nub, nue, updateB, updateE,
+  updatePi, adjE, std::move(n), nit, nburn, nthin, ncores, seed, nchains,
+  keep_chains, std::move(chain_seeds), updateE_start, updateE_every,
+  updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends,
+  ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s,
+  maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd,
+  maf_effect_s_log_h, convergence_markers, convergence_probability,
+  convergence_b, convergence_d, convergence_component, bed_files, n_bed,
+  cls, rows, af, block_start, std::move(eigen_filter), eigen_tau, eigen_eta,
+  std::move(representation), eigen_prop, low_rank_residual_rebuild_every,
+  block_residual_config, nullptr
  );
 }
 

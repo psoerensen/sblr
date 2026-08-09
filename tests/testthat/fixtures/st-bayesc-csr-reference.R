@@ -45,6 +45,41 @@ st_bayesc_csr_reference_configurations <- list(
   )
 )
 
+# Captured from the pre-extraction DLL on 2026-08-09. Timing and temporary LD
+# prefixes are normalized by st_bayesc_csr_reference_md5(). These hashes freeze
+# the complete accessible raw/formatted trajectory and schema across ordinary,
+# multichain, explicit-seed, retained-chain, and fixed-scale routes.
+st_bayesc_csr_pre_engine_extraction_hashes <- list(
+  one_trait_one_chain_one_core = c(
+    raw = "1bdbead1dbdc2f3b5f9c3576d2f78669",
+    fit = "fb01c4ef85b01cfecef4c7b0297a2ac2"
+  ),
+  one_trait_two_chains_one_core = c(
+    raw = "6c5667d2ab9a1aa9fdd1e4d3bd289122",
+    fit = "7e546722842b9d59f283a4a261cd8522"
+  ),
+  one_trait_two_chains_two_cores = c(
+    raw = "6c5667d2ab9a1aa9fdd1e4d3bd289122",
+    fit = "34fb0eea180f5378f0cc6ae4773a29a9"
+  ),
+  multiple_traits = c(
+    raw = "e63936437a33fd3f2b479401a2520fac",
+    fit = "a9ba3f3a5e1a38bd6a5de6c2e45029fc"
+  ),
+  explicit_chain_seeds = c(
+    raw = "fc9847ed816c0cc2e41b1ded38dccc0a",
+    fit = "68bd9a521469fab766640478eb76d9f2"
+  ),
+  keep_chains = c(
+    raw = "25617ccc7903fe7e28116871593cb495",
+    fit = "b258ac45a7d4d30914305b210047d130"
+  ),
+  fixed_maf_effect_s = c(
+    raw = "1c50036f9bca4b12456d97d333bbedc0",
+    fit = "8de361541b489facc3ae62d5dfeaa631"
+  )
+)
+
 st_bayesc_csr_reference_write_csr <- function() {
   prefix <- tempfile("blr_st_bayesc_csr_reference_csr_")
   sblr:::.stblr_write_uint64_file(

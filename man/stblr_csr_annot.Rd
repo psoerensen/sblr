@@ -9,7 +9,7 @@ stblr_csr_annot(
   Glist = NULL,
   annotations,
   annotation_model = c("fixed_marker", "group", "learned_logistic",
-    "annotation_probit_stick"),
+    "annotation_probit_stick", "log_variance"),
   method = NULL,
   nit = 1000,
   nburn = 100,
@@ -40,6 +40,9 @@ stblr_csr_annot(
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
+  theta_prior_sd = 0.7,
+  theta_init = NULL,
+  updateTheta = TRUE,
   ld_prefix = NULL,
   ...
 )
@@ -54,14 +57,18 @@ is not supplied, `Glist$sparseLD$prefix` is used when available.}
 marker x annotation matrix or a list with optional `A`, `fixed_pi_marker`
 or `pi_marker`, and `fixed_vb_multiplier` or `vb_multiplier` elements. For
 `"learned_logistic"` and `"annotation_probit_stick"`, use a marker x
-annotation matrix. For
+annotation matrix. For `"log_variance"`, binary columns are centered only
+and continuous columns are centered and standardized to SD one; intercept,
+constant, non-finite, duplicate, and rank-deficient designs are rejected. For
 `"group"`, use a length-`m` group vector, factor, or one-column data frame.}
 
 \item{annotation_model}{Annotation policy. Must be one of `"fixed_marker"`,
-`"group"`, `"learned_logistic"`, or `"annotation_probit_stick"`.}
+`"group"`, `"learned_logistic"`, `"annotation_probit_stick"`, or
+`"log_variance"`.}
 
 \item{method}{Optional lowercase method override. BayesC-like annotation
-models use `"sbayesc"`; SBayesRC uses `"sbayesrc"`.}
+models use `"sbayesc"`; SBayesRC uses `"sbayesrc"`. Log variance accepts
+`"sbayesc"` or `"sbayesr"`.}
 
 \item{nit, nburn, nthin}{MCMC iteration controls.}
 
@@ -138,6 +145,14 @@ marker for swap proposals.}
 
 \item{ld_swap_moves}{Number of swap attempts when LD-swap is triggered.}
 
+\item{theta_prior_sd}{Positive fixed Gaussian prior SD for log-variance
+annotation coefficients. The validated version-1 default is 0.7.}
+
+\item{theta_init}{Optional annotation-by-trait initial coefficient matrix.}
+
+\item{updateTheta}{Logical; update log-variance coefficients with elliptical
+slice sampling. Set `FALSE` to hold `theta_init` fixed.}
+
 \item{ld_prefix}{Optional prefix of the disk-backed CSR LD files.}
 
 \item{...}{Additional model-specific arguments passed to the internal
@@ -155,7 +170,12 @@ A formatted ST-BLR fit. All returned fits contain `dm`
 
   Annotation-aware outputs are model-specific and may include
   `annotation_summary`, `annotation_pi`, `annotation_effects`,
-  `annotation_prior`, `alpha`, and `sigmaSqAlpha`. SBayesRC fits also
+  `annotation_prior`, `alpha`, and `sigmaSqAlpha`. Log-variance fits include
+  `theta`, `theta_summary`, `annotation_variance_ratio`,
+  `annotation_transform`, and `marker_prior_scale`. For a binary annotation,
+  `exp(theta)` is the conditional annotated/unannotated prior-variance ratio;
+  for a continuous annotation it is the ratio for a one-SD increase.
+  SBayesRC fits also
   include BayesR-style `component_probabilities`: marker-by-component
   posterior probabilities by trait, including component zero. The `dm`
   field is the posterior non-null probability.
@@ -192,8 +212,11 @@ Available annotation policies are `annotation_model = "fixed_marker"` for fixed
 annotation-informed prior probabilities and variance multipliers,
 `annotation_model = "learned_logistic"` for learned annotation effects on BayesC-like
 inclusion and variance priors, `annotation_model = "group"` for grouped
-annotation architectures, and `annotation_model = "annotation_probit_stick"` for
-SBayesRC-style annotation-dependent component probabilities. Only
+annotation architectures, `annotation_model = "annotation_probit_stick"` for
+SBayesRC-style annotation-dependent component probabilities, and
+`annotation_model = "log_variance"` for BayesC-LV or BayesR-LV. In the LV
+models annotations rescale non-null prior variances while inclusion or
+component probabilities remain global. Only
 `annotation_model = "annotation_probit_stick"` supports fixed global `maf_effect_s` and
 sampled trait-specific `maf_effect_s`.
 

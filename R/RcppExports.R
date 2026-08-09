@@ -129,6 +129,14 @@ stblr_block_low_rank_contract_internal <- function(bed_files, n_bed, cls, rows, 
     .Call(`_sblr_stblr_block_ve_ratio_accepted_internal`, ratio, minimum)
 }
 
+stblr_cpg_omp_block_eigen_logvar_bayesc <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, convergence_markers, convergence_b, convergence_d, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every, annotation, theta_init, theta_prior_sd, updateTheta) {
+    .Call(`_sblr_stblr_cpg_omp_block_eigen_logvar_bayesc`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, convergence_markers, convergence_b, convergence_d, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every, annotation, theta_init, theta_prior_sd, updateTheta)
+}
+
+stblr_cpg_omp_block_eigen_logvar_bayesr <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every, block_residual_config, annotation, theta_init, theta_prior_sd, updateTheta) {
+    .Call(`_sblr_stblr_cpg_omp_block_eigen_logvar_bayesr`, wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component, bed_files, n_bed, cls, rows, af, block_start, eigen_filter, eigen_tau, eigen_eta, representation, eigen_prop, low_rank_residual_rebuild_every, block_residual_config, annotation, theta_init, theta_prior_sd, updateTheta)
+}
+
 stblr_cpg_omp_csr <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L, maf_effect_s_prior_scale = NULL, estimate_maf_effect_s = FALSE, maf_effect_s_init = 0.0, maf_effect_s_prior = as.numeric( c(-3.0, 2.0)), maf_effect_s_proposal_sd = 0.35, maf_effect_s_log_h = NULL, convergence_markers = as.integer( c()), convergence_b = FALSE, convergence_d = FALSE) {
     .Call(`_sblr_stblr_cpg_omp_csr`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h, convergence_markers, convergence_b, convergence_d)
 }
@@ -161,6 +169,14 @@ stblr_cpg_omp_csr_group_annot <- function(wy, ww, yy, b_init, d_init, use_d_init
     .Call(`_sblr_stblr_cpg_omp_csr_group_annot`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, group_index, ngroup, group_pi_init, pi_group_prior_a, pi_group_prior_b, group_vb_multiplier_init, updateGroupVb, nub_group, ssb_group_prior, normalize_group_vb, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, convergence_markers, convergence_annotations, convergence_b, convergence_d)
 }
 
+stblr_cpg_omp_csr_logvar_bayesc <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, annotation, theta_init, theta_prior_sd, updateTheta, convergence_markers, convergence_b, convergence_d) {
+    .Call(`_sblr_stblr_cpg_omp_csr_logvar_bayesc`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, annotation, theta_init, theta_prior_sd, updateTheta, convergence_markers, convergence_b, convergence_d)
+}
+
+stblr_cpg_omp_csr_logvar_bayesr <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, annotation, theta_init, theta_prior_sd, updateTheta, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component) {
+    .Call(`_sblr_stblr_cpg_omp_csr_logvar_bayesr`, wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start, updateE_every, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, annotation, theta_init, theta_prior_sd, updateTheta, convergence_markers, convergence_probability, convergence_b, convergence_d, convergence_component)
+}
+
 stblr_cpg_omp_csr_prior <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, use_pi_marker, pi_marker, use_vb_multiplier, vb_multiplier, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains = 1L, keep_chains = FALSE, chain_seeds = NULL, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L, convergence_markers = as.integer( c()), convergence_b = FALSE, convergence_d = FALSE) {
     .Call(`_sblr_stblr_cpg_omp_csr_prior`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, use_pi_marker, pi_marker, use_vb_multiplier, vb_multiplier, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, convergence_markers, convergence_b, convergence_d)
 }
@@ -179,6 +195,22 @@ stblr_cpg_omp_bed_marker_scheduled <- function(bed_files, n, cls, y, b_init, set
 
 stblr_cpg_omp_bed_marker_scheduled_chains <- function(bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, pi_prior_a, pi_prior_b, nchains, ncores, seed, chain_seeds = as.integer( c()), convergence_markers = as.integer( c()), convergence_b = FALSE, convergence_d = FALSE) {
     .Call(`_sblr_stblr_cpg_omp_bed_marker_scheduled_chains`, bed_files, n, cls, y, b_init, sets, rows, af, scale, B, E, ssb_prior, sse_prior, pi, nub, nue, updateB, updateE, updatePi, adjE, nit, nburn, nthin, rebuild_every, full_sweep_every, null_skip_base, null_skip_max, candidate_threshold, candidate_lifetime, skip_nulls_burnin_only, return_wy, return_r, read_block_size, progress_every, pi_prior_a, pi_prior_b, nchains, ncores, seed, chain_seeds, convergence_markers, convergence_b, convergence_d)
+}
+
+st_logvar_eta_q_internal <- function(annotation, theta) {
+    .Call(`_sblr_st_logvar_eta_q_internal`, annotation, theta)
+}
+
+st_logvar_loglik_bayesc_internal <- function(theta, annotation, effect, state, marker_variance) {
+    .Call(`_sblr_st_logvar_loglik_bayesc_internal`, theta, annotation, effect, state, marker_variance)
+}
+
+st_logvar_loglik_bayesr_internal <- function(theta, annotation, effect, component, marker_variance, gamma) {
+    .Call(`_sblr_st_logvar_loglik_bayesr_internal`, theta, annotation, effect, component, marker_variance, gamma)
+}
+
+st_logvar_ess_fixture_internal <- function(theta, annotation, effect, state, marker_variance, theta_prior_sd = 0.7, updates = 1L, seed = 1L, empty_active_set = FALSE, model = "bayesc", gamma = NULL) {
+    .Call(`_sblr_st_logvar_ess_fixture_internal`, theta, annotation, effect, state, marker_variance, theta_prior_sd, updates, seed, empty_active_set, model, gamma)
 }
 
 .st_bayesrc_truncated_normal_draws <- function(location, draws, seed) {

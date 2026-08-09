@@ -702,7 +702,7 @@ NULL
   }
  }
 
- if (model %in% c("bayesr", "sbayesrc", "bayesrc")) {
+ if (model %in% c("bayesr", "sbayesr_logvar", "sbayesrc", "bayesrc")) {
   prob <- raw$component$prob
   if (is.null(prob)) {
    add("raw$component$prob is required for model '", model, "'.")
@@ -735,7 +735,7 @@ NULL
      " (component columns), got ", length(comp_names), "."
     )
    }
-   null_component <- if (model %in% c("sbayesrc", "bayesrc")) "gamma_0.00" else "component_0"
+  null_component <- if (model %in% c("sbayesrc", "bayesrc")) "gamma_0.00" else "component_0"
    if (!is.null(comp_names) && !(null_component %in% comp_names)) {
     add(
      "raw$component$names is missing the required null component '",
@@ -860,7 +860,7 @@ NULL
   vg = variance_mat(raw$variance$vg),
   ve = variance_mat(raw$variance$ve)
  )
- if (identical(meta$model, "bayesr")) {
+ if (meta$model %in% c("bayesr", "sbayesr_logvar")) {
   out$component <- out$d
  } else if (meta$model %in% c("sbayesrc", "bayesrc")) {
   out$component <- out$d
@@ -871,7 +871,7 @@ NULL
  pi_names <- raw$pi$names %||% paste0("component_", seq_len(ncol(pi_final)) - 1L)
  colnames(pi_final) <- colnames(pi_mean) <- pi_names
  rownames(pi_final) <- rownames(pi_mean) <- trait_names
- if (meta$model %in% c("bayesr", "sbayesrc", "bayesrc")) {
+ if (meta$model %in% c("bayesr", "sbayesr_logvar", "sbayesrc", "bayesrc")) {
   out$pi <- pi_final
   out$pim <- pi_mean
   out$final_pi <- pi_final
@@ -883,7 +883,7 @@ NULL
 
  out <- .stblr_ensure_chain_summary_fields(out, raw, meta, marker_mat)
 
- if (meta$model %in% c("bayesr", "sbayesrc", "bayesrc")) {
+ if (meta$model %in% c("bayesr", "sbayesr_logvar", "sbayesrc", "bayesrc")) {
   component_names <- raw$component$names %||% pi_names
   comp_prob <- raw$component$prob
   if (is.list(comp_prob) && length(comp_prob) == nt) {
@@ -1162,7 +1162,7 @@ NULL
       as.numeric(ch$marker$state), variable_names
      )
     }
-    if (meta$model %in% c("bayesr", "sbayesrc", "bayesrc")) {
+    if (meta$model %in% c("bayesr", "sbayesr_logvar", "sbayesrc", "bayesrc")) {
      trait_chains[[cc]]$component <- trait_chains[[cc]]$state
      if (!is.null(ch$component$prob)) {
       cp <- as.matrix(ch$component$prob)

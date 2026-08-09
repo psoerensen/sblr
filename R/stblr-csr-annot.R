@@ -8,8 +8,11 @@
 #' annotation-informed prior probabilities and variance multipliers,
 #' `annotation_model = "learned_logistic"` for learned annotation effects on BayesC-like
 #' inclusion and variance priors, `annotation_model = "group"` for grouped
-#' annotation architectures, and `annotation_model = "annotation_probit_stick"` for
-#' SBayesRC-style annotation-dependent component probabilities. Only
+#' annotation architectures, `annotation_model = "annotation_probit_stick"` for
+#' SBayesRC-style annotation-dependent component probabilities, and
+#' `annotation_model = "log_variance"` for BayesC-LV or BayesR-LV. In the LV
+#' models annotations rescale non-null prior variances while inclusion or
+#' component probabilities remain global. Only
 #' `annotation_model = "annotation_probit_stick"` supports fixed global `maf_effect_s` and
 #' sampled trait-specific `maf_effect_s`.
 #'
@@ -20,12 +23,16 @@
 #'   marker x annotation matrix or a list with optional `A`, `fixed_pi_marker`
 #'   or `pi_marker`, and `fixed_vb_multiplier` or `vb_multiplier` elements. For
 #'   `"learned_logistic"` and `"annotation_probit_stick"`, use a marker x
-#'   annotation matrix. For
+#'   annotation matrix. For `"log_variance"`, binary columns are centered only
+#'   and continuous columns are centered and standardized to SD one; intercept,
+#'   constant, non-finite, duplicate, and rank-deficient designs are rejected. For
 #'   `"group"`, use a length-`m` group vector, factor, or one-column data frame.
 #' @param annotation_model Annotation policy. Must be one of `"fixed_marker"`,
-#'   `"group"`, `"learned_logistic"`, or `"annotation_probit_stick"`.
+#'   `"group"`, `"learned_logistic"`, `"annotation_probit_stick"`, or
+#'   `"log_variance"`.
 #' @param method Optional lowercase method override. BayesC-like annotation
-#'   models use `"sbayesc"`; SBayesRC uses `"sbayesrc"`.
+#'   models use `"sbayesc"`; SBayesRC uses `"sbayesrc"`. Log variance accepts
+#'   `"sbayesc"` or `"sbayesr"`.
 #' @param nit,nburn,nthin MCMC iteration controls.
 #' @param ncores Number of OpenMP threads.
 #' @param seed Sampler seed.
@@ -70,6 +77,11 @@
 #' @param ld_swap_max_friends Maximum number of high-LD friends stored per
 #'   marker for swap proposals.
 #' @param ld_swap_moves Number of swap attempts when LD-swap is triggered.
+#' @param theta_prior_sd Positive fixed Gaussian prior SD for log-variance
+#'   annotation coefficients. The validated version-1 default is 0.7.
+#' @param theta_init Optional annotation-by-trait initial coefficient matrix.
+#' @param updateTheta Logical; update log-variance coefficients with elliptical
+#'   slice sampling. Set `FALSE` to hold `theta_init` fixed.
 #' @param h2 Requested initial expected genetic-variance fraction under the
 #'   resolved marker, group, annotation, component, and MAF-S prior weights
 #'   used by the selected model.
@@ -91,7 +103,12 @@
 #'
 #'   Annotation-aware outputs are model-specific and may include
 #'   `annotation_summary`, `annotation_pi`, `annotation_effects`,
-#'   `annotation_prior`, `alpha`, and `sigmaSqAlpha`. SBayesRC fits also
+#'   `annotation_prior`, `alpha`, and `sigmaSqAlpha`. Log-variance fits include
+#'   `theta`, `theta_summary`, `annotation_variance_ratio`,
+#'   `annotation_transform`, and `marker_prior_scale`. For a binary annotation,
+#'   `exp(theta)` is the conditional annotated/unannotated prior-variance ratio;
+#'   for a continuous annotation it is the ratio for a one-SD increase.
+#'   SBayesRC fits also
 #'   include BayesR-style `component_probabilities`: marker-by-component
 #'   posterior probabilities by trait, including component zero. The `dm`
 #'   field is the posterior non-null probability.
@@ -180,7 +197,7 @@ stblr_csr_annot <- function(
   Glist = NULL,
   annotations,
   annotation_model = c("fixed_marker", "group", "learned_logistic",
-                       "annotation_probit_stick"),
+                       "annotation_probit_stick", "log_variance"),
   method = NULL,
   nit = 1000,
   nburn = 100,
@@ -211,6 +228,9 @@ stblr_csr_annot <- function(
   ld_swap_r2 = 0.8,
   ld_swap_max_friends = 50L,
   ld_swap_moves = 1L,
+  theta_prior_sd = 0.7,
+  theta_init = NULL,
+  updateTheta = TRUE,
   ld_prefix = NULL,
   ...
 ) {
@@ -227,6 +247,70 @@ stblr_csr_annot <- function(
  extra <- list(...)
  marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id
  if (!length(marker_ids)) marker_ids <- paste0("V", seq_along(stats$ww[[1L]]))
+ if (annotation_model == "logvar") {
+  method <- method %||% "sbayesc"
+  if (length(method) != 1L || is.na(method) ||
+      !method %in% c("sbayesc", "sbayesr")) {
+   stop("annotation_model = \"log_variance\" requires method = \"sbayesc\" or \"sbayesr\".",
+        call. = FALSE)
+  }
+  if (!is.numeric(theta_prior_sd) || length(theta_prior_sd) != 1L ||
+      !is.finite(theta_prior_sd) || theta_prior_sd <= 0) {
+   stop("theta_prior_sd must be a positive finite scalar.", call. = FALSE)
+  }
+  if (!is.logical(updateTheta) || length(updateTheta) != 1L || is.na(updateTheta)) {
+   stop("updateTheta must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s)) {
+   stop("log_variance version 1 does not support maf_effect_s.", call. = FALSE)
+  }
+  annotation_info <- .stblr_preprocess_logvar_annotations(annotations, marker_ids)
+  trace_spec <- .blr_st_native_trace_spec(
+   conv, marker_ids, if (method == "sbayesr") "bayesr" else "bayesc",
+   annotations = TRUE,
+   component_count = if (method == "sbayesr")
+    length(extra$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L,
+   annotation_quantity_count = ncol(annotation_info$X))
+  memory <- .blr_st_preflight_memory(
+   stats = stats, operator = "csr", chain = chain, conv = conv,
+   memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
+  .validate_ld_swap_args(
+   updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves)
+  ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(Glist, ld_prefix)
+  args <- c(list(
+   stats = stats, ld_prefix = ld_prefix, annotation_info = annotation_info,
+   theta_prior_sd = theta_prior_sd, theta_init = theta_init,
+   updateTheta = updateTheta, h2 = h2, adjE = adjE,
+   nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
+   ncores = chain$ncores, seed = chain$seed, nchains = chain$nchains,
+   keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
+   chain_seeds = if (length(chain$chain_seeds_native))
+    chain$chain_seeds_native else NULL,
+   updateB = updateB, updateE = updateE, updatePi = updatePi,
+   updateLDswap = updateLDswap, ld_swap_prob = ld_swap_prob,
+   ld_swap_r2 = ld_swap_r2, ld_swap_max_friends = ld_swap_max_friends,
+   ld_swap_moves = ld_swap_moves, .convergence_spec = trace_spec), extra)
+  fit <- if (method == "sbayesr") {
+   do.call(.stblr_csr_logvar_bayesr, args)
+  } else {
+   do.call(.stblr_csr_logvar_bayesc, args)
+  }
+  logvar_diagnostics <- fit$diagnostics$logvar
+  out <- .blr_finalize_st_public(
+   fit, method, "csr", chain, conv, memory_warning_gb, verbose, memory)
+  out$diagnostics$logvar <- logvar_diagnostics
+  identity <- paste0(method, "_logvar")
+  out$model <- identity
+  out$annotation_model <- "log_variance"
+  out$input$method <- method
+  out$input$model <- identity
+  out$input$backend <- paste0("csr_logvar_", sub("sbayes", "bayes", method))
+  out$input$annotation_model <- "log_variance"
+  out$input$annotation_transform <- annotation_info$transform
+  out$input$annotation_marker_alignment_status <- annotation_info$marker_alignment
+  out <- .stblr_attach_csr_operator_contract(out, Glist, ld_prefix)
+  return(out)
+ }
  component_count <- if (annotation_model == "sbayesrc")
   length(extra$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L
  annotation_quantity_count <- switch(

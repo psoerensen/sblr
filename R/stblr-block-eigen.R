@@ -19,6 +19,15 @@
 #'   frequencies may be used explicitly when summary-population frequencies
 #'   are unavailable. The default is `FALSE`.
 #' @param annotation Annotation matrix required for `"sbayesrc"`.
+#' @param annotations Annotation matrix for
+#'   `annotation_model = "log_variance"`. Binary columns are centered only;
+#'   continuous columns are centered and standardized to SD one.
+#' @param annotation_model Optional annotation policy. The retained-block LV
+#'   models use `"log_variance"`; `NULL` preserves ordinary model dispatch.
+#' @param theta_prior_sd Positive finite Gaussian prior SD for log-variance
+#'   annotation coefficients. The validated version-1 default is `0.7`.
+#' @param theta_init Optional annotation-by-trait initial coefficient matrix.
+#' @param updateTheta Whether to update log-variance coefficients by ESS.
 #' @param representation Operator representation. `"low_rank"` is canonical;
 #'   `"dense_reconstructed"` retains the historical packed dense operator.
 #' @param eigen_policy Representation-specific eigenvalue policy, or `NULL` for
@@ -58,7 +67,8 @@ stblr_block_eigen <- function(
   stats, Glist, block_start,
   method = c("sbayesc", "sbayesr", "sbayesrc"),
   effect_maf = NULL, allow_reference_maf_for_maf_effect_s = FALSE,
-  annotation = NULL,
+  annotation = NULL, annotations = NULL, annotation_model = NULL,
+  theta_prior_sd = 0.7, theta_init = NULL, updateTheta = TRUE,
   representation = c("low_rank", "dense_reconstructed"),
   eigen_policy = NULL, eigen_prop = 0.995, eigen_tau = 0.01, eigen_eta = 0,
   low_rank_residual_rebuild_every = 100L,
@@ -73,6 +83,24 @@ stblr_block_eigen <- function(
   verbose = FALSE, ...
 ) {
   rebuild_interval_supplied <- !missing(low_rank_residual_rebuild_every)
+  if (!is.null(annotation_model)) {
+    if (length(annotation_model) != 1L || is.na(annotation_model) ||
+        !identical(annotation_model, "log_variance")) {
+      stop("annotation_model must be NULL or 'log_variance'.", call. = FALSE)
+    }
+    if (!is.null(annotation) && !is.null(annotations)) {
+      stop("Supply log-variance annotations through only one of annotations or annotation.",
+           call. = FALSE)
+    }
+    if (!is.numeric(theta_prior_sd) || length(theta_prior_sd) != 1L ||
+        !is.finite(theta_prior_sd) || theta_prior_sd <= 0) {
+      stop("theta_prior_sd must be a positive finite scalar.", call. = FALSE)
+    }
+    if (!is.logical(updateTheta) || length(updateTheta) != 1L ||
+        is.na(updateTheta)) {
+      stop("updateTheta must be TRUE or FALSE.", call. = FALSE)
+    }
+  }
   dots <- list(...)
   legacy_filter <- dots$eigen_filter
   dots$eigen_filter <- NULL
@@ -162,6 +190,16 @@ stblr_block_eigen <- function(
     method, dots, c("sbayesc", "sbayesr", "sbayesrc"), "block_eigen")
   method <- resolved_model$model
   dots <- resolved_model$dots
+  logvar <- identical(annotation_model, "log_variance")
+  if (logvar && !method %in% c("sbayesc", "sbayesr")) {
+    stop("annotation_model = 'log_variance' requires method = 'sbayesc' or 'sbayesr'.",
+         call. = FALSE)
+  }
+  if (logvar && (!is.null(dots$maf_effect_s) ||
+                 isTRUE(dots$estimate_maf_effect_s))) {
+    stop("maf_effect_s is not supported jointly with log-variance annotations.",
+         call. = FALSE)
+  }
   if (is.null(residual_policy)) {
     residual_policy <- if (
       identical(representation, "low_rank") &&
@@ -225,9 +263,19 @@ stblr_block_eigen <- function(
   marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id %||%
     unlist(Glist$rsids %||% Glist$rsidsLD, use.names = FALSE)
   if (!length(marker_ids)) marker_ids <- paste0("V", seq_along(stats$ww[[1L]]))
+  annotation_info <- NULL
+  if (logvar) {
+    logvar_annotations <- annotations %||% annotation
+    if (is.null(logvar_annotations)) {
+      stop("annotations are required for annotation_model = 'log_variance'.",
+           call. = FALSE)
+    }
+    annotation_info <- .stblr_preprocess_logvar_annotations(
+      logvar_annotations, marker_ids)
+  }
   trace_spec <- .blr_st_native_trace_spec(
     conv, marker_ids, resolved_model$prior_kernel,
-    annotations = identical(method, "sbayesrc"),
+    annotations = identical(method, "sbayesrc") && !logvar,
     component_count = if (resolved_model$prior_kernel %in% c("bayesr", "bayesrc"))
       length(dots$mixture_var %||% c(0, 0.01, 0.1, 1)) else 0L,
     annotation_quantity_count = if (identical(method, "sbayesrc")) {
@@ -253,7 +301,23 @@ stblr_block_eigen <- function(
       chain$chain_seeds_native else NULL,
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
     .convergence_spec = trace_spec)
-  fit <- switch(
+  fit <- if (logvar) {
+    logvar_common <- c(common, list(
+      annotation_info = annotation_info,
+      theta_prior_sd = theta_prior_sd,
+      theta_init = theta_init,
+      updateTheta = updateTheta
+    ))
+    if (identical(method, "sbayesc")) {
+      do.call(.stblr_block_logvar_bayesc, c(
+        logvar_common[setdiff(
+          names(logvar_common),
+          c("residual_policy", "block_ve_mode", "resam_thresh",
+            "minimum_ve_ratio", "block_ve_keep_history"))], dots))
+    } else {
+      do.call(.stblr_block_logvar_bayesr, c(logvar_common, dots))
+    }
+  } else switch(
     method,
     sbayesc = do.call(
       .stblr_csr_bayesc_block_eigen,
@@ -278,6 +342,7 @@ stblr_block_eigen <- function(
                          "ncores", "chain_seeds", "keep_chains",
                          ".convergence_spec")], dots))
     })
+  logvar_diagnostics <- if (logvar) fit$diagnostics$logvar else NULL
   fit <- .blr_finalize_st_public(
     fit, method, "block_eigen", chain, conv, memory_warning_gb, verbose,
     memory)
@@ -309,6 +374,7 @@ stblr_block_eigen <- function(
       "and reproducibility, not an exact full-LD reference.")
   fit$diagnostics$block_eigen <-
     fit$input$eigen_diagnostics %||% fit$diagnostics$block_eigen %||% NULL
+  if (logvar) fit$diagnostics$logvar <- logvar_diagnostics
   block_diag <- fit$diagnostics$block_eigen$blocks %||% NULL
   if (!is.null(block_diag) && "retained_rank" %in% names(block_diag)) {
     fit$input$block_retained_ranks <- as.integer(block_diag$retained_rank)
@@ -317,7 +383,8 @@ stblr_block_eigen <- function(
         rep(1L, nrow(block_diag)),
       nrow = length(stats$yy))
   }
-  fit$input$effect_scale <- resolved_model$effect_scale
+  fit$input$effect_scale <- if (logvar) "annotation_log_variance" else
+    resolved_model$effect_scale
   fit$input$prior_kernel <- resolved_model$prior_kernel
   fit$input$probability_policy <- resolved_model$probability_policy
   fit$input$effect_maf_source <- maf_info$effect_maf_source
@@ -330,5 +397,15 @@ stblr_block_eigen <- function(
   fit$data$effect_maf_alignment_status <-
     maf_info$effect_maf_alignment_status
   fit$data$effect_maf_fallback_used <- maf_info$effect_maf_fallback_used
+  if (logvar) {
+    identity <- paste0(method, "_logvar")
+    fit$model <- identity
+    fit$annotation_model <- "log_variance"
+    fit$input$model <- identity
+    fit$input$annotation_model <- "log_variance"
+    fit$input$annotation_transform <- annotation_info$transform
+    fit$input$annotation_marker_alignment_status <-
+      annotation_info$marker_alignment
+  }
   fit
 }

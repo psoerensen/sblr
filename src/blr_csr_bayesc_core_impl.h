@@ -1,11 +1,11 @@
 #ifndef SBLR_CORE_BLR_CSR_BAYESC_CORE_IMPL_H
 #define SBLR_CORE_BLR_CSR_BAYESC_CORE_IMPL_H
 
-// Implementation header: include only from st_cpg_omp_csr.cpp after the
-// package's established Armadillo configuration has been selected.
-#ifndef SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT
-#error "blr_csr_bayesc_core_impl.h may only be included by st_cpg_omp_csr.cpp"
-#endif
+// Binding-neutral implementation header. Translation units must select the
+// package's established Armadillo configuration before including it. The
+// ordinary binding defines SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT to emit
+// the legacy run_csr_bayesc() entry point; scientific adapters instantiate the
+// policy engine directly.
 
 #include "blr_csr_bayesc_types.h"
 #include "blr_scalar_execution.h"
@@ -436,7 +436,7 @@ inline bool attempt_ld_swap(
 
 }  // namespace
 
-void validate_csr_bayesc_execution_input(
+inline void validate_csr_bayesc_execution_input(
   const CsrBayesCExecutionInput& input
 ) {
   validate_resolved_spec(input.specification);
@@ -496,7 +496,33 @@ void validate_csr_bayesc_execution_input(
   }
 }
 
-CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
+// The policy surface is intentionally narrow. It supplies an optional dynamic
+// marker scale and one post-vb update point. Ordinary BayesC compiles against
+// the no-op policy below, which performs no draws and owns no mutable state.
+struct CsrBayesCNoOpPolicy {
+  bool provides_prior_scale() const noexcept { return false; }
+  const arma::rowvec& prior_scale() const {
+    throw std::logic_error("ordinary BayesC has no policy-owned prior scale");
+  }
+  void after_vb_update(
+    const arma::rowvec&, const arma::Row<int>&, double, std::mt19937&, int
+  ) noexcept {}
+  void capture(int) noexcept {}
+  void retain(int) noexcept {}
+  void finish() noexcept {}
+};
+
+struct CsrBayesCNoOpPolicyFactory {
+  CsrBayesCNoOpPolicy make(int, int, int, int) const noexcept {
+    return CsrBayesCNoOpPolicy{};
+  }
+};
+
+template <class PolicyFactory>
+CsrBayesCResult run_csr_bayesc_engine(
+  const CsrBayesCExecutionInput& input,
+  PolicyFactory& policy_factory
+) {
   validate_csr_bayesc_execution_input(input);
   const int m = static_cast<int>(input.data.marker_count);
   const int nt = static_cast<int>(input.data.trait_count);
@@ -545,6 +571,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       );
       status.seed = task_seed;
       std::mt19937 gen(task_seed);
+      auto policy = policy_factory.make(task, trait, chain, m);
       arma::rowvec wy = input.data.wy->row(static_cast<arma::uword>(trait));
       const arma::rowvec& diagonal = input.data.ld.diag();
       arma::rowvec effects(m, arma::fill::zeros);
@@ -629,9 +656,13 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
           );
         }
         if (input.controls.estimate_maf_effect_s ||
-            input.controls.use_fixed_maf_effect_scale) {
+            input.controls.use_fixed_maf_effect_scale ||
+            policy.provides_prior_scale()) {
           const arma::rowvec& active_scale = input.controls.estimate_maf_effect_s
-            ? dynamic_maf_effect_scale : *input.controls.fixed_maf_effect_scale;
+            ? dynamic_maf_effect_scale
+            : (input.controls.use_fixed_maf_effect_scale
+                ? *input.controls.fixed_maf_effect_scale
+                : policy.prior_scale());
           // Marker sweep begin.
           for (int sorted = 0; sorted < m; ++sorted) {
             const int marker =
@@ -665,6 +696,8 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
                 active_scale = &dynamic_maf_effect_scale;
               } else if (input.controls.use_fixed_maf_effect_scale) {
                 active_scale = input.controls.fixed_maf_effect_scale;
+              } else if (policy.provides_prior_scale()) {
+                active_scale = &policy.prior_scale();
               }
               if (attempt_ld_swap(
                     m, adjusted_residual, marker_variance,
@@ -678,9 +711,13 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         }
         if (input.controls.update_marker_variance) {
           if (input.controls.estimate_maf_effect_s ||
-              input.controls.use_fixed_maf_effect_scale) {
+              input.controls.use_fixed_maf_effect_scale ||
+              policy.provides_prior_scale()) {
             const arma::rowvec& active_scale = input.controls.estimate_maf_effect_s
-              ? dynamic_maf_effect_scale : *input.controls.fixed_maf_effect_scale;
+              ? dynamic_maf_effect_scale
+              : (input.controls.use_fixed_maf_effect_scale
+                  ? *input.controls.fixed_maf_effect_scale
+                  : policy.prior_scale());
             sample_marker_variance_scaled(
               m, input.priors.marker_degrees_freedom, marker_variance,
               effects, state, active_scale,
@@ -712,6 +749,9 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
             output.maf_effect_s_accepted += 1.0;
           }
         }
+        policy.after_vb_update(
+          effects, state, marker_variance, gen, iteration
+        );
         if (input.controls.update_residual_variance) {
           if (input.controls.rebuild_residual_before_update) {
             input.data.ld.rebuild(wy, effects, residual);
@@ -782,6 +822,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         output.le_variance_trace(iteration_u) = le_variance;
         output.ld_variance_trace(iteration_u) = ld_variance;
         output.maf_effect_s_trace(iteration_u) = maf_effect_s;
+        policy.capture(iteration);
         if (iteration >= input.controls.nburn) {
           const arma::uword draw=static_cast<arma::uword>(iteration-input.controls.nburn);
           for (arma::uword s=0;s<selected_count;++s) {
@@ -792,6 +833,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
         }
         if (scalar_iteration_is_retained(
               iteration, input.controls.nburn, input.controls.nthin)) {
+          policy.retain(iteration);
           output.retained_samples += 1.0;
           for (int marker = 0; marker < m; ++marker) {
             const arma::uword marker_u = static_cast<arma::uword>(marker);
@@ -818,6 +860,7 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
       output.final_le_variance = le_variance;
       output.final_ld_variance = ld_variance;
       output.final_inclusion_probability = pi[1];
+      policy.finish();
       status.retained_samples = output.retained_samples;
 #ifdef _OPENMP
       output.seconds = omp_get_wtime() - wall_start;
@@ -1003,6 +1046,15 @@ CsrBayesCResult run_csr_bayesc(const CsrBayesCExecutionInput& input) {
   }
   return result;
 }
+
+#ifdef SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT
+inline CsrBayesCResult run_csr_bayesc(
+  const CsrBayesCExecutionInput& input
+) {
+  CsrBayesCNoOpPolicyFactory policy_factory;
+  return run_csr_bayesc_engine(input, policy_factory);
+}
+#endif
 
 }  // namespace core
 }  // namespace sblr

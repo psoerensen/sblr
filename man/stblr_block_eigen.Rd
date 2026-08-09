@@ -12,6 +12,11 @@ stblr_block_eigen(
   effect_maf = NULL,
   allow_reference_maf_for_maf_effect_s = FALSE,
   annotation = NULL,
+  annotations = NULL,
+  annotation_model = NULL,
+  theta_prior_sd = 0.7,
+  theta_init = NULL,
+  updateTheta = TRUE,
   representation = c("low_rank", "dense_reconstructed"),
   eigen_policy = NULL,
   eigen_prop = 0.995,
@@ -56,6 +61,20 @@ frequencies may be used explicitly when summary-population frequencies
 are unavailable. The default is `FALSE`.}
 
 \item{annotation}{Annotation matrix required for `"sbayesrc"`.}
+
+\item{annotations}{Annotation matrix for
+`annotation_model = "log_variance"`. Binary columns are centered only;
+continuous columns are centered and standardized to SD one.}
+
+\item{annotation_model}{Optional annotation policy. The retained-block LV
+models use `"log_variance"`; `NULL` preserves ordinary model dispatch.}
+
+\item{theta_prior_sd}{Positive finite Gaussian prior SD for log-variance
+annotation coefficients. The validated version-1 default is `0.7`.}
+
+\item{theta_init}{Optional annotation-by-trait initial coefficient matrix.}
+
+\item{updateTheta}{Whether to update log-variance coefficients by ESS.}
 
 \item{representation}{Operator representation. `"low_rank"` is canonical;
 `"dense_reconstructed"` retains the historical packed dense operator.}
