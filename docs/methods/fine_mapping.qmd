@@ -9,198 +9,468 @@ format:
 Fine-mapping uses posterior marker evidence together with local linkage
 disequilibrium (LD) to describe which markers remain plausible explanations
 for an association signal. In `sblr`, the current credible-set helpers are
-post-processing procedures based on marginal posterior inclusion
-probabilities. This page defines the corresponding statistical quantities and
-states the limits of their interpretation. Practical function usage is in
+post-processing procedures based primarily on **marginal posterior inclusion
+probabilities (PIPs)** and regional LD.
+
+This page defines the statistical quantities used by those procedures and, just
+as importantly, states what they do **not** represent. The current helpers do
+not fit an explicit per-effect fine-mapping model and do not reconstruct the
+full posterior distribution over causal configurations from marginal PIPs.
+
+Practical function usage is documented in
 [Credible sets and fine-mapping](../notes/credible_sets_and_finemapping.qmd).
 
 ## Posterior marker quantities
 
-For a BayesC marker indicator $d_j$, the posterior inclusion probability is
+Fine-mapping starts from posterior marker summaries, but several different
+posterior quantities must be kept separate.
 
-$$
-\operatorname{PIP}_j=P(d_j\ne0\mid\mathcal D),
-$$
+### Posterior inclusion probability
 
-where $\mathcal D$ denotes the fitted data and likelihood operator. It is a
-marginal posterior probability that marker $j$ is active. It integrates over
-the states of all other markers and over the other sampled model parameters.
-
-For BayesR or BayesRC, let $c_j=0$ denote the exact null component. Then
+For BayesC, let $d_j\in\{0,1\}$ denote whether marker $j$ is active. Its
+posterior inclusion probability is
 
 $$
 \operatorname{PIP}_j
-=1-P(c_j=0\mid\mathcal D)
-=\sum_{k=1}^K P(c_j=k\mid\mathcal D).
+=
+\Pr(d_j=1\mid\mathcal D),
 $$
 
-The terms in the sum are posterior component allocation probabilities. They
-must be distinguished from the *prior* component probabilities used before
-the marker likelihood is evaluated. They must also be distinguished from the
-final MCMC component state, which is one draw rather than a posterior
-probability.
+where $\mathcal D$ denotes the data together with the likelihood/operator
+representation used in the fitted model.
 
-The posterior mean effect
+This is a **marginal** posterior probability. It averages over the states of
+all other markers and over the other sampled model parameters.
 
-$$
-\widehat b_j=\mathbb E(b_j\mid\mathcal D)
-$$
-
-answers another question. It averages the zero and nonzero states and can
-also average effects with different signs or magnitudes. A marker may therefore
-have appreciable PIP but a modest posterior mean effect. Ranking by PIP and
-ranking by $|\widehat b_j|$ need not agree.
-
-## Marginal PIPs do not define posterior configurations
-
-The collection $\{\operatorname{PIP}_j\}_{j=1}^M$ contains one-marker
-marginals. It does not contain the joint posterior distribution
+For BayesR or BayesRC, let $c_j=0$ denote the exact null component and
+$c_j=k>0$ a positive mixture component. Then
 
 $$
-P(d_1,\ldots,d_M\mid\mathcal D)
+\operatorname{PIP}_j
+=
+1-\Pr(c_j=0\mid\mathcal D)
+=
+\sum_{k=1}^{K}
+\Pr(c_j=k\mid\mathcal D).
 $$
 
-over multi-marker activity configurations. In particular, marginal PIPs do
-not reveal whether two correlated markers tend to enter together, replace one
-another across draws, or represent separate signals.
+Thus, the PIP is the posterior non-null probability after marginalizing over
+positive mixture components.
 
-This distinction matters when comparing credible-set constructions. An
-effect-specific model can define a posterior distribution for the identity of
-one latent signal and construct a set for that signal. Accumulating ordinary
-marginal PIPs does not automatically produce the same object and should not be
-described as a SuSiE-style per-effect credible set.
+In current fit objects, the marginal activity probability is commonly
+represented by `dm`. This implementation name should not be confused with the
+mathematical indicator $d_j$ or with a sampled component state.
 
-## Cumulative marginal-PIP sets
+### Posterior component probabilities
 
-For a candidate marker set $C$, a marginal-PIP total is
+For BayesR/BayesRC, the complete posterior component vector
 
 $$
-\operatorname{PIP}(C)=\sum_{j\in C}\operatorname{PIP}_j.
+\left\{
+\Pr(c_j=0\mid\mathcal D),
+\ldots,
+\Pr(c_j=K\mid\mathcal D)
+\right\}
 $$
 
-The current post-processing helpers order candidate markers by PIP, or use an
-LD-smoothed score to choose a lead, and retain markers until this sum reaches a
-target such as $0.95$. The sum has an immediate interpretation as the
-posterior expected number of active markers in $C$:
+contains more information than the PIP. It describes uncertainty among the
+positive effect-size components as well as uncertainty about the null state.
+
+These posterior allocation probabilities must be distinguished from the
+**prior** component probabilities that enter the marker model before the
+marker-specific likelihood evidence is evaluated.
+
+They must also be distinguished from the final MCMC component state. A final
+state is one sampled realization from a chain, whereas a posterior component
+probability averages over retained draws.
+
+### Posterior mean effect
+
+The posterior mean marker effect is
 
 $$
-\mathbb E\left(\sum_{j\in C}d_j\mid\mathcal D\right)
-=\sum_{j\in C}\operatorname{PIP}_j.
+\widehat b_j
+=
+\mathbb E(b_j\mid\mathcal D).
 $$
 
-It is not generally equal to the probability that at least one active marker
-lies in $C$. A stronger coverage interpretation requires assumptions such as
-mutual exclusivity of the candidate marker states and one relevant latent
-signal in the candidate universe. Without those assumptions, a nominal $95\%$
-cumulative-PIP target is not a calibrated guarantee that exactly one causal
-variant lies in the returned set with probability $0.95$.
+This answers a different question from the PIP. The posterior mean averages
+over null and non-null states and, where relevant, over different mixture
+components and signs.
 
-The term *credible set* is retained for the current package helpers, but
-reports should state that these are marginal-PIP accumulation sets and should
-avoid stronger causal or per-effect coverage claims.
+A marker may therefore have appreciable PIP but a modest posterior mean effect.
+Conversely, a marker with a lower PIP can have a comparatively large posterior
+mean effect if its non-null draws are large.
 
-## The role of LD
+Consequently, ranking markers by
 
-LD makes marker-level evidence nonlocal. Correlated markers can explain
-similar score patterns, so posterior activity may be distributed across a
-neighborhood even when the underlying signal is narrow. Regional LD is used in
-post-processing to:
+$$
+\operatorname{PIP}_j
+$$
 
-- define which markers are candidates around a lead;
-- group redundant correlated explanations;
-- separate approximately LD-distinct neighborhoods; and
-- summarize how strongly each set member is correlated with its lead.
+and ranking them by
 
-Two LD objects can enter one analysis and must be distinguished. The LD
-operator used during the original genomic fit determines residual propagation,
-marker likelihoods, and the posterior PIPs themselves. A regional LD matrix
-used later determines post-processing neighborhoods and reported correlations.
-If the two objects differ in markers, alleles, sample, ancestry, scaling, or
-approximation, the resulting set combines posterior evidence and neighborhood
-definitions from different statistical representations.
+$$
+|\widehat b_j|
+$$
 
-### Sparse-LD limitations
+need not give the same ordering.
 
-In a sparse CSR fit, omitted LD edges are treated as zero by the fitted
-operator. If a regional matrix is later extracted from the same sparse
-artifact, it cannot reconstruct correlations that were thresholded or
-windowed out during construction. A missing edge is an approximation in the
-operator, not evidence that the underlying markers are truly uncorrelated.
+In current fit objects, posterior mean effects are commonly represented by
+`bm`.
 
-Supplying a separate dense regional LD matrix can restore neighborhood
-information for post-processing, but it does not retroactively change the
-PIPs obtained under the sparse genomic likelihood. Sensitivity to the fitting
-operator and to the regional LD reference should therefore be assessed
-separately. See [Summary Statistics](summary_statistics.qmd),
+## Marginal PIPs Do Not Define the Joint Posterior Configuration
+
+For $M$ markers, the collection
+
+$$
+\left\{
+\operatorname{PIP}_j
+\right\}_{j=1}^{M}
+$$
+
+contains one-marker marginal probabilities. It does **not** contain the full
+joint posterior distribution
+
+$$
+\Pr(d_1,\ldots,d_M\mid\mathcal D)
+$$
+
+for a BayesC-style activity representation, or the corresponding joint
+component distribution for BayesR/BayesRC.
+
+This distinction matters strongly in regions of LD.
+
+For example, two correlated markers may each have moderate marginal PIP under
+very different joint posterior structures:
+
+- the markers may rarely be active together and instead substitute for one
+  another across posterior draws;
+- they may often be active together;
+- one may tag a signal generated by the other;
+- or they may represent genuinely distinct nearby signals.
+
+Marginal PIPs alone do not distinguish these possibilities.
+
+An effect-specific fine-mapping model can instead define a posterior
+distribution for the identity of one latent effect and construct a credible set
+for that effect. Accumulating ordinary marginal PIPs does not automatically
+produce the same statistical object.
+
+For that reason, the current `sblr` sets should not be described as
+SuSiE-style per-effect credible sets. The term *credible set* is retained for
+the package helpers, but the more precise description is a
+**marginal-PIP accumulation set**.
+
+## Cumulative Marginal-PIP Sets
+
+For a candidate marker set $\mathcal C$, define the marginal-PIP total
+
+$$
+S_{\mathrm{PIP}}(\mathcal C)
+=
+\sum_{j\in\mathcal C}
+\operatorname{PIP}_j.
+$$
+
+For BayesC-style activity indicators,
+
+$$
+S_{\mathrm{PIP}}(\mathcal C)
+=
+\mathbb E
+\left[
+\sum_{j\in\mathcal C}d_j
+\mid
+\mathcal D
+\right].
+$$
+
+Thus, the sum is the posterior expected **number of active markers** in
+$\mathcal C$.
+
+It is not, in general, equal to
+
+$$
+\Pr
+\left(
+\sum_{j\in\mathcal C}d_j\ge 1
+\mid
+\mathcal D
+\right),
+$$
+
+the probability that at least one active marker lies in the set.
+
+The two quantities coincide only under additional conditions. For example, if
+the relevant posterior model assigns exactly one active marker within the
+candidate universe, then
+
+$$
+\sum_{j\in\mathcal C}\operatorname{PIP}_j
+$$
+
+can be interpreted as the posterior probability that the unique active marker
+lies in $\mathcal C$. The current marginal-PIP helpers do not impose this
+general exactly-one-signal model.
+
+Therefore, accumulating PIPs until their sum reaches a target such as $0.95$
+does not automatically imply
+
+$$
+\Pr(\text{exactly one causal variant lies in }\mathcal C\mid\mathcal D)
+=
+0.95.
+$$
+
+A nominal 95% target is a **marginal-PIP accumulation criterion**, not by itself
+a calibrated 95% per-effect causal coverage statement.
+
+## How the Current Credible-Set Post-Processing Uses LD
+
+Marginal PIPs provide marker-level posterior evidence. LD supplies regional
+structure used to organize that evidence.
+
+The current post-processing can use LD to:
+
+- define a neighborhood around a lead marker;
+- group highly correlated candidate explanations;
+- limit which markers are considered for one reported set;
+- distinguish approximately LD-separated neighborhoods; and
+- report how strongly each candidate is correlated with the lead.
+
+This means that two distinct LD objects can affect one fine-mapping workflow.
+
+### LD used in the fitted model
+
+The LD/operator used during the original genomic fit affects the posterior
+itself. It determines how marker effects propagate through the likelihood and
+therefore influences:
+
+- marker effects;
+- component allocations;
+- PIPs;
+- residual scores; and
+- posterior competition among correlated markers.
+
+### LD used in post-processing
+
+A regional LD matrix supplied after fitting determines which markers are
+grouped around a lead and how the reported set is constructed.
+
+Changing the post-processing LD while holding the fitted posterior fixed can
+therefore change the returned set even though the PIPs themselves are
+unchanged.
+
+If fitting LD and post-processing LD differ in marker set, allele orientation,
+sample, ancestry, scale, or approximation, the reported set combines posterior
+evidence from one statistical representation with a neighborhood definition
+from another.
+
+That can be useful as a sensitivity analysis, but it should be explicit.
+
+## Sparse-LD Limitations
+
+In a sparse CSR analysis, weak or distant LD edges may have been removed by
+thresholding or windowing before the model was fitted.
+
+The fitted operator then behaves as if those omitted cross-products are absent
+from its sparse approximation.
+
+If regional LD is later reconstructed from the **same sparse artifact**, an
+edge that was removed during sparse-LD construction cannot be recovered merely
+because the analysis is now restricted to a small locus.
+
+A missing sparse edge therefore means
+
+> the correlation was not retained by the fitted operator,
+
+not
+
+> the underlying markers are known to be uncorrelated.
+
+A separate dense regional LD matrix can provide more complete LD information
+for post-processing. However, it does not retroactively change the posterior
+PIPs that were obtained under the sparse genomic likelihood.
+
+Sensitivity to the **fitting operator** and sensitivity to the
+**post-processing LD reference** are therefore different questions.
+
+See [Summary Statistics](summary_statistics.qmd),
 [Sparse-LD CSR](sparse_ld_csr.qmd), and
 [Block-Eigen LD](block_eigen_operator.qmd) for the likelihood consequences of
-LD approximation.
+different LD representations.
 
-## Single-signal and approximate multiple-signal summaries
+## Single-Signal and Approximate Multiple-Signal Summaries
 
-A single marginal-PIP set starts from one lead and accumulates candidates in
-its LD neighborhood. The current multiple-signal helper repeats this process:
-it selects another lead from remaining marginal PIP, constructs another
-neighborhood, and removes either selected set members or the complete lead
-neighborhood according to the declared rule.
+A single marginal-PIP set begins from one lead marker and accumulates
+candidates within its declared LD neighborhood.
 
-This repeated procedure is useful for descriptive separation of LD-distinct
-posterior mass. It is not equivalent to fitting a model with separate
-effect-specific latent signals. The number and membership of returned sets can
-depend on the PIP cutoff, LD threshold, lead score, stopping threshold, maximum
-signal count, and marker-removal rule. Those settings are part of the
-post-processing estimand and should be reported.
+The current multiple-signal post-processing repeats this logic. After one set is
+constructed, another lead can be selected from the remaining markers, followed
+by another LD-based candidate set. Depending on the chosen rule, previously
+selected markers or the complete LD neighborhood of an earlier lead can be
+removed before searching for the next signal.
 
-## Genome-wide inference and local refitting
+This is useful for describing approximately LD-distinct concentrations of
+posterior mass.
 
-Extracting a locus from a genome-wide fit preserves the original posterior
-question: marker summaries remain marginal under the full fitted marker set,
-prior updates, and likelihood operator. No new MCMC model is fitted.
+It is **not** equivalent to fitting an explicit model with multiple
+effect-specific latent signals.
 
-The current CSR local-refitting procedure asks a different, conditional
-question. For each locus it:
+The number and membership of returned sets can depend on:
 
-1. resolves global estimates of $v_e$, $v_b$, and the inclusion probability
-   from the genome-wide fit, unless explicit values are supplied;
-2. holds those quantities fixed during local sampling;
-3. optionally residualizes regional summary scores against posterior mean
-   effects outside the locus; and
-4. fits only the markers included in the local locus definition.
+- the minimum PIP used to define candidate signals;
+- the cumulative PIP target;
+- the LD threshold;
+- lead-marker scoring;
+- the maximum number of signals;
+- the marker-removal rule; and
+- the regional LD representation.
 
-Fixing global architecture prevents a small region from re-estimating
-genome-wide sparsity and variance scales from little information. Optional
-outside-locus residualization conditions the regional score more directly on
-the fitted background. At the same time, restricting the marker universe and
-plugging in global posterior summaries remove uncertainty that was present in
-the genome-wide model. The local posterior is therefore a sensitivity or
-conditional reference analysis, not a replacement for the global posterior.
+These are not merely cosmetic settings. They help define the post-processing
+summary being reported.
 
-Global extraction and local refitting should be reported separately. Agreement
-supports robustness to the conditioning choice; disagreement can reveal
-dependence on outside-locus effects, LD boundaries, fixed global parameters,
-or local marker selection.
+## Genome-Wide Posterior Inference Versus Local Refitting
 
-## Alignment and scientific interpretation
+There are two conceptually different ways to obtain locus-level summaries.
+
+### Extraction from a genome-wide fit
+
+If a locus is extracted from a completed genome-wide fit without rerunning
+MCMC, the marker summaries retain their original posterior meaning.
+
+They were estimated while:
+
+- the full fitted marker set was present;
+- genome-wide prior parameters were updated according to the original model;
+- effects outside the locus could influence the local residual state through
+  the fitted LD operator; and
+- uncertainty was propagated through the original genome-wide sampler.
+
+The locus summary is therefore a view of the **global posterior**.
+
+### Local conditional refitting
+
+The current CSR local-refitting procedure asks a different question. At a high
+level, it can:
+
+1. resolve genome-wide estimates of $v_e$, $v_b$, and the inclusion probability
+   from the global fit, unless explicit values are supplied;
+2. hold those global quantities fixed during the local fit;
+3. optionally residualize the regional summary score against fitted effects
+   outside the locus; and
+4. rerun the marker model using only the locus markers.
+
+Fixing global architecture prevents a small region from trying to re-estimate
+genome-wide sparsity and effect-variance scales from limited information.
+
+Optional outside-locus residualization conditions the local score more directly
+on the fitted background outside the region.
+
+However, the local analysis also changes the inferential problem:
+
+- the marker universe is smaller;
+- global parameters are treated as fixed rather than uncertain;
+- outside-locus uncertainty is reduced to the chosen residualization summary;
+- LD boundaries may change; and
+- local marker inclusion/exclusion changes which competing explanations are
+  available.
+
+The local posterior is therefore best interpreted as a **conditional or
+sensitivity analysis**, not as a replacement for the original genome-wide
+posterior.
+
+Agreement between global extraction and local refitting supports robustness to
+the conditioning choice. Disagreement may reveal dependence on outside-locus
+effects, LD boundaries, fixed global parameters, or the local marker universe.
+
+## Alignment Is Part of the Fine-Mapping Model
 
 PIPs, posterior effects, component probabilities, LD, marker IDs, locus
 definitions, alleles, and effect directions must refer to the same aligned
-marker representation. Matching dimensions is insufficient. In particular,
-an allele flip changes the sign of an effect and inconsistent marker naming
-can pair a PIP with the wrong LD row.
+marker representation.
 
-Credible-set output describes uncertainty under the fitted prior, likelihood
-operator, marker universe, MCMC approximation, and post-processing rule. High
-PIP or set membership is evidence that a marker is a plausible active
-explanation within that model. It is not by itself proof of molecular causality.
-Functional annotation, colocalization, perturbation evidence, and independent
-replication can strengthen a causal argument, but they answer additional
-questions rather than changing the definition of the PIP.
+Matching dimensions is not sufficient.
 
-## Related pages
+Important alignment requirements include:
 
-- [Core BLR Model Theory](model_theory.qmd) defines BayesC and BayesR marker
-  states.
-- [Annotation-Informed Priors](annotation_priors.qmd) explains how prior
-  probability and active-effect variance architectures affect marker evidence.
+- the same marker identity;
+- the same marker order;
+- the same reference/effect allele orientation;
+- compatible genotype scaling;
+- compatible LD marker order; and
+- consistent mapping between posterior rows and LD rows/columns.
+
+An allele flip changes the sign of a marker effect. A marker-order mismatch can
+pair a PIP with the wrong LD neighborhood. Either can invalidate a
+fine-mapping summary while leaving matrix dimensions apparently correct.
+
+## What Fine-Mapping Evidence Means
+
+A high PIP means that a marker has a high posterior probability of being
+non-null **under the fitted model**.
+
+Membership in a marginal-PIP accumulation set means that the marker contributes
+to a set constructed from:
+
+- the fitted prior;
+- the likelihood/operator approximation;
+- the marker universe;
+- the MCMC approximation;
+- the regional LD representation; and
+- the declared post-processing rule.
+
+Neither statement proves molecular causality.
+
+LD can distribute posterior evidence among correlated markers, prior
+architecture can favor some markers over others, and omitted variants can
+change the available explanation set.
+
+Functional annotation, colocalization, molecular QTL evidence, perturbation
+experiments, and independent replication can strengthen causal interpretation,
+but they provide additional evidence rather than changing the mathematical
+definition of the PIP.
+
+## Practical Reporting
+
+For a reported fine-mapping result, it is useful to state:
+
+- whether the result was extracted from the genome-wide posterior or obtained
+  from a local refit;
+- the model and likelihood operator used for the original fit;
+- how PIPs were defined;
+- the candidate-locus definition;
+- the regional LD source;
+- the LD threshold or neighborhood rule;
+- the cumulative PIP target;
+- whether multiple-signal post-processing was used;
+- the marker-removal rule for repeated signals;
+- whether local refitting fixed global parameters;
+- whether outside-locus residualization was used; and
+- important marker/allele alignment choices.
+
+This makes clear which parts of the result arise from posterior inference and
+which arise from subsequent LD-based post-processing.
+
+## Related Pages
+
+- [Core BLR Model Theory](model_theory.qmd) defines BayesC/BayesR marker states,
+  posterior marker quantities, and the distinction between prior and
+  likelihood operator.
+- [Annotation-Informed Priors](annotation_priors.qmd) explains how probability
+  and relative effect-variance architectures influence marker evidence.
+- [Summary Statistics](summary_statistics.qmd) derives the cross-product and
+  residual-score representation used by summary-statistic models.
+- [Sparse-LD CSR](sparse_ld_csr.qmd) describes the sparse-LD likelihood
+  approximation.
+- [Block-Eigen LD](block_eigen_operator.qmd) describes retained spectral and
+  reconstructed-dense block representations.
 - [Credible sets and fine-mapping](../notes/credible_sets_and_finemapping.qmd)
   documents current practical helper usage.
+
+This page therefore owns the statistical interpretation of current `sblr`
+fine-mapping and credible-set post-processing: marginal PIPs are posterior
+marker summaries, LD organizes those summaries into regional sets, and the
+result must not be confused with the full posterior distribution over causal
+configurations or with an effect-specific credible-set model.
