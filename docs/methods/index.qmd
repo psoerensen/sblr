@@ -17,6 +17,9 @@ layers:
 - implementation ownership, schema, qualification, and migration contracts
   belong in [Developer documentation](../dev/README.md).
 
+For the mapping between Methods notation and current `sblr` inputs and outputs,
+see [Statistical quantities and `sblr` outputs](../notes/statistical_quantities_and_sblr_outputs.qmd).
+
 When a Methods page distinguishes **current implementation** from **proposed**
 or **research** architecture, that distinction is part of the scientific
 documentation. A proposed equation should not be interpreted as evidence that
@@ -36,8 +39,6 @@ The main conventions are:
   $v_b,v_g,v_e$ for ST and $V_b,V_g,V_e$ for MT;
 - mathematical cross-products are written explicitly as
   $X^\top y$, $X^\top Y$, $X^\top X$, $y^\top y$, and related quantities;
-- implementation names such as `wy`, `Xy`, `ww`, `yy`, `SSY`, and `Nmat`
-  are used only when referring to code objects;
 - $\Pr(\cdot)$ denotes probability and $\mathbb E(\cdot)$ expectation.
 
 For annotation-informed priors, the conceptual architecture is divided into:
@@ -65,8 +66,8 @@ between a **prior family** and a **likelihood operator**.
 
 Derives the Gaussian cross-product representation based on
 $X^\top y$, $X^\top Y$, $X^\top X$, and phenotype cross-products. It also
-defines the marker-scale residual score and explains how current code fields
-such as `wy`, `ww`, and `yy` map to the mathematical quantities.
+defines the marker-scale residual score and the conditions under which these
+quantities describe a coherent likelihood.
 
 ### [Multi-Trait Sample Overlap](multitrait_overlap.qmd)
 

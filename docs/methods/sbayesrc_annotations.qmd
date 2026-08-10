@@ -117,8 +117,8 @@ If multiple traits are supplied to the single-trait annotation fitter, the
 mixture construction and annotation coefficients are fitted separately by
 trait.
 
-The formatted fit therefore stores separate annotation architecture summaries
-for the independently fitted trait columns.
+The resulting annotation architectures are trait specific rather than one
+joint multi-trait architecture.
 
 This is distinct from the genuine joint
 
@@ -767,20 +767,10 @@ Thus:
 - $q_j(S)$, when enabled, supplies an additional marker-specific
   **variance multiplier**.
 
-## Fit outputs
+## Posterior architecture and marker quantities
 
-The formatted fit exposes ordinary marker and variance summaries together with
-SBayesRC-specific architecture summaries.
-
-### `alpha`
-
-`fit$alpha` is a list with one posterior-mean coefficient matrix per separately
-fitted trait.
-
-Each matrix has annotation coefficients in rows and continuation steps in
-columns.
-
-Because it is a posterior mean,
+The posterior mean coefficient matrix has annotation coefficients in rows and
+continuation steps in columns. Because the stick transformation is nonlinear,
 
 $$
 \operatorname{stick}
@@ -800,17 +790,10 @@ $$
 \right].
 $$
 
-Applying the nonlinear stick transform to `fit$alpha` therefore produces a
-plug-in diagnostic, not the posterior mean of the transformed prior
-architecture.
-
-### `sigmaSqAlpha`
-
-`fit$sigmaSqAlpha` is a trait-by-step matrix of posterior mean annotation-effect
-variance parameters.
-
-Larger values allow greater dispersion among the non-intercept annotation
-coefficients at that continuation step.
+Applying the nonlinear stick transform to posterior mean $\alpha$ therefore
+produces a plug-in diagnostic, not the posterior mean of the transformed prior
+architecture. Posterior summaries of $\sigma_{\alpha,k}^2$ describe the
+step-specific dispersion allowed among non-intercept annotation coefficients.
 
 They should be interpreted together with:
 
@@ -819,15 +802,9 @@ They should be interpreted together with:
 - component occupancy;
 - chain diagnostics.
 
-### `component_probabilities`
-
-`fit$component_probabilities` contains one marker-by-component posterior matrix
-per independently fitted trait.
-
-It records posterior frequencies of sampled component assignments after burn-in
-and thinning.
-
-It is **not** the annotation-derived prior matrix
+The marker-by-component posterior allocation probabilities record posterior
+frequencies of component assignments after burn-in and thinning. They are
+**not** the annotation-derived prior matrix
 
 $$
 P_{jk}
@@ -844,9 +821,8 @@ $$
 is a posterior allocation probability and contains both prior and likelihood
 information.
 
-The first R matrix column corresponds to theoretical component $k=0$.
-
-Therefore the marker PIP is
+The mathematical ordering fixes component $k=0$ as null. Therefore the marker
+PIP is
 
 $$
 \operatorname{PIP}_j
@@ -854,11 +830,6 @@ $$
 1-
 \Pr(c_j=0\mid\mathcal D).
 $$
-
-In current formatted fit objects, this marginal activity probability is
-represented by `dm`.
-
-Posterior mean marker effects are represented by `bm`.
 
 Final sampled component states, posterior allocation probabilities, prior
 component probabilities, and posterior mean effects should not be interpreted
@@ -922,29 +893,6 @@ $$
 
 This expected multiplier is a one-number summary of the marker's complete prior
 component distribution.
-
-For example:
-
-```r
-alpha_t <- fit$alpha[[1]]
-mixture_var <- c(0, 0.01, 0.1, 1)
-
-prior_pi <- sbayesrc_marker_pi(
-  fit$input$A,
-  alpha_t,
-  mixture_var
-)
-
-expected_multiplier <- sbayesrc_marker_gamma_mean(
-  fit$input$A,
-  alpha_t,
-  mixture_var
-)
-```
-
-The exact matrix stored in `fit$input$A` is an implementation object; its
-alignment and preprocessing should be interpreted according to the fitted
-annotation contract.
 
 Marker-profile diagnostics are generally more directly connected to the fitted
 prior architecture than standalone annotation-row diagnostics because they use

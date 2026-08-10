@@ -19,3 +19,4 @@ diagnostic interpretation. Mathematical derivations are collected under
 - [Credible sets and fine-mapping](credible_sets_and_finemapping.qmd)
 - [Convergence diagnostics](convergence_diagnostics.qmd)
 - [Workflows and outputs](workflows_and_outputs.qmd)
+- [Statistical quantities and `sblr` outputs](statistical_quantities_and_sblr_outputs.qmd)

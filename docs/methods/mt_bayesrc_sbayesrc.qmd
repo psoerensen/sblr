@@ -649,9 +649,6 @@ $$
 This marginalizes over every positive component and every non-null pattern that
 contains trait $t$.
 
-In current formatted fit objects, the trait-specific PIP is commonly
-represented by `dm`.
-
 ### Posterior mean effect
 
 The posterior mean effective marker effect is
@@ -659,8 +656,6 @@ The posterior mean effective marker effect is
 $$
 \mathbb E(b_j\mid\mathcal D).
 $$
-
-In current formatted fit objects this is commonly represented by `bm`.
 
 It averages over null status, component allocation, trait-pattern allocation,
 and effect uncertainty.
@@ -677,11 +672,7 @@ describe the global conditional non-null sharing architecture. Their final,
 posterior-mean, and trace summaries are distinct from marker-level component
 probabilities and trait-specific PIPs.
 
-## Current Output Interpretation
-
-The current fitted objects expose model-specific summaries for the
-annotation-dependent probability architecture and the conditional sharing
-architecture.
+## Posterior and architecture quantities
 
 Important scientific quantities include:
 
@@ -700,13 +691,8 @@ Important scientific quantities include:
 - posterior mean marker effects; and
 - posterior summaries of the conditional pattern architecture $H$.
 
-Because the BayesRC component prior is marker specific, the ordinary global
-`pi_*` fields are not reinterpreted as marker-averaged BayesRC component
-probabilities.
-
-Exact current field ownership remains an implementation/schema matter and is
-documented in the developer output-schema contract. The Methods layer defines
-the scientific distinction among these quantities.
+Because the BayesRC component prior is marker specific, it should not be
+collapsed into an unspecified marker-averaged global component probability.
 
 ## Identifiability and Interpretation
 
@@ -811,8 +797,7 @@ by the future provider architecture.
 - [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) gives the
   detailed continuation-probit mathematics and alpha hierarchy.
 - [Summary Statistics](summary_statistics.qmd) derives the summary-statistics
-  likelihood quantities without treating code names such as `wy` or `Xy` as
-  mathematical symbols.
+  likelihood quantities.
 - [Multi-Trait Sample Overlap](multitrait_overlap.qmd) explains cross-trait
   phenotype products and residual-covariance information.
 - [Annotation-informed models](../notes/annotation_informed_models.qmd)

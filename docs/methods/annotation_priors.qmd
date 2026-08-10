@@ -111,12 +111,6 @@ submatrix of $V_b$. Here $\gamma_k$ is the BayesR relative component
 multiplier, $q_j$ is the marker-specific relative variance multiplier, and
 $v_b$ or $V_b$ carries the global active-effect variance or covariance scale.
 
-These are mathematical quantities. Established R fields retain explicit code
-names such as `vb`/`covb`, `vg`/`covg`, and `ve`/`cove`; case-only R names are
-deliberately avoided. Trait-specific scalar summaries such as `vle` and `vld`
-likewise remain implementation field names rather than new matrix-valued
-theory symbols.
-
 This decomposition exposes two distinct marker-level prior architectures:
 
 1. **Probability architecture $P$** controls prior inclusion or
@@ -844,28 +838,14 @@ names, but they should resolve to a core family plus a typed prior
 specification. The package should not maintain a separate sampler identity for
 every composable combination.
 
-## Proposed output and diagnostics
+## Posterior architecture summaries and diagnostics
 
-A coherent future fit should separate the prior supplied or assumed by the
-user from posterior inference about the architecture governed by that prior.
-The recommended design is:
-
-```text
-fit$architecture$probability
-fit$architecture$variance
-fit$architecture$sharing
-fit$architecture$covariance
-fit$model_spec$prior
-fit$annotation_design
-fit$diagnostics
-```
-
-`model_spec$prior` records what was specified or assumed, including fixed
-inputs, coefficient priors, normalization rules, and resolved initialization.
-`architecture` contains fixed architecture quantities and posterior inference
-for learned architecture parameters such as $\alpha$, $\theta$, induced marker
-probabilities, and $q$. It is a scientific result namespace, not a copy of the
-input prior specification.
+The prior specification supplied or assumed by an analysis must be
+distinguished from posterior inference about parameters governing that prior.
+Fixed inputs, coefficient priors, normalization rules, and resolved
+initialization describe the assumed model; posterior summaries of $\alpha$,
+$\theta$, induced marker probabilities, and $q$ describe what was learned
+conditional on that model and the data.
 
 Probability results should distinguish prior marker/component probabilities
 from posterior allocations. Variance results should distinguish fixed external

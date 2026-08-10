@@ -15,9 +15,7 @@ phenotype products. A joint multi-trait model with residual covariance needs
 those pairwise products, or a defensible approximation to them.
 
 Throughout the Methods documentation, mathematical cross-products are written
-explicitly. Implementation names such as `wy`, `Xy`, `yy`, `SSY`, and `Nmat`
-are used only when referring to actual code objects or current interface
-conventions.
+explicitly.
 
 ## Multi-Trait Individual-Level Model
 
@@ -114,8 +112,8 @@ The two marginal values $y_t^\top y_t$ and $y_s^\top y_s$ do not determine
 this cross-product. Two phenotype pairs can have identical marginal sums of
 squares but very different, or even opposite, cross-trait correlations.
 
-Consequently, marginal `yy` values alone cannot identify the full residual
-cross-product needed to update $V_e$.
+Consequently, marginal values $y_t^\top y_t$ alone cannot identify the full
+residual cross-product needed to update $V_e$.
 
 ## Pairwise Phenotype Cross-Product Matrix
 
@@ -135,10 +133,6 @@ $$
 =
 y_t^\top y_t.
 $$
-
-The current code and historical documentation commonly call this information
-`SSY`. In this Methods layer, $S_Y$ denotes the mathematical object and `SSY`
-denotes the implementation/documentation name.
 
 Under complete sample overlap, all traits are measured on the same $N$
 individuals, so
@@ -180,10 +174,10 @@ $$
 
 where $N_t$ is the marginal sample size for trait $t$.
 
-In code, an analysis-level matrix carrying these overlap counts is commonly
-called `Nmat`. The current native CSR likelihood does not consume `Nmat`
-directly; rather, overlap information can be used to construct or justify the
-trait cross-product information supplied to the fitter.
+The overlap information can be used to construct or justify the trait
+cross-product information supplied to a summary-statistics likelihood. The
+current CSR likelihood consumes the resulting cross-trait information rather
+than treating $N_{\mathrm{overlap}}$ as a direct likelihood argument.
 
 ## Complete Sample Overlap
 
@@ -218,9 +212,8 @@ $$
 for residual vectors observed jointly on those individuals.
 
 The current CSR MTBLR kernel is closest to this setting. It uses shared LD,
-requires equal trait sample sizes and matching `ww` values across traits, and
-accepts a full $T\times T$ trait cross-product matrix through its current
-`yy` argument.
+requires equal trait sample sizes and matching marker diagonal cross-products
+across traits, and accepts a full $T\times T$ trait cross-product matrix.
 
 ### Nested-sample approximation
 
@@ -571,13 +564,13 @@ result is no longer an exact matrix identity arising from one complete
 rectangular $Y$. Its validity depends on the overlap and covariance assumptions
 described above.
 
-The current CSR MTBLR implementation accepts a full $T\times T$ matrix through
-its `yy` argument. It combines that matrix with marker-trait cross-products,
-current marker effects, and marker-scale residual scores, then symmetrizes the
-resulting residual cross-product before updating $V_e$.
+The current CSR MTBLR implementation combines a full $T\times T$ trait
+cross-product matrix with marker-trait cross-products, current marker effects,
+and marker-scale residual scores, then symmetrizes the resulting residual
+cross-product before updating $V_e$.
 
-If only marginal `yy` values are available, separate trait-wise residual
-variances can still be updated. A full residual covariance update requires
+If only marginal phenotype sums of squares are available, separate trait-wise
+residual variances can still be updated. A full residual covariance update requires
 off-diagonal trait products to be observed, reconstructed, supplied
 externally, fixed, or otherwise excluded from inference.
 
@@ -692,7 +685,7 @@ two GWAS samples do not overlap. Direct residual covariance information from
 paired residuals is fundamentally different: without shared individuals,
 those paired residual observations do not exist.
 
-## Connection to Current `sblr` Interfaces
+## Current operator restrictions
 
 The canonical multi-trait fitters are:
 
@@ -700,16 +693,7 @@ The canonical multi-trait fitters are:
 - `mtblr_csr()`; and
 - `mtblr_block_eigen()`.
 
-The current interfaces use historical code-field names for the cross-product
-objects. Depending on the route, marker-trait cross-products may appear as
-trait-wise `wy` vectors or as an `Xy`-style matrix. Marker diagonal
-cross-products are represented by `ww`. The full trait cross-product matrix is
-currently carried through a `yy`/`YY`-style argument in some lower-level
-contracts, while analysis documentation often calls the same mathematical
-information `SSY`.
-
-These names should not be interpreted as different mathematical quantities.
-The underlying objects are:
+The underlying likelihood objects are:
 
 $$
 X^\top Y,
@@ -731,13 +715,9 @@ Conceptually, the current MT CSR likelihood requires:
 - the multi-trait state/sharing probabilities appropriate to the model; and
 - trait sample sizes.
 
-The current CSR kernel requires equal values in its `n` vector and matching
-`ww` across traits because it assumes shared LD scaling. It does not accept
-`Nmat` directly.
-
-Therefore, `Nmat` currently serves as an analysis-level object used to
-construct, justify, and validate the trait cross-product matrix. Supplying a
-reconstructed `SSY` does not by itself remove the kernel's shared-$X$,
+The current CSR kernel requires equal trait sample sizes and matching marker
+diagonal cross-products because it assumes shared LD scaling. Supplying a
+reconstructed $S_Y$ does not by itself remove the kernel's shared-$X$,
 shared-LD, and equal-sample-size assumptions.
 
 More general partial-overlap likelihoods would require additional model and
@@ -777,22 +757,22 @@ recovers known covariance and sharing patterns. They do not validate
 partial-overlap reconstruction assumptions unless missingness, sample
 separation, or trait-specific study structure is explicitly simulated.
 
-## Data Requirements for Joint Summary-Statistic MTBLR
+## Data requirements for joint summary-statistic MTBLR
 
 A joint summary-statistics MTBLR analysis should retain enough information to
 establish both the mathematical quantities and their provenance.
 
-| Mathematical object | Current implementation representation | Required contract |
-|---|---|---|
-| trait order | names/columns | identical across every trait-indexed object |
-| $X^\top Y$ | trait-wise `wy` or route-specific `Xy` | $M\times T$, aligned in marker and trait order |
-| $\operatorname{diag}(X^\top X)$ | `ww` | length $M$ per trait and compatible with LD scaling |
-| LD / $X^\top X$ representation | sparse LD or operator object | marker order and scale compatible with $X^\top Y$ |
-| $S_Y$ | `SSY` conceptually; full matrix carried through current trait-cross-product inputs | symmetric $T\times T$ observed or reconstructed pairwise phenotype cross-products |
-| $N_t$ | `n` | trait sample sizes, with current CSR requiring equality |
-| $N_{\mathrm{overlap}}$ | `Nmat` at analysis level | symmetric $T\times T$ pairwise overlap counts used to justify reconstruction |
-| phenotype preprocessing | analysis metadata | centering, scaling, transformations, covariate adjustment |
-| covariance priors | model inputs | trait order and units compatible with $S_Y$ and marker statistics |
+| Mathematical object | Required contract |
+|---|---|
+| trait order | identical across every trait-indexed object |
+| $X^\top Y$ | $M\times T$, aligned in marker and trait order |
+| $\operatorname{diag}(X^\top X)$ | length $M$ per trait and compatible with LD scaling |
+| LD / $X^\top X$ representation | marker order and scale compatible with $X^\top Y$ |
+| $S_Y$ | symmetric $T\times T$ observed or reconstructed pairwise phenotype cross-products |
+| $N_t$ | trait sample sizes, with current CSR requiring equality |
+| $N_{\mathrm{overlap}}$ | symmetric $T\times T$ pairwise overlap counts used to justify reconstruction |
+| phenotype preprocessing | centering, scaling, transformations, covariate adjustment |
+| covariance priors | trait order and units compatible with $S_Y$ and marker statistics |
 
 For current CSR MTBLR use, the shared-LD and equal-sample-size restrictions must
 also be satisfied.
@@ -804,13 +784,13 @@ Before fitting or interpreting a joint multi-trait model:
 1. Confirm that the supplied trait cross-product matrix is $T\times T$, finite,
    and symmetric.
 2. Confirm that its diagonal equals the observed marginal phenotype
-   cross-products $y_t^\top y_t$ represented by the relevant `yy` values.
+   cross-products $y_t^\top y_t$.
 3. Under complete overlap, confirm that the observed matrix
    $S_Y=Y^\top Y$ is positive semidefinite up to numerical tolerance.
 4. For reconstructed pairwise $S_Y$, inspect eigenvalues and remember that
    pairwise-plausible entries do not automatically imply one globally valid
    positive semidefinite covariance/cross-product matrix.
-5. Confirm that `Nmat`, when used, is finite and symmetric.
+5. Confirm that $N_{\mathrm{overlap}}$ is finite and symmetric.
 6. Confirm that
 
    $$
@@ -826,14 +806,14 @@ Before fitting or interpreting a joint multi-trait model:
 7. Confirm identical trait order across the trait cross-product matrix,
    overlap matrix, $X^\top Y$, sample sizes, $V_b$, $V_e$, prior scale
    matrices, and outputs.
-8. Confirm that marker-trait cross-products, `ww`, and LD use the same marker
-   order, allele orientation, and compatible genotype scaling.
+8. Confirm that marker-trait cross-products, marker diagonals, and LD use the
+   same marker order, allele orientation, and compatible genotype scaling.
 9. Confirm that supplied phenotype correlations refer to compatible phenotype
    definitions and scales.
 10. Record whether every off-diagonal trait cross-product was observed,
     reconstructed, fixed, or assumed.
 11. For the current CSR MTBLR kernel, confirm equal sample sizes and matching
-    `ww` vectors across traits.
+    marker diagonal vectors across traits.
 12. Inspect covariance traces, eigenvalues, correlations, and sensitivity to
     overlap assumptions before interpreting cross-trait borrowing.
 
@@ -891,6 +871,6 @@ covariance estimates.
 
 This appendix therefore owns the pairwise phenotype cross-product and
 sample-overlap theory. The mathematical objects $S_Y$ and
-$N_{\mathrm{overlap}}$ are kept separate from the current implementation names
-`SSY` and `Nmat`, and the general partial-overlap theory is kept distinct from
-the narrower assumptions of the current CSR kernel.
+$N_{\mathrm{overlap}}$ are kept distinct, and the general partial-overlap
+theory is kept separate from the narrower assumptions of the current CSR
+kernel.

@@ -57,10 +57,6 @@ $$
 Thus, the PIP is the posterior non-null probability after marginalizing over
 positive mixture components.
 
-In current fit objects, the marginal activity probability is commonly
-represented by `dm`. This implementation name should not be confused with the
-mathematical indicator $d_j$ or with a sampled component state.
-
 ### Posterior component probabilities
 
 For BayesR/BayesRC, the complete posterior component vector
@@ -115,9 +111,6 @@ $$
 $$
 
 need not give the same ordering.
-
-In current fit objects, posterior mean effects are commonly represented by
-`bm`.
 
 ## Marginal PIPs Do Not Define the Joint Posterior Configuration
 

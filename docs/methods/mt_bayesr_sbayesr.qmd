@@ -447,8 +447,6 @@ $$
 Equivalently, it is the posterior probability that marker $j$ occupies any
 joint state whose activity pattern includes trait $t$.
 
-In current formatted fit objects, this quantity is represented by `dm`.
-
 ### Posterior mean effective effect
 
 The posterior mean effective marker effect is
@@ -457,16 +455,14 @@ $$
 \mathbb E(b_j\mid\mathcal D).
 $$
 
-In current formatted fit objects this is represented by `bm`.
-
-Because `bm` averages over null states, activity patterns, positive components,
-and effect uncertainty, it should not be confused with a conditional effect
-given one joint state.
+Because this posterior mean averages over null states, activity patterns,
+positive components, and effect uncertainty, it should not be confused with a
+conditional effect given one joint state.
 
 ### Posterior component probabilities
 
-Current marker-by-component `component_probabilities` marginalize over trait
-patterns. For marker $j$,
+Marker-by-component posterior probabilities marginalize over trait patterns.
+For marker $j$,
 
 $$
 \Pr(c_j=k\mid\mathcal D)
@@ -484,8 +480,8 @@ marker-by-joint-state posterior distribution.
 
 ### Final sampled state
 
-A final marker state such as `component_final` is one sampled state from the
-primary chain, not a posterior probability.
+A final marker state is one sampled state from a chain, not a posterior
+probability.
 
 Posterior means, posterior probabilities, and final mutable MCMC states answer
 different questions and should not be interpreted interchangeably.
@@ -560,10 +556,6 @@ $$
 X^\top Y.
 $$
 
-Current code may represent this through trait-wise `wy` objects or route-specific
-fields. These code names should not be treated as separate mathematical
-quantities.
-
 The current MT CSR route uses shared LD scaling and does not infer arbitrary
 unmodeled cross-trait sample overlap.
 
@@ -579,32 +571,14 @@ retained-factor low-rank operator used by current scalar block-eigen fits.
 The prior state model remains ordinary MT BayesR in either case; only the
 likelihood representation changes.
 
-## Current Formatted Outputs
+## Posterior summaries and state distinctions
 
-The current formatted MT fit exposes posterior summaries of marker effects,
-activity, components, probabilities, and covariance states.
-
-Important scientific interpretations include:
-
-- `bm`: posterior mean **effective** marker effects;
-- `dm`: trait-specific posterior probability of activity;
-- `component_probabilities`: marker-by-component posterior probabilities,
-  marginalized over trait patterns;
-- `pi_final`, `pi_mean`, and `pi_trace`: final, posterior-mean, and trace
-  summaries of the **joint-state probability simplex**;
-- covariance outputs: posterior-mean and final versions of $V_b$, $V_g$, and
-  $V_e$ under the current covariance field names.
-
-No marker-by-joint-state posterior probability matrix is returned by default.
-
-A separate latent-effect final field is not universally part of the canonical
-formatted contract. The distinction between latent and effective effects is
-therefore primarily a model/native-state concept unless a specific route
-explicitly exposes both.
-
-For exact current field ownership, see the developer output-schema contract.
-The Methods layer defines scientific meaning rather than duplicating the full
-schema.
+Posterior mean effective effects, trait-specific activity probabilities,
+marker-by-component probabilities, the joint-state simplex, and covariance
+summaries are distinct statistical objects. Marker-by-component probabilities
+are marginals over trait patterns and therefore do not recover the full
+marker-by-joint-state posterior distribution. Likewise, a final sampled latent
+or effective state is not a posterior mean or posterior probability.
 
 ## Current Limitations
 
@@ -636,8 +610,7 @@ in by the future provider architecture.
 - [Annotation-Informed Priors](annotation_priors.qmd) defines the broader
   $P/Q/H/V_b$ architecture and the proposed shared-$q$ MT-LV extension.
 - [Summary Statistics](summary_statistics.qmd) derives the summary-statistics
-  likelihood quantities without treating code names such as `wy` or `Xy` as
-  mathematical symbols.
+  likelihood quantities.
 - [Multi-Trait Sample Overlap](multitrait_overlap.qmd) explains the cross-trait
   phenotype products and overlap assumptions required for residual covariance.
 - [Multi-trait models](../notes/multi_trait_models.qmd) provides practical

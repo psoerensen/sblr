@@ -111,9 +111,6 @@ probability of occupying any positive component.
 Here $\mathcal D$ denotes the data together with the likelihood/operator
 representation used in the genomic fit.
 
-In current fit objects, posterior mean effects and PIPs are commonly stored in
-`bm` and `dm`. These are code fields, not mathematical symbols.
-
 Throughout this Methods page, mathematical cross-products are written
 explicitly:
 
@@ -124,9 +121,6 @@ X^\top X,
 \qquad
 y_t^\top y_t.
 $$
-
-Current implementation names such as `wy`, `ww`, and `yy` appear only in code
-snippets or when explicitly discussing package fields.
 
 Likewise, $q_j$ is reserved for the marker-specific **prior variance
 multiplier** used in the canonical $Q$ architecture. It is not used as a name
@@ -257,9 +251,6 @@ S_b <- fit0$bm
 S_pip <- qlogis(pmin(pmax(fit0$dm, 1e-6), 1 - 1e-6))
 S_g <- fit0$bm * (fit0$wy - fit0$r) / n
 ```
-
-The use of `fit0$wy` above is an implementation detail. Mathematically, the
-factor is $X^\top y_t-r_t$.
 
 # Set-specific genomic contributions
 

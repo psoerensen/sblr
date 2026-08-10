@@ -16,8 +16,7 @@ The sparse-LD artifact is a likelihood/operator object. It does not define the
 BayesC, BayesR, BayesRC, annotation, or MAF-S prior.
 
 Throughout the Methods documentation, mathematical cross-products are written
-explicitly. Current code names such as `wy`, `ww`, and `yy` are used only when
-referring to actual package fields.
+explicitly.
 
 The stable high-level workflow is:
 
@@ -65,12 +64,6 @@ X^\top(y-Xb)
 X^\top y-X^\top Xb.
 $$
 
-In current code:
-
-- $X^\top y$ is commonly stored as `wy`;
-- $\operatorname{diag}(X^\top X)$ is stored as `ww`;
-- $y^\top y$ is stored as `yy`.
-
 The sparse LD artifact supplies an approximation to the off-diagonal structure
 of $X^\top X$.
 
@@ -90,7 +83,7 @@ A typical preparation flow is:
 
 ```text
 BED + phenotype
-  -> make_summary_stats() -> stats$wy, stats$ww, stats$yy
+  -> make_summary_stats() -> X^T y, diag(X^T X), y^T y, N
   -> make_sparse_ld()     -> Glist$sparseLD
   -> stblr_csr(...) / stblr_csr_annot(...) / mtblr_csr(...)
 ```
@@ -651,8 +644,7 @@ The current disk artifact omits diagonal entries and reports an implicit
 correlation diagonal of one.
 
 That does **not** mean the sampler uses unit marker cross-products. The actual
-marker diagonals are supplied separately through `ww`, corresponding
-mathematically to
+marker diagonals are supplied separately as
 
 $$
 \operatorname{diag}(X^\top X).
@@ -793,7 +785,8 @@ During setup, the current scalar CSR implementation:
 
 1. validates marker dimensions and structural metadata;
 2. reads the zero-based upper-triangle arrays;
-3. validates row pointers, column bounds, correlations, and positive `ww`;
+3. validates row pointers, column bounds, correlations, and positive marker
+   diagonal cross-products;
 4. ignores explicit self-pairs if encountered;
 5. reconstructs retained cross-products as
 
@@ -830,12 +823,9 @@ $$
 X^\top Y.
 $$
 
-Current implementation routes may carry this information as trait-wise `wy`
-vectors or through route-specific fields.
-
-The present MT CSR likelihood requires shared LD scaling and matching `ww`
-across traits. It does not infer arbitrary pairwise sample overlap merely from
-the sparse-LD prefix.
+The present MT CSR likelihood requires shared LD scaling and matching marker
+diagonal cross-products across traits. It does not infer arbitrary pairwise
+sample overlap merely from the sparse-LD prefix.
 
 Cross-trait phenotype products and overlap assumptions required for full
 residual covariance are separate likelihood inputs; see

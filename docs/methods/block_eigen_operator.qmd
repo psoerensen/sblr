@@ -24,8 +24,7 @@ This page distinguishes two current representations:
    by the multi-trait block-eigen route.
 
 Throughout the Methods documentation, mathematical cross-products are written
-explicitly. Historical code names such as `wy`, `ww`, and `Q` are used only
-when referring to implementation objects.
+explicitly.
 
 ## Relationship to the Gaussian likelihood
 
@@ -260,8 +259,8 @@ Three filtering policies are retained.
 With `hard_truncate`, eigenvalues below the nonnegative `eigen_tau` threshold
 are removed.
 
-The summary score $X^\top y$, represented in the current ST interface by
-`wy`, is projected consistently into the retained eigenspace.
+The summary score $X^\top y$ is projected consistently into the retained
+eigenspace.
 
 Thus both the block operator and the marker score are restricted to the retained
 spectral subspace.
@@ -324,8 +323,7 @@ conflated.
 
 ### Input summary-statistic diagonal
 
-The input `ww` records the marker diagonal information supplied with the
-summary statistics. Mathematically, it corresponds to
+The supplied marker diagonal information corresponds to
 
 $$
 \operatorname{diag}(X^\top X)
@@ -353,9 +351,9 @@ $$
 This is the diagonal that belongs to the actual likelihood operator used during
 marker updates.
 
-The block-eigen summary route validates input `ww` as provenance. It does not
-silently replace the filtered runtime diagonal with the input summary-statistic
-diagonal.
+The block-eigen summary route validates the supplied summary-statistic diagonal
+as provenance. It does not silently replace the filtered runtime diagonal with
+that input diagonal.
 
 For the reconstructed representation, the runtime diagonal exactly matches the
 diagonal of the packed filtered block operator and is required to remain

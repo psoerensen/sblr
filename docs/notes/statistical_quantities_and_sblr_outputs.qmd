@@ -1,0 +1,95 @@
+---
+title: "Statistical Quantities and sblr Outputs"
+format:
+  html:
+    toc: true
+    number-sections: true
+---
+
+The [Methods pages](../methods/index.qmd) define statistical objects without
+depending on the current R schema. This page is the practical crosswalk from
+that notation to current `sblr` inputs and formatted fit fields. The mapping is
+not always one-to-one: some fields are family-, model-, or operator-specific,
+and some mathematical quantities have no universal formatted field.
+
+## Marker-level posterior quantities
+
+| Statistical quantity | Theory notation | Current `sblr` field | Interpretation and qualification |
+|---|---|---|---|
+| Posterior mean effective marker effect | $\mathbb E(b_j\mid\mathcal D)$ or $\mathbb E(b_{jt}\mid\mathcal D)$ | `bm` | Marker by trait. It averages over null states, mixture components, sharing patterns, and retained effect draws where applicable. |
+| Posterior inclusion probability | $\Pr(d_j=1\mid\mathcal D)$ or $\Pr([b_j]_t\ne0\mid\mathcal D)$ | `dm` | Marker by trait. In mixture models it is the posterior non-null/activity probability marginalized over relevant positive components and MT patterns. |
+| Posterior component allocation probability | $\Pr(c_j=k\mid\mathcal D)$ | `component_probabilities` | ST commonly uses a named list of marker-by-component matrices by trait; MT uses a marker-by-component matrix. Rows include the null component and sum to one. It is not a prior component probability. |
+| Final effective effect/activity state | one retained $b_j,d_j$ state | ST commonly retains `b` and `d`; MT uses `b_final` and `d_final` | A primary-chain final state, not a posterior mean or probability. Final-state naming is not currently universal across ST and MT. |
+| Final component state | one retained $c_j$ state | ST may retain `component`; MT uses `component_final` | A sampled state, not `component_probabilities`. It is present only for component-mixture routes. |
+
+The posterior mean effect and PIP answer different questions. A marker can
+have appreciable `dm` but a small `bm` because the posterior mean averages over
+the null state, effect-size uncertainty, and possibly sign uncertainty.
+
+## Prior architecture quantities
+
+| Statistical quantity | Theory notation | Current `sblr` field or location | Interpretation and qualification |
+|---|---|---|---|
+| Global/model probability state | $\pi$ or a global state simplex | `pi_final`, `pi_mean`, `pi_trace` | For ordinary MT BayesR these are the full `joint_pi` state simplex, not separate $P$ and $H$ parameters. BayesRC marker priors are not averaged into these fields. |
+| BayesRC marker prior component probabilities | $P_{jk}$ | ST SBayesRC may expose `annotation_prior`; MT BayesRC stores `model_parameters$annotations$prior_component_probabilities` | Model-specific. ST `annotation_pi` is instead a plug-in annotation-row diagnostic and must not be mistaken for the complete marker prior matrix. |
+| BayesRC marker prior active probability | $1-P_{j0}$ | MT: `model_parameters$annotations$prior_active_probabilities`; no universal ST field | Derived from the marker prior null probability, not from posterior allocations. |
+| Conditional non-null MT sharing architecture | $H_p$ | MT BayesRC: `model_parameters$annotations$pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`; ordinary MT BayesR marginals live under `model_parameters$mixture` | In MT BayesRC, $H$ is a sampled conditional sharing simplex. In ordinary MT BayesR, reported pattern probabilities are marginals of `joint_pi`, not an independently parameterized $H$. |
+| Probit-stick coefficients | $\alpha$ | ST: `alpha`, with `alpha_final` where exposed; MT: `model_parameters$annotations$annotation_coefficients_mean` and `annotation_coefficients_final` | Posterior coefficient summaries. Nonlinear transformations of posterior mean coefficients are plug-in summaries, not posterior means of transformed probabilities. |
+| Probit-stick coefficient variances | $\sigma_{\alpha,k}^2$ | ST: `sigmaSqAlpha`, with `sigmaSqAlpha_final` where exposed; MT: annotation variance fields under `model_parameters$annotations` | Step-specific hierarchical variance parameters. |
+| Group probability and variance architecture | group-specific $\pi_g,q_g$ | `group_pi`, `group_vb_multiplier`, with `annotation_pi`/`annotation_variance` aliases and `annotation_summary` | Available only for the group annotation route. |
+| Learned-logistic coefficients | probability and variance coefficients | `eta_pi`, `eta_vb`, plus `annotation_effects` and `annotation_summary` | Historical learned-logistic route; these are not LV $\theta$. |
+| Fixed marker prior architecture | supplied $\pi_j,q_j$ | `annotation_prior` and route-specific `prior`/input metadata | Model-specific; there is no universal current fixed-$P/Q$ result namespace. |
+| MAF-S parameter | $S$ | `maf_effect_s` and model-specific final/trace/chain-summary fields where sampling is supported | Fixed and sampled support is route dependent. |
+| LV coefficients | $\theta$ | `theta`, `theta_summary`, `theta_chain_mean`, and optional `theta_trace` | Current only for qualified ST CSR and retained block-eigen LV routes. |
+| LV marker variance multiplier | $q_j=\exp(\widetilde A_j^{(Q)}\theta)$ | `marker_prior_scale` | Posterior mean marker scale returned by current LV fits; no marker-by-iteration $q$ history is retained by default. |
+| LV annotation variance ratio and transform | $\exp(\theta_c)$ and the processed $Q$ design metadata | `annotation_variance_ratio`, `annotation_transform` | The ratio is coefficient-scale; correlated annotations require conditional interpretation. Numerical ESS diagnostics are under `diagnostics$logvar`. |
+
+## Variance and covariance quantities
+
+| Statistical quantity | Theory notation | Current `sblr` field | Interpretation and qualification |
+|---|---|---|---|
+| ST marker-effect variance trace | $v_b$ | `vbs` | Iteration-by-trait trace. |
+| ST genomic variance trace | $v_g$ | `vgs` | Iteration-by-trait trace of the fitted genomic variance. |
+| ST residual variance trace | $v_e$ | `ves` | Iteration-by-trait trace. |
+| MT posterior mean marker-effect covariance | $V_b$ | `cov_b_mean` | Trait-by-trait posterior mean matrix. |
+| MT posterior mean genomic covariance | $V_g$ | `cov_g_mean` | Trait-by-trait posterior mean matrix. |
+| MT posterior mean residual covariance | $V_e$ | `cov_e_mean` | Trait-by-trait posterior mean matrix. |
+| MT final covariance states | $V_b,V_g,V_e$ in one final retained state | `cov_b_final`, `cov_g_final`, `cov_e_final` | Primary-chain final matrices, not posterior means. |
+
+The scalar traces and covariance matrices are different representations. The
+diagonals are scientifically related, but a covariance matrix is not an
+iteration trace. Historical native names such as `covb`, `covg`, and `cove`
+are normalized by the canonical formatter and should not be used as the public
+theory notation.
+
+## Summary-statistic and likelihood quantities
+
+| Statistical quantity | Theory notation | Current input/object | Qualification |
+|---|---|---|---|
+| Marker-phenotype cross-products | $X^\top y$ | commonly `stats$wy` | Trait-specific vectors in ST-style summary objects. |
+| Marker-trait cross-products | $X^\top Y$ | trait-wise `wy` or route-specific `Xy` in lower-level MT interfaces | There is no single universal field across all MT routes. |
+| Marker diagonal cross-products | $\operatorname{diag}(X^\top X)$ | commonly `stats$ww` | Must use the same marker order and genotype scale as the LD operator. |
+| Phenotype sum of squares | $y^\top y$ | commonly `stats$yy` | For parallel ST fits this is marginal by trait. |
+| Pairwise phenotype cross-products | $S_Y$ | often called `SSY`; current joint MT contracts may carry the full matrix through a `yy`/`YY`-style argument | A full matrix is required for residual covariance; marginal sums of squares are insufficient. |
+| Pairwise overlap counts | $N_{\mathrm{overlap}}$ | commonly `Nmat` at analysis/workflow level | The current native MT CSR likelihood does not consume `Nmat` directly; it helps construct or justify $S_Y$. |
+| Sample sizes | $N$ or $N_t$ | `n` | Current shared-LD MT CSR restrictions require compatible/equal sample-size structure. |
+| Marker-scale residual score | $r=X^\top y-X^\top Xb$ or $R=X^\top Y-X^\top XB$ | `r` where exposed | This is not the observation-level residual $y-Xb$ or $Y-XB$. |
+
+## Distinctions to preserve
+
+- `bm` is a posterior mean effect; `dm` is a posterior activity probability.
+- `component_probabilities` contains posterior allocations; BayesRC prior
+  component probabilities describe $P_{jk}$ before marker likelihood evidence.
+- A posterior mean is not a final sampled state.
+- $v_b,v_g,v_e$ are scalar ST quantities; $V_b,V_g,V_e$ are MT covariance
+  matrices. Current R names deliberately do not differ only by capitalization.
+- $X^\top y$, $X^\top Y$, $S_Y$, and $N_{\mathrm{overlap}}$ are mathematical
+  objects; `wy`, `Xy`, `SSY`, and `Nmat` are historical or route-specific code
+  names.
+- Ordinary MT BayesR uses one full `joint_pi` simplex. Current MT BayesRC uses
+  marker/component architecture $P$ multiplied by conditional non-null sharing
+  architecture $H$.
+
+For formal statistical definitions, return to [Statistical Methods](../methods/index.qmd).
+For the maintained raw/formatter contract, see
+[BLR output and raw schemas](../dev/blr_output_schema.md).

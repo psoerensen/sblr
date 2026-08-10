@@ -17,9 +17,7 @@ definition, genotype coding, allele frequencies, and LD are mutually
 compatible.
 
 Throughout the Methods documentation, mathematical cross-products are written
-explicitly. Code names such as `wy`, `Xy`, `ww`, `yy`, and `SSY` are used only
-when referring to actual `sblr` inputs or outputs. This avoids giving historical
-implementation names a separate mathematical meaning.
+explicitly.
 
 ## Individual-Level Model and Cross-Product Sufficiency
 
@@ -81,21 +79,12 @@ The prior may require additional quantities, but the marker-likelihood
 calculations depend on the data only through these cross-products. This is the
 sense in which they are sufficient for the Gaussian regression layer.
 
-## Mathematical Quantities and Current Code Names
+## Cross-product notation
 
-The mathematical notation and implementation names should be kept distinct.
-
-| Mathematical quantity | Meaning | Current code names encountered in `sblr` |
-|---|---|---|
-| $X^\top y$ | marker-phenotype cross-product vector | commonly `wy` |
-| $X^\top Y$ | marker-by-trait cross-product matrix | represented as trait-wise `wy` in some routes and `Xy` in some MT/native interfaces |
-| $\operatorname{diag}(X^\top X)$ | marker diagonal cross-products | `ww` |
-| $y^\top y$ | phenotype sum of squares | `yy` |
-| pairwise cross-trait phenotype products | trait cross-product information | commonly described as `SSY`; some interfaces carry the matrix through a `yy`/`YY` argument |
-
-These names are implementation conventions. In the derivations below,
-$X^\top y$, $X^\top Y$, and $X^\top X$ denote the statistical quantities
-themselves.
+The principal quantities are $X^\top y$, $X^\top Y$,
+$\operatorname{diag}(X^\top X)$, $y^\top y$, and the pairwise cross-trait
+phenotype products collected in $S_Y$. These denote statistical objects, not
+storage fields.
 
 For marker $j$, define the diagonal genotype cross-product
 
@@ -103,8 +92,7 @@ $$
 w_j=x_j^\top x_j,
 $$
 
-where $x_j$ is column $j$ of $X$. In code, the vector
-$(w_1,\ldots,w_M)^\top$ is stored as `ww`.
+where $x_j$ is column $j$ of $X$.
 
 ## Residual Scores and Marker Updates
 
@@ -236,9 +224,9 @@ y^\top y
 \end{aligned}
 $$
 
-The current single-trait CSR implementation uses the corresponding code
-quantities `yy`, `wy`, `b`, and `r` to evaluate this expression without
-returning to individual-level observations.
+This expression can be evaluated without returning to individual-level
+observations once the cross-products and marker-scale residual score are
+available.
 
 ### Genomic variance
 
@@ -268,11 +256,9 @@ b^\top(X^\top y-r).
 $$
 
 The denominator $N$ makes this a cross-product-per-observation quantity; it is
-not presented here as an unbiased sample-variance estimator. In the CSR code,
-the same calculation is expressed using the stored `wy` vector and residual
-score.
+not presented here as an unbiased sample-variance estimator.
 
-## Genotype Scaling, Allele Frequencies, and `ww`
+## Genotype scaling, allele frequencies, and marker diagonals
 
 Summary statistics and LD are meaningful only relative to the genotype matrix
 that produced them.
@@ -324,7 +310,7 @@ $$
 x_j^\top x_\ell.
 $$
 
-Its diagonal is supplied to the CSR samplers through `ww`. The disk-backed CSR
+Its diagonal is supplied separately to the CSR likelihood. The disk-backed CSR
 files produced by the sparse-LD workflow store retained correlations rather
 than complete cross-products.
 
@@ -340,7 +326,8 @@ $$
 $$
 
 where $\widetilde C_X$ denotes the sparse approximation to $X^\top X$ used by
-the CSR likelihood. The diagonal is handled separately from `ww`.
+the CSR likelihood. The diagonal is handled separately from the sparse
+off-diagonal artifact.
 
 With all correlations retained, compatible scaling, and compatible diagonal
 cross-products,
@@ -416,9 +403,7 @@ X^\top y_t,
 y_t^\top y_t.
 $$
 
-The corresponding current code fields are `wy`, `ww`, and `yy`.
-
-The same `ww` vector is repeated across traits because the current function
+The same marker diagonal vector applies across traits because the construction
 uses one selected genotype matrix $X$ for all phenotype columns. Additional
 returned fields include `xx`, the allele frequencies used, row-selection
 information, sample and marker counts, scaling status, and summaries of the
@@ -450,11 +435,11 @@ writes them under a sparse-LD prefix, and records metadata in
 frequencies, and scaling convention used for the sufficient statistics. The
 lower-level writer behind this workflow is `sparseLD_stream_CSR()`.
 
-The current workflow handoff is represented by code-field names:
+The workflow hands compatible likelihood objects to the fitter:
 
 ```text
 BED + phenotype
-  -> make_summary_stats() -> wy, ww, yy, n
+  -> make_summary_stats() -> X^T y, diag(X^T X), y^T y, N
   -> make_sparse_ld()     -> Glist$sparseLD
   -> stblr_csr(stats = stats, Glist = Glist)
 ```
@@ -462,22 +447,15 @@ BED + phenotype
 The complete operational sequence is documented in
 [Sparse-LD and individual-level workflows](../notes/sparse_ld_workflows.qmd).
 
-## How `stblr_csr()` Consumes the Statistics
+## CSR likelihood requirements
 
-At the public interface, `stblr_csr()` accepts implementation objects such as:
-
-- `stats$wy`, representing $X^\top y$ for each trait;
-- `stats$ww`, representing $\operatorname{diag}(X^\top X)$;
-- `stats$yy`, representing $y^\top y$ for each trait;
-- `n`, representing the associated sample size;
-- `Glist$sparseLD$prefix`, or an explicit `ld_prefix`, identifying the
-  compatible disk-backed sparse LD; and
-- prior, variance-update, scheduling, and MCMC controls.
-
-The wrapper uses `yy/(n-1)` to initialize phenotype-variance-related prior
-scales. The native sampler validates marker and trait dimensions, reconstructs
-retained off-diagonal cross-products from LD correlations and `ww`, and
-initializes or rebuilds the sparse residual score
+The CSR likelihood requires aligned $X^\top y$ values for each trait,
+$\operatorname{diag}(X^\top X)$, $y^\top y$, the associated sample size, and
+a compatible disk-backed sparse-LD operator. The implementation initializes
+phenotype-variance-related prior scales from the phenotype sum of squares,
+validates marker and trait dimensions, reconstructs retained off-diagonal
+cross-products from LD correlations and marker diagonals, and initializes or
+rebuilds the sparse residual score
 
 $$
 r_{\mathrm{CSR}}
@@ -488,10 +466,10 @@ $$
 Marker and variance updates are then performed from this
 summary-statistic state.
 
-For the current shared-LD parallel single-trait CSR path, `ww` and `n` must
-agree across traits. This reflects one common genotype sample and scaling
-scheme. Trait-specific summary statistics from materially different samples
-require a likelihood and LD contract that explicitly supports those
+For the current shared-LD parallel single-trait CSR path, marker diagonals and
+sample sizes must agree across traits. This reflects one common genotype sample
+and scaling scheme. Trait-specific summary statistics from materially different
+samples require a likelihood and LD contract that explicitly supports those
 differences.
 
 ## Multi-Trait Summary-Statistic Representation
@@ -538,11 +516,6 @@ Under complete sample overlap, the phenotype cross-product matrix is
 $$
 Y^\top Y.
 $$
-
-In code, the marker-trait quantity may be represented as trait-wise `wy` or
-through a field such as `Xy`, depending on the interface. Cross-trait phenotype
-products are commonly described as `SSY`; the next section defines the
-mathematical object more carefully so that partial overlap can also be handled.
 
 For a common $X$, define the marker-score matrix
 
@@ -631,10 +604,6 @@ $$
 Under partial overlap, however, different entries of $S_Y$ can be calculated
 from different sets of individuals. In that case, $S_Y$ should not literally be
 interpreted as the cross-product of one complete rectangular phenotype matrix.
-
-The current code and documentation commonly refer to this trait
-cross-product information as `SSY`. Here $S_Y$ is the mathematical object and
-`SSY` is the implementation/documentation name.
 
 For a common complete sample,
 
@@ -749,9 +718,9 @@ slightly by orientation. The current native multi-trait CSR implementation
 symmetrizes off-diagonal residual and genomic covariance quantities before
 covariance updates.
 
-A vector of marginal `yy` values can support separate trait-wise residual
-variance updates. It cannot, by itself, identify a full residual covariance
-matrix.
+A vector of marginal phenotype sums of squares can support separate trait-wise
+residual variance updates. It cannot, by itself, identify a full residual
+covariance matrix.
 
 ## Set-Specific and LD-Aware Genetic Contributions
 
@@ -806,9 +775,6 @@ X^\top y_t-r_t
 }{N_t}.
 $$
 
-In current fit objects, the posterior mean effects and PIPs are commonly
-represented by `bm` and `dm`.
-
 These quantities are useful for describing annotations, loci, or genomic
 regions. For disjoint sets, the unweighted contributions can approximate a
 partition of the fitted genomic-variance expression. For overlapping sets, one
@@ -851,53 +817,54 @@ Agreement should therefore be assessed through posterior distributions,
 marker-level patterns, predictions, variance summaries, and sensitivity
 analyses rather than equality of individual MCMC draws.
 
-## Validation and Diagnostics
+## Validation and diagnostics
 
-Before fitting a summary-statistics model, verify the current code objects
-against the corresponding mathematical quantities:
+Before fitting a summary-statistics model, verify the supplied objects against
+the corresponding mathematical quantities:
 
-1. Every trait's `wy` vector has length $M$ and corresponds to $X^\top y_t$.
-2. Every trait's `ww` vector has length $M$, contains finite positive values,
-   and is compatible with the LD scaling.
-3. `yy` has one marginal phenotype cross-product per trait for parallel
-   single-trait fitting, or the joint MT route receives the required full
-   trait cross-product information.
-4. The supplied `n` corresponds to the sample used to calculate the associated
-   summary statistics; trait-specific sample sizes and overlap assumptions are
+1. Every trait's $X^\top y_t$ vector has length $M$.
+2. Every marker-diagonal vector has length $M$, contains finite positive
+   values, and is compatible with the LD scaling.
+3. Parallel single-trait fitting has one marginal phenotype cross-product per
+   trait, or the joint MT route receives the required full trait cross-product
+   information.
+4. Every supplied sample size corresponds to the sample used to calculate the
+   associated statistics; trait-specific sizes and overlap assumptions are
    recorded where relevant.
-5. Sparse-LD dimensions are $M\times M$, and marker order matches `wy` and
-   `ww`.
+5. Sparse-LD dimensions are $M\times M$, and marker order matches the marker
+   cross-products and diagonal information.
 6. `cls`, allele frequencies, `rows`, and `scale` choices are compatible
    between `bed_xtx_xty()` and sparse-LD construction.
 7. Marker names, annotation rows, and posterior marker summaries use the same
    marker order and allele orientation.
 8. Phenotypes are centered, or the intercept/centering convention is otherwise
    explicit.
-9. The magnitude of `ww` is plausible for the genotype coding and sample size.
+9. Marker diagonal magnitudes are plausible for the genotype coding and sample
+   size.
 10. LD thresholds, windows, precision, reference sample, and construction
     provenance are recorded.
 
-Useful implementation diagnostics include inspecting `stats$n`, `stats$m`,
-`stats$scale`, `stats$min_xx`, `stats$mean_xx`, and `stats$max_xx`; reading CSR
-metadata with `sparseLD_read_CSR()`; and comparing BED-direct and CSR fits when
-the same individual-level data are available.
+Useful checks include inspecting sample size, marker count, genotype scale, and
+the range of marker diagonal cross-products; reading CSR metadata with
+`sparseLD_read_CSR()`; and comparing BED-direct and CSR fits when the same
+individual-level data are available.
 
 ## Limitations
 
 Summary-statistic inference cannot recover information that was never retained
 or supplied.
 
-- **Summary-statistic/LD compatibility:** `wy` and `ww` from one sample or
-  genotype-scaling convention combined with LD from another imply an
-  approximate and potentially biased likelihood.
+- **Summary-statistic/LD compatibility:** marker-phenotype and marker-diagonal
+  cross-products from one sample or genotype-scaling convention combined with
+  LD from another imply an approximate and potentially biased likelihood.
 - **LD-reference mismatch:** ancestry, allele frequencies, imputation quality,
   marker filtering, and sample selection can make reference LD differ from
   study LD.
 - **Sparsification:** thresholding and windowing deliberately remove
   off-diagonal cross-product information.
 - **Phenotype preprocessing:** unrecorded centering, scaling, covariate
-  adjustment, or residualization changes the meaning of the code fields
-  representing $X^\top y$ and $y^\top y$.
+  adjustment, or residualization changes the meaning of $X^\top y$ and
+  $y^\top y$.
 - **Multi-trait information:** marginal trait statistics do not identify
   cross-trait phenotype products or sample overlap.
 - **Overlap assumptions:** incorrect pairwise overlap counts or phenotype

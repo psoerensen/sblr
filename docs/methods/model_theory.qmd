@@ -341,12 +341,8 @@ y^\top y.
 $$
 
 Throughout the Methods documentation, these mathematical cross-products are
-written explicitly rather than using implementation field names as mathematical
-symbols. In the current `sblr` interfaces, $X^\top y$ is commonly stored as
-`wy`, the diagonal of $X^\top X$ is stored as `ww` where applicable, and
-$y^\top y$ is stored as `yy`. Some multi-trait/native interfaces use `Xy` for
-the corresponding matrix $X^\top Y$. These are code conventions rather than
-distinct statistical quantities.
+written explicitly rather than using implementation field names as
+mathematical symbols.
 
 Up to terms not depending on $b$, the single-trait Gaussian log likelihood is
 
@@ -403,7 +399,7 @@ described in [Annotation-Informed Priors](annotation_priors.qmd).
   separation.
 - [Summary Statistics](summary_statistics.qmd): cross-products, residual-score
   identities, and sufficient-statistic likelihood calculations.
-- [Multi-Trait Sample Overlap](multitrait_overlap.qmd): `SSY`, overlap, and
+- [Multi-Trait Sample Overlap](multitrait_overlap.qmd): $S_Y$, overlap, and
   residual-covariance assumptions.
 - [Sparse-LD CSR](sparse_ld_csr.qmd): sparse-LD likelihood approximation.
 - [Block-Eigen LD](block_eigen_operator.qmd): retained spectral and
