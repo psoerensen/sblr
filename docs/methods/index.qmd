@@ -28,6 +28,10 @@ implementation ownership belongs in
 - [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd)
 - [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
 
+## Posterior marker inference and fine-mapping
+
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd)
+
 ## Multi-trait prior and state models
 
 - [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd)

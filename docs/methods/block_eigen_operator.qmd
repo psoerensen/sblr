@@ -75,7 +75,7 @@ positive and exactly matches the diagonal stored in each packed block.
 ## Runtime representation and ownership
 
 The canonical scalar representation stores `Q` as a column-major float
-`retained rank × marker count` factor after double construction, transformed
+retained-rank-by-marker-count factor after double construction, transformed
 scores and per-chain reduced residuals as double, and runtime diagonals as
 double. Immutable `Q` and transformed scores are shared by chains; each chain
 owns only its reduced residual and sampler state. Marker updates cost retained

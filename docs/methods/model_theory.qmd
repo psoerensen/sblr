@@ -14,9 +14,9 @@ derivations live on their dedicated methods pages.
 
 ## Single-trait regression
 
-For a centered phenotype \(y\in\mathbb R^N\), genotype matrix
-\(X\in\mathbb R^{N\times M}\), marker effects \(b\in\mathbb R^M\), and residual
-vector \(e\), the single-trait model is
+For a centered phenotype $y\in\mathbb R^N$, genotype matrix
+$X\in\mathbb R^{N\times M}$, marker effects $b\in\mathbb R^M$, and residual
+vector $e$, the single-trait model is
 
 $$
 y=Xb+e,
@@ -24,9 +24,13 @@ y=Xb+e,
 e\sim N(0,v_eI_N).
 $$
 
-Here \(v_e\) is the residual variance. The fitted genetic values are \(Xb\),
-and their variance is denoted \(v_g\). A global active-marker effect-variance
-scale is denoted \(v_b\).
+Here $v_e$ is the residual variance. The fitted genetic values are $Xb$,
+and their variance is denoted $v_g$. A global active-marker effect-variance
+scale is denoted $v_b$. These quantities have different roles: $v_b$ belongs
+to the prior for an active marker effect, $v_g$ summarizes variation in the
+combined fitted genetic value $Xb$, and $v_e$ belongs to the observation
+likelihood. They need not be numerically equal even when genotypes and
+phenotypes have been standardized.
 
 ### BayesC
 
@@ -42,7 +46,7 @@ b_j=0\quad(d_j=0),
 b_j\mid d_j=1\sim N(0,v_bq_j).
 $$
 
-In the ordinary model, \(\pi_j=\pi\) and \(q_j=1\). Annotation-informed prior
+In the ordinary model, $\pi_j=\pi$ and $q_j=1$. Annotation-informed prior
 architectures may change marker inclusion probabilities or relative non-null
 effect variance without changing the Gaussian regression likelihood.
 
@@ -69,40 +73,73 @@ b_j=0\quad(c_j=0),
 b_j\mid c_j=k>0\sim N(0,\gamma_kq_jv_b).
 $$
 
-The \(\gamma_k\) ladder contains known relative component multipliers, \(q_j\)
-is a marker-specific relative variance multiplier, and \(v_b\) carries the
+The $\gamma_k$ ladder contains known relative component multipliers, $q_j$
+is a marker-specific relative variance multiplier, and $v_b$ carries the
 global active-effect variance scale. In current R inputs, the first element of
 `mixture_var` is the null multiplier; its one-based R position represents the
-theoretical component \(k=0\).
+theoretical component $k=0$.
 
 BayesRC/SBayesRC retains the BayesR effect mixture and makes marker component
 probabilities annotation dependent. Log-variance models retain global
-probability architecture and learn \(q_j\) from annotations. See
+probability architecture and learn $q_j$ from annotations. See
 [Annotation-Informed Priors](annotation_priors.qmd).
+
+### Posterior marker quantities
+
+The prior probabilities above should not be confused with posterior marker
+summaries. In BayesC,
+
+$$
+\operatorname{PIP}_j=P(d_j=1\mid\text{data}).
+$$
+
+In BayesR or BayesRC, the same non-null probability is obtained by summing the
+posterior allocation probabilities over all positive components:
+
+$$
+\operatorname{PIP}_j
+=1-P(c_j=0\mid\text{data})
+=\sum_{k=1}^KP(c_j=k\mid\text{data}).
+$$
+
+Posterior component allocation probabilities describe uncertainty across the
+mixture components. A final component state is only the state of one retained
+MCMC draw, not that probability vector. The posterior mean effect
+$\mathbb E(b_j\mid\text{data})$ is another distinct summary: model averaging and sign
+uncertainty can make it small even when the PIP is appreciable. Consequently,
+ranking markers by PIP and ranking them by absolute posterior mean effect can
+give different orders.
+
+These distinctions are central to interpreting marker evidence and credible
+sets. See [Fine-Mapping and Credible Sets](fine_mapping.qmd) for the relation
+between marginal PIPs, posterior configurations, and LD-aware post-processing.
 
 ## Multi-trait regression
 
-For \(T\) traits, collect phenotypes, marker effects, and observation-level
+For $T$ traits, collect phenotypes, marker effects, and observation-level
 residuals in matrices:
 
 $$
 Y=XB+E_Y,
 $$
 
-where \(Y\in\mathbb R^{N\times T}\), \(B\in\mathbb R^{M\times T}\), and
-\(E_Y\in\mathbb R^{N\times T}\). Here \(B\) is the marker-effect matrix and
-\(E_Y\) is the residual-observation matrix; neither symbol denotes a covariance
-matrix.
+where $Y\in\mathbb R^{N\times T}$, $B\in\mathbb R^{M\times T}$, and
+$E_Y\in\mathbb R^{N\times T}$. Here $B$ is the marker-effect matrix and
+$E_Y$ is the residual-observation matrix; neither symbol denotes a covariance
+matrix. The rows of $B$ collect marker effects across traits, while the rows
+of $E_Y$ collect observation-level residual vectors. Covariance matrices
+describe distributions of those row vectors; they are not substitutes for
+the matrices themselves.
 
 The covariance notation is
 
 | Quantity | ST | MT |
 |---|---:|---:|
-| active marker effects | \(v_b\) | \(V_b\) |
-| genomic values | \(v_g\) | \(V_g\) |
-| residuals | \(v_e\) | \(V_e\) |
+| active marker effects | $v_b$ | $V_b$ |
+| genomic values | $v_g$ | $V_g$ |
+| residuals | $v_e$ | $V_e$ |
 
-For a non-null trait-activity pattern \(p\) and BayesR component \(k>0\), a
+For a non-null trait-activity pattern $p$ and BayesR component $k>0$, a
 shared marker-specific variance multiplier gives
 
 $$
@@ -110,20 +147,23 @@ $$
 =\gamma_kq_jV_{b,p},
 $$
 
-where \(V_{b,p}\) is the active-trait submatrix of \(V_b\). The scalar \(q_j\)
+where $V_{b,p}$ is the active-trait submatrix of $V_b$. The scalar $q_j$
 rescales the complete active covariance matrix and therefore does not by itself
-change the correlation structure represented by \(V_b\).
+change the correlation structure represented by $V_b$. The genomic covariance
+$V_g$ is induced by the complete fitted marker-effect matrix and genotype
+operator, whereas $V_e$ describes residual covariance at the observation or
+summary-likelihood level.
 
 The current MT prior-state probability model depends on the core family:
 
 - ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the unique null
   state and all non-null trait-pattern by positive-component states;
-- MT BayesRC/SBayesRC factorizes marker component probability \(P\) from a
-  global conditional non-null sharing probability \(H\).
+- MT BayesRC/SBayesRC factorizes marker component probability $P$ from a
+  global conditional non-null sharing probability $H$.
 
 The component and pattern probabilities reported for ordinary MT BayesR are
 marginals of its full joint simplex; they are not parameters of a current
-\(P\times H\) factorization. See [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
+$P\times H$ factorization. See [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
 [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the implemented state spaces.
 
 ## Likelihood information and operators
@@ -161,3 +201,5 @@ For the underlying likelihood information, see
   probit-stick mathematics.
 - [Empirical-Bayes Construction](annotation_informed_models.qmd):
   posterior-to-prior workflows.
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd): marginal PIPs, LD-aware
+  post-processing, and coverage interpretation.

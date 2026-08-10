@@ -45,7 +45,7 @@ $$
 P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p,\qquad k>0.
 $$
 
-Here \(P\) is the marker component-probability architecture and \(H\) is the
+Here $P$ is the marker component-probability architecture and $H$ is the
 global conditional non-null sharing architecture. Both simplexes sum to one,
 so this factorization preserves one null state. It does not fit
 annotation-dependent trait-pattern probabilities.
@@ -83,7 +83,7 @@ With `updateAlpha = TRUE`, latent probit variables, coefficients, and
 `sigmaSqAlpha` are updated every `alpha_update_every` completed iterations;
 the current values still exist at every iteration. With `FALSE`, coefficients
 remain fixed. `updatePi` separately controls the conditional pattern
-probabilities \(H\).
+probabilities $H$.
 
 ## Effects and independent MAF scaling
 
@@ -95,9 +95,9 @@ $$
 \gamma_k q_j(S)V_{b,p}.
 $$
 
-Here \(V_{b,p}\) is the active-trait submatrix of the global marker-effect
-covariance \(V_b\). Annotations change component probabilities only. They do
-not change \(V_b\),
+Here $V_{b,p}$ is the active-trait submatrix of the global marker-effect
+covariance $V_b$. Annotations change component probabilities only. They do
+not change $V_b$,
 the residual covariance, component multipliers, operators, or the optional
 `maf_effect_s` scale. Fixed MT `maf_effect_s` is supported; sampled MT
 `maf_effect_s` is not. When an explicitly identified MAF/heterozygosity
@@ -107,11 +107,11 @@ warns once because both mechanisms may encode related information.
 ## Probability outputs
 
 - `prior_component_probabilities`: posterior mean annotation-driven prior
-  component architecture \(P_j\), marker by component;
-- `prior_active_probabilities`: \(1-P_{j0}\);
+  component architecture $P_j$, marker by component;
+- `prior_active_probabilities`: $1-P_{j0}$;
 - `component_probabilities`: posterior marker component-state probabilities;
 - `pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`: the conditional
-  non-null pattern architecture \(H\);
+  non-null pattern architecture $H$;
 - annotation coefficient and variance final/mean fields: the probit-stick
   parameter summaries.
 

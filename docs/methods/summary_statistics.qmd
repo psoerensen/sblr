@@ -453,8 +453,8 @@ $$
 Y=XB+E_Y,
 $$
 
-where the rows of \(E_Y\) may have residual covariance matrix
-\(V_e\). The central multi-trait cross-products are
+where the rows of $E_Y$ may have residual covariance matrix
+$V_e$. The central multi-trait cross-products are
 
 $$
 WY=X^\top Y

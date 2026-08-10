@@ -34,15 +34,15 @@ $$
 e_i\sim N_T(0,V_e),
 $$
 
-where \(V_e\) is the residual covariance matrix. Marker-effect vectors may
+where $V_e$ is the residual covariance matrix. Marker-effect vectors may
 also share covariance. For example, an active marker-effect vector $b_j$
-may have a prior involving the marker-effect covariance matrix \(V_b\).
+may have a prior involving the marker-effect covariance matrix $V_b$.
 
 These two covariance structures have different meanings:
 
-- \(V_b\) describes prior or posterior covariance among marker effects
+- $V_b$ describes prior or posterior covariance among marker effects
   across traits and enables genetic information sharing;
-- \(V_e\) describes covariance among residual phenotype deviations for
+- $V_e$ describes covariance among residual phenotype deviations for
   individuals observed on the same traits.
 
 Residual covariance is therefore directly tied to which individuals are
@@ -300,7 +300,7 @@ $$
 
 Using $n_t-1$ instead gives the usual sample-variance denominator. The
 choice must match the intended likelihood and preprocessing convention. The
-the reconstruction uses $yy_t/n_t$ as the cross-product-per-observation
+reconstruction uses $yy_t/n_t$ as the cross-product-per-observation
 quantity.
 
 Collect the marginal variance estimates in:
@@ -566,7 +566,7 @@ b_j\mid\text{active model}
 N_T(0,V_b)
 $$
 
-on the active traits. Off-diagonal entries of \(V_b\) allow effects to
+on the active traits. Off-diagonal entries of $V_b$ allow effects to
 co-vary across traits. Trait-sharing model indicators can additionally encode
 whether a marker is active for specific subsets of traits.
 
@@ -625,8 +625,8 @@ Conceptually, the internal MT CSR likelihood requires:
 - `ww`, marker diagonal cross-products per trait;
 - `yy`, a full $T\times T$ trait cross-product matrix;
 - `ld_prefix`, identifying shared CSR LD;
-- marker-effect covariance \(V_b\) (current formatted field `covb`);
-- residual covariance \(V_e\) (current formatted field `cove`);
+- marker-effect covariance $V_b$ (current formatted field `covb`);
+- residual covariance $V_e$ (current formatted field `cove`);
 - multi-trait sharing models and model probabilities; and
 - a sample-size vector `n`.
 
@@ -715,7 +715,7 @@ Before fitting or interpreting a joint multi-trait model:
    $$
 
 7. Confirm that trait order is identical across `SSY`, `Nmat`, $WY$, $n$,
-   \(V_b\), \(V_e\), prior scale matrices, and outputs.
+   $V_b$, $V_e$, prior scale matrices, and outputs.
 8. Confirm that $WY$, `ww`, and LD use the same marker order and compatible
    genotype scaling.
 9. Confirm that reported phenotype correlations are on compatible phenotype

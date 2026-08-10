@@ -76,7 +76,7 @@ region at the same time.
 
 This page follows the package-wide theory convention that lowercase v denotes
 a scalar variance and uppercase V a variance-covariance matrix: ST uses
-\(v_b,v_g,v_e\), whereas MT uses \(V_b,V_g,V_e\). Historical conceptual R code
+$v_b,v_g,v_e$, whereas MT uses $V_b,V_g,V_e$. Historical conceptual R code
 snippets below may retain ordinary code variables such as `B`; those are not
 the preferred mathematical symbols or proposed case-only API names.
 
@@ -627,7 +627,7 @@ $$
 \mathbf b_i \mid a(i)=k \sim N(0, V_{b,k}).
 $$
 
-A simple estimate of \(V_{b,k}\) is
+A simple estimate of $V_{b,k}$ is
 
 $$
 \widehat V_{b,k}
@@ -1301,7 +1301,7 @@ estimate_B_from_annotation_model <- function(gamma, dm, ridge = 1e-8) {
 }
 ```
 
-This matrix can be used as the initial global \(V_b\) matrix in the next MTBLR
+This matrix can be used as the initial global $V_b$ matrix in the next MTBLR
 run. The conceptual R snippet retains `B`/`B_init` as code-variable names; it
 does not define the preferred mathematical notation or a public field rename.
 
@@ -1448,7 +1448,7 @@ $$
 V_{b,i}.
 $$
 
-Here $\pi_{it}$ is the prior inclusion probability for marker $i$ and trait $t$, $v_{b,it}$ is the marker-specific prior effect variance, $\pi_{im}$ is the marker-specific prior probability of MTBLR sharing model $m$, and \(V_{b,i}\) is a marker-specific prior covariance matrix for multivariate marker effects.
+Here $\pi_{it}$ is the prior inclusion probability for marker $i$ and trait $t$, $v_{b,it}$ is the marker-specific prior effect variance, $\pi_{im}$ is the marker-specific prior probability of MTBLR sharing model $m$, and $V_{b,i}$ is a marker-specific prior covariance matrix for multivariate marker effects.
 
 ## Direct annotation-informed STBLR
 
@@ -1720,7 +1720,7 @@ $$
 \mathbf b_i \mid M_i=m \sim N_m(0,V_b),
 $$
 
-where \(N_m(0,V_b)\) denotes a multivariate normal distribution restricted to the active traits in model $m$.
+where $N_m(0,V_b)$ denotes a multivariate normal distribution restricted to the active traits in model $m$.
 
 An annotation-aware version can use marker-specific or annotation-specific covariance matrices:
 
@@ -1746,7 +1746,7 @@ $$
 D_i = \mathrm{diag}(\sqrt{V_{b,i,11}},\ldots,\sqrt{V_{b,i,TT}}),
 $$
 
-or use annotation-specific full covariance matrices \(V_{b,k}\).
+or use annotation-specific full covariance matrices $V_{b,k}$.
 
 The first approach is more stable:
 
@@ -1975,7 +1975,7 @@ $$
 \log \pi_{im} = \log \pi_m^{global} + A_i\eta_m^{centered} - C_i.
 $$
 
-These two extensions are simple, interpretable, and likely to be stable. Marker-specific prior variances $v_{b,it}$ and marker-specific covariance matrices \(V_{b,i}\) are useful next steps, but they should be introduced with shrinkage and caps.
+These two extensions are simple, interpretable, and likely to be stable. Marker-specific prior variances $v_{b,it}$ and marker-specific covariance matrices $V_{b,i}$ are useful next steps, but they should be introduced with shrinkage and caps.
 
 
 ## Causal interpretation and causal-hypothesis generation

@@ -49,9 +49,9 @@ uppercase V denotes a variance-covariance matrix:
 
 | Quantity | Single trait | Multi trait |
 |---|---|---|
-| marker-effect scale | \(v_b\) | \(V_b\) |
-| genomic variance/covariance | \(v_g\) | \(V_g\) |
-| residual variance/covariance | \(v_e\) | \(V_e\) |
+| marker-effect scale | $v_b$ | $V_b$ |
+| genomic variance/covariance | $v_g$ | $V_g$ |
+| residual variance/covariance | $v_e$ | $V_e$ |
 
 Thus, for a non-null BayesR component,
 
@@ -59,9 +59,9 @@ $$
 \operatorname{Var}(\beta_j\mid c_j=k)=\gamma_kq_jv_b
 $$
 
-in ST, while its MT counterpart uses an active-trait submatrix of \(V_b\).
-Here \(\gamma_k\) is the BayesR relative component multiplier, \(q_j\) is the
-marker-specific relative variance multiplier, and \(v_b\) or \(V_b\) carries
+in ST, while its MT counterpart uses an active-trait submatrix of $V_b$.
+Here $\gamma_k$ is the BayesR relative component multiplier, $q_j$ is the
+marker-specific relative variance multiplier, and $v_b$ or $V_b$ carries
 the global active-effect variance/covariance scale.
 
 This is mathematical notation only. R fields retain explicit established names
@@ -71,50 +71,50 @@ lowercase unless a genuine matrix-valued counterpart is separately defined.
 
 This exposes two distinct architectures:
 
-1. **Probability architecture \(P_j\)** controls inclusion or mixture-component
+1. **Probability architecture $P_j$** controls inclusion or mixture-component
    probabilities.
-2. **Variance architecture \(Q_j=q_j\)** controls relative non-null effect
+2. **Variance architecture $Q_j=q_j$** controls relative non-null effect
    variance.
 
-BayesR's \(\gamma_k\) values are the core mixture ladder. They are not an
-annotation coefficient and do not replace \(q_j\).
+BayesR's $\gamma_k$ values are the core mixture ladder. They are not an
+annotation coefficient and do not replace $q_j$.
 
 For multi-trait models there are two further quantities:
 
-3. **Sharing architecture \(H\)** controls which trait-activity patterns are
+3. **Sharing architecture $H$** controls which trait-activity patterns are
    likely.
-4. **Covariance architecture \(V_b\)** controls cross-trait effect covariance.
+4. **Covariance architecture $V_b$** controls cross-trait effect covariance.
 
-For MT models, let \(a_j=p\) denote a non-null trait-activity pattern and
-\(c_j=k\) denote a BayesR component. The long-term architecture treats \(P\)
-and \(H\) as separate provider concepts where the statistical model supports
+For MT models, let $a_j=p$ denote a non-null trait-activity pattern and
+$c_j=k$ denote a BayesR component. The long-term architecture treats $P$
+and $H$ as separate provider concepts where the statistical model supports
 that factorization:
 
 $$
 P(c_j=0\mid A_j)=P_{j0},
 $$
 
-and, for \(k>0\),
+and, for $k>0$,
 
 $$
 P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p.
 $$
 
-Here \(P_{j0}\) is the marker null probability, the \(P_{jk}\) values control
-the non-null BayesR component architecture, and \(H_p\) is the conditional
-probability of non-null trait pattern p. Thus
-\(P_{j0}+\sum_{k>0}P_{jk}=1\) and \(\sum_pH_p=1\).
+Here $P_{j0}$ is the marker null probability, the $P_{jk}$ values control
+the non-null BayesR component architecture, and $H_p$ is the conditional
+probability of non-null trait pattern $p$. Thus
+$P_{j0}+\sum_{k>0}P_{jk}=1$ and $\sum_pH_p=1$.
 
 Current MT implementations must be distinguished from this target vocabulary:
 
 - ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the null state
   and all non-null pattern-by-positive-component states. Its component and
-  pattern probabilities are marginals of that simplex, not current \(P\) and
-  \(H\) factors;
-- MT BayesRC/SBayesRC implements the displayed factorization: \(P\) is
-  annotation dependent through probit stick breaking, while \(H\) remains
+  pattern probabilities are marginals of that simplex, not current $P$ and
+  $H$ factors;
+- MT BayesRC/SBayesRC implements the displayed factorization: $P$ is
+  annotation dependent through probit stick breaking, while $H$ remains
   global and conditional on non-null status;
-- \(V_b\) remains global and annotation independent in both current families.
+- $V_b$ remains global and annotation independent in both current families.
 
 The factorized MT BayesC special case would be
 
@@ -126,15 +126,87 @@ $$
 
 There is no BayesR component ladder in that case. This equation expresses the
 architectural decomposition; it does not claim that every current MT BayesC
-route is parameterized internally as independent \(P\) and \(H\) providers.
+route is parameterized internally as independent $P$ and $H$ providers.
 Marker non-null probability,
 non-null component probability, and conditional trait-pattern probability are
 therefore separate quantities even when their product determines a joint state
-probability. Annotation-dependent H is a future model, not a current feature.
+probability. Annotation-dependent $H$ is a future model, not a current feature.
 
 Keeping these four roles separate is important. Annotation-dependent inclusion
 is not the same scientific model as annotation-dependent effect magnitude, and
 a stable coefficient estimate is not automatically a stable induced prior.
+
+## How probability and variance architecture enter a marker update
+
+The distinction between $P$ and $Q$ is visible in one ordinary BayesC marker
+conditional. Let $w_j=x_j^\top x_j$ be the diagonal marker cross-product and
+let
+
+$$
+s_j=r_j+w_jb_j
+$$
+
+be the current marker score after adding marker $j$'s existing effect back to
+the summary-statistic residual score. Write
+
+$$
+v_{b,j}=v_bq_j
+$$
+
+for its active-effect prior variance. Integrating the active normal prior out
+of the Gaussian marker likelihood gives the active-versus-null Bayes factor
+
+$$
+\log BF_j
+=
+\frac{1}{2}\log\left(
+\frac{v_e}{v_e+w_jv_{b,j}}
+\right)
++
+\frac{1}{2}
+\frac{s_j^2v_{b,j}}
+{v_e\left(v_e+w_jv_{b,j}\right)}.
+$$
+
+The posterior inclusion odds are therefore
+
+$$
+\frac{P(d_j=1\mid\text{rest})}{P(d_j=0\mid\text{rest})}
+=
+\frac{\pi_j}{1-\pi_j}BF_j,
+$$
+
+or, equivalently,
+
+$$
+P(d_j=1\mid\text{rest})
+=
+\frac{\pi_jBF_j}{(1-\pi_j)+\pi_jBF_j}.
+$$
+
+Conditional on activity, the effect has the normal distribution
+
+$$
+b_j\mid d_j=1,\text{rest}
+\sim
+N\left(
+\frac{s_j}{w_j+v_e/v_{b,j}},
+\frac{v_e}{w_j+v_e/v_{b,j}}
+\right).
+$$
+
+Thus $\pi_j$ enters through prior odds, whereas $q_j$ enters through the
+active-effect variance, the marginal evidence for activity, and the amount of
+conditional shrinkage. Increasing $\pi_j$ asserts that marker $j$ is more likely
+to be active before observing its marker score. Increasing $q_j$ asserts that,
+if active, its effect is drawn from a wider distribution. Either mechanism can
+produce posterior enrichment in an annotated set, but they encode different
+scientific hypotheses and are not interchangeable.
+
+The same separation persists in BayesR: $P_{jk}$ supplies prior odds among
+components, while $\gamma_kq_jv_b$ supplies the active variance for component
+$k$. The operator determines how $s_j$ and $w_j$ are evaluated; it does not
+change these prior roles.
 
 ## Information may be fixed, learned, or informative
 
@@ -142,7 +214,7 @@ For any prior architecture, information can enter in several ways:
 
 - a global value shared by all markers;
 - a fixed marker-specific vector supplied externally;
-- a fixed mapping from \(A\) and supplied coefficients;
+- a fixed mapping from $A$ and supplied coefficients;
 - coefficients learned jointly from the current data;
 - an informative prior on learned coefficients;
 - a fixed marker baseline plus a learned correction.
@@ -159,14 +231,14 @@ prior mean.
 
 ### Global BayesC and BayesR probabilities
 
-Ordinary BayesC uses one global \(\pi\). Ordinary BayesR uses one global vector
+Ordinary BayesC uses one global $\pi$. Ordinary BayesR uses one global vector
 of component probabilities. These are the zero-annotation reference models and
 remain important regression controls.
 
 ### Fixed marker probabilities
 
-The current ST CSR `fixed_marker` route can take marker-specific \(\pi_j\)
-directly or construct them from \(A\) and fixed coefficients. Its historical
+The current ST CSR `fixed_marker` route can take marker-specific $\pi_j$
+directly or construct them from $A$ and fixed coefficients. Its historical
 map centers the linear predictor, applies a global-logit offset, and clamps the
 result to configured bounds. This is a fixed probability architecture: the
 coefficients are not learned in the sampler.
@@ -198,7 +270,7 @@ the historical learned variance implementation.
 ### Probit-stick component probabilities
 
 BayesRC/SBayesRC use annotations to change BayesR component probabilities. For
-continuation step \(k\), a probit regression based on \(A_j\alpha_k\) defines
+continuation step $k$, a probit regression based on $A_j\alpha_k$ defines
 the probability of stopping at or continuing past that component. The implied
 row of prior component probabilities is floored for numerical safety and
 renormalized.
@@ -220,23 +292,25 @@ probability.
 
 ::: {.callout-note title="Current implementation"}
 Probit-stick BayesRC/SBayesRC is implemented across ST and MT BED, CSR, and
-retained block-eigen routes. MT currently uses annotation-dependent component
-probabilities together with global conditional trait-pattern probabilities;
-annotations do not change sharing patterns or \(V_b\).
+block-eigen routes. The scalar block-eigen route uses the retained-factor
+operator, whereas the current joint MT route uses reconstructed dense blocks.
+MT uses annotation-dependent component probabilities together with global
+conditional trait-pattern probabilities; annotations do not change sharing
+patterns or $V_b$.
 :::
 
 ## Variance architecture
 
 ### Fixed marker variance
 
-A positive supplied multiplier \(q_j\) modifies non-null variance while the
-global scale remains \(v_b\) in ST or \(V_b\) in MT. The existing ST CSR
+A positive supplied multiplier $q_j$ modifies non-null variance while the
+global scale remains $v_b$ in ST or $V_b$ in MT. The existing ST CSR
 `fixed_marker` route exposes this as `fixed_vb_multiplier` and also supports a
-fixed log-linear construction from \(A\).
+fixed log-linear construction from $A$.
 
 The scientific quantity is a **prior variance multiplier**. A future API should
 use that name and route it through one variance provider; it should not create a
-second “offset” mechanism for the same q.
+second “offset” mechanism for the same $q$.
 
 ### Group probability and variance
 
@@ -274,7 +348,7 @@ d_j\sim\operatorname{Bernoulli}(\pi),\qquad
 \beta_j\mid d_j=1\sim N(0,v_bq_j).
 $$
 
-Annotations affect non-null variance only; \(\pi\) remains global. The theta
+Annotations affect non-null variance only; $\pi$ remains global. The $\theta$
 conditional, apart from its Gaussian prior, is
 
 $$
@@ -288,7 +362,7 @@ $$
 \beta_j\mid c_j=k>0\sim N(0,v_b\gamma_kq_j),
 $$
 
-with one common theta across all non-null components and global mixture
+with one common $\theta$ across all non-null components and global mixture
 probabilities. The conditional contribution is
 
 $$
@@ -297,9 +371,10 @@ $$
 \frac{\beta_j^2}{v_b\gamma_{c_j}\exp(\eta_j)}\right\}.
 $$
 
-Theta is updated by elliptical slice sampling (ESS). If no marker is active,
-theta is drawn directly from its Gaussian prior. The implementation does not
-silently clamp q; it uses log-scale guards and reports min/max log q and ESS
+$\theta$ is updated by elliptical slice sampling (ESS). If no marker is active,
+$\theta$ is drawn directly from its Gaussian prior. The implementation does not
+silently clamp $q$; it uses log-scale guards and reports minimum/maximum
+$\log q$ and ESS
 evaluation/contraction diagnostics.
 
 ::: {.callout-note title="Current implementation"}
@@ -308,14 +383,14 @@ block-eigen likelihoods. They are not implemented for packed BED or MT. Their
 ordinary no-op policies preserve ordinary-model RNG trajectories.
 :::
 
-For binary column \(c\), \(\exp(\theta_c)\) is the annotated/unannotated prior
+For binary column $c$, $\exp(\theta_c)$ is the annotated/unannotated prior
 **variance** ratio, conditional on the other annotations. For a standardized
 continuous column it is the variance ratio for a one-SD increase.
 
 ### Learned-logistic variance versus LV
 
 The variance half of the older learned-logistic model also has a centered
-log-linear q, but it uses a zero-centered isotropic prior, bounded q, joint
+log-linear $q$, but it uses a zero-centered isotropic prior, bounded $q$, joint
 random-walk Metropolis proposals, a different update schedule, and different
 preprocessing. Its active-effect likelihood is closely related to BayesC-LV,
 but the two implementations do not define identical transition kernels or,
@@ -328,18 +403,43 @@ intentional model migration, not a mechanical rename.
 
 ### MAF-S
 
-MAF-S is also a variance architecture. With heterozygosity \(h_j\),
+MAF-S is also a variance architecture. If $p_j$ is the effect-allele
+frequency, define marker heterozygosity
+
+$$
+h_j=2p_j(1-p_j).
+$$
+
+The current standardized-genotype parameterization uses
 
 $$
 q_j(S)=h_j^{S+1}.
 $$
 
-`sblr` supports fixed S and, on selected summary-statistics routes, sampled S.
-MT support is currently for fixed marker scale in established mixture-model
-routes; sampled MT S is unsupported. Historical MAF-S does not log-center q,
-so its global-scale convention differs from LV.
+The scalar $S$ controls how active-effect variance changes with allele
+frequency. The exponent is $S+1$, rather than $S$, because current MAF-S
+effects are represented on the standardized-genotype scale. Consequently,
+$S=-1$ gives $q_j(-1)=1$ for every nondegenerate marker and is the numerical
+unit-scale reduction. Other values tilt prior active-effect variance toward
+or away from low-heterozygosity markers.
 
-MAF-derived columns in A and MAF-S can explain much the same variation. A
+This multiplier is distinct from three other scales. The BayesR value
+$\gamma_k$ selects a relative mixture-component variance; $v_b$ is the global
+ST active-effect scale; and an annotation-derived $q_j$ describes relative
+marker variance from annotation information. MAF-S instead imposes the
+one-parameter curve $h_j^{S+1}$. A fixed $S$ treats that curve as supplied
+prior architecture. A sampled $S$ estimates the curve jointly with supported
+ST summary-statistics models.
+
+`sblr` supports fixed $S$ and, on selected summary-statistics routes, sampled
+$S$. MT support is currently for a fixed marker scale in established
+mixture-model routes; sampled MT $S$ is unsupported. Historical MAF-S does not
+log-center $q$, so its global-scale and calibration convention differs from
+LV and must not be silently replaced by the proposed composed-$q$ convention.
+
+A MAF- or heterozygosity-derived column in $A$ and MAF-S can explain much the
+same variation in marker scale. Their coefficients can therefore be weakly
+identified or trade off strongly when both are learned. A
 future composed model should warn about this confounding and require a declared
 normalization/calibration convention.
 
@@ -348,8 +448,11 @@ normalization/calibration convention.
 Current annotation mechanisms do not all use the same transformation. LV has
 the strongest explicit contract:
 
-- align rows exactly to the analysis-marker order;
-- require unique, complete marker IDs and unique annotation names;
+- require the exact analysis-marker row count and order;
+- when non-default row names are supplied, require them to match the final
+  marker order exactly rather than silently reordering; positional exact-length
+  input remains possible when marker row names are absent;
+- require unique, nonempty annotation names;
 - reject missing or nonfinite values;
 - binary columns are centered but not divided by their SD;
 - continuous columns are centered and standardized to SD one;
@@ -357,7 +460,7 @@ the strongest explicit contract:
 - reject constant, all-one, duplicate, or rank-deficient designs;
 - preserve transformation metadata and do not mutate the caller's object.
 
-Because every column of \(X\) is centered,
+Because every column of $X$ is centered,
 
 $$
 M^{-1}\sum_j\eta_j=0,
@@ -378,9 +481,9 @@ provenance. Each provider declares its transform profile. Harmonization must be
 an explicit model decision; a common object must not silently change existing
 models.
 
-## Identification and composition of q
+## Identification and composition of $q$
 
-The global \(v_b\) or \(V_b\) controls overall magnitude. q should normally
+The global $v_b$ or $V_b$ controls overall magnitude. The multiplier $q$ should normally
 redistribute variance across markers. For a new composable provider, a coherent
 raw architecture is
 
@@ -392,9 +495,9 @@ $$
 $$
 
 The proposed new-provider convention subtracts the unweighted mean of
-\(\log q_j^{\rm raw}\) over the aligned analysis-marker universe, making the
+$\log q_j^{\rm raw}$ over the aligned analysis-marker universe, making the
 combined geometric mean one. This constant does not change annotation variance
-ratios, but it identifies q relative to the global scale.
+ratios, but it identifies $q$ relative to the global scale.
 
 This convention must not be retrofitted silently onto historical MAF-S or group
 routes, whose normalization and calibration are different. Existing routes
@@ -404,9 +507,9 @@ Potential warnings or unsupported combinations include:
 
 - an intercept in a log-variance design;
 - highly correlated annotations, which can make individual coefficients weakly
-  identified even when induced q is stable;
-- MAF-derived annotation columns together with sampled S;
-- an external q nearly collinear with \(A\theta\);
+  identified even when induced $q$ is stable;
+- MAF-derived annotation columns together with sampled $S$;
+- an external $q$ nearly collinear with $A\theta$;
 - simultaneously learned annotation-dependent probability and variance without
   dedicated identifiability validation.
 
@@ -444,8 +547,8 @@ The first production default-initialization rule is fixed as follows:
 - if `theta_init` is supplied, use that explicit value.
 
 The fit specification must record `theta_prior_mean` and the resolved
-`theta_init` separately. Initial q is constructed from the resolved
-`theta_init`, and h2 calibration uses that initial q. This default does not turn
+`theta_init` separately. Initial $q$ is constructed from the resolved
+`theta_init`, and $h^2$ calibration uses that initial $q$. This default does not turn
 the prior mean into an initialization parameter; it only avoids calibrating an
 informative threefold prior belief under an unrelated default onefold
 architecture.
@@ -458,17 +561,17 @@ $$
 \log q_j=\log q_j^{\rm external}+A_j\theta.
 $$
 
-This covers external q only, learned LV only, and external q plus learned
+This covers external $q$ only, learned LV only, and external $q$ plus learned
 recalibration. The public term should be `prior_variance_multiplier`; “offset”
 is an implementation description, not the scientific object. Values must be
 strictly positive, finite, uniquely aligned by marker, and normalized under the
-declared q convention. Existing fixed-marker variance machinery should become
+declared $q$ convention. Existing fixed-marker variance machinery should become
 the fixed form of the same provider.
 
 ## Multi-trait generalization
 
 The first MT-LV implementation target is specifically MT BayesR/SBayesR with
-its existing global `joint_pi` state simplex unchanged and one q shared across
+its existing global `joint_pi` state simplex unchanged and one $q$ shared across
 traits:
 
 $$
@@ -480,12 +583,12 @@ $$
 =\gamma_kq_jV_{b,p},
 $$
 
-where p is a non-null activity pattern and \(V_{b,p}\) is the active-trait
-submatrix of \(V_b\). The scalar \(q_j\) multiplies the entire active-trait
+where $p$ is a non-null activity pattern and $V_{b,p}$ is the active-trait
+submatrix of $V_b$. The scalar $q_j$ multiplies the entire active-trait
 covariance matrix, so it changes overall marker effect magnitude without by
-itself changing the correlation structure represented by \(V_b\). Pattern
-Complete joint-state probabilities remain global; their component and pattern
-marginals remain derived summaries rather than a new factorized \(P\times H\)
+itself changing the correlation structure represented by $V_b$. The complete
+joint-state probabilities remain global; their component and pattern
+marginals remain derived summaries rather than a new factorized $P\times H$
 parameterization.
 No annotation-dependent probability architecture is part of this first target.
 MT BayesRC/SBayesRC plus LV belongs entirely to the separately research-gated
@@ -493,8 +596,8 @@ probability-plus-variance phase. MT BayesC-LV may be considered later, but it is
 not the first MT target.
 
 ::: {.callout-warning title="Proposed, not implemented"}
-Shared-q MT-LV is not a current production route. It requires q-aware \(V_b\) updates,
-prior calibration, operator parity, an independent theta oracle, and
+Shared-$q$ MT-LV is not a current production route. It requires $q$-aware $V_b$ updates,
+prior calibration, operator parity, an independent $\theta$ oracle, and
 ordinary-MT trajectory gates.
 :::
 
@@ -509,8 +612,8 @@ $$
 \operatorname{Cov}(\beta_j)=\gamma_kD_jV_bD_j.
 $$
 
-That model needs stronger identification between D and \(V_b\). Annotation-dependent
-trait sharing and annotation-dependent \(V_b\) are later research models, not implied
+That model needs stronger identification between D and $V_b$. Annotation-dependent
+trait sharing and annotation-dependent $V_b$ are later research models, not implied
 by current MT BayesRC.
 
 ## Probability plus variance annotations
@@ -523,12 +626,12 @@ P_j=\operatorname{probit\mbox{-}stick}(A_j\alpha),
 $$
 
 The same annotations would then explain both component membership and effect
-magnitude. Given known alpha/occupancy mixing challenges in SBayesRC, this
+magnitude. Given known $\alpha$/occupancy mixing challenges in SBayesRC, this
 combination should not be exposed merely because provider composition makes it
 easy to code. It needs separate signal, null, correlated-annotation,
 identification, and multichain validation.
 
-## Prior calibration and h2
+## Prior calibration and $h^2$
 
 Automatic calibration must use the resolved initial architecture. For ST, its
 expected-variance weight has the form
@@ -537,25 +640,25 @@ $$
 W=\sum_j\sum_k p^{\rm init}_{jk}\gamma_kq_jv_j,
 $$
 
-where \(v_j\) is the genotype/summary-statistic scaling term appropriate to the
-route. The initial global scale is chosen so the requested h2 corresponds to
+where $v_j$ is the genotype/summary-statistic scaling term appropriate to the
+route. The initial global scale is chosen so the requested $h^2$ corresponds to
 the initialized expected genetic variance.
 
 For MT, calibration uses a trait-pair weight matrix that includes component,
-pattern, q, and genotype scaling. Automatic diagonal \(V_b\) can target marginal
-trait variances; automatically identifying an unrestricted covariance \(V_b\) from
-h2 alone is not well-defined.
+pattern, $q$, and genotype scaling. Automatic diagonal $V_b$ can target marginal
+trait variances; automatically identifying an unrestricted covariance $V_b$ from
+$h^2$ alone is not well-defined.
 
-When theta, alpha, group scales, or S are learned, calibration at their initial
+When $\theta$, $\alpha$, group scales, or $S$ are learned, calibration at their initial
 state is generally an initialization approximation, not the exact marginal
 prior expectation after integrating over learned coefficients. Outputs and
 documentation should say which interpretation applies.
 
-For informative theta priors, the first production rule is deterministic:
+For informative $\theta$ priors, the first production rule is deterministic:
 resolve missing `theta_init` to `theta_prior_mean`, otherwise use the explicit
-`theta_init`; construct initial q from that resolved value; and calibrate h2
-using that q. Record the prior mean and resolved initialization separately. Do
-not integrate over the theta prior in the first implementation.
+`theta_init`; construct initial $q$ from that resolved value; and calibrate $h^2$
+using that $q$. Record the prior mean and resolved initialization separately. Do
+not integrate over the $\theta$ prior in the first implementation.
 
 ## Current capability summary
 
@@ -563,14 +666,14 @@ not integrate over the theta prior in the first implementation.
 |---|---|---|---|---|---|---|
 | Global BayesC/R | implemented | implemented | implemented | implemented | implemented | implemented |
 | Probit-stick BayesRC | implemented | implemented | implemented | implemented | implemented | implemented |
-| Fixed marker P/Q | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
-| Group P/Q | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
-| Learned logistic P/Q | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
+| Fixed marker $P/Q$ | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
+| Group $P/Q$ | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
+| Learned logistic $P/Q$ | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
 | BayesC/R-LV | not implemented | implemented and qualified | implemented and qualified | not implemented | proposed | proposed |
 | Annotation-dependent sharing | conceptual only | conceptual only | conceptual only | conceptual only | conceptual only | conceptual only |
 | Annotation-dependent covariance | unsupported | unsupported | unsupported | research concept | research concept | research concept |
 
-MAF-S coverage is route- and model-dependent; fixed and sampled S are not
+MAF-S coverage is route- and model-dependent; fixed and sampled $S$ are not
 uniformly supported across this table. Consult route validation rather than
 assuming that an argument's presence means the combination is implemented.
 
@@ -667,21 +770,21 @@ fit$diagnostics
 `model_spec$prior` records what was specified or assumed, including fixed
 inputs, coefficient priors, normalization rules, and resolved initialization.
 `architecture` contains fixed architecture quantities and posterior inference
-for learned architecture parameters such as alpha, theta, induced marker
-probabilities, and q. It is a scientific result namespace, not a copy of the
+for learned architecture parameters such as $\alpha$, $\theta$, induced marker
+probabilities, and $q$. It is a scientific result namespace, not a copy of the
 input prior specification.
 
 Probability results should distinguish prior marker/component probabilities
 from posterior allocations. Variance results should distinguish fixed external
-q, posterior mean q, coefficient summaries, and MAF-S. For LV,
+$q$, posterior mean $q$, coefficient summaries, and MAF-S. For LV,
 `exp(mean(theta))` is a plug-in coefficient ratio, whereas the posterior mean
-marker q is `mean(exp(X theta))`; these need not be identical.
+marker $q$ is `mean(exp(X theta))`; these need not be identical.
 
 Diagnostics should be layered:
 
 1. latent coefficients: R-hat, bulk/tail ESS, MCSE, and MH acceptance or ESS
    contraction statistics;
-2. induced architecture: cross-chain stability of marker P and q and expected
+2. induced architecture: cross-chain stability of marker $P$ and $q$ and expected
    active/component counts;
 3. posterior marker quantities: PIP, component allocation, and beta stability;
 4. downstream quantities: genetic variance and prediction stability.
