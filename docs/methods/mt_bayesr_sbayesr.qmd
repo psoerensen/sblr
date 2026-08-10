@@ -1,141 +1,649 @@
 ---
-title: "Multi-trait BayesR and SBayesR"
+title: "Multi-Trait BayesR and SBayesR"
 format:
   html:
     toc: true
     number-sections: true
 ---
 
-## Data level and prior kernel
+This page describes the current ordinary multi-trait BayesR/SBayesR prior and
+state space in `sblr`. The important feature of this model is that trait-sharing
+patterns and BayesR variance components are represented by **one joint
+probability simplex**. They are not currently parameterized as independent
+probability and sharing architectures.
 
-The public model name identifies the likelihood representation:
+The individual-level and summary-statistics routes use the same core
+multi-trait prior. They differ in how the likelihood information is represented.
+
+## BayesR and SBayesR
+
+The public model name identifies the likelihood context:
 
 - `bayesr` is the individual-level packed-BED model;
-- `sbayesr` is the summary-statistics model for CSR or block-eigen LD.
+- `sbayesr` is the summary-statistics model used with CSR or block-eigen LD.
 
-Both use the same joint multi-trait BayesR prior kernel. The `s` prefix does
-not activate MAF scaling. Optional MAF-dependent scaling is controlled only by
-`maf_effect_s`.
+Both use the same ordinary multi-trait BayesR state model described below.
 
-## Joint marker state
+The `S` prefix does **not** activate MAF-dependent effect scaling. Optional
+BayesS-style MAF scaling is controlled separately by `maf_effect_s`.
 
-Let the supplied trait-activity patterns contain one null pattern and $P$
-non-null binary patterns $a_p\in\{0,1\}^T$. Let
+See [Core BLR Model Theory](model_theory.qmd) for the general ST/MT regression
+model and the distinction between prior family and likelihood operator.
 
-$$
-0=\gamma_0 < \gamma_1 < \cdots < \gamma_K
-$$
+## Trait-Activity Patterns
 
-be `mixture_var`, with one null multiplier and $K$ positive variance
-components. A marker has one unique null state plus every non-null
-pattern/component combination, so
+Let $T$ be the number of traits. A trait-activity pattern is a binary vector
 
 $$
-J = 1 + PK.
+a_p\in\{0,1\}^{T},
 $$
 
-Ordering is deterministic: `null` first, then supplied non-null pattern order,
-and within each pattern ascending positive-component order. Public names follow
-`null`, `pattern_1__component_1`, ..., without exposing zero-based native
-indices. The state-space and memory guard runs before sampling and never
-silently drops patterns or components.
-
-## Latent and effective effects
-
-For marker $j$, component $k>0$, and active pattern $a_p$, the retained
-MT prior uses a shared base marker-effect covariance $V_b$. On the active trait
-subspace,
+where
 
 $$
-\beta_{j,p,k}\mid V_b,S \sim
-N\!\left(0,\;\gamma_k q_j(S) V_{b,p}\right),
+[a_p]_t
+=
+\begin{cases}
+1, & \text{marker active for trait }t,\\
+0, & \text{marker inactive for trait }t.
+\end{cases}
+$$
+
+The supplied pattern set contains one null pattern and $L$ non-null patterns.
+
+We use $L$ here for the number of non-null patterns rather than $P$, because
+$P$ is reserved elsewhere in the Methods documentation for probability
+architecture.
+
+The null pattern is
+
+$$
+a_0=(0,\ldots,0)^\top.
+$$
+
+The remaining patterns may represent activity in one trait, several traits, or
+all traits, depending on the model specification.
+
+For example, with three traits,
+
+$$
+a_p=
+\begin{bmatrix}
+1\\
+0\\
+1
+\end{bmatrix}
+$$
+
+means that the marker is active for traits 1 and 3 but inactive for trait 2.
+
+## BayesR Variance Components
+
+Let the theoretical BayesR variance multipliers satisfy
+
+$$
+\gamma_0=0,
 \qquad
-q_j(S)=\{2p_j(1-p_j)\}^{S+1},
+0<\gamma_1<\cdots<\gamma_K.
 $$
 
-where $q_j(S)=1$ when `maf_effect_s` is absent and also numerically when the
-explicit value is $-1$. Inactive traits are masked:
+The null multiplier $\gamma_0$ gives an exact zero-effect state. The positive
+multipliers define increasingly diffuse effect-size components.
+
+In current R inputs, `mixture_var[1]` is the null multiplier and corresponds to
+the theoretical component $k=0$. The remaining one-based R elements correspond
+to $k=1,\ldots,K$.
+
+The component ladder $\gamma_k$ is part of the core BayesR prior. It should not
+be confused with:
+
+- the global marker-effect covariance $V_b$;
+- the optional marker-specific MAF multiplier $q_j(S)$; or
+- an annotation-derived variance architecture.
+
+## One Joint Marker State
+
+For marker $j$, a non-null state is defined by both:
+
+1. a non-null trait-activity pattern $p\in\{1,\ldots,L\}$; and
+2. a positive BayesR component $k\in\{1,\ldots,K\}$.
+
+There is only one null state. Therefore the total number of joint states is
 
 $$
-b_j = a_p \odot \beta_j.
+J
+=
+1+LK.
 $$
 
-Here $V_{b,p}$ is the active-trait submatrix of $V_b$. Annotations do not
-enter this BayesR model. Known component and optional MAF scales are removed
-when updating the shared base $V_b$; the sampler does
-not maintain component-specific covariance matrices.
+It is useful to denote the complete marker state by $z_j$. Then
 
-Terminology is fixed:
+$$
+z_j=0
+$$
 
-- `beta_final`: final latent effects, where exposed;
-- `b_final`: final effective marker effects;
-- `d_final`: final binary trait activity;
-- `component_final`: final component code, with zero as null;
-- `bm`: posterior mean effective effects;
-- `dm`: trait-specific posterior probability of activity.
+is the unique null state, whereas
 
-## Joint probabilities
+$$
+z_j=(p,k)
+$$
 
-`joint_pi` initializes the probability simplex over the $J$ deterministic
-states and `joint_pi_prior` supplies its positive Dirichlet prior. With
-`updatePi = TRUE`, counts from the complete joint states update that simplex;
-with `FALSE`, the supplied state remains fixed. Component and pattern
-marginals are deterministic sums of the current joint probabilities.
+denotes non-null activity pattern $p$ together with positive component $k$.
 
-This is a full joint-state simplex, not a factorization into an independent
-component-probability vector and a conditional trait-pattern vector. The
-explicit probability architecture $P$ and sharing architecture $H$ used in
-the long-term design are useful conceptual provider boundaries, but they must
-not be projected backward onto the current ordinary MT BayesR implementation.
-Current MT BayesRC/SBayesRC differs: it factorizes marker-specific component
-probabilities $P_j$ from global conditional non-null pattern probabilities
-$H$.
+The implementation uses a deterministic state order:
 
-For BayesR/SBayesR, `pi_final`, `pi_mean`, and `pi_trace` therefore refer to
-named joint-state probabilities. `model_parameters$mixture` records
-`mixture_var`, component and pattern names, joint-state names, probability
-marginals, and `maf_effect_s` metadata.
+1. the unique null state;
+2. supplied non-null patterns in their declared order;
+3. within each pattern, positive components in ascending component order.
 
-## Outputs
+Current public state names follow this deterministic ordering. The state-space
+size is checked before sampling; patterns or components are not silently
+discarded to reduce memory use.
 
-Marker outputs include `bm`, `dm`, `b_final`, `d_final`, `component_final`,
-and row-normalized marker-by-component `component_probabilities`. Covariance
-outputs are the mean and final full marker-effect $V_b$, genomic $V_g$,
-and residual $V_e$ covariance matrices. Their existing code fields remain
-`covb`, `covg`, and `cove`; no case-only R names are introduced. The common
-`vbs`, `vgs`, `ves`, `vle`, and `vld` traces are
-iteration by trait, with `vld = vgs - vle` at each recorded iteration.
+## Marker Effects and Trait Masking
 
-No marker-by-joint-state posterior matrix is returned by default.
+Let
 
-## Operator-specific likelihoods
+$$
+\beta_j\in\mathbb{R}^{T}
+$$
 
-The state descriptor, prior, probability update, base-$V_b$ update, seeds,
-chain aggregation, and output meanings are shared. The likelihood operator
-differs:
+denote marker $j$'s latent multi-trait effect vector before trait-pattern
+masking.
 
-- `mtblr_bed(method = "bayesr")` uses standardized selected genotypes and may
-  use full or diagonal residual covariance;
-- `mtblr_csr(method = "sbayesr")` uses aligned summary scores and sparse LD,
-  with the summary-data residual policy;
-- `mtblr_block_eigen(method = "sbayesr")` uses reconstructed filtered
-  within-block operators on the same summary scale.
+If marker $j$ occupies non-null state $(p,k)$, its active-trait prior covariance
+is based on the corresponding submatrix $V_{b,p}$ of the global marker-effect
+covariance $V_b$.
 
-Operator and immutable model data are prepared once per fit and shared across
-logical chains.
+With an optional marker-specific variance multiplier $q_j$,
 
-## Current limitations
+$$
+\beta_{j,p,k}
+\mid
+V_b,q_j
+\sim
+N\left(
+0,\,
+\gamma_k q_j V_{b,p}
+\right)
+$$
 
-- MT `maf_effect_s` may be fixed but cannot be sampled.
-- Joint state count is guarded for memory and practical numerical size.
-- Ordinary MT BayesR has no annotation-dependent component probability or
-  learned log-variance multiplier. Annotation-dependent component probability
-  is available through MT BayesRC/SBayesRC.
-- Shared-$q$ MT BayesR-LV is proposed, not implemented.
-- Full marker-by-joint-state posterior probabilities are not retained.
-- Summary routes do not infer unmodeled cross-trait sample overlap.
+on the active trait subspace.
 
-See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the current factorized
-annotation-probability model, [Annotation-Informed Priors](annotation_priors.qmd)
-for proposed shared-$q$ MT-LV, and
-[Multi-trait models](../notes/multi_trait_models.qmd) for calls.
+The effective marker-effect vector is obtained by applying the activity mask:
+
+$$
+b_j
+=
+a_p\odot\beta_j,
+$$
+
+where $\odot$ denotes elementwise multiplication.
+
+Inactive traits therefore have effective effect exactly zero, even though the
+native sampler may distinguish latent and effective effect representations
+internally.
+
+The marker-effect matrix in the regression model is
+
+$$
+B=
+\begin{bmatrix}
+b_1^\top\\
+\vdots\\
+b_M^\top
+\end{bmatrix},
+$$
+
+so that
+
+$$
+Y=XB+E_Y.
+$$
+
+## Marker-Effect Covariance $V_b$
+
+The matrix
+
+$$
+V_b\in\mathbb{R}^{T\times T}
+$$
+
+is the shared base covariance for active marker effects.
+
+For state $(p,k)$, the active covariance is
+
+$$
+\gamma_k q_j V_{b,p}.
+$$
+
+Thus:
+
+- $\gamma_k$ changes variance according to the BayesR component;
+- $q_j$ changes marker-specific relative variance;
+- $V_b$ supplies the shared cross-trait covariance structure.
+
+The sampler does not maintain a separate covariance matrix for every BayesR
+component. Instead, known relative scales such as $\gamma_k$ and the optional
+$q_j$ are accounted for when updating the shared base covariance $V_b$.
+
+This separation is important. A marker being assigned to a larger BayesR
+component does not imply that the cross-trait correlation structure itself has
+changed.
+
+## Optional MAF-S Scaling
+
+For marker $j$, let $f_j$ denote minor allele frequency and define
+heterozygosity
+
+$$
+h_j
+=
+2f_j(1-f_j).
+$$
+
+When fixed MAF-S scaling is enabled,
+
+$$
+q_j(S)
+=
+h_j^{S+1}.
+$$
+
+The non-null covariance becomes
+
+$$
+\gamma_k q_j(S)V_{b,p}.
+$$
+
+If `maf_effect_s` is absent, the ordinary model uses
+
+$$
+q_j=1.
+$$
+
+If an explicit value
+
+$$
+S=-1
+$$
+
+is supplied, then
+
+$$
+q_j(-1)=1
+$$
+
+numerically for every nondegenerate marker, so the MAF multiplier also reduces
+to unit scale.
+
+The $S+1$ exponent reflects the standardized-genotype effect scale used by the
+current summary-statistics parameterization. MAF-S is a variance architecture;
+it is not part of the `S` prefix in SBayesR.
+
+Current MT BayesR/SBayesR supports fixed `maf_effect_s`, but MT sampling of
+$S$ is not implemented.
+
+See [Annotation-Informed Priors](annotation_priors.qmd) for the general
+relationship among MAF-S, $q_j$, $\gamma_k$, and $V_b$.
+
+## Joint-State Probability Simplex
+
+Let
+
+$$
+\omega_0
+$$
+
+denote the probability of the unique null state, and let
+
+$$
+\omega_{pk},
+\qquad
+p=1,\ldots,L,
+\quad
+k=1,\ldots,K,
+$$
+
+denote the probabilities of the non-null pattern-component states.
+
+They satisfy
+
+$$
+\omega_0
++
+\sum_{p=1}^{L}
+\sum_{k=1}^{K}
+\omega_{pk}
+=
+1.
+$$
+
+The current code stores this complete simplex in `joint_pi`.
+
+This is the key defining property of ordinary MT BayesR/SBayesR:
+
+> component membership and trait-sharing pattern are represented jointly.
+
+There is no current parameterization of the form
+
+$$
+\text{component probability}
+\times
+\text{conditional sharing probability}
+$$
+
+for this ordinary model.
+
+### Dirichlet updating
+
+The supplied `joint_pi_prior` defines positive Dirichlet prior parameters for
+the complete $J$-state simplex.
+
+When `updatePi = TRUE`, the current marker-state counts update the full joint
+simplex. Schematically,
+
+$$
+\omega
+\mid
+z_1,\ldots,z_M
+\sim
+\operatorname{Dirichlet}
+\left(
+\alpha_1+n_1,\ldots,\alpha_J+n_J
+\right),
+$$
+
+where $n_s$ is the number of markers currently occupying joint state $s$.
+
+When `updatePi = FALSE`, the supplied joint-state probabilities remain fixed.
+
+## Component and Pattern Marginals
+
+Although the current model is parameterized by the full joint simplex, useful
+marginal probabilities can be obtained by summation.
+
+The marginal probability of positive BayesR component $k$ is
+
+$$
+\omega_k^{(\mathrm{component})}
+=
+\sum_{p=1}^{L}\omega_{pk}.
+$$
+
+The marginal probability of non-null trait pattern $p$ is
+
+$$
+\omega_p^{(\mathrm{pattern})}
+=
+\sum_{k=1}^{K}\omega_{pk}.
+$$
+
+These are deterministic marginals of the joint state.
+
+They should not be interpreted as independently sampled probability
+architectures.
+
+This distinction is especially important when comparing ordinary MT BayesR
+with MT BayesRC/SBayesRC.
+
+## Contrast With MT BayesRC/SBayesRC
+
+Current MT BayesRC/SBayesRC uses a different probability architecture.
+
+There, marker-specific BayesR component probabilities are represented by
+
+$$
+P_{jk},
+$$
+
+and conditional non-null trait-pattern probabilities by
+
+$$
+H_p.
+$$
+
+For $k>0$,
+
+$$
+\Pr(a_j=p,c_j=k\mid A_j)
+=
+P_{jk}H_p.
+$$
+
+Thus MT BayesRC/SBayesRC has the current factorization
+
+$$
+P\times H.
+$$
+
+Ordinary MT BayesR/SBayesR does **not**.
+
+The conceptual $P$ and $H$ axes are useful for the long-term prior
+architecture, but they must not be projected backward onto the current ordinary
+MT BayesR implementation.
+
+See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for that model.
+
+## Posterior Marker Quantities
+
+The joint state induces several different posterior marker summaries.
+
+### Trait-specific PIP
+
+For marker $j$ and trait $t$, the trait-specific posterior inclusion
+probability is
+
+$$
+\operatorname{PIP}_{jt}
+=
+\Pr\left(
+[b_j]_t\ne0
+\mid
+\mathcal D
+\right).
+$$
+
+Equivalently, it is the posterior probability that marker $j$ occupies any
+joint state whose activity pattern includes trait $t$.
+
+In current formatted fit objects, this quantity is represented by `dm`.
+
+### Posterior mean effective effect
+
+The posterior mean effective marker effect is
+
+$$
+\mathbb E(b_j\mid\mathcal D).
+$$
+
+In current formatted fit objects this is represented by `bm`.
+
+Because `bm` averages over null states, activity patterns, positive components,
+and effect uncertainty, it should not be confused with a conditional effect
+given one joint state.
+
+### Posterior component probabilities
+
+Current marker-by-component `component_probabilities` marginalize over trait
+patterns. For marker $j$,
+
+$$
+\Pr(c_j=k\mid\mathcal D)
+=
+\sum_{p}
+\Pr(z_j=(p,k)\mid\mathcal D)
+$$
+
+for positive components, with the unique null state contributing the null
+component probability.
+
+These probabilities contain more information about the BayesR effect-size
+mixture than the trait-specific PIPs, but they still do not retain the complete
+marker-by-joint-state posterior distribution.
+
+### Final sampled state
+
+A final marker state such as `component_final` is one sampled state from the
+primary chain, not a posterior probability.
+
+Posterior means, posterior probabilities, and final mutable MCMC states answer
+different questions and should not be interpreted interchangeably.
+
+## Genomic and Residual Covariance
+
+The prior covariance $V_b$ is only one of the covariance quantities in the MT
+model.
+
+The fitted genetic-value matrix is
+
+$$
+G_X=XB.
+$$
+
+For one common sample, the genomic covariance is induced by the fitted effects
+and genotype covariance:
+
+$$
+V_g
+\propto
+B^\top X^\top XB.
+$$
+
+The residual covariance $V_e$ instead describes the observation-level residual
+vectors in
+
+$$
+E_Y=Y-XB.
+$$
+
+Thus:
+
+- $V_b$ is a marker-effect prior covariance;
+- $V_g$ is an induced covariance of fitted genetic values;
+- $V_e$ is an observation-level residual covariance.
+
+The summary-statistics representation of $V_g$ and the cross-trait phenotype
+information required for $V_e$ are developed in
+[Summary Statistics](summary_statistics.qmd) and
+[Multi-Trait Sample Overlap](multitrait_overlap.qmd).
+
+## Likelihood Operators
+
+The joint state descriptor, BayesR prior, joint probability update, base-$V_b$
+update, logical chain structure, and scientific interpretation are shared
+across the current MT BayesR/SBayesR routes.
+
+The likelihood representation differs.
+
+### Packed BED
+
+`mtblr_bed(method = "bayesr")` uses selected individual-level genotypes.
+
+The individual-level model is
+
+$$
+Y=XB+E_Y.
+$$
+
+Depending on the route and settings, residual covariance may be represented by
+a full or restricted structure.
+
+### CSR summary-statistics likelihood
+
+`mtblr_csr(method = "sbayesr")` uses aligned marker-trait cross-products,
+marker diagonal cross-products, and sparse LD.
+
+Mathematically, the central marker-trait quantity is
+
+$$
+X^\top Y.
+$$
+
+Current code may represent this through trait-wise `wy` objects or route-specific
+fields. These code names should not be treated as separate mathematical
+quantities.
+
+The current MT CSR route uses shared LD scaling and does not infer arbitrary
+unmodeled cross-trait sample overlap.
+
+### Block-eigen summary-statistics likelihood
+
+`mtblr_block_eigen(method = "sbayesr")` uses the current multi-trait
+block-eigen representation.
+
+Importantly, the current MT block-eigen route is based on reconstructed
+filtered within-block operators. It should not be conflated with the canonical
+retained-factor low-rank operator used by current scalar block-eigen fits.
+
+The prior state model remains ordinary MT BayesR in either case; only the
+likelihood representation changes.
+
+## Current Formatted Outputs
+
+The current formatted MT fit exposes posterior summaries of marker effects,
+activity, components, probabilities, and covariance states.
+
+Important scientific interpretations include:
+
+- `bm`: posterior mean **effective** marker effects;
+- `dm`: trait-specific posterior probability of activity;
+- `component_probabilities`: marker-by-component posterior probabilities,
+  marginalized over trait patterns;
+- `pi_final`, `pi_mean`, and `pi_trace`: final, posterior-mean, and trace
+  summaries of the **joint-state probability simplex**;
+- covariance outputs: posterior-mean and final versions of $V_b$, $V_g$, and
+  $V_e$ under the current covariance field names.
+
+No marker-by-joint-state posterior probability matrix is returned by default.
+
+A separate latent-effect final field is not universally part of the canonical
+formatted contract. The distinction between latent and effective effects is
+therefore primarily a model/native-state concept unless a specific route
+explicitly exposes both.
+
+For exact current field ownership, see the developer output-schema contract.
+The Methods layer defines scientific meaning rather than duplicating the full
+schema.
+
+## Current Limitations
+
+Current ordinary MT BayesR/SBayesR has several important limitations:
+
+- MT `maf_effect_s` may be fixed but cannot currently be sampled.
+- The joint state count is guarded for memory and practical numerical size.
+- Ordinary MT BayesR has no annotation-dependent component-probability model.
+- Ordinary MT BayesR has no learned annotation-dependent log-variance
+  multiplier.
+- Shared learned-$q$ MT BayesR-LV is a proposed extension, not current
+  functionality.
+- Annotation-dependent sharing $H$ is not implemented for ordinary MT BayesR.
+- Annotation-dependent $V_b$ is not implemented.
+- Full marker-by-joint-state posterior probabilities are not retained by
+  default.
+- Current summary-statistics routes do not infer arbitrary cross-trait sample
+  overlap that was not supplied through the model's likelihood information.
+
+These limitations define the current model; they should not be silently filled
+in by the future provider architecture.
+
+## Related Pages
+
+- [Core BLR Model Theory](model_theory.qmd) defines the common ST/MT regression
+  notation, BayesR component ladder, and covariance quantities.
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describes the current
+  annotation-dependent $P\times H$ probability factorization.
+- [Annotation-Informed Priors](annotation_priors.qmd) defines the broader
+  $P/Q/H/V_b$ architecture and the proposed shared-$q$ MT-LV extension.
+- [Summary Statistics](summary_statistics.qmd) derives the summary-statistics
+  likelihood quantities without treating code names such as `wy` or `Xy` as
+  mathematical symbols.
+- [Multi-Trait Sample Overlap](multitrait_overlap.qmd) explains the cross-trait
+  phenotype products and overlap assumptions required for residual covariance.
+- [Multi-trait models](../notes/multi_trait_models.qmd) provides practical
+  fitting guidance.
+
+This page therefore owns the statistical definition of current ordinary MT
+BayesR/SBayesR: one joint pattern-by-component state space, one joint
+probability simplex, shared base marker-effect covariance $V_b$, and
+operator-specific likelihood evaluation.
