@@ -672,8 +672,8 @@ Conceptually:
 
 ```text
 analysis marker IDs
-    == order of X'y
-    == order of diag(X'X)
+    == order of X^T y
+    == order of diag(X^T X)
     == rows/columns of sparse LD
     == rows of annotations
     == rows of posterior marker summaries

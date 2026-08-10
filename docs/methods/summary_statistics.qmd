@@ -437,7 +437,7 @@ genotype matrix:
 same BED marker selection and order
 + same selected individuals
 + same allele frequencies and scaling
-    -> compatible X'y, diag(X'X), y'y, and sparse LD
+    -> compatible X^T y, diag(X^T X), y^T y, and sparse LD
 ```
 
 Here the text block uses compact transpose notation for readability; the
