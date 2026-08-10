@@ -2,50 +2,95 @@
 title: "Annotation-Informed Priors"
 ---
 
-This page is the canonical statistical overview of annotation-aware Bayesian
-linear regression in `sblr`. It separates what annotations change in the prior
-from how genotype information is represented. Packed BED genotypes, sparse CSR
-LD, and retained block-eigen LD are likelihood/operator choices; they do not by
-themselves define a different prior.
+This page is the canonical statistical overview of annotation-informed
+Bayesian linear regression in `sblr`. It describes **which part of the prior**
+annotations modify, how the different annotation mechanisms relate to one
+another, and which distinctions must be preserved when these models are
+extended.
+
+The prior architecture is conceptually separate from the representation used
+to evaluate the likelihood. Packed BED genotypes, sparse CSR LD, and block-eigen
+representations are likelihood/operator choices; by themselves they do not
+define a different marker-effect prior.
 
 Callouts labelled **Current implementation** describe executable, tested
-functionality. **Proposed** sections describe the intended architecture and are
-not promises that the current API accepts the illustrated syntax.
+functionality. Sections labelled **Proposed** describe the approved future
+architecture and should not be read as claims that the current public API
+already accepts the illustrated syntax.
 
-## One annotation matrix, several prior quantities
+## One raw annotation matrix, several prior quantities
 
 Let
 
 $$
-A\in\mathbb R^{M\times K}
+A\in\mathbb{R}^{M\times K}
 $$
 
-be a marker-by-annotation matrix. Its columns may be binary membership
-indicators, continuous functional scores, or overlapping annotations. A row is
-always associated with one analysis marker; marker identity and ordering are
-part of the input contract, not incidental metadata.
+denote a raw marker-by-annotation matrix, with one row for each of the $M$
+analysis markers and one column for each annotation. Columns may be binary
+membership indicators, continuous functional scores, or other quantitative
+annotations, and annotations may overlap.
+
+Throughout the Methods documentation, $X$ is reserved for the **genotype
+matrix**. We therefore do not reuse $X$ as the mathematical symbol for a
+processed annotation design. When provider-specific preprocessing matters, we
+write
+
+$$
+\widetilde A^{(P)}
+\quad\text{and}\quad
+\widetilde A^{(Q)}
+$$
+
+for processed annotation designs used by probability and variance
+architectures, respectively. They may be derived from the same raw $A$ but need
+not use the same centering, scaling, or intercept convention. Internal code may
+use different object or field names; these are mathematical symbols for the
+Methods layer.
+
+Marker identity and ordering are part of the statistical input contract. A row
+of $A$, and any processed row derived from it, must refer to the same marker as
+the corresponding likelihood information and posterior marker summaries.
 
 Annotations can influence different parts of a sparse regression prior. For
-single-trait BayesC, write
+single-trait BayesC,
 
 $$
-d_j\sim\operatorname{Bernoulli}(\pi_j),\qquad
-\beta_j\mid d_j=1\sim N(0,v_bq_j).
+d_j\sim\operatorname{Bernoulli}(\pi_j),
+\qquad
+b_j\mid d_j=1\sim N(0,v_bq_j).
 $$
 
-For BayesR or BayesRC,
+Here $\pi_j$ governs whether marker $j$ is active and $q_j>0$ governs its
+relative effect variance conditional on activity.
+
+For BayesR or BayesRC, let
 
 $$
-c_j\sim\operatorname{Categorical}(\pi_{j0},\ldots,\pi_{j,K_R-1}),
+c_j\in\{0,1,\ldots,K_R\},
+\qquad
+\gamma_0=0,
+\qquad
+\gamma_k>0\;\text{for }k>0.
 $$
 
+Write the marker-specific prior component probabilities as
+
 $$
-\beta_j\mid c_j=k>0\sim N(0,v_b\gamma_kq_j),
-\qquad \gamma_0=0.
+\Pr(c_j=k)=P_{jk},
+\qquad
+\sum_{k=0}^{K_R}P_{jk}=1.
 $$
 
-Throughout this architecture, lowercase v denotes a scalar variance and
-uppercase V denotes a variance-covariance matrix:
+Conditional on a positive component,
+
+$$
+b_j\mid c_j=k>0
+\sim
+N(0,v_b\gamma_kq_j).
+$$
+
+Lowercase $v$ denotes a scalar variance and uppercase $V$ a covariance matrix:
 
 | Quantity | Single trait | Multi trait |
 |---|---|---|
@@ -53,101 +98,129 @@ uppercase V denotes a variance-covariance matrix:
 | genomic variance/covariance | $v_g$ | $V_g$ |
 | residual variance/covariance | $v_e$ | $V_e$ |
 
-Thus, for a non-null BayesR component,
+Thus, for a non-null ST BayesR component,
 
 $$
-\operatorname{Var}(\beta_j\mid c_j=k)=\gamma_kq_jv_b
+\operatorname{Var}(b_j\mid c_j=k)
+=
+\gamma_kq_jv_b.
 $$
 
-in ST, while its MT counterpart uses an active-trait submatrix of $V_b$.
-Here $\gamma_k$ is the BayesR relative component multiplier, $q_j$ is the
-marker-specific relative variance multiplier, and $v_b$ or $V_b$ carries
-the global active-effect variance/covariance scale.
+For MT models, the corresponding marker-effect vector uses an active-trait
+submatrix of $V_b$. Here $\gamma_k$ is the BayesR relative component
+multiplier, $q_j$ is the marker-specific relative variance multiplier, and
+$v_b$ or $V_b$ carries the global active-effect variance or covariance scale.
 
-This is mathematical notation only. R fields retain explicit established names
-such as `vb`/`covb`, `vg`/`covg`, and `ve`/`cove`; case-only R names are
-deliberately avoided. Trait-specific scalar summaries `v_le` and `v_ld` remain
-lowercase unless a genuine matrix-valued counterpart is separately defined.
+These are mathematical quantities. Established R fields retain explicit code
+names such as `vb`/`covb`, `vg`/`covg`, and `ve`/`cove`; case-only R names are
+deliberately avoided. Trait-specific scalar summaries such as `vle` and `vld`
+likewise remain implementation field names rather than new matrix-valued
+theory symbols.
 
-This exposes two distinct architectures:
+This decomposition exposes two distinct marker-level prior architectures:
 
-1. **Probability architecture $P_j$** controls inclusion or mixture-component
-   probabilities.
-2. **Variance architecture $Q_j=q_j$** controls relative non-null effect
-   variance.
+1. **Probability architecture $P$** controls prior inclusion or
+   mixture-component probabilities. Depending on the model, this may be a
+   scalar, a global component vector, or a marker-specific vector
+   $\mathbf P_j=(P_{j0},\ldots,P_{jK_R})$.
+2. **Variance architecture $Q$** is represented by the positive multiplier
+   $q_j$ and controls relative non-null effect variance.
 
-BayesR's $\gamma_k$ values are the core mixture ladder. They are not an
-annotation coefficient and do not replace $q_j$.
+BayesR's $\gamma_k$ values are part of the core mixture ladder. They are
+neither annotation coefficients nor substitutes for $q_j$.
 
-For multi-trait models there are two further quantities:
+For multi-trait models there are two additional prior quantities:
 
-3. **Sharing architecture $H$** controls which trait-activity patterns are
-   likely.
-4. **Covariance architecture $V_b$** controls cross-trait effect covariance.
+3. **Sharing architecture $H$** controls which non-null trait-activity patterns
+   are likely.
+4. **Covariance architecture $V_b$** controls covariance among active marker
+   effects across traits.
 
 For MT models, let $a_j=p$ denote a non-null trait-activity pattern and
-$c_j=k$ denote a BayesR component. The long-term architecture treats $P$
-and $H$ as separate provider concepts where the statistical model supports
-that factorization:
+$c_j=k$ a BayesR component. Where the statistical model supports a factorized
+probability architecture,
 
 $$
-P(c_j=0\mid A_j)=P_{j0},
+\Pr(c_j=0\mid A_j)=P_{j0},
 $$
 
 and, for $k>0$,
 
 $$
-P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p.
+\Pr(a_j=p,c_j=k\mid A_j)
+=
+P_{jk}H_p.
 $$
 
-Here $P_{j0}$ is the marker null probability, the $P_{jk}$ values control
-the non-null BayesR component architecture, and $H_p$ is the conditional
-probability of non-null trait pattern $p$. Thus
-$P_{j0}+\sum_{k>0}P_{jk}=1$ and $\sum_pH_p=1$.
+Here $P_{j0}$ is the marker null probability, $P_{jk}$ for $k>0$ controls
+non-null BayesR component probability, and $H_p$ is the conditional
+probability of non-null trait pattern $p$. Thus,
 
-Current MT implementations must be distinguished from this target vocabulary:
+$$
+P_{j0}+\sum_{k=1}^{K_R}P_{jk}=1,
+\qquad
+\sum_pH_p=1.
+$$
 
-- ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the null state
-  and all non-null pattern-by-positive-component states. Its component and
-  pattern probabilities are marginals of that simplex, not current $P$ and
-  $H$ factors;
-- MT BayesRC/SBayesRC implements the displayed factorization: $P$ is
-  annotation dependent through probit stick breaking, while $H$ remains
+Current MT implementations must be distinguished carefully:
+
+- ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the unique null
+  state and all non-null trait-pattern by positive-component states. Component
+  and pattern probabilities are marginals of that simplex; they are not
+  current independent $P$ and $H$ parameters;
+- MT BayesRC/SBayesRC implements the factorization above: $P$ is
+  annotation dependent through probit stick breaking, whereas $H$ remains
   global and conditional on non-null status;
 - $V_b$ remains global and annotation independent in both current families.
 
-The factorized MT BayesC special case would be
+A factorized MT BayesC special case would have
 
 $$
-P(d_j=0\mid A_j)=1-\pi_j,
-\qquad
-P(a_j=p,d_j=1\mid A_j)=\pi_jH_p.
+\Pr(d_j=0\mid A_j)=1-\pi_j,
 $$
 
-There is no BayesR component ladder in that case. This equation expresses the
+and
+
+$$
+\Pr(a_j=p,d_j=1\mid A_j)
+=
+\pi_jH_p.
+$$
+
+There is no BayesR component ladder in that case. This equation illustrates the
 architectural decomposition; it does not claim that every current MT BayesC
-route is parameterized internally as independent $P$ and $H$ providers.
-Marker non-null probability,
-non-null component probability, and conditional trait-pattern probability are
-therefore separate quantities even when their product determines a joint state
-probability. Annotation-dependent $H$ is a future model, not a current feature.
+route is internally parameterized as separate $P$ and $H$ providers.
 
-Keeping these four roles separate is important. Annotation-dependent inclusion
-is not the same scientific model as annotation-dependent effect magnitude, and
-a stable coefficient estimate is not automatically a stable induced prior.
+Keeping these four roles separate is scientifically important.
+Annotation-dependent inclusion is not the same model as
+annotation-dependent effect magnitude, and a stable coefficient estimate does
+not by itself imply that the induced marker prior is stable.
 
 ## How probability and variance architecture enter a marker update
 
 The distinction between $P$ and $Q$ is visible in one ordinary BayesC marker
-conditional. Let $w_j=x_j^\top x_j$ be the diagonal marker cross-product and
-let
+conditional. Let $x_j$ denote genotype column $j$ and define its diagonal
+cross-product
 
 $$
-s_j=r_j+w_jb_j
+w_j=x_j^\top x_j.
 $$
 
-be the current marker score after adding marker $j$'s existing effect back to
-the summary-statistic residual score. Write
+For the exact Gaussian regression model, the marker-scale residual score is
+
+$$
+r_j=x_j^\top(y-Xb).
+$$
+
+Summary-statistic operators maintain the corresponding score under their
+representation of $X^\top X$. Adding marker $j$'s current effect back gives the
+partial marker score
+
+$$
+s_j=r_j+w_jb_j.
+$$
+
+Write
 
 $$
 v_{b,j}=v_bq_j
@@ -157,7 +230,7 @@ for its active-effect prior variance. Integrating the active normal prior out
 of the Gaussian marker likelihood gives the active-versus-null Bayes factor
 
 $$
-\log BF_j
+\log \mathrm{BF}_j
 =
 \frac{1}{2}\log\left(
 \frac{v_e}{v_e+w_jv_{b,j}}
@@ -171,17 +244,17 @@ $$
 The posterior inclusion odds are therefore
 
 $$
-\frac{P(d_j=1\mid\text{rest})}{P(d_j=0\mid\text{rest})}
+\frac{\Pr(d_j=1\mid\text{rest})}{\Pr(d_j=0\mid\text{rest})}
 =
-\frac{\pi_j}{1-\pi_j}BF_j,
+\frac{\pi_j}{1-\pi_j}\mathrm{BF}_j,
 $$
 
 or, equivalently,
 
 $$
-P(d_j=1\mid\text{rest})
+\Pr(d_j=1\mid\text{rest})
 =
-\frac{\pi_jBF_j}{(1-\pi_j)+\pi_jBF_j}.
+\frac{\pi_j\mathrm{BF}_j}{(1-\pi_j)+\pi_j\mathrm{BF}_j}.
 $$
 
 Conditional on activity, the effect has the normal distribution
@@ -270,7 +343,7 @@ the historical learned variance implementation.
 ### Probit-stick component probabilities
 
 BayesRC/SBayesRC use annotations to change BayesR component probabilities. For
-continuation step $k$, a probit regression based on $A_j\alpha_k$ defines
+continuation step $k$, a probit regression based on $\widetilde A^{(P)}_j\alpha_k$ defines
 the probability of stopping at or continuing past that component. The implied
 row of prior component probabilities is floored for numerical safety and
 renormalized.
@@ -329,7 +402,7 @@ probability and variance providers, with its hierarchical priors preserved.
 The canonical learned annotation-variance model is
 
 $$
-\eta_j=X_j\theta,\qquad q_j=\exp(\eta_j),
+\eta_j=\widetilde A^{(Q)}_j\theta,\qquad q_j=\exp(\eta_j),
 $$
 
 with no annotation intercept and
@@ -345,7 +418,7 @@ For BayesC-LV,
 
 $$
 d_j\sim\operatorname{Bernoulli}(\pi),\qquad
-\beta_j\mid d_j=1\sim N(0,v_bq_j).
+b_j\mid d_j=1\sim N(0,v_bq_j).
 $$
 
 Annotations affect non-null variance only; $\pi$ remains global. The $\theta$
@@ -353,13 +426,13 @@ conditional, apart from its Gaussian prior, is
 
 $$
 -\frac12\sum_{j:d_j>0}
-\left\{\eta_j+\frac{\beta_j^2}{v_b\exp(\eta_j)}\right\}.
+\left\{\eta_j+\frac{b_j^2}{v_b\exp(\eta_j)}\right\}.
 $$
 
 For BayesR-LV,
 
 $$
-\beta_j\mid c_j=k>0\sim N(0,v_b\gamma_kq_j),
+b_j\mid c_j=k>0\sim N(0,v_b\gamma_kq_j),
 $$
 
 with one common $\theta$ across all non-null components and global mixture
@@ -368,7 +441,7 @@ probabilities. The conditional contribution is
 $$
 -\frac12\sum_{j:c_j>0}
 \left\{\eta_j+
-\frac{\beta_j^2}{v_b\gamma_{c_j}\exp(\eta_j)}\right\}.
+\frac{b_j^2}{v_b\gamma_{c_j}\exp(\eta_j)}\right\}.
 $$
 
 $\theta$ is updated by elliptical slice sampling (ESS). If no marker is active,
@@ -460,7 +533,7 @@ the strongest explicit contract:
 - reject constant, all-one, duplicate, or rank-deficient designs;
 - preserve transformation metadata and do not mutate the caller's object.
 
-Because every column of $X$ is centered,
+For LV, every column of $\widetilde A^{(Q)}$ is centered, so
 
 $$
 M^{-1}\sum_j\eta_j=0,
@@ -475,7 +548,7 @@ and permits one explicit intercept. Older fixed/logistic helpers are less
 strict and use their own centering and clipping rules.
 
 **Proposed:** use one immutable internal annotation-design object carrying
-processed X, marker IDs, original and processed names, column types, centers,
+the processed annotation design, marker IDs, original and processed names, column types, centers,
 scales, intercept policy, alignment decisions, rank diagnostics, and
 provenance. Each provider declares its transform profile. Harmonization must be
 an explicit model decision; a common object must not silently change existing
@@ -490,7 +563,7 @@ raw architecture is
 $$
 \log q_j^{\rm raw}
 =\log q_j^{\rm external}
-+A_j\theta
++\widetilde A^{(Q)}_j\theta
 +(S+1)\log h_j.
 $$
 
@@ -509,7 +582,7 @@ Potential warnings or unsupported combinations include:
 - highly correlated annotations, which can make individual coefficients weakly
   identified even when induced $q$ is stable;
 - MAF-derived annotation columns together with sampled $S$;
-- an external $q$ nearly collinear with $A\theta$;
+- an external $q$ nearly collinear with $\widetilde A^{(Q)}\theta$;
 - simultaneously learned annotation-dependent probability and variance without
   dedicated identifiability validation.
 
@@ -558,7 +631,7 @@ architecture.
 **Proposed:** support
 
 $$
-\log q_j=\log q_j^{\rm external}+A_j\theta.
+\log q_j=\log q_j^{\rm external}+\widetilde A^{(Q)}_j\theta.
 $$
 
 This covers external $q$ only, learned LV only, and external $q$ plus learned
@@ -572,19 +645,28 @@ the fixed form of the same provider.
 
 The first MT-LV implementation target is specifically MT BayesR/SBayesR with
 its existing global `joint_pi` state simplex unchanged and one $q$ shared across
-traits:
+traits. Following the notation in
+[Core BLR Model Theory](model_theory.qmd), let
 
 $$
-q_j=\exp(A_j\theta),
+\beta_j=B_{j\cdot}^{\top}
 $$
+
+denote marker $j$'s vector of effects across traits. Then
+
+$$
+q_j=\exp(\widetilde A^{(Q)}_j\theta),
+$$
+
+and for non-null activity pattern $p$ and positive component $k$,
 
 $$
 \operatorname{Cov}(\beta_{j,p,k})
-=\gamma_kq_jV_{b,p},
+=
+\gamma_kq_jV_{b,p},
 $$
 
-where $p$ is a non-null activity pattern and $V_{b,p}$ is the active-trait
-submatrix of $V_b$. The scalar $q_j$ multiplies the entire active-trait
+where $V_{b,p}$ is the active-trait submatrix of $V_b$. The scalar $q_j$ multiplies the entire active-trait
 covariance matrix, so it changes overall marker effect magnitude without by
 itself changing the correlation structure represented by $V_b$. The complete
 joint-state probabilities remain global; their component and pattern
@@ -604,7 +686,7 @@ ordinary-MT trajectory gates.
 A later trait-specific model could use
 
 $$
-q_{jt}=\exp(A_j\theta_t),\qquad
+q_{jt}=\exp(\widetilde A^{(Q)}_j\theta_t),\qquad
 D_j=\operatorname{diag}(\sqrt{q_{j1}},\ldots,\sqrt{q_{jT}}),
 $$
 
@@ -612,7 +694,7 @@ $$
 \operatorname{Cov}(\beta_j)=\gamma_kD_jV_bD_j.
 $$
 
-That model needs stronger identification between D and $V_b$. Annotation-dependent
+That model needs stronger identification between $D_j$ and $V_b$. Annotation-dependent
 trait sharing and annotation-dependent $V_b$ are later research models, not implied
 by current MT BayesRC.
 
@@ -621,12 +703,19 @@ by current MT BayesRC.
 It is mathematically possible to combine
 
 $$
-P_j=\operatorname{probit\mbox{-}stick}(A_j\alpha),
-\qquad q_j=\exp(A_j\theta).
+\mathbf P_j
+=
+\operatorname{probit\mbox{-}stick}
+\left(\widetilde A^{(P)}_j\alpha\right),
+\qquad
+q_j
+=
+\exp\left(\widetilde A^{(Q)}_j\theta\right).
 $$
 
-The same annotations would then explain both component membership and effect
-magnitude. Given known $\alpha$/occupancy mixing challenges in SBayesRC, this
+The same raw annotations could then explain both component membership and
+effect magnitude, while the probability and variance providers retain their
+own scientifically appropriate preprocessing profiles. Given known $\alpha$/occupancy mixing challenges in SBayesRC, this
 combination should not be exposed merely because provider composition makes it
 easy to code. It needs separate signal, null, correlated-annotation,
 identification, and multichain validation.
@@ -662,16 +751,20 @@ not integrate over the $\theta$ prior in the first implementation.
 
 ## Current capability summary
 
-| Architecture | ST BED | ST CSR | ST retained eigen | MT BED | MT CSR | MT retained eigen |
+| Architecture | ST BED | ST CSR | ST block eigen | MT BED | MT CSR | MT block eigen |
 |---|---|---|---|---|---|---|
 | Global BayesC/R | implemented | implemented | implemented | implemented | implemented | implemented |
-| Probit-stick BayesRC | implemented | implemented | implemented | implemented | implemented | implemented |
+| Probit-stick BayesRC/SBayesRC | implemented | implemented | implemented | implemented | implemented | implemented |
 | Fixed marker $P/Q$ | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
 | Group $P/Q$ | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
 | Learned logistic $P/Q$ | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
-| BayesC/R-LV | not implemented | implemented and qualified | implemented and qualified | not implemented | proposed | proposed |
-| Annotation-dependent sharing | conceptual only | conceptual only | conceptual only | conceptual only | conceptual only | conceptual only |
-| Annotation-dependent covariance | unsupported | unsupported | unsupported | research concept | research concept | research concept |
+| BayesC/R-LV | not implemented | implemented and qualified | implemented; retained route qualified | not implemented | not implemented | not implemented |
+| Annotation-dependent sharing | not implemented | not implemented | not implemented | not implemented | not implemented | not implemented |
+| Annotation-dependent covariance | not implemented | not implemented | not implemented | not implemented | not implemented | not implemented |
+
+For ST block eigen, the retained-factor LV route is the canonical qualified
+scalable path; the historical reconstructed-dense representation also has
+coverage but is not the preferred large-scale operator.
 
 MAF-S coverage is route- and model-dependent; fixed and sampled $S$ are not
 uniformly supported across this table. Consult route validation rather than
@@ -751,7 +844,7 @@ names, but they should resolve to a core family plus a typed prior
 specification. The package should not maintain a separate sampler identity for
 every composable combination.
 
-## Output and diagnostics
+## Proposed output and diagnostics
 
 A coherent future fit should separate the prior supplied or assumed by the
 user from posterior inference about the architecture governed by that prior.
@@ -776,29 +869,51 @@ input prior specification.
 
 Probability results should distinguish prior marker/component probabilities
 from posterior allocations. Variance results should distinguish fixed external
-$q$, posterior mean $q$, coefficient summaries, and MAF-S. For LV,
-`exp(mean(theta))` is a plug-in coefficient ratio, whereas the posterior mean
-marker $q$ is `mean(exp(X theta))`; these need not be identical.
+$q$, posterior mean $q$, coefficient summaries, and MAF-S. For LV, these nonlinear summaries must be distinguished. For coefficient $c$,
+
+$$
+\exp\left\{\mathbb E(\theta_c\mid\text{data})\right\}
+$$
+
+is a plug-in coefficient-scale variance ratio, whereas for marker $j$,
+
+$$
+\mathbb E\left[
+\exp\left\{\widetilde A^{(Q)}_j\theta\right\}
+\mid\text{data}
+\right]
+$$
+
+is the posterior mean marker variance multiplier. In general these are not the
+same quantity.
 
 Diagnostics should be layered:
 
-1. latent coefficients: R-hat, bulk/tail ESS, MCSE, and MH acceptance or ESS
+1. latent coefficients: $\widehat R$, bulk/tail ESS, MCSE, and MH acceptance or ESS
    contraction statistics;
 2. induced architecture: cross-chain stability of marker $P$ and $q$ and expected
    active/component counts;
-3. posterior marker quantities: PIP, component allocation, and beta stability;
+3. posterior marker quantities: PIP, component allocation, and marker-effect stability;
 4. downstream quantities: genetic variance and prediction stability.
 
-Coefficient R-hat alone is not evidence that an annotation-informed model is
+Coefficient $\widehat R$ alone is not evidence that an annotation-informed model is
 scientifically stable.
 
 ## Related pages
 
-- `sbayesrc_annotations.qmd` gives focused details for probit-stick component
-  probabilities.
-- `mt_bayesrc_sbayesrc.qmd` and `mt_bayesr_sbayesr.qmd` describe current MT
-  kernels and sharing/covariance structures.
-- `annotation_informed_models.qmd` is retained as a focused empirical-Bayes and
-  posterior-to-prior construction note; its conceptual workflows are not all
-  current package features.
-- Developer capability, schema, and migration details live under `docs/dev/`.
+- [Core BLR Model Theory](model_theory.qmd) defines the common BayesC/BayesR
+  notation, ST/MT variance and covariance quantities, and the distinction
+  between prior family and likelihood operator.
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd) explains how posterior PIPs
+  and component allocations relate to marker interpretation and credible-set
+  post-processing.
+- [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) gives the
+  detailed continuation-probit construction and alpha hierarchy.
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
+  [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describe the current MT
+  joint-state and factorized probability architectures.
+- [Empirical-Bayes Construction](annotation_informed_models.qmd) is retained as
+  a focused posterior-to-prior construction note; its conceptual workflows are
+  not all current package features.
+- Developer capability, schema, qualification, and migration details live under
+  `docs/dev/`.
