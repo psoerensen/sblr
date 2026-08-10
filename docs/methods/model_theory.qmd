@@ -6,54 +6,114 @@ format:
     number-sections: true
 ---
 
-This page gives the statistical map shared by the Bayesian linear regression
-(BLR) models in `sblr`. It separates the regression model and prior family from
-the data representation used to evaluate the likelihood. Detailed
-summary-statistic, overlap, operator, annotation-prior, and multi-trait state
-derivations live on their dedicated methods pages.
+This page gives the statistical framework shared by the Bayesian linear
+regression (BLR) models in `sblr`. It defines the core regression models, the
+main variance and covariance quantities, and the distinction between the prior
+family and the likelihood/operator representation. Detailed derivations for
+summary statistics, sample overlap, LD operators, annotation-informed priors,
+and multi-trait state spaces are kept on dedicated Methods pages.
 
 ## Single-trait regression
 
-For a centered phenotype $y\in\mathbb R^N$, genotype matrix
-$X\in\mathbb R^{N\times M}$, marker effects $b\in\mathbb R^M$, and residual
-vector $e$, the single-trait model is
+For a centered phenotype $y\in\mathbb{R}^{N}$, genotype matrix
+$X\in\mathbb{R}^{N\times M}$, marker-effect vector
+$b\in\mathbb{R}^{M}$, and observation-level residual vector
+$e\in\mathbb{R}^{N}$,
 
 $$
-y=Xb+e,
+y = Xb + e,
 \qquad
-e\sim N(0,v_eI_N).
+e \sim N(0,v_e I_N).
 $$
 
-Here $v_e$ is the residual variance. The fitted genetic values are $Xb$,
-and their variance is denoted $v_g$. A global active-marker effect-variance
-scale is denoted $v_b$. These quantities have different roles: $v_b$ belongs
-to the prior for an active marker effect, $v_g$ summarizes variation in the
-combined fitted genetic value $Xb$, and $v_e$ belongs to the observation
-likelihood. They need not be numerically equal even when genotypes and
-phenotypes have been standardized.
+The fitted genetic values are
+
+$$
+g = Xb.
+$$
+
+Three variance quantities occur repeatedly:
+
+- $v_b$ is the global prior variance scale for an active marker effect;
+- $v_g$ is the variance of the combined fitted genetic values $g=Xb$;
+- $v_e$ is the residual variance in the observation likelihood.
+
+These have different roles. In particular, $v_b$ belongs to the marker-effect
+prior, whereas $v_g$ is induced jointly by the marker effects and genotype
+covariance structure. They therefore need not be numerically equal.
+
+For centered genotypes and one common sample, a natural sample-scaled genomic
+variance is
+
+$$
+\widehat v_g
+=
+\frac{1}{N}g^\top g
+=
+\frac{1}{N}b^\top X^\top Xb.
+$$
+
+When $\operatorname{Cov}(g,e)=0$, the usual decomposition is
+
+$$
+v_y=v_g+v_e,
+\qquad
+h^2=\frac{v_g}{v_g+v_e}.
+$$
+
+A supplied `h2` value used for prior calibration or initialization should not
+be confused with a posterior estimate of this ratio.
 
 ### BayesC
 
-BayesC uses a point mass at zero and one non-null normal distribution:
+BayesC uses a point mass at zero and one non-null normal distribution. Let
+$d_j\in\{0,1\}$ denote whether marker $j$ is active:
 
 $$
-d_j\sim\operatorname{Bernoulli}(\pi_j),
+d_j\sim\operatorname{Bernoulli}(\pi_j).
 $$
 
+Conditional on the activity state,
+
 $$
-b_j=0\quad(d_j=0),
+b_j=0
+\quad\text{if }d_j=0,
+$$
+
+and
+
+$$
+b_j\mid d_j=1
+\sim
+N(0,v_bq_j).
+$$
+
+The quantity $\pi_j$ controls the prior probability that marker $j$ is active,
+whereas $q_j>0$ is a marker-specific relative variance multiplier for an active
+effect. In ordinary BayesC,
+
+$$
+\pi_j=\pi,
 \qquad
-b_j\mid d_j=1\sim N(0,v_bq_j).
+q_j=1.
 $$
 
-In the ordinary model, $\pi_j=\pi$ and $q_j=1$. Annotation-informed prior
-architectures may change marker inclusion probabilities or relative non-null
-effect variance without changing the Gaussian regression likelihood.
+Structured priors may make either quantity marker specific without changing the
+Gaussian regression likelihood. The distinction is scientific as well as
+computational: $\pi_j$ changes prior activity odds, whereas $q_j$ changes
+effect magnitude and shrinkage conditional on activity. Their roles in the
+marker conditional are derived in
+[Annotation-Informed Priors](annotation_priors.qmd).
 
 ### BayesR
 
-BayesR replaces the single non-null distribution with a finite mixture. Use
-the theoretical indexing convention
+BayesR replaces the single non-null distribution with a finite mixture. Let
+
+$$
+c_j\in\{0,1,\ldots,K\}
+$$
+
+denote the mixture component for marker $j$, with
 
 $$
 \gamma_0=0,
@@ -61,58 +121,83 @@ $$
 \gamma_k>0,\quad k=1,\ldots,K.
 $$
 
+Write the marker-specific prior component probabilities as
+
+$$
+\Pr(c_j=k)=P_{jk},
+\qquad
+\sum_{k=0}^{K}P_{jk}=1.
+$$
+
 Then
 
 $$
-c_j\sim\operatorname{Categorical}(P_{j0},\ldots,P_{jK}),
+b_j=0
+\quad\text{if }c_j=0,
 $$
 
+whereas for a positive component,
+
 $$
-b_j=0\quad(c_j=0),
-\qquad
-b_j\mid c_j=k>0\sim N(0,\gamma_kq_jv_b).
+b_j\mid c_j=k>0
+\sim
+N(0,\gamma_kq_jv_b).
 $$
 
-The $\gamma_k$ ladder contains known relative component multipliers, $q_j$
-is a marker-specific relative variance multiplier, and $v_b$ carries the
-global active-effect variance scale. In current R inputs, the first element of
-`mixture_var` is the null multiplier; its one-based R position represents the
-theoretical component $k=0$.
+The three scale terms have different meanings:
 
-BayesRC/SBayesRC retains the BayesR effect mixture and makes marker component
-probabilities annotation dependent. Log-variance models retain global
-probability architecture and learn $q_j$ from annotations. See
-[Annotation-Informed Priors](annotation_priors.qmd).
+- $\gamma_k$ is the fixed relative variance of BayesR component $k$;
+- $q_j$ is a marker-specific relative variance multiplier;
+- $v_b$ is the global active-effect variance scale.
+
+Thus, the BayesR component ladder $\gamma_k$ and marker-specific architecture
+$q_j$ are not interchangeable. In current R inputs, `mixture_var[1]` is the
+null multiplier and corresponds to theoretical component $k=0$.
+
+BayesRC/SBayesRC retains the BayesR effect mixture but makes the marker
+component probabilities $P_{jk}$ annotation dependent. Log-variance models
+instead retain global probability architecture and learn $q_j$ from
+annotations. See [Annotation-Informed Priors](annotation_priors.qmd).
 
 ### Posterior marker quantities
 
-The prior probabilities above should not be confused with posterior marker
-summaries. In BayesC,
+Prior probabilities should not be confused with posterior marker summaries.
 
-$$
-\operatorname{PIP}_j=P(d_j=1\mid\text{data}).
-$$
-
-In BayesR or BayesRC, the same non-null probability is obtained by summing the
-posterior allocation probabilities over all positive components:
+For BayesC,
 
 $$
 \operatorname{PIP}_j
-=1-P(c_j=0\mid\text{data})
-=\sum_{k=1}^KP(c_j=k\mid\text{data}).
+=
+\Pr(d_j=1\mid\text{data}).
 $$
 
-Posterior component allocation probabilities describe uncertainty across the
-mixture components. A final component state is only the state of one retained
-MCMC draw, not that probability vector. The posterior mean effect
-$\mathbb E(b_j\mid\text{data})$ is another distinct summary: model averaging and sign
-uncertainty can make it small even when the PIP is appreciable. Consequently,
-ranking markers by PIP and ranking them by absolute posterior mean effect can
-give different orders.
+For BayesR or BayesRC,
 
-These distinctions are central to interpreting marker evidence and credible
-sets. See [Fine-Mapping and Credible Sets](fine_mapping.qmd) for the relation
-between marginal PIPs, posterior configurations, and LD-aware post-processing.
+$$
+\operatorname{PIP}_j
+=
+1-\Pr(c_j=0\mid\text{data})
+=
+\sum_{k=1}^{K}\Pr(c_j=k\mid\text{data}).
+$$
+
+The full posterior component-probability vector contains more information than
+the PIP because it also describes uncertainty among positive components. A
+final component state is different again: it is one sampled MCMC state, not a
+posterior probability vector.
+
+The posterior mean effect,
+
+$$
+\mathbb{E}(b_j\mid\text{data}),
+$$
+
+is also distinct. Model averaging and sign uncertainty can make it small even
+when the PIP is appreciable. Consequently, ranking by PIP and ranking by
+absolute posterior mean effect can give different orders.
+
+See [Fine-Mapping and Credible Sets](fine_mapping.qmd) for the relation among
+marginal PIPs, posterior configurations, LD, and credible-set post-processing.
 
 ## Multi-trait regression
 
@@ -123,83 +208,215 @@ $$
 Y=XB+E_Y,
 $$
 
-where $Y\in\mathbb R^{N\times T}$, $B\in\mathbb R^{M\times T}$, and
-$E_Y\in\mathbb R^{N\times T}$. Here $B$ is the marker-effect matrix and
-$E_Y$ is the residual-observation matrix; neither symbol denotes a covariance
-matrix. The rows of $B$ collect marker effects across traits, while the rows
-of $E_Y$ collect observation-level residual vectors. Covariance matrices
-describe distributions of those row vectors; they are not substitutes for
-the matrices themselves.
+where
 
-The covariance notation is
+$$
+Y\in\mathbb{R}^{N\times T},
+\qquad
+B\in\mathbb{R}^{M\times T},
+\qquad
+E_Y\in\mathbb{R}^{N\times T}.
+$$
 
-| Quantity | ST | MT |
+Here $B$ is the marker-effect matrix and $E_Y$ is the residual-observation
+matrix; neither symbol denotes a covariance matrix. The $j$th row of $B$
+contains the effects of marker $j$ across traits. Write the corresponding
+trait-effect vector as
+
+$$
+\beta_j=B_{j\cdot}^{\top}.
+$$
+
+The package-wide theoretical convention is lowercase $v$ for scalar variances
+and uppercase $V$ for covariance matrices:
+
+| Quantity | Single trait | Multi trait |
 |---|---:|---:|
 | active marker effects | $v_b$ | $V_b$ |
 | genomic values | $v_g$ | $V_g$ |
 | residuals | $v_e$ | $V_e$ |
 
-For a non-null trait-activity pattern $p$ and BayesR component $k>0$, a
-shared marker-specific variance multiplier gives
+The matrix of fitted genetic values is
+
+$$
+G_X=XB.
+$$
+
+For centered genotypes and one common sample,
+
+$$
+\widehat V_g
+=
+\frac{1}{N}G_X^\top G_X
+=
+\frac{1}{N}B^\top X^\top XB.
+$$
+
+This makes the distinction between $V_b$ and $V_g$ explicit: $V_b$ is the
+covariance scale in the prior for active marker effects, whereas $V_g$ is
+induced by the complete fitted marker-effect matrix and genotype covariance.
+Similarly, $V_e$ describes residual covariance across traits.
+
+With summary statistics, inference on $V_e$ requires compatible cross-trait
+phenotype products and sample-overlap information; see
+[Multi-Trait Sample Overlap](multitrait_overlap.qmd).
+
+### Multi-trait effect covariance
+
+Suppose marker $j$ is assigned to a non-null trait-activity pattern $p$ and a
+positive BayesR component $k>0$. Let $V_{b,p}$ denote the active-trait
+submatrix of $V_b$. With one marker-specific multiplier shared across traits,
 
 $$
 \operatorname{Cov}(\beta_{j,p,k})
-=\gamma_kq_jV_{b,p},
+=
+\gamma_kq_jV_{b,p}.
 $$
 
-where $V_{b,p}$ is the active-trait submatrix of $V_b$. The scalar $q_j$
-rescales the complete active covariance matrix and therefore does not by itself
-change the correlation structure represented by $V_b$. The genomic covariance
-$V_g$ is induced by the complete fitted marker-effect matrix and genotype
-operator, whereas $V_e$ describes residual covariance at the observation or
-summary-likelihood level.
+The scalar $q_j$ rescales the complete active covariance matrix and therefore
+does not by itself change the cross-trait correlation structure encoded by
+$V_b$. This shared-$q$ equation is also the mathematical target for a future
+MT log-variance extension; it is not a claim that MT-LV is currently
+implemented.
 
-The current MT prior-state probability model depends on the core family:
+### Current multi-trait state probabilities
 
-- ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the unique null
-  state and all non-null trait-pattern by positive-component states;
-- MT BayesRC/SBayesRC factorizes marker component probability $P$ from a
-  global conditional non-null sharing probability $H$.
+The current probability model depends on the core family.
 
-The component and pattern probabilities reported for ordinary MT BayesR are
-marginals of its full joint simplex; they are not parameters of a current
-$P\times H$ factorization. See [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
-[MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the implemented state spaces.
+Ordinary MT BayesR/SBayesR uses one full `joint_pi` simplex over one unique null
+state and all non-null trait-pattern by positive-component combinations.
+Component probabilities and trait-pattern probabilities reported from this
+model are marginals of the joint simplex; they are not parameters of an
+independent $P\times H$ factorization.
 
-## Likelihood information and operators
+Current MT BayesRC/SBayesRC instead factorizes marker component probability and
+conditional non-null trait sharing:
 
-The core prior family does not determine how the Gaussian likelihood is
-evaluated:
+$$
+\Pr(c_j=0\mid A_j)=P_{j0},
+$$
 
-- packed BED routes use selected individual-level genotypes;
-- CSR routes use aligned summary cross-products and sparse LD;
-- block-eigen routes use within-block spectral representations, either the
-  canonical retained-factor form for current scalar fits or an explicitly
-  reconstructed dense representation where supported.
+and for $k>0$,
 
-The `S` prefix in names such as SBayesC and SBayesR identifies a
-summary-statistics likelihood/display convention. It does not define a new
-effect prior and does not activate MAF scaling. MAF-S behavior is controlled
-separately by `maf_effect_s`.
+$$
+\Pr(a_j=p,c_j=k\mid A_j)
+=
+P_{jk}H_p.
+$$
 
-For the underlying likelihood information, see
-[Summary Statistics](summary_statistics.qmd) and
-[Multi-Trait Sample Overlap](multitrait_overlap.qmd). For operator details, see
-[Sparse-LD CSR](sparse_ld_csr.qmd) and
+Here $P_{jk}$ is the marker-specific component architecture and $H_p$ is the
+global conditional probability of non-null trait pattern $p$, with
+
+$$
+P_{j0}+\sum_{k=1}^{K}P_{jk}=1,
+\qquad
+\sum_pH_p=1.
+$$
+
+Current MT BayesRC annotations therefore change $P$, not $H$, and do not make
+$V_b$ annotation dependent. See
+[MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
+[MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd).
+
+## Prior family versus likelihood representation
+
+The prior family and likelihood representation are separate parts of the
+model. Schematically, if $\Theta$ denotes all unknown model states,
+
+$$
+p(\Theta\mid\text{data})
+\propto
+L_{\mathrm{operator}}(\text{data}\mid\Theta)
+\,p_{\mathrm{prior}}(\Theta).
+$$
+
+For single-trait Gaussian regression, the relevant cross-products are
+
+$$
+X^\top y,
+\qquad
+X^\top X,
+\qquad
+y^\top y.
+$$
+
+Throughout the Methods documentation, these mathematical cross-products are
+written explicitly rather than using implementation field names as mathematical
+symbols. In the current `sblr` interfaces, $X^\top y$ is commonly stored as
+`wy`, the diagonal of $X^\top X$ is stored as `ww` where applicable, and
+$y^\top y$ is stored as `yy`. Some multi-trait/native interfaces use `Xy` for
+the corresponding matrix $X^\top Y$. These are code conventions rather than
+distinct statistical quantities.
+
+Up to terms not depending on $b$, the single-trait Gaussian log likelihood is
+
+$$
+\log L(y\mid b,v_e)
+=
+-\frac{1}{2v_e}
+\left(
+y^\top y
+-2b^\top X^\top y
++b^\top X^\top Xb
+\right)
++\text{constant}.
+$$
+
+This identity explains why summary-statistic BLR can operate on cross-products.
+It also shows why the LD/operator representation matters: different operators
+provide different representations or approximations to the genotype
+cross-product information entering the likelihood.
+
+Current routes include:
+
+- packed BED, using selected individual-level genotypes;
+- CSR sparse LD, combining summary cross-products with sparse off-diagonal LD;
+- block eigen, using within-block spectral representations, including the
+  retained-factor form for current scalar fits and reconstructed dense blocks
+  where supported.
+
+Different operator approximations can therefore produce different posterior
+marker effects and PIPs even when the prior family is the same. For details,
+see [Summary Statistics](summary_statistics.qmd),
+[Sparse-LD CSR](sparse_ld_csr.qmd), and
 [Block-Eigen LD](block_eigen_operator.qmd).
+
+## The `S` prefix and MAF-S are different concepts
+
+The `S` prefix in SBayesC, SBayesR, and SBayesRC identifies the
+summary-statistics model/likelihood context. It does not define a different
+effect prior by itself and it is not the BayesS-style MAF parameter.
+
+MAF-dependent prior scaling is controlled separately by `maf_effect_s`. Thus:
+
+- BayesR and SBayesR share the same core finite-mixture prior family;
+- the summary-statistics route changes how likelihood information is supplied;
+- MAF-S, when enabled, changes marker-specific prior effect variance.
+
+The relationship between MAF-S and the general variance architecture $q_j$ is
+described in [Annotation-Informed Priors](annotation_priors.qmd).
 
 ## Responsibility map
 
-- This page: core ST/MT regression and BayesC/BayesR prior families.
-- [Summary Statistics](summary_statistics.qmd): cross-products and sufficient
-  statistics.
+- **This page:** core ST/MT regression, BayesC/BayesR priors, variance and
+  covariance notation, posterior marker quantities, and prior-versus-operator
+  separation.
+- [Summary Statistics](summary_statistics.qmd): cross-products, residual-score
+  identities, and sufficient-statistic likelihood calculations.
 - [Multi-Trait Sample Overlap](multitrait_overlap.qmd): `SSY`, overlap, and
   residual-covariance assumptions.
-- [Annotation-Informed Priors](annotation_priors.qmd): probability, relative
-  variance, sharing, and covariance architectures.
+- [Sparse-LD CSR](sparse_ld_csr.qmd): sparse-LD likelihood approximation.
+- [Block-Eigen LD](block_eigen_operator.qmd): retained spectral and
+  reconstructed-dense block representations.
+- [Annotation-Informed Priors](annotation_priors.qmd): probability and relative
+  variance architecture, sharing, covariance, MAF-S, and annotation priors.
 - [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd): detailed
   probit-stick mathematics.
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd): ordinary MT joint-state
+  architecture.
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd): factorized component and
+  sharing probabilities.
 - [Empirical-Bayes Construction](annotation_informed_models.qmd):
-  posterior-to-prior workflows.
-- [Fine-Mapping and Credible Sets](fine_mapping.qmd): marginal PIPs, LD-aware
-  post-processing, and coverage interpretation.
+  posterior-to-prior constructions.
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd): marginal PIPs, posterior
+  configurations, LD-aware post-processing, and coverage interpretation.
