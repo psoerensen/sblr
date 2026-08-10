@@ -2,27 +2,45 @@
 title: "Technical Appendix: Multi-Trait Sample Overlap"
 ---
 
-This appendix develops the cross-trait phenotype and sample-overlap
-information required by multi-trait Bayesian linear regression (MTBLR) from
-summary statistics. It connects the `SSY` and overlap derivations to the
-current `sblr` multi-trait interfaces and distinguishes mathematically required
-quantities from current implementation constraints.
+This appendix develops the cross-trait phenotype and sample-overlap information
+required by multi-trait Bayesian linear regression (MTBLR) when individual-level
+phenotypes are unavailable. It explains which cross-trait quantities are
+mathematically required, how they can be reconstructed from marginal summary
+information and overlap assumptions, and where the current `sblr` implementation
+is more restrictive than the general theory.
 
-The central issue is simple: separate single-trait summary statistics preserve
-each trait's marginal phenotype sum of squares, but they do not preserve
-cross-trait phenotype products. A joint model with residual covariance needs
-those cross-products or defensible approximations to them.
+The central issue is that separate single-trait summary statistics preserve each
+trait's marginal phenotype sum of squares, but they do not preserve cross-trait
+phenotype products. A joint multi-trait model with residual covariance needs
+those pairwise products, or a defensible approximation to them.
+
+Throughout the Methods documentation, mathematical cross-products are written
+explicitly. Implementation names such as `wy`, `Xy`, `yy`, `SSY`, and `Nmat`
+are used only when referring to actual code objects or current interface
+conventions.
 
 ## Multi-Trait Individual-Level Model
 
-Let $T$ denote the number of traits. For a fully overlapping sample, define:
+Let $T$ denote the number of traits. Under complete sample overlap, let
 
-- $Y$, an $n\times T$ phenotype matrix;
-- $X$, an $n\times m$ genotype matrix;
-- $B$, an $m\times T$ marker-effect matrix; and
-- $E_Y$, an $n\times T$ residual matrix.
+$$
+Y\in\mathbb{R}^{N\times T},
+\qquad
+X\in\mathbb{R}^{N\times M},
+\qquad
+B\in\mathbb{R}^{M\times T},
+\qquad
+E_Y\in\mathbb{R}^{N\times T}.
+$$
 
-The multi-trait linear model is
+Here:
+
+- $Y$ is the phenotype matrix;
+- $X$ is the genotype matrix;
+- $B$ is the marker-effect matrix; and
+- $E_Y$ is the observation-level residual matrix.
+
+The multi-trait regression model is
 
 $$
 Y=XB+E_Y.
@@ -34,219 +52,230 @@ $$
 e_i\sim N_T(0,V_e),
 $$
 
-where $V_e$ is the residual covariance matrix. Marker-effect vectors may
-also share covariance. For example, an active marker-effect vector $b_j$
-may have a prior involving the marker-effect covariance matrix $V_b$.
+where $V_e$ is the residual covariance matrix.
 
-These two covariance structures have different meanings:
+For marker $j$, write the vector of effects across traits as
 
-- $V_b$ describes prior or posterior covariance among marker effects
-  across traits and enables genetic information sharing;
-- $V_e$ describes covariance among residual phenotype deviations for
-  individuals observed on the same traits.
+$$
+\beta_j=B_{j\cdot}^{\top}.
+$$
 
-Residual covariance is therefore directly tied to which individuals are
-shared across traits.
+An active marker-effect vector may have a prior involving the marker-effect
+covariance matrix $V_b$. Thus:
+
+- $V_b$ describes covariance among active marker effects across traits;
+- $V_e$ describes covariance among observation-level residual deviations across
+  traits.
+
+These covariance structures have different statistical meanings. In
+particular, residual covariance is directly tied to which individuals are
+observed jointly for each pair of traits.
 
 ## Why Marginal Trait Statistics Are Not Enough
 
-For one trait $t$, the phenotype-side scalar summary is
+For one trait $t$, the phenotype-side marginal cross-product is
 
 $$
-yy_t=y_t^\top y_t=\sum_i y_{it}^2.
-$$
-
-Together with $X^\top y_t$, genotype cross-products, and $n_t$, this can
-support a single-trait likelihood. Repeating those inputs for several traits
-supports separate or parallel single-trait fits.
-
-A joint multi-trait likelihood additionally depends on cross-trait phenotype
-products:
-
-$$
-y_t^\top y_s
+y_t^\top y_t
 =
-\sum_i y_{it}y_{is}.
+\sum_{i\in\mathcal I_t}y_{it}^2,
 $$
 
-The marginal values $yy_t$ and $yy_s$ do not determine this cross-product.
-For example, two phenotype pairs can have identical marginal sums of squares
-but opposite cross-trait correlations.
+where $\mathcal I_t$ denotes the individuals observed for trait $t$.
 
-Consequently, a full residual covariance update cannot be reconstructed from
-trait-specific `yy` values alone. It requires the complete cross-trait
-phenotype cross-product matrix, usually denoted `SSY` or $Y^\top Y$, together
-with a clear sample-overlap interpretation.
+Together with $X_t^\top y_t$, the corresponding genotype cross-products, and
+the trait sample size $N_t=|\mathcal I_t|$, this can support a single-trait
+likelihood.
 
-## Multi-Trait Summary Statistics
-
-Under full sample overlap with one common $X$, the central summary
-statistics are:
+A joint multi-trait likelihood additionally needs cross-trait phenotype
+products. For traits $t$ and $s$, let
 
 $$
-WY=X^\top Y,
-\qquad
-XX=X^\top X,
-\qquad
-SSY=Y^\top Y,
-\qquad
-n.
+\mathcal I_{ts}
+=
+\mathcal I_t\cap\mathcal I_s
 $$
 
-Their dimensions are:
-
-| Quantity | Dimension | Meaning |
-|---|---:|---|
-| $WY=X^\top Y$ | $m\times T$ | Marker-trait cross-products |
-| $XX=X^\top X$ | $m\times m$ | Marker cross-products or compatible LD representation |
-| $SSY=Y^\top Y$ | $T\times T$ | Trait cross-products |
-| $n$ | scalar | Number of jointly observed individuals |
-
-For partially overlapping studies, the representation expands to include:
-
-- trait-specific sample sizes $n_t$;
-- pairwise overlap counts $N_{ts}$; and
-- trait-pair-specific interpretations of cross-products.
-
-Define the sample-overlap matrix
-
-$$
-N=
-\begin{bmatrix}
-N_{11} & \cdots & N_{1T}\\
-\vdots & \ddots & \vdots\\
-N_{T1} & \cdots & N_{TT}
-\end{bmatrix},
-$$
-
-where
+be the set of individuals observed for both traits, and define
 
 $$
 N_{ts}
 =
-|\mathcal I_{ts}|
+|\mathcal I_{ts}|.
 $$
 
-and $\mathcal I_{ts}$ is the set of individuals observed for both traits
-$t$ and $s$. By definition,
+The observed pairwise phenotype product is then
 
 $$
-N_{tt}=n_t.
+\sum_{i\in\mathcal I_{ts}}y_{it}y_{is}.
 $$
 
-## Cross-Trait `SSY`
+The two marginal values $y_t^\top y_t$ and $y_s^\top y_s$ do not determine
+this cross-product. Two phenotype pairs can have identical marginal sums of
+squares but very different, or even opposite, cross-trait correlations.
 
-For partially overlapping traits, define
+Consequently, marginal `yy` values alone cannot identify the full residual
+cross-product needed to update $V_e$.
+
+## Pairwise Phenotype Cross-Product Matrix
+
+To handle both complete and partial overlap cleanly, define the symmetric
+pairwise phenotype cross-product matrix $S_Y$ by
 
 $$
-SSY_{ts}
+[S_Y]_{ts}
 =
 \sum_{i\in\mathcal I_{ts}}y_{it}y_{is}.
 $$
 
-The diagonal entries reduce to ordinary single-trait sums of squares:
+Its diagonal is
 
 $$
-SSY_{tt}=yy_t.
+[S_Y]_{tt}
+=
+y_t^\top y_t.
 $$
 
-When all traits are observed on exactly the same individuals,
-$\mathcal I_{ts}$ is the common sample for every pair and
+The current code and historical documentation commonly call this information
+`SSY`. In this Methods layer, $S_Y$ denotes the mathematical object and `SSY`
+denotes the implementation/documentation name.
+
+Under complete sample overlap, all traits are measured on the same $N$
+individuals, so
 
 $$
-SSY=Y^\top Y
+\mathcal I_{ts}=\{1,\ldots,N\}
 $$
 
-has its ordinary matrix-cross-product meaning.
+for every pair, and therefore
 
-When samples overlap only partially, `SSY` remains a useful symmetric matrix
-of pairwise cross-products, but its entries are calculated from different
-sets of individuals. It should not be interpreted as the cross-product of one
-complete rectangular phenotype matrix unless such a matrix actually exists.
+$$
+S_Y=Y^\top Y.
+$$
 
-## Full Sample Overlap
+Under partial overlap, however, different entries of $S_Y$ can be calculated
+from different sets of individuals. In that setting, $S_Y$ remains a useful
+pairwise cross-product matrix but should not literally be interpreted as
+$Y^\top Y$ for one complete rectangular phenotype matrix.
 
-The cleanest MTBLR setting has all traits measured on the same $n$
+This distinction is important because some formulas that are ordinary matrix
+identities under complete overlap become pairwise reconstruction
+approximations under partial overlap.
+
+## Sample-Overlap Matrix
+
+Collect the pairwise overlap counts in
+
+$$
+N_{\mathrm{overlap}}
+=
+[N_{ts}]_{t,s=1}^{T}.
+$$
+
+By definition,
+
+$$
+N_{tt}=N_t,
+$$
+
+where $N_t$ is the marginal sample size for trait $t$.
+
+In code, an analysis-level matrix carrying these overlap counts is commonly
+called `Nmat`. The current native CSR likelihood does not consume `Nmat`
+directly; rather, overlap information can be used to construct or justify the
+trait cross-product information supplied to the fitter.
+
+## Complete Sample Overlap
+
+The cleanest MTBLR setting has all $T$ traits measured on the same $N$
 individuals:
 
 $$
-n_t=n,
+N_t=N,
 \qquad
-N_{ts}=n
+N_{ts}=N
 \quad\text{for all }t,s.
 $$
 
-Then:
+Then
 
 $$
-WY=X^\top Y,
+X^\top Y,
 \qquad
-SSY=Y^\top Y
+X^\top X,
+\qquad
+S_Y=Y^\top Y
 $$
 
-can be computed directly, and the residual covariance has the conventional
-interpretation:
+are ordinary matrix cross-products from one common sample.
+
+The residual covariance has its conventional interpretation,
 
 $$
-V_e
-=
-\operatorname{Cov}(e_i)
+V_e=\operatorname{Cov}(e_i),
 $$
 
-for residual vectors observed jointly on the same individuals.
+for residual vectors observed jointly on those individuals.
 
 The current CSR MTBLR kernel is closest to this setting. It uses shared LD,
 requires equal trait sample sizes and matching `ww` values across traits, and
-accepts a full trait cross-product matrix through its `yy` argument.
+accepts a full $T\times T$ trait cross-product matrix through its current
+`yy` argument.
 
-One weaker "full-overlap" approximation
-for unequal marginal sample sizes:
+### Nested-sample approximation
+
+A weaker approximation sometimes called "full overlap" for unequal marginal
+sample sizes is
 
 $$
-N^{\mathrm{full}}_{ts}
+N_{ts}^{\mathrm{full}}
 =
-\min(n_t,n_s).
+\min(N_t,N_s).
 $$
 
-This assumes the smaller study is nested within the larger study for each
-trait pair. It is useful as an explicit approximation, but it is not equivalent
-to all traits being measured on one common sample.
+This assumes, for each trait pair, that the smaller study is nested entirely
+within the larger one. It can be useful as an explicit approximation, but it is
+not equivalent to all traits being measured on one common set of individuals.
 
 ## Partial Sample Overlap
 
-With partial overlap, different trait pairs may share different individuals:
+With partial overlap,
 
 $$
-0<N_{ts}<\min(n_t,n_s).
+0<N_{ts}<\min(N_t,N_s)
 $$
+
+for at least some trait pairs.
 
 A convenient parameterization uses overlap fractions
 $p_{ts}\in[0,1]$:
 
 $$
-N^{\mathrm{frac}}_{ts}
+N_{ts}^{\mathrm{frac}}
 =
-p_{ts}\min(n_t,n_s),
+p_{ts}\min(N_t,N_s),
 \qquad
-N_{tt}=n_t.
+N_{tt}=N_t.
 $$
 
-The matrix $N$ records the amount of direct information available about each
-trait pair. A cross-trait phenotype covariance estimated from 500 shared
-individuals is not supported by the same information as one estimated from
-50,000 shared individuals, even when the numerical correlation is identical.
+The overlap matrix records how much direct paired phenotype information is
+available for each trait pair. A covariance estimate based on 500 shared
+individuals is not supported by the same amount of direct information as one
+based on 50,000 shared individuals, even when their numerical correlations are
+identical.
 
 Partial overlap complicates the likelihood because:
 
-- `SSY` entries arise from different pair-specific samples;
-- marker-trait statistics $X_t^\top y_t$ may arise from different genotype
+- entries of $S_Y$ arise from different pair-specific samples;
+- marker-trait statistics $X_t^\top y_t$ may come from different genotype
   samples;
-- LD and diagonal genotype cross-products may differ by trait;
-- residual covariance reflects only shared individuals; and
-- a single common $X^\top X$ may not exactly represent every trait pair.
+- marker diagonal cross-products may differ by trait;
+- LD may differ across the marginal trait samples;
+- residual covariance is informed only by individuals observed jointly; and
+- one common $X^\top X$ may not exactly represent all trait-specific studies.
 
-These issues require explicit modeling assumptions. Supplying an overlap
-matrix does not by itself make a shared-LD likelihood exact.
+Supplying an overlap matrix therefore does not, by itself, make a shared-LD
+multi-trait likelihood exact.
 
 ## No Overlap and Unknown Overlap
 
@@ -256,99 +285,80 @@ $$
 N_{ts}=0.
 $$
 
-There is then no direct individual-level cross-product
-$\sum_i y_{it}y_{is}$ for that pair. Setting
+There is then no observed pairwise phenotype product for that trait pair.
+Under a centered-phenotype convention, setting
 
 $$
-SSY_{ts}=0
+[S_Y]_{ts}=0
 $$
 
-records the absence of observed cross-trait phenotype product under a centered
-phenotype convention. It does not establish that biological, genetic, or
+can be used to record the absence of an observed shared-individual
+cross-product. This is a bookkeeping convention for the pairwise
+cross-product matrix; it is **not** evidence that the biological, genetic, or
 population-level residual correlation is zero.
 
-Genetic covariance can still be informed by shared markers, aligned
-marker-trait associations, and an appropriate cross-study model. Residual
-covariance between non-overlapping samples, however, is not directly
-identified by observed paired residuals. It must be fixed, strongly
-regularized, inferred from external information, or excluded from the model.
+Genetic covariance can still be informed by aligned marker effects and an
+appropriate model even when study samples do not overlap. Direct residual
+covariance information, however, is not supplied by paired residual
+observations when there are no shared individuals. Such residual covariance
+must then be fixed, externally informed, strongly regularized, or excluded,
+depending on the model.
 
-When overlap is unknown, off-diagonal `SSY` is also unknown. Treating unknown
-overlap as full overlap can create spurious residual covariance; treating it as
-zero can discard real correlated-error information. Sensitivity analyses over
-plausible overlap assumptions are preferable to silently choosing either
-extreme.
+When overlap is unknown, the corresponding off-diagonal entries of $S_Y$ are
+also unknown. Treating unknown overlap as complete overlap can create
+unsupported residual covariance information; treating it as zero can discard
+real correlated-error information. Sensitivity analyses over plausible overlap
+assumptions are preferable to silently choosing either extreme.
 
 ## Phenotypic Variance From Marginal Summary Statistics
 
-For trait $t$, let:
-
-$$
-yy_t=\sum_{i\in\mathcal I_t}y_{it}^2,
-\qquad
-n_t=|\mathcal I_t|.
-$$
-
-If phenotypes are centered or approximately centered, an empirical variance
-estimate is
+For centered or approximately centered trait $t$, a cross-product-per-observation
+estimate of the phenotype variance is
 
 $$
 \widehat{\operatorname{Var}}(y_t)
 \approx
-\frac{yy_t}{n_t}.
+\frac{y_t^\top y_t}{N_t}.
 $$
 
-Using $n_t-1$ instead gives the usual sample-variance denominator. The
-choice must match the intended likelihood and preprocessing convention. The
-reconstruction uses $yy_t/n_t$ as the cross-product-per-observation
-quantity.
+This is the quantity naturally paired with the cross-product reconstruction
+below. Using $N_t-1$ instead gives the usual unbiased sample-variance
+denominator; the choice must match the intended likelihood and preprocessing
+convention.
 
-Collect the marginal variance estimates in:
+If phenotypes are not centered,
 
 $$
-\widehat{\sigma}_y^2
-=
-\left(
-\frac{yy_1}{n_1},
-\ldots,
-\frac{yy_T}{n_T}
-\right).
+\frac{y_t^\top y_t}{N_t}
 $$
 
-If phenotypes are not centered, $yy_t/n_t$ is a second raw moment rather
-than a variance. Covariance reconstruction then requires explicit treatment
-of trait means.
+is a second raw moment rather than a variance. Covariance reconstruction then
+requires explicit treatment of trait means.
 
-## Covariance Reconstruction From Correlations
+## Covariance Reconstruction From Phenotypic Correlations
 
 Suppose a phenotypic correlation matrix
 
 $$
-R_y=[r_{ts}]
+R_y=[\rho^{(y)}_{ts}]
 $$
 
 is available from individual-level data, a reported study estimate, or an
-external source. Convert it to phenotype covariance units using:
+external source.
+
+Convert it to phenotype covariance units using
 
 $$
-\widehat{\sigma}_{ts}
+\widehat\sigma_{ts}
 =
-r_{ts}
+\rho^{(y)}_{ts}
 \sqrt{
 \widehat{\operatorname{Var}}(y_t)
 \widehat{\operatorname{Var}}(y_s)
 }.
 $$
 
-In matrix form:
-
-$$
-\widehat{\operatorname{Cov}}(Y)
-=
-D_yR_yD_y,
-$$
-
-where
+Equivalently, define
 
 $$
 D_y
@@ -358,71 +368,87 @@ D_y
 \sqrt{\widehat{\operatorname{Var}}(y_1)},
 \ldots,
 \sqrt{\widehat{\operatorname{Var}}(y_T)}
-\right).
+\right)
 $$
 
-This rescaling is essential. A correlation matrix alone is dimensionless and
-cannot replace phenotype cross-products when traits have different scales.
-
-The supplied $R_y$ must have the same trait order as `yy`, $n$, $WY$,
-and all covariance priors. If $R_y$ comes from another sample, its
-transportability is an additional assumption.
-
-## Reconstructing `SSY`
-
-Under the approximation that pairwise covariance is homogeneous across
-individuals and that missingness or study membership does not alter it,
+and
 
 $$
-\mathbb E[y_{it}y_{is}]
+\widehat V_y
+=
+D_yR_yD_y.
+$$
+
+Here $\widehat V_y$ is the estimated phenotype covariance matrix on a
+per-observation scale. A correlation matrix alone is dimensionless and cannot
+replace phenotype cross-products when traits have different variances.
+
+The supplied $R_y$ must use the same trait order, phenotype definitions,
+covariate adjustment, and scale as the marginal summary information. If it
+comes from a different sample, its transportability is an additional
+assumption.
+
+## Reconstructing the Pairwise Phenotype Cross-Products
+
+Assume that, for centered traits observed together,
+
+$$
+\mathbb E(y_{it}y_{is})
 =
 \sigma_{ts}
 $$
 
-for centered traits observed together. Therefore:
+for individuals contributing to pair $(t,s)$. Then
 
 $$
 \begin{aligned}
-\mathbb E[SSY_{ts}]
+\mathbb E\left([S_Y]_{ts}\right)
 &=
-E\left[
-\sum_{i\in\mathcal I_{ts}}y_{it}y_{is}
+\mathbb E\left[
+\sum_{i\in\mathcal I_{ts}}
+y_{it}y_{is}
 \right]\\
 &=
-\sum_{i\in\mathcal I_{ts}}\mathbb E[y_{it}y_{is}]\\
+\sum_{i\in\mathcal I_{ts}}
+\mathbb E(y_{it}y_{is})\\
 &=
 N_{ts}\sigma_{ts}.
 \end{aligned}
 $$
 
-Replacing $\sigma_{ts}$ with its estimate gives:
+Replacing $\sigma_{ts}$ with an estimate gives
 
 $$
-\widehat{SSY}_{ts}
+[\widehat S_Y]_{ts}
 =
-N_{ts}\widehat{\sigma}_{ts}.
+N_{ts}\widehat\sigma_{ts}.
 $$
 
-In matrix notation:
+In matrix notation,
 
 $$
-\widehat{SSY}
+\widehat S_Y
 =
-N\odot\widehat{\operatorname{Cov}}(Y),
+N_{\mathrm{overlap}}
+\odot
+\widehat V_y,
 $$
 
 where $\odot$ denotes elementwise multiplication.
 
-The diagonal should be forced to the observed marginal sums of squares:
+The diagonal should be forced to the observed marginal cross-products:
 
 $$
-\widehat{SSY}_{tt}=yy_t.
+[\widehat S_Y]_{tt}
+=
+y_t^\top y_t.
 $$
 
 This avoids small inconsistencies caused by rounding, denominator choices, or
-correlation-matrix construction.
+the construction of $R_y$.
 
-A short illustrative construction is:
+In current analysis code, the same reconstruction may be written using
+implementation names:
 
 ```r
 vy <- yy / n
@@ -431,45 +457,49 @@ SSY <- Nmat * cov_y
 diag(SSY) <- yy
 ```
 
-This is a reconstruction under assumptions, not an observed cross-product
-unless the input covariance and overlap information were obtained directly
-from the relevant individuals.
+This is a reconstruction under assumptions, not an observed complete-sample
+cross-product unless the covariance and overlap information were obtained
+directly from the relevant individuals.
 
-## First-Principles Assumptions
+## Assumptions Behind the Reconstruction
 
-The reconstruction
+The approximation
 
 $$
-\widehat{SSY}_{ts}=N_{ts}\widehat{\sigma}_{ts}
+[\widehat S_Y]_{ts}
+=
+N_{ts}\widehat\sigma_{ts}
 $$
 
 rests on several assumptions.
 
 ### Centered phenotypes
 
-For nonzero means:
+For nonzero phenotype means,
 
 $$
-\mathbb E[y_ty_s]
+\mathbb E(y_ty_s)
 =
 \operatorname{Cov}(y_t,y_s)
-+\mathbb E[y_t]\mathbb E[y_s].
++
+\mathbb E(y_t)\mathbb E(y_s).
 $$
 
-The covariance-only reconstruction is therefore appropriate when phenotypes
-are centered, residualized with an intercept, or otherwise have negligible
-means on the relevant sample.
+A covariance-only reconstruction is therefore appropriate when phenotypes are
+centered, residualized with an intercept, or otherwise have negligible means on
+the relevant sample.
 
 ### Random or ignorable missingness
 
 The shared individuals $\mathcal I_{ts}$ should not have a systematically
-different cross-trait covariance from the target population. If overlap is
-selected by disease status, cohort, measurement protocol, or other
-trait-related factors, covariance homogeneity may fail.
+different cross-trait covariance from the population represented by the
+supplied phenotype covariance. Selection by disease status, cohort,
+measurement protocol, or other trait-related factors can violate this
+assumption.
 
 ### Homogeneous covariance
 
-The derivation assumes:
+The derivation assumes that
 
 $$
 \operatorname{Cov}(y_{it},y_{is})
@@ -477,35 +507,39 @@ $$
 \sigma_{ts}
 $$
 
-for individuals contributing to the pairwise product. Cohort heterogeneity,
-ancestry differences, environmental strata, and phenotype harmonization can
-violate this assumption.
+is sufficiently homogeneous among individuals contributing to the pairwise
+product. Cohort heterogeneity, ancestry differences, environmental strata, and
+phenotype harmonization can violate this assumption.
 
 ### Correct overlap counts
 
-The approximation uses the actual or defensible effective value of
-$N_{ts}$. Rounding overlap fractions, using total study size instead of
-shared size, or ignoring duplicated participants changes the implied
+The approximation uses the actual or a defensible effective value of $N_{ts}$.
+Rounding overlap fractions, using total study size rather than shared sample
+size, or failing to account for duplicated participants changes the implied
 cross-product.
 
 ### Compatible phenotype covariance
 
-The correlation or covariance estimate must refer to phenotypes on compatible
-scales, with compatible covariate adjustment and trait definitions.
+The correlation or covariance estimate must refer to compatible phenotype
+definitions, scales, and covariate adjustment. A numerically valid correlation
+matrix from an incompatible sample is not automatically a valid reconstruction
+input.
 
-## Why `SSY` Matters for Residual Covariance
+## Why Cross-Trait Phenotype Products Matter for $V_e$
 
-Let:
+Under complete overlap, define the observation-level residual matrix
 
 $$
-R_Y=Y-XB
+E_Y
+=
+Y-XB.
 $$
 
-be the individual-level residual matrix. Its cross-product is:
+Its cross-product is
 
 $$
 \begin{aligned}
-R_Y^\top R_Y
+E_Y^\top E_Y
 &=
 (Y-XB)^\top(Y-XB)\\
 &=
@@ -516,142 +550,205 @@ Y^\top Y
 \end{aligned}
 $$
 
-Using summary-statistic notation:
+Since $S_Y=Y^\top Y$ under complete overlap,
 
 $$
-R_Y^\top R_Y
+E_Y^\top E_Y
 =
-SSY
--WY^\top B
--B^\top WY
-+B^\top XXB.
+S_Y
+-Y^\top XB
+-B^\top X^\top Y
++B^\top X^\top XB.
 $$
 
-The off-diagonal entries of this residual cross-product depend directly on
-the off-diagonal entries of `SSY`. Without them, a sampler cannot reconstruct
-the full residual cross-product from marginal summaries alone.
+The off-diagonal entries depend directly on the off-diagonal entries of $S_Y$.
+Marginal phenotype sums of squares alone therefore cannot reconstruct the full
+residual cross-product.
 
-The current CSR MTBLR implementation accepts a full $T\times T$ matrix
-through its `yy`/`YY` argument. It combines that matrix with marker-trait
-cross-products, current effects, and marker-scale residual scores, then
-symmetrizes the resulting residual cross-product before updating the residual
-covariance matrix.
+Under partial overlap, replacing $Y^\top Y$ by a reconstructed pairwise
+$S_Y$ preserves the role of the phenotype-side cross-trait information, but the
+result is no longer an exact matrix identity arising from one complete
+rectangular $Y$. Its validity depends on the overlap and covariance assumptions
+described above.
 
-If only diagonal `yy` values are available, a model can still update
-trait-specific residual variances. A full residual covariance update then
-requires off-diagonal values to be fixed, reconstructed, externally supplied,
-or excluded.
+The current CSR MTBLR implementation accepts a full $T\times T$ matrix through
+its `yy` argument. It combines that matrix with marker-trait cross-products,
+current marker effects, and marker-scale residual scores, then symmetrizes the
+resulting residual cross-product before updating $V_e$.
 
-## Genetic Covariance and Residual Covariance
+If only marginal `yy` values are available, separate trait-wise residual
+variances can still be updated. A full residual covariance update requires
+off-diagonal trait products to be observed, reconstructed, supplied
+externally, fixed, or otherwise excluded from inference.
 
-Multi-trait models can borrow information through both marker-effect and
-residual covariance, but these sources must not be conflated.
+## Marker-Effect, Genomic, and Residual Covariance
 
-### Marker-effect covariance
+Three multi-trait covariance quantities should not be conflated.
 
-For marker $j$, let:
+### Marker-effect covariance $V_b$
 
-$$
-b_j=
-\begin{bmatrix}
-b_{j1} & \cdots & b_{jT}
-\end{bmatrix}^\top.
-$$
-
-A multi-trait prior can assign:
+For marker $j$, let
 
 $$
-b_j\mid\text{active model}
+\beta_j
+=
+B_{j\cdot}^{\top}.
+$$
+
+For an active trait pattern $p$, a prior may use the corresponding active
+submatrix $V_{b,p}$:
+
+$$
+\beta_{j,p}
 \sim
-N_T(0,V_b)
+N(0,V_{b,p})
 $$
 
-on the active traits. Off-diagonal entries of $V_b$ allow effects to
-co-vary across traits. Trait-sharing model indicators can additionally encode
-whether a marker is active for specific subsets of traits.
-
-### Genetic covariance from fitted effects
-
-With a common genotype matrix:
+or, in a BayesR component with multiplier $\gamma_k$ and optional
+marker-specific variance multiplier $q_j$,
 
 $$
-G_X=XB
+\beta_{j,p,k}
+\sim
+N\left(0,\gamma_kq_jV_{b,p}\right).
 $$
 
-has cross-product:
+Thus $V_b$ is a covariance parameter in the marker-effect prior.
+
+### Genomic covariance $V_g$
+
+The fitted genetic-value matrix is
 
 $$
-G_X^\top G_X=B^\top XXB.
+G_X=XB.
 $$
 
-Using marker-score residuals $R= WY-XXB$, a symmetric summary-statistic
-estimate for traits $t$ and $s$ is:
+Under one common sample,
+
+$$
+G_X^\top G_X
+=
+B^\top X^\top XB.
+$$
+
+A natural sample-scaled genomic covariance is
+
+$$
+\widehat V_g
+=
+\frac{1}{N}
+B^\top X^\top XB.
+$$
+
+Therefore $V_g$ is induced by the fitted effects together with genotype
+covariance/LD; it is not the same object as the prior covariance $V_b$.
+
+For trait-specific summary-statistic notation, let
+
+$$
+r_t
+=
+X^\top y_t-X^\top Xb_t.
+$$
+
+Then
+
+$$
+X^\top Xb_t
+=
+X^\top y_t-r_t.
+$$
+
+A symmetric cross-trait estimator is
 
 $$
 [\widehat V_g]_{ts}
 =
 \frac{
-b_t^\top(wy_s-r_s)
-+b_s^\top(wy_t-r_t)
+b_t^\top(X^\top y_s-r_s)
++
+b_s^\top(X^\top y_t-r_t)
 }{
-2\sqrt{n_tn_s}
+2\sqrt{N_tN_s}
 }.
 $$
 
-This quantity concerns genetic values induced by marker effects and LD. It is
-not determined by `SSY` alone.
+When all traits use one common sample of size $N$, the denominator becomes $N$.
+When $t=s$, the expression reduces to the single-trait genomic-variance
+formula.
 
-### Residual covariance
+This quantity concerns fitted genetic values and LD. It is not determined by
+$S_Y$ alone.
 
-Residual covariance concerns phenotype variation not represented by the
-current marker effects. Its observed cross-trait information comes from shared
-individuals and therefore depends on `SSY` and sample overlap. A genetic
-correlation may exist with no sample overlap; direct residual covariance
-information cannot.
+### Residual covariance $V_e$
+
+Residual covariance describes phenotype variation not represented by the
+current marker effects. Its direct cross-trait information comes from
+individuals observed jointly and therefore depends on $S_Y$ and sample
+overlap.
+
+Genetic covariance may be estimable from aligned marker associations even when
+two GWAS samples do not overlap. Direct residual covariance information from
+paired residuals is fundamentally different: without shared individuals,
+those paired residual observations do not exist.
 
 ## Connection to Current `sblr` Interfaces
 
-The canonical `mtblr_bed()`, `mtblr_csr()`, and `mtblr_block_eigen()`
-interfaces distinguish individual-level and summary-statistics inputs. In the
-underlying mathematical contract, `yy` denotes a trait cross-product matrix,
-`Xy` as marker-trait cross-products, and `XX` as marker cross-product or LD
-matrices. It initializes trait variances from the diagonal of `yy`. The public
-summary-statistics routes use the documented current sufficient-statistics
-contract; they do not infer unavailable cross-trait overlap information.
+The canonical multi-trait fitters are:
 
-Conceptually, the internal MT CSR likelihood requires:
+- `mtblr_bed()`;
+- `mtblr_csr()`; and
+- `mtblr_block_eigen()`.
 
-- `wy`, one marker vector per trait;
-- `ww`, marker diagonal cross-products per trait;
-- `yy`, a full $T\times T$ trait cross-product matrix;
-- `ld_prefix`, identifying shared CSR LD;
-- marker-effect covariance $V_b$ (current formatted field `covb`);
-- residual covariance $V_e$ (current formatted field `cove`);
-- multi-trait sharing models and model probabilities; and
-- a sample-size vector `n`.
+The current interfaces use historical code-field names for the cross-product
+objects. Depending on the route, marker-trait cross-products may appear as
+trait-wise `wy` vectors or as an `Xy`-style matrix. Marker diagonal
+cross-products are represented by `ww`. The full trait cross-product matrix is
+currently carried through a `yy`/`YY`-style argument in some lower-level
+contracts, while analysis documentation often calls the same mathematical
+information `SSY`.
 
-The current CSR kernel requires equal values in `n` and matching `ww` across
-traits because it assumes shared LD scaling. It does not accept `Nmat`
-directly. Therefore, `Nmat` currently serves as an analysis-level object used
-to construct, justify, and validate `SSY`; it is not automatically used by the
-native CSR likelihood to adjust each trait pair.
+These names should not be interpreted as different mathematical quantities.
+The underlying objects are:
 
-This distinction matters. A mathematically reconstructed `SSY` for partial
-overlap does not by itself remove the kernel's shared-$X$, shared-LD, and
-equal-$n$ assumptions. More general partial-overlap likelihoods require
-additional implementation and validation.
+$$
+X^\top Y,
+\qquad
+\operatorname{diag}(X^\top X),
+\qquad
+S_Y.
+$$
+
+Conceptually, the current MT CSR likelihood requires:
+
+- marker-trait cross-products corresponding to $X^\top Y$;
+- marker diagonal cross-products corresponding to
+  $\operatorname{diag}(X^\top X)$;
+- a full $T\times T$ trait cross-product matrix corresponding to $S_Y$;
+- shared sparse LD compatible with those marker statistics;
+- marker-effect covariance $V_b$;
+- residual covariance $V_e$;
+- the multi-trait state/sharing probabilities appropriate to the model; and
+- trait sample sizes.
+
+The current CSR kernel requires equal values in its `n` vector and matching
+`ww` across traits because it assumes shared LD scaling. It does not accept
+`Nmat` directly.
+
+Therefore, `Nmat` currently serves as an analysis-level object used to
+construct, justify, and validate the trait cross-product matrix. Supplying a
+reconstructed `SSY` does not by itself remove the kernel's shared-$X$,
+shared-LD, and equal-sample-size assumptions.
+
+More general partial-overlap likelihoods would require additional model and
+implementation work.
 
 ## Simulation as a Known-Truth Check
 
 `mtsim()` and `mtsim_annotation()` simulate all traits on one common genotype
-matrix and one common individual set. They generate:
-
-- marker-effect matrix `B`;
-- genetic values `G`;
-- residual matrix `E`;
-- phenotype matrix `y`;
-- target and observed genetic correlations; and
-- target and observed residual correlations.
+matrix and one common individual set. They return implementation objects such
+as marker effects, genetic values, residuals, phenotypes, and target/observed
+genetic and residual correlations.
 
 For such simulations, full-overlap quantities can be calculated directly:
 
@@ -661,117 +758,139 @@ SSY <- crossprod(Y)
 Nmat <- matrix(nrow(Y), nrow = ncol(Y), ncol = ncol(Y))
 ```
 
+Mathematically, this corresponds to
+
+$$
+S_Y=Y^\top Y
+$$
+
+and
+
+$$
+N_{ts}=N
+$$
+
+for every trait pair.
+
 These simulations are useful for checking whether an MTBLR implementation
 recovers known covariance and sharing patterns. They do not validate
-partial-overlap reconstruction assumptions unless missingness or study
-separation is explicitly simulated.
+partial-overlap reconstruction assumptions unless missingness, sample
+separation, or trait-specific study structure is explicitly simulated.
 
-The existing workflow scripts currently use the simulated phenotype columns
-primarily in parallel single-trait CSR and annotation-aware fits. A complete
-joint MTBLR workflow must additionally construct and validate full cross-trait
-inputs.
+## Data Requirements for Joint Summary-Statistic MTBLR
 
-## Practical Data Requirements
+A joint summary-statistics MTBLR analysis should retain enough information to
+establish both the mathematical quantities and their provenance.
 
-A joint summary-statistics MTBLR analysis should retain:
+| Mathematical object | Current implementation representation | Required contract |
+|---|---|---|
+| trait order | names/columns | identical across every trait-indexed object |
+| $X^\top Y$ | trait-wise `wy` or route-specific `Xy` | $M\times T$, aligned in marker and trait order |
+| $\operatorname{diag}(X^\top X)$ | `ww` | length $M$ per trait and compatible with LD scaling |
+| LD / $X^\top X$ representation | sparse LD or operator object | marker order and scale compatible with $X^\top Y$ |
+| $S_Y$ | `SSY` conceptually; full matrix carried through current trait-cross-product inputs | symmetric $T\times T$ observed or reconstructed pairwise phenotype cross-products |
+| $N_t$ | `n` | trait sample sizes, with current CSR requiring equality |
+| $N_{\mathrm{overlap}}$ | `Nmat` at analysis level | symmetric $T\times T$ pairwise overlap counts used to justify reconstruction |
+| phenotype preprocessing | analysis metadata | centering, scaling, transformations, covariate adjustment |
+| covariance priors | model inputs | trait order and units compatible with $S_Y$ and marker statistics |
 
-| Object | Required contract |
-|---|---|
-| Trait names/order | Identical across every trait-indexed object |
-| $WY=X^\top Y$ | $m\times T$, with marker and trait order recorded |
-| `ww` / diagonal $XX$ | Length $m$ per trait; compatible with LD scaling |
-| LD / $XX$ | Marker order identical to rows of $WY$ |
-| `SSY` | Symmetric $T\times T$ observed or reconstructed trait cross-product matrix |
-| $n$ | Trait-specific sample-size vector, even when all values are equal |
-| `Nmat` | Symmetric $T\times T$ pairwise overlap matrix used to justify `SSY` |
-| Phenotype scaling | Centering, variance scaling, transformations, and covariate adjustment |
-| Covariance priors | Trait order and units matching `SSY` and marker statistics |
-
-For current CSR MTBLR use, additionally verify that the shared-LD and equal
-sample-size restrictions are satisfied.
+For current CSR MTBLR use, the shared-LD and equal-sample-size restrictions must
+also be satisfied.
 
 ## Validation Checks
 
 Before fitting or interpreting a joint multi-trait model:
 
-1. Confirm that `SSY` is $T\times T$, finite, and symmetric.
-2. Confirm that `diag(SSY)` equals the trait-specific `yy` values.
-3. Check that observed full-overlap `SSY = crossprod(Y)` is positive
-   semidefinite up to numerical tolerance.
-4. For reconstructed pairwise `SSY`, inspect eigenvalues and understand that
-   pairwise-valid entries do not automatically guarantee a globally positive
-   semidefinite matrix.
-5. Confirm that `Nmat` is symmetric and finite.
-6. Confirm that:
+1. Confirm that the supplied trait cross-product matrix is $T\times T$, finite,
+   and symmetric.
+2. Confirm that its diagonal equals the observed marginal phenotype
+   cross-products $y_t^\top y_t$ represented by the relevant `yy` values.
+3. Under complete overlap, confirm that the observed matrix
+   $S_Y=Y^\top Y$ is positive semidefinite up to numerical tolerance.
+4. For reconstructed pairwise $S_Y$, inspect eigenvalues and remember that
+   pairwise-plausible entries do not automatically imply one globally valid
+   positive semidefinite covariance/cross-product matrix.
+5. Confirm that `Nmat`, when used, is finite and symmetric.
+6. Confirm that
 
    $$
-   N_{tt}=n_t
+   N_{tt}=N_t
    $$
 
-   and:
+   and
 
    $$
-   0\le N_{ts}\le \min(n_t,n_s).
+   0\le N_{ts}\le\min(N_t,N_s).
    $$
 
-7. Confirm that trait order is identical across `SSY`, `Nmat`, $WY$, $n$,
-   $V_b$, $V_e$, prior scale matrices, and outputs.
-8. Confirm that $WY$, `ww`, and LD use the same marker order and compatible
-   genotype scaling.
-9. Confirm that reported phenotype correlations are on compatible phenotype
+7. Confirm identical trait order across the trait cross-product matrix,
+   overlap matrix, $X^\top Y$, sample sizes, $V_b$, $V_e$, prior scale
+   matrices, and outputs.
+8. Confirm that marker-trait cross-products, `ww`, and LD use the same marker
+   order, allele orientation, and compatible genotype scaling.
+9. Confirm that supplied phenotype correlations refer to compatible phenotype
    definitions and scales.
-10. Record whether every off-diagonal `SSY` value was observed, reconstructed,
-    fixed, or assumed.
-11. For current CSR MTBLR, confirm equal `n` values and equal `ww` vectors
-    across traits.
+10. Record whether every off-diagonal trait cross-product was observed,
+    reconstructed, fixed, or assumed.
+11. For the current CSR MTBLR kernel, confirm equal sample sizes and matching
+    `ww` vectors across traits.
 12. Inspect covariance traces, eigenvalues, correlations, and sensitivity to
-    overlap assumptions.
+    overlap assumptions before interpreting cross-trait borrowing.
 
 Positive semidefiniteness is especially important because covariance updates
-require valid scale matrices. Small negative eigenvalues may arise from
-rounding and can sometimes be regularized; substantial negative eigenvalues
-usually indicate incompatible pairwise inputs or assumptions.
+require valid scale matrices. Small negative eigenvalues can arise from
+rounding, but substantial negative eigenvalues usually indicate incompatible
+pairwise inputs or assumptions.
 
 ## Limitations and Sensitivity Analysis
 
-Multi-trait summary-statistics inference is sensitive to assumptions that are
+Multi-trait summary-statistics inference depends on assumptions that are either
 unnecessary or directly observable with complete individual-level data.
 
 - **Overlap uncertainty:** errors in $N_{ts}$ directly alter reconstructed
-  `SSY` off-diagonals.
+  off-diagonal entries of $S_Y$.
 - **Nonrandom missingness:** shared individuals may not represent the marginal
   trait samples.
 - **Phenotype heterogeneity:** correlations can differ across cohorts,
-  ancestries, environments, or phenotype definitions.
+  ancestries, environments, measurement protocols, or phenotype definitions.
 - **LD mismatch:** trait-specific association statistics may not be compatible
   with one shared LD reference.
-- **Scale mismatch:** correlations, `yy`, $WY$, and covariance priors may be
-  expressed on different phenotype scales.
+- **Scale mismatch:** phenotype correlations, marginal cross-products,
+  $X^\top Y$, and covariance priors may refer to different scales.
 - **Weak identification:** residual covariance is weakly or not directly
   identified when overlap is small, zero, or unknown.
-- **Covariance instability:** high-dimensional or highly correlated trait
+- **Pairwise reconstruction:** a matrix assembled from individually plausible
+  pairwise entries is not automatically the cross-product of one coherent
+  complete dataset.
+- **Covariance instability:** high-dimensional or strongly correlated trait
   covariance matrices can be numerically unstable.
 - **Current implementation scope:** the CSR MTBLR kernel's shared-LD and
-  equal-$n$ requirements are narrower than the most general partial-overlap
-  theory.
+  equal-sample-size requirements are narrower than the most general
+  partial-overlap theory.
 
 Production analyses should compare plausible overlap matrices, phenotype
 correlation sources, residual covariance restrictions, and LD references.
-Repeated chains, covariance diagnostics, predictive validation, and
-sensitivity to regularization are required before interpreting cross-trait
-borrowing or covariance estimates.
+Repeated chains, covariance diagnostics, predictive validation, and sensitivity
+to regularization are important before interpreting cross-trait borrowing or
+covariance estimates.
 
-## Related Notes and Sources
+## Related Methods and Practical Notes
 
-- [Summary statistics](summary_statistics.qmd) derives the
-  general cross-product and residual-score representation.
-- [Multi-trait models](../notes/multi_trait_models.qmd) provides the conceptual model
-  map for covariance and trait-sharing structures.
-- [Data representations](../notes/data_representations.qmd) introduces individual-level
-  and summary-statistics inputs.
-- [Model overview](../notes/model_overview.qmd) places MTBLR within the broader `sblr`
-  workflow landscape.
+- [Core BLR Model Theory](model_theory.qmd) defines the common ST/MT regression
+  model and distinguishes $B$/$E_Y$ from $V_b$/$V_e$.
+- [Summary Statistics](summary_statistics.qmd) derives the general
+  cross-product, residual-score, and sparse-summary representation.
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) describes the current ordinary MT
+  joint-state probability model.
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describes the current
+  factorized component/sharing probability architecture.
+- [Multi-trait models](../notes/multi_trait_models.qmd) provides practical model
+  guidance.
+- [Data representations](../notes/data_representations.qmd) describes
+  individual-level and summary-statistics inputs.
 
-This appendix consolidates the `SSY` and sample-overlap theory while aligning
-its claims with the current multi-trait fitters and CSR implementation.
-Residual covariance is not an implicit GWAS sampling-overlap likelihood.
+This appendix therefore owns the pairwise phenotype cross-product and
+sample-overlap theory. The mathematical objects $S_Y$ and
+$N_{\mathrm{overlap}}$ are kept separate from the current implementation names
+`SSY` and `Nmat`, and the general partial-overlap theory is kept distinct from
+the narrower assumptions of the current CSR kernel.
