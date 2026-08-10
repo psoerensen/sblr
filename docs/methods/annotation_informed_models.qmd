@@ -1,6 +1,6 @@
 ---
-title: "Annotation-Informed Prior Scales for STBLR and MTBLR"
-subtitle: "Using posterior marker summaries and annotations to construct prior inclusion probabilities, prior effect variances, and sharing-model priors"
+title: "Empirical-Bayes Construction of Annotation-Informed Priors"
+subtitle: "Conceptual posterior-to-prior workflows for STBLR and MTBLR"
 author: ""
 date: ""
 format:
@@ -14,10 +14,17 @@ execute:
 ---
 
 ::: {.callout-note}
-This page preserves general derivations and conceptual empirical-Bayes
-constructions. Functions whose names end in `_conceptually` are mathematical
-pseudocode, not package APIs. Executable package fits use the seven canonical
-fitters described in the [model overview](../notes/model_overview.qmd).
+This is a focused conceptual and historical page about deriving prior
+information from first-stage posterior summaries. The canonical model
+definitions, implemented capability table, preprocessing contract, LV model,
+and proposed unified architecture are in
+[Annotation-Informed Priors](annotation_priors.qmd).
+
+Functions whose names end in `_conceptually` are mathematical pseudocode, not
+package APIs. Several MT sharing/covariance and direct in-sampler constructions
+below are research proposals rather than implemented package features.
+Executable package fits use the public fitters described in the
+[model overview](../notes/model_overview.qmd).
 :::
 
 # Motivation
@@ -40,7 +47,19 @@ $$
 
 where marker $i = 1, \ldots, m$ and trait $t = 1, \ldots, T$.
 
-Let $A$ denote an annotation matrix:
+The general `sblr` annotation contract uses
+
+$$
+A\in\mathbb R^{M\times K},
+$$
+
+whose columns may contain binary annotations, continuous scores, or overlapping
+binary and continuous information. See
+[Annotation-Informed Priors](annotation_priors.qmd) for the canonical general
+A-matrix, preprocessing, and identification contract.
+
+For the set-based empirical-Bayes derivations on this page, it is useful to
+specialize A to binary membership indicators:
 
 $$
 A_{ik} =
@@ -50,12 +69,21 @@ A_{ik} =
 \end{cases}
 $$
 
-The annotation columns may overlap. For example, a marker may be coding, close to a gene, and located inside a QTL region at the same time.
+This binary definition is an illustrative special case, not a restriction of
+the broader package architecture. These annotation columns may overlap. For
+example, a marker may be coding, close to a gene, and located inside a QTL
+region at the same time.
+
+This page follows the package-wide theory convention that lowercase v denotes
+a scalar variance and uppercase V a variance-covariance matrix: ST uses
+\(v_b,v_g,v_e\), whereas MT uses \(V_b,V_g,V_e\). Historical conceptual R code
+snippets below may retain ordinary code variables such as `B`; those are not
+the preferred mathematical symbols or proposed case-only API names.
 
 The goal is to derive annotation-specific or marker-specific prior parameters such as:
 
 $$
-\pi_{k,t}, \qquad \sigma^2_{b,k,t}, \qquad B_k, \qquad \pi_{k,m},
+\pi_{k,t}, \qquad \sigma^2_{b,k,t}, \qquad V_{b,k}, \qquad \pi_{k,m},
 $$
 
 where $k$ indexes an annotation class or marker set, $t$ indexes a trait, and $m$ indexes a multi-trait sharing model.
@@ -89,7 +117,7 @@ This identity is useful because it allows approximate genetic variance and covar
 For a single trait, the genomic variance estimate is
 
 $$
-\widehat V_{G,t}
+\widehat v_{g,t}
 = \frac{1}{n} b_t^\top X^\top X b_t
 = \frac{1}{n} b_t^\top (wy_t - r_t).
 $$
@@ -97,7 +125,7 @@ $$
 For traits $t_1$ and $t_2$, a symmetric genetic covariance estimate is
 
 $$
-\widehat G_{t_1,t_2}
+\widehat V_{g,t_1,t_2}
 = \frac{1}{2n}
 \left\{
  b_{t_1}^\top (wy_{t_2} - r_{t_2})
@@ -110,7 +138,7 @@ $$
 For a marker set or annotation $S_k$, define the set-specific genomic variance contribution for trait $t$ as
 
 $$
-\widehat V_{G,k,t}
+\widehat v_{g,k,t}
 =
 \frac{1}{n}
 \sum_{i \in S_k}
@@ -399,7 +427,7 @@ For marker-specific priors, assign each marker to an annotation or compute a mar
 For annotation $S_k$, an estimated genomic variance contribution is
 
 $$
-\widehat V_{G,k,t}
+\widehat v_{g,k,t}
 =
 \frac{1}{n}
 \sum_{i \in S_k}
@@ -411,7 +439,7 @@ A simple prior scale is
 $$
 \widehat\sigma^2_{b,k,t}
 =
-\frac{\widehat V_{G,k,t}}{|S_k|}.
+\frac{\widehat v_{g,k,t}}{|S_k|}.
 $$
 
 However, in sparse models it is usually better to divide by an effective number of active markers:
@@ -427,7 +455,7 @@ Then
 $$
 \widehat\sigma^2_{b,k,t}
 =
-\frac{\widehat V_{G,k,t}}
+\frac{\widehat v_{g,k,t}}
 {\max(m^{\mathrm{eff}}_{k,t}, c)},
 $$
 
@@ -590,19 +618,19 @@ $$
 The global MTBLR prior may use
 
 $$
-\mathbf b_i \sim N(0, B).
+\mathbf b_i \sim N(0, V_b).
 $$
 
 An annotation-informed extension uses annotation-specific covariance matrices:
 
 $$
-\mathbf b_i \mid a(i)=k \sim N(0, B_k).
+\mathbf b_i \mid a(i)=k \sim N(0, V_{b,k}).
 $$
 
-A simple estimate of $B_k$ is
+A simple estimate of \(V_{b,k}\) is
 
 $$
-\widehat B_k
+\widehat V_{b,k}
 =
 \frac{
 \sum_{i \in S_k} w_i \hat{\mathbf b}_i \hat{\mathbf b}_i^\top
@@ -788,7 +816,7 @@ These are used to estimate annotation effects, variance contributions, and shari
 Compute:
 
 $$
-\widehat V_{G,k,t},
+\widehat v_{g,k,t},
 $$
 
 PIP enrichment,
@@ -812,7 +840,7 @@ $$
 $$
 
 $$
-B_k,
+V_{b,k},
 $$
 
 and
@@ -834,7 +862,7 @@ $$
 for STBLR, or
 
 $$
-\mathbf b_i \sim \sum_m \pi_{i,m} N_m(0, B_i)
+\mathbf b_i \sim \sum_m \pi_{i,m} N_m(0, V_{b,i})
 $$
 
 for MTBLR.
@@ -923,7 +951,7 @@ $$
 annotation-specific effect variances,
 
 $$
-B_k,
+V_{b,k},
 $$
 
 annotation-specific multi-trait effect covariance matrices, and
@@ -1248,7 +1276,7 @@ An annotation-level MTBLR also gives annotation effect estimates across traits. 
 Let $\hat\Gamma$ be the matrix of annotation posterior mean effects. A weighted covariance estimate is:
 
 $$
-B_{ann}
+V_{b,ann}
 =
 \frac{\sum_k w_k \hat{\boldsymbol\gamma}_k\hat{\boldsymbol\gamma}_k^\top}
 {\sum_k w_k},
@@ -1273,7 +1301,9 @@ estimate_B_from_annotation_model <- function(gamma, dm, ridge = 1e-8) {
 }
 ```
 
-This matrix can be used as the initial global $B$ matrix in the next MTBLR run.
+This matrix can be used as the initial global \(V_b\) matrix in the next MTBLR
+run. The conceptual R snippet retains `B`/`B_init` as code-variable names; it
+does not define the preferred mathematical notation or a public field rename.
 
 ## Recommended empirical-Bayes workflow
 
@@ -1375,7 +1405,7 @@ $$
 marker-specific MTBLR sharing-model probabilities, and
 
 $$
-B_{ann},
+V_{b,ann},
 $$
 
 an annotation-informed global MTBLR prior covariance matrix.
@@ -1415,10 +1445,10 @@ $$
 and, for MTBLR,
 
 $$
-B_i.
+V_{b,i}.
 $$
 
-Here $\pi_{it}$ is the prior inclusion probability for marker $i$ and trait $t$, $v_{b,it}$ is the marker-specific prior effect variance, $\pi_{im}$ is the marker-specific prior probability of MTBLR sharing model $m$, and $B_i$ is a marker-specific prior covariance matrix for multivariate marker effects.
+Here $\pi_{it}$ is the prior inclusion probability for marker $i$ and trait $t$, $v_{b,it}$ is the marker-specific prior effect variance, $\pi_{im}$ is the marker-specific prior probability of MTBLR sharing model $m$, and \(V_{b,i}\) is a marker-specific prior covariance matrix for multivariate marker effects.
 
 ## Direct annotation-informed STBLR
 
@@ -1687,41 +1717,41 @@ This is likely the most useful direct annotation extension for MTBLR, because it
 Annotations can also affect the prior covariance matrix of marker effects. A global MTBLR model may use:
 
 $$
-\mathbf b_i \mid M_i=m \sim N_m(0,B),
+\mathbf b_i \mid M_i=m \sim N_m(0,V_b),
 $$
 
-where $N_m(0,B)$ denotes a multivariate normal distribution restricted to the active traits in model $m$.
+where \(N_m(0,V_b)\) denotes a multivariate normal distribution restricted to the active traits in model $m$.
 
 An annotation-aware version can use marker-specific or annotation-specific covariance matrices:
 
 $$
-\mathbf b_i \mid M_i=m,A_i \sim N_m(0,B_i).
+\mathbf b_i \mid M_i=m,A_i \sim N_m(0,V_{b,i}).
 $$
 
 A log-linear construction for trait-specific prior variances is:
 
 $$
-\log B_{i,tt} = \mu_{B,t} + A_i\eta_{B,t}.
+\log V_{b,i,tt} = \mu_{b,t} + A_i\eta_{b,t}.
 $$
 
 For cross-trait covariances, one can either use a global correlation matrix $R$ and annotation-specific standard deviations:
 
 $$
-B_i = D_i R D_i,
+V_{b,i} = D_i R D_i,
 $$
 
 where
 
 $$
-D_i = \mathrm{diag}(\sqrt{B_{i,11}},\ldots,\sqrt{B_{i,TT}}),
+D_i = \mathrm{diag}(\sqrt{V_{b,i,11}},\ldots,\sqrt{V_{b,i,TT}}),
 $$
 
-or use annotation-specific full covariance matrices $B_k$.
+or use annotation-specific full covariance matrices \(V_{b,k}\).
 
 The first approach is more stable:
 
 $$
-B_i = D_i R D_i.
+V_{b,i} = D_i R D_i.
 $$
 
 It lets annotations change the amount of prior variance per trait while preserving a globally estimated cross-trait correlation structure.
@@ -1729,7 +1759,7 @@ It lets annotations change the amount of prior variance per trait while preservi
 The second approach is more flexible:
 
 $$
-B_i = \sum_k w_{ik}B_k,
+V_{b,i} = \sum_k w_{ik}V_{b,k},
 $$
 
 where $w_{ik}$ are normalized annotation weights for marker $i$. However, this can be unstable if annotations are sparse or highly overlapping.
@@ -1759,7 +1789,7 @@ $$
 \frac{\exp(c_m + A_i\eta_m)}
 {\sum_l \exp(c_l + A_i\eta_l)}, \\
 M_i &\sim \mathrm{Categorical}(\pi_{i1},\ldots,\pi_{iM}), \\
-\mathbf b_i \mid M_i=m,A_i &\sim N_m(0,B_i).
+\mathbf b_i \mid M_i=m,A_i &\sim N_m(0,V_{b,i}).
 \end{aligned}
 $$
 
@@ -1945,7 +1975,7 @@ $$
 \log \pi_{im} = \log \pi_m^{global} + A_i\eta_m^{centered} - C_i.
 $$
 
-These two extensions are simple, interpretable, and likely to be stable. Marker-specific prior variances $v_{b,it}$ and marker-specific covariance matrices $B_i$ are useful next steps, but they should be introduced with shrinkage and caps.
+These two extensions are simple, interpretable, and likely to be stable. Marker-specific prior variances $v_{b,it}$ and marker-specific covariance matrices \(V_{b,i}\) are useful next steps, but they should be introduced with shrinkage and caps.
 
 
 ## Causal interpretation and causal-hypothesis generation

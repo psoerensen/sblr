@@ -1,5 +1,18 @@
 # Model capability matrix
 
+> **Status: historical and superseded for annotation/prior capabilities.**
+> This table predates the qualified ST CSR/block-eigen log-variance routes and
+> also reflects an executable capability resolver that is known to lag tested
+> public MT BayesRC/SBayesRC routes. Do not use it as current annotation-model
+> capability truth. Use
+> [the audited annotation-prior capability matrix](annotation_prior_architecture_matrix.md)
+> for annotation and prior architectures, and
+> [the backend inventory](blr_backend_inventory.md) for the broader current
+> ST/MT/operator route inventory. The table below is retained as a historical
+> snapshot until Phase 1 replaces the duplicated capability declarations.
+
+## Historical snapshot
+
 | Public route | Supported models | Annotation policy | Fixed `maf_effect_s` | Sampled `maf_effect_s` |
 |---|---|---|---|---|
 | `stblr_bed()` | `bayesc`, `bayesr`, `bayesrc` | global or probit-stick BayesRC | model-dependent | supported where the scalar kernel implements it |
@@ -10,6 +23,8 @@
 | `mtblr_csr()` | `sbayesc`, `sbayesr`, `sbayesrc` | global or probit-stick BayesRC | supported for mixture models | unsupported |
 | `mtblr_block_eigen()` | `sbayesc`, `sbayesr`, `sbayesrc` | global or probit-stick BayesRC | supported for mixture models | unsupported |
 
-Unsupported combinations fail before native execution. The runtime matrix is
-owned by `.blr_model_capability_matrix()` and tested against this public
-contract.
+At this historical checkpoint, unsupported combinations were intended to fail
+before native execution and `.blr_model_capability_matrix()` was intended
+to own dispatch truth. The current resolver is itself part of the documented
+capability drift and must not be treated as the sole authority until the
+Phase-1 capability consolidation is completed.

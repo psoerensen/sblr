@@ -1,299 +1,163 @@
 ---
-title: "Cross-Trait Summary-Statistic Matrices"
+title: "Core BLR Model Theory"
+format:
+  html:
+    toc: true
+    number-sections: true
 ---
 
-## Constructing SSY and Nmat
+This page gives the statistical map shared by the Bayesian linear regression
+(BLR) models in `sblr`. It separates the regression model and prior family from
+the data representation used to evaluate the likelihood. Detailed
+summary-statistic, overlap, operator, annotation-prior, and multi-trait state
+derivations live on their dedicated methods pages.
 
-### Overview
+## Single-trait regression
 
-In multivariate Bayesian linear regression using *summary statistics*, the
-likelihood depends on cross-trait quantities of the form
-
-$$
-\mathrm{SSY}_{t_1,t_2}
-\;=\;
-\sum_{i=1}^{N_{t_1,t_2}}
-y_{i t_1} \, y_{i t_2},
-$$
-
-where $y_{i t}$ denotes the phenotype of individual $i$ for trait $t$,
-and $N_{t_1,t_2}$ is the number of individuals jointly observed for traits
-$t_1$ and $t_2$.
-In the univariate case this reduces to the usual
-sum of squares $\mathrm{SSY}_t = \sum_i y_{it}^2$, but in the multivariate
-case the full matrix
+For a centered phenotype \(y\in\mathbb R^N\), genotype matrix
+\(X\in\mathbb R^{N\times M}\), marker effects \(b\in\mathbb R^M\), and residual
+vector \(e\), the single-trait model is
 
 $$
-\mathrm{SSY} = \bigl[\mathrm{SSY}_{t_1,t_2}\bigr]_{t_1,t_2=1}^{n_t}
+y=Xb+e,
+\qquad
+e\sim N(0,v_eI_N).
 $$
 
-is required to estimate or sample from a *residual covariance matrix*
-$E$ or its inverse.
+Here \(v_e\) is the residual variance. The fitted genetic values are \(Xb\),
+and their variance is denoted \(v_g\). A global active-marker effect-variance
+scale is denoted \(v_b\).
 
-When individual-level data are unavailable, we must reconstruct or approximate
-SSY and the effective sample-overlap matrix $N$ from summary statistics,
-phenotypic variances, and (estimated or assumed) phenotypic correlations.
-This section describes the statistical foundations of these reconstructed
-matrices and how the helper functions
-`build_SSY_full_overlap()`, `build_Nmat_full()`, and `build_Nmat_frac()`
-implement them.
+### BayesC
 
----
-
-## Phenotypic Variance From Summary Statistics
-
-For trait $t$, let
-
-- $yy_t = \sum_i y_{it}^2$ (the univariate summary statistic),
-- $n_t$ be the number of individuals with observations for trait $t$.
-
-The empirical phenotypic variance is approximated by
+BayesC uses a point mass at zero and one non-null normal distribution:
 
 $$
-\widehat{\mathrm{Var}}(y_t)
-\approx
-\frac{yy_t}{n_t}.
+d_j\sim\operatorname{Bernoulli}(\pi_j),
 $$
 
-This is valid when phenotypes have been centered (or approximately centered),
-a standard preprocessing step in GWAS pipelines.
-
-We collect these into a diagonal variance vector:
-
 $$
-\hat{\sigma}^2_y = \left( \frac{yy_t}{n_t} \right)_{t=1}^{n_t}.
+b_j=0\quad(d_j=0),
+\qquad
+b_j\mid d_j=1\sim N(0,v_bq_j).
 $$
 
----
+In the ordinary model, \(\pi_j=\pi\) and \(q_j=1\). Annotation-informed prior
+architectures may change marker inclusion probabilities or relative non-null
+effect variance without changing the Gaussian regression likelihood.
 
-## Phenotypic Covariance From Correlation Information
+### BayesR
 
-If we know (or estimate) the phenotypic correlation matrix
-
-$$
-R_y = \bigl[r_{t_1,t_2}\bigr],
-$$
-
-then the corresponding phenotypic covariance matrix is
+BayesR replaces the single non-null distribution with a finite mixture. Use
+the theoretical indexing convention
 
 $$
-\widehat{\mathrm{Cov}}(y)
-=
-\bigl[ r_{t_1,t_2}
-      \,\sqrt{\widehat{\mathrm{Var}}(y_{t_1})
-              \widehat{\mathrm{Var}}(y_{t_2})}
-\bigr].
+\gamma_0=0,
+\qquad
+\gamma_k>0,\quad k=1,\ldots,K.
 $$
 
-This step is essential: correlation matrices contain *standardized* information,
-and we rescale them back to covariance units using the variance estimates
-derived from summary statistics.
-
----
-
-## The Sample-Overlap Matrix $N$
-
-For two traits $t_1$ and $t_2$, define
+Then
 
 $$
-N_{t_1,t_2}
-=
-\text{number of individuals observed for both traits}.
+c_j\sim\operatorname{Categorical}(P_{j0},\ldots,P_{jK}),
 $$
 
-### Full-overlap assumption
-
-When the two traits originate from the same biobank or cohort,
-the overlap is often close to the size of the *smaller* sample:
-
 $$
-N^{\text{full}}_{t_1,t_2} = \min(n_{t_1}, n_{t_2}).
+b_j=0\quad(c_j=0),
+\qquad
+b_j\mid c_j=k>0\sim N(0,\gamma_kq_jv_b).
 $$
 
-This defines the function `build_Nmat_full()`.
+The \(\gamma_k\) ladder contains known relative component multipliers, \(q_j\)
+is a marker-specific relative variance multiplier, and \(v_b\) carries the
+global active-effect variance scale. In current R inputs, the first element of
+`mixture_var` is the null multiplier; its one-based R position represents the
+theoretical component \(k=0\).
 
-### Fractional-overlap assumption
+BayesRC/SBayesRC retains the BayesR effect mixture and makes marker component
+probabilities annotation dependent. Log-variance models retain global
+probability architecture and learn \(q_j\) from annotations. See
+[Annotation-Informed Priors](annotation_priors.qmd).
 
-In meta-analysis or multi-cohort settings, sample overlap may be *partial*.
-We then model
+## Multi-trait regression
 
-$$
-N^{\text{frac}}_{t_1,t_2}
-=
-p_{t_1,t_2} \,\min(n_{t_1}, n_{t_2}),
-$$
-
-where $p_{t_1,t_2} \in [0,1]$ is a user-supplied overlap proportion.
-This defines `build_Nmat_frac()`.
-
-The diagonal entries satisfy $N_{t,t} = n_t$.
-
----
-
-## Reconstructing the Cross-Trait SSY Matrix
-
-The cross-product between two traits is defined as
+For \(T\) traits, collect phenotypes, marker effects, and observation-level
+residuals in matrices:
 
 $$
-\mathrm{SSY}_{t_1,t_2}
-=
-\sum_{i=1}^{N_{t_1,t_2}}
-y_{i t_1} \, y_{i t_2}.
+Y=XB+E_Y,
 $$
 
-Under the assumption of independence across individuals and using the covariance
-identity
+where \(Y\in\mathbb R^{N\times T}\), \(B\in\mathbb R^{M\times T}\), and
+\(E_Y\in\mathbb R^{N\times T}\). Here \(B\) is the marker-effect matrix and
+\(E_Y\) is the residual-observation matrix; neither symbol denotes a covariance
+matrix.
+
+The covariance notation is
+
+| Quantity | ST | MT |
+|---|---:|---:|
+| active marker effects | \(v_b\) | \(V_b\) |
+| genomic values | \(v_g\) | \(V_g\) |
+| residuals | \(v_e\) | \(V_e\) |
+
+For a non-null trait-activity pattern \(p\) and BayesR component \(k>0\), a
+shared marker-specific variance multiplier gives
 
 $$
-\mathbb{E}[y_{t_1} y_{t_2}]
-=
-\mathrm{Cov}(y_{t_1},y_{t_2}),
+\operatorname{Cov}(\beta_{j,p,k})
+=\gamma_kq_jV_{b,p},
 $$
 
-we obtain the summary-statistic approximation
+where \(V_{b,p}\) is the active-trait submatrix of \(V_b\). The scalar \(q_j\)
+rescales the complete active covariance matrix and therefore does not by itself
+change the correlation structure represented by \(V_b\).
 
-$$
-\mathrm{SSY}_{t_1,t_2}
-\;\approx\;
-N_{t_1,t_2}
-\cdot
-\widehat{\mathrm{Cov}}(y_{t_1}, y_{t_2}).
-$$
+The current MT prior-state probability model depends on the core family:
 
-This is the key identity used by `build_SSY_full_overlap()`:
+- ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the unique null
+  state and all non-null trait-pattern by positive-component states;
+- MT BayesRC/SBayesRC factorizes marker component probability \(P\) from a
+  global conditional non-null sharing probability \(H\).
 
-- it constructs the covariance matrix using $R_y$ and the variance estimates,
-- multiplies by the appropriate overlap counts $N_{t_1,t_2}$,
-- and forces the diagonals to match the observed univariate summary statistics:
-  $\mathrm{SSY}_{t,t} = yy_t$.
+The component and pattern probabilities reported for ordinary MT BayesR are
+marginals of its full joint simplex; they are not parameters of a current
+\(P\times H\) factorization. See [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
+[MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the implemented state spaces.
 
-Thus, the reconstructed SSY matrix is:
+## Likelihood information and operators
 
-$$
-\widehat{\mathrm{SSY}}
-=
-N \odot \widehat{\mathrm{Cov}}(y),
-$$
+The core prior family does not determine how the Gaussian likelihood is
+evaluated:
 
-where $\odot$ denotes elementwise multiplication.
+- packed BED routes use selected individual-level genotypes;
+- CSR routes use aligned summary cross-products and sparse LD;
+- block-eigen routes use within-block spectral representations, either the
+  canonical retained-factor form for current scalar fits or an explicitly
+  reconstructed dense representation where supported.
 
----
+The `S` prefix in names such as SBayesC and SBayesR identifies a
+summary-statistics likelihood/display convention. It does not define a new
+effect prior and does not activate MAF scaling. MAF-S behavior is controlled
+separately by `maf_effect_s`.
 
-## Why SSY and Nmat Are Needed in Multivariate BLR
+For the underlying likelihood information, see
+[Summary Statistics](summary_statistics.qmd) and
+[Multi-Trait Sample Overlap](multitrait_overlap.qmd). For operator details, see
+[Sparse-LD CSR](sparse_ld_csr.qmd) and
+[Block-Eigen LD](block_eigen_operator.qmd).
 
-In a multivariate Bayesian linear regression model
+## Responsibility map
 
-$$
-y = Xb + e,
-\quad
-e \sim \mathcal{N}(0, E \otimes I),
-$$
-
-the full residual covariance sampler for $E$ requires access to the cross-trait
-quantities
-
-$$
-\sum_i e_{i t_1} e_{i t_2},
-$$
-
-which, after substituting $e = y - Xb$, depend on the observed SSY matrix,
-the cross-products involving $X$, and the current posterior draw of $b$.
-
-When individual-level data are unavailable, the only way to compute
-these cross-trait sums is through a reconstruction of SSY and Nmat from
-summary statistics.  
-Without these matrices, the sampler must be restricted to *diagonal*
-residual variances (the usual summary-statistic assumption).
-
-The functions provided here therefore enable *full multivariate residual
-variance estimation* in summary-statistic MTBLR when a phenotypic correlation
-matrix or sample-overlap information is available.
-
----
-
-## Summary
-
-- `build_Nmat_full()` constructs a full-overlap sample-overlap matrix  
-  $N_{t_1,t_2} = \min(n_{t_1},n_{t_2})$.
-
-- `build_Nmat_frac()` generalizes this using overlap fractions  
-  $N_{t_1,t_2} = p_{t_1,t_2}\min(n_{t_1},n_{t_2})$.
-
-- `build_SSY_full_overlap()` combines variances, phenotypic correlations,
-  and overlap counts to reconstruct:
-
-  $$
-  \widehat{\mathrm{SSY}} = N \odot \widehat{\mathrm{Cov}}(y).
-  $$
-
-- These matrices provide the necessary inputs for a full sampler of the
-  residual covariance matrix $E$ when only summary statistics are available.
-
-
-## 5.1 Deriving SSY from first principles
-
-Let $Y_t$ be an $n_t$-dimensional vector of observations for trait $t$.
-If samples overlap partially, define the set of shared individuals:
-
-$$
-\mathcal{I}_{ts} = \text{indices of individuals with both }y_t\text{ and }y_s.
-$$
-
-Then:
-
-$$
-\mathrm{SSY}_{ts}
-=
-\sum_{i \in \mathcal{I}_{ts}} y_{ti} y_{si}.
-$$
-
-If we assume:
-
-1. random missingness independent of trait values, and  
-2. covariance structure homogeneous across individuals, i.e.
-
-   $$
-   \mathrm{Cov}(y_t, y_s) = \sigma_{ts}
-   $$
-
-then the expectation becomes:
-
-$$
-\mathbb{E}[\mathrm{SSY}_{ts}]
-  = |\mathcal{I}_{ts}| \, \sigma_{ts}.
-$$
-
-If we approximate the overlap size as:
-
-$$
-|\mathcal{I}_{ts}| \approx N_{ts},
-$$
-
-then:
-
-$$
-\mathrm{SSY}_{ts}
-\approx N_{ts} \, \sigma_{ts}.
-$$
-
-Estimating $\sigma_{ts}$ by:
-
-$$
-\widehat{\sigma}_{ts}
-= R_{y,ts}
-  \sqrt{
-    \widehat{\mathrm{Var}}(y_t)\,
-    \widehat{\mathrm{Var}}(y_s)
-  }
-$$
-
-yields the final approximation:
-
-$$
-\mathrm{SSY}
-\approx
-N \odot \widehat{\mathrm{Cov}}(y).
-$$
-
-This provides a principled summary‑statistic reconstruction of  
-$Y^\top Y$ suitable for multi‑trait Bayesian models.
+- This page: core ST/MT regression and BayesC/BayesR prior families.
+- [Summary Statistics](summary_statistics.qmd): cross-products and sufficient
+  statistics.
+- [Multi-Trait Sample Overlap](multitrait_overlap.qmd): `SSY`, overlap, and
+  residual-covariance assumptions.
+- [Annotation-Informed Priors](annotation_priors.qmd): probability, relative
+  variance, sharing, and covariance architectures.
+- [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd): detailed
+  probit-stick mathematics.
+- [Empirical-Bayes Construction](annotation_informed_models.qmd):
+  posterior-to-prior workflows.

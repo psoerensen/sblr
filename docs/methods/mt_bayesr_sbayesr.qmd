@@ -43,12 +43,12 @@ silently drops patterns or components.
 ## Latent and effective effects
 
 For marker $j$, component $k>0$, and active pattern $a_p$, the retained
-MT prior uses a shared base marker-effect covariance $B$. On the active trait
+MT prior uses a shared base marker-effect covariance \(V_b\). On the active trait
 subspace,
 
 $$
-\beta_{j,p,k}\mid B,S \sim
-N\!\left(0,\;\gamma_k q_j(S) B_p\right),
+\beta_{j,p,k}\mid V_b,S \sim
+N\!\left(0,\;\gamma_k q_j(S) V_{b,p}\right),
 \qquad
 q_j(S)=\{2p_j(1-p_j)\}^{S+1},
 $$
@@ -60,8 +60,9 @@ $$
 b_j = a_p \odot \beta_j.
 $$
 
-Annotations do not enter this BayesR model. Known component and optional
-MAF scales are removed when updating the shared base $B$; the sampler does
+Here \(V_{b,p}\) is the active-trait submatrix of \(V_b\). Annotations do not
+enter this BayesR model. Known component and optional MAF scales are removed
+when updating the shared base \(V_b\); the sampler does
 not maintain component-specific covariance matrices.
 
 Terminology is fixed:
@@ -81,6 +82,15 @@ states and `joint_pi_prior` supplies its positive Dirichlet prior. With
 with `FALSE`, the supplied state remains fixed. Component and pattern
 marginals are deterministic sums of the current joint probabilities.
 
+This is a full joint-state simplex, not a factorization into an independent
+component-probability vector and a conditional trait-pattern vector. The
+explicit probability architecture \(P\) and sharing architecture \(H\) used in
+the long-term design are useful conceptual provider boundaries, but they must
+not be projected backward onto the current ordinary MT BayesR implementation.
+Current MT BayesRC/SBayesRC differs: it factorizes marker-specific component
+probabilities \(P_j\) from global conditional non-null pattern probabilities
+\(H\).
+
 For BayesR/SBayesR, `pi_final`, `pi_mean`, and `pi_trace` therefore refer to
 named joint-state probabilities. `model_parameters$mixture` records
 `mixture_var`, component and pattern names, joint-state names, probability
@@ -90,15 +100,17 @@ marginals, and `maf_effect_s` metadata.
 
 Marker outputs include `bm`, `dm`, `b_final`, `d_final`, `component_final`,
 and row-normalized marker-by-component `component_probabilities`. Covariance
-outputs are the mean and final full $B$, genetic $G$, and residual $E$
-matrices. The common `vbs`, `vgs`, `ves`, `vle`, and `vld` traces are
+outputs are the mean and final full marker-effect \(V_b\), genomic \(V_g\),
+and residual \(V_e\) covariance matrices. Their existing code fields remain
+`covb`, `covg`, and `cove`; no case-only R names are introduced. The common
+`vbs`, `vgs`, `ves`, `vle`, and `vld` traces are
 iteration by trait, with `vld = vgs - vle` at each recorded iteration.
 
 No marker-by-joint-state posterior matrix is returned by default.
 
 ## Operator-specific likelihoods
 
-The state descriptor, prior, probability update, base-$B$ update, seeds,
+The state descriptor, prior, probability update, base-\(V_b\) update, seeds,
 chain aggregation, and output meanings are shared. The likelihood operator
 differs:
 
@@ -116,9 +128,14 @@ logical chains.
 
 - MT `maf_effect_s` may be fixed but cannot be sampled.
 - Joint state count is guarded for memory and practical numerical size.
-- BayesR has no annotation dependence; use BayesRC/SBayesRC for that model.
+- Ordinary MT BayesR has no annotation-dependent component probability or
+  learned log-variance multiplier. Annotation-dependent component probability
+  is available through MT BayesRC/SBayesRC.
+- Shared-q MT BayesR-LV is proposed, not implemented.
 - Full marker-by-joint-state posterior probabilities are not retained.
 - Summary routes do not infer unmodeled cross-trait sample overlap.
 
-See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the annotation-informed
-extension and [Multi-trait models](../notes/multi_trait_models.qmd) for calls.
+See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the current factorized
+annotation-probability model, [Annotation-Informed Priors](annotation_priors.qmd)
+for proposed shared-q MT-LV, and
+[Multi-trait models](../notes/multi_trait_models.qmd) for calls.

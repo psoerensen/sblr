@@ -11,6 +11,14 @@ The seven canonical fitting functions are `stblr_csr()`,
 `stblr_csr_annot()`, `stblr_block_eigen()`, `stblr_bed()`, `mtblr_csr()`,
 `mtblr_block_eigen()`, and `mtblr_bed()`.
 
+Current annotation-informed effect-variance LV backends are available only for
+ST CSR and retained block eigen through `annotation_model = "log_variance"`
+with BayesC or BayesR. BED-LV and MT-LV are proposed work, not current routes.
+Current and proposed annotation-provider ownership is audited in
+[the architecture audit](annotation_prior_architecture_audit.md),
+[capability matrix](annotation_prior_architecture_matrix.md), and
+[implementation plan](annotation_prior_architecture_implementation_plan.md).
+
 Prepared operator and annotation data are immutable and owned once per fit.
 Sampler state, RNG, residuals, workspaces, accumulators, and diagnostic traces
 are logical-task private. Seed resolution depends on logical task identity, not

@@ -1,5 +1,17 @@
 # BLR prior-variance calibration audit
 
+> **Status and provenance.** This is a historical before-change audit anchored
+> at commit `bd8e2c8148a0d9540dc20716455706beeb16fa86`, followed by the
+> calibration contract selected and subsequently implemented. The
+> “Scalar route audit” and “Multivariate route audit” tables record defects at
+> that audited commit; they are not claims about current package behavior or
+> current route support. The final “Calibration contract selected after audit”
+> section records the current calibration design. For current annotation-prior
+> capabilities and future calibration work, use
+> [the annotation-prior architecture audit](annotation_prior_architecture_audit.md),
+> [capability matrix](annotation_prior_architecture_matrix.md), and
+> [implementation plan](annotation_prior_architecture_implementation_plan.md).
+
 ## Scope and native effect-scale contract
 
 This audit was performed from commit `bd8e2c8148a0d9540dc20716455706beeb16fa86`

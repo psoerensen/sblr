@@ -22,8 +22,8 @@ implementations.
 
 ## Model Definition
 
-For marker $i$, let $z_i \in \{1,\ldots,C\}$ identify one of $C$ mixture
-components. Conditional on $z_i=k$, the marker effect is
+For marker \(i\), let \(z_i\in\{0,\ldots,K\}\) identify one of \(K+1\)
+mixture components. Conditional on \(z_i=k\), the marker effect is
 
 $$
 \beta_i \mid z_i=k, v_b, \gamma
@@ -31,34 +31,47 @@ $$
 N(0,\gamma_k v_b).
 $$
 
-The vector
+The theoretical component ladder
 
 $$
-\gamma=(\gamma_1,\ldots,\gamma_C)
+\gamma=(\gamma_0,\ldots,\gamma_K)
 $$
 
-contains fixed variance multipliers, while $v_b$ is the sampled global
+contains fixed variance multipliers, while \(v_b\) is the sampled global
 active-effect variance scale. The implementation requires
 
 $$
-\gamma_1=0,
+\gamma_0=0,
 \qquad
-\gamma_k>0 \quad \text{for } k>1.
+\gamma_k>0 \quad \text{for } k=1,\ldots,K.
 $$
 
 The first component is therefore an exact null component:
 
 $$
-\beta_i=0 \quad \text{when } z_i=1.
+\beta_i=0 \quad \text{when } z_i=0.
 $$
 
 The remaining components represent increasingly diffuse active-effect
 distributions when their gamma multipliers increase.
 
+Current R vectors use one-based positions: `mixture_var[1]` is the
+theoretical \(\gamma_0\), and R position \(k+1\) represents theoretical
+component \(k\). This is an indexing crosswalk only; no code fields or native
+component codes are renamed.
+
+### Multiple columns in an ST fitter are not the joint MT model
+
 For multiple traits supplied to the fitter, this mixture construction and its
 annotation coefficients are fitted separately by trait. The formatted fit
-therefore stores one `alpha` matrix and one set of marker component summaries
-per trait.
+therefore stores one `alpha` matrix and one set of marker component
+summaries per independently fitted trait.
+
+That behavior is distinct from the genuine joint `mtblr_bed()`,
+`mtblr_csr()`, and `mtblr_block_eigen()` BayesRC/SBayesRC
+model. The joint model samples complete marker states with shared cross-trait
+covariance and the factorized \(P\times H\) state architecture described in
+[MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd).
 
 ## Optional BayesS-Style `maf_effect_s`
 
@@ -152,8 +165,8 @@ details remain distinct.
 
 ## Annotation-Dependent Component Probabilities
 
-Let $A$ be an $m \times K$ marker-by-annotation matrix. For $C$ mixture
-components, let $\alpha$ be a $K \times (C-1)$ coefficient matrix. Column
+Let \(A\) be an \(m\times L\) marker-by-annotation matrix. For \(K+1\)
+mixture components, let \(\alpha\) be an \(L\times K\) coefficient matrix. Column
 $\alpha_j$ controls conditional stick-breaking step $j$.
 
 For marker $i$ and step $j$, the linear predictor and conditional
@@ -170,35 +183,35 @@ component probabilities are
 
 $$
 \begin{aligned}
-\pi_{i1} &= 1-p_{i1},\\
-\pi_{i2} &= p_{i1}(1-p_{i2}),\\
-\pi_{i3} &= p_{i1}p_{i2}(1-p_{i3}),\\
+P_{i0} &= 1-p_{i1},\\
+P_{i1} &= p_{i1}(1-p_{i2}),\\
+P_{i2} &= p_{i1}p_{i2}(1-p_{i3}),\\
 &\ \vdots\\
-\pi_{iC} &= \prod_{j=1}^{C-1}p_{ij}.
+P_{iK} &= \prod_{j=1}^{K}p_{ij}.
 \end{aligned}
 $$
 
-Equivalently, component $k<C$ receives the probability of continuing through
-all earlier steps and stopping at step $k$; the final component receives the
-probability of continuing through every step.
+Equivalently, each nonfinal component receives the probability of continuing
+through all earlier steps and stopping at its step; component \(K\) receives
+the probability of continuing through every step.
 
 ### Why the probabilities sum to one
 
-For a marker with step probabilities $p_1,\ldots,p_{C-1}$,
+For a marker with step probabilities \(p_1,\ldots,p_K\),
 
 $$
-\sum_{k=1}^{C}\pi_k
+\sum_{k=0}^{K}P_k
 =
 (1-p_1)
 +p_1(1-p_2)
 +\cdots+
-\left(\prod_{j=1}^{C-2}p_j\right)(1-p_{C-1})
-+\prod_{j=1}^{C-1}p_j
+\left(\prod_{j=1}^{K-1}p_j\right)(1-p_K)
++\prod_{j=1}^{K}p_j
 =1.
 $$
 
 The expression telescopes: probability either stops at one of the first
-$C-1$ steps or reaches the final component.
+\(K\) steps or reaches the final component.
 
 ### Numerical flooring and renormalization
 
@@ -340,7 +353,7 @@ component probabilities from $A\alpha$.
 annotation-dependent mixture architecture.
 
 Given an initial overall active probability `pi_init`, it distributes active
-mass across the $C-1$ non-null components using normalized
+mass across the \(K\) non-null components using normalized
 `active_comp_weights`. This produces initial marginal component probabilities
 
 $$
@@ -348,9 +361,9 @@ $$
 =
 \left(
 1-\pi_{\mathrm{init}},
-\pi_{\mathrm{init}}w_2,
+\pi_{\mathrm{init}}w_1,
 \ldots,
-\pi_{\mathrm{init}}w_C
+\pi_{\mathrm{init}}w_K
 \right).
 $$
 
@@ -379,7 +392,7 @@ sampler.
 
 For each marker, the sampler combines the annotation-derived prior component
 probabilities with the summary-statistics likelihood. The exact null component
-has $\gamma_1=0$ and leaves the marker effect at zero. For active component
+has \(\gamma_0=0\) and leaves the marker effect at zero. For active component
 $k$, the effect prior variance is
 
 $$
@@ -425,7 +438,8 @@ contains posterior frequencies of sampled component assignments after burn-in
 and thinning. It is not the same object as the annotation-derived prior
 probability matrix computed from $A\alpha$.
 
-The first component is the exact null component. Consequently, `dm` is one
+The first R matrix column is the theoretical \(k=0\) exact null component.
+Consequently, `dm` is one
 minus its posterior probability. Component identities and multipliers are
 recorded with the model parameters; code should not infer scientific meaning
 from a display label alone.
@@ -570,23 +584,45 @@ Before interpreting an SBayesRC-style fit:
   hyperparameters; and
 - avoid causal claims from alpha coefficients or expected-gamma summaries.
 
+## Joint MT factorization
+
+For genuine joint MT BayesRC/SBayesRC, let \(P_{j0}\) be marker \(j\)'s null
+component probability, \(P_{jk}\) its positive-component probabilities, and
+\(H_p\) the global conditional probability of non-null trait pattern \(p\).
+The current prior is
+
+$$
+P(\mathrm{null}\mid A_j)=P_{j0},
+$$
+
+$$
+P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p,\qquad k>0.
+$$
+
+The same probit-stick \(\alpha\) architecture governs \(P\). The sharing
+architecture \(H\) is global and annotation independent. Conditional on an
+active pattern and component,
+
+$$
+\operatorname{Cov}(\beta_{j,p,k})
+=\gamma_kq_jV_{b,p},
+$$
+
+where \(V_{b,p}\) is the active-trait submatrix of the global marker-effect
+covariance \(V_b\). Current annotations change \(P\), not \(H\) or \(V_b\).
+See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for complete state and
+output semantics.
+
 ## Related Notes and Sources
 
-- [Annotation-informed models](annotation_informed_models.qmd) compares this
-  model with fixed, learned, and group annotation priors.
-- [Annotation priors](annotation_priors.qmd) develops
-  marker-specific inclusion and variance priors outside the BayesR mixture
-  construction.
+- [Annotation-Informed Priors](annotation_priors.qmd) is the canonical general
+  annotation-prior theory.
+- [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
+  covers posterior-to-prior construction workflows.
 - [Workflows and outputs](../notes/workflows_and_outputs.qmd) explains compact fit and
   expected-gamma reporting.
 - [Model overview](../notes/model_overview.qmd) places the model within the broader
   `sblr` model and workflow landscape.
 
-The implementation contracts described here are based on the public fitter,
-deterministic diagnostic helpers, helper tests, and native CSR sampler.
-## Shared MT extension
-
-The MT model reuses the ST probit-stick order and coefficient-prior update for
-one joint component state. It does not create trait-, pattern-, operator-, or
-component-covariance-specific coefficient matrices. Global non-null pattern
-probabilities form the second factor of the marker-state prior.
+The implementation contracts described here are based on the public fitters,
+deterministic diagnostic helpers, helper tests, and native samplers.

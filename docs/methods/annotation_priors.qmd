@@ -1,610 +1,701 @@
 ---
-title: "Technical Appendix: Annotation-Informed Priors"
+title: "Annotation-Informed Priors"
 ---
 
-This appendix describes how `sblr` transfers marker annotations into sparse
-Bayesian linear-regression priors. It develops marker-specific inclusion
-probabilities and effect-variance scales, explains the fixed, learned, and
-group-prior CSR policies, and records useful empirical-Bayes constructions.
-The emphasis is on the prior and its
-implementation contract; the CSR likelihood and sparse-LD representation are
-covered elsewhere.
+This page is the canonical statistical overview of annotation-aware Bayesian
+linear regression in `sblr`. It separates what annotations change in the prior
+from how genotype information is represented. Packed BED genotypes, sparse CSR
+LD, and retained block-eigen LD are likelihood/operator choices; they do not by
+themselves define a different prior.
 
-## Annotation Matrix and Preprocessing
+Callouts labelled **Current implementation** describe executable, tested
+functionality. **Proposed** sections describe the intended architecture and are
+not promises that the current API accepts the illustrated syntax.
+
+## One annotation matrix, several prior quantities
 
 Let
 
 $$
-A =
-\begin{bmatrix}
-A_{11} & \cdots & A_{1K}\\
-\vdots & \ddots & \vdots\\
-A_{m1} & \cdots & A_{mK}
-\end{bmatrix}
+A\in\mathbb R^{M\times K}
 $$
 
-be an $m \times K$ marker-by-annotation matrix. Row $A_i$ describes marker
-$i$, and column $k$ describes an annotation. Binary annotations may encode
-membership in functional sets; quantitative annotations may encode continuous
-scores. A marker may belong to several annotations, so the columns generally
-do not define a partition.
+be a marker-by-annotation matrix. Its columns may be binary membership
+indicators, continuous functional scores, or overlapping annotations. A row is
+always associated with one analysis marker; marker identity and ordering are
+part of the input contract, not incidental metadata.
 
-The marker-row contract is strict. Rows of $A$ must correspond, in the same
-order, to:
-
-- the markers used to compute `wy` and `ww`;
-- rows and columns of the sparse-LD matrix;
-- marker names represented by `cls` and `Glist$rsidsLD`; and
-- rows of posterior marker summaries such as `bm` and `dm`.
-
-When row names and marker names are both available, the annotation preparation
-helper can reorder rows by name. Names are not a substitute for checking the
-alignment: duplicated, incomplete, or stale names can still produce an
-incorrect analysis.
-
-### Intercepts, binary columns, and quantitative columns
-
-The annotation-aware implementation uses a shared preprocessing contract to
-validate and preprocess $A$. Its relevant behavior is:
-
-- values must be numeric and finite;
-- an intercept is recognized when the first column is all ones;
-- `add_intercept = TRUE` prepends an intercept if one is not recognized;
-- with `standardize = TRUE`, nonbinary, non-intercept columns are centered and
-  scaled;
-- binary columns are left unchanged unless `center_binary = TRUE`.
-
-An intercept lets the model express a baseline prior independently of the
-annotation contrasts. Centering quantitative columns makes their coefficients
-more comparable and reduces confounding between the intercept and annotation
-effects. Leaving a binary indicator uncentered gives its coefficient the
-interpretation of a contrast against markers outside that annotation.
-
-These choices are part of the model specification and should be reported.
-Automatic standardization is convenient, but users should retain the
-preprocessing metadata needed to apply the same transformation in sensitivity
-analyses or prediction data.
-
-## Baseline Sparse Prior
-
-For a single trait, the baseline sparse prior introduces a marker inclusion
-indicator $d_i$:
+Annotations can influence different parts of a sparse regression prior. For
+single-trait BayesC, write
 
 $$
-\begin{aligned}
-b_i \mid d_i = 0 &= 0,\\
-b_i \mid d_i = 1 &\sim N(0, v_b),\\
-\Pr(d_i = 1) &= \pi.
-\end{aligned}
+d_j\sim\operatorname{Bernoulli}(\pi_j),\qquad
+\beta_j\mid d_j=1\sim N(0,v_bq_j).
 $$
 
-Here $b_i$ is the effect of marker $i$, $v_b$ is the active-marker
-variance, and $\pi$ is a global inclusion probability. The posterior
-inclusion probability (PIP) is
+For BayesR or BayesRC,
 
 $$
-\Pr(d_i = 1 \mid \text{data}),
+c_j\sim\operatorname{Categorical}(\pi_{j0},\ldots,\pi_{j,K_R-1}),
 $$
 
-which is summarized by `dm` when returned by a fitted model.
+$$
+\beta_j\mid c_j=k>0\sim N(0,v_b\gamma_kq_j),
+\qquad \gamma_0=0.
+$$
 
-The annotation-informed models retain this sparse-prior logic but replace one
-or both global quantities with structured marker-specific quantities:
+Throughout this architecture, lowercase v denotes a scalar variance and
+uppercase V denotes a variance-covariance matrix:
+
+| Quantity | Single trait | Multi trait |
+|---|---|---|
+| marker-effect scale | \(v_b\) | \(V_b\) |
+| genomic variance/covariance | \(v_g\) | \(V_g\) |
+| residual variance/covariance | \(v_e\) | \(V_e\) |
+
+Thus, for a non-null BayesR component,
 
 $$
-\Pr(d_i = 1) = \pi_i,
+\operatorname{Var}(\beta_j\mid c_j=k)=\gamma_kq_jv_b
+$$
+
+in ST, while its MT counterpart uses an active-trait submatrix of \(V_b\).
+Here \(\gamma_k\) is the BayesR relative component multiplier, \(q_j\) is the
+marker-specific relative variance multiplier, and \(v_b\) or \(V_b\) carries
+the global active-effect variance/covariance scale.
+
+This is mathematical notation only. R fields retain explicit established names
+such as `vb`/`covb`, `vg`/`covg`, and `ve`/`cove`; case-only R names are
+deliberately avoided. Trait-specific scalar summaries `v_le` and `v_ld` remain
+lowercase unless a genuine matrix-valued counterpart is separately defined.
+
+This exposes two distinct architectures:
+
+1. **Probability architecture \(P_j\)** controls inclusion or mixture-component
+   probabilities.
+2. **Variance architecture \(Q_j=q_j\)** controls relative non-null effect
+   variance.
+
+BayesR's \(\gamma_k\) values are the core mixture ladder. They are not an
+annotation coefficient and do not replace \(q_j\).
+
+For multi-trait models there are two further quantities:
+
+3. **Sharing architecture \(H\)** controls which trait-activity patterns are
+   likely.
+4. **Covariance architecture \(V_b\)** controls cross-trait effect covariance.
+
+For MT models, let \(a_j=p\) denote a non-null trait-activity pattern and
+\(c_j=k\) denote a BayesR component. The long-term architecture treats \(P\)
+and \(H\) as separate provider concepts where the statistical model supports
+that factorization:
+
+$$
+P(c_j=0\mid A_j)=P_{j0},
+$$
+
+and, for \(k>0\),
+
+$$
+P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p.
+$$
+
+Here \(P_{j0}\) is the marker null probability, the \(P_{jk}\) values control
+the non-null BayesR component architecture, and \(H_p\) is the conditional
+probability of non-null trait pattern p. Thus
+\(P_{j0}+\sum_{k>0}P_{jk}=1\) and \(\sum_pH_p=1\).
+
+Current MT implementations must be distinguished from this target vocabulary:
+
+- ordinary MT BayesR/SBayesR uses one `joint_pi` simplex over the null state
+  and all non-null pattern-by-positive-component states. Its component and
+  pattern probabilities are marginals of that simplex, not current \(P\) and
+  \(H\) factors;
+- MT BayesRC/SBayesRC implements the displayed factorization: \(P\) is
+  annotation dependent through probit stick breaking, while \(H\) remains
+  global and conditional on non-null status;
+- \(V_b\) remains global and annotation independent in both current families.
+
+The factorized MT BayesC special case would be
+
+$$
+P(d_j=0\mid A_j)=1-\pi_j,
 \qquad
-b_i \mid d_i = 1 \sim N(0, v_b w_i),
+P(a_j=p,d_j=1\mid A_j)=\pi_jH_p.
 $$
 
-where $w_i > 0$ is a marker-specific variance multiplier.
+There is no BayesR component ladder in that case. This equation expresses the
+architectural decomposition; it does not claim that every current MT BayesC
+route is parameterized internally as independent \(P\) and \(H\) providers.
+Marker non-null probability,
+non-null component probability, and conditional trait-pattern probability are
+therefore separate quantities even when their product determines a joint state
+probability. Annotation-dependent H is a future model, not a current feature.
 
-## Marker-Specific Prior Construction
+Keeping these four roles separate is important. Annotation-dependent inclusion
+is not the same scientific model as annotation-dependent effect magnitude, and
+a stable coefficient estimate is not automatically a stable induced prior.
 
-### Inclusion probabilities
+## Information may be fixed, learned, or informative
 
-A common annotation construction places annotation effects on the log-odds
-scale:
+For any prior architecture, information can enter in several ways:
+
+- a global value shared by all markers;
+- a fixed marker-specific vector supplied externally;
+- a fixed mapping from \(A\) and supplied coefficients;
+- coefficients learned jointly from the current data;
+- an informative prior on learned coefficients;
+- a fixed marker baseline plus a learned correction.
+
+The current package implements different subsets for different mechanisms and
+routes. A long-term API should express these as variants of the same scientific
+quantity, rather than as unrelated model names.
+
+Initialization is separate from prior information. `theta_init`, `alpha_init`,
+or a starting mixture vector says where a chain starts; it does not define a
+prior mean.
+
+## Probability architecture
+
+### Global BayesC and BayesR probabilities
+
+Ordinary BayesC uses one global \(\pi\). Ordinary BayesR uses one global vector
+of component probabilities. These are the zero-annotation reference models and
+remain important regression controls.
+
+### Fixed marker probabilities
+
+The current ST CSR `fixed_marker` route can take marker-specific \(\pi_j\)
+directly or construct them from \(A\) and fixed coefficients. Its historical
+map centers the linear predictor, applies a global-logit offset, and clamps the
+result to configured bounds. This is a fixed probability architecture: the
+coefficients are not learned in the sampler.
+
+::: {.callout-note title="Current implementation"}
+Fixed marker probability is implemented for ST CSR BayesC/SBayesC. It is not a
+general BED/CSR/eigen provider, and its preprocessing and clipping conventions
+are not the canonical LV contract.
+:::
+
+### Learned logistic inclusion
+
+The current learned-logistic mechanism uses
 
 $$
-\operatorname{logit}(\pi_i)
-=
-\operatorname{logit}(\pi_0) + A_i \eta_\pi,
+\operatorname{logit}(\pi_j)
+=\operatorname{logit}(\pi)+
+\operatorname{center}(A_j\eta_\pi),
 $$
 
-where $\pi_0$ is a baseline inclusion probability and $\eta_\pi$ contains
-annotation coefficients. Positive values of $A_i\eta_\pi$ increase prior
-inclusion odds; negative values reduce them.
+with a zero-centered Gaussian coefficient prior and random-walk Metropolis
+updates. Marker probabilities are bounded. It is a learned probability
+architecture for ST CSR BayesC.
 
-The fixed-marker policy centers the linear predictor before
-combining it with the baseline:
+Its probability and variance halves are mathematically separable. The future
+architecture should retain a logistic probability provider without requiring
+the historical learned variance implementation.
+
+### Probit-stick component probabilities
+
+BayesRC/SBayesRC use annotations to change BayesR component probabilities. For
+continuation step \(k\), a probit regression based on \(A_j\alpha_k\) defines
+the probability of stopping at or continuing past that component. The implied
+row of prior component probabilities is floored for numerical safety and
+renormalized.
+
+The current model can learn `alpha`, hold it fixed, or initialize it separately.
+It has a proper intercept prior and Gaussian non-intercept priors whose variance
+parameters may be updated.
+
+Two outputs must not be confused:
+
+- **prior component probability** is the probability implied by the current
+  probit-stick architecture before observing marker-specific likelihood
+  evidence;
+- **posterior component allocation probability** is the posterior probability
+  that a marker occupies each component.
+
+PIP is derived from posterior allocation, not from the prior component
+probability.
+
+::: {.callout-note title="Current implementation"}
+Probit-stick BayesRC/SBayesRC is implemented across ST and MT BED, CSR, and
+retained block-eigen routes. MT currently uses annotation-dependent component
+probabilities together with global conditional trait-pattern probabilities;
+annotations do not change sharing patterns or \(V_b\).
+:::
+
+## Variance architecture
+
+### Fixed marker variance
+
+A positive supplied multiplier \(q_j\) modifies non-null variance while the
+global scale remains \(v_b\) in ST or \(V_b\) in MT. The existing ST CSR
+`fixed_marker` route exposes this as `fixed_vb_multiplier` and also supports a
+fixed log-linear construction from \(A\).
+
+The scientific quantity is a **prior variance multiplier**. A future API should
+use that name and route it through one variance provider; it should not create a
+second “offset” mechanism for the same q.
+
+### Group probability and variance
+
+The current group route assigns each marker to exactly one group. It can learn a
+group-specific inclusion probability and can fix or update group variance
+multipliers. Probability has Beta priors; variance uses a scaled
+inverse-chi-square-style update. Optional normalization uses a marker-count
+weighted arithmetic mean.
+
+This remains a meaningful hierarchical prior, but it need not remain a separate
+core model family. It can be a convenience specification of group-valued
+probability and variance providers, with its hierarchical priors preserved.
+
+### Log-variance annotation model
+
+The canonical learned annotation-variance model is
 
 $$
-\widetilde{\ell}_{\pi i}
-=
-A_i\eta_\pi - \frac{1}{m}\sum_{j=1}^m A_j\eta_\pi,
+\eta_j=X_j\theta,\qquad q_j=\exp(\eta_j),
+$$
+
+with no annotation intercept and
+
+$$
+\theta\sim N(0,0.7^2I)
+$$
+
+by default. Users may currently set another positive finite scalar
+`theta_prior_sd`; it is not estimated.
+
+For BayesC-LV,
+
+$$
+d_j\sim\operatorname{Bernoulli}(\pi),\qquad
+\beta_j\mid d_j=1\sim N(0,v_bq_j).
+$$
+
+Annotations affect non-null variance only; \(\pi\) remains global. The theta
+conditional, apart from its Gaussian prior, is
+
+$$
+-\frac12\sum_{j:d_j>0}
+\left\{\eta_j+\frac{\beta_j^2}{v_b\exp(\eta_j)}\right\}.
+$$
+
+For BayesR-LV,
+
+$$
+\beta_j\mid c_j=k>0\sim N(0,v_b\gamma_kq_j),
+$$
+
+with one common theta across all non-null components and global mixture
+probabilities. The conditional contribution is
+
+$$
+-\frac12\sum_{j:c_j>0}
+\left\{\eta_j+
+\frac{\beta_j^2}{v_b\gamma_{c_j}\exp(\eta_j)}\right\}.
+$$
+
+Theta is updated by elliptical slice sampling (ESS). If no marker is active,
+theta is drawn directly from its Gaussian prior. The implementation does not
+silently clamp q; it uses log-scale guards and reports min/max log q and ESS
+evaluation/contraction diagnostics.
+
+::: {.callout-note title="Current implementation"}
+BayesC-LV and BayesR-LV are scientifically qualified for ST CSR and retained
+block-eigen likelihoods. They are not implemented for packed BED or MT. Their
+ordinary no-op policies preserve ordinary-model RNG trajectories.
+:::
+
+For binary column \(c\), \(\exp(\theta_c)\) is the annotated/unannotated prior
+**variance** ratio, conditional on the other annotations. For a standardized
+continuous column it is the variance ratio for a one-SD increase.
+
+### Learned-logistic variance versus LV
+
+The variance half of the older learned-logistic model also has a centered
+log-linear q, but it uses a zero-centered isotropic prior, bounded q, joint
+random-walk Metropolis proposals, a different update schedule, and different
+preprocessing. Its active-effect likelihood is closely related to BayesC-LV,
+but the two implementations do not define identical transition kernels or,
+when clipping is active, identical models.
+
+The recommended direction is to make LV the canonical learned variance engine
+and retain learned logistic as a probability architecture. Retirement of the
+old variance half must follow frozen side-by-side tests and be described as an
+intentional model migration, not a mechanical rename.
+
+### MAF-S
+
+MAF-S is also a variance architecture. With heterozygosity \(h_j\),
+
+$$
+q_j(S)=h_j^{S+1}.
+$$
+
+`sblr` supports fixed S and, on selected summary-statistics routes, sampled S.
+MT support is currently for fixed marker scale in established mixture-model
+routes; sampled MT S is unsupported. Historical MAF-S does not log-center q,
+so its global-scale convention differs from LV.
+
+MAF-derived columns in A and MAF-S can explain much the same variation. A
+future composed model should warn about this confounding and require a declared
+normalization/calibration convention.
+
+## Annotation preprocessing is part of the model
+
+Current annotation mechanisms do not all use the same transformation. LV has
+the strongest explicit contract:
+
+- align rows exactly to the analysis-marker order;
+- require unique, complete marker IDs and unique annotation names;
+- reject missing or nonfinite values;
+- binary columns are centered but not divided by their SD;
+- continuous columns are centered and standardized to SD one;
+- no annotation intercept;
+- reject constant, all-one, duplicate, or rank-deficient designs;
+- preserve transformation metadata and do not mutate the caller's object.
+
+Because every column of \(X\) is centered,
+
+$$
+M^{-1}\sum_j\eta_j=0,
 \qquad
-\pi_i
-=
-\operatorname{logit}^{-1}
-\left\{\operatorname{logit}(\pi_0)+\widetilde{\ell}_{\pi i}\right\}.
+\left(\prod_jq_j\right)^{1/M}=1.
 $$
 
-Centering makes the annotation effects primarily redistribute prior inclusion
-probability across markers rather than changing its genome-wide location.
-The resulting values are clamped to user-specified lower and upper bounds for
-numerical and inferential stability.
+BayesRC has a scientifically different intercept policy because its
+continuation-probit baseline is a probability parameter. Its current helper
+standardizes continuous columns, commonly keeps binary indicators uncentered,
+and permits one explicit intercept. Older fixed/logistic helpers are less
+strict and use their own centering and clipping rules.
 
-### Effect-variance multipliers
+**Proposed:** use one immutable internal annotation-design object carrying
+processed X, marker IDs, original and processed names, column types, centers,
+scales, intercept policy, alignment decisions, rank diagnostics, and
+provenance. Each provider declares its transform profile. Harmonization must be
+an explicit model decision; a common object must not silently change existing
+models.
 
-Annotation effects on active-marker variance naturally use a log scale:
+## Identification and composition of q
 
-$$
-\log w_i = A_i\eta_v,
-\qquad
-w_i = \exp(A_i\eta_v).
-$$
-
-As with inclusion probabilities, the fixed-marker policy centers the linear predictor:
-
-$$
-\widetilde{\ell}_{v i}
-=
-A_i\eta_v-\frac{1}{m}\sum_{j=1}^m A_j\eta_v,
-\qquad
-w_i=\exp(\widetilde{\ell}_{v i}).
-$$
-
-This construction makes $w_i$ a relative multiplier around the global
-active-marker variance $v_b$. Lower and upper bounds prevent extreme
-annotation combinations from creating nearly degenerate or unreasonably
-diffuse marker priors.
-
-### Consequences for a single-marker update
-
-The marker-specific quantities enter the standard sparse BLR update directly.
-Let $w_i^{XX}$ denote the diagonal marker cross-product and let
+The global \(v_b\) or \(V_b\) controls overall magnitude. q should normally
+redistribute variance across markers. For a new composable provider, a coherent
+raw architecture is
 
 $$
-s_i = r_i + w_i^{XX} b_i
+\log q_j^{\rm raw}
+=\log q_j^{\rm external}
++A_j\theta
++(S+1)\log h_j.
 $$
 
-be the marker score formed from the current residual state. To avoid confusing
-the cross-product with the prior multiplier, write
-$v_{b,i}=v_b w_i$. The log Bayes factor for the active versus null component
-is
+The proposed new-provider convention subtracts the unweighted mean of
+\(\log q_j^{\rm raw}\) over the aligned analysis-marker universe, making the
+combined geometric mean one. This constant does not change annotation variance
+ratios, but it identifies q relative to the global scale.
+
+This convention must not be retrofitted silently onto historical MAF-S or group
+routes, whose normalization and calibration are different. Existing routes
+remain frozen adapters until a separately validated migration.
+
+Potential warnings or unsupported combinations include:
+
+- an intercept in a log-variance design;
+- highly correlated annotations, which can make individual coefficients weakly
+  identified even when induced q is stable;
+- MAF-derived annotation columns together with sampled S;
+- an external q nearly collinear with \(A\theta\);
+- simultaneously learned annotation-dependent probability and variance without
+  dedicated identifiability validation.
+
+## Informative annotation priors
+
+**Proposed:** generalize LV to
 
 $$
-\log BF_i
-=
-\frac{1}{2}\log\left(
-\frac{v_e}{v_e+w_i^{XX}v_{b,i}}
-\right)
-+
-\frac{1}{2}
-\frac{s_i^2v_{b,i}}
-{v_e(v_e+w_i^{XX}v_{b,i})}.
+\theta\sim N(\mu_\theta,\Sigma_\theta).
 $$
 
-The conditional inclusion probability is
+The first production extension should use independent named coefficients:
 
 $$
-\Pr(d_i=1\mid\cdot)
-=
-\frac{\pi_i BF_i}{(1-\pi_i)+\pi_i BF_i}.
+\theta_k\sim N(\mu_k,\sigma_k^2).
 $$
 
-Conditional on inclusion,
+For example,
 
 $$
-b_i\mid d_i=1,\cdot
-\sim
-N\left(
-\frac{s_i}{w_i^{XX}+v_e/v_{b,i}},
-\frac{v_e}{w_i^{XX}+v_e/v_{b,i}}
-\right).
+\theta_{\rm coding}\sim N\{\log(3),0.3^2\}
 $$
 
-Thus, $\pi_i$ alters prior odds of inclusion, whereas $w_i$ alters the
-active effect distribution and its shrinkage. These mechanisms should not be
-interpreted as interchangeable.
+expresses prior belief in an approximately threefold active-effect variance
+ratio for coding markers, conditional on other annotations.
 
-## Annotation-Level Posterior Summaries
+The interface should use `theta_prior_mean` and `theta_prior_sd`. Means should
+be named vectors; SD may be a positive scalar or named vector. Names are
+resolved after preprocessing. A later `theta_prior_cov` may accept a named
+positive-definite matrix. `theta_init` remains a separate scientific concept.
 
-Posterior marker summaries can be aggregated to describe signal associated
-with an annotation set $S_k=\{i:A_{ik}\ne0\}$. Useful descriptive summaries
-include:
+The first production default-initialization rule is fixed as follows:
 
-$$
-m_{\mathrm{eff},k}
-=
-\sum_{i\in S_k}\widehat{\Pr}(d_i=1\mid\text{data}),
-$$
+- if `theta_init` is not supplied, resolve it to `theta_prior_mean`;
+- if `theta_init` is supplied, use that explicit value.
 
-the expected number of included markers in the set, and the PIP enrichment
-ratio
+The fit specification must record `theta_prior_mean` and the resolved
+`theta_init` separately. Initial q is constructed from the resolved
+`theta_init`, and h2 calibration uses that initial q. This default does not turn
+the prior mean into an initialization parameter; it only avoids calibrating an
+informative threefold prior belief under an unrelated default onefold
+architecture.
 
-$$
-E_k
-=
-\frac{|S_k|^{-1}\sum_{i\in S_k}\widehat{\Pr}(d_i=1\mid\text{data})}
-{|S_k^c|^{-1}\sum_{i\notin S_k}\widehat{\Pr}(d_i=1\mid\text{data})}.
-$$
+## External marker-specific variance
 
-For summary-statistics fits, a marker-level contribution estimate may be
-written
+**Proposed:** support
 
 $$
-c_i
-=
-\frac{\widehat b_i\{wy_i-r_i\}}{n},
+\log q_j=\log q_j^{\rm external}+A_j\theta.
 $$
 
-with an optional PIP-weighted version. An annotation-level genetic-variance
-summary is then
+This covers external q only, learned LV only, and external q plus learned
+recalibration. The public term should be `prior_variance_multiplier`; “offset”
+is an implementation description, not the scientific object. Values must be
+strictly positive, finite, uniquely aligned by marker, and normalized under the
+declared q convention. Existing fixed-marker variance machinery should become
+the fixed form of the same provider.
+
+## Multi-trait generalization
+
+The first MT-LV implementation target is specifically MT BayesR/SBayesR with
+its existing global `joint_pi` state simplex unchanged and one q shared across
+traits:
 
 $$
-\widehat V_{G,k}
-=
-\sum_{i\in S_k} c_i.
+q_j=\exp(A_j\theta),
 $$
 
-These set summaries are deliberately descriptive. When annotations overlap,
-their totals are not additive and the same marker contribution may appear in
-several sets. `summarize_annotation_signal()` follows this descriptive
-set-based approach for known simulation truth and, when a fit is supplied,
-adds within-set means of `dm` and absolute `bm`.
-
-For conditional interpretation with overlapping annotations, one can regress a
-marker-level posterior response $s_i$ on all annotation columns:
-
 $$
-s_i = \alpha + \sum_{k=1}^K A_{ik}\gamma_k+\epsilon_i.
+\operatorname{Cov}(\beta_{j,p,k})
+=\gamma_kq_jV_{b,p},
 $$
 
-Possible responses include a PIP, squared posterior mean effect, or estimated
-marker contribution. Such a regression estimates conditional associations
-among annotations, but it does not establish that an annotation causes the
-genetic signal.
+where p is a non-null activity pattern and \(V_{b,p}\) is the active-trait
+submatrix of \(V_b\). The scalar \(q_j\) multiplies the entire active-trait
+covariance matrix, so it changes overall marker effect magnitude without by
+itself changing the correlation structure represented by \(V_b\). Pattern
+Complete joint-state probabilities remain global; their component and pattern
+marginals remain derived summaries rather than a new factorized \(P\times H\)
+parameterization.
+No annotation-dependent probability architecture is part of this first target.
+MT BayesRC/SBayesRC plus LV belongs entirely to the separately research-gated
+probability-plus-variance phase. MT BayesC-LV may be considered later, but it is
+not the first MT target.
 
-## Empirical-Bayes Prior Construction
+::: {.callout-warning title="Proposed, not implemented"}
+Shared-q MT-LV is not a current production route. It requires q-aware \(V_b\) updates,
+prior calibration, operator parity, an independent theta oracle, and
+ordinary-MT trajectory gates.
+:::
 
-An empirical-Bayes workflow estimates annotation signal from one genomic fit
-and uses it to construct priors for a subsequent fit:
-
-$$
-\text{initial genomic fit}
-\rightarrow
-\text{marker summaries}
-\rightarrow
-\text{annotation model}
-\rightarrow
-\{\pi_i,w_i\}
-\rightarrow
-\text{updated genomic fit}.
-$$
-
-This approach separates prior construction from the genomic sampler. It is
-useful when annotation effects should be estimated with a dedicated model or
-when fixed marker priors must be inspected before fitting.
-
-### Set-based estimates
-
-A smoothed set-level inclusion probability can be estimated from PIPs:
+A later trait-specific model could use
 
 $$
-\widehat\pi_k
-=
-\frac{a+\sum_{i\in S_k} dm_i}{2a+|S_k|},
+q_{jt}=\exp(A_j\theta_t),\qquad
+D_j=\operatorname{diag}(\sqrt{q_{j1}},\ldots,\sqrt{q_{jT}}),
 $$
 
-where $a>0$ supplies symmetric pseudo-count shrinkage. A rough active-effect
-variance estimate is
-
 $$
-\widehat v_{b,k}
-=
-\frac{\widehat V_{G,k}}
-{\max(m_{\mathrm{eff},k},c)},
+\operatorname{Cov}(\beta_j)=\gamma_kD_jV_bD_j.
 $$
 
-where $c>0$ prevents instability when the expected number of active markers
-is very small. Both estimates should generally be shrunk toward genome-wide
-values before they are converted into marker priors.
+That model needs stronger identification between D and \(V_b\). Annotation-dependent
+trait sharing and annotation-dependent \(V_b\) are later research models, not implied
+by current MT BayesRC.
 
-These formulas are easiest to interpret for disjoint sets. With overlapping
-annotations, directly assigning each set estimate to its member markers can
-double-count evidence.
+## Probability plus variance annotations
 
-### Conditional annotation models
+It is mathematically possible to combine
 
-For overlapping annotations, an annotation-level regression or BLR can map
-marker summaries to annotation coefficients. Candidate marker-level responses
-include:
+$$
+P_j=\operatorname{probit\mbox{-}stick}(A_j\alpha),
+\qquad q_j=\exp(A_j\theta).
+$$
 
-- posterior mean effects, $\widehat b_i$;
-- transformed PIPs, such as a bounded $\operatorname{logit}(dm_i)$;
-- squared effects or absolute effects; and
-- marker contribution estimates,
-  $\widehat b_i(wy_i-r_i)/n$.
+The same annotations would then explain both component membership and effect
+magnitude. Given known alpha/occupancy mixing challenges in SBayesRC, this
+combination should not be exposed merely because provider composition makes it
+easy to code. It needs separate signal, null, correlated-annotation,
+identification, and multichain validation.
 
-The fitted annotation effects can then be transformed through the centered
-logit and log-scale constructions above. Regularization is essential because
-annotation columns can be numerous, correlated, imbalanced, or nearly
-redundant.
+## Prior calibration and h2
 
-### Data reuse and cross-fitting
+Automatic calibration must use the resolved initial architecture. For ST, its
+expected-variance weight has the form
 
-When the same phenotype data are used both to estimate annotation enrichment
-and to fit the annotation-informed model, the resulting prior is
-data-dependent. This can improve adaptation but can also exaggerate evidence
-if uncertainty in the first-stage estimate is ignored.
+$$
+W=\sum_j\sum_k p^{\rm init}_{jk}\gamma_kq_jv_j,
+$$
 
-Useful safeguards include:
+where \(v_j\) is the genotype/summary-statistic scaling term appropriate to the
+route. The initial global scale is chosen so the requested h2 corresponds to
+the initialized expected genetic variance.
 
-- shrink annotation coefficients toward zero;
-- clamp $\pi_i$ and $w_i$ to defensible ranges;
-- compare against an unannotated baseline;
-- split markers into approximately LD-independent folds and construct priors
-  out of fold; and
-- assess sensitivity to the annotation model and prior bounds.
+For MT, calibration uses a trait-pair weight matrix that includes component,
+pattern, q, and genotype scaling. Automatic diagonal \(V_b\) can target marginal
+trait variances; automatically identifying an unrestricted covariance \(V_b\) from
+h2 alone is not well-defined.
 
-The current `fixed_marker` policy supports the final marker-prior fitting stage.
-Cross-fitting and a full empirical-Bayes pipeline remain analysis-level
-responsibilities rather than a single exported package workflow.
+When theta, alpha, group scales, or S are learned, calibration at their initial
+state is generally an initialization approximation, not the exact marginal
+prior expectation after integrating over learned coefficients. Outputs and
+documentation should say which interpretation applies.
 
-## Fixed Marker-Specific Prior Policy
+For informative theta priors, the first production rule is deterministic:
+resolve missing `theta_init` to `theta_prior_mean`, otherwise use the explicit
+`theta_init`; construct initial q from that resolved value; and calibrate h2
+using that q. Record the prior mean and resolved initialization separately. Do
+not integrate over the theta prior in the first implementation.
 
-`stblr_csr_annot(annotation_model = "fixed_marker")` fits a CSR summary-statistics
-model with fixed marker-specific inclusion probabilities and effect-variance
-multipliers. Users may either supply `fixed_pi_marker` and
-`fixed_vb_multiplier` directly, or supply $A$ and fixed annotation
-coefficients from which the canonical interface constructs them.
+## Current capability summary
+
+| Architecture | ST BED | ST CSR | ST retained eigen | MT BED | MT CSR | MT retained eigen |
+|---|---|---|---|---|---|---|
+| Global BayesC/R | implemented | implemented | implemented | implemented | implemented | implemented |
+| Probit-stick BayesRC | implemented | implemented | implemented | implemented | implemented | implemented |
+| Fixed marker P/Q | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
+| Group P/Q | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
+| Learned logistic P/Q | not exposed | BayesC only | not exposed | not exposed | not exposed | not exposed |
+| BayesC/R-LV | not implemented | implemented and qualified | implemented and qualified | not implemented | proposed | proposed |
+| Annotation-dependent sharing | conceptual only | conceptual only | conceptual only | conceptual only | conceptual only | conceptual only |
+| Annotation-dependent covariance | unsupported | unsupported | unsupported | research concept | research concept | research concept |
+
+MAF-S coverage is route- and model-dependent; fixed and sampled S are not
+uniformly supported across this table. Consult route validation rather than
+assuming that an argument's presence means the combination is implemented.
+
+## Proposed public model specification
+
+The following calls are design mockups, not current syntax. They illustrate a
+future API in which the fitter selects the data operator, `model` selects the
+core family, and `prior` selects orthogonal architectures.
 
 ```r
-fit_fixed <- stblr_csr_annot(
-  stats = stats,
-  Glist = Glist,
-  annotations = list(
-    A = A,
-    beta_pi = beta_pi,
-    beta_vb = beta_vb
-  ),
-  annotation_model = "fixed_marker"
+# A. Ordinary BayesR
+stblr_csr(stats, Glist, model = "bayesr")
+
+# B-D. BayesR with one or many binary/continuous annotations
+stblr_csr(
+  stats, Glist, model = "bayesr",
+  prior = prior_spec(
+    variance = annotation_log_variance(annotations = A)
+  )
 )
+
+# E. Informative annotation-variance prior
+stblr_csr(
+  stats, Glist, model = "bayesr",
+  prior = prior_spec(
+    variance = annotation_log_variance(
+      annotations = A,
+      theta_prior_mean = c(coding = log(3)),
+      theta_prior_sd = c(coding = 0.3)
+    )
+  )
+)
+
+# F. External marker-specific q
+stblr_csr(
+  stats, Glist, model = "bayesr",
+  prior = prior_spec(
+    variance = fixed_variance(prior_variance_multiplier = q_external)
+  )
+)
+
+# G. External q plus learned annotation correction
+stblr_csr(
+  stats, Glist, model = "bayesr",
+  prior = prior_spec(
+    variance = annotation_log_variance(
+      annotations = A,
+      prior_variance_multiplier = q_external
+    )
+  )
+)
+
+# H. SBayesRC: BayesR core plus probit-stick component probabilities
+stblr_csr(
+  stats, Glist, model = "bayesr",
+  prior = prior_spec(
+    probability = annotation_probit_stick(annotations = A)
+  )
+)
+
+# I. Proposed MT BayesR-LV with shared q
+mtblr_csr(
+  stats, Glist, model = "bayesr",
+  prior = prior_spec(
+    variance = annotation_log_variance(annotations = A, trait_scope = "shared")
+  )
+)
+
+# J. No annotation object and no annotation overhead
+stblr_bed(y, bed_prefix, model = "bayesc")
 ```
 
-The annotation-derived marker priors remain fixed during sampling. Marker
-effects, inclusion states, residual variance, global variance parameters, and
-other sampler states may still be updated according to the fitter's update
-flags. Fixed therefore refers to the annotation-to-marker prior mapping, not to
-the whole fitted model.
+Convenience aliases such as BayesRC or BayesR-LV may remain useful display
+names, but they should resolve to a core family plus a typed prior
+specification. The package should not maintain a separate sampler identity for
+every composable combination.
 
-This policy is appropriate when priors come from external evidence, a
-separate training analysis, or a deliberately staged empirical-Bayes
-procedure.
+## Output and diagnostics
 
-## Learned Annotation Effects
+A coherent future fit should separate the prior supplied or assumed by the
+user from posterior inference about the architecture governed by that prior.
+The recommended design is:
 
-`stblr_csr_annot(..., annotation_model = "learned_logistic")` learns annotation coefficients jointly with the
-marker model. For trait $t$, the implemented construction is conceptually
+```text
+fit$architecture$probability
+fit$architecture$variance
+fit$architecture$sharing
+fit$architecture$covariance
+fit$model_spec$prior
+fit$annotation_design
+fit$diagnostics
+```
 
-$$
-\operatorname{logit}(\pi_{it})
-=
-\operatorname{logit}(\pi_t)
-+
-\operatorname{center}(A_i\eta_{\pi,t}),
-$$
+`model_spec$prior` records what was specified or assumed, including fixed
+inputs, coefficient priors, normalization rules, and resolved initialization.
+`architecture` contains fixed architecture quantities and posterior inference
+for learned architecture parameters such as alpha, theta, induced marker
+probabilities, and q. It is a scientific result namespace, not a copy of the
+input prior specification.
 
-and
+Probability results should distinguish prior marker/component probabilities
+from posterior allocations. Variance results should distinguish fixed external
+q, posterior mean q, coefficient summaries, and MAF-S. For LV,
+`exp(mean(theta))` is a plug-in coefficient ratio, whereas the posterior mean
+marker q is `mean(exp(X theta))`; these need not be identical.
 
-$$
-v_{b,it}
-=
-v_{b,t}
-\exp\{\operatorname{center}(A_i\eta_{v,t})\}.
-$$
+Diagnostics should be layered:
 
-The annotation effects are initialized by `eta_pi_init` and `eta_vb_init`,
-with zero matrices used by default. Gaussian shrinkage scales
-`sigma_eta_pi` and `sigma_eta_vb` regularize the coefficients.
+1. latent coefficients: R-hat, bulk/tail ESS, MCSE, and MH acceptance or ESS
+   contraction statistics;
+2. induced architecture: cross-chain stability of marker P and q and expected
+   active/component counts;
+3. posterior marker quantities: PIP, component allocation, and beta stability;
+4. downstream quantities: genetic variance and prediction stability.
 
-The native sampler uses random-walk Metropolis-Hastings updates at the
-`annot_update_every` schedule. The inclusion-coefficient target is informed by
-the current inclusion states; the variance-coefficient target is informed by
-the current active effects and inclusion states. Proposal scales are controlled
-by `rw_sd_eta_pi` and `rw_sd_eta_vb`. Marker-level inclusion probabilities and
-variance multipliers are bounded during construction.
+Coefficient R-hat alone is not evidence that an annotation-informed model is
+scientifically stable.
 
-This is a direct learned-prior model rather than a separate two-stage
-empirical-Bayes fit. The posterior annotation coefficients summarize how the
-model adapts prior inclusion and active-effect variance, conditional on all
-other annotations and the sampler specification.
+## Related pages
 
-## Group Priors
-
-`stblr_csr_annot(..., annotation_model = "group")` assigns each marker to exactly one group through
-`group_index`. Group $g$ receives a group-specific inclusion probability and
-variance multiplier:
-
-$$
-\Pr(d_i=1)=\pi_{g(i)},
-\qquad
-b_i\mid d_i=1
-\sim
-N\{0,v_b w_{g(i)}\}.
-$$
-
-Group inclusion probabilities have beta-prior shape parameters derived from a
-prior mean and strength. Group variance multipliers may also be updated,
-depending on `updateGroupVb`, and can be normalized around a common scale.
-
-The group construction is a simplification of overlapping annotation models:
-it creates an unambiguous partition and directly pools evidence within groups,
-but it cannot represent a marker's simultaneous membership in several
-functional categories. It is useful when annotations naturally define
-mutually exclusive strata or when a simpler, more stable model is preferred.
-
-The preparation helper verifies that every marker has one nonmissing group,
-that requested group names define the ordering, and that every represented
-group is nonempty. The native interface receives a zero-based group index;
-users should supply ordinary R group labels and let the canonical fitter handle that
-conversion.
-
-## Simulation Helpers and Known-Truth Diagnostics
-
-The annotation simulation helpers support controlled checks of whether an
-annotation-informed model recovers known architecture.
-
-`make_overlapping_annotations()` creates binary annotation columns using
-independent membership probabilities. Overlap is allowed, and an option can
-ensure that every marker belongs to at least one annotation.
-
-`make_marker_priors_from_annotations()` constructs marker-level inclusion
-probabilities and variance multipliers from specified enriched annotations. It
-uses log inclusion-odds and log variance-multiplier effects, optionally centers
-the linear predictors, and caps the resulting marker priors.
-
-`sample_causal_pool_weighted()` samples causal markers without replacement,
-giving markers in selected annotations increased sampling weight.
-
-`mtsim_annotation()` combines annotation generation, weighted causal-marker
-sampling, and marker-prior construction with multi-trait phenotype simulation.
-Its returned truth allows direct comparison of simulated architecture and
-posterior summaries.
-
-`summarize_annotation_signal()` reports annotation size, causal-marker counts,
-and causal rates. If a fit is supplied, it can also report within-annotation
-mean PIPs and mean absolute posterior marker effects. Because annotation sets
-may overlap, these summaries should be read one annotation at a time rather
-than summed across rows.
-
-## Overlap, Identifiability, and Double Counting
-
-Overlapping annotations are biologically natural but statistically difficult.
-If two columns of $A$ identify nearly the same markers, their separate
-coefficients may be weakly identified even when their joint signal is clear.
-Rare annotations can produce unstable estimates, whereas very broad
-annotations may largely reproduce the intercept.
-
-Additive constructions on the logit and log scales provide a coherent way to
-combine overlap:
-
-$$
-\operatorname{logit}(\pi_i)
-=
-\operatorname{logit}(\pi_0)+A_i\eta_\pi,
-\qquad
-\log w_i=A_i\eta_v.
-$$
-
-However, additive predictors can still create extreme priors when a marker
-belongs to many enriched sets. Centering, coefficient shrinkage, and explicit
-bounds are therefore structural safeguards, not merely numerical
-conveniences.
-
-Interpretation is conditional: an annotation coefficient measures the
-association remaining after the other included annotations and preprocessing
-choices are accounted for. Marginal set enrichment and conditional annotation
-coefficients answer different questions and need not agree.
-
-## Research-Stage Multi-Trait Extensions
-
-The following extensions go beyond the currently exposed fixed-marker,
-learned-logistic, and group CSR policies. They are design directions rather
-than claims about the public API.
-
-For multiple traits, marker-specific annotation priors can vary by trait:
-
-$$
-\operatorname{logit}(\pi_{it})
-=
-\operatorname{logit}(\pi_{0t})+A_i\eta_{\pi,t},
-\qquad
-\log w_{it}=A_i\eta_{v,t}.
-$$
-
-Annotations could also influence cross-trait sharing. For example, a softmax
-model could assign marker-specific probabilities to patterns such as null,
-trait-specific, and shared effects. A further extension could let annotation
-sets influence the covariance of active multi-trait effects. These models
-require strong regularization because annotation effects, sharing
-probabilities, and trait covariance can otherwise be difficult to identify.
-
-One possible extension uses warm-started regional multi-trait fits:
-genome-wide annotation summaries construct priors, and selected regions are
-then fitted with more detailed multi-trait models. Such a workflow may be
-computationally useful, but prior reuse, region selection, and uncertainty
-propagation must be handled explicitly.
-
-## Regularization, Bounds, and Uncertainty
-
-Annotation-informed priors add flexibility and therefore add failure modes.
-The following controls address distinct problems:
-
-- **Centering** separates relative marker enrichment from the genome-wide
-  baseline.
-- **Standardization** places quantitative annotations on comparable scales.
-- **Coefficient shrinkage** limits overfitting in correlated or high-dimensional
-  annotation matrices.
-- **Probability bounds** prevent prior inclusion probabilities from collapsing
-  to zero or one.
-- **Variance-multiplier bounds** prevent extreme prior scales.
-- **Cross-fitting or external training** reduces optimism from empirical-Bayes
-  data reuse.
-- **Sensitivity analyses** reveal dependence on bounds, annotation definitions,
-  LD settings, and prior choices.
-
-Posterior uncertainty conditional on a fixed empirical-Bayes prior does not
-include uncertainty from estimating that prior. This distinction should be
-made explicit when reporting results.
-
-## Interpretation and Causal Limits
-
-Annotation coefficients, set enrichments, and marker-specific priors describe
-how external information interacts with the fitted prior and observed genetic
-evidence. They do not prove that an annotation or annotated marker is causal.
-
-Apparent enrichment can reflect:
-
-- LD between annotated and causal markers;
-- differences in marker density and allele frequency;
-- correlated or overlapping annotation definitions;
-- phenotype architecture and sample size;
-- sparse-LD approximation and marker filtering; and
-- model, regularization, and prior-bound choices.
-
-Top markers and enriched annotations should therefore be treated as
-model-dependent evidence. Comparisons against unannotated models and
-sensitivity analyses are central to interpretation.
-
-## Implementation Checklist
-
-Before fitting an annotation-informed model:
-
-- verify marker-row alignment across annotations, sufficient statistics,
-  sparse LD, and posterior outputs;
-- inspect annotation column prevalence, ranges, missingness, and correlation;
-- reconsider all-zero, all-one, extremely rare, or nearly duplicate columns;
-- record intercept, centering, standardization, and binary-column choices;
-- record inclusion-probability and variance-multiplier bounds;
-- decide whether priors are external, empirically constructed, jointly learned,
-  or group based;
-- use cross-fitting or external data when empirical-Bayes reuse is a concern;
-- compare prior annotation summaries with posterior annotation summaries; and
-- report sensitivity to priors, annotation preprocessing, and LD settings.
-
-## Related Notes and Sources
-
-- [Annotation-informed models](annotation_informed_models.qmd) gives the main
-  conceptual and practical path through the annotation-aware fitter.
-- [SBayesRC-style annotations](sbayesrc_annotations.qmd)
-  covers the separate annotation-dependent BayesR mixture prior.
-- [Workflows and outputs](../notes/workflows_and_outputs.qmd) explains compact posterior
-  summaries and the annotation workflow.
-- [Data representations](../notes/data_representations.qmd) defines the marker-order and
-  summary-statistics contracts used here.
-
-This appendix distinguishes current fitter behavior from empirical-Bayes and
-multi-trait designs that remain research-stage extensions.
+- `sbayesrc_annotations.qmd` gives focused details for probit-stick component
+  probabilities.
+- `mt_bayesrc_sbayesrc.qmd` and `mt_bayesr_sbayesr.qmd` describe current MT
+  kernels and sharing/covariance structures.
+- `annotation_informed_models.qmd` is retained as a focused empirical-Bayes and
+  posterior-to-prior construction note; its conceptual workflows are not all
+  current package features.
+- Developer capability, schema, and migration details live under `docs/dev/`.

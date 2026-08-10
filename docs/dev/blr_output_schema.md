@@ -35,6 +35,9 @@ Retained low-rank raw diagnostics include the configured residual-rebuild
 interval, rebuild counts, and maximum absolute and relative drift by logical
 task. SBayesRC invalid-scale diagnostics are failure-only and opt-in; they add
 context to the error without changing the raw or formatted scientific fields.
+LD-swap summaries live at `diagnostics$ld_swap` and
+`diagnostics$ld_swap_chains`; these entries remain present with `NULL`
+values when unavailable or inapplicable.
 
 ## Marker fields
 
@@ -78,6 +81,22 @@ under `model_parameters$annotations`.
 `prior_component_probabilities` are annotation-driven prior probabilities;
 `component_probabilities` are posterior allocation probabilities. They must
 not be conflated.
+
+## Current log-variance annotation fields
+
+Qualified ST CSR and retained block-eigen BayesC-LV/BayesR-LV fits currently
+add `theta`, `theta_summary`, `theta_chain_mean`,
+`annotation_variance_ratio`, `annotation_transform`, and
+`marker_prior_scale`. `theta_trace` is retained when `keep_chains = TRUE`;
+formal convergence-trace retention remains governed separately by the
+convergence controls. ESS numerical diagnostics live under
+`diagnostics$logvar`. These fields describe the existing flat formatted
+contract.
+
+The nested `fit$architecture` and `fit$model_spec$prior` layout discussed
+in the annotation architecture audit is **Proposed** and is not a current raw
+or formatted schema. See
+[the annotation-prior implementation plan](annotation_prior_architecture_implementation_plan.md).
 
 ## Chain aggregation
 

@@ -1,5 +1,10 @@
 # SBayesRC-S C++ implementation and integration record
 
+> **Status: RESEARCH/EXPERIMENTAL RECORD.** The internal implementation and
+> qualification attempts recorded here did not establish a supported public
+> production backend. This record does not override the current contracts or
+> approved annotation-prior plan in [`README.md`](README.md).
+
 ## Scope and baseline
 
 Phase 4 starts from commit `6528ae15118f1ad4a3fba6661583119e1f9f848b`,

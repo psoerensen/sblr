@@ -24,29 +24,35 @@ trait-pattern by positive-component state space described for
 Let $A_j$ be marker $j$'s processed annotation row and let
 
 $$
-\theta_{jc}=P(c_j=c\mid A_j),\qquad c=0,\ldots,K,
+P_{jk}=P(c_j=k\mid A_j),\qquad k=0,\ldots,K,
 $$
 
 be annotation-dependent component probabilities from probit stick breaking.
 Let
 
 $$
-\omega_p=P(a_j=p\mid c_j>0),\qquad p=1,\ldots,P,
+H_p=P(a_j=p\mid c_j>0),\qquad p=1,\ldots,P,
 $$
 
 be global conditional probabilities for the supplied non-null trait patterns.
 The complete state prior is
 
 $$
-P(\text{null}\mid A_j)=\theta_{j0},
+P(\text{null}\mid A_j)=P_{j0},
 $$
 
 $$
-P(a_j=p,c_j=k\mid A_j)=\theta_{jk}\omega_p,\qquad k>0.
+P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p,\qquad k>0.
 $$
 
-Both simplexes sum to one, so this factorization preserves one null state. It
-does not fit annotation-dependent trait-pattern probabilities.
+Here \(P\) is the marker component-probability architecture and \(H\) is the
+global conditional non-null sharing architecture. Both simplexes sum to one,
+so this factorization preserves one null state. It does not fit
+annotation-dependent trait-pattern probabilities.
+
+This differs from current ordinary MT BayesR/SBayesR, whose `joint_pi` is one
+simplex over complete joint states and whose component and pattern
+probabilities are marginals rather than independent factors.
 
 ## Annotation alignment and preprocessing
 
@@ -77,7 +83,7 @@ With `updateAlpha = TRUE`, latent probit variables, coefficients, and
 `sigmaSqAlpha` are updated every `alpha_update_every` completed iterations;
 the current values still exist at every iteration. With `FALSE`, coefficients
 remain fixed. `updatePi` separately controls the conditional pattern
-probabilities $\omega$.
+probabilities \(H\).
 
 ## Effects and independent MAF scaling
 
@@ -86,10 +92,12 @@ BayesR:
 
 $$
 \operatorname{Cov}(\beta_{j,p,k})=
-\gamma_k q_j(S)B_p.
+\gamma_k q_j(S)V_{b,p}.
 $$
 
-Annotations change component probabilities only. They do not change $B$,
+Here \(V_{b,p}\) is the active-trait submatrix of the global marker-effect
+covariance \(V_b\). Annotations change component probabilities only. They do
+not change \(V_b\),
 the residual covariance, component multipliers, operators, or the optional
 `maf_effect_s` scale. Fixed MT `maf_effect_s` is supported; sampled MT
 `maf_effect_s` is not. When an explicitly identified MAF/heterozygosity
@@ -99,11 +107,11 @@ warns once because both mechanisms may encode related information.
 ## Probability outputs
 
 - `prior_component_probabilities`: posterior mean annotation-driven prior
-  probabilities $\theta_j$, marker by component;
-- `prior_active_probabilities`: $1-\theta_{j0}$;
+  component architecture \(P_j\), marker by component;
+- `prior_active_probabilities`: \(1-P_{j0}\);
 - `component_probabilities`: posterior marker component-state probabilities;
 - `pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`: the conditional
-  non-null pattern probabilities $\omega$;
+  non-null pattern architecture \(H\);
 - annotation coefficient and variance final/mean fields: the probit-stick
   parameter summaries.
 
@@ -123,6 +131,6 @@ probabilities. Model-specific quantities live under
 - The current factorization is the model implemented by `sblr`, not a claim of
   a universally standardized external MT BayesRC definition.
 
-See [Annotation-informed models](../notes/annotation_informed_models.qmd) for
-practical selection and [Annotation priors](annotation_priors.qmd) for broader
-prior context.
+See [Annotation-Informed Priors](annotation_priors.qmd) for canonical prior
+theory and [Annotation-informed models](../notes/annotation_informed_models.qmd)
+for practical selection.

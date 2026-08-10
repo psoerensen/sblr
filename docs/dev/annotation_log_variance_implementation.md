@@ -1,5 +1,10 @@
 # Annotation log-variance BLR implementation contract
 
+> **Status: CURRENT QUALIFICATION RECORD.** This page records the qualified
+> version-1 LV implementation and its reduction/trajectory gates. General
+> architecture ownership and future restructuring are defined by
+> [`README.md`](README.md) and the annotation-prior architecture documents.
+
 ## Frozen version-1 model
 
 This implementation follows

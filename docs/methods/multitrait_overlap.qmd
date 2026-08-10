@@ -31,18 +31,18 @@ $$
 For individual $i$, the residual vector may be modeled as
 
 $$
-e_i\sim N_T(0,\Sigma_e),
+e_i\sim N_T(0,V_e),
 $$
 
-where $\Sigma_e$ is the residual covariance matrix. Marker-effect vectors may
+where \(V_e\) is the residual covariance matrix. Marker-effect vectors may
 also share covariance. For example, an active marker-effect vector $b_j$
-may have a prior involving a covariance matrix $\Sigma_b$.
+may have a prior involving the marker-effect covariance matrix \(V_b\).
 
 These two covariance structures have different meanings:
 
-- $\Sigma_b$ describes prior or posterior covariance among marker effects
+- \(V_b\) describes prior or posterior covariance among marker effects
   across traits and enables genetic information sharing;
-- $\Sigma_e$ describes covariance among residual phenotype deviations for
+- \(V_e\) describes covariance among residual phenotype deviations for
   individuals observed on the same traits.
 
 Residual covariance is therefore directly tied to which individuals are
@@ -188,7 +188,7 @@ can be computed directly, and the residual covariance has the conventional
 interpretation:
 
 $$
-\Sigma_e
+V_e
 =
 \operatorname{Cov}(e_i)
 $$
@@ -374,7 +374,7 @@ Under the approximation that pairwise covariance is homogeneous across
 individuals and that missingness or study membership does not alter it,
 
 $$
-E(y_{it}y_{is})
+\mathbb E[y_{it}y_{is}]
 =
 \sigma_{ts}
 $$
@@ -383,13 +383,13 @@ for centered traits observed together. Therefore:
 
 $$
 \begin{aligned}
-E(SSY_{ts})
+\mathbb E[SSY_{ts}]
 &=
 E\left[
 \sum_{i\in\mathcal I_{ts}}y_{it}y_{is}
 \right]\\
 &=
-\sum_{i\in\mathcal I_{ts}}E(y_{it}y_{is})\\
+\sum_{i\in\mathcal I_{ts}}\mathbb E[y_{it}y_{is}]\\
 &=
 N_{ts}\sigma_{ts}.
 \end{aligned}
@@ -450,10 +450,10 @@ rests on several assumptions.
 For nonzero means:
 
 $$
-E(y_ty_s)
+\mathbb E[y_ty_s]
 =
 \operatorname{Cov}(y_t,y_s)
-+E(y_t)E(y_s).
++\mathbb E[y_t]\mathbb E[y_s].
 $$
 
 The covariance-only reconstruction is therefore appropriate when phenotypes
@@ -563,10 +563,10 @@ A multi-trait prior can assign:
 $$
 b_j\mid\text{active model}
 \sim
-N_T(0,\Sigma_b)
+N_T(0,V_b)
 $$
 
-on the active traits. Off-diagonal entries of $\Sigma_b$ allow effects to
+on the active traits. Off-diagonal entries of \(V_b\) allow effects to
 co-vary across traits. Trait-sharing model indicators can additionally encode
 whether a marker is active for specific subsets of traits.
 
@@ -588,7 +588,7 @@ Using marker-score residuals $R= WY-XXB$, a symmetric summary-statistic
 estimate for traits $t$ and $s$ is:
 
 $$
-\widehat G_{ts}
+[\widehat V_g]_{ts}
 =
 \frac{
 b_t^\top(wy_s-r_s)
@@ -625,8 +625,8 @@ Conceptually, the internal MT CSR likelihood requires:
 - `ww`, marker diagonal cross-products per trait;
 - `yy`, a full $T\times T$ trait cross-product matrix;
 - `ld_prefix`, identifying shared CSR LD;
-- marker-effect covariance `B`;
-- residual covariance `E`;
+- marker-effect covariance \(V_b\) (current formatted field `covb`);
+- residual covariance \(V_e\) (current formatted field `cove`);
 - multi-trait sharing models and model probabilities; and
 - a sample-size vector `n`.
 
@@ -715,7 +715,7 @@ Before fitting or interpreting a joint multi-trait model:
    $$
 
 7. Confirm that trait order is identical across `SSY`, `Nmat`, $WY$, $n$,
-   $\Sigma_b$, $\Sigma_e$, prior scale matrices, and outputs.
+   \(V_b\), \(V_e\), prior scale matrices, and outputs.
 8. Confirm that $WY$, `ww`, and LD use the same marker order and compatible
    genotype scaling.
 9. Confirm that reported phenotype correlations are on compatible phenotype

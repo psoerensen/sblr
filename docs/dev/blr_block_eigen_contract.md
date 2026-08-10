@@ -1,5 +1,10 @@
 # Scalar block-eigen backend contract
 
+> **Status: CURRENT CONTRACT.** This file was intentionally reintroduced and
+> revised with the retained low-rank implementation after the historical
+> cleanup manifest. Current source and tests use the contract identifiers
+> below. See [`README.md`](README.md) for the authority hierarchy.
+
 `stblr_block_eigen()` defaults to `representation = "low_rank"`, contract
 `block_low_rank_v1`, policy `cumulative_positive_mass`, and
 `eigen_prop = 0.995`. It uses the general cross-product scale documented in

@@ -51,6 +51,11 @@ The scalar block-eigen API defaults to retained low rank with
 historical packed reconstructed operator. The retained route is currently
 single-trait only and preserves all priors and states in marker space.
 
+Current log-variance BayesC-LV and BayesR-LV models are available for ST CSR
+and retained block eigen only. BED-LV and MT-LV are not implemented. See
+[Annotation-Informed Priors](methods/annotation_priors.qmd) for the current
+capability table and clearly labelled proposed extensions.
+
 ## Model names
 
 | Model | Prior kernel | Data level |
@@ -74,8 +79,10 @@ support limits.
 ## Data representations and diagnostics
 
 The canonical operators are packed BED for individual-level analysis, sparse
-CSR LD for summary-statistics analysis, and block-eigen LD construction with a
-reconstructed runtime operator. The [data-representation guide](notes/data_representations.qmd)
+CSR LD for summary-statistics analysis, and block-eigen LD. Current scalar
+block eigen uses retained factors by default, with reconstructed dense blocks
+as an explicit historical/reference representation; current MT block eigen
+uses reconstructed dense blocks. The [data-representation guide](notes/data_representations.qmd)
 explains their scales, alignment requirements, and provenance.
 
 Core convergence diagnostics cover the five trait-level variance traces.

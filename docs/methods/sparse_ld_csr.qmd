@@ -588,8 +588,13 @@ longer chains, and convergence diagnostics.
 - [Operator comparison workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/operator_comparison_workflow.R)
 - [ST annotation workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/st_annotation_workflow.R)
 
-Block-filtered LD is a distinct canonical operator representation: it stores
-dense within-block upper triangles, whereas CSR stores explicit sparse
-off-diagonal correlations that are converted to the aligned cross-product
-scale. Current ST and MT fitters may borrow one shared or trait-specific view,
-but never conflate their storage or diagonal contracts.
+Block-based LD is a separate operator family and has two distinct
+representations. The historical reconstructed-dense form stores filtered dense
+within-block upper triangles. The canonical current scalar block-eigen form
+stores retained rectangular eigen factors and maintains reduced residuals
+without reconstructing a dense SNP-by-SNP matrix during MCMC. Current MT
+block-eigen sampling still uses reconstructed dense blocks. CSR instead stores
+explicit sparse off-diagonal correlations that are converted to the aligned
+cross-product scale. These representations must not share or conflate storage,
+diagonal, or residual contracts. See
+[Block-Eigen LD](block_eigen_operator.qmd).

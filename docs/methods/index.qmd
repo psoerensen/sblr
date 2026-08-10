@@ -3,18 +3,32 @@ title: "Statistical methods"
 format: html
 ---
 
-These pages describe the likelihoods, priors, state spaces, and operator
-mathematics implemented by `sblr`. Practical calls and workflow choices belong
-in [Notes](../notes/index.qmd); implementation ownership belongs in
+These pages are the canonical statistical-theory layer for `sblr`. Practical
+calls and workflow choices belong in [Notes](../notes/index.qmd);
+implementation ownership belongs in
 [developer contracts](../dev/blr_architecture.md).
 
-- [General model theory](model_theory.qmd)
-- [Summary-statistics likelihood](summary_statistics.qmd)
-- [Cross-trait sample overlap](multitrait_overlap.qmd)
-- [Sparse-LD CSR operator](sparse_ld_csr.qmd)
-- [Block-eigen operator](block_eigen_operator.qmd)
-- [Annotation-informed models](annotation_informed_models.qmd)
-- [Annotation priors](annotation_priors.qmd)
-- [SBayesRC annotation probabilities](sbayesrc_annotations.qmd)
-- [MT BayesR and SBayesR](mt_bayesr_sbayesr.qmd)
-- [MT BayesRC and SBayesRC](mt_bayesrc_sbayesrc.qmd)
+## Core statistical model
+
+- [Core BLR Model Theory](model_theory.qmd)
+
+## Likelihood information and sufficient statistics
+
+- [Summary Statistics](summary_statistics.qmd)
+- [Multi-Trait Sample Overlap](multitrait_overlap.qmd)
+
+## Likelihood operators
+
+- [Sparse-LD CSR](sparse_ld_csr.qmd)
+- [Block-Eigen LD](block_eigen_operator.qmd)
+
+## Annotation-informed priors
+
+- [Annotation-Informed Priors](annotation_priors.qmd)
+- [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd)
+- [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
+
+## Multi-trait prior and state models
+
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd)
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd)

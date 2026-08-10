@@ -222,7 +222,7 @@ $$
 The corresponding sample-scaled genetic-variance quantity is
 
 $$
-\widehat V_G
+\widehat v_g
 =
 \frac{1}{n}b^\top(wy-r).
 $$
@@ -453,8 +453,8 @@ $$
 Y=XB+E_Y,
 $$
 
-where the rows of $E_Y$ may have residual covariance matrix
-$\Sigma_e$. The central multi-trait cross-products are
+where the rows of \(E_Y\) may have residual covariance matrix
+\(V_e\). The central multi-trait cross-products are
 
 $$
 WY=X^\top Y
@@ -485,7 +485,7 @@ $$
 This permits a symmetric genetic covariance estimate:
 
 $$
-\widehat G_{ts}
+[\widehat V_g]_{ts}
 =
 \frac{1}{2\sqrt{n_tn_s}}
 \left[
@@ -533,7 +533,7 @@ $N_{ts}=|\mathcal I_{ts}|$ and the cross-trait phenotype covariance is
 $\sigma_{ts}$, then under random missingness and covariance homogeneity,
 
 $$
-E(SSY_{ts})=N_{ts}\sigma_{ts}.
+\mathbb E[SSY_{ts}]=N_{ts}\sigma_{ts}.
 $$
 
 Given phenotype correlations $R_y$ and approximate trait variances
@@ -615,7 +615,7 @@ The identity $XXb_t=wy_t-r_t$ also supports marker-set summaries. For a
 marker set $S_k$, define
 
 $$
-\widehat V_{G,k,t}
+\widehat v_{g,k,t}
 =
 \frac{1}{n_t}
 \sum_{i\in S_k}

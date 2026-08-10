@@ -1,5 +1,9 @@
 # BLR cleanup manifest
 
+> **Status: HISTORICAL CLEANUP/PROVENANCE RECORD.** This manifest is anchored
+> to the starting commit below. Current repository truth is defined by current
+> code, tests, and maintained contracts; see [`README.md`](README.md).
+
 This final manifest inventories the starting tracked artifacts and their permanent replacements. Every removal records a replacement owner and validation evidence.
 
 Starting commit: `03db04a8eb6044b78a44f49c7366bf30cc03cd7f`

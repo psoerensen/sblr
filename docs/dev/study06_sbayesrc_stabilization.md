@@ -1,5 +1,9 @@
 # Study 06 scalar SBayesRC stabilization
 
+> **Status: RESEARCH/EXPERIMENTAL RECORD.** This document preserves historical
+> Study06 diagnoses and corrections at its recorded commits. It is not current
+> general architecture authority; see [`README.md`](README.md).
+
 ## Status
 
 Study 06 is **not ready for four-entry requalification**. The CSR failures are

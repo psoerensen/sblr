@@ -1,5 +1,10 @@
 # SBayesRC sampler-development endpoint
 
+> **Status: CURRENT QUALIFICATION/NAVIGATION RECORD.** This page identifies the
+> supported scalar SBayesRC endpoint and classifies non-promoted experiments.
+> General implementation authority remains with the maintained contracts in
+> [`README.md`](README.md).
+
 ## Purpose
 
 This page is the navigation record for the continuous-alpha SBayesRC sampler

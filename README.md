@@ -57,13 +57,15 @@ scale.
 |---|---|---|
 | `stblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
 | `stblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr` |
-| `stblr_block_eigen()` | retained low-rank block eigen (default); reconstructed dense by request | `sbayesc`, `sbayesr`, `sbayesrc` |
-| `stblr_csr_annot()` | CSR sparse LD | `sbayesc` with `fixed_marker`, `group`, or `learned_logistic`; `sbayesrc` with `annotation_probit_stick` |
+| `stblr_block_eigen()` | retained low-rank block eigen (default); reconstructed dense by request | ordinary `sbayesc`, `sbayesr`, `sbayesrc`; `sbayesc`/`sbayesr` with `annotation_model = "log_variance"` |
+| `stblr_csr_annot()` | CSR sparse LD | `sbayesc` with `fixed_marker`, `group`, `learned_logistic`, or `log_variance`; `sbayesr` with `log_variance`; `sbayesrc` with `annotation_probit_stick` |
 | `mtblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
 | `mtblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr`, `sbayesrc` |
 | `mtblr_block_eigen()` | block eigen | `sbayesc`, `sbayesr`, `sbayesrc` |
 
 Unsupported combinations fail before numerical execution.
+Current log-variance models are ST CSR/block-eigen only; BED-LV and MT-LV are
+not implemented.
 
 The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
 strategy, represented in `sblr` cross-product units with a global projected
@@ -90,6 +92,7 @@ absolute convergence.
 - [GitHub Pages site](https://psoerensen.github.io/sblr/)
 - [Practical Notes](https://psoerensen.github.io/sblr/notes/)
 - [Statistical Methods](https://psoerensen.github.io/sblr/methods/)
+- [Annotation-Informed Priors](https://psoerensen.github.io/sblr/methods/annotation_priors.html)
 - [Credible sets and fine-mapping](https://psoerensen.github.io/sblr/notes/credible_sets_and_finemapping.html)
 - [Maintained workflows](examples/workflows/README.md)
 - [Generated R help sources](man/) (`help(package = "sblr")` after installation)

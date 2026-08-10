@@ -44,10 +44,22 @@ Annotation policies are:
 - `learned_logistic`: learned inclusion/variance annotation coefficients;
 - `annotation_probit_stick`: annotation-dependent BayesR component
   probabilities.
+- `log_variance`: learned marker-specific relative non-null variance
+  \(q_j=\exp(X_j\theta)\) with global BayesC inclusion or global BayesR
+  component probabilities.
 
 MT BayesRC factorizes annotation-dependent component probabilities and global
 conditional non-null trait-pattern probabilities. Annotations do not alter
 covariance matrices, component multipliers, operators, or residual likelihoods.
+Ordinary MT BayesR instead uses one global `joint_pi` simplex over complete
+joint states; its component and pattern probabilities are marginals, not a
+current factorized \(P\times H\) parameterization.
+
+Current `log_variance` support is ST CSR and retained block eigen with
+the public `sbayesc` and `sbayesr` methods. BED-LV, MT-LV, and simultaneous learned
+probability-plus-LV variance are not implemented. See
+[the annotation-prior capability matrix](annotation_prior_architecture_matrix.md)
+for current and proposed scope.
 
 ## State and effect meanings
 

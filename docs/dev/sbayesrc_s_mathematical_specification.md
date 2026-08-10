@@ -1,5 +1,10 @@
 # SBayesRC-S Phase 1 mathematical specification
 
+> **Status: RESEARCH/EXPERIMENTAL RECORD.** This document records a separately
+> validated annotation-selection research model. It is not a supported
+> production model or current architecture contract. See
+> [`README.md`](README.md).
+
 ## 1. Model identity and naming
 
 SBayesRC-S means **SBayesRC with annotation Selection**. The suffix does not
