@@ -1,38 +1,182 @@
 ---
-title: "Statistical methods"
-format: html
+title: "Statistical Methods"
+format:
+  html:
+    toc: true
 ---
 
-These pages are the canonical statistical-theory layer for `sblr`. Practical
-calls and workflow choices belong in [Notes](../notes/index.qmd);
-implementation ownership belongs in
-[developer contracts](../dev/blr_architecture.md).
+These pages form the canonical statistical-theory layer for `sblr`. They define
+the regression models, prior architectures, likelihood representations, and
+posterior quantities used throughout the package.
+
+The Methods layer is intentionally separated from two other documentation
+layers:
+
+- practical calls, examples, and workflow choices belong in
+  [Notes](../notes/index.qmd);
+- implementation ownership, schema, qualification, and migration contracts
+  belong in [Developer documentation](../dev/README.md).
+
+When a Methods page distinguishes **current implementation** from **proposed**
+or **research** architecture, that distinction is part of the scientific
+documentation. A proposed equation should not be interpreted as evidence that
+the corresponding public fitter already implements that model.
+
+## Notation used across the Methods pages
+
+The main conventions are:
+
+- $N$ individuals, $M$ markers, and $T$ traits;
+- $X$ is the genotype matrix;
+- $A$ is a raw marker-by-annotation matrix;
+- $b_j$ is a scalar single-trait marker effect;
+- $B$ is the $M\times T$ multi-trait marker-effect matrix;
+- $\beta_j=B_{j\cdot}^{\top}$ is marker $j$'s multi-trait effect vector;
+- lowercase $v$ denotes scalar variance and uppercase $V$ covariance:
+  $v_b,v_g,v_e$ for ST and $V_b,V_g,V_e$ for MT;
+- mathematical cross-products are written explicitly as
+  $X^\top y$, $X^\top Y$, $X^\top X$, $y^\top y$, and related quantities;
+- implementation names such as `wy`, `Xy`, `ww`, `yy`, `SSY`, and `Nmat`
+  are used only when referring to code objects;
+- $\Pr(\cdot)$ denotes probability and $\mathbb E(\cdot)$ expectation.
+
+For annotation-informed priors, the conceptual architecture is divided into:
+
+- **$P$**: marker state/component probability architecture;
+- **$Q$**: marker-specific relative effect-variance architecture;
+- **$H$**: multi-trait trait-sharing probability architecture;
+- **$V_b$**: multi-trait marker-effect covariance architecture.
+
+The current models do not implement every possible combination of these four
+axes.
 
 ## Core statistical model
 
-- [Core BLR Model Theory](model_theory.qmd)
+### [Core BLR Model Theory](model_theory.qmd)
+
+Start here. This page defines the common single- and multi-trait Gaussian
+regression models, BayesC and BayesR marker priors, marker-effect and genomic
+variance/covariance quantities, posterior marker summaries, and the distinction
+between a **prior family** and a **likelihood operator**.
 
 ## Likelihood information and sufficient statistics
 
-- [Summary Statistics](summary_statistics.qmd)
-- [Multi-Trait Sample Overlap](multitrait_overlap.qmd)
+### [Summary Statistics](summary_statistics.qmd)
+
+Derives the Gaussian cross-product representation based on
+$X^\top y$, $X^\top Y$, $X^\top X$, and phenotype cross-products. It also
+defines the marker-scale residual score and explains how current code fields
+such as `wy`, `ww`, and `yy` map to the mathematical quantities.
+
+### [Multi-Trait Sample Overlap](multitrait_overlap.qmd)
+
+Defines the pairwise phenotype cross-product matrix $S_Y$ and the overlap
+matrix $N_{\mathrm{overlap}}$. It distinguishes true complete overlap from
+pairwise partial-overlap reconstruction and explains why marginal trait
+statistics alone do not identify a full residual covariance matrix.
 
 ## Likelihood operators
 
-- [Sparse-LD CSR](sparse_ld_csr.qmd)
-- [Block-Eigen LD](block_eigen_operator.qmd)
+### [Sparse-LD CSR](sparse_ld_csr.qmd)
+
+Defines the sparse CSR approximation to $X^\top X$, including LD thresholding,
+distance windows, alignment, scaling, disk provenance, and the maintained
+sparse residual score. Missing edges mean **not retained by the operator**, not
+known zero biological LD.
+
+### [Block-Eigen LD](block_eigen_operator.qmd)
+
+Defines the block-spectral likelihood. It distinguishes the canonical retained
+low-rank scalar representation from reconstructed-dense block operators and
+separates block-boundary approximation from within-block spectral filtering.
 
 ## Annotation-informed priors
 
-- [Annotation-Informed Priors](annotation_priors.qmd)
-- [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd)
-- [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
+### [Annotation-Informed Priors](annotation_priors.qmd)
 
-## Posterior marker inference and fine-mapping
+The canonical annotation-prior architecture page. It defines the roles of
+$P$, $Q$, $H$, and $V_b$, the current fixed/group/logistic/probit/LV mechanisms,
+MAF-S, current capability boundaries, and approved future directions.
 
-- [Fine-Mapping and Credible Sets](fine_mapping.qmd)
+### [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd)
+
+Detailed technical appendix for the continuation-probit BayesRC/SBayesRC
+probability architecture. It covers processed annotation designs,
+stick-breaking probabilities, the $\alpha$ hierarchy, `sigmaSqAlpha`,
+initialization, empty-stick behavior, induced marker prior probabilities, and
+diagnostics.
+
+### [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
+
+Conceptual posterior-to-prior workflows. It explains how first-stage genomic
+posterior summaries can be converted into fixed annotation-informed priors,
+set-level summaries, or research-stage MT extensions. It is deliberately
+separate from the canonical current-model definitions in
+`annotation_priors.qmd`.
 
 ## Multi-trait prior and state models
 
-- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd)
-- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd)
+### [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd)
+
+Defines the current ordinary multi-trait BayesR/SBayesR model: one unique null
+state plus non-null trait-pattern by positive-component states, represented by
+one full `joint_pi` simplex. Pattern and component probabilities are marginals
+of this joint simplex.
+
+### [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd)
+
+Defines the current annotation-dependent multi-trait BayesRC/SBayesRC model.
+Its probability architecture is factorized as marker-specific component
+probabilities $P$ times global conditional non-null sharing probabilities $H$.
+
+The distinction between these two current MT probability models is fundamental:
+
+$$
+\text{ordinary MT BayesR}
+\neq
+P\times H,
+$$
+
+whereas
+
+$$
+\text{current MT BayesRC}
+=
+P\times H.
+$$
+
+## Posterior marker inference and fine-mapping
+
+### [Fine-Mapping and Credible Sets](fine_mapping.qmd)
+
+Defines PIPs, posterior component probabilities, posterior mean marker effects,
+and the limits of marginal-PIP accumulation sets. It explains why the current
+credible-set helpers should not be interpreted as full joint causal-configuration
+posteriors or as SuSiE-style effect-specific credible sets.
+
+It also distinguishes LD used in the original genomic fit from LD used later
+for regional post-processing or local conditional refitting.
+
+## Suggested reading order
+
+For a complete statistical overview, a useful order is:
+
+1. [Core BLR Model Theory](model_theory.qmd)
+2. [Summary Statistics](summary_statistics.qmd)
+3. [Sparse-LD CSR](sparse_ld_csr.qmd) and/or
+   [Block-Eigen LD](block_eigen_operator.qmd)
+4. [Annotation-Informed Priors](annotation_priors.qmd)
+5. [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
+   [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd)
+6. [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) when detailed
+   BayesRC annotation mechanics are needed
+7. [Multi-Trait Sample Overlap](multitrait_overlap.qmd) for incomplete or
+   reconstructed cross-trait phenotype information
+8. [Fine-Mapping and Credible Sets](fine_mapping.qmd) for posterior marker
+   interpretation
+9. [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
+   for staged posterior-to-prior workflows
+
+Together, these pages define the statistical meaning of the current `sblr`
+models while keeping practical API guidance and implementation-specific
+contracts in their respective documentation layers.

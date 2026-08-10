@@ -1,136 +1,602 @@
 ---
-title: "Block-eigen LD operator"
+title: "Block-Eigen LD Operator"
 format:
   html:
     toc: true
     number-sections: true
 ---
 
-## Purpose and provenance
+The block-eigen operator is a summary-statistics representation of linkage
+disequilibrium (LD) constructed from selected PLINK BED reference genotypes.
+It replaces one genome-wide marker cross-product operator with a collection of
+within-block spectral operators.
 
-The block-eigen operator is a summary-statistics LD representation constructed
-from selected PLINK BED reference genotypes. Public ST and MT fitters require
-the BED source, selected samples and markers, block starts, allele frequencies,
-and summary-statistic provenance needed to prove marker and scale alignment.
-Current MT use requires summary statistics derived from the same selected BED
-genotypes by construction; arbitrary external GWAS projection is not supported.
+The block structure, marker order, genotype scaling, allele frequencies, and
+reference sample are therefore part of the statistical likelihood
+specification, not merely storage metadata.
 
-For scalar models, “block eigen” now means a retained rectangular factor by
-default. `representation = "low_rank"` stores an eigen-by-marker factor and a
-transformed score, maintains a reduced residual, and never reconstructs a dense
-SNP-by-SNP matrix during MCMC. The historical packed reconstruction remains
-available as `representation = "dense_reconstructed"`. The MT route is still
-reconstructed dense; MT retained-factor sampling is planned but unavailable.
+This page distinguishes two current representations:
 
-The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
-strategy, represented in `sblr` cross-product units with a global projected
-residual-variance contract. The retained-rank rule, transformed score, and
-marker conditional have an explicit scale crosswalk to the pinned GCTB code.
-The residual-variance samplers do not: `sblr` uses one global projected SSE,
-whereas GCTB uses a block-specific variance procedure with block sample sizes,
-retained-rank degrees of freedom, and block-specific residual variances.
+1. the **retained low-rank scalar representation**, which is the canonical
+   scalable block-eigen route for current single-trait fits; and
+2. the **reconstructed-dense representation**, which retains the historical
+   filtered block reconstruction and is also the representation currently used
+   by the multi-trait block-eigen route.
 
-## Construction
+Throughout the Methods documentation, mathematical cross-products are written
+explicitly. Historical code names such as `wy`, `ww`, and `Q` are used only
+when referring to implementation objects.
 
-Markers and samples are resolved once from `Glist`, `rows`, and selected BED
-columns. BED genotypes are decoded, missing values are replaced according to
-the aligned allele-frequency/standardization contract, and columns are put on
-the standardized-genotype scale. `block_start` is one-based at the public R
-boundary; blocks must be positive, contiguous, non-overlapping, and cover the
-complete selected marker order.
+## Relationship to the Gaussian likelihood
 
-For each block, the implementation forms the standardized within-block
-cross-product/correlation representation, symmetrizes it, and computes its
-eigendecomposition. Low rank retains the smallest leading rank whose cumulative
-positive-eigenvalue mass is strictly greater than `eigen_prop` (default 0.995),
-using positive eigenvalues above `1e-10`. An exact cumulative boundary therefore
-retains the next eigenvector; zero/negative eigenvalues are omitted and
-rank-zero blocks fail. The reconstructed-dense reference retains its historical
-filters:
-
-- `hard_truncate`: eigenvalues below the nonnegative `eigen_tau` threshold are
-  removed, and the summary score `wy` is projected consistently into the
-  retained eigenspace;
-- `ridge_fixed`: a fixed nonnegative `eigen_eta` ridge/shrinkage policy is
-  applied while `wy` remains on its original aligned score scale;
-- `ridge_lw`: a Ledoit–Wolf-style block shrinkage estimate is used, with the
-  implementation's positive floor and block diagnostics; `wy` is not hard
-  projected.
-
-Filtering parameters and block diagnostics are retained in fit metadata.
-
-## Diagonal meanings
-
-Three diagonals must not be conflated:
-
-- input `ww`: the supplied summary-statistic marker information;
-- unfiltered reference diagonal: the diagonal before spectral filtering;
-- filtered runtime diagonal: the diagonal of the reconstructed operator
-  actually used by marker updates and by `vle`.
-
-The block-eigen summary route validates input `ww` as provenance but does not
-substitute it for the filtered runtime diagonal. The runtime diagonal is
-positive and exactly matches the diagonal stored in each packed block.
-
-## Runtime representation and ownership
-
-The canonical scalar representation stores `Q` as a column-major float
-retained-rank-by-marker-count factor after double construction, transformed
-scores and per-chain reduced residuals as double, and runtime diagonals as
-double. Immutable `Q` and transformed scores are shared by chains; each chain
-owns only its reduced residual and sampler state. Marker updates cost retained
-rank for their block, and storage is `O(sum_b m_b k_b)`.
-
-The reconstructed reference representation stores each symmetric block's upper triangle in
-single-precision packed order plus marker-to-block/local-index mappings and a
-double-precision diagonal view. Immutable storage is prepared once per fit and
-borrowed by logical chains. Worker tasks own sampler state but do not rebuild
-or copy the operator.
-
-A marker update visits its within-block off-diagonal entries, so the update
-cost is proportional to its block size. Storage is
+For a single trait, the Gaussian summary-statistics likelihood depends on
 
 $$
-O\!\left(\sum_b m_b(m_b+1)/2\right),
+X^\top y,
+\qquad
+X^\top X,
+\qquad
+y^\top y.
 $$
 
-This is not low-rank storage. Narrower blocks lower memory and update cost but
-set cross-block LD to zero.
+A block-eigen operator changes the representation of the genotype
+cross-product information $X^\top X$.
+
+Suppose the $M$ markers are divided into $B$ non-overlapping blocks. If
+$\mathcal B_b$ denotes block $b$, with $m_b$ markers, then the block operator
+contains within-block LD information but does not represent cross-block LD.
+
+Conceptually, the resulting marker operator has block-diagonal form,
+
+$$
+\widetilde C_X
+=
+\operatorname{blockdiag}
+\left(
+\widetilde C_1,
+\ldots,
+\widetilde C_B
+\right),
+$$
+
+where $\widetilde C_b$ is the filtered operator used for block $b$.
+
+The tilde emphasizes that filtering or rank truncation can make
+$\widetilde C_b$ differ from the complete within-block cross-product
+information.
+
+Consequently, block definition and spectral filtering can change posterior
+marker effects, component allocations, PIPs, and other marker-level
+quantities, even when the prior family is unchanged.
+
+See [Core BLR Model Theory](model_theory.qmd) and
+[Summary Statistics](summary_statistics.qmd) for the general distinction
+between prior family and likelihood operator.
+
+## Provenance and alignment
+
+Public block-eigen fitters require enough information to establish the
+relationship among:
+
+- the selected PLINK BED reference genotypes;
+- selected individuals;
+- selected markers and their order;
+- block boundaries;
+- allele frequencies;
+- genotype standardization;
+- summary-statistic marker order; and
+- the block-eigen operator constructed from those inputs.
+
+The operator is therefore not an interchangeable LD file independent of the
+summary statistics.
+
+Current multi-trait block-eigen use is more restrictive: the summary
+statistics are required to be derived from the same selected BED genotypes by
+construction. Arbitrary projection of an external GWAS onto an independently
+constructed block-eigen reference is not part of the current public contract.
+
+## Block construction
+
+Markers and samples are resolved once from `Glist`, `rows`, and the selected BED
+columns.
+
+BED genotypes are decoded, missing values are handled according to the aligned
+allele-frequency and standardization contract, and the selected marker columns
+are placed on the standardized-genotype scale.
+
+At the public R boundary, `block_start` uses one-based indexing.
+
+The blocks must be:
+
+- positive;
+- contiguous;
+- non-overlapping; and
+- exhaustive over the selected marker order.
+
+A marker belongs to exactly one block.
+
+Cross-block LD is therefore set to zero by the operator definition.
+
+## Within-block eigendecomposition
+
+For block $b$, let $C_b$ denote the standardized within-block
+cross-product/correlation representation constructed by the implementation.
+
+After symmetrization, the block is eigendecomposed as
+
+$$
+C_b
+=
+U_b\Lambda_bU_b^\top,
+$$
+
+where $\Lambda_b$ contains the block eigenvalues and $U_b$ the corresponding
+eigenvectors.
+
+The subsequent representation depends on the chosen block-eigen mode.
+
+## Retained low-rank scalar representation
+
+For current scalar fits, `representation = "low_rank"` is the canonical
+block-eigen representation.
+
+The implementation retains only positive eigenvalues above
+
+$$
+10^{-10}.
+$$
+
+Among those positive eigenvalues, it chooses the smallest leading rank $k_b$
+whose cumulative positive-eigenvalue mass is **strictly greater than**
+
+$$
+\texttt{eigen_prop}.
+$$
+
+The public default is
+
+$$
+\texttt{eigen_prop}=0.995.
+$$
+
+The strict inequality is important. If the cumulative retained mass lands
+exactly on the requested boundary, the next eigenvector is retained.
+
+Zero or negative eigenvalues are omitted. A block whose retained rank is zero
+fails rather than silently producing an empty operator.
+
+### What is stored
+
+The scalar low-rank implementation stores:
+
+- a retained eigen-by-marker factor `Q` for each block;
+- a transformed marker score;
+- the runtime marker diagonal; and
+- one reduced residual state per chain.
+
+If block $b$ contains $m_b$ markers and retains rank $k_b$, the factor has
+dimension
+
+$$
+k_b\times m_b.
+$$
+
+The immutable retained factor and transformed score are shared across logical
+chains. Each chain owns its own reduced residual and sampler state.
+
+The retained factor is constructed in double precision and stored in
+single-precision column-major form; transformed scores and chain residuals are
+kept in double precision.
+
+### Computational scaling
+
+A marker update costs approximately the retained rank of its block rather than
+the full block size.
+
+The retained-factor storage scales as
+
+$$
+O\left(
+\sum_{b=1}^{B}m_bk_b
+\right).
+$$
+
+This gives a substantial memory and computational advantage only when
+
+$$
+k_b\ll m_b
+$$
+
+for a meaningful fraction of the blocks.
+
+If nearly all modes are retained, the low-rank representation provides little
+compression.
+
+## Relationship to the GCTB/SBayesRC eigenspace likelihood
+
+The retained scalar operator follows the GCTB/SBayesRC eigenspace-likelihood
+strategy, represented in `sblr` cross-product units.
+
+The following parts have an explicit scale crosswalk to the pinned GCTB
+reference implementation:
+
+- retained-rank construction;
+- transformed score representation; and
+- marker conditional calculations.
+
+The residual-variance update is not identical.
+
+Current `sblr` scalar block-eigen fitting uses one global projected residual
+sum-of-squares contract.
+
+The referenced GCTB procedure instead uses block-specific residual-variance
+quantities involving:
+
+- block sample sizes;
+- retained-rank degrees of freedom; and
+- block-specific residual variances.
+
+Therefore, agreement in retained eigenspace construction does not imply that
+the complete residual-variance procedure is identical.
+
+## Reconstructed-dense representation
+
+The historical scalar reference route remains available as
+
+```r
+representation = "dense_reconstructed"
+```
+
+and the current multi-trait block-eigen route also uses reconstructed filtered
+within-block operators rather than the scalar retained-factor runtime.
+
+The reconstructed representation stores a filtered dense operator for each
+block in packed symmetric form.
+
+Three filtering policies are retained.
+
+### Hard truncation
+
+With `hard_truncate`, eigenvalues below the nonnegative `eigen_tau` threshold
+are removed.
+
+The summary score $X^\top y$, represented in the current ST interface by
+`wy`, is projected consistently into the retained eigenspace.
+
+Thus both the block operator and the marker score are restricted to the retained
+spectral subspace.
+
+### Fixed ridge
+
+With `ridge_fixed`, a fixed nonnegative `eigen_eta` ridge/shrinkage rule is
+applied.
+
+Unlike hard truncation, the summary score remains on its original aligned
+scale. In other words, the filtering rule modifies the block operator without
+hard-projecting the score into a reduced eigenspace.
+
+### Ledoit-Wolf-style shrinkage
+
+With `ridge_lw`, a block-specific Ledoit-Wolf-style shrinkage estimate is used
+together with the implementation's positive numerical floor and block
+diagnostics.
+
+The summary score is not hard projected.
+
+These filtering policies define different likelihood operators and should be
+reported as part of the model specification.
+
+## Dense reconstructed runtime storage
+
+For reconstructed block $b$, the symmetric filtered operator is stored using
+the packed upper triangle in single precision.
+
+The implementation additionally retains:
+
+- marker-to-block mappings;
+- within-block marker indices; and
+- a double-precision runtime diagonal.
+
+Immutable block storage is prepared once and borrowed by the logical chains.
+Worker tasks own sampler state but do not rebuild or copy the operator.
+
+The packed storage scales as
+
+$$
+O\left(
+\sum_{b=1}^{B}
+\frac{m_b(m_b+1)}{2}
+\right).
+$$
+
+A marker update visits the within-block off-diagonal entries associated with
+that marker, so the update cost is proportional to block size.
+
+This is a dense within-block representation. It is not low-rank storage.
+
+Narrower blocks reduce memory and update cost, but they also remove more
+cross-block LD by construction.
+
+## Three different diagonal quantities
+
+Three marker diagonals appear in the block-eigen workflow and must not be
+conflated.
+
+### Input summary-statistic diagonal
+
+The input `ww` records the marker diagonal information supplied with the
+summary statistics. Mathematically, it corresponds to
+
+$$
+\operatorname{diag}(X^\top X)
+$$
+
+under the summary-statistic genotype representation.
+
+### Unfiltered reference diagonal
+
+Before spectral filtering, the BED-derived within-block operator has its own
+reference diagonal.
+
+This records the marker information implied by the selected block-eigen
+reference construction before filtering.
+
+### Filtered runtime diagonal
+
+After eigenspace truncation or shrinkage, the operator used by the sampler has
+a filtered runtime diagonal,
+
+$$
+\operatorname{diag}(\widetilde C_X).
+$$
+
+This is the diagonal that belongs to the actual likelihood operator used during
+marker updates.
+
+The block-eigen summary route validates input `ww` as provenance. It does not
+silently replace the filtered runtime diagonal with the input summary-statistic
+diagonal.
+
+For the reconstructed representation, the runtime diagonal exactly matches the
+diagonal of the packed filtered block operator and is required to remain
+positive.
+
+This distinction matters because spectral filtering changes the operator.
+Using an unfiltered diagonal together with a filtered off-diagonal operator
+would define a different marker conditional.
+
+## Effect on marker updates
+
+Under a complete cross-product representation, the marker-scale residual score
+is
+
+$$
+r
+=
+X^\top y-X^\top Xb.
+$$
+
+Under a block-eigen operator, the likelihood instead uses its filtered
+block-based representation.
+
+Conceptually, the corresponding score becomes
+
+$$
+r_{\mathrm{block}}
+=
+X^\top y-\widetilde C_Xb
+$$
+
+for a reconstructed block operator, or the mathematically equivalent reduced
+state in the retained-factor representation.
+
+Thus, spectral truncation or block partitioning affects the way effect changes
+propagate through LD.
+
+This is why block-eigen filtering is not merely a compression choice: it changes
+the likelihood information retained by the sampler.
+
+## Block boundaries
+
+Block boundaries create another approximation independent of spectral
+filtering.
+
+Even if every positive eigenmode is retained within each block, the operator
+still omits correlations between markers in different blocks.
+
+Therefore two distinct approximations can be present:
+
+1. **block approximation:** cross-block LD is set to zero;
+2. **spectral approximation:** within-block modes are filtered, truncated, or
+   shrunk.
+
+These choices should be distinguished when comparing block-eigen results with
+CSR or other LD representations.
 
 ## Public support
 
-- `stblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`;
-- `mtblr_block_eigen()`: `sbayesc`, `sbayesr`, `sbayesrc`.
+Current public block-eigen fitting includes:
+
+### Single trait
+
+`stblr_block_eigen()` supports ordinary:
+
+- `sbayesc`;
+- `sbayesr`; and
+- `sbayesrc`.
+
+The scalar block-eigen route also supports the qualified BayesC-LV and
+BayesR-LV annotation log-variance models.
+
+The retained-factor representation is the canonical scalable scalar route. The
+historical reconstructed-dense scalar representation remains available for
+reference and explicit use.
+
+### Multi trait
+
+`mtblr_block_eigen()` supports:
+
+- `sbayesc`;
+- `sbayesr`; and
+- `sbayesrc`.
+
+The current MT block-eigen runtime is reconstructed dense. A retained-factor MT
+runtime is not currently implemented.
+
+MT-LV is also not currently implemented.
+
+These capability distinctions are model/operator facts; they should not be
+inferred merely from the presence of similarly named arguments on another
+route.
+
+## Example calls
+
+The canonical scalar route is:
 
 ```r
-# Canonical scalar route
 fit <- stblr_block_eigen(
-  stats = stats, Glist = Glist, block_start = block_start,
+  stats = stats,
+  Glist = Glist,
+  block_start = block_start,
   method = "sbayesr"
-)
-
-# Historical reconstructed-dense route
-fit_dense_reference <- stblr_block_eigen(
-  stats = stats, Glist = Glist, block_start = block_start,
-  method = "sbayesr", representation = "dense_reconstructed"
 )
 ```
 
-The `sbayesrc` ST route uses its public `annotation` input; the MT route uses
-`annotations`. Fixed `maf_effect_s` requires aligned allele frequencies and
-explicit provenance. Exact unfiltered construction is used in permanent
-reductions against CSR when both represent the same LD operator.
+The historical reconstructed-dense scalar route can be requested explicitly:
+
+```r
+fit_dense_reference <- stblr_block_eigen(
+  stats = stats,
+  Glist = Glist,
+  block_start = block_start,
+  method = "sbayesr",
+  representation = "dense_reconstructed"
+)
+```
+
+For current annotation-dependent BayesRC/SBayesRC routes, use the arguments
+documented by the corresponding public fitter.
+
+The ST and MT interfaces currently differ in some historical argument naming
+for annotation inputs. Those are code/API conventions rather than different
+statistical annotation objects.
+
+## MAF-S and allele-frequency provenance
+
+Fixed `maf_effect_s` requires aligned allele frequencies and explicit
+provenance.
+
+MAF-S modifies the active-effect prior variance, whereas the block-eigen
+operator modifies the likelihood representation.
+
+The two therefore affect different parts of the posterior model.
+
+See [Annotation-Informed Priors](annotation_priors.qmd) for the mathematical
+MAF-S variance architecture.
+
+## Reduction and operator comparison
+
+Exact or nearly unfiltered block construction is useful for validating the
+operator against another likelihood representation.
+
+Permanent reductions compare block-eigen and CSR behavior when both are
+constructed to represent the same LD information.
+
+Such comparisons test operator consistency. They should not be interpreted as
+proof that aggressively filtered block-eigen, thresholded CSR, and complete
+individual-level likelihoods are identical models.
+
+Agreement depends on:
+
+- the same marker set and order;
+- the same allele orientation;
+- compatible genotype scaling;
+- compatible sample/reference construction;
+- equivalent retained LD information; and
+- matching priors and update settings.
+
+## Consequences for fine-mapping
+
+Marker-level posterior quantities are particularly sensitive to local LD.
+
+Spectral filtering, block boundaries, and reconstruction choices can therefore
+affect:
+
+- which correlated marker receives posterior mass;
+- PIP ranking;
+- posterior component allocation;
+- posterior mean effects; and
+- marginal-PIP credible-set post-processing.
+
+A block-eigen fit and a sparse-CSR fit can agree well at the level of genomic
+prediction while differing more noticeably in local marker allocation.
+
+This does not necessarily imply a sampler error; it can reflect genuinely
+different LD information in the likelihood operators.
+
+See [Fine-Mapping and Credible Sets](fine_mapping.qmd) for the interpretation
+of marginal PIPs and LD-aware post-processing.
 
 ## Practical limitations
 
-- Cross-block LD is not represented.
-- Filtering changes the likelihood operator and must be reported.
-- External-GWAS/reference-LD use requires a scale/projection contract not
-  supplied by the current block-eigen API.
-- Retained factors help only when retained rank is materially below block size;
-  sparse CSR or packed dense blocks may be preferable otherwise.
-- Reference samples, marker order, allele orientation, missing-value policy,
-  frequencies, block boundaries, and filter settings are required provenance.
+Important limitations of the current block-eigen operator include:
 
-See [Data representations](../notes/data_representations.qmd) and the
-[operator comparison workflow](https://github.com/psoerensen/sblr/blob/master/examples/workflows/operator_comparison_workflow.R).
+- cross-block LD is not represented;
+- spectral filtering changes the likelihood operator;
+- the retained representation is efficient only when retained rank is
+  materially below block size;
+- reconstructed dense blocks can become expensive for large blocks;
+- current arbitrary external-GWAS/reference-LD projection is not supported by
+  the public block-eigen contract;
+- current MT block-eigen fitting remains reconstructed dense rather than
+  retained-factor;
+- reference sample, marker order, allele orientation, missing-value handling,
+  allele frequencies, block boundaries, and filter settings are required
+  provenance.
+
+Depending on block size, retained rank, and LD sparsity, sparse CSR or packed
+dense block representations may be more efficient than retained factors.
+
+## Reporting recommendations
+
+A block-eigen analysis should report at least:
+
+- the BED/reference sample used to construct the operator;
+- selected sample and marker definitions;
+- genotype scaling and allele-frequency source;
+- block boundaries;
+- representation (`low_rank` or `dense_reconstructed`);
+- retained-rank threshold `eigen_prop` for low rank;
+- filter policy and parameters for reconstructed dense blocks;
+- retained ranks or relevant block diagnostics;
+- whether the analysis is ST or MT;
+- whether MAF-S or annotation-informed priors were used; and
+- the provenance relationship between the summary statistics and the
+  block-eigen reference.
+
+These quantities define the statistical operator sufficiently to interpret
+differences among fits.
+
+## Related pages
+
+- [Core BLR Model Theory](model_theory.qmd) defines the regression likelihood,
+  posterior marker quantities, and prior-versus-operator distinction.
+- [Summary Statistics](summary_statistics.qmd) derives the cross-product and
+  residual-score representation used by summary-statistics BLR.
+- [Sparse LD and CSR](sparse_ld_csr.qmd) describes the alternative sparse-LD
+  likelihood operator.
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd) explains why local
+  posterior marker inference depends on the fitted LD representation.
+- [Annotation-Informed Priors](annotation_priors.qmd) describes BayesRC, LV,
+  MAF-S, and the broader prior architecture.
+- [Data representations](../notes/data_representations.qmd) provides practical
+  guidance on current data/operator choices.
+- [Operator comparison workflow](https://github.com/psoerensen/sblr/blob/master/examples/workflows/operator_comparison_workflow.R)
+  gives a practical comparison workflow.
+
+This page therefore owns the statistical interpretation of the block-eigen
+likelihood operator: block boundaries remove cross-block LD, spectral filtering
+changes the within-block operator, retained factors provide a scalable scalar
+runtime when rank is genuinely reduced, and the reconstructed-dense route
+remains the current reference representation for historical scalar use and
+multi-trait fitting.

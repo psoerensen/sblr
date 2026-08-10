@@ -1,136 +1,825 @@
 ---
-title: "Multi-trait BayesRC and SBayesRC"
+title: "Multi-Trait BayesRC and SBayesRC"
 format:
   html:
     toc: true
     number-sections: true
 ---
 
-This page describes the package-specific multi-trait annotation-informed
-mixture formulation implemented by `sblr`. It should not be read as a claim of
-exact equivalence to a separately published BayesRC implementation.
+This page describes the current multi-trait BayesRC/SBayesRC model implemented
+by `sblr`. The model combines a BayesR effect-size mixture with
+annotation-dependent **component probabilities** and a separate global
+distribution over non-null trait-sharing patterns.
 
-## Public models and state space
-
-`mtblr_bed(method = "bayesrc")` is individual-level;
-`mtblr_csr(method = "sbayesrc")` and
-`mtblr_block_eigen(method = "sbayesrc")` are summary-statistics routes. All
-use `prior_kernel = "bayesrc"` and the same unique-null, non-null
-trait-pattern by positive-component state space described for
-[MT BayesR](mt_bayesr_sbayesr.qmd).
-
-## Factorized annotation prior
-
-Let $A_j$ be marker $j$'s processed annotation row and let
+The defining probability architecture is therefore
 
 $$
-P_{jk}=P(c_j=k\mid A_j),\qquad k=0,\ldots,K,
+P\times H,
 $$
 
-be annotation-dependent component probabilities from probit stick breaking.
+where $P$ controls marker-specific BayesR component probabilities and $H$
+controls the conditional distribution of non-null trait-activity patterns.
+
+This factorization is part of the current `sblr` model. It is different from
+ordinary MT BayesR/SBayesR, which uses one full `joint_pi` simplex over joint
+pattern-component states.
+
+The description here is package-specific and should not be read as a claim that
+every external method called BayesRC uses exactly the same multi-trait
+parameterization.
+
+## Current Public Routes
+
+The current public routes are:
+
+- `mtblr_bed(method = "bayesrc")` for individual-level packed-BED data;
+- `mtblr_csr(method = "sbayesrc")` for summary statistics with sparse CSR LD;
+- `mtblr_block_eigen(method = "sbayesrc")` for the current multi-trait
+  block-eigen likelihood.
+
+All three use the same core BayesRC prior and the same unique-null,
+non-null-pattern by positive-component state space. The routes differ in how
+the likelihood information is represented, not in the meaning of the
+annotation-dependent prior.
+
+The `S` prefix identifies the summary-statistics likelihood context. It does
+not activate MAF-dependent variance scaling; optional MAF-S scaling is
+controlled separately by `maf_effect_s`.
+
+See [Core BLR Model Theory](model_theory.qmd) for the common regression
+notation and [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) for the corresponding
+ordinary MT state model.
+
+## Trait-Activity Patterns
+
+Let $T$ denote the number of traits. A trait-activity pattern is a binary vector
+
+$$
+a_p\in\{0,1\}^{T}.
+$$
+
+For trait $t$,
+
+$$
+[a_p]_t
+=
+\begin{cases}
+1, & \text{marker active for trait }t,\\
+0, & \text{marker inactive for trait }t.
+\end{cases}
+$$
+
+Let $L$ denote the number of supplied non-null patterns. We use $L$ rather than
+$P$ for this count because $P$ is reserved for the component-probability
+architecture.
+
+The null pattern is the all-zero vector,
+
+$$
+a_0=(0,\ldots,0)^\top.
+$$
+
+The supplied non-null patterns
+
+$$
+a_1,\ldots,a_L
+$$
+
+describe the allowed cross-trait activity configurations conditional on a
+marker being non-null.
+
+## BayesR Components
+
+Let the theoretical BayesR component multipliers satisfy
+
+$$
+\gamma_0=0,
+\qquad
+\gamma_k>0,
+\quad
+k=1,\ldots,K.
+$$
+
+Component $k=0$ is the exact null component. Positive components correspond to
+increasingly diffuse effect-size distributions according to the supplied
+$\gamma_k$ ladder.
+
+In current R inputs, `mixture_var[1]` is the null multiplier and corresponds to
+the theoretical component $k=0$.
+
+The $\gamma_k$ ladder is part of the core BayesR prior. It is distinct from:
+
+- annotation-dependent component probabilities;
+- the global marker-effect covariance $V_b$;
+- the optional MAF-S multiplier $q_j(S)$; and
+- any future annotation-dependent log-variance multiplier.
+
+## Raw and Processed Annotation Designs
+
 Let
 
 $$
-H_p=P(a_j=p\mid c_j>0),\qquad p=1,\ldots,P,
+A\in\mathbb{R}^{M\times C}
 $$
 
-be global conditional probabilities for the supplied non-null trait patterns.
-The complete state prior is
+denote the raw marker-by-annotation matrix for $M$ analysis markers and $C$
+annotation columns.
+
+Throughout the Methods documentation, $X$ is reserved for the genotype matrix.
+We therefore distinguish the raw annotation matrix $A$ from the processed
+annotation design used by the probability model.
+
+Write
 
 $$
-P(\text{null}\mid A_j)=P_{j0},
+\widetilde A^{(P)}
+$$
+
+for the processed annotation design used by the BayesRC probability
+architecture. Its row for marker $j$ is
+
+$$
+\widetilde A^{(P)}_j.
+$$
+
+The superscript $(P)$ is important: BayesRC preprocessing is tied to the
+probability architecture and need not be identical to the preprocessing used by
+a variance architecture such as log-variance LV.
+
+### Alignment
+
+Annotation rows must refer to exactly the same marker universe used by the
+likelihood and posterior marker summaries.
+
+The current MT BayesRC preparation requires:
+
+- finite annotation values;
+- unique, nonempty annotation column names;
+- exact marker identity when external marker IDs are used;
+- unique marker row names for name-based alignment; and
+- no silent intersection or silent removal of unmatched markers.
+
+Exact identifier matching may reorder annotation rows to the analysis-marker
+order. Reordering is acceptable because marker identity is explicit; silently
+dropping unmatched markers is not.
+
+### Transform profile
+
+The current probability preprocessing can:
+
+- preserve or add one intercept according to the declared intercept policy;
+- standardize eligible continuous annotations when requested;
+- apply the explicit binary-centering policy to binary columns; and
+- retain transformation information needed to interpret the fitted
+  coefficients.
+
+These transformations are part of the statistical model because they determine
+the scale and interpretation of the probit coefficients.
+
+The raw annotation matrix supplied by the caller is not itself the mathematical
+linear predictor. The predictor is formed from the processed
+$\widetilde A^{(P)}$.
+
+## Probit Stick-Breaking Component Probabilities
+
+The annotation model determines the marker-specific BayesR component
+probabilities.
+
+For $K+1$ components, including the null component, there are $K$ conditional
+continuation steps.
+
+Let
+
+$$
+\alpha_k
+$$
+
+denote the coefficient vector for continuation step $k$, and define the linear
+predictor
+
+$$
+\eta_{jk}
+=
+\widetilde A^{(P)}_j\alpha_k.
+$$
+
+The conditional continuation probability is
+
+$$
+\rho_{jk}
+=
+\Phi(\eta_{jk}),
+$$
+
+where $\Phi$ is the standard normal cumulative distribution function.
+
+The component probabilities are then
+
+$$
+P_{j0}
+=
+1-\rho_{j1},
 $$
 
 $$
-P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p,\qquad k>0.
+P_{j1}
+=
+\rho_{j1}(1-\rho_{j2}),
 $$
 
-Here $P$ is the marker component-probability architecture and $H$ is the
-global conditional non-null sharing architecture. Both simplexes sum to one,
-so this factorization preserves one null state. It does not fit
-annotation-dependent trait-pattern probabilities.
-
-This differs from current ordinary MT BayesR/SBayesR, whose `joint_pi` is one
-simplex over complete joint states and whose component and pattern
-probabilities are marginals rather than independent factors.
-
-## Annotation alignment and preprocessing
-
-`annotations` must be a finite numeric matrix or data frame with unique,
-nonempty column names and exact marker identity. External annotations require
-unique marker row names; exact identifier matching may reorder rows, but the
-implementation never intersects or silently drops markers.
-
-Preprocessing happens once per fit and records original/processed names,
-column types, centers, scales, intercept policy, and marker-alignment status.
-An existing intercept is preserved; `add_intercept = TRUE` adds at most one.
-Eligible continuous columns are standardized when requested. Binary columns
-follow the explicit `center_binary_annotations` policy. Constant or nonfinite
-columns fail according to the preprocessing contract. The caller's matrix is
-not modified.
-
-## Probit stick breaking
-
-For $K+1$ categories (null plus $K$ positive components), the coefficient
-matrix has processed annotations in rows and deterministic sticks in columns.
-Stick order follows component order. Linear predictors are transformed by the
-normal CDF, floored only by `pi_floor`, and renormalized.
-
-`alpha_init` and `sigmaSqAlpha_init` initialize coefficients and their
-positive prior variances. `annotation_intercept_prior` specifies the separate
-proper normal intercept prior; initialization does not recenter that prior.
-With `updateAlpha = TRUE`, latent probit variables, coefficients, and
-`sigmaSqAlpha` are updated every `alpha_update_every` completed iterations;
-the current values still exist at every iteration. With `FALSE`, coefficients
-remain fixed. `updatePi` separately controls the conditional pattern
-probabilities $H$.
-
-## Effects and independent MAF scaling
-
-Conditional on a selected state, the effect prior is unchanged from MT
-BayesR:
+and, more generally,
 
 $$
-\operatorname{Cov}(\beta_{j,p,k})=
+P_{jk}
+=
+\left(
+\prod_{\ell=1}^{k}\rho_{j\ell}
+\right)
+(1-\rho_{j,k+1}),
+\qquad
+k=1,\ldots,K-1,
+$$
+
+with final component probability
+
+$$
+P_{jK}
+=
+\prod_{\ell=1}^{K}\rho_{j\ell}.
+$$
+
+Thus,
+
+$$
+\sum_{k=0}^{K}P_{jk}=1.
+$$
+
+A positive annotation coefficient increases the continuation probability at
+the corresponding stick. Its effect on the final component probabilities
+depends on the position of that stick and on all subsequent sticks. An
+individual coefficient therefore should not be interpreted as a simple
+component-specific log-odds effect.
+
+The native implementation applies the configured numerical probability floor
+and then renormalizes the component probabilities. This is a numerical
+stability operation; the conceptual link remains continuation-probit
+stick breaking.
+
+See [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) for the
+detailed single-trait/probit-stick derivation and coefficient hierarchy.
+
+## Conditional Trait-Sharing Architecture
+
+The second probability axis is the global distribution over non-null
+trait-activity patterns.
+
+Let
+
+$$
+H_p
+=
+\Pr(a_j=p\mid c_j>0),
+\qquad
+p=1,\ldots,L.
+$$
+
+The conditional pattern probabilities satisfy
+
+$$
+\sum_{p=1}^{L}H_p=1.
+$$
+
+Crucially, $H_p$ does **not** depend on marker annotations in the current model.
+The same conditional sharing distribution applies to every non-null marker.
+
+This makes $H$ scientifically distinct from $P$:
+
+- $P$ answers which BayesR component a particular marker tends to occupy;
+- $H$ answers which trait-activity pattern a non-null marker tends to occupy.
+
+## The Current $P\times H$ Factorization
+
+The full marker-state prior combines the annotation-dependent component
+architecture $P$ with the global conditional sharing architecture $H$.
+
+The unique null state has probability
+
+$$
+\Pr(c_j=0\mid A_j)
+=
+P_{j0}.
+$$
+
+For positive component $k>0$ and non-null pattern $p$,
+
+$$
+\Pr(a_j=p,c_j=k\mid A_j)
+=
+P_{jk}H_p.
+$$
+
+Because
+
+$$
+\sum_{k=0}^{K}P_{jk}=1
+$$
+
+and
+
+$$
+\sum_{p=1}^{L}H_p=1,
+$$
+
+the complete state probabilities sum to one:
+
+$$
+P_{j0}
++
+\sum_{k=1}^{K}
+\sum_{p=1}^{L}
+P_{jk}H_p
+=
+1.
+$$
+
+This construction contains exactly one null state. A separate null state is not
+created for each trait pattern.
+
+### Why $H$ is conditional on non-null status
+
+The factorization
+
+$$
+P_{jk}H_p
+$$
+
+applies only for $k>0$. This matters because $H$ distributes probability among
+non-null trait patterns after the marker has entered a positive BayesR
+component.
+
+It would be incorrect to interpret $H_p$ as an unconditional genome-wide
+probability of pattern $p$. Its unconditional probability for marker $j$ is
+
+$$
+\Pr(a_j=p,c_j>0\mid A_j)
+=
+H_p
+\sum_{k=1}^{K}P_{jk}.
+$$
+
+Thus, marker-specific non-null probability is controlled by $P$, whereas the
+relative distribution among non-null trait patterns is controlled by $H$.
+
+## Contrast With Ordinary MT BayesR/SBayesR
+
+Ordinary MT BayesR/SBayesR uses one full joint simplex.
+
+Using the notation from
+[MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd), the ordinary model has probabilities
+
+$$
+\omega_0
+$$
+
+for the unique null state and
+
+$$
+\omega_{pk}
+$$
+
+for non-null pattern-component states, satisfying
+
+$$
+\omega_0
++
+\sum_{p=1}^{L}
+\sum_{k=1}^{K}
+\omega_{pk}
+=
+1.
+$$
+
+Its component probabilities and pattern probabilities are **marginals** of
+this complete joint simplex.
+
+Current MT BayesRC/SBayesRC instead constrains the non-null joint probabilities
+to the product form
+
+$$
+P_{jk}H_p.
+$$
+
+Therefore the two current models differ statistically, not merely in how their
+probabilities are stored.
+
+The factorized BayesRC representation is less general than an unrestricted
+joint simplex because, conditional on the marker-specific component
+probabilities, it assumes one shared non-null pattern distribution $H$ across
+positive components.
+
+At the same time, BayesRC gains marker-specific probability architecture
+through the annotations.
+
+## Marker Effects and Covariance
+
+Let
+
+$$
+\beta_j\in\mathbb{R}^{T}
+$$
+
+denote marker $j$'s latent effect vector before trait-pattern masking.
+
+For non-null trait pattern $p$ and positive component $k$, let $V_{b,p}$ be the
+active-trait submatrix of the global marker-effect covariance $V_b$.
+
+With optional marker-specific MAF-S scaling $q_j(S)$,
+
+$$
+\beta_{j,p,k}
+\sim
+N\left(
+0,\,
+\gamma_k q_j(S)V_{b,p}
+\right)
+$$
+
+on the active trait subspace.
+
+The corresponding effective marker effect is obtained by applying the activity
+mask,
+
+$$
+b_j
+=
+a_p\odot\beta_j.
+$$
+
+The marker-effect matrix in the regression model is
+
+$$
+B=
+\begin{bmatrix}
+b_1^\top\\
+\vdots\\
+b_M^\top
+\end{bmatrix},
+$$
+
+so that
+
+$$
+Y=XB+E_Y.
+$$
+
+Annotations affect the prior state probabilities through $P$. They do **not**
+currently alter:
+
+- $V_b$;
+- the residual covariance $V_e$;
+- the BayesR multipliers $\gamma_k$;
+- the trait-sharing probabilities $H$ through a marker-specific annotation
+  model; or
+- an additional annotation-derived variance multiplier $q_j$.
+
+This is why current MT BayesRC is an annotation-dependent **probability**
+architecture, not a simultaneous learned $P+Q$ model.
+
+## Independent MAF-S Scaling
+
+For marker $j$, let $f_j$ be minor allele frequency and define
+heterozygosity
+
+$$
+h_j=2f_j(1-f_j).
+$$
+
+With fixed MAF-S scaling,
+
+$$
+q_j(S)
+=
+h_j^{S+1}.
+$$
+
+The active covariance is then
+
+$$
 \gamma_k q_j(S)V_{b,p}.
 $$
 
-Here $V_{b,p}$ is the active-trait submatrix of the global marker-effect
-covariance $V_b$. Annotations change component probabilities only. They do
-not change $V_b$,
-the residual covariance, component multipliers, operators, or the optional
-`maf_effect_s` scale. Fixed MT `maf_effect_s` is supported; sampled MT
-`maf_effect_s` is not. When an explicitly identified MAF/heterozygosity
-annotation is combined with `maf_effect_s`, the fit records the overlap and
-warns once because both mechanisms may encode related information.
+MAF-S and BayesRC annotations act on different parts of the prior:
 
-## Probability outputs
+- probit-stick annotations change $P_{jk}$;
+- MAF-S changes active-effect variance through $q_j(S)$.
 
-- `prior_component_probabilities`: posterior mean annotation-driven prior
-  component architecture $P_j$, marker by component;
-- `prior_active_probabilities`: $1-P_{j0}$;
-- `component_probabilities`: posterior marker component-state probabilities;
-- `pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`: the conditional
-  non-null pattern architecture $H$;
-- annotation coefficient and variance final/mean fields: the probit-stick
-  parameter summaries.
+Fixed MT `maf_effect_s` is supported. Sampling $S$ in the current MT model is
+not implemented.
 
-Because the component prior is marker dependent, `pi_final`, `pi_mean`, and
-`pi_trace` are present but `NULL`; they are not redefined as marker-averaged
-probabilities. Model-specific quantities live under
-`model_parameters$annotations`.
+If MAF-derived annotation columns are used together with `maf_effect_s`, the two
+mechanisms can encode overlapping information about heterozygosity and effect
+architecture. Such fits require careful interpretation and sensitivity
+analysis.
 
-## Limitations and identifiability
+See [Annotation-Informed Priors](annotation_priors.qmd) for the general
+relationship among $P$, $Q$, MAF-S, and $V_b$.
 
-- Trait-pattern probabilities are global conditional on non-null status.
-- Annotations do not modify covariance matrices or component scales.
-- Sampled MT `maf_effect_s` is unsupported.
-- MAF-derived annotations and `maf_effect_s` can overlap or be confounded.
-- Annotation coefficients diagnose component propensity, not causal
-  enrichment by themselves.
-- The current factorization is the model implemented by `sblr`, not a claim of
-  a universally standardized external MT BayesRC definition.
+## Learning the Probit-Stick Coefficients
 
-See [Annotation-Informed Priors](annotation_priors.qmd) for canonical prior
-theory and [Annotation-informed models](../notes/annotation_informed_models.qmd)
-for practical selection.
+The probit-stick coefficients are part of the learned probability architecture.
+
+`alpha_init` specifies the starting coefficient state, whereas the coefficient
+prior determines the posterior target. Initialization and prior information
+are distinct.
+
+The intercept has its own proper normal prior under the current standard
+contract. Non-intercept coefficients use the current hierarchical Gaussian
+prior with step-specific variance parameters represented by `sigmaSqAlpha`.
+
+When `updateAlpha = TRUE`, the sampler updates the probit architecture at the
+configured `alpha_update_every` schedule using latent normal augmentation and
+conditional Gaussian coefficient updates.
+
+Conceptually, for eligible marker $j$ at continuation step $k$, a latent
+variable has distribution
+
+$$
+\ell_{jk}
+\mid
+\alpha_k
+\sim
+N\left(
+\widetilde A^{(P)}_j\alpha_k,\,
+1
+\right),
+$$
+
+truncated according to whether the marker stops at or continues beyond that
+stick.
+
+Only markers that reach a particular continuation step contribute to the
+latent-data likelihood for that step.
+
+After the coefficient update, the marker-specific prior component
+probabilities $P_{jk}$ are recomputed.
+
+If `updateAlpha = FALSE`, the annotation coefficients remain fixed and the
+component probabilities are determined by that fixed architecture.
+
+The detailed alpha hierarchy and empty-stick behavior are documented in
+[SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd).
+
+## Learning the Sharing Probabilities
+
+The conditional non-null pattern probabilities $H$ are controlled separately
+from the probit coefficients.
+
+When the corresponding probability update is enabled, the current non-null
+trait-pattern allocations inform the update of $H$.
+
+This update does not turn $H$ into an annotation-dependent quantity. It remains
+one global conditional pattern simplex shared across markers.
+
+Thus, the two learned probability layers are:
+
+1. marker-specific component propensity through the annotation coefficients
+   $\alpha$ and $P_{jk}$;
+2. global conditional trait sharing through $H_p$.
+
+## Posterior Marker Quantities
+
+Several outputs describe different levels of the model and should not be
+conflated.
+
+### Prior component probabilities
+
+For marker $j$,
+
+$$
+P_{jk}
+=
+\Pr(c_j=k\mid A_j)
+$$
+
+is a **prior** component probability implied by the current annotation
+architecture.
+
+A posterior summary of this architecture averages the sampled prior
+probabilities over retained MCMC draws. It is still a summary of the
+annotation-driven prior architecture, not a posterior marker allocation
+probability.
+
+### Posterior component allocation
+
+The posterior component probability is
+
+$$
+\Pr(c_j=k\mid\mathcal D),
+$$
+
+where $\mathcal D$ denotes the fitted data and likelihood representation.
+
+This probability includes marker-specific likelihood evidence as well as the
+prior architecture.
+
+Therefore,
+
+$$
+P_{jk}
+\ne
+\Pr(c_j=k\mid\mathcal D)
+$$
+
+in general.
+
+### Trait-specific PIP
+
+For trait $t$,
+
+$$
+\operatorname{PIP}_{jt}
+=
+\Pr\left(
+[b_j]_t\ne0
+\mid
+\mathcal D
+\right).
+$$
+
+This marginalizes over every positive component and every non-null pattern that
+contains trait $t$.
+
+In current formatted fit objects, the trait-specific PIP is commonly
+represented by `dm`.
+
+### Posterior mean effect
+
+The posterior mean effective marker effect is
+
+$$
+\mathbb E(b_j\mid\mathcal D).
+$$
+
+In current formatted fit objects this is commonly represented by `bm`.
+
+It averages over null status, component allocation, trait-pattern allocation,
+and effect uncertainty.
+
+### Conditional sharing probabilities
+
+The quantities
+
+$$
+H_p
+$$
+
+describe the global conditional non-null sharing architecture. Their final,
+posterior-mean, and trace summaries are distinct from marker-level component
+probabilities and trait-specific PIPs.
+
+## Current Output Interpretation
+
+The current fitted objects expose model-specific summaries for the
+annotation-dependent probability architecture and the conditional sharing
+architecture.
+
+Important scientific quantities include:
+
+- posterior summaries of the probit-stick coefficients $\alpha$;
+- posterior summaries of the step-specific coefficient variances
+  `sigmaSqAlpha`;
+- marker-specific prior component probabilities $P_{jk}$;
+- marker-specific prior active probability
+
+  $$
+  1-P_{j0};
+  $$
+
+- posterior component allocation probabilities;
+- trait-specific PIPs;
+- posterior mean marker effects; and
+- posterior summaries of the conditional pattern architecture $H$.
+
+Because the BayesRC component prior is marker specific, the ordinary global
+`pi_*` fields are not reinterpreted as marker-averaged BayesRC component
+probabilities.
+
+Exact current field ownership remains an implementation/schema matter and is
+documented in the developer output-schema contract. The Methods layer defines
+the scientific distinction among these quantities.
+
+## Identifiability and Interpretation
+
+The factorization provides a useful separation of component propensity and
+trait sharing, but it also has important interpretation limits.
+
+### Annotation coefficients are conditional
+
+A probit coefficient describes the contribution of one processed annotation
+column conditional on the other columns in
+$\widetilde A^{(P)}$.
+
+With correlated annotations, individual coefficients can be weakly identified
+even if the induced marker component probabilities are relatively stable.
+
+### Stick-specific coefficients are not simple enrichment effects
+
+A coefficient changes one conditional continuation probability. Its effect on
+the final component vector depends on the stick position and on the remaining
+continuation probabilities.
+
+Interpretation should therefore examine the induced marker probabilities
+$P_{jk}$ in addition to raw $\alpha$ coefficients.
+
+### Sharing is global
+
+The current model cannot express an annotation that specifically increases the
+probability that a marker affects, for example, traits 1 and 2 together while
+leaving its BayesR component architecture unchanged.
+
+That would require annotation-dependent $H$, which is a future model rather
+than current functionality.
+
+### Covariance is global
+
+Annotations also do not currently modify $V_b$. An annotation-dependent
+cross-trait covariance architecture would be a different and substantially more
+complex model.
+
+### Probability and effect magnitude are separate
+
+The current BayesRC annotation model changes component probabilities. Apart from
+independent MAF-S scaling when enabled, it does not learn a separate
+annotation-dependent variance multiplier.
+
+Combining learned probit-stick $P$ with learned log-variance $Q$ is
+mathematically possible but requires dedicated identifiability and mixing
+validation before it should be treated as a supported model.
+
+## Convergence Should Be Assessed at Several Levels
+
+Annotation-model convergence should not be judged from raw coefficient
+diagnostics alone.
+
+A useful hierarchy is:
+
+1. **latent coefficient state:** $\alpha$, `sigmaSqAlpha`, and their
+   $\widehat R$, ESS, and MCSE diagnostics;
+2. **induced prior architecture:** marker-level $P_{jk}$, active
+   probabilities, expected component occupancy, and $H_p$;
+3. **posterior marker inference:** PIPs, posterior component allocations, and
+   marker effects;
+4. **downstream inference:** genomic covariance and prediction.
+
+Poorly identified coefficients can sometimes induce comparatively stable marker
+probabilities. Conversely, apparently stable coefficient means do not guarantee
+stable induced prior probabilities or marker occupancy.
+
+The detailed executable convergence contract remains under `docs/dev/`; this
+page records the statistical interpretation.
+
+## Current Limitations
+
+Current MT BayesRC/SBayesRC has the following important boundaries:
+
+- annotations affect BayesR component probabilities $P$, not trait-sharing
+  probabilities $H$;
+- $H$ remains global and conditional on non-null status;
+- annotations do not modify $V_b$ or $V_e$;
+- no learned annotation-dependent log-variance $Q$ is implemented for MT;
+- sampled MT `maf_effect_s` is unsupported;
+- MAF-derived annotations and fixed `maf_effect_s` can encode overlapping
+  information;
+- annotation coefficients are conditional model parameters, not direct causal
+  enrichment estimates;
+- the current multi-trait factorization is package-specific and should not be
+  assumed to define all methods called BayesRC;
+- the current MT block-eigen route uses the current multi-trait block operator
+  and should not be conflated with the scalar retained-factor implementation.
+
+These are model boundaries, not missing values that should be silently supplied
+by the future provider architecture.
+
+## Related Pages
+
+- [Core BLR Model Theory](model_theory.qmd) defines the common regression,
+  variance, and covariance notation.
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) describes the current ordinary MT
+  joint-state simplex and provides the direct contrast to $P\times H$.
+- [Annotation-Informed Priors](annotation_priors.qmd) defines the broader
+  $P/Q/H/V_b$ architecture and distinguishes current from proposed models.
+- [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) gives the
+  detailed continuation-probit mathematics and alpha hierarchy.
+- [Summary Statistics](summary_statistics.qmd) derives the summary-statistics
+  likelihood quantities without treating code names such as `wy` or `Xy` as
+  mathematical symbols.
+- [Multi-Trait Sample Overlap](multitrait_overlap.qmd) explains cross-trait
+  phenotype products and residual-covariance information.
+- [Annotation-informed models](../notes/annotation_informed_models.qmd)
+  provides practical model-selection guidance.
+
+This page therefore owns the statistical definition of current MT
+BayesRC/SBayesRC in `sblr`: marker-specific annotation-dependent component
+probabilities $P$, global conditional non-null sharing probabilities $H$, a
+shared marker-effect covariance $V_b$, and operator-specific likelihood
+evaluation.

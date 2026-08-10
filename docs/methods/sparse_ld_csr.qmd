@@ -1,143 +1,257 @@
 ---
 title: "Technical Appendix: Sparse LD and CSR"
+format:
+  html:
+    toc: true
+    number-sections: true
 ---
 
 This appendix defines the sparse linkage disequilibrium (LD) representation
-used by the current `sblr` BED-to-CSR workflow. It describes the statistical
-matrix, compressed sparse row (CSR) structure, disk-backed construction,
-indexing conventions, alignment requirements, and downstream conversion used
-by `stblr_csr()` and the other summary-statistics fitters.
+used by the current `sblr` BED-to-CSR workflow. It explains the statistical
+operator represented by the disk artifact, how retained LD correlations are
+combined with summary-statistic marker diagonals, and which alignment and
+scaling assumptions are required for valid inference.
 
-The stable user-facing contract is deliberately narrower than the current
-binary-file implementation:
+The sparse-LD artifact is a likelihood/operator object. It does not define the
+BayesC, BayesR, BayesRC, annotation, or MAF-S prior.
 
-1. create sparse LD with `make_sparse_ld()`, which records metadata in
-   `Glist$sparseLD`;
-2. inspect the resulting prefix with `sparseLD_read_CSR()` when needed; and
-3. pass the updated `Glist` to `stblr_csr()` or `stblr_csr_annot()`.
+Throughout the Methods documentation, mathematical cross-products are written
+explicitly. Current code names such as `wy`, `ww`, and `yy` are used only when
+referring to actual package fields.
 
-`sparseLD_stream_CSR()` is the lower-level writer used by the preparation
-helper. Its `ld_prefix` remains the disk-backed artifact identifier, but the
-current high-level workflow carries that prefix through `Glist$sparseLD`.
+The stable high-level workflow is:
 
-The present file suffixes, integer widths, floating-point widths, metadata
-keys, and upper-triangle storage convention are documented here to explain
-behavior and support validation. They should not be treated as a guaranteed
-manual file-format API. Use package readers, writers, and samplers rather than
-editing or independently constructing these files.
+1. construct sufficient statistics from the chosen genotype/phenotype sample;
+2. construct sparse LD from the compatible genotype sample and marker order;
+3. retain the resulting prefix and provenance;
+4. pass the updated `Glist` and sufficient statistics to the appropriate CSR
+   fitter.
 
-## From BED Genotypes to Sufficient Statistics and Sparse LD
+The current binary suffixes, integer widths, floating-point widths, metadata
+keys, and upper-triangle convention are implementation details. Package
+readers, writers, and fitters should be used instead of manually constructing or
+editing the artifact.
 
-For genotype matrix $X$, phenotype vector $y$, and marker effects $b$, a
-summary-statistics marker sampler needs quantities including
+## From genotype data to a sparse likelihood operator
+
+For one trait, let
 
 $$
-wy=X^\top y,
+y\in\mathbb R^N,
 \qquad
-ww_i=x_i^\top x_i,
+X\in\mathbb R^{N\times M},
 \qquad
-yy=y^\top y,
+b\in\mathbb R^M.
 $$
 
-and enough off-diagonal marker information to update
+The Gaussian summary-statistics likelihood depends on quantities including
 
 $$
-r=X^\top(y-Xb)=wy-X^\top Xb.
+X^\top y,
+\qquad
+\operatorname{diag}(X^\top X),
+\qquad
+y^\top y,
 $$
 
-In the BED-derived workflow, these inputs are prepared in two coordinated
-branches:
+together with enough off-diagonal information from $X^\top X$ to update the
+marker-scale residual score
+
+$$
+r
+=
+X^\top(y-Xb)
+=
+X^\top y-X^\top Xb.
+$$
+
+In current code:
+
+- $X^\top y$ is commonly stored as `wy`;
+- $\operatorname{diag}(X^\top X)$ is stored as `ww`;
+- $y^\top y$ is stored as `yy`.
+
+The sparse LD artifact supplies an approximation to the off-diagonal structure
+of $X^\top X$.
+
+In the standard BED-derived workflow, the sufficient-statistic and LD branches
+must use the same underlying genotype representation:
 
 ```text
-the same BED files + cls + rows + allele frequencies
-    |
-    +--> make_summary_stats() ------> stats$wy, stats$ww, stats$yy
-    |
-    +--> make_sparse_ld() ---> Glist$sparseLD$prefix
-                                      |
-                                      v
-                       stblr_csr(stats = stats, Glist = Glist, ...)
+same BED source
++ same marker selection and order
++ same selected individuals
++ same allele frequencies
++ compatible genotype scaling
+    -> compatible summary statistics and sparse LD
 ```
 
-`make_summary_stats()` supplies the phenotype cross-products and diagonal marker
-cross-products. `make_sparse_ld()` supplies retained off-diagonal marker
-correlations and records their prefix and metadata in `Glist$sparseLD`.
-During CSR model setup, the sampler combines the stored correlations with
-`stats$ww` to recover the corresponding off-diagonal cross-product scale.
+A typical preparation flow is:
 
-This split is important: the on-disk values are correlations, not raw
-$X_i^\top X_j$, and the diagonal cross-products are supplied separately by
-`stats$ww`.
+```text
+BED + phenotype
+  -> make_summary_stats() -> stats$wy, stats$ww, stats$yy
+  -> make_sparse_ld()     -> Glist$sparseLD
+  -> stblr_csr(...) / stblr_csr_annot(...) / mtblr_csr(...)
+```
 
-## Matrix Represented by the Current Writer
+See [Summary Statistics](summary_statistics.qmd) for the complete
+cross-product derivation.
 
-The current BED sparse-LD writer standardizes each selected marker using its
-allele frequency, mean-imputes missing genotypes to zero on that standardized
-scale, computes marker cross-products, and normalizes off-diagonal entries to
-correlations:
+## The matrix represented by the sparse artifact
+
+Let $x_j$ denote marker column $j$ and define its diagonal cross-product
 
 $$
-r_{ij}
+w_j
 =
-\frac{x_i^\top x_j}
-{\sqrt{(x_i^\top x_i)(x_j^\top x_j)}}.
+x_j^\top x_j.
 $$
 
-The writer retains an off-diagonal pair $i<j$ when it passes the configured
-distance rules and
+For markers $j$ and $\ell$, let
 
 $$
-r_{ij}^2 \geq \texttt{r2_threshold}.
+\rho_{j\ell}
 $$
 
-The stored value is signed $r_{ij}$, not $r_{ij}^2$. The current streamed
-artifact stores:
+denote their signed LD correlation.
 
-- only the upper triangle, $j>i$;
+We use $\rho$ rather than $r$ for LD correlation so that the notation cannot be
+confused with the residual-score vector $r$.
+
+The streamed writer considers eligible marker pairs according to the configured
+distance rules and retains a pair only when
+
+$$
+\rho_{j\ell}^2
+\ge
+\texttt{r2_threshold}.
+$$
+
+The stored value is signed $\rho_{j\ell}$, not $\rho_{j\ell}^2$.
+
+The current disk artifact stores:
+
+- only the upper triangle, $\ell>j$;
 - no explicit diagonal entries;
 - an implicit diagonal correlation of one; and
-- only pairs passing the threshold and window rules.
+- only pairs that pass every enabled distance and $r^2$ rule.
 
-Thus the disk artifact is a sparse, upper-triangle, correlation-like
-representation of LD. It is not itself the complete $X^\top X$ matrix.
+Therefore the disk artifact is a sparse correlation representation. It is not
+itself the complete genotype cross-product matrix $X^\top X$.
 
-When a CSR ST-BLR sampler opens the prefix, it reads the stored correlation
-and constructs a symmetric in-memory neighbor structure. For each retained
-pair it converts
+When the CSR sampler opens the prefix, it reconstructs each retained
+off-diagonal cross-product as
 
 $$
-r_{ij}
-\quad\longrightarrow\quad
-\widetilde{X_i^\top X_j}
+\widetilde C_{X,j\ell}
 =
-r_{ij}\sqrt{ww_iww_j}.
+\rho_{j\ell}\sqrt{w_jw_\ell},
 $$
 
-The diagonal contribution remains `ww[i]`. This is why the sparse-LD prefix
-and sufficient statistics must use compatible samples, marker scaling, and
-marker order. The current shared-LD ST-BLR setup also requires compatible
-`ww` across trait columns.
+where $\widetilde C_X$ denotes the sparse approximation to $X^\top X$ used by
+the CSR likelihood.
 
-## What CSR Means
+The diagonal is supplied separately:
 
-Compressed sparse row format represents a sparse matrix without allocating
-all $m^2$ entries. Three arrays describe the retained entries:
+$$
+\widetilde C_{X,jj}
+=
+w_j.
+$$
 
-| Array | Current conceptual role |
+Thus, conceptually,
+
+$$
+\widetilde C_X
+\approx
+X^\top X.
+$$
+
+The approximation arises because unretained off-diagonal entries are treated as
+zero.
+
+## Residual-score representation under CSR
+
+Under the complete cross-product model,
+
+$$
+r
+=
+X^\top y-X^\top Xb.
+$$
+
+Under the sparse CSR operator, the maintained score is instead
+
+$$
+r_{\mathrm{CSR}}
+=
+X^\top y-\widetilde C_Xb.
+$$
+
+For marker $j$, the partial score used in a marker update is
+
+$$
+s_j
+=
+[r_{\mathrm{CSR}}]_j+w_jb_j.
+$$
+
+If the marker effect changes by
+
+$$
+\Delta b_j
+=
+b_j^{\mathrm{new}}-b_j^{\mathrm{old}},
+$$
+
+then the diagonal residual-score entry changes by
+
+$$
+[r_{\mathrm{CSR}}]_j
+\leftarrow
+[r_{\mathrm{CSR}}]_j
+-
+w_j\Delta b_j,
+$$
+
+and each retained LD neighbor $\ell$ receives the off-diagonal update
+
+$$
+[r_{\mathrm{CSR}}]_\ell
+\leftarrow
+[r_{\mathrm{CSR}}]_\ell
+-
+\widetilde C_{X,\ell j}\Delta b_j.
+$$
+
+No update propagates through an omitted edge.
+
+This is why sparse LD is a statistical approximation rather than merely a
+compressed storage format.
+
+## What CSR means
+
+Compressed sparse row (CSR) format represents a sparse matrix without
+allocating all $M^2$ entries.
+
+Three arrays describe the retained upper-triangle entries:
+
+| Array | Conceptual role |
 |---|---|
-| `row_ptr` | Cumulative offsets delimiting each row's retained entries; length $m+1$. |
-| `col_idx` | Column index for every retained entry; length `nnz`. |
-| `values` | Value for every retained entry; length `nnz`. |
+| `row_ptr` | cumulative offsets delimiting each row's retained entries; length $M+1$ |
+| `col_idx` | column index for every retained entry; length `nnz` |
+| `values` | retained signed LD correlations; length `nnz` |
 
-For zero-based row pointers, entries belonging to row $i$ occupy positions
+For zero-based row pointers, entries belonging to row $j$ occupy positions
 
 $$
-\texttt{row\_ptr}[i]
+\texttt{row\_ptr}[j]
 \quad\text{through}\quad
-\texttt{row\_ptr}[i+1]-1.
+\texttt{row\_ptr}[j+1]-1.
 $$
 
-For example, consider the upper-triangle entries
+For example,
 
 ```text
 row 0: (column 1, 0.40), (column 3, -0.20)
@@ -146,7 +260,7 @@ row 2: no retained entries
 row 3: no retained entries
 ```
 
-Their CSR arrays are conceptually:
+corresponds conceptually to
 
 ```text
 row_ptr = [0, 2, 3, 3, 3]
@@ -154,34 +268,49 @@ col_idx = [1, 3, 3]
 values  = [0.40, -0.20, 0.15]
 ```
 
-`row_ptr` is always a cumulative pointer array. The `one_based` option of
-`sparseLD_read_CSR()` converts returned **column indices** for convenient R
-inspection; it does not convert the row pointers.
+`row_ptr` is always a cumulative pointer array.
 
-## Why Disk-Backed Sparse CSR Is Used
+The `one_based` option of `sparseLD_read_CSR()` converts returned **column
+indices** for convenient R inspection. It does not convert the row pointers.
 
-A dense $m\times m$ LD matrix requires $O(m^2)$ storage. This becomes
-prohibitive for genome-scale marker sets even when most scientifically useful
-LD relationships are local or sufficiently strong.
+## Why disk-backed sparse CSR is used
 
-Sparse CSR reduces storage toward $O(m+\mathrm{nnz})$, where `nnz` is the
-number of retained off-diagonal upper-triangle entries. Disk-backed storage
-provides two additional advantages:
+A dense $M\times M$ LD matrix requires
 
-- the resulting LD artifact can be reused by multiple CSR model fits; and
-- the complete sparse arrays do not have to be returned to or retained in R
-  during construction.
+$$
+O(M^2)
+$$
 
-`sparseLD_stream_CSR()` processes marker blocks, computes candidate
-cross-products for block pairs, applies distance and $r^2$ rules, and writes
-retained entries incrementally. It still needs working memory for decoded
-genotype blocks and block cross-products, but it avoids constructing either a
-dense whole-genome LD matrix or the complete sparse result in R.
+storage.
 
-## Stable User-Facing Contract
+This is prohibitive for genome-scale marker sets even when most retained
+relationships are local or above a modest LD threshold.
 
-The supported workflow treats the sparse-LD artifact as an opaque package-
-managed object identified by a prefix:
+Sparse CSR reduces the stored result toward
+
+$$
+O(M+\mathrm{nnz}),
+$$
+
+where `nnz` is the number of retained upper-triangle off-diagonal entries.
+
+Disk-backed construction also allows:
+
+- one LD artifact to be reused across multiple compatible model fits;
+- large sparse arrays to remain outside ordinary R memory;
+- streaming construction without returning one giant in-memory sparse object
+  to R.
+
+The lower-level writer still requires working memory for selected packed
+genotypes, decoded blocks, marker diagonals, and block cross-products. Sparse
+storage does not imply zero construction cost.
+
+## Stable user-facing construction contract
+
+The supported high-level workflow is to use `make_sparse_ld()` and let
+`Glist$sparseLD` carry the resulting prefix and metadata.
+
+A lower-level explicit call may look like:
 
 ```r
 ld_prefix <- file.path(output_dir, "chr1_ld")
@@ -199,27 +328,30 @@ sparseLD_stream_CSR(
 )
 ```
 
-The stable usage expectations are:
+Stable usage expectations are:
 
-- all files belonging to a prefix are created and retained together;
-- `sparseLD_read_CSR(ld_prefix)` is used for inspection and validation;
-- `stblr_csr(..., Glist = Glist)` and `stblr_csr_annot()` normally consume
-  it through `Glist$sparseLD$prefix`; explicit `ld_prefix` remains available
-  for lower-level workflows;
-- marker order and construction settings are recorded externally; and
-- package functions handle file naming, binary types, index bases, diagonal
-  convention, and conversion to sampler structures.
+- all files belonging to one prefix are kept together;
+- `sparseLD_read_CSR()` is used for structural inspection;
+- public fitters normally obtain the prefix through `Glist$sparseLD$prefix`;
+- explicit `ld_prefix` remains available for lower-level workflows;
+- marker/sample/scaling provenance is retained externally; and
+- package functions own file naming, binary decoding, index conventions, and
+  conversion to sampler structures.
 
-Analysis code should not assume that current suffixes, metadata keys, or
-binary encodings will remain unchanged. Independent tools that manually write
-these files depend on implementation details and can silently become
-incompatible after package changes.
+Manual binary-file construction is not part of the stable user-facing
+contract.
 
-## `ld_prefix` and the Current Disk Artifact
+## `ld_prefix` and the current disk artifact
 
-`ld_prefix` is a common path prefix, not a single file and not an in-memory
-matrix. The current implementation derives several files from it. For
-example, a prefix `path/chr1_ld` currently identifies:
+`ld_prefix` is a path prefix, not a single file and not an in-memory matrix.
+
+For a prefix such as
+
+```text
+path/chr1_ld
+```
+
+the current implementation derives files similar to
 
 ```text
 path/chr1_ld.row_ptr.u64.bin
@@ -228,180 +360,326 @@ path/chr1_ld.values.f32.bin
 path/chr1_ld.meta.txt
 ```
 
-These names expose current implementation details:
+These names expose current implementation choices:
 
-- row pointers are currently unsigned 64-bit integers;
-- column indices are currently unsigned 32-bit zero-based integers;
-- stored correlations are currently 32-bit floating-point values; and
-- metadata is currently a text file describing dimensions and settings.
+- row pointers are unsigned 64-bit integers;
+- column indices are unsigned 32-bit zero-based integers;
+- correlations are stored as 32-bit floating-point values;
+- metadata are stored in a text file.
 
-The metadata currently records fields such as marker count, `nnz`, triangle
-and diagonal conventions, value type, normalization, threshold, distance
-limits, block size, thread count, and used sample count.
+Metadata currently record quantities such as:
 
-Treat the complete prefix as one artifact. Do not mix files from separate
-runs. Do not overwrite an important prefix when changing samples, marker
-sets, allele frequencies, distance windows, or thresholds. Prefer distinct,
-descriptive prefixes and retain construction provenance beside them.
+- marker count;
+- `nnz`;
+- triangle convention;
+- diagonal convention;
+- value type;
+- normalization;
+- threshold;
+- distance limits;
+- block size;
+- thread count;
+- used sample count.
+
+These details support validation and reproducibility but should not be treated
+as a guaranteed external binary-file API.
+
+Treat the complete prefix as one indivisible artifact.
+
+Do not mix files from different runs or silently overwrite a prefix when
+changing marker sets, samples, allele frequencies, thresholds, or windows.
 
 ## Public construction and inspection
 
-Use `make_sparse_ld()` to construct the disk-backed sparse-LD artifact.
-`sparseLD_read_CSR()` can inspect a written prefix. The fitting handoff is the
-prefix recorded by `make_sparse_ld()` (or supplied as `ld_prefix`), not an
-ad-hoc in-memory list assembled from internal native routines.
+Use:
 
-## Sparse-LD Construction Settings
+```r
+Glist <- make_sparse_ld(...)
+```
 
-Sparse-LD settings affect memory, runtime, disk use, and the statistical
-approximation. They should be selected deliberately and reported with model
-results.
+for high-level construction.
 
-### Marker and Sample Selection
+Use:
+
+```r
+ld <- sparseLD_read_CSR(Glist$sparseLD$prefix)
+```
+
+for inspection.
+
+The fitting handoff is the written prefix, normally carried through
+`Glist$sparseLD`, not an ad-hoc R list assembled from lower-level native
+objects.
+
+## Marker and sample selection
+
+### BED sources
 
 `bed_files`
-: Paths to one or more PLINK BED files. Their corresponding `cls` entries
-  define the concatenated model-marker order.
+: Paths to one or more PLINK BED files.
+
+The associated `cls` entries define the concatenated model-marker order.
+
+### Marker columns
+
+`cls`
+: Marker-column index vectors, one per BED source.
+
+The order within and across these vectors becomes the CSR row and column order.
+
+### Samples
 
 `n`
 : Number of individuals encoded by the BED source.
 
-`cls`
-: A list of marker-column index vectors, one per BED file. The order within
-  and across these vectors becomes the sparse-LD row and column order.
-
 `rows`
-: Optional positive one-based sample indices. When supplied, LD is computed
-  from this selected sample. The same sample selection must underlie the
-  sufficient statistics used downstream.
+: Optional positive one-based sample indices.
+
+If `rows` is supplied, LD is constructed from that selected sample. The
+sufficient statistics used with the artifact must correspond to a compatible
+sample definition.
+
+### Allele frequencies
 
 `af`
-: Optional list of allele frequencies aligned to `cls`. When omitted, the
-  writer computes allele frequencies from the selected packed genotypes.
-  Supplied values must be finite and in $[0,1]$. Missing genotypes are
-  represented as zero after standardization, corresponding to mean
-  imputation on that scale.
+: Optional allele frequencies aligned exactly to `cls`.
 
-### Threshold and Window Settings
+If omitted, the writer estimates allele frequencies from the selected packed
+genotypes.
 
-`r2_threshold`
-: Minimum squared correlation for retaining an eligible pair. The writer
-  compares $r_{ij}^2$ with this value but stores signed $r_{ij}$. A larger
-  threshold produces a sparser approximation and may remove weak but
-  collectively relevant LD.
+Supplied frequencies must be finite and lie in
 
-`max_distance_variants`
-: Maximum difference in model-order marker indices. Positive values restrict
-  retained pairs to this index window. A value of zero disables this
-  restriction in the current implementation.
+$$
+[0,1].
+$$
 
-`max_distance_bp`
-: Maximum base-pair separation when positions are supplied. Positive values
-  restrict retained pairs by physical distance. A value of zero disables this
-  restriction. The implementation evaluates forward position differences,
-  so `pos_bp` should be aligned to marker order and ordered consistently
-  within the intended genomic segments.
+Allele frequencies determine the standardized marker representation and are
+therefore part of the statistical operator, not merely descriptive metadata.
+
+### Marker positions
 
 `pos_bp`
-: Optional list of marker base-pair positions aligned to `cls`. When absent,
-  the base-pair distance restriction cannot be applied, even if
-  `max_distance_bp` is positive.
+: Optional marker base-pair positions aligned to `cls`.
 
-A pair must pass every enabled window rule before its $r^2$ is tested.
-Disabling both distance restrictions permits all upper-triangle marker pairs
-to be considered and can be computationally expensive. The exported R wrapper
-fails closed in this case unless `allow_full_ld = TRUE` is supplied explicitly.
+These are used only when physical-distance filtering is enabled.
 
-### Computational Settings
+## LD threshold and distance windows
+
+Sparse-LD settings change both computational cost and the likelihood
+approximation.
+
+### Squared-correlation threshold
+
+`r2_threshold`
+: Minimum squared correlation required to retain an otherwise eligible pair.
+
+The writer compares
+
+$$
+\rho_{j\ell}^2
+$$
+
+with the threshold but stores the signed value
+
+$$
+\rho_{j\ell}.
+$$
+
+Increasing the threshold reduces `nnz` but can remove weak LD that is
+collectively relevant to conditional marker inference.
+
+### Marker-index window
+
+`max_distance_variants`
+: Maximum difference in model-order marker indices.
+
+Positive values restrict eligible pairs to that window. A value of zero
+disables the restriction under the current implementation.
+
+### Physical-distance window
+
+`max_distance_bp`
+: Maximum base-pair separation when `pos_bp` is supplied.
+
+Positive values restrict eligible pairs by physical distance. A value of zero
+disables this restriction.
+
+The current implementation evaluates forward position differences, so marker
+positions must be aligned and consistently ordered within the intended genomic
+segments.
+
+A pair must pass **every enabled distance rule** before its squared correlation
+is tested.
+
+Disabling both distance restrictions allows all upper-triangle pairs to be
+considered and can be computationally expensive. The exported wrapper fails
+closed unless full-LD construction is explicitly allowed.
+
+## Computational settings
+
+### Block size
 
 `block_size`
-: Number of markers decoded and compared in a working block. Larger values
-  can improve matrix-multiplication efficiency but increase working memory
-  roughly through genotype-block and block-cross-product buffers. It changes
-  the construction strategy, not the intended retention rule.
+: Number of markers decoded and compared in a working block.
+
+Larger blocks can improve matrix-multiplication efficiency but increase working
+memory through decoded genotype buffers and block cross-products.
+
+`block_size` changes the construction strategy, not the intended statistical
+retention rule.
+
+### Threads
 
 `nthreads`
-: Requested OpenMP thread count. It affects construction performance and may
-  affect low-level floating-point execution details, but it is not an LD
-  threshold or model-prior parameter.
+: Requested OpenMP thread count.
 
-### Scaling
+This affects construction performance and potentially low-level
+floating-point execution details. It is not an LD threshold or prior
+parameter.
 
-`sparseLD_stream_CSR()` does not expose a `scale` argument. The current writer
-always constructs its correlation values from allele-frequency-standardized
-markers. By contrast, `bed_xtx_xty()` exposes `scale`. For the standard
-BED-to-CSR handoff, use compatible standardized marker statistics:
+## Genotype scaling
+
+The current sparse-LD writer constructs correlation values from
+allele-frequency-standardized markers.
+
+For genotype dosage $g_{ij}\in\{0,1,2\}$ and allele frequency $p_j$, the
+standardized marker value is conceptually
+
+$$
+x_{ij}
+=
+\frac{
+g_{ij}-2p_j
+}{
+\sqrt{2p_j(1-p_j)}
+}.
+$$
+
+Missing genotypes are represented as zero after standardization, corresponding
+to mean imputation on this scale under the supplied allele frequency.
+
+The current writer does not expose a general `scale` switch analogous to
+`bed_xtx_xty()`.
+
+For the standard BED-to-CSR handoff, sufficient statistics should therefore use
+compatible standardized marker coding:
 
 ```r
-stats <- bed_xtx_xty(..., af = af, scale = TRUE)
-sparseLD_stream_CSR(..., af = list(af))
+stats <- bed_xtx_xty(
+  ...,
+  af = af,
+  scale = TRUE
+)
+
+sparseLD_stream_CSR(
+  ...,
+  af = list(af)
+)
 ```
 
-Using `bed_xtx_xty(..., scale = FALSE)` with the current standardized
-correlation writer changes the scale relationship assumed when the sampler
-combines `r_ij` with `stats$ww`. Such combinations require explicit
-validation rather than being assumed compatible.
+Combining `bed_xtx_xty(..., scale = FALSE)` with the current standardized
+correlation writer changes the scale relationship assumed when converting
 
-## Streaming and Blocking Behavior
+$$
+\rho_{j\ell}
+$$
 
-The writer reads the selected BED markers into a packed representation, then
-works through pairs of marker blocks. For each eligible block pair it:
+to
+
+$$
+\rho_{j\ell}\sqrt{w_jw_\ell}.
+$$
+
+Such a combination requires explicit validation rather than being assumed
+compatible.
+
+## Streaming and block-wise construction
+
+The writer processes selected markers through pairs of working blocks.
+
+For each eligible block pair it:
 
 1. decodes standardized marker values into floating-point working buffers;
-2. computes raw block cross-products with matrix multiplication;
-3. converts each eligible cross-product to correlation $r_{ij}$;
-4. applies distance and $r^2$ retention rules; and
-5. appends retained upper-triangle column indices and values to disk.
+2. calculates candidate block cross-products;
+3. converts eligible pairs to signed correlations;
+4. applies distance rules;
+5. applies the $r^2$ threshold; and
+6. appends retained upper-triangle indices and correlations to disk.
 
-After each row, it writes the cumulative retained-entry count to `row_ptr`.
-Consequently, the final row pointer equals `nnz`.
+After each row, the cumulative retained-entry count is written to `row_ptr`.
 
-Streaming avoids holding the final `col_idx` and `values` arrays in R or in
-one complete native in-memory result. It does not eliminate all memory or
-runtime costs: the packed selected genotype matrix, diagonal cross-products,
-decoded blocks, and block cross-products still require resources. The number
-of candidate block pairs can also become large when windows are wide or
-disabled.
+Therefore,
 
-## Index Bases and Diagonal Convention
+$$
+\texttt{row\_ptr}[M]
+=
+\mathrm{nnz}.
+$$
 
-Three conventions must be distinguished:
+Streaming avoids materializing one complete dense LD matrix or one complete
+sparse result in R.
 
-1. `rows` and `cls` supplied from R use the documented R-facing indexing
-   expected by their wrappers.
-2. Current on-disk `col_idx` entries are zero-based.
-3. `sparseLD_read_CSR(prefix, one_based = TRUE)` returns one-based column
-   indices for convenient R inspection.
+It does not eliminate all memory or runtime costs. Packed genotypes, decoded
+blocks, marker diagonals, block cross-products, and the candidate block-pair
+search still require resources.
 
-The reader's `one_based` argument changes only the returned `col_idx` vector.
+## Index bases and diagonal convention
+
+Several index conventions coexist.
+
+1. R-facing `rows` and `cls` follow their documented one-based wrapper
+   conventions.
+2. On-disk `col_idx` entries are currently zero-based.
+3. `sparseLD_read_CSR(prefix, one_based = TRUE)` returns one-based `col_idx`
+   values for convenient R inspection.
+
+The `one_based` argument changes only returned `col_idx`.
+
 `row_ptr` remains a zero-based cumulative pointer array whose first value is
-zero and whose final value is `nnz`.
 
-The current streamed artifact omits diagonal entries and reports
-`diag = "implicit_1"`. Downstream ST-BLR samplers use the supplied `stats$ww`
-for diagonal $X_i^\top X_i$ contributions. Users inspecting the sparse
-arrays should not mistake absence of explicit diagonal entries for a zero
-diagonal.
+$$
+0
+$$
 
-Package functions validate and handle these conventions. Manual index
-conversion or insertion of diagonal values risks corrupting the expected
-contract.
+and whose final value is
 
-## Marker-Order, Sample, and Scaling Invariants
+$$
+\mathrm{nnz}.
+$$
+
+The current disk artifact omits diagonal entries and reports an implicit
+correlation diagonal of one.
+
+That does **not** mean the sampler uses unit marker cross-products. The actual
+marker diagonals are supplied separately through `ww`, corresponding
+mathematically to
+
+$$
+\operatorname{diag}(X^\top X).
+$$
+
+Manual insertion of diagonal entries into the sparse artifact changes the
+expected contract and should be avoided.
+
+## Marker-order invariant
 
 Sparse arrays contain positional indices, not biological marker identifiers.
-The most important cross-layer invariant is:
+
+The essential invariant is that all marker-indexed objects refer to the same
+ordered marker universe.
+
+Conceptually:
 
 ```text
-Glist$rsids[[chr]][cls]
-    == Glist$rsidsLD[[chr]]
-    == rows of stats$wy and stats$ww
-    == rows and columns of sparse LD
-    == rows of an annotation matrix A
-    == rows of fit$bm and fit$dm
+analysis marker IDs
+    == order of X'y
+    == order of diag(X'X)
+    == rows/columns of sparse LD
+    == rows of annotations
+    == rows of posterior marker summaries
 ```
 
-Establish and retain marker order explicitly:
+At the code level, this may be checked with objects such as:
 
 ```r
 marker_id <- Glist$rsidsLD[[chr]]
@@ -413,31 +691,53 @@ stopifnot(
 )
 ```
 
-For multiple BED files, the concatenation of `cls[[1]]`, `cls[[2]]`, and so
-on defines the CSR order. Allele-frequency and position lists must follow the
-same per-file and concatenated order.
+For multiple BED files, concatenating the `cls` vectors defines the CSR order.
 
-The same selected sample must underlie LD and sufficient statistics. If
-`rows` is used, apply it consistently. If allele frequencies are supplied,
-they must correspond to that construction and marker order. If annotations
-are later used, align their rows before fitting:
+Allele frequencies and marker positions must follow the same per-file and
+concatenated order.
+
+If annotations are used later, they must be aligned to this marker universe
+before fitting.
+
+A marker permutation can produce dimensionally valid summary statistics,
+sparse LD, and posterior matrices while assigning LD or annotations to the
+wrong biological markers.
+
+Dimension checks alone cannot detect this error.
+
+## Sample invariant
+
+The same sample definition should underlie the genotype information used for
+the summary statistics and sparse LD whenever the fitted likelihood assumes one
+shared genotype sample.
+
+If `rows` is used, it must be applied consistently.
+
+A mismatch can change:
+
+- allele frequencies;
+- marker variances;
+- LD correlations;
+- $X^\top y$;
+- $\operatorname{diag}(X^\top X)$.
+
+The resulting objects can remain dimensionally compatible while describing
+different statistical likelihoods.
+
+For external-GWAS analyses using a reference LD sample, exact equality is not
+possible by design. In that setting the reference-sample mismatch is an
+explicit approximation and should be treated as such rather than confused with
+the exact BED-derived reduction.
+
+## Reading and validating a prefix
+
+Use the exported reader rather than manually decoding the binary files:
 
 ```r
-rownames(A) <- marker_id
-stopifnot(identical(rownames(A), marker_id))
-```
-
-A permutation error can produce dimensionally valid CSR files and model fits
-while assigning LD or annotations to the wrong markers. Dimension checks
-alone cannot detect this error.
-
-## Reading and Validating a Prefix
-
-Use the exported reader to inspect a prefix without manually decoding the
-binary files:
-
-```r
-ld <- sparseLD_read_CSR(ld_prefix, one_based = TRUE)
+ld <- sparseLD_read_CSR(
+  ld_prefix,
+  one_based = TRUE
+)
 
 stopifnot(
   ld$nrow == length(cls),
@@ -450,33 +750,36 @@ stopifnot(
 )
 ```
 
-The current reader checks that required metadata dimensions exist, reads the
-expected byte counts, verifies that row pointers begin at zero and end at
-`nnz`, requires nondecreasing row pointers, checks column-index bounds, and
-rejects non-finite values.
+The current reader checks structural properties including:
 
-Additional analysis-level validation should confirm:
+- required dimensions;
+- expected byte counts;
+- initial/final row-pointer values;
+- monotonic row pointers;
+- column-index bounds;
+- finite values.
 
-1. `cls` contains no missing marker matches.
-2. LD dimensions equal the intended marker count.
-3. `row_ptr` has length $m+1$.
-4. `col_idx` and `values` have equal length.
-5. the final row pointer equals `nnz`.
-6. returned `index_base` matches how `col_idx` is being inspected.
-7. the upper-triangle and implicit-diagonal conventions are understood.
-8. values are finite signed correlations and remain within plausible
-   correlation bounds.
-9. `n_used`, thresholds, windows, and marker count match the intended run.
-10. `stats$wy`, every `stats$ww` vector, annotations, and posterior rows use
-    exactly the same marker order.
+Additional analysis-level checks should confirm:
 
-The reader can validate structural properties but cannot prove that the BED
-source, allele frequencies, sample rows, phenotypes, annotations, or marker
-identities are scientifically aligned. Retain that provenance separately.
+1. no missing marker matches;
+2. intended marker count;
+3. `row_ptr` length $M+1$;
+4. equal `col_idx`/`values` lengths;
+5. final row pointer equals `nnz`;
+6. expected returned index base;
+7. understood upper-triangle and implicit-diagonal conventions;
+8. finite correlations in plausible correlation bounds;
+9. intended sample size, thresholds, and windows;
+10. exact marker-order compatibility among sufficient statistics, annotations,
+    LD, and posterior rows.
 
-## How `stblr_csr()` Consumes the Prefix
+The reader cannot prove scientific provenance such as sample identity, allele
+orientation, phenotype compatibility, or annotation alignment. Those must be
+retained separately.
 
-The public model handoff is short:
+## How `stblr_csr()` consumes sparse LD
+
+A typical public call is:
 
 ```r
 fit <- stblr_csr(
@@ -486,115 +789,279 @@ fit <- stblr_csr(
 )
 ```
 
-During setup, the current ST-BLR CSR implementation:
+During setup, the current scalar CSR implementation:
 
-1. checks that metadata marker count matches the model marker count;
+1. validates marker dimensions and structural metadata;
 2. reads the zero-based upper-triangle arrays;
-3. validates row pointers, column bounds, finite correlations, and positive
-   `stats$ww`;
-4. ignores any explicit self-pairs if encountered;
-5. converts retained $r_{ij}$ to
-   $r_{ij}\sqrt{ww_iww_j}$; and
-6. creates a symmetric in-memory neighbor structure for residual updates.
+3. validates row pointers, column bounds, correlations, and positive `ww`;
+4. ignores explicit self-pairs if encountered;
+5. reconstructs retained cross-products as
 
-For marker effect $b_i$, the diagonal residual contribution uses
-$ww_i b_i$, while retained off-diagonal neighbors use the converted
-cross-product values. Missing off-diagonal entries are treated as zero in the
-sparse approximation.
+   $$
+   \rho_{j\ell}\sqrt{w_jw_\ell};
+   $$
 
-Annotation-aware CSR fitters use the same LD prefix and marker-order
-contract. Their differences concern prior structure, not CSR construction.
+6. builds a symmetric in-memory neighbor representation used by the marker
+   updates.
 
-## Scheduled Sparse Updates
+The diagonal contribution comes from
 
-The canonical `stblr_csr()` dispatcher owns any scheduled marker-update
-implementation that can revisit likely null markers less frequently and wake
-retained LD neighbors after an effect change. Settings such as
-`full_sweep_every`, `candidate_threshold`, `candidate_lifetime`,
-`null_skip_base`, `null_skip_max`, and LD-neighbor wake-up controls affect the
-sampler's computational schedule.
+$$
+w_jb_j,
+$$
 
-These controls are separate from CSR construction settings:
+while retained off-diagonal contributions use the reconstructed
+$\widetilde C_{X,j\ell}$ values.
 
-- `r2_threshold` and distance windows determine which LD edges exist;
+Unretained off-diagonal entries are treated as zero.
+
+Annotation-aware scalar CSR fitters use the same sparse likelihood operator.
+Their differences concern the prior, not the CSR artifact.
+
+## Multi-trait CSR use
+
+The current MT CSR route uses the same principle: aligned marker-trait
+cross-products and marker diagonals are combined with one shared sparse-LD
+representation.
+
+Mathematically, the marker-trait quantity is
+
+$$
+X^\top Y.
+$$
+
+Current implementation routes may carry this information as trait-wise `wy`
+vectors or through route-specific fields.
+
+The present MT CSR likelihood requires shared LD scaling and matching `ww`
+across traits. It does not infer arbitrary pairwise sample overlap merely from
+the sparse-LD prefix.
+
+Cross-trait phenotype products and overlap assumptions required for full
+residual covariance are separate likelihood inputs; see
+[Multi-Trait Sample Overlap](multitrait_overlap.qmd).
+
+## Scheduled sparse marker updates
+
+Some scalar CSR samplers can use scheduled marker updates to revisit likely
+null markers less frequently and to wake retained LD neighbors after an effect
+change.
+
+Controls such as:
+
+- `full_sweep_every`;
+- `candidate_threshold`;
+- `candidate_lifetime`;
+- `null_skip_base`;
+- `null_skip_max`; and
+- LD-neighbor wake-up settings
+
+affect the computational transition schedule.
+
+These settings are distinct from sparse-LD construction settings.
+
+- `r2_threshold` and distance windows determine which LD edges exist in
+  $\widetilde C_X$.
 - scheduling controls determine when markers and retained neighbors are
-  reconsidered during MCMC.
+  revisited during MCMC.
 
-Both can affect finite-run behavior and performance. The statistical prior is
-unchanged by choosing a scheduled path, but aggressive sparse scheduling must
-be checked for adequate mixing and sensitivity. See
-[Single-trait models](../notes/single_trait_models.qmd) for the scheduling controls.
+The prior is not changed by selecting a scheduled path, but aggressive
+scheduling can affect finite-run mixing and should be checked for sensitivity.
 
-## Sparse LD as an Approximation
+See [Single-trait models](../notes/single_trait_models.qmd) for the practical
+controls.
 
-The sparse matrix replaces unretained off-diagonal relationships with zero.
+## Sparse LD as a likelihood approximation
+
+Sparse CSR replaces unretained off-diagonal cross-products with zero.
+
 Approximation enters through:
 
 - $r^2$ thresholding;
-- marker-index and physical-distance windows;
+- marker-index windows;
+- physical-distance windows;
 - finite-sample LD estimation;
-- allele-frequency estimation and missing-genotype handling;
-- 32-bit storage of retained correlation values; and
-- any difference between the sample or scaling used for LD and sufficient
-  statistics.
+- allele-frequency estimation;
+- missing-genotype handling;
+- finite-precision correlation storage;
+- sample/reference mismatch;
+- genotype-scaling mismatch.
 
-Increasing `r2_threshold` or narrowing windows usually reduces `nnz`, runtime,
-and disk use, but can remove LD needed to represent the conditional marker
-likelihood adequately. Lower thresholds and wider windows preserve more LD at
-greater computational cost. There is no universally correct threshold; its
-adequacy depends on marker density, LD structure, sample size, phenotype
-architecture, and inferential target.
+Increasing `r2_threshold` or narrowing windows usually reduces:
 
-## BED-Versus-CSR Comparison and Reproducibility
+- `nnz`;
+- disk use;
+- memory;
+- runtime.
 
-When both paths use the same BED source, markers, samples, phenotype,
-standardization, and priors, `stblr_bed()` and `stblr_csr()` should
-usually show qualitatively comparable posterior patterns. Exact equality is
-not expected because:
+But it can also remove LD required to represent the conditional marker
+likelihood adequately.
 
-- the CSR path omits unretained LD;
-- BED and CSR samplers maintain residual information differently;
-- update scheduling and initialization can differ;
-- retained correlations use finite precision; and
-- MCMC introduces Monte Carlo variation.
+There is no universal threshold that is optimal for every inferential target.
 
-A comparison should examine PIP rankings, posterior mean effects, aggregate
-variance summaries, and sensitivity to thresholds rather than equality of
-individual samples.
+A threshold that is adequate for prediction may not be adequate for local
+marker allocation or fine-mapping, where distinctions among correlated markers
+are particularly important.
 
-For reproducibility, retain:
+## Missing edges mean "not retained"
 
-- immutable identifiers for BED inputs and selected samples;
+A missing CSR edge should be interpreted as
+
+> this off-diagonal LD term is absent from the fitted sparse operator,
+
+not as
+
+> the two markers are known to be biologically uncorrelated.
+
+This distinction matters when interpreting:
+
+- posterior competition among correlated markers;
+- PIP;
+- component allocation;
+- local credible-set post-processing.
+
+If a regional LD matrix is reconstructed later from the **same sparse
+artifact**, an omitted edge cannot be recovered simply because the region is
+small.
+
+A separate dense regional reference may contain that LD information, but it
+does not retroactively alter the genomic posterior obtained under the sparse
+operator.
+
+See [Fine-Mapping and Credible Sets](fine_mapping.qmd).
+
+## Comparison with complete BED-derived likelihood information
+
+If BED-direct and CSR fits use:
+
+- the same genotype source;
+- the same selected individuals;
+- the same marker set and order;
+- compatible genotype coding;
+- compatible allele frequencies;
+- the same phenotype;
+- the same priors and model settings; and
+- sufficiently complete sparse LD,
+
+then their likelihood information can be made closely comparable.
+
+Exact MCMC sample equality is not generally expected because:
+
+- CSR may omit LD edges;
+- finite-precision correlations are reconstructed into cross-products;
+- residual states may be maintained differently;
+- update schedules may differ;
+- initialization may differ;
+- Monte Carlo variation remains.
+
+Comparisons should therefore focus on quantities such as:
+
+- posterior mean effects;
+- PIP rankings;
+- component probabilities;
+- genomic variance;
+- prediction;
+- sensitivity to LD threshold/window settings.
+
+This is an operator-reduction question, not a requirement that two independent
+MCMC trajectories be identical.
+
+## Contrast with block-eigen LD
+
+CSR and block-eigen are separate summary-statistics likelihood operators.
+
+CSR stores selected marker-to-marker correlations explicitly.
+
+Block-eigen instead uses within-block spectral information.
+
+The two approximations differ:
+
+### CSR
+
+- preserves retained explicit LD edges;
+- removes edges through threshold/window rules;
+- has no mandatory genomic block boundary apart from configured windows.
+
+### Block eigen
+
+- removes all cross-block LD by construction;
+- can additionally filter or shrink within-block spectral modes;
+- uses retained factors for the canonical current scalar low-rank route;
+- uses reconstructed filtered dense blocks in the current MT route.
+
+Therefore, a sparse CSR fit and a block-eigen fit can agree in broad prediction
+while allocating local posterior marker mass differently.
+
+See [Block-Eigen LD](block_eigen_operator.qmd).
+
+## Reproducibility
+
+For reproducible sparse-LD analyses, retain:
+
+- immutable identifiers for BED/reference inputs;
+- selected individuals;
 - marker IDs in exact CSR order;
-- `cls`, `rows`, allele frequencies, and positions;
-- sufficient-statistic dimensions and scaling choices;
-- all files belonging to `ld_prefix`;
-- the writer's returned summary and metadata;
-- package version and platform information; and
-- model priors, MCMC settings, scheduling controls, and seeds.
+- `cls`;
+- `rows`;
+- allele frequencies;
+- marker positions;
+- sufficient-statistic dimensions;
+- scaling convention;
+- all files belonging to the sparse-LD prefix;
+- construction thresholds and windows;
+- writer metadata;
+- package version and platform;
+- prior/model settings;
+- MCMC settings;
+- scheduling settings;
+- random seeds.
 
-The current workflow scripts use demonstration-scale settings. Production
-analyses require sensitivity checks for LD construction and sampler settings,
-longer chains, and convergence diagnostics.
+Production analyses should also assess sensitivity to LD construction choices,
+especially for marker-level inference.
 
-## Related Notes and Sources
+## Reporting recommendations
 
+A sparse-CSR analysis should report at least:
+
+- genotype/LD reference source;
+- selected marker and sample definitions;
+- allele-frequency source;
+- genotype scaling;
+- marker-order provenance;
+- `r2_threshold`;
+- marker-index and physical windows;
+- `nnz` or comparable sparsity information;
+- whether LD and sufficient statistics come from the same sample or from a
+  reference-study combination;
+- whether annotation-informed or MAF-S priors were used;
+- the CSR scheduling strategy if non-default sparse scheduling was used;
+- sensitivity analyses relevant to the inferential target.
+
+These quantities define the sparse likelihood approximation sufficiently to
+interpret differences among analyses.
+
+## Related pages
+
+- [Core BLR Model Theory](model_theory.qmd) defines the common regression model
+  and the prior-versus-operator distinction.
+- [Summary Statistics](summary_statistics.qmd) derives the cross-product and
+  residual-score representation.
+- [Block-Eigen LD](block_eigen_operator.qmd) describes the alternative
+  block-spectral operator.
+- [Multi-Trait Sample Overlap](multitrait_overlap.qmd) describes cross-trait
+  phenotype products and residual-covariance information.
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd) explains why local marker
+  inference depends on the fitted LD representation.
+- [Annotation-Informed Priors](annotation_priors.qmd) describes prior
+  architectures that can be combined with the CSR likelihood where supported.
 - [Sparse-LD and individual-level workflows](../notes/sparse_ld_workflows.qmd)
-- [Data representations](../notes/data_representations.qmd)
-- [Single-trait models](../notes/single_trait_models.qmd)
-- [Workflows and outputs](../notes/workflows_and_outputs.qmd)
-- [Summary statistics](summary_statistics.qmd)
-- [ST summary workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/st_summary_workflow.R)
-- [Operator comparison workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/operator_comparison_workflow.R)
-- [ST annotation workflow on GitHub](https://github.com/psoerensen/sblr/blob/master/examples/workflows/st_annotation_workflow.R)
+  gives practical BED-to-CSR construction guidance.
+- [Data representations](../notes/data_representations.qmd) gives practical
+  data/operator guidance.
+- [Single-trait models](../notes/single_trait_models.qmd) documents practical
+  scalar fitting and scheduling controls.
 
-Block-based LD is a separate operator family and has two distinct
-representations. The historical reconstructed-dense form stores filtered dense
-within-block upper triangles. The canonical current scalar block-eigen form
-stores retained rectangular eigen factors and maintains reduced residuals
-without reconstructing a dense SNP-by-SNP matrix during MCMC. Current MT
-block-eigen sampling still uses reconstructed dense blocks. CSR instead stores
-explicit sparse off-diagonal correlations that are converted to the aligned
-cross-product scale. These representations must not share or conflate storage,
-diagonal, or residual contracts. See
-[Block-Eigen LD](block_eigen_operator.qmd).
+This appendix therefore owns the statistical interpretation of sparse CSR LD:
+the disk artifact stores selected signed correlations, the sampler reconstructs
+retained cross-products using the aligned marker diagonals, and omitted edges
+are treated as zero in the fitted likelihood operator.

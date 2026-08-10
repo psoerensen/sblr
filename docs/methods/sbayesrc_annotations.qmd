@@ -1,114 +1,208 @@
 ---
 title: "Technical Appendix: SBayesRC-Style Annotation Priors"
+format:
+  html:
+    toc: true
+    number-sections: true
 ---
 
 This appendix describes the SBayesRC-style annotation-dependent BayesR prior
-available through `stblr_csr_annot(annotation_model =
-"annotation_probit_stick")`. The core prior family is
-closely aligned with published SBayesRC: marker effects follow a multi-normal
-mixture, and marker-specific mixture probabilities are determined by
-conditional probit stick-breaking regressions on annotations. The exposed
-`stblr_csr_annot()` model is not an exact reproduction of the published GCTB
-SBayesRC implementation. Its default component-multiplier grid differs, and
-this interface uses a CSR sparse-LD likelihood. The separate scalar
-`stblr_block_eigen(method = "sbayesrc")` route follows the GCTB/SBayesRC
-eigenspace likelihood strategy in `sblr` cross-product units, but uses a
-global projected residual-variance contract rather than GCTB's block-specific
-variance procedure.
+available through
 
-This note focuses on the annotation-dependent prior and its diagnostics. It
-does not claim computational equivalence between the two likelihood
-implementations.
+```r
+stblr_csr_annot(
+  ...,
+  annotation_model = "annotation_probit_stick"
+)
+```
 
-## Model Definition
+The core prior family is closely aligned with published SBayesRC: marker
+effects follow a multi-normal mixture and marker-specific mixture probabilities
+are determined by conditional probit stick-breaking regressions on annotations.
 
-For marker $i$, let $z_i\in\{0,\ldots,K\}$ identify one of $K+1$
-mixture components. Conditional on $z_i=k$, the marker effect is
+The exposed `stblr_csr_annot()` model is not an exact reproduction of the
+published GCTB SBayesRC implementation. Its default component-multiplier grid
+differs, and this route uses the `sblr` CSR sparse-LD likelihood.
+
+The separate scalar
+
+```r
+stblr_block_eigen(method = "sbayesrc")
+```
+
+route follows the GCTB/SBayesRC eigenspace-likelihood strategy in `sblr`
+cross-product units, but uses the current `sblr` global projected
+residual-variance contract rather than GCTB's block-specific variance
+procedure.
+
+This page focuses on the annotation-dependent **probability architecture**,
+its coefficient hierarchy, and its diagnostics. The underlying likelihood
+operators are documented separately.
+
+Throughout the Methods documentation:
+
+- $X$ denotes the genotype matrix;
+- $A$ denotes the raw marker-by-annotation matrix;
+- $\widetilde A^{(P)}$ denotes the processed annotation design used by the
+  probability architecture;
+- lowercase $v$ denotes scalar variance and uppercase $V$ covariance;
+- $\Pr(\cdot)$ denotes a probability statement; and
+- implementation names are written in backticks.
+
+## Single-trait model
+
+For marker $j$, let
 
 $$
-\beta_i \mid z_i=k, v_b, \gamma
+c_j\in\{0,\ldots,K\}
+$$
+
+identify one of $K+1$ BayesR mixture components.
+
+Conditional on component $c_j=k$,
+
+$$
+b_j
+\mid
+c_j=k,v_b,\gamma
 \sim
-N(0,\gamma_k v_b).
+N(0,\gamma_kv_b).
 $$
 
 The theoretical component ladder
 
 $$
-\gamma=(\gamma_0,\ldots,\gamma_K)
+\gamma
+=
+(\gamma_0,\ldots,\gamma_K)
 $$
 
-contains fixed variance multipliers, while $v_b$ is the sampled global
-active-effect variance scale. The implementation requires
+contains fixed relative variance multipliers, while $v_b$ is the global
+active-effect variance scale.
+
+The implementation requires
 
 $$
 \gamma_0=0,
 \qquad
-\gamma_k>0 \quad \text{for } k=1,\ldots,K.
+\gamma_k>0
+\quad
+\text{for }k=1,\ldots,K.
 $$
 
-The first component is therefore an exact null component:
+The first component is therefore an exact null state:
 
 $$
-\beta_i=0 \quad \text{when } z_i=0.
+b_j=0
+\qquad
+\text{when }c_j=0.
 $$
 
 The remaining components represent increasingly diffuse active-effect
-distributions when their $\gamma$ multipliers increase.
+distributions when the supplied $\gamma_k$ values increase.
 
-Current R vectors use one-based positions: `mixture_var[1]` is the
-theoretical $\gamma_0$, and R position $k+1$ represents theoretical
-component $k$. This is an indexing crosswalk only; no code fields or native
-component codes are renamed.
+### R indexing crosswalk
 
-### Multiple columns in an ST fitter are not the joint MT model
+Current R vectors use one-based positions:
 
-For multiple traits supplied to the fitter, this mixture construction and its
-annotation coefficients are fitted separately by trait. The formatted fit
-therefore stores one `alpha` matrix and one set of marker component
-summaries per independently fitted trait.
+- `mixture_var[1]` corresponds to theoretical $\gamma_0$;
+- R position `k + 1` corresponds to theoretical component $k$.
 
-That behavior is distinct from the genuine joint `mtblr_bed()`,
-`mtblr_csr()`, and `mtblr_block_eigen()` BayesRC/SBayesRC
-model. The joint model samples complete marker states with shared cross-trait
-covariance and the factorized $P\times H$ state architecture described in
+This is only an indexing crosswalk. It does not imply a rename of current code
+fields or native component labels.
+
+## Multiple columns in an ST fitter are not the joint MT model
+
+If multiple traits are supplied to the single-trait annotation fitter, the
+mixture construction and annotation coefficients are fitted separately by
+trait.
+
+The formatted fit therefore stores separate annotation architecture summaries
+for the independently fitted trait columns.
+
+This is distinct from the genuine joint
+
+- `mtblr_bed()`;
+- `mtblr_csr()`; and
+- `mtblr_block_eigen()`
+
+BayesRC/SBayesRC models.
+
+The joint MT model samples complete marker states with shared cross-trait
+covariance and the factorized
+
+$$
+P\times H
+$$
+
+probability architecture described in
 [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd).
 
-## Optional BayesS-Style `maf_effect_s`
+## Optional BayesS-style `maf_effect_s`
 
-The package argument is `maf_effect_s`. It corresponds to the BayesS-style MAF
-architecture parameter `S`.
+The package argument `maf_effect_s` corresponds to the BayesS-style MAF
+architecture parameter $S$.
 
-Current CSR SBayesRC supports both fixed global `maf_effect_s` and sampled
-trait-specific `maf_effect_s` by Metropolis-Hastings. SBayesRC annotations and
-`maf_effect_s` affect different parts of the prior:
+Current CSR SBayesRC supports both:
 
-- annotations affect marker-specific component probabilities through
-  $A\alpha$ and probit stick-breaking;
-- `maf_effect_s` affects marker-specific effect-size prior variance.
+- fixed global `maf_effect_s`; and
+- sampled trait-specific `maf_effect_s` through Metropolis-Hastings on
+  validated ST routes.
 
-CSR effects are on the standardized-genotype scale. The MAF-dependent prior
-scale is
+SBayesRC annotations and MAF-S affect different parts of the prior:
 
-$$
-q_j(S)=h_j^{S+1},
-\qquad
-h_j=2p_j(1-p_j),
-$$
+- annotations affect marker-specific **component probabilities** through the
+  probit-stick $P$ architecture;
+- MAF-S affects marker-specific **effect variance** through a $Q$-type
+  multiplier.
 
-where $p_j$ is the minor allele frequency. The `+1` exponent is used because
-the CSR sampler effects are standardized-genotype-scale effects rather than
-allele-scale effects.
-
-With fixed `maf_effect_s`, the active SBayesRC component prior is
+Let $f_j$ denote minor allele frequency and define heterozygosity
 
 $$
-b_j \mid \mathrm{component}_j=m,v_b,S
+h_j
+=
+2f_j(1-f_j).
+$$
+
+For standardized-genotype-scale effects, the current MAF-dependent prior
+multiplier is
+
+$$
+q_j(S)
+=
+h_j^{S+1}.
+$$
+
+The $+1$ exponent reflects the standardized-genotype effect scale used by the
+current summary-statistics parameterization.
+
+For fixed $S$, a positive SBayesRC component has prior
+
+$$
+b_j
+\mid
+c_j=k>0,v_b,S
 \sim
-N\{0, v_b\gamma_m q_j(S)\}.
+N\left(
+0,
+v_b\gamma_kq_j(S)
+\right).
 $$
 
-With sampled `maf_effect_s`, the current implementation samples one $S_t$ per
-trait and chain using the active-component MH log posterior contribution
+Thus the full non-null variance contains three conceptually distinct pieces:
+
+$$
+\underbrace{v_b}_{\text{global scale}}
+\times
+\underbrace{\gamma_k}_{\text{BayesR component}}
+\times
+\underbrace{q_j(S)}_{\text{MAF-S marker multiplier}}.
+$$
+
+### Sampled $S$
+
+When `maf_effect_s` is sampled, the current implementation samples one $S_t$
+per trait and chain using the active-component log-posterior contribution
 
 ```text
 log p(S_t | b_t, gamma_t, vb_t)
@@ -118,7 +212,7 @@ log p(S_t | b_t, gamma_t, vb_t)
       ]
 ```
 
-The sampled-$S$ defaults are:
+The current sampled-$S$ defaults are
 
 ```r
 maf_effect_s_init = 0
@@ -128,25 +222,26 @@ maf_effect_s_proposal_sd = 0.35
 
 Fixed `maf_effect_s` is available only where the public capability contract
 marks it supported. Sampled `maf_effect_s` remains an ST-only capability on
-validated routes. See [`maf_effect_s`](../notes/maf_effect_s.qmd) and the
-[model capability matrix](../dev/blr_model_capability_matrix.md) for the
-current support matrix.
+validated routes.
 
-## Component-Multiplier Grids
+See [`maf_effect_s`](../notes/maf_effect_s.qmd) and the current developer
+capability documentation for route-specific support.
 
-The public `sblr` default is:
+## Component-multiplier grids
+
+The public `sblr` default is
 
 ```r
 mixture_var = c(0, 0.01, 0.1, 1)
 ```
 
-Published SBayesRC uses the five-component grid:
+whereas the published SBayesRC component grid is
 
 ```r
 mixture_var = c(0, 0.001, 0.01, 0.1, 1)
 ```
 
-Users can request that published component-multiplier grid explicitly:
+The published grid can be requested explicitly:
 
 ```r
 fit <- stblr_csr_annot(
@@ -158,204 +253,419 @@ fit <- stblr_csr_annot(
 )
 ```
 
-Matching the component-multiplier grid aligns this part of the prior specification. It does
-not make the complete `sblr` model identical to GCTB SBayesRC because the
-likelihood, sparse-LD representation, exposed defaults, and implementation
-details remain distinct.
+Matching the multiplier grid aligns this part of the prior specification.
 
-## Annotation-Dependent Component Probabilities
+It does **not** make the complete `sblr` model identical to GCTB SBayesRC,
+because the likelihood representation, exposed defaults, and other
+implementation contracts remain distinct.
 
-Let $A$ be an $m\times L$ marker-by-annotation matrix. For $K+1$
-mixture components, let $\alpha$ be an $L\times K$ coefficient matrix. Column
-$\alpha_j$ controls conditional stick-breaking step $j$.
+## Raw and processed annotation designs
 
-For marker $i$ and step $j$, the linear predictor and conditional
-continuation probability are
+Let
 
 $$
-\eta_{ij}=A_i\alpha_j,
+A\in\mathbb R^{M\times C}
+$$
+
+denote the raw marker-by-annotation matrix, where $M$ is the number of markers
+and $C$ the number of annotation columns before or after any explicit intercept
+handling.
+
+The SBayesRC probability model acts on a processed design, denoted
+
+$$
+\widetilde A^{(P)}.
+$$
+
+This notation is useful because the preprocessing appropriate to a probability
+architecture need not be identical to the preprocessing used by another prior
+mechanism such as log-variance LV.
+
+Rows must be aligned with the markers in:
+
+- the sufficient statistics;
+- the fitted LD/operator representation; and
+- posterior marker summaries.
+
+Columns may contain binary or quantitative annotations, and annotations may
+overlap.
+
+### Current preprocessing controls
+
+Before fitting, the current SBayesRC-style route uses the annotation preparation
+contract with controls including:
+
+- `add_intercept = TRUE`, which adds an all-ones first column when an intercept
+  is not already recognized;
+- `standardize_annotations = TRUE`, which centers and scales eligible
+  nonbinary quantitative annotations;
+- `center_binary_annotations = FALSE`, which leaves binary annotation columns
+  unchanged by default;
+- marker names, when available, which may be used to reorder annotation rows to
+  the declared analysis-marker order.
+
+The preprocessing choices determine the meaning and scale of the fitted
+annotation coefficients.
+
+Under the defaults:
+
+- a quantitative coefficient is interpreted per standardized annotation unit;
+- an unchanged binary coefficient compares annotation membership conditional
+  on the other annotation columns and on the stick position.
+
+The processed design, rather than the raw $A$ itself, is the object entering
+the mathematical linear predictor.
+
+## Annotation-dependent component probabilities
+
+For $K+1$ BayesR components, including the exact null component, there are $K$
+conditional continuation steps.
+
+Let
+
+$$
+\alpha_k
+\in
+\mathbb R^C
+$$
+
+be the coefficient vector for continuation step $k$, and define
+
+$$
+\eta_{jk}
+=
+\widetilde A_j^{(P)}\alpha_k.
+$$
+
+The conditional continuation probability is
+
+$$
+\rho_{jk}
+=
+\Phi(\eta_{jk}),
+$$
+
+where $\Phi$ is the standard normal cumulative distribution function.
+
+The marker-specific prior component probabilities are
+
+$$
+P_{j0}
+=
+1-\rho_{j1},
+$$
+
+$$
+P_{j1}
+=
+\rho_{j1}(1-\rho_{j2}),
+$$
+
+and more generally
+
+$$
+P_{jk}
+=
+\left(
+\prod_{\ell=1}^{k}
+\rho_{j\ell}
+\right)
+(1-\rho_{j,k+1}),
 \qquad
-p_{ij}=\Phi(\eta_{ij}),
+k=1,\ldots,K-1,
 $$
 
-where $\Phi$ is the standard normal distribution function. The marker-level
-component probabilities are
+with final component probability
 
 $$
-\begin{aligned}
-P_{i0} &= 1-p_{i1},\\
-P_{i1} &= p_{i1}(1-p_{i2}),\\
-P_{i2} &= p_{i1}p_{i2}(1-p_{i3}),\\
-&\ \vdots\\
-P_{iK} &= \prod_{j=1}^{K}p_{ij}.
-\end{aligned}
+P_{jK}
+=
+\prod_{\ell=1}^{K}
+\rho_{j\ell}.
 $$
 
-Equivalently, each nonfinal component receives the probability of continuing
-through all earlier steps and stopping at its step; component $K$ receives
-the probability of continuing through every step.
+Thus,
+
+$$
+\Pr(c_j=k\mid A_j)
+=
+P_{jk}.
+$$
+
+The annotation architecture therefore changes the prior probability that a
+marker occupies each BayesR component. It does not directly change $v_b$ or the
+component multipliers $\gamma_k$.
 
 ### Why the probabilities sum to one
 
-For a marker with step probabilities $p_1,\ldots,p_K$,
+For one marker, write its continuation probabilities as
 
 $$
+\rho_1,\ldots,\rho_K.
+$$
+
+Then
+
+$$
+\begin{aligned}
 \sum_{k=0}^{K}P_k
-=
-(1-p_1)
-+p_1(1-p_2)
-+\cdots+
-\left(\prod_{j=1}^{K-1}p_j\right)(1-p_K)
-+\prod_{j=1}^{K}p_j
-=1.
+&=
+(1-\rho_1)
++
+\rho_1(1-\rho_2)
++
+\cdots\\
+&\quad+
+\left(
+\prod_{\ell=1}^{K-1}\rho_\ell
+\right)
+(1-\rho_K)
++
+\prod_{\ell=1}^{K}\rho_\ell\\
+&=
+1.
+\end{aligned}
 $$
 
-The expression telescopes: probability either stops at one of the first
-$K$ steps or reaches the final component.
+The expression telescopes: a marker either stops at one of the first $K$
+continuation steps or reaches the final component.
 
-### Numerical flooring and renormalization
+## Numerical flooring and renormalization
 
-The native sampler computes these probabilities from $A\alpha$, floors each
-component probability at `pi_floor`, and renormalizes each marker row to sum to
-one. The public default is `pi_floor = 1e-12`.
+The native sampler computes the component probabilities from the processed
+annotation linear predictors, floors each component probability at `pi_floor`,
+and renormalizes each marker row to sum to one.
+
+The current public default is
+
+```r
+pi_floor = 1e-12
+```
 
 Flooring prevents exact numerical zero probabilities when probit predictors are
-extreme. Because flooring slightly changes the unnormalized stick-breaking
-probabilities, the subsequent row renormalization is required. This is a
-numerical-stability adjustment, not a different conceptual link function.
+extreme.
 
-The deterministic R diagnostic helpers apply the mathematical
-stick-breaking transform without the native sampler's floor-and-renormalize
-step. For ordinary finite coefficients, their rows sum to one up to numerical
-tolerance.
+Because flooring slightly changes the unnormalized stick probabilities, the
+subsequent row renormalization is required.
 
-## Annotation Matrix and Preprocessing
+This is a numerical-stability adjustment, not a different conceptual link
+function.
 
-Rows of $A$ must be aligned with the markers in the sufficient statistics,
-CSR sparse-LD matrix, and posterior outputs. Columns may contain binary or
-quantitative annotations, and overlap is allowed.
+The deterministic R diagnostic helpers apply the mathematical stick-breaking
+transform without the native sampler's floor-and-renormalize step. For ordinary
+finite coefficients, their rows sum to one up to numerical tolerance.
 
-Before fitting, `stblr_csr_annot(..., annotation_model =
-"annotation_probit_stick")` calls the shared annotation
-preparation helper using these controls:
+## Intercept prior
 
-- `add_intercept = TRUE` adds an all-ones first column when one is not already
-  recognized;
-- `standardize_annotations = TRUE` centers and scales nonbinary quantitative
-  annotations;
-- `center_binary_annotations = FALSE` leaves binary columns unchanged by
-  default;
-- row names can be used to reorder $A$ to known marker names when all names
-  are available.
+At continuation step $k$, let $\alpha_{0k}$ denote the intercept coefficient.
 
-The preprocessing choices determine the meaning and scale of `alpha`.
-Quantitative coefficients are effects per standardized annotation unit under
-the defaults. An unchanged binary coefficient is a contrast associated with
-membership in that annotation, conditional on the remaining columns.
-
-### Intercept prior
-
-The first annotation coefficient at step $j$ has the proper prior
+The current standard contract uses the proper prior
 
 $$
-\alpha_{0j}\sim N(\mu_{0j},\tau_{0j}^2).
-$$
-
-By default, $\mu_{0j}=\Phi^{-1}(p_j)$, where $p_j$ is the continuation
-probability implied by the resolved global component mixture, and
-$\tau_{0j}=1$. `annotation_intercept_prior` supports finite scalar or
-stick-specific means and standard deviations. This prior specification is
-independent of `alpha_init`, which controls only the initial MCMC state.
-
-The historical flat prior is available only through explicit
-`intercept_flat = TRUE`. It is a legacy reference mode and fails for empty or
-completely separated sticks because those targets are improper.
-
-## $\alpha$ and `sigmaSqAlpha` Priors
-
-For non-intercept annotation coefficient $k$ at stick-breaking step $j$,
-the implemented prior is
-
-$$
-\alpha_{kj}\mid \sigma_{\alpha,j}^2
+\alpha_{0k}
 \sim
-N(0,\sigma_{\alpha,j}^2).
+N(\mu_{0k},\tau_{0k}^2).
 $$
 
-Each step has its own annotation-effect variance
-$\sigma_{\alpha,j}^2$, represented by `sigmaSqAlpha[j]`. Under
-the current model, the intercept is excluded from this hierarchical shrinkage
-prior and from the variance update because it has the separate proper prior
-above.
-
-The variance update has scaled-inverse-chi-square or inverse-gamma family form:
+By default,
 
 $$
-\sigma_{\alpha,j}^2
+\mu_{0k}
+=
+\Phi^{-1}(\rho_k^{(0)}),
+$$
+
+where $\rho_k^{(0)}$ is the continuation probability implied by the resolved
+global component mixture, and
+
+$$
+\tau_{0k}=1.
+$$
+
+`annotation_intercept_prior` can provide finite scalar or step-specific means
+and standard deviations.
+
+This prior specification is distinct from `alpha_init`, which controls only the
+initial MCMC state.
+
+The historical flat-intercept mode is available only through explicit
+
+```r
+intercept_flat = TRUE
+```
+
+and is retained as a legacy reference mode. Empty or completely separated
+sticks do not define a proper flat-intercept target, so the implementation
+fails rather than silently continuing under such a state.
+
+## Non-intercept $\alpha$ hierarchy and `sigmaSqAlpha`
+
+For non-intercept annotation coefficient $c$ at continuation step $k$, the
+implemented prior is
+
+$$
+\alpha_{ck}
+\mid
+\sigma_{\alpha,k}^2
+\sim
+N(0,\sigma_{\alpha,k}^2).
+$$
+
+Each continuation step has its own annotation-effect variance
+
+$$
+\sigma_{\alpha,k}^2,
+$$
+
+represented in current code by `sigmaSqAlpha[k]`.
+
+The intercept is excluded from this hierarchical shrinkage variance because it
+has the separate prior above.
+
+The current variance update has scaled-inverse-chi-square /
+inverse-gamma-family form,
+
+$$
+\sigma_{\alpha,k}^2
 =
 \frac{
-\sum_{k \in \mathcal{R}}\alpha_{kj}^2 + b_\alpha
+\sum_{c\in\mathcal R}\alpha_{ck}^2+b_\alpha
 }{
-\chi^2_{|\mathcal{R}|+a_\alpha}
+\chi^2_{|\mathcal R|+a_\alpha}
 },
 $$
 
-where $\mathcal{R}$ contains coefficients subject to shrinkage,
-`sigmaSqAlpha_a` supplies $a_\alpha$, and `sigmaSqAlpha_b` supplies
-$b_\alpha$. Both public defaults are 2.
+where $\mathcal R$ is the set of coefficients subject to hierarchical
+shrinkage.
 
-This construction is aligned with the published SBayesRC use of normal
-annotation-coefficient priors and a scaled-inverse-chi-square-family variance
-prior. The exact published hyperparameter specification should not be inferred
-from the `sblr` defaults. Users should report the values supplied to
-`sigmaSqAlpha_a`, `sigmaSqAlpha_b`, `sigmaSqAlpha_init`, and
-`annotation_intercept_prior`. Historical fits should additionally report
-whether they used the legacy `intercept_flat` mode.
+Current code controls the hyperparameters through:
 
-## Gibbs-Style $\alpha$ Updating
+- `sigmaSqAlpha_a`, supplying $a_\alpha$;
+- `sigmaSqAlpha_b`, supplying $b_\alpha$;
+- `sigmaSqAlpha_init`, supplying the initial state.
 
-When `updateAlpha = TRUE`, the native sampler updates $\alpha$ every
-`alpha_update_every` iterations. The public default interval is 10.
+The current public defaults for `sigmaSqAlpha_a` and `sigmaSqAlpha_b` are both
+2.
 
-The update uses conditional probit data augmentation. At stick-breaking step
-$j$, only markers that reached that step are included. A latent normal
-variable is sampled for each eligible marker:
+This is the same broad prior family used in SBayesRC-style annotation
+regression. The exact published external implementation should not be inferred
+from the `sblr` defaults.
+
+For reproducibility, report the actual values used for:
+
+- `sigmaSqAlpha_a`;
+- `sigmaSqAlpha_b`;
+- `sigmaSqAlpha_init`;
+- `annotation_intercept_prior`; and
+- `intercept_flat`, if legacy flat-intercept mode was explicitly requested.
+
+## Gibbs-style $\alpha$ updating
+
+When
+
+```r
+updateAlpha = TRUE
+```
+
+the native sampler updates the annotation coefficients every
+`alpha_update_every` iterations.
+
+The public default interval is 10.
+
+The update uses conditional probit data augmentation.
+
+### Eligible markers at one stick
+
+At continuation step $k$, only markers that **reach that step** contribute to
+the corresponding probit likelihood.
+
+For each eligible marker $j$, introduce a latent normal variable
 
 $$
-\ell_{ij}\mid \alpha_j
+\ell_{jk}
+\mid
+\alpha_k
 \sim
-N(A_i\alpha_j,1),
+N\left(
+\widetilde A_j^{(P)}\alpha_k,
+1
+\right).
 $$
 
-truncated above zero when the marker continues beyond step $j$, and truncated
-at or below zero when it stops at that step.
+The latent variable is truncated:
+
+- above zero when the marker continues beyond step $k$;
+- at or below zero when it stops at step $k$.
+
+Thus the sign of the latent variable records the continuation outcome for that
+stick.
+
+### Coefficient update
 
 Conditional on the latent variables and the other coefficients, each
-annotation coefficient has a normal full conditional. For a non-intercept
-coefficient, the prior precision $1/\sigma_{\alpha,j}^2$ is added to the
-data precision. For the intercept, $1/\tau_{0j}^2$ is added to the data
-precision and $\mu_{0j}/\tau_{0j}^2$ is added to the conditional right-hand
-side. After the coefficients for a step are updated,
-`sigmaSqAlpha[j]` is drawn from the scaled-inverse-chi-square-family update.
+annotation coefficient has a Gaussian full conditional.
 
-If no marker reaches a stick, there is no latent-data likelihood. The sampler
-then draws the intercept from its proper prior, draws non-intercept
-coefficients from their hierarchical conditional prior, and performs the
-unchanged `sigmaSqAlpha` conditional update.
+For a non-intercept coefficient, the prior precision
 
-This is a Gibbs-style conditional update using truncated-normal augmentation
-and normal draws. It is not a random-walk Metropolis-Hastings $\alpha$ update.
-After an $\alpha$ update, the native sampler recomputes all marker-specific prior
-component probabilities from $A\alpha$.
+$$
+\frac{1}{\sigma_{\alpha,k}^2}
+$$
+
+is added to the data precision.
+
+For the intercept, the proper-prior contribution is
+
+$$
+\frac{1}{\tau_{0k}^2}
+$$
+
+to the precision and
+
+$$
+\frac{\mu_{0k}}{\tau_{0k}^2}
+$$
+
+to the conditional right-hand side.
+
+After the coefficients for a step are updated, `sigmaSqAlpha[k]` is drawn from
+its hierarchical conditional update.
+
+### Empty sticks
+
+If no marker reaches a continuation step, there is no latent-data likelihood
+for that stick.
+
+Under the proper-intercept contract, the sampler then:
+
+1. draws the intercept from its proper prior;
+2. draws non-intercept coefficients from their hierarchical conditional prior;
+3. performs the ordinary `sigmaSqAlpha` conditional update.
+
+The sampler therefore has an explicit no-data behavior rather than relying on
+an undefined regression fit.
+
+### Nature of the update
+
+The $\alpha$ update is a Gibbs-style conditional update based on:
+
+- truncated-normal latent-variable draws; and
+- Gaussian coefficient full conditionals.
+
+It is **not** a random-walk Metropolis-Hastings update.
+
+After an $\alpha$ update, the marker-specific prior component probabilities
+$P_{jk}$ are recomputed from the updated processed annotation predictors.
 
 ## Initialization
 
-`make_sbayesrc_alpha_init()` creates deterministic initial values for the
+`make_sbayesrc_alpha_init()` constructs deterministic initial values for the
 annotation-dependent mixture architecture.
 
 Given an initial overall active probability `pi_init`, it distributes active
-mass across the $K$ non-null components using normalized
-`active_comp_weights`. This produces initial marginal component probabilities
+probability mass across the $K$ non-null components using normalized
+`active_comp_weights`.
+
+This produces initial marginal component probabilities
 
 $$
 \pi^{(0)}
@@ -368,262 +678,514 @@ $$
 \right).
 $$
 
-The helper then converts these marginal probabilities to conditional
-continuation probabilities for the stick-breaking representation. When $A$
-contains an all-ones column, the first such column receives intercept
-coefficients
+The helper then converts those marginal probabilities into conditional
+continuation probabilities.
+
+If the processed annotation design contains an all-ones intercept column, the
+intercept receives initial coefficients
 
 $$
-\alpha_{0j}^{(0)}
+\alpha_{0k}^{(0)}
 =
-\Phi^{-1}\{p_j^{(0)}\},
+\Phi^{-1}
+\left(
+\rho_k^{(0)}
+\right),
 $$
 
-and all other coefficients begin at zero. If no all-ones column exists, all
-default coefficients are zero. Supplied `alpha_init` and
-`sigmaSqAlpha_init` values are accepted after dimension and finite-value
-validation.
+and the remaining annotation coefficients begin at zero.
 
-The helper also returns named initial component probabilities, normalized
-active-component weights, conditional step probabilities, $\gamma$ values, and
-component names. These make initialization auditable without running the
-sampler.
+If no all-ones column is present, the default coefficient matrix begins at
+zero.
 
-## Marker-Effect and Component Updates
+Explicit `alpha_init` and `sigmaSqAlpha_init` values are accepted after
+dimension and finite-value validation.
 
-For each marker, the sampler combines the annotation-derived prior component
-probabilities with the summary-statistics likelihood. The exact null component
-has $\gamma_0=0$ and leaves the marker effect at zero. For active component
-$k$, the effect prior variance is
+The helper also returns auditable quantities such as:
+
+- initial component probabilities;
+- normalized active-component weights;
+- conditional continuation probabilities;
+- component multipliers $\gamma$;
+- component names.
+
+Initialization is an MCMC starting-state choice. It is distinct from the
+coefficient prior.
+
+## Marker-effect and component updates
+
+For each marker, the sampler combines:
+
+1. the annotation-derived prior component probabilities $P_{jk}$; and
+2. the marker-specific likelihood evidence.
+
+The exact null component has
 
 $$
-v_{b,k}=\gamma_k v_b.
+\gamma_0=0
 $$
 
-The sampler forms a component-specific Bayes factor using the current marker
-score, residual variance, marker diagonal cross-product, and $v_{b,k}$.
-It samples a new component from the resulting posterior component
-probabilities, then samples the marker effect from its conditional normal
-distribution when the selected $\gamma$ is positive.
+and therefore fixes the marker effect to zero.
 
-The global scale $v_b$ may also be updated from currently active marker
-effects and their selected $\gamma$ values when `updateB = TRUE`. Thus $\gamma$
-defines relative component scales, while $v_b$ supplies the shared sampled
-scale.
+For active component $k>0$, without additional MAF-S scaling the prior variance
+is
 
-## Fit Outputs
+$$
+v_{b,jk}
+=
+\gamma_kv_b.
+$$
 
-The formatted fit exposes the standard marker and variance summaries together
-with SBayesRC-style architecture summaries.
+With MAF-S,
+
+$$
+v_{b,jk}
+=
+\gamma_kq_j(S)v_b.
+$$
+
+The sampler forms component-specific posterior weights from:
+
+- the current marker score;
+- residual variance $v_e$;
+- the marker diagonal cross-product;
+- the component prior variance; and
+- the annotation-derived prior probability $P_{jk}$.
+
+It then samples a new component and, if that component is positive, samples the
+marker effect from its conditional Gaussian distribution.
+
+When `updateB = TRUE`, the global scale $v_b$ can also be updated using the
+currently active marker effects together with their selected component
+multipliers.
+
+Thus:
+
+- $P_{jk}$ controls **which component is likely**;
+- $\gamma_k$ controls the component's **relative effect-variance scale**;
+- $v_b$ supplies the **global effect-variance scale**;
+- $q_j(S)$, when enabled, supplies an additional marker-specific
+  **variance multiplier**.
+
+## Fit outputs
+
+The formatted fit exposes ordinary marker and variance summaries together with
+SBayesRC-specific architecture summaries.
 
 ### `alpha`
 
-`fit$alpha` is a list with one posterior-mean coefficient matrix per trait.
-Each matrix has annotations in rows and stick-breaking steps in columns.
-Because it is a posterior mean, applying a nonlinear probability transform to
-it gives a plug-in diagnostic, not the posterior mean of that transformed
-quantity.
+`fit$alpha` is a list with one posterior-mean coefficient matrix per separately
+fitted trait.
+
+Each matrix has annotation coefficients in rows and continuation steps in
+columns.
+
+Because it is a posterior mean,
+
+$$
+\operatorname{stick}
+\left(
+\mathbb E(\alpha\mid\mathcal D)
+\right)
+$$
+
+is generally not equal to
+
+$$
+\mathbb E
+\left[
+\operatorname{stick}(\alpha)
+\mid
+\mathcal D
+\right].
+$$
+
+Applying the nonlinear stick transform to `fit$alpha` therefore produces a
+plug-in diagnostic, not the posterior mean of the transformed prior
+architecture.
 
 ### `sigmaSqAlpha`
 
 `fit$sigmaSqAlpha` is a trait-by-step matrix of posterior mean annotation-effect
-variance parameters. Large values permit more dispersion among non-intercept
-annotation coefficients at that stick-breaking step. They should be
-interpreted together with $\alpha$ coefficients, annotation scaling, and chain
-diagnostics.
+variance parameters.
+
+Larger values allow greater dispersion among the non-intercept annotation
+coefficients at that continuation step.
+
+They should be interpreted together with:
+
+- annotation preprocessing;
+- $\alpha$ coefficients;
+- component occupancy;
+- chain diagnostics.
 
 ### `component_probabilities`
 
-`fit$component_probabilities` is a list with one marker-by-component matrix per trait. It
-contains posterior frequencies of sampled component assignments after burn-in
-and thinning. It is not the same object as the annotation-derived prior
-probability matrix computed from $A\alpha$.
+`fit$component_probabilities` contains one marker-by-component posterior matrix
+per independently fitted trait.
 
-The first R matrix column is the theoretical $k=0$ exact null component.
-Consequently, `dm` is one
-minus its posterior probability. Component identities and multipliers are
-recorded with the model parameters; code should not infer scientific meaning
-from a display label alone.
+It records posterior frequencies of sampled component assignments after burn-in
+and thinning.
 
-The usual outputs remain available when returned, including `bm`, `dm`,
-variance traces, covariance summaries, current effects, and residual state.
-Full marker-scale matrices should be retained for analysis rather than printed
-in full.
+It is **not** the annotation-derived prior matrix
 
-## Diagnostic Helpers
+$$
+P_{jk}
+=
+\Pr(c_j=k\mid A_j,\alpha).
+$$
 
-Four deterministic exported helpers translate $\alpha$ coefficients into compact
-prior-architecture diagnostics.
+For marker $j$,
+
+$$
+\Pr(c_j=k\mid\mathcal D)
+$$
+
+is a posterior allocation probability and contains both prior and likelihood
+information.
+
+The first R matrix column corresponds to theoretical component $k=0$.
+
+Therefore the marker PIP is
+
+$$
+\operatorname{PIP}_j
+=
+1-
+\Pr(c_j=0\mid\mathcal D).
+$$
+
+In current formatted fit objects, this marginal activity probability is
+represented by `dm`.
+
+Posterior mean marker effects are represented by `bm`.
+
+Final sampled component states, posterior allocation probabilities, prior
+component probabilities, and posterior mean effects should not be interpreted
+interchangeably.
+
+## Deterministic diagnostic helpers
+
+The package exposes deterministic helpers that map fitted $\alpha$ values to
+compact prior-architecture summaries.
+
+These are useful diagnostics, but when supplied with posterior mean
+coefficients they are plug-in summaries rather than full posterior
+transformations.
 
 ### Annotation-row diagnostics
 
 `sbayesrc_annotation_pi(alpha, gamma)` applies the probit stick-breaking
-transform separately to each row of `alpha`. It returns an
-annotation-by-component probability matrix.
+transform separately to each coefficient row in the representation expected by
+the helper.
 
-`sbayesrc_annotation_gamma_mean(alpha, gamma)` computes
+It returns an annotation-by-component probability matrix.
+
+`sbayesrc_annotation_gamma_mean(alpha, gamma)` calculates the corresponding
+expected component multiplier for an annotation-row diagnostic:
 
 $$
-\overline{\gamma}_k^{\mathrm{annotation}}
+\overline\gamma_c^{(\mathrm{annotation})}
 =
-\sum_{c=1}^{C}\pi_{kc}\gamma_c
+\sum_{k=0}^{K}
+\pi_{ck}\gamma_k.
 $$
 
-for each $\alpha$ row.
+These are **coefficient-row diagnostics**.
 
-These are coefficient-row diagnostics. A binary annotation row, for example,
-is evaluated as a standalone predictor row. It does not automatically include
-the fitted intercept or the effects of correlated annotations. It should not
-be described as the literal component probability for every marker carrying
-that annotation.
+For example, evaluating a binary annotation as a standalone row does not
+automatically include:
+
+- the fitted intercept;
+- correlated annotations;
+- the complete annotation profile of an actual marker.
+
+The result should therefore not be described as the literal prior component
+probability of every marker carrying that annotation.
 
 ### Marker-profile diagnostics
 
-`sbayesrc_marker_pi(A, alpha, gamma)` first computes $A\alpha$, then applies
-the stick-breaking transform. It returns an $m \times C$ marker-level prior
-component probability matrix.
+`sbayesrc_marker_pi(A, alpha, gamma)` first forms the annotation linear
+predictors for complete marker profiles and then applies the stick-breaking
+transform.
 
-`sbayesrc_marker_gamma_mean(A, alpha, gamma)` computes the plug-in expected
-$\gamma$ for each marker:
+It returns an $M\times(K+1)$ marker-level prior component-probability matrix.
+
+`sbayesrc_marker_gamma_mean(A, alpha, gamma)` calculates
 
 $$
-\overline{\gamma}_i^{\mathrm{marker}}
+\overline\gamma_j^{(\mathrm{marker})}
 =
-\sum_{c=1}^{C}\pi_{ic}\gamma_c.
+\sum_{k=0}^{K}
+P_{jk}\gamma_k.
 $$
 
-These marker-profile helpers include the complete annotation combination in
-each row of $A$. They are generally more directly relevant to the fitted
-prior architecture than standalone annotation-row summaries.
+This expected multiplier is a one-number summary of the marker's complete prior
+component distribution.
+
+For example:
 
 ```r
 alpha_t <- fit$alpha[[1]]
 mixture_var <- c(0, 0.01, 0.1, 1)
-prior_pi <- sbayesrc_marker_pi(fit$input$A, alpha_t, mixture_var)
+
+prior_pi <- sbayesrc_marker_pi(
+  fit$input$A,
+  alpha_t,
+  mixture_var
+)
+
 expected_multiplier <- sbayesrc_marker_gamma_mean(
-  fit$input$A, alpha_t, mixture_var
+  fit$input$A,
+  alpha_t,
+  mixture_var
 )
 ```
 
-Because these diagnostics transform posterior mean $\alpha$ coefficients, they do
-not propagate the full posterior uncertainty in $\alpha$. Compact reports can
-show annotation-row expected multipliers, `summary(expected_multiplier)`, and the
-correlation between marker expected $\gamma$ and PIP. That correlation describes
-the fitted prior-posterior relationship; it is not a calibration statistic or
-causal estimate.
+The exact matrix stored in `fit$input$A` is an implementation object; its
+alignment and preprocessing should be interpreted according to the fitted
+annotation contract.
 
-## Interpretation of Annotation Effects
+Marker-profile diagnostics are generally more directly connected to the fitted
+prior architecture than standalone annotation-row diagnostics because they use
+the complete marker annotation profile.
 
-An $\alpha$ coefficient changes a conditional continuation probability at one
-stick-breaking step. Its sign cannot be interpreted independently of component
-ordering:
+## Interpreting annotation effects
 
-- a positive coefficient increases the probability of continuing past that
-  step;
-- a negative coefficient increases the probability of stopping at that step;
-- the consequences for expected $\gamma$ depend on all later steps and the $\gamma$
-  grid.
+An $\alpha$ coefficient acts on one **conditional continuation probability**.
 
-$\mathbb E(\gamma)$ is a useful scalar summary of prior mixture allocation, but it
-compresses a complete component-probability vector. Two markers can have the
-same expected $\gamma$ while assigning probability to different components.
-Report component probabilities when those distinctions matter.
+Its sign cannot be interpreted independently of the stick position.
 
-Annotation effects and expected-$\gamma$ differences are prior-architecture
-summaries, not proof of biological causality. They can reflect LD, marker
-density, annotation overlap, quantitative-annotation scaling, model
-misspecification, and finite-chain behavior. Interpretation should compare
-annotation-derived prior probabilities with posterior component frequencies
-and assess sensitivity to preprocessing, $\gamma$ grids, sparse-LD settings, and
-hyperparameters.
+At step $k$:
 
-## Comparison With Published SBayesRC
+- a positive coefficient increases the probability of continuing beyond that
+  stick;
+- a negative coefficient increases the probability of stopping at that stick;
+- its effect on the final component distribution depends on earlier and later
+  continuation probabilities.
+
+Therefore a raw coefficient is not a simple component-specific log-odds ratio.
+
+### Expected component multiplier
+
+The quantity
+
+$$
+\mathbb E_\text{prior}(\gamma_j)
+=
+\sum_{k=0}^{K}
+P_{jk}\gamma_k
+$$
+
+is a useful scalar summary of prior mixture allocation.
+
+However, it compresses a full component-probability vector.
+
+Two markers can have the same expected multiplier while placing prior mass on
+different BayesR components.
+
+When component identity matters, report the full $P_{jk}$ vector rather than
+only the expected multiplier.
+
+### Prior architecture versus posterior marker evidence
+
+A marker's prior component vector
+
+$$
+(P_{j0},\ldots,P_{jK})
+$$
+
+should be distinguished from its posterior component vector
+
+$$
+\left\{
+\Pr(c_j=k\mid\mathcal D)
+\right\}_{k=0}^{K}.
+$$
+
+The difference between the two reflects the contribution of the marker
+likelihood and the rest of the hierarchical posterior.
+
+Correlations between expected prior multiplier and posterior PIP can describe a
+prior-posterior relationship, but they are not calibration statistics or
+causal estimates.
+
+## Convergence diagnostics should follow the hierarchy
+
+Because the annotation model is hierarchical, convergence should be assessed at
+more than one level.
+
+A useful hierarchy is:
+
+1. **raw coefficient state:** $\alpha$, `sigmaSqAlpha`, and their
+   $\widehat R$, ESS, MCSE, and trace diagnostics;
+2. **induced prior architecture:** marker-level $P_{jk}$, prior active
+   probabilities, expected component multipliers, and expected occupancy;
+3. **posterior marker inference:** posterior component probabilities, PIPs, and
+   marker effects;
+4. **downstream summaries:** variance components and prediction.
+
+Good-looking coefficient means do not by themselves establish that the induced
+marker prior is stable.
+
+Conversely, uncertainty in raw coefficients can sometimes be partially
+attenuated in downstream quantities.
+
+For this reason, SBayesRC-style diagnostics should include both coefficient
+space and induced marker-prior space.
+
+## Comparison with published SBayesRC
 
 | Published SBayesRC feature | `sblr` implementation | Assessment |
 |---|---|---|
-| BayesR-like multi-normal marker-effect mixture | $\beta_i\mid z_i=k \sim N(0,\gamma_kv_b)$ | Same core prior family |
-| Exact null component | Requires `gamma[1] == 0`; null effects are exactly zero | Same |
-| Published $\gamma$ grid `c(0, 0.001, 0.01, 0.1, 1)` | User-supplied and supported | Same when explicitly requested |
-| Default $\gamma$ grid | `c(0, 0.01, 0.1, 1)` | Different exposed default |
-| Marker-specific mixture probabilities from annotations | Uses $A\alpha$ for every marker | Same core structure |
-| Conditional probit stick-breaking | Uses $p_{ij}=\Phi(A_i\alpha_j)$ and conditional continuation probabilities | Same core structure |
+| BayesR-like multi-normal marker-effect mixture | $b_j\mid c_j=k\sim N(0,\gamma_kv_b)$ | Same core prior family |
+| Exact null component | Requires first multiplier to be zero; null effects are exactly zero | Same |
+| Published multiplier grid `c(0, 0.001, 0.01, 0.1, 1)` | User-supplied and supported | Same when explicitly requested |
+| Exposed default multiplier grid | `c(0, 0.01, 0.1, 1)` | Different default |
+| Marker-specific component probabilities from annotations | Uses processed annotation predictors for every marker | Same core structure |
+| Conditional probit stick breaking | Uses $\rho_{jk}=\Phi(\widetilde A_j^{(P)}\alpha_k)$ | Same core structure |
 | Intercept and functional annotations | Adds an intercept by default; accepts overlapping binary or quantitative annotations | Closely aligned, with `sblr` preprocessing defaults |
-| Quantitative annotation handling | Standardizes nonbinary annotations by default; leaves binary columns unchanged by default | Qualified implementation choice |
-| Normal $\alpha$ priors with step-specific variance | Non-intercept coefficients use $N(0,\sigma_{\alpha,j}^2)$ | Same prior family |
-| Scaled inverse-chi-square prior on $\alpha$ variance | Uses a scaled-inverse-chi-square/inverse-gamma-family update controlled by `sigmaSqAlpha_a` and `sigmaSqAlpha_b` | Same family; exact published hyperparameters not implied |
-| Probit $\alpha$ update | Latent truncated-normal augmentation and conditional normal draws | Closely aligned Gibbs-style update |
-| Component-probability numerical handling | Floors probabilities at `pi_floor` and renormalizes rows | Qualified numerical-stability detail |
-| Summary-statistics likelihood | CSR sparse-LD likelihood for `stblr_csr_annot()`; retained eigenspace likelihood for scalar `stblr_block_eigen()` | The block-eigen route crosswalks retained rank, transformed score, and marker conditionals, but not GCTB's block-specific residual-variance procedure |
+| Quantitative annotation handling | Standardizes eligible nonbinary annotations by default; leaves binary columns unchanged by default | Qualified implementation choice |
+| Normal non-intercept $\alpha$ prior with step-specific variance | $\alpha_{ck}\mid\sigma_{\alpha,k}^2\sim N(0,\sigma_{\alpha,k}^2)$ | Same broad prior family |
+| Scaled inverse-chi-square-family variance prior | Controlled by `sigmaSqAlpha_a` and `sigmaSqAlpha_b` | Same broad family; exact external hyperparameters not implied by `sblr` defaults |
+| Probit coefficient update | Truncated-normal augmentation and conditional Gaussian draws | Closely aligned Gibbs-style update |
+| Numerical component-probability handling | Floors probabilities at `pi_floor` and renormalizes | `sblr` numerical-stability detail |
+| Summary-statistics likelihood | CSR sparse LD for `stblr_csr_annot()`; retained eigenspace for scalar `stblr_block_eigen()` | Different operator routes; block-eigen crosswalk does not imply an identical residual-variance procedure |
 
-The most accurate description is therefore:
+The most accurate description is:
 
 > `stblr_csr_annot(..., annotation_model = "annotation_probit_stick")`
-> implements an SBayesRC-style,
-> annotation-dependent BayesR prior that is closely aligned with the published
-> SBayesRC prior structure, fitted with the `sblr` CSR sparse-LD likelihood.
+> implements an SBayesRC-style annotation-dependent BayesR probability prior
+> that is closely aligned with the published SBayesRC prior structure and is
+> fitted using the `sblr` CSR sparse-LD likelihood.
 
-It should not be described as an exact reproduction of published GCTB
-SBayesRC as exposed by default.
+It should not be described as an exact reproduction of the published GCTB
+SBayesRC implementation under default `sblr` settings.
 
-## Practical Validation Checklist
+## Practical validation checklist
 
 Before interpreting an SBayesRC-style fit:
 
-- verify marker alignment among $A$, sufficient statistics, CSR LD, and
-  posterior summaries;
-- record the component-multiplier grid and distinguish the `sblr` default from the published
-  grid;
-- record intercept, standardization, and binary-centering choices;
-- inspect annotation prevalence, scaling, overlap, and collinearity;
-- report `annotation_intercept_prior`, `sigmaSqAlpha_a`, `sigmaSqAlpha_b`,
-  `pi_floor`, and `alpha_update_every` (and any explicit legacy-flat use);
-- check component counts, PIPs, variance traces, and chain behavior;
-- distinguish annotation-derived prior probabilities from posterior component
-  frequencies in `component_probabilities`;
-- compare annotation-row and full marker-profile diagnostics;
-- assess sensitivity to $\gamma$, sparse-LD thresholds, annotations, and
-  hyperparameters; and
-- avoid causal claims from $\alpha$ coefficients or expected-$\gamma$ summaries.
+1. verify marker alignment among annotations, sufficient statistics, the fitted
+   LD/operator representation, and posterior marker summaries;
+2. record the component-multiplier grid and distinguish the `sblr` default from
+   the published grid;
+3. record intercept handling, quantitative standardization, and binary
+   centering;
+4. inspect annotation prevalence, scale, overlap, and collinearity;
+5. report `annotation_intercept_prior`, `sigmaSqAlpha_a`,
+   `sigmaSqAlpha_b`, `pi_floor`, and `alpha_update_every`;
+6. report whether legacy `intercept_flat = TRUE` was explicitly used;
+7. inspect $\alpha$ and `sigmaSqAlpha` convergence;
+8. inspect induced marker-level prior probabilities and expected occupancy;
+9. inspect posterior component probabilities, PIPs, variance traces, and marker
+   effects;
+10. distinguish annotation-derived prior probabilities from posterior component
+    frequencies;
+11. compare standalone annotation-row diagnostics with full marker-profile
+    diagnostics where useful;
+12. assess sensitivity to the $\gamma$ grid, LD representation, annotations,
+    preprocessing, and hyperparameters;
+13. avoid causal interpretation of raw $\alpha$ coefficients or expected
+    component multipliers.
 
 ## Joint MT factorization
 
-For genuine joint MT BayesRC/SBayesRC, let $P_{j0}$ be marker $j$'s null
-component probability, $P_{jk}$ its positive-component probabilities, and
-$H_p$ the global conditional probability of non-null trait pattern $p$.
+For genuine joint MT BayesRC/SBayesRC, let
+
+$$
+P_{j0}
+$$
+
+be marker $j$'s null component probability and
+
+$$
+P_{jk},
+\qquad
+k>0,
+$$
+
+its positive-component probabilities.
+
+Let
+
+$$
+H_p
+$$
+
+be the global conditional probability of non-null trait pattern $p$.
+
 The current prior is
 
 $$
-P(\mathrm{null}\mid A_j)=P_{j0},
+\Pr(c_j=0\mid A_j)
+=
+P_{j0},
 $$
 
+and for $k>0$,
+
 $$
-P(a_j=p,c_j=k\mid A_j)=P_{jk}H_p,\qquad k>0.
+\Pr(a_j=p,c_j=k\mid A_j)
+=
+P_{jk}H_p.
 $$
 
-The same probit-stick $\alpha$ architecture governs $P$. The sharing
-architecture $H$ is global and annotation independent. Conditional on an
-active pattern and component,
+The same probit-stick architecture governs $P$.
+
+The sharing architecture $H$ is global and annotation independent.
+
+Let
+
+$$
+\beta_j
+=
+B_{j\cdot}^{\top}
+$$
+
+denote the joint MT marker-effect vector.
+
+Conditional on active pattern $p$ and positive component $k$,
 
 $$
 \operatorname{Cov}(\beta_{j,p,k})
-=\gamma_kq_jV_{b,p},
+=
+\gamma_kq_jV_{b,p},
 $$
 
 where $V_{b,p}$ is the active-trait submatrix of the global marker-effect
-covariance $V_b$. Current annotations change $P$, not $H$ or $V_b$.
-See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for complete state and
-output semantics.
+covariance $V_b$.
 
-## Related Notes and Sources
+Current SBayesRC annotations modify $P$.
+
+They do not currently make $H$ or $V_b$ annotation dependent.
+
+See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the complete joint MT
+state model and output semantics.
+
+## Related pages
 
 - [Annotation-Informed Priors](annotation_priors.qmd) is the canonical general
-  annotation-prior theory.
+  prior-architecture page.
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) defines the current joint MT
+  $P\times H$ model.
 - [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
   covers posterior-to-prior construction workflows.
-- [Workflows and outputs](../notes/workflows_and_outputs.qmd) explains compact fit and
-  expected-$\gamma$ reporting.
-- [Model overview](../notes/model_overview.qmd) places the model within the broader
-  `sblr` model and workflow landscape.
+- [Summary Statistics](summary_statistics.qmd) defines the summary-statistics
+  cross-product representation without using code-field names as mathematical
+  symbols.
+- [Sparse LD and CSR](sparse_ld_csr.qmd) defines the sparse-LD likelihood used
+  by `stblr_csr_annot()`.
+- [Block-Eigen LD](block_eigen_operator.qmd) defines the scalar retained
+  eigenspace and reconstructed block operators.
+- [Fine-Mapping and Credible Sets](fine_mapping.qmd) explains the distinction
+  between prior architecture, posterior marker probabilities, and LD-aware
+  marker post-processing.
+- [Workflows and outputs](../notes/workflows_and_outputs.qmd) gives practical
+  fit and reporting guidance.
+- [Model overview](../notes/model_overview.qmd) places the model within the
+  broader `sblr` workflow landscape.
 
-The implementation contracts described here are based on the public fitters,
-deterministic diagnostic helpers, helper tests, and native samplers.
+This appendix therefore owns the detailed continuation-probit construction,
+coefficient hierarchy, initialization, and interpretation of the current
+SBayesRC-style annotation-dependent component-probability architecture.
