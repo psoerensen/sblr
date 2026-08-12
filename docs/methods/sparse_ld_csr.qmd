@@ -118,10 +118,11 @@ distance rules and retains a pair only when
 $$
 \rho_{j\ell}^2
 \ge
-\texttt{r2_threshold}.
+\tau_{r^2}.
 $$
 
-The stored value is signed $\rho_{j\ell}$, not $\rho_{j\ell}^2$.
+Here $\tau_{r^2}$ is the configured `r2_threshold`. The stored value is signed
+$\rho_{j\ell}$, not $\rho_{j\ell}^2$.
 
 The current disk artifact stores:
 
@@ -236,12 +237,14 @@ Three arrays describe the retained upper-triangle entries:
 | `col_idx` | column index for every retained entry; length `nnz` |
 | `values` | retained signed LD correlations; length `nnz` |
 
-For zero-based row pointers, entries belonging to row $j$ occupy positions
+Let $\rho_j^{(\mathrm{ptr})}$ denote the zero-based cumulative pointer stored as
+`row_ptr[j]`.
+Entries belonging to row $j$ occupy positions
 
 $$
-\texttt{row\_ptr}[j]
+\rho_j^{(\mathrm{ptr})}
 \quad\text{through}\quad
-\texttt{row\_ptr}[j+1]-1.
+\rho_{j+1}^{(\mathrm{ptr})}-1.
 $$
 
 For example,
@@ -604,10 +607,12 @@ After each row, the cumulative retained-entry count is written to `row_ptr`.
 Therefore,
 
 $$
-\texttt{row\_ptr}[M]
+\rho_M^{(\mathrm{ptr})}
 =
 \mathrm{nnz}.
 $$
+
+The final pointer $\rho_M^{(\mathrm{ptr})}$ is stored as `row_ptr[M]`.
 
 Streaming avoids materializing one complete dense LD matrix or one complete
 sparse result in R.
@@ -918,6 +923,31 @@ A separate dense regional reference may contain that LD information, but it
 does not retroactively alter the genomic posterior obtained under the sparse
 operator.
 
+Entrywise thresholding or windowing of an otherwise positive-semidefinite LD
+matrix need not preserve positive semidefiniteness. A structurally valid CSR
+artifact can therefore encode a symmetric sparse operator that is not itself a
+valid covariance matrix. This is a property to diagnose, not evidence that a
+missing edge was biologically zero; diagonal positivity and correlation bounds
+alone do not establish positive semidefiniteness or likelihood fidelity.
+Symmetry alone is also insufficient.
+
+Consequently, for a potentially indefinite reconstructed sparse operator
+$\widetilde C_X$ on the cross-product scale,
+
+$$
+\frac{1}{N}b^\top\widetilde C_Xb
+$$
+
+is an operator-relative quadratic form and can be negative; it is not a
+guaranteed genomic variance. Likewise,
+$B^\top\widetilde C_XB/N$ is an operator-relative matrix of bilinear forms, not
+a guaranteed covariance matrix. Its diagonal/off-diagonal split is an
+algebraic decomposition rather than a guaranteed variance decomposition.
+Variance and covariance terminology is justified only after
+positive semidefiniteness and compatible scale and population provenance have
+been established. If an operator is instead supplied on the per-observation
+covariance scale, its quadratic is not divided by $N$ again.
+
 See [Fine-Mapping and Credible Sets](fine_mapping.qmd).
 
 ## Comparison with complete BED-derived likelihood information
@@ -949,7 +979,9 @@ Comparisons should therefore focus on quantities such as:
 - posterior mean effects;
 - PIP rankings;
 - component probabilities;
-- genomic variance;
+- the operator-relative genomic quadratic, interpreted as genomic variance
+  only when positive semidefiniteness and compatible scale and provenance are
+  established;
 - prediction;
 - sensitivity to LD threshold/window settings.
 

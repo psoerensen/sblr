@@ -176,9 +176,10 @@ off-diagonal part of this update. This is one of the places where sparse-LD
 approximation changes the numerical likelihood state relative to a complete
 $X^\top X$ representation.
 
-## The Identity $X^\top Xb=X^\top y-r$
+## Exact Gram and Approximate-Operator Identities
 
-Rearranging the residual-score definition gives
+For the actual common-sample Gram matrix $C_X=X^\top X$, rearranging the exact
+residual-score definition gives
 
 $$
 X^\top Xb
@@ -186,10 +187,10 @@ X^\top Xb
 X^\top y-r.
 $$
 
-This identity is useful well beyond the marker update. It allows residual
-variance, genomic variance, and marker- or set-level genetic contributions to
-be calculated from summary-statistic quantities and the maintained residual
-score.
+This exact identity is useful well beyond the marker update. It allows a
+residual sum of squares, genomic variance, and marker- or set-level genetic
+contributions to be calculated from summary-statistic quantities and the exact
+Gram-matrix residual score.
 
 ### Residual sum of squares
 
@@ -224,8 +225,8 @@ y^\top y
 \end{aligned}
 $$
 
-This expression can be evaluated without returning to individual-level
-observations once the cross-products and marker-scale residual score are
+This exact expression can be evaluated without returning to individual-level
+observations once the actual cross-products and marker-scale residual score are
 available.
 
 ### Genomic variance
@@ -255,8 +256,64 @@ $$
 b^\top(X^\top y-r).
 $$
 
-The denominator $N$ makes this a cross-product-per-observation quantity; it is
-not presented here as an unbiased sample-variance estimator.
+Writing $\Sigma_X=C_X/N$ for the corresponding per-observation genotype
+covariance gives
+
+$$
+C_X=N\Sigma_X,
+\qquad
+\frac{1}{N}b^\top C_Xb
+=
+b^\top\Sigma_Xb.
+$$
+
+Thus a cross-product-scale operator receives the factor $1/N$, whereas a
+covariance-scale operator does not. The resulting genomic-variance
+interpretation additionally requires a positive-semidefinite operator with
+compatible marker order, allele orientation, genotype coding, centering,
+standardization, and population provenance. It is not presented here as an
+unbiased sample-variance estimator.
+
+For an approximate fitted operator $\widetilde C_X$ on the cross-product scale,
+define the maintained operator score
+
+$$
+r_{\mathrm{op}}
+=
+X^\top y-\widetilde C_Xb.
+$$
+
+Then
+
+$$
+\widetilde C_Xb
+=
+X^\top y-r_{\mathrm{op}}.
+$$
+
+The associated residual and genomic quadratics are
+
+$$
+\begin{aligned}
+q_e^{(\mathrm{op})}
+&=
+y^\top y-2b^\top X^\top y+b^\top\widetilde C_Xb\\
+&=
+y^\top y-b^\top(X^\top y+r_{\mathrm{op}}),\\
+q_g^{(\mathrm{op})}
+&=
+\frac{1}{N}b^\top\widetilde C_Xb
+=
+\frac{1}{N}b^\top(X^\top y-r_{\mathrm{op}}).
+\end{aligned}
+$$
+
+If $\widetilde C_X$ is potentially indefinite, these are an
+operator-relative residual quadratic and an operator-relative genomic
+quadratic: they are algebraic likelihood summaries, not guaranteed residual
+sum of squares or genomic variance. A variance interpretation requires an
+appropriate positive-semidefinite operator on the declared scale and compatible
+provenance.
 
 ## Genotype scaling, allele frequencies, and marker diagonals
 
@@ -543,22 +600,51 @@ X^\top Xb_t
 X^\top y_t-r_t.
 $$
 
-A symmetric sample-scaled genomic covariance estimate for traits $t$ and $s$
-can then be written as
+When both traits refer to the same $N$ individuals and the same actual genotype
+matrix $X$, the exact sample-scaled genomic covariance is
 
 $$
 [\widehat V_g]_{ts}
 =
-\frac{1}{2\sqrt{N_tN_s}}
+\frac{1}{2N}
 \left[
 b_t^\top(X^\top y_s-r_s)
 +
 b_s^\top(X^\top y_t-r_t)
-\right].
+\right]
+=
+\frac{1}{N}b_t^\top X^\top Xb_s.
 $$
 
-When $t=s$, this reduces to the single-trait genomic-variance expression. When
-all traits use the same sample size $N$, the denominator becomes $N$.
+When $t=s$, this reduces to the single-trait genomic-variance expression. The
+symmetrized form is useful numerically, although its two terms are equal under
+the common-sample cross-product $X^\top X$.
+
+A different target can be defined using a declared per-observation
+target-population genotype covariance $\Sigma_X$. It must be positive
+semidefinite and compatible with both effect vectors in marker order, allele
+orientation, genotype coding, centering, standardization, target population,
+and covariance scale. Then
+
+$$
+[V_g^{(\mathrm{target})}]_{ts}
+=
+b_t^\top\Sigma_Xb_s
+$$
+
+is a target-population genetic covariance. If the same operator is represented
+on a cross-product scale as $C_X=N\Sigma_X$, then
+$b_t^\top C_Xb_s/N=b_t^\top\Sigma_Xb_s$; the covariance-scale expression is not
+divided by $N$ again. These assumptions are additional to symmetry. If an
+approximate symmetric operator is indefinite, the same expression is only an
+operator-relative bilinear form, not an entry of a guaranteed covariance
+matrix.
+
+For traits from different samples, dividing an analogous symmetrized expression
+by $2\sqrt{N_tN_s}$ may provide a descriptive common-scale normalization. It is
+not, without an explicit joint genotype/overlap model, an exact covariance of
+two fitted genetic-value vectors. Separate marginal GWAS do not generally
+supply the cross-trait genotype cross-products required for that interpretation.
 
 ## Cross-Trait Phenotype Products and Sample Overlap
 
@@ -714,9 +800,10 @@ depends on the overlap model and the assumptions described above.
 
 Finite precision, asymmetric input construction, or trait-specific summary
 statistics can make nominally equivalent cross-trait expressions differ
-slightly by orientation. The current native multi-trait CSR implementation
-symmetrizes off-diagonal residual and genomic covariance quantities before
-covariance updates.
+slightly by orientation. According to the current maintained implementation
+contract, the multi-trait CSR route symmetrizes off-diagonal residual and
+genomic covariance quantities before covariance updates; that software-behavior
+claim remains to be checked against source in phase 2.
 
 A vector of marginal phenotype sums of squares can support separate trait-wise
 residual variance updates. It cannot, by itself, identify a full residual
@@ -734,11 +821,11 @@ $$
 
 also supports descriptive marker- and set-level summaries.
 
-For a marker set $\mathcal S_k$, define the fitted set-specific genomic
-contribution for trait $t$ as
+For a marker set $\mathcal S_k$, define the signed fitted allocation for trait
+$t$ as
 
 $$
-\widehat v_{g,k,t}
+\widehat a^{(\mathrm{signed})}_{g,k,t}
 =
 \frac{1}{N_t}
 \sum_{j\in\mathcal S_k}
@@ -775,11 +862,17 @@ X^\top y_t-r_t
 }{N_t}.
 $$
 
-These quantities are useful for describing annotations, loci, or genomic
-regions. For disjoint sets, the unweighted contributions can approximate a
-partition of the fitted genomic-variance expression. For overlapping sets, one
-marker contributes to every set containing it, so the resulting totals are
-attributions rather than an additive partition.
+These signed quantities are useful for describing annotations, loci, or genomic
+regions. They include LD cross-terms between markers in $\mathcal S_k$ and
+markers outside it, so they can be negative even when the full genomic
+quadratic form is nonnegative. For disjoint sets, the unweighted allocations
+sum algebraically to the fitted full-genome expression. For overlapping sets,
+one marker contributes to every set containing it, so the resulting totals are
+attributions rather than an additive partition. Neither the set allocation nor
+the marker contribution is, by itself, a nonnegative variance suitable for use
+as a Normal-prior variance. The corresponding nonnegative within-set quadratic
+and posterior-second-moment effect scale are developed in
+[Empirical-Bayes Construction](annotation_informed_models.qmd).
 
 There is also an important posterior-summarization caveat. Combining posterior
 mean effects, posterior mean PIPs, and a returned residual score in a nonlinear

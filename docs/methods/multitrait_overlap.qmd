@@ -652,7 +652,8 @@ X^\top Xb_t
 X^\top y_t-r_t.
 $$
 
-A symmetric cross-trait estimator is
+For one common sample of size $N$ and its actual genotype cross-product
+$X^\top X$, the exact sample-scaled cross-trait genomic covariance is
 
 $$
 [\widehat V_g]_{ts}
@@ -662,13 +663,55 @@ b_t^\top(X^\top y_s-r_s)
 +
 b_s^\top(X^\top y_t-r_t)
 }{
-2\sqrt{N_tN_s}
-}.
+2N
+}
+=
+\frac{1}{N}b_t^\top X^\top Xb_s.
 $$
 
-When all traits use one common sample of size $N$, the denominator becomes $N$.
 When $t=s$, the expression reduces to the single-trait genomic-variance
-formula.
+formula. The two cross-trait orientations are algebraically equal under the
+common-sample cross-product; averaging them is a numerical symmetrization.
+
+This paired fitted-value covariance requires the two fitted genetic-value
+vectors to be defined on the same individuals, or otherwise requires paired
+genotypes sufficient to form the relevant cross-product.
+
+A distinct target-population quantity may be defined even when the two GWAS
+samples do not overlap. Let $\Sigma_X$ be a declared per-observation
+target-population genotype covariance that is positive semidefinite and
+compatible with both effect vectors in marker order, allele orientation,
+genotype coding, centering, standardization, target population, and covariance
+scale. Define
+
+$$
+[V_g^{(\mathrm{target})}]_{ts}
+=
+b_t^\top\Sigma_Xb_s.
+$$
+
+This is covariance in the declared target population, not covariance of paired
+fitted values in the two separate GWAS samples. Symmetry without positive
+semidefiniteness and compatible population provenance is insufficient; with a
+potentially indefinite approximate operator, the expression is only an
+operator-relative bilinear form.
+
+If the same target operator is represented on a cross-product scale for a
+declared size $N$, then $C_X=N\Sigma_X$ and
+
+$$
+\frac{1}{N}b_t^\top C_Xb_s
+=
+b_t^\top\Sigma_Xb_s.
+$$
+
+The covariance-scale form is not divided by $N$ again.
+
+With trait-specific samples, a denominator such as $\sqrt{N_tN_s}$ can define a
+descriptive normalization only after the cross-trait operator terms have been
+specified. It does not turn separate marginal GWAS into one joint fitted-value
+covariance, because the necessary cross-sample genotype products are otherwise
+unidentified.
 
 This quantity concerns fitted genetic values and LD. It is not determined by
 $S_Y$ alone.
@@ -680,10 +723,12 @@ current marker effects. Its direct cross-trait information comes from
 individuals observed jointly and therefore depends on $S_Y$ and sample
 overlap.
 
-Genetic covariance may be estimable from aligned marker associations even when
-two GWAS samples do not overlap. Direct residual covariance information from
-paired residuals is fundamentally different: without shared individuals,
-those paired residual observations do not exist.
+A target-population genetic covariance may therefore be estimable from aligned
+marker effects and an appropriate external $\Sigma_X$ even when two GWAS
+samples do not overlap. Marginal sample-size scaling alone does not supply that
+operator. Direct residual covariance information from paired residuals is
+fundamentally different: without shared individuals, those paired residual
+observations do not exist.
 
 ## Current operator restrictions
 

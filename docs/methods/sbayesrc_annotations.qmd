@@ -24,6 +24,14 @@ The exposed `stblr_csr_annot()` model is not an exact reproduction of the
 published GCTB SBayesRC implementation. Its default component-multiplier grid
 differs, and this route uses the `sblr` CSR sparse-LD likelihood.
 
+::: {.callout-note title="Software-status basis"}
+Statements on current `sblr` defaults, supported routes, numerical safeguards,
+and failure behavior on this page are reported from maintained developer
+contracts or qualification records. They remain pending verification against
+dispatch and source in phase 2; this qualification does not make the
+statistical definitions themselves provisional.
+:::
+
 The separate scalar
 
 ```r
@@ -31,9 +39,12 @@ stblr_block_eigen(method = "sbayesrc")
 ```
 
 route follows the GCTB/SBayesRC eigenspace-likelihood strategy in `sblr`
-cross-product units, but uses the current `sblr` global projected
-residual-variance contract rather than GCTB's block-specific variance
-procedure.
+cross-product units. According to the current maintained block-eigen contract,
+retained SBayesR/SBayesRC fitting defaults to the block-specific `gctb_block`
+residual policy, while the older global projected policy is retained explicitly
+as `global_projected_legacy`. Matching the default block policy still does not
+establish equality of every likelihood, prior, preprocessing, and numerical
+contract.
 
 This page focuses on the annotation-dependent **probability architecture**,
 its coefficient hierarchy, and its diagnostics. The underlying likelihood
@@ -80,7 +91,8 @@ $$
 contains fixed relative variance multipliers, while $v_b$ is the global
 active-effect variance scale.
 
-The implementation requires
+The maintained model contract, pending source verification in phase 2,
+requires
 
 $$
 \gamma_0=0,
@@ -143,7 +155,8 @@ probability architecture described in
 The package argument `maf_effect_s` corresponds to the BayesS-style MAF
 architecture parameter $S$.
 
-Current CSR SBayesRC supports both:
+According to the maintained capability contract, pending source verification
+in phase 2, CSR SBayesRC supports both:
 
 - fixed global `maf_effect_s`; and
 - sampled trait-specific `maf_effect_s` through Metropolis-Hastings on
@@ -189,20 +202,20 @@ v_b\gamma_kq_j(S)
 \right).
 $$
 
-Thus the full non-null variance contains three conceptually distinct pieces:
+Thus the full non-null variance is
 
 $$
-\underbrace{v_b}_{\text{global scale}}
-\times
-\underbrace{\gamma_k}_{\text{BayesR component}}
-\times
-\underbrace{q_j(S)}_{\text{MAF-S marker multiplier}}.
+v_b\gamma_kq_j(S).
 $$
+
+Here $v_b$ is the global active-effect scale, $\gamma_k$ the BayesR component
+multiplier, and $q_j(S)$ the MAF-S marker multiplier.
 
 ### Sampled $S$
 
-When `maf_effect_s` is sampled, the current implementation samples one $S_t$
-per trait and chain using the active-component log-posterior contribution
+When `maf_effect_s` is sampled, the maintained sampler contract reports one
+$S_t$ per trait and chain, pending source verification in phase 2, using the
+active-component log-posterior contribution
 
 ```text
 log p(S_t | b_t, gamma_t, vb_t)
@@ -212,7 +225,7 @@ log p(S_t | b_t, gamma_t, vb_t)
       ]
 ```
 
-The current sampled-$S$ defaults are
+The same contract reports the sampled-$S$ defaults
 
 ```r
 maf_effect_s_init = 0
@@ -229,19 +242,44 @@ capability documentation for route-specific support.
 
 ## Component-multiplier grids
 
-The public `sblr` default is
+According to the current maintained model contract, the public `sblr` default
+is
 
 ```r
 mixture_var = c(0, 0.01, 0.1, 1)
 ```
 
-whereas the published SBayesRC component grid is
+The published SBayesRC specification instead names five biological effect-size
+classes---zero, very small, small, medium, and large---with component variances
+expressed as percentages of total SNP genetic variance:
+
+$$
+\left(
+0,
+0.001\%,
+0.01\%,
+0.1\%,
+1\%
+\right)v_g^{\mathrm{SNP}}
+=
+\left(
+0,
+10^{-5},
+10^{-4},
+10^{-3},
+10^{-2}
+\right)v_g^{\mathrm{SNP}}.
+$$
+
+In the generic `sblr` parameterization $\gamma_kv_b$, the common factor
+$10^{-2}v_g^{\mathrm{SNP}}$ can be absorbed into $v_b$. The corresponding
+*relative* ladder is then
 
 ```r
 mixture_var = c(0, 0.001, 0.01, 0.1, 1)
 ```
 
-The published grid can be requested explicitly:
+The same contract reports that the relative ladder can be requested explicitly:
 
 ```r
 fit <- stblr_csr_annot(
@@ -253,11 +291,12 @@ fit <- stblr_csr_annot(
 )
 ```
 
-Matching the multiplier grid aligns this part of the prior specification.
-
-It does **not** make the complete `sblr` model identical to GCTB SBayesRC,
-because the likelihood representation, exposed defaults, and other
-implementation contracts remain distinct.
+Matching this multiplier vector aligns the component ratios and restores the
+published five-class ordering. It does not by itself align the absolute scale:
+that also requires $v_b$ to have the corresponding interpretation. Nor does it
+make the complete `sblr` model identical to GCTB SBayesRC, because likelihood,
+residual-variance, preprocessing, hyperprior, and numerical contracts can still
+differ.
 
 ## Raw and processed annotation designs
 
@@ -290,10 +329,10 @@ Rows must be aligned with the markers in:
 Columns may contain binary or quantitative annotations, and annotations may
 overlap.
 
-### Current preprocessing controls
+### Contract-reported preprocessing controls
 
-Before fitting, the current SBayesRC-style route uses the annotation preparation
-contract with controls including:
+According to the maintained annotation-preparation contract, pending source
+verification in phase 2, the SBayesRC-style route uses controls including:
 
 - `add_intercept = TRUE`, which adds an all-ones first column when an intercept
   is not already recognized;
@@ -432,11 +471,12 @@ continuation steps or reaches the final component.
 
 ## Numerical flooring and renormalization
 
-The native sampler computes the component probabilities from the processed
-annotation linear predictors, floors each component probability at `pi_floor`,
-and renormalizes each marker row to sum to one.
+According to the maintained sampler contract, pending source verification in
+phase 2, the sampler computes component probabilities from the processed
+annotation linear predictors, floors each probability at `pi_floor`, and
+renormalizes each marker row to sum to one.
 
-The current public default is
+The contract-reported public default is
 
 ```r
 pi_floor = 1e-12
@@ -459,7 +499,8 @@ finite coefficients, their rows sum to one up to numerical tolerance.
 
 At continuation step $k$, let $\alpha_{0k}$ denote the intercept coefficient.
 
-The current standard contract uses the proper prior
+According to the current maintained intercept qualification record, pending
+source verification in phase 2, the standard contract uses the proper prior
 
 $$
 \alpha_{0k}
@@ -488,15 +529,21 @@ and standard deviations.
 This prior specification is distinct from `alpha_init`, which controls only the
 initial MCMC state.
 
-The historical flat-intercept mode is available only through explicit
+The same qualification record reports that the historical flat-intercept mode
+is available only through explicit
 
 ```r
 intercept_flat = TRUE
 ```
 
 and is retained as a legacy reference mode. Empty or completely separated
-sticks do not define a proper flat-intercept target, so the implementation
-fails rather than silently continuing under such a state.
+sticks do not define a proper flat-intercept posterior target. The reported
+software behavior is to fail rather than silently continue under such a state;
+that behavior awaits phase-2 source verification.
+
+The published SBayesRC annotation regression used a flat intercept convention.
+The proper default above is therefore a deliberate `sblr` model generalization,
+not an exact reproduction of that part of the published prior.
 
 ## Non-intercept $\alpha$ hierarchy and `sigmaSqAlpha`
 
@@ -522,8 +569,16 @@ represented in current code by `sigmaSqAlpha[k]`.
 The intercept is excluded from this hierarchical shrinkage variance because it
 has the separate prior above.
 
-The current variance update has scaled-inverse-chi-square /
-inverse-gamma-family form,
+A scaled-inverse-chi-squared prior parameterized by degrees of freedom
+$\nu_\alpha$ and scale $\tau_\alpha^2$ can be written
+
+$$
+\sigma_{\alpha,k}^2
+=
+\frac{\nu_\alpha\tau_\alpha^2}{\chi^2_{\nu_\alpha}}.
+$$
+
+After conditioning on the coefficients in $\mathcal R$, its conjugate update is
 
 $$
 \sigma_{\alpha,k}^2
@@ -536,20 +591,39 @@ $$
 $$
 
 where $\mathcal R$ is the set of coefficients subject to hierarchical
-shrinkage.
+shrinkage, with the parameter crosswalk
 
-Current code controls the hyperparameters through:
+$$
+a_\alpha=\nu_\alpha,
+\qquad
+b_\alpha=\nu_\alpha\tau_\alpha^2.
+$$
+
+According to the current maintained qualification record, the implementation
+controls these hyperparameters through:
 
 - `sigmaSqAlpha_a`, supplying $a_\alpha$;
 - `sigmaSqAlpha_b`, supplying $b_\alpha$;
 - `sigmaSqAlpha_init`, supplying the initial state.
 
-The current public defaults for `sigmaSqAlpha_a` and `sigmaSqAlpha_b` are both
-2.
+That record reports current public defaults
 
-This is the same broad prior family used in SBayesRC-style annotation
-regression. The exact published external implementation should not be inferred
-from the `sblr` defaults.
+$$
+(a_\alpha,b_\alpha)=(2,2).
+$$
+
+The published specification used
+$\nu_\alpha=4$ and $\tau_\alpha^2=1$. Under the convention displayed above,
+
+$$
+(a_\alpha,b_\alpha)
+=
+(4,4).
+$$
+
+The reported current defaults $(2,2)$ are therefore different from the
+published hyperparameters. The two priors share a broad
+scaled-inverse-chi-squared family but are not exactly equivalent.
 
 For reproducibility, report the actual values used for:
 
@@ -561,16 +635,17 @@ For reproducibility, report the actual values used for:
 
 ## Gibbs-style $\alpha$ updating
 
-When
+According to the maintained sampler contract, pending source verification in
+phase 2, when
 
 ```r
 updateAlpha = TRUE
 ```
 
-the native sampler updates the annotation coefficients every
-`alpha_update_every` iterations.
+the sampler updates the annotation coefficients every `alpha_update_every`
+iterations.
 
-The public default interval is 10.
+The contract-reported public default interval is 10.
 
 The update uses conditional probit data augmentation.
 
@@ -658,8 +733,9 @@ $P_{jk}$ are recomputed from the updated processed annotation predictors.
 
 ## Initialization
 
-`make_sbayesrc_alpha_init()` constructs deterministic initial values for the
-annotation-dependent mixture architecture.
+According to the maintained initialization contract, pending source
+verification in phase 2, `make_sbayesrc_alpha_init()` constructs deterministic
+initial values for the annotation-dependent mixture architecture.
 
 Given an initial overall active probability `pi_init`, it distributes active
 probability mass across the $K$ non-null components using normalized
@@ -984,21 +1060,28 @@ space and induced marker-prior space.
 
 ## Comparison with published SBayesRC
 
+The primary external reference for this comparison is
+[Zheng et al. (2024)](https://doi.org/10.1038/s41588-024-01704-y).
+
+The `sblr` column reports maintained-contract behavior pending phase-2 source
+verification.
+
 | Published SBayesRC feature | `sblr` implementation | Assessment |
 |---|---|---|
 | BayesR-like multi-normal marker-effect mixture | $b_j\mid c_j=k\sim N(0,\gamma_kv_b)$ | Same core prior family |
 | Exact null component | Requires first multiplier to be zero; null effects are exactly zero | Same |
-| Published multiplier grid `c(0, 0.001, 0.01, 0.1, 1)` | User-supplied and supported | Same when explicitly requested |
+| Five absolute classes $(0,0.001\%,0.01\%,0.1\%,1\%)v_g^{\mathrm{SNP}}$ | Supports the relative ladder `c(0, 0.001, 0.01, 0.1, 1)` with a separate $v_b$ | Same component ratios only when requested; absolute scale also depends on $v_b$ |
 | Exposed default multiplier grid | `c(0, 0.01, 0.1, 1)` | Different default |
 | Marker-specific component probabilities from annotations | Uses processed annotation predictors for every marker | Same core structure |
 | Conditional probit stick breaking | Uses $\rho_{jk}=\Phi(\widetilde A_j^{(P)}\alpha_k)$ | Same core structure |
-| Intercept and functional annotations | Adds an intercept by default; accepts overlapping binary or quantitative annotations | Closely aligned, with `sblr` preprocessing defaults |
+| Flat annotation-regression intercept | Proper mixture-calibrated normal intercept prior by default; flat only in explicit legacy mode | Deliberate model difference |
+| Functional annotations | Accepts overlapping binary or quantitative annotations and adds an intercept by default | Closely aligned, with `sblr` preprocessing defaults |
 | Quantitative annotation handling | Standardizes eligible nonbinary annotations by default; leaves binary columns unchanged by default | Qualified implementation choice |
 | Normal non-intercept $\alpha$ prior with step-specific variance | $\alpha_{ck}\mid\sigma_{\alpha,k}^2\sim N(0,\sigma_{\alpha,k}^2)$ | Same broad prior family |
-| Scaled inverse-chi-square-family variance prior | Controlled by `sigmaSqAlpha_a` and `sigmaSqAlpha_b` | Same broad family; exact external hyperparameters not implied by `sblr` defaults |
+| Scaled inverse-chi-square annotation-variance prior with $\nu_\alpha=4$, $\tau_\alpha^2=1$ | Uses $(a_\alpha,b_\alpha)=(2,2)$ by reported default rather than the mapped published values $(4,4)$ | Same broad family, different hyperparameters |
 | Probit coefficient update | Truncated-normal augmentation and conditional Gaussian draws | Closely aligned Gibbs-style update |
 | Numerical component-probability handling | Floors probabilities at `pi_floor` and renormalizes | `sblr` numerical-stability detail |
-| Summary-statistics likelihood | CSR sparse LD for `stblr_csr_annot()`; retained eigenspace for scalar `stblr_block_eigen()` | Different operator routes; block-eigen crosswalk does not imply an identical residual-variance procedure |
+| Summary-statistics likelihood | CSR sparse LD for `stblr_csr_annot()`; retained eigenspace for scalar `stblr_block_eigen()` | CSR is a different operator; retained fitting defaults to the block-specific compatibility policy but is not thereby identical in every contract |
 
 The most accurate description is:
 
@@ -1104,9 +1187,9 @@ $$
 where $V_{b,p}$ is the active-trait submatrix of the global marker-effect
 covariance $V_b$.
 
-Current SBayesRC annotations modify $P$.
-
-They do not currently make $H$ or $V_b$ annotation dependent.
+According to the maintained MT model contract, pending source verification in
+phase 2, SBayesRC annotations modify $P$ but do not make $H$ or $V_b$
+annotation dependent.
 
 See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the complete joint MT
 state model and output semantics.

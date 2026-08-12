@@ -13,10 +13,19 @@ to evaluate the likelihood. Packed BED genotypes, sparse CSR LD, and block-eigen
 representations are likelihood/operator choices; by themselves they do not
 define a different marker-effect prior.
 
-Callouts labelled **Current implementation** describe executable, tested
-functionality. Sections labelled **Proposed** describe the approved future
-architecture and should not be read as claims that the current public API
-already accepts the illustrated syntax.
+::: {.callout-note title="Software-status basis"}
+Statements on current `sblr` routes, defaults, preprocessing, safeguards,
+qualification, and unsupported combinations on this page are reported from
+maintained developer contracts or qualification records. They remain pending
+verification against dispatch and source in phase 2; the prior mathematics is
+not provisional for that reason.
+:::
+
+Callouts labelled **Contract-reported current implementation** describe
+functionality recorded by maintained contracts or qualification evidence and
+pending verification against source in phase 2. Sections labelled **Proposed**
+describe the approved future architecture and should not be read as claims that
+the current public API already accepts the illustrated syntax.
 
 ## One raw annotation matrix, several prior quantities
 
@@ -310,10 +319,11 @@ map centers the linear predictor, applies a global-logit offset, and clamps the
 result to configured bounds. This is a fixed probability architecture: the
 coefficients are not learned in the sampler.
 
-::: {.callout-note title="Current implementation"}
-Fixed marker probability is implemented for ST CSR BayesC/SBayesC. It is not a
-general BED/CSR/eigen provider, and its preprocessing and clipping conventions
-are not the canonical LV contract.
+::: {.callout-note title="Contract-reported current implementation"}
+According to the maintained model contract, fixed marker probability is
+implemented for ST CSR BayesC/SBayesC. It is not a general BED/CSR/eigen
+provider, and its preprocessing and clipping conventions are not the canonical
+LV contract. This route claim awaits phase-2 source verification.
 :::
 
 ### Learned logistic inclusion
@@ -342,8 +352,10 @@ the probability of stopping at or continuing past that component. The implied
 row of prior component probabilities is floored for numerical safety and
 renormalized.
 
-The current model can learn `alpha`, hold it fixed, or initialize it separately.
-It has a proper intercept prior and Gaussian non-intercept priors whose variance
+According to the current maintained model contract and intercept qualification
+record, pending source verification in phase 2, the model can learn `alpha`,
+hold it fixed, or initialize it separately. The reported current model has a
+proper intercept prior and Gaussian non-intercept priors whose variance
 parameters may be updated.
 
 Two outputs must not be confused:
@@ -357,13 +369,21 @@ Two outputs must not be confused:
 PIP is derived from posterior allocation, not from the prior component
 probability.
 
-::: {.callout-note title="Current implementation"}
-Probit-stick BayesRC/SBayesRC is implemented across ST and MT BED, CSR, and
-block-eigen routes. The scalar block-eigen route uses the retained-factor
-operator, whereas the current joint MT route uses reconstructed dense blocks.
-MT uses annotation-dependent component probabilities together with global
-conditional trait-pattern probabilities; annotations do not change sharing
-patterns or $V_b$.
+The named external precedents are
+[BayesRC](https://doi.org/10.1186/s12864-016-2443-6) and
+[SBayesRC](https://doi.org/10.1038/s41588-024-01704-y). Their published
+parameterizations do not make every `sblr` preprocessing, hyperprior, or
+likelihood-operator choice identical.
+
+::: {.callout-note title="Contract-reported current implementation"}
+According to the maintained model and operator contracts, probit-stick
+BayesRC/SBayesRC is implemented across ST and MT BED, CSR, and block-eigen
+routes. The scalar block-eigen route uses the retained-factor operator, whereas
+the joint MT route uses reconstructed dense blocks. MT uses
+annotation-dependent component probabilities together with global conditional
+trait-pattern probabilities; annotations do not change sharing patterns or
+$V_b$. These software-behavior claims remain pending source verification in
+phase 2.
 :::
 
 ## Variance architecture
@@ -444,10 +464,12 @@ silently clamp $q$; it uses log-scale guards and reports minimum/maximum
 $\log q$ and ESS
 evaluation/contraction diagnostics.
 
-::: {.callout-note title="Current implementation"}
-BayesC-LV and BayesR-LV are scientifically qualified for ST CSR and retained
-block-eigen likelihoods. They are not implemented for packed BED or MT. Their
-ordinary no-op policies preserve ordinary-model RNG trajectories.
+::: {.callout-note title="Contract-reported current implementation"}
+According to the maintained contracts and qualification record, BayesC-LV and
+BayesR-LV are scientifically qualified for ST CSR and retained block-eigen
+likelihoods. They are not reported as implemented for packed BED or MT. Their
+ordinary no-op policies are reported to preserve ordinary-model RNG
+trajectories. These software claims await phase-2 source verification.
 :::
 
 For binary column $c$, $\exp(\theta_c)$ is the annotated/unannotated prior
@@ -483,12 +505,39 @@ $$
 q_j(S)=h_j^{S+1}.
 $$
 
+This exponent follows from a change of effect scale, not from a different
+definition of BayesS. Let $Z_j$ be a centered allele-count column and
+$X_j=Z_j/\sqrt{h_j}$ its standardized version. If $a_j$ is the allele-count
+effect and $b_j$ the standardized-genotype effect, equality of genetic values
+requires
+
+$$
+Z_ja_j=X_jb_j,
+\qquad
+b_j=\sqrt{h_j}\,a_j.
+$$
+
+The published BayesS model specifies
+$\operatorname{Var}(a_j\mid d_j=1)\propto h_j^S$ on the allele-count scale.
+Therefore
+
+$$
+\operatorname{Var}(b_j\mid d_j=1)
+=
+h_j\operatorname{Var}(a_j\mid d_j=1)
+\propto
+h_j^{S+1}.
+$$
+
 The scalar $S$ controls how active-effect variance changes with allele
-frequency. The exponent is $S+1$, rather than $S$, because current MAF-S
-effects are represented on the standardized-genotype scale. Consequently,
+frequency. Consequently,
 $S=-1$ gives $q_j(-1)=1$ for every nondegenerate marker and is the numerical
 unit-scale reduction. Other values tilt prior active-effect variance toward
 or away from low-heterozygosity markers.
+
+This scale crosswalk follows the primary
+[BayesS publication](https://doi.org/10.1038/s41588-018-0101-4). The summary
+model prefix `s` remains unrelated to the parameter $S$.
 
 This multiplier is distinct from three other scales. The BayesR value
 $\gamma_k$ selects a relative mixture-component variance; $v_b$ is the global
@@ -498,11 +547,13 @@ one-parameter curve $h_j^{S+1}$. A fixed $S$ treats that curve as supplied
 prior architecture. A sampled $S$ estimates the curve jointly with supported
 ST summary-statistics models.
 
-`sblr` supports fixed $S$ and, on selected summary-statistics routes, sampled
-$S$. MT support is currently for a fixed marker scale in established
-mixture-model routes; sampled MT $S$ is unsupported. Historical MAF-S does not
-log-center $q$, so its global-scale and calibration convention differs from
-LV and must not be silently replaced by the proposed composed-$q$ convention.
+According to the maintained capability contract, pending source verification
+in phase 2, `sblr` supports fixed $S$ and, on selected summary-statistics
+routes, sampled $S$. The contract reports MT support for a fixed marker scale
+in established mixture-model routes and no sampled MT $S$. Historical MAF-S
+does not log-center $q$, so its global-scale and calibration convention differs
+from LV and must not be silently replaced by the proposed composed-$q$
+convention.
 
 A MAF- or heterozygosity-derived column in $A$ and MAF-S can explain much the
 same variation in marker scale. Their coefficients can therefore be weakly
@@ -744,6 +795,10 @@ using that $q$. Record the prior mean and resolved initialization separately. Do
 not integrate over the $\theta$ prior in the first implementation.
 
 ## Current capability summary
+
+The following table reports maintained-contract capabilities. It is not a
+phase-2 source verification, and its software-status entries should be checked
+against public dispatch, source, and tests in that phase.
 
 | Architecture | ST BED | ST CSR | ST block eigen | MT BED | MT CSR | MT block eigen |
 |---|---|---|---|---|---|---|

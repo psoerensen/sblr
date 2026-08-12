@@ -150,6 +150,11 @@ distribution for the identity of one latent effect and construct a credible set
 for that effect. Accumulating ordinary marginal PIPs does not automatically
 produce the same statistical object.
 
+[SuSiE](https://doi.org/10.1111/rssb.12388), for example, represents a
+multivariable effect as a sum of single effects and constructs credible sets for
+those latent effects. That model structure is the relevant distinction, not the
+use of a particular set-building label.
+
 For that reason, the current `sblr` sets should not be described as
 SuSiE-style per-effect credible sets. The term *credible set* is retained for
 the package helpers, but the more precise description is a

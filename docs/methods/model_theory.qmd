@@ -218,6 +218,36 @@ B\in\mathbb{R}^{M\times T},
 E_Y\in\mathbb{R}^{N\times T}.
 $$
 
+When all traits are observed on the same individuals and residual rows are
+conditionally independent, the Gaussian likelihood can be written
+
+$$
+Y\mid B,V_e
+\sim
+\operatorname{MN}_{N\times T}(XB,I_N,V_e).
+$$
+
+Equivalently, with $E_Y=Y-XB$,
+
+$$
+E_Y\mid B,V_e
+\sim
+\operatorname{MN}_{N\times T}(0,I_N,V_e),
+$$
+
+so that
+
+$$
+e_i\mid B,V_e
+\mathrel{\overset{\mathrm{iid}}{\sim}}
+N_T(0,V_e),
+\qquad i=1,\ldots,N.
+$$
+
+This matrix-normal statement is a complete-overlap model. Pairwise phenotype
+products assembled from different overlapping samples do not by themselves
+create one rectangular $Y$ satisfying this likelihood.
+
 Here $B$ is the marker-effect matrix and $E_Y$ is the residual-observation
 matrix; neither symbol denotes a covariance matrix. The $j$th row of $B$
 contains the effects of marker $j$ across traits. Write the corresponding
@@ -251,6 +281,9 @@ $$
 =
 \frac{1}{N}B^\top X^\top XB.
 $$
+
+The denominator $N$ defines a cross-product-per-observation covariance. It is
+not asserted to be the unbiased sample covariance with denominator $N-1$.
 
 This makes the distinction between $V_b$ and $V_g$ explicit: $V_b$ is the
 covariance scale in the prior for active marker effects, whereas $V_g$ is
@@ -377,6 +410,100 @@ see [Summary Statistics](summary_statistics.qmd),
 [Sparse-LD CSR](sparse_ld_csr.qmd), and
 [Block-Eigen LD](block_eigen_operator.qmd).
 
+## Operator-relative genomic quadratic decomposition
+
+For a genuine genotype cross-product $C_X=X^\top X$, define the corresponding
+per-observation genotype covariance operator by
+
+$$
+\Sigma_X
+=
+\frac{1}{N}C_X,
+\qquad
+C_X=N\Sigma_X.
+$$
+
+An alternative operator must be positive semidefinite and compatible with the
+effect vector or matrix in marker order, allele orientation, genotype coding,
+centering, standardization, target-population provenance, and declared
+covariance or cross-product scale. On the cross-product scale,
+
+$$
+v_g
+=
+\frac{1}{N}b^\top C_Xb
+=
+b^\top\Sigma_Xb
+$$
+
+is nonnegative and can be interpreted as a genomic variance. Likewise,
+
+$$
+V_g
+=
+\frac{1}{N}B^\top C_XB
+=
+B^\top\Sigma_XB
+$$
+
+is positive semidefinite and can be interpreted as a genomic covariance
+matrix. A covariance-scale operator such as $\Sigma_X$ is not divided by $N$
+again. Symmetry alone is insufficient for either interpretation.
+
+More generally, let $\widetilde C_X$ be the symmetric marker operator actually
+used by an approximate summary-statistics likelihood. A sparse CSR operator can
+be indefinite after entrywise thresholding, whereas a retained block factor of
+the form $Q^\top Q$ is positive semidefinite. Without an established
+positive-semidefinite property, define only the operator-relative quadratic
+
+$$
+q_g^{(\mathrm{op})}
+=
+\frac{1}{N}b^\top\widetilde C_Xb.
+$$
+
+Its diagonal and off-diagonal parts are
+
+$$
+q_{\mathrm{diag}}^{(\mathrm{op})}
+=
+\frac{1}{N}
+\sum_{j=1}^{M}
+[\widetilde C_X]_{jj}b_j^2,
+$$
+
+and
+
+$$
+\begin{aligned}
+q_{\mathrm{off}}^{(\mathrm{op})}
+&=
+q_g^{(\mathrm{op})}-q_{\mathrm{diag}}^{(\mathrm{op})}\\
+&=
+\frac{2}{N}
+\sum_{j<\ell}
+[\widetilde C_X]_{j\ell}b_jb_\ell.
+\end{aligned}
+$$
+
+This is an algebraic decomposition of the fitted quadratic, not necessarily a
+variance decomposition. If $\widetilde C_X$ is positive semidefinite, one may
+write $v_g^{(\mathrm{op})}=q_g^{(\mathrm{op})}$,
+$v_{\mathrm{LE}}^{(\mathrm{op})}=q_{\mathrm{diag}}^{(\mathrm{op})}$, and
+$v_{\mathrm{LD}}^{(\mathrm{op})}=q_{\mathrm{off}}^{(\mathrm{op})}$. The total
+is then nonnegative, although $v_{\mathrm{LD}}^{(\mathrm{op})}$ can still be
+negative. Neither diagonal nor off-diagonal term is a separately identified
+biological variance component.
+
+Under sparse CSR or truncated block eigen, all such quantities are operator
+relative: omitted edges or modes alter the fitted quadratic and its
+off-diagonal part. For MT effects, the analogous object
+$b_t^\top\widetilde C_Xb_s/N$ is an operator-relative bilinear form. It is an
+entry of a genomic covariance matrix only when the operator is a compatible
+positive-semidefinite cross-product-scale operator. If the operator is instead
+supplied on the covariance scale, the corresponding bilinear form is
+$b_t^\top\widetilde\Sigma_Xb_s$ without an additional factor of $1/N$.
+
 ## The `S` prefix and MAF-S are different concepts
 
 The `S` prefix in SBayesC, SBayesR, and SBayesRC identifies the
@@ -391,6 +518,15 @@ MAF-dependent prior scaling is controlled separately by `maf_effect_s`. Thus:
 
 The relationship between MAF-S and the general variance architecture $q_j$ is
 described in [Annotation-Informed Priors](annotation_priors.qmd).
+
+## Primary statistical references
+
+The named external families are anchored by the original or defining
+publications: [BayesC$\pi$](https://doi.org/10.1186/1471-2105-12-186),
+[BayesR](https://doi.org/10.3168/jds.2011-5019), and
+[SBayesR](https://doi.org/10.1038/s41467-019-12653-0). These references define
+external methods; the package-specific parameterizations and operator contracts
+on this page remain the definitions for current `sblr` models.
 
 ## Responsibility map
 

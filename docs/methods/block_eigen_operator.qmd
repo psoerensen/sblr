@@ -15,6 +15,14 @@ The block structure, marker order, genotype scaling, allele frequencies, and
 reference sample are therefore part of the statistical likelihood
 specification, not merely storage metadata.
 
+::: {.callout-note title="Software-status basis"}
+Statements on current `sblr` representations, supported routes, defaults,
+storage, numerical safeguards, and failure behavior on this page are reported
+from maintained developer contracts. They remain pending verification against
+dispatch and source in phase 2; the operator mathematics does not share that
+provisional software-status qualification.
+:::
+
 This page distinguishes two current representations:
 
 1. the **retained low-rank scalar representation**, which is the canonical
@@ -118,55 +126,124 @@ Cross-block LD is therefore set to zero by the operator definition.
 
 ## Within-block eigendecomposition
 
-For block $b$, let $C_b$ denote the standardized within-block
-cross-product/correlation representation constructed by the implementation.
-
-After symmetrization, the block is eigendecomposed as
+For block $b$, let
 
 $$
-C_b
+A_b=X_b^\top X_b,
+\qquad
+D_b=\operatorname{Diag}\!\left(\operatorname{diag}(A_b)\right),
+$$
+
+where $A_b,D_b\in\mathbb R^{m_b\times m_b}$ and $D_b$ denotes the diagonal
+matrix of marker cross-products. Every retained marker must have a finite,
+strictly positive diagonal entry. A marker with a zero or invalid diagonal does
+not admit $D_b^{-1/2}$ and must be excluded before constructing this operator.
+The correlation-scale block is
+
+$$
+R_b=D_b^{-1/2}A_bD_b^{-1/2}.
+$$
+
+Thus $R_b\in\mathbb R^{m_b\times m_b}$. For a genuine common-sample
+cross-product, $A_b$ and $R_b$ are positive semidefinite.
+
+After symmetrization, it is eigendecomposed as
+
+$$
+R_b
 =
 U_b\Lambda_bU_b^\top,
 $$
 
-where $\Lambda_b$ contains the block eigenvalues and $U_b$ the corresponding
-eigenvectors.
+where $U_b\in\mathbb R^{m_b\times m_b}$ contains orthonormal eigenvectors and
+$\Lambda_b\in\mathbb R^{m_b\times m_b}$ contains the corresponding
+eigenvalues.
 
 The subsequent representation depends on the chosen block-eigen mode.
 
 ## Retained low-rank scalar representation
 
-For current scalar fits, `representation = "low_rank"` is the canonical
-block-eigen representation.
+According to the current maintained block-eigen implementation contract,
+pending source verification in phase 2, `representation = "low_rank"` is the
+canonical block-eigen representation for scalar fits.
 
-The implementation retains only positive eigenvalues above
-
-$$
-10^{-10}.
-$$
-
-Among those positive eigenvalues, it chooses the smallest leading rank $k_b$
-whose cumulative positive-eigenvalue mass is **strictly greater than**
-
-$$
-\texttt{eigen_prop}.
-$$
-
-The public default is
-
-$$
-\texttt{eigen_prop}=0.995.
-$$
-
-The strict inequality is important. If the cumulative retained mass lands
-exactly on the requested boundary, the next eigenvector is retained.
-
-Zero or negative eigenvalues are omitted. A block whose retained rank is zero
-fails rather than silently producing an empty operator.
+Statistically, the leading positive eigenvalues are retained through the
+smallest rank $k_b$ that meets a configured cumulative
+positive-eigenvalue-mass target. The omitted modes define the spectral
+approximation. Exact numerical cutoffs, the software comparison at the target
+boundary, zero-rank failure behavior, and current defaults are version-specific
+details in the maintained
+[block-eigen contract](../dev/blr_block_eigen_contract.md) and remain pending
+source verification in phase 2.
 
 ### What is stored
 
-The scalar low-rank implementation stores:
+Let
+
+$$
+U_{b,k}\in\mathbb R^{m_b\times k_b},
+\qquad
+\Lambda_{b,k}\in\mathbb R^{k_b\times k_b}
+$$
+
+contain the retained eigenvectors and positive eigenvalues, and let
+$s_b=X_b^\top y\in\mathbb R^{m_b}$. In `sblr` cross-product units the retained
+factor and transformed score are
+
+$$
+Q_b
+=
+\Lambda_{b,k}^{1/2}U_{b,k}^\top D_b^{1/2},
+$$
+
+and
+
+$$
+w_b
+=
+\Lambda_{b,k}^{-1/2}U_{b,k}^\top D_b^{-1/2}s_b.
+$$
+
+Their dimensions are
+
+$$
+Q_b\in\mathbb R^{k_b\times m_b},
+\qquad
+w_b\in\mathbb R^{k_b}.
+$$
+
+Define the retained block cross-product and retained score by
+
+$$
+\begin{aligned}
+\widetilde C_b
+=
+\widetilde A_b
+=
+Q_b^\top Q_b
+&=
+D_b^{1/2}U_{b,k}\Lambda_{b,k}U_{b,k}^\top D_b^{1/2},\\
+\widetilde s_b
+=
+Q_b^\top w_b
+&=
+D_b^{1/2}U_{b,k}U_{b,k}^\top D_b^{-1/2}s_b.
+\end{aligned}
+$$
+
+Here $\widetilde C_b=\widetilde A_b\in\mathbb R^{m_b\times m_b}$ and
+$\widetilde s_b\in\mathbb R^{m_b}$. The matrix
+$U_{b,k}U_{b,k}^\top$ is an orthogonal projector in whitened correlation
+coordinates. Because the maps on either side involve $D_b^{1/2}$ and
+$D_b^{-1/2}$, $\widetilde s_b$ is not generally the ordinary Euclidean
+projection of the raw score $s_b$. At full positive rank the retained objects
+recover the block cross-product and its compatible score, apart from any
+zero-eigenvalue directions; at truncated rank they define the fitted
+approximation. The identity $\widetilde C_b=Q_b^\top Q_b$ also establishes that
+the retained block operator is positive semidefinite.
+
+According to the maintained implementation contract, the scalar low-rank
+implementation stores:
 
 - a retained eigen-by-marker factor `Q` for each block;
 - a transformed marker score;
@@ -183,9 +260,51 @@ $$
 The immutable retained factor and transformed score are shared across logical
 chains. Each chain owns its own reduced residual and sampler state.
 
-The retained factor is constructed in double precision and stored in
-single-precision column-major form; transformed scores and chain residuals are
-kept in double precision.
+Version-specific storage precision is documented in the maintained
+[block-eigen contract](../dev/blr_block_eigen_contract.md) and remains pending
+source verification in phase 2; it does not alter the statistical identities
+above.
+
+### Reduced residual and marker conditional
+
+For a block coefficient vector $b_b$, define the reduced residual
+
+$$
+e_b=w_b-Q_b\,b_b.
+$$
+
+For marker $j$ in the block, let $Q_{b,\cdot j}$ be its factor column and define
+
+$$
+\delta_j^{(\mathrm{op})}
+=
+Q_{b,\cdot j}^\top Q_{b,\cdot j},
+\qquad
+u_j
+=
+Q_{b,\cdot j}^\top e_b
++
+\delta_j^{(\mathrm{op})}b_j.
+$$
+
+If the active prior variance for that marker and component is $\tau_j^2>0$ and
+the applicable residual variance is $v_e$, the Gaussian active-state
+conditional has variance and mean
+
+$$
+\widetilde v_j
+=
+\left(
+\frac{\delta_j^{(\mathrm{op})}}{v_e}+\frac{1}{\tau_j^2}
+\right)^{-1},
+\qquad
+\widetilde m_j
+=
+\widetilde v_j\frac{u_j}{v_e}.
+$$
+
+For a block-specific residual policy, $v_e$ in this expression is replaced by
+the current $v_{e,b}$. Exact-null mixture states still set $b_j=0$.
 
 ### Computational scaling
 
@@ -223,36 +342,101 @@ reference implementation:
 - transformed score representation; and
 - marker conditional calculations.
 
-The residual-variance update is not identical.
+The residual-variance policy must nevertheless be stated separately from the
+eigenspace likelihood. According to the current maintained implementation
+contract, pending source verification in phase 2, retained SBayesR/SBayesRC
+fitting defaults to the `gctb_block` policy with block-specific residual
+variances. With reduced residual $e_b$, retained rank $k_b$, centered phenotype
+variance $v_y=y^\top y/N$, and prior degrees of freedom $\nu_e>2$, its reported
+conditional draw is
 
-Current `sblr` scalar block-eigen fitting uses one global projected residual
-sum-of-squares contract.
+$$
+S_{e,b}
+=
+\lVert e_b\rVert^2
++
+\nu_e s_{e,b},
+\qquad
+s_{e,b}
+=
+\frac{\nu_e-2}{\nu_e}v_y,
+$$
 
-The referenced GCTB procedure instead uses block-specific residual-variance
-quantities involving:
+$$
+v_{e,b}^{*}
+=
+\frac{S_{e,b}}{\chi^2_{k_b+\nu_e}}.
+$$
 
-- block sample sizes;
-- retained-rank degrees of freedom; and
-- block-specific residual variances.
+On the canonical common-sample scale used throughout this derivation, define
 
-Therefore, agreement in retained eigenspace construction does not imply that
-the complete residual-variance procedure is identical.
+$$
+v_{g,b}
+=
+\frac{\lVert Q_b\,b_b\rVert^2}{N},
+\qquad
+SS_{b}
+=
+\sum_{j\in b}b_j^2.
+$$
+
+Here the denominator is the same $N$ that defines $A_b=X_b^\top X_b$,
+$s_b=X_b^\top y$, and $v_y$. Block-specific effective sample sizes belong to a
+versioned implementation scale crosswalk and do not alter this common-$N$
+statistical derivation.
+
+The maintained contract reports that `allMixVe` uses $v_{g,b}$, $SS_b$, and
+their ratio to determine block eligibility and applies a minimum
+residual-to-phenotypic-variance acceptance rule. The exact numerical thresholds,
+strict boundary behavior, and control defaults are version-specific
+implementation details owned by the maintained
+[block residual contract](../dev/block_eigen_gctb_residual_contract.md). They
+are compatibility rules, not mathematical requirements of every block-eigen
+model, and remain pending phase-2 source verification.
+
+According to that contract, two other policies remain distinct. `fixed_block`
+holds every $v_{e,b}$ at $v_y$. `global_projected_legacy` uses one global
+projected residual sum of squares,
+
+$$
+\operatorname{SSE}_{\mathrm{proj}}
+=
+y^\top y
+-
+\sum_b w_b^\top w_b
++
+\sum_b e_b^\top e_b.
+$$
+
+The legacy global quantity equals an individual-level residual sum of squares
+only under compatible same-sample provenance and a complete block-diagonal
+cross-product representation. The contract reports that reconstructed-dense
+scalar fitting retains this legacy policy rather than the block-specific GCTB
+policy; this software-behavior statement awaits phase-2 source verification.
+
+Thus, a shared retained eigenspace construction does not by itself make the
+complete `sblr` model identical to GCTB. Under block policies, a reported scalar
+residual summary is an aggregation of block residual variances, not a
+BED-equivalent global $v_e$. The defining external reference is the
+[SBayesRC publication](https://doi.org/10.1038/s41588-024-01704-y).
 
 ## Reconstructed-dense representation
 
-The historical scalar reference route remains available as
+According to the maintained block-eigen contract, pending source verification
+in phase 2, the historical scalar reference route remains available as
 
 ```r
 representation = "dense_reconstructed"
 ```
 
-and the current multi-trait block-eigen route also uses reconstructed filtered
-within-block operators rather than the scalar retained-factor runtime.
+and the multi-trait block-eigen route uses reconstructed filtered within-block
+operators rather than the scalar retained-factor runtime.
 
-The reconstructed representation stores a filtered dense operator for each
-block in packed symmetric form.
-
-Three filtering policies are retained.
+The same contract reports that the reconstructed representation stores a
+filtered dense operator for each block in packed symmetric form and retains
+three filtering policies. The mathematical descriptions below define the
+resulting operators; the claims that these named controls and storage paths are
+currently exposed remain subject to phase-2 verification.
 
 ### Hard truncation
 
@@ -290,7 +474,8 @@ reported as part of the model specification.
 For reconstructed block $b$, the symmetric filtered operator is stored using
 the packed upper triangle in single precision.
 
-The implementation additionally retains:
+According to the maintained storage contract, the implementation additionally
+retains:
 
 - marker-to-block mappings;
 - within-block marker indices; and
@@ -394,6 +579,42 @@ propagate through LD.
 This is why block-eigen filtering is not merely a compression choice: it changes
 the likelihood information retained by the sampler.
 
+## Operator-relative genomic variance
+
+Because each retained block satisfies
+$\widetilde C_b=Q_b^\top Q_b$, the assembled retained operator
+$\widetilde C_X$ is positive semidefinite. Its fitted genomic variance on the
+cross-product-per-observation scale is therefore
+
+$$
+v_g^{(\mathrm{op})}
+=
+\frac{1}{N}
+\sum_b\lVert Q_b\,b_b\rVert^2
+=
+\frac{1}{N}b^\top\widetilde C_Xb.
+$$
+
+Writing
+$\delta_j^{(\mathrm{op})}=[\widetilde C_X]_{jj}$, its
+diagonal/off-diagonal decomposition is
+
+$$
+v_{\mathrm{LE}}^{(\mathrm{op})}
+=
+\frac{1}{N}\sum_j\delta_j^{(\mathrm{op})}b_j^2,
+\qquad
+v_{\mathrm{LD}}^{(\mathrm{op})}
+=
+v_g^{(\mathrm{op})}-v_{\mathrm{LE}}^{(\mathrm{op})}.
+$$
+
+These quantities refer to the retained block operator. Cross-block LD and
+discarded eigenmodes do not contribute, and the algebraic LD term can be
+negative even though the total retained-operator variance is nonnegative. The
+diagonal and LD terms are an algebraic decomposition, not separately identified
+biological variance components.
+
 ## Block boundaries
 
 Block boundaries create another approximation independent of spectral
@@ -413,7 +634,8 @@ CSR or other LD representations.
 
 ## Public support
 
-Current public block-eigen fitting includes:
+According to the current maintained model and block-eigen contracts, pending
+source verification in phase 2, public block-eigen fitting includes:
 
 ### Single trait
 

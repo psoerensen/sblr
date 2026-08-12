@@ -497,12 +497,13 @@ $$
 G_X=XB.
 $$
 
-For one common sample, the genomic covariance is induced by the fitted effects
-and genotype covariance:
+For one common sample of size $N$, the cross-product-per-observation genomic
+covariance is induced by the fitted effects and genotype covariance:
 
 $$
 V_g
-\propto
+ =
+\frac{1}{N}
 B^\top X^\top XB.
 $$
 

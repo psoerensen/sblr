@@ -128,7 +128,8 @@ for $X^\top Xb$ or other fitted cross-product quantities.
 
 # First-stage genomic summaries
 
-For trait $t$, define the marker-scale residual score
+For trait $t$ and the actual common-sample Gram matrix $C_X=X^\top X$, define
+the exact marker-scale residual score
 
 $$
 r_t
@@ -162,7 +163,36 @@ $$
 
 is a descriptive sample-scaled genomic-variance quantity.
 
-For two traits $t$ and $s$, a symmetric descriptive covariance is
+For an approximate fitted operator $\widetilde C_X$ on the cross-product scale,
+the maintained operator score is instead
+
+$$
+r_{\mathrm{op},t}
+=
+X^\top y_t-\widetilde C_Xb_t,
+\qquad
+\widetilde C_Xb_t
+=
+X^\top y_t-r_{\mathrm{op},t}.
+$$
+
+The corresponding plug-in quantity
+
+$$
+\widehat q_{g,t}^{(\mathrm{op})}
+=
+\frac{1}{N_t}
+\widehat b_t^\top
+\left(X^\top y_t-r_{\mathrm{op},t}\right)
+$$
+
+is an operator-relative genomic quadratic. It is a genomic variance only when
+$\widetilde C_X$ is a compatible positive-semidefinite operator on the declared
+cross-product scale. If the fitted operator can be indefinite, the expression
+is only an algebraic likelihood summary.
+
+For two traits $t$ and $s$ observed on one common sample, the exact plug-in
+fitted-value covariance is
 
 $$
 [\widehat V_g]_{ts}
@@ -172,12 +202,34 @@ $$
 +
 \widehat b_s^\top(X^\top y_t-r_t)
 }{
-2\sqrt{N_tN_s}
-}.
+2N
+}
+=
+\frac{1}{N}\widehat b_t^\top X^\top X\widehat b_s.
 $$
 
-When all traits use one common sample size $N$, the denominator reduces to
-$N$.
+This identity requires one common sample of size $N$ and its actual
+cross-product $X^\top X$. A declared positive-semidefinite per-observation
+target-population genotype covariance $\Sigma_X$ can instead define
+$\widehat b_t^\top\Sigma_X\widehat b_s$. It must be compatible with both effect
+vectors in marker order, allele orientation, genotype coding, centering,
+standardization, target population, and covariance scale. If the same target
+operator is represented on a cross-product scale, then
+
+$$
+C_X=N\Sigma_X,
+\qquad
+\frac{1}{N}\widehat b_t^\top C_X\widehat b_s
+=
+\widehat b_t^\top\Sigma_X\widehat b_s.
+$$
+
+The covariance-scale form is not divided by $N$ again. With a merely symmetric
+and potentially indefinite approximation, the result is only an
+operator-relative bilinear form. A $\sqrt{N_tN_s}$ normalization for different
+trait samples is at most descriptive unless a joint cross-sample model or a
+declared target-population covariance supplies the missing operator
+information.
 
 These formulas are derived in
 [Summary Statistics](summary_statistics.qmd). The important point here is that
@@ -240,25 +292,26 @@ $$
 S^{(g)}_{jt}=c_{jt}.
 $$
 
-This response includes the fitted LD structure through
-$X^\top y_t-r_t=X^\top X\widehat b_t$ under the maintained
-summary-statistic representation.
+In the exact Gram case, this response includes the fitted LD structure through
+$X^\top y_t-r_t=X^\top X\widehat b_t$. Under an approximate fitted operator,
+$X^\top y_t-r_{\mathrm{op},t}=\widetilde C_X\widehat b_t$ instead, and the
+resulting response is operator relative.
 
 A conceptual R construction using current code fields is:
 
 ```r
 S_b <- fit0$bm
 S_pip <- qlogis(pmin(pmax(fit0$dm, 1e-6), 1 - 1e-6))
-S_g <- fit0$bm * (fit0$wy - fit0$r) / n
+S_alloc <- fit0$bm * (fit0$wy - fit0$r) / n
 ```
 
 # Set-specific genomic contributions
 
-For a marker set or annotation $\mathcal S_k$, define the descriptive
-set-specific genomic contribution
+For a marker set or annotation $\mathcal S_k$, define the signed, descriptive
+set allocation
 
 $$
-\widehat v_{g,k,t}
+\widehat a_{g,k,t}^{(\mathrm{signed})}
 =
 \frac{1}{N_t}
 \sum_{j\in\mathcal S_k}
@@ -268,19 +321,92 @@ X^\top y_t-r_t
 \right]_j.
 $$
 
-For disjoint sets, these values can approximate a partition of the fitted
-genomic-variance expression.
+Even when $X^\top X$ is positive semidefinite, this allocation can be negative.
+Writing $C_X=X^\top X$ and $\mathcal S_k^c$ for markers outside the set,
+
+$$
+\widehat a_{g,k,t}^{(\mathrm{signed})}
+=
+\frac{1}{N_t}
+\left(
+\widehat b_{\mathcal S_k,t}^\top
+C_{\mathcal S_k\mathcal S_k}
+\widehat b_{\mathcal S_k,t}
++
+\widehat b_{\mathcal S_k,t}^\top
+C_{\mathcal S_k\mathcal S_k^c}
+\widehat b_{\mathcal S_k^c,t}
+\right).
+$$
+
+The second term contains signed LD cross-terms with markers outside the set.
+For a disjoint partition, the signed allocations sum to the complete fitted
+quadratic, but an individual allocation need not be nonnegative.
 
 For overlapping annotations, they should instead be interpreted as
 **attributions**. A marker belonging to several annotations contributes to
 every set that contains it, so the totals are not additive.
 
-A conceptual implementation is:
+A different, nonnegative quantity is the within-set fitted genetic-value
+variance
+
+$$
+\widehat v_{g,k,t}^{(\mathrm{within})}
+=
+\frac{1}{N_t}
+\widehat b_{\mathcal S_k,t}^\top
+C_{\mathcal S_k\mathcal S_k}
+\widehat b_{\mathcal S_k,t}.
+$$
+
+It is nonnegative when $C_{\mathcal S_k\mathcal S_k}$ is positive semidefinite.
+It omits LD cross-terms with markers outside the set and therefore does not, in
+general, partition the complete genomic variance.
+
+A conceptual implementation is shown below. It assumes one common scalar
+sample size `n` for all traits in the illustration.
 
 ```r
-estimate_vg_by_set <- function(fit, sets, n) {
+estimate_signed_allocation_by_set <- function(fit, sets, n) {
+  if (!is.numeric(n) || length(n) != 1L || !is.finite(n) || n <= 0) {
+    stop("`n` must be one finite, strictly positive sample size.")
+  }
+  if (!is.list(fit)) {
+    stop("`fit` must be a list containing matrix fields `bm`, `wy`, and `r`.")
+  }
+  if (!is.list(sets) || length(sets) == 0L) {
+    stop("`sets` must be a nonempty list of marker-index vectors.")
+  }
+
   b <- fit$bm
-  xtxb <- fit$wy - fit$r
+  xy <- fit$wy
+  residual_score <- fit$r
+
+  if (!is.numeric(b) || !is.matrix(b) ||
+      nrow(b) == 0L || ncol(b) == 0L) {
+    stop("`fit$bm` must be a nonempty numeric marker-by-trait matrix.")
+  }
+  if (!is.numeric(xy) || !is.matrix(xy) ||
+      !is.numeric(residual_score) || !is.matrix(residual_score) ||
+      !identical(dim(b), dim(xy)) ||
+      !identical(dim(b), dim(residual_score))) {
+    stop("`fit$bm`, `fit$wy`, and `fit$r` must have identical matrix dimensions.")
+  }
+  if (any(!is.finite(b)) || any(!is.finite(xy)) ||
+      any(!is.finite(residual_score))) {
+    stop("Effect, score, and residual-score matrices must be finite.")
+  }
+
+  valid_set <- vapply(sets, function(idx) {
+    is.numeric(idx) && length(idx) > 0L && all(is.finite(idx)) &&
+      all(idx == floor(idx)) && all(idx >= 1L & idx <= nrow(b)) &&
+      !anyDuplicated(idx)
+  }, logical(1))
+  if (!all(valid_set)) {
+    stop("Each set must contain unique integer marker indices within `fit$bm`.")
+  }
+
+  operator_b <- xy - residual_score
 
   out <- matrix(
     NA_real_,
@@ -293,16 +419,23 @@ estimate_vg_by_set <- function(fit, sets, n) {
     idx <- sets[[s]]
 
     for (t in seq_len(ncol(b))) {
-      out[s, t] <- sum(b[idx, t] * xtxb[idx, t]) / n
+      out[s, t] <- sum(b[idx, t] * operator_b[idx, t]) / n
     }
+  }
+
+  if (any(!is.finite(out))) {
+    stop("The signed set allocations are not finite.")
   }
 
   out
 }
 ```
 
-The local code variable `xtxb` is deliberately used rather than `q`, because
-$q_j$ is reserved for prior variance architecture.
+The local code variable `operator_b` is deliberately used rather than `q`,
+because $q_j$ is reserved for prior variance architecture. It equals
+$X^\top Xb$ only for an exact Gram representation; under an approximate route
+it represents $\widetilde C_Xb$, so the returned allocations are operator
+relative.
 
 ## Posterior-summary caveat
 
@@ -326,9 +459,10 @@ X^\top y_t-
 \right]_j.
 $$
 
-Therefore set contributions calculated from posterior summaries should be
+Therefore signed allocations calculated from posterior summaries should be
 described as descriptive plug-in summaries unless the quantity is computed
-draw by draw and then averaged.
+draw by draw and then averaged. Neither a draw-wise signed allocation nor its
+plug-in version is automatically a valid prior variance.
 
 # PIP enrichment
 
@@ -705,32 +839,10 @@ double-count information.
 
 # Set-based empirical-Bayes effect scales
 
-A descriptive set contribution is
-
-$$
-\widehat v_{g,k,t}
-=
-\frac{1}{N_t}
-\sum_{j\in\mathcal S_k}
-\widehat b_{jt}
-\left[
-X^\top y_t-r_t
-\right]_j.
-$$
-
-A simple empirical prior effect scale is
-
-$$
-\widehat\sigma_{b,k,t}^2
-=
-\frac{
-\widehat v_{g,k,t}
-}{
-\max(m^{\mathrm{eff}}_{k,t},c)
-},
-$$
-
-where
+A signed allocation such as
+$\widehat a_{g,k,t}^{(\mathrm{signed})}$ must not be assigned directly to a
+Normal-prior variance. One nonnegative construction uses the within-set
+quadratic defined above. Let
 
 $$
 m^{\mathrm{eff}}_{k,t}
@@ -739,50 +851,166 @@ m^{\mathrm{eff}}_{k,t}
 \widehat{\operatorname{PIP}}_{jt}
 $$
 
-and $c>0$ prevents instability when the effective number of active markers is
-very small.
+and choose a declared small threshold $\epsilon_m>0$. The threshold, any
+positive fallback, and the shrinkage weight used below are non-unique
+calibration choices, not consequences of the probability model. When
+$m^{\mathrm{eff}}_{k,t}>\epsilon_m$, define
 
-This is a heuristic empirical-Bayes construction. The numerator is a fitted
-genomic contribution, not a direct observation of the prior effect variance.
+$$
+\widehat\sigma_{b,k,t}^{2,\mathrm{within}}
+=
+\frac{
+\widehat v_{g,k,t}^{(\mathrm{within})}
+}{
+m^{\mathrm{eff}}_{k,t}
+}.
+$$
 
-A conceptual implementation is:
+When $m^{\mathrm{eff}}_{k,t}\le\epsilon_m$, the set does not identify a stable
+data-derived effect scale. A declared positive fallback, such as a global prior
+scale, should be used, or the set-specific update should be omitted. Silently
+dividing by an arbitrary floor obscures that lack of information.
+
+If the validated within-set quadratic is exactly zero, the fitted set-specific
+genetic value has zero variance. A model requiring a strictly positive active
+Normal-prior variance must likewise use a declared positive fallback or omit
+the set-specific active component; it must not reinterpret a signed allocation
+as the missing scale.
+
+When the within-set operator is positive semidefinite, this is a nonnegative,
+LD-dependent within-set-genetic-variance-per-expected-active-marker
+calibration. It is not an identified average active-effect variance because its
+numerator includes within-set LD cross-terms, and it is not an estimate of the
+same object as the signed allocation.
+
+A second theoretical construction targets average non-null effect squared:
+
+$$
+\widehat\sigma_{b,k,t}^{2,\mathrm{second}}
+=
+\frac{
+\sum_{j\in\mathcal S_k}
+\mathbb E(b_{jt}^2\mid\mathcal D)
+}{
+\sum_{j\in\mathcal S_k}
+\operatorname{PIP}_{jt}
+}.
+$$
+
+It is defined only when the denominator exceeds a declared positive threshold.
+Otherwise the same fallback-or-omit rule is required. The numerator requires
+posterior second moments, which may be computed from retained posterior draws;
+it must not be approximated by squared posterior means without explicitly
+changing the target. No current fit-object field is assumed here.
+
+The two nonnegative constructions are not equivalent. The within-set quadratic
+provides the LD-dependent calibration just described. When the required
+posterior information is available, the posterior-second-moment ratio has a
+more direct average non-null second-moment interpretation and does not include
+LD cross-products.
+
+A conceptual implementation is shown below. It accepts either one positive
+fallback scale shared by all traits or one positive fallback per trait.
 
 ```r
-estimate_annotation_vb <- function(
-  fit,
+estimate_annotation_vb_within <- function(
+  b,
+  pip,
+  C_X,
   sets,
   n,
-  min_eff = 1,
+  fallback,
+  min_eff = 1e-8,
   shrink = 0.5
 ) {
-  b <- fit$bm
-  pip <- fit$dm
-  xtxb <- fit$wy - fit$r
+  if (!is.numeric(n) || length(n) != 1L || !is.finite(n) || n <= 0) {
+    stop("`n` must be one finite, strictly positive common sample size.")
+  }
+  if (!is.numeric(min_eff) || length(min_eff) != 1L ||
+      !is.finite(min_eff) || min_eff <= 0) {
+    stop("`min_eff` must be one finite, strictly positive threshold.")
+  }
+  if (!is.numeric(shrink) || length(shrink) != 1L ||
+      !is.finite(shrink) || shrink < 0 || shrink > 1) {
+    stop("`shrink` must be one finite scalar between zero and one.")
+  }
+  if (!is.numeric(b) || !is.matrix(b) ||
+      nrow(b) == 0L || ncol(b) == 0L || any(!is.finite(b))) {
+    stop("`b` must be a nonempty finite numeric marker-by-trait matrix.")
+  }
+  if (!is.numeric(pip) || !is.matrix(pip) ||
+      !identical(dim(b), dim(pip)) || any(!is.finite(pip)) ||
+      any(pip < 0 | pip > 1)) {
+    stop("`pip` must be a finite matrix in [0, 1] with the dimensions of `b`.")
+  }
+  if (!is.numeric(C_X) || !is.matrix(C_X) ||
+      !identical(dim(C_X), c(nrow(b), nrow(b))) ||
+      any(!is.finite(C_X)) ||
+      !isTRUE(all.equal(C_X, t(C_X), tolerance = sqrt(.Machine$double.eps)))) {
+    stop("`C_X` must be a finite symmetric marker-by-marker matrix aligned to `b`.")
+  }
+  if (!is.list(sets) || length(sets) == 0L) {
+    stop("`sets` must be a nonempty list of marker-index vectors.")
+  }
+
+  valid_set <- vapply(sets, function(idx) {
+    is.numeric(idx) && length(idx) > 0L && all(is.finite(idx)) &&
+      all(idx == floor(idx)) && all(idx >= 1L & idx <= nrow(b)) &&
+      !anyDuplicated(idx)
+  }, logical(1))
+  if (!all(valid_set)) {
+    stop("Each set must contain unique integer marker indices within `b`.")
+  }
 
   nt <- ncol(b)
   K <- length(sets)
 
+  if (!is.numeric(fallback) || !(length(fallback) %in% c(1L, nt)) ||
+      any(!is.finite(fallback)) || any(fallback <= 0)) {
+    stop("`fallback` must contain one or one-per-trait finite positive scale.")
+  }
+  fallback <- rep(fallback, length.out = nt)
+
   vb_ann <- matrix(NA_real_, K, nt)
-  vg_ann <- matrix(NA_real_, K, nt)
+  vg_within <- matrix(NA_real_, K, nt)
   meff <- matrix(NA_real_, K, nt)
 
-  rownames(vb_ann) <- rownames(vg_ann) <-
+  rownames(vb_ann) <- rownames(vg_within) <-
     rownames(meff) <- names(sets)
 
-  colnames(vb_ann) <- colnames(vg_ann) <-
+  colnames(vb_ann) <- colnames(vg_within) <-
     colnames(meff) <- colnames(b)
 
   for (k in seq_along(sets)) {
     idx <- sets[[k]]
+    C_set <- C_X[idx, idx, drop = FALSE]
 
     for (t in seq_len(nt)) {
-      vg <- sum(b[idx, t] * xtxb[idx, t]) / n
+      b_set <- b[idx, t]
+      Cb_set <- drop(C_set %*% b_set)
+      quad <- sum(b_set * Cb_set)
+      quad_scale <- sum(abs(b_set * Cb_set))
       neff <- sum(pip[idx, t])
 
-      vg_ann[k, t] <- max(vg, 0)
+      if (!is.finite(quad) || !is.finite(quad_scale) || !is.finite(neff)) {
+        stop("Within-set quadratics and effective marker counts must be finite.")
+      }
+
+      quad_tol <- sqrt(.Machine$double.eps) * max(1, quad_scale)
+      if (quad < -quad_tol) {
+        stop("A within-set quadratic is materially negative; validate `C_X` as positive semidefinite.")
+      }
+      vg <- max(quad, 0) / n
+
+      vg_within[k, t] <- vg
       meff[k, t] <- neff
-      vb_ann[k, t] <-
-        max(vg_ann[k, t] / max(neff, min_eff), 1e-12)
+      vb_ann[k, t] <- if (
+        neff <= min_eff || vg_within[k, t] == 0
+      ) {
+        fallback[t]
+      } else {
+        vg_within[k, t] / neff
+      }
     }
   }
 
@@ -794,9 +1022,23 @@ estimate_annotation_vb <- function(
       (1 - shrink) * vb_global[t]
   }
 
-  list(vb = vb_ann, vg = vg_ann, meff = meff)
+  if (any(!is.finite(vb_ann)) || any(vb_ann <= 0)) {
+    stop("Calibrated prior variances must be finite and strictly positive.")
+  }
+
+  list(vb = vb_ann, vg_within = vg_within, meff = meff)
 }
 ```
+
+This illustration assumes one common scalar sample size `n` across traits and
+that `C_X` has already been validated as positive semidefinite and aligned to
+the marker order in `b`; the code also checks its dimensions, finiteness, and
+symmetry. The `max(quad, 0)` operation is only a guard against negligible
+floating-point error after that validation; it is not a repair for a materially
+indefinite operator. Because $0\leq\texttt{shrink}\leq1$, the final shrinkage
+step is a convex combination of strictly positive scales. The chosen
+`min_eff`, fallback values, and shrinkage weight remain non-unique calibration
+decisions.
 
 # From annotation effects to fixed marker-specific probability priors
 
