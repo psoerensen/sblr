@@ -35,7 +35,6 @@ run_csr_learned_annotation_bayesc(
  const double sigma_eta_vb=context.multiplier_prior_sd;
  const double rw_sd_eta_pi=context.probability_proposal_sd;
  const double rw_sd_eta_vb=context.multiplier_proposal_sd;
- const double pi_min=context.probability_min, pi_max=context.probability_max;
  const double vb_multiplier_min=context.multiplier_min;
  const double vb_multiplier_max=context.multiplier_max;
  const double nub=context.marker_degrees_freedom, nue=context.residual_degrees_freedom;
@@ -111,6 +110,7 @@ run_csr_learned_annotation_bayesc(
  std::vector<int> failed(static_cast<std::size_t>(nt), 0);
  std::vector<std::string> errors(static_cast<std::size_t>(nt));
  std::vector<int> thread_used(static_cast<std::size_t>(nt), 0);
+ std::vector<int> team_size_used(static_cast<std::size_t>(nt), 1);
  std::vector<double> trait_seconds(static_cast<std::size_t>(nt), 0.0);
 
  int nthreads = 1;
@@ -129,6 +129,7 @@ run_csr_learned_annotation_bayesc(
 #ifdef _OPENMP
   const double wall_start = omp_get_wtime();
   thread_used[static_cast<std::size_t>(t)] = omp_get_thread_num();
+  team_size_used[static_cast<std::size_t>(t)] = omp_get_num_threads();
 #else
   const double wall_start = 0.0;
   thread_used[static_cast<std::size_t>(t)] = 0;
@@ -210,14 +211,20 @@ run_csr_learned_annotation_bayesc(
     eta_vb_t = eta_vb_init.col(static_cast<arma::uword>(t));
    }
 
+   arma::rowvec pi_offset_t(m, arma::fill::zeros);
+   arma::rowvec pi_logit_t(m, arma::fill::zeros);
    arma::rowvec pi_marker_t(m, arma::fill::zeros);
    arma::rowvec vb_multiplier_t(m, arma::fill::ones);
 
    if (learn_pi_annot) {
-    pi_marker_t = make_pi_from_annotation(A, eta_pi_t, pi_t[1], pi_min, pi_max);
+    pi_offset_t = centered_annotation_linear_predictor(A, eta_pi_t);
+    pi_logit_t = make_logit_from_annotation(A, eta_pi_t, pi_t[1]);
+    pi_marker_t = make_pi_from_annotation(A, eta_pi_t, pi_t[1]);
    } else {
-    pi_marker_t.fill(clamp_double(pi_t[1], pi_min, pi_max));
+    pi_logit_t.fill(learned_logistic_strict_logit(pi_t[1]));
+    pi_marker_t.fill(learned_logistic_open_probability(pi_logit_t(0)));
    }
+   validate_learned_marker_probabilities(pi_marker_t);
 
    if (learn_vb_annot) {
     vb_multiplier_t = make_vb_multiplier_from_annotation(
@@ -256,7 +263,7 @@ run_csr_learned_annotation_bayesc(
 
      sampleBetaC_ST_csr_prior(
       i,
-      pi_marker_t(iu),
+      pi_logit_t(iu),
       vb_t,
       vb_multiplier_t(iu),
       vei_t,
@@ -282,7 +289,7 @@ run_csr_learned_annotation_bayesc(
             vb_t,
             ww_t,
             wy_t,
-            pi_marker_t,
+            pi_logit_t,
             learn_pi_annot,
             vb_multiplier_t,
             learn_vb_annot,
@@ -306,16 +313,17 @@ run_csr_learned_annotation_bayesc(
        eta_pi_t,
        d_t,
        pi_t[1],
-           pi_min,
-           pi_max,
-           sigma_eta_pi,
-           rw_sd_eta_pi,
-           gen_t,
-           eta_pi_accepted,
-           eta_pi_proposed
+       sigma_eta_pi,
+       rw_sd_eta_pi,
+       gen_t,
+       eta_pi_accepted,
+       eta_pi_proposed
       );
 
-      pi_marker_t = make_pi_from_annotation(A, eta_pi_t, pi_t[1], pi_min, pi_max);
+      pi_offset_t = centered_annotation_linear_predictor(A, eta_pi_t);
+      pi_logit_t = make_logit_from_annotation(A, eta_pi_t, pi_t[1]);
+      pi_marker_t = make_pi_from_annotation(A, eta_pi_t, pi_t[1]);
+      validate_learned_marker_probabilities(pi_marker_t);
      }
 
      if (learn_vb_annot) {
@@ -384,7 +392,9 @@ run_csr_learned_annotation_bayesc(
     }
 
     if (updatePi) {
-     samplePi_ST_annot(d_t, pi_t, pi_prior_a, pi_prior_b, gen_t);
+     samplePi_ST_annot(
+      d_t, pi_offset_t, pi_t, pi_prior_a, pi_prior_b, gen_t
+     );
 
      if (!std::isfinite(pi_t[0]) || !std::isfinite(pi_t[1]) ||
          pi_t[0] <= 0.0 || pi_t[1] <= 0.0) {
@@ -397,10 +407,13 @@ run_csr_learned_annotation_bayesc(
      }
 
      if (learn_pi_annot) {
-      pi_marker_t = make_pi_from_annotation(A, eta_pi_t, pi_t[1], pi_min, pi_max);
+      pi_logit_t = make_logit_from_annotation(A, eta_pi_t, pi_t[1]);
+      pi_marker_t = make_pi_from_annotation(A, eta_pi_t, pi_t[1]);
      } else {
-      pi_marker_t.fill(clamp_double(pi_t[1], pi_min, pi_max));
+      pi_logit_t.fill(learned_logistic_strict_logit(pi_t[1]));
+      pi_marker_t.fill(learned_logistic_open_probability(pi_logit_t(0)));
      }
+     validate_learned_marker_probabilities(pi_marker_t);
     }
 
     vg_t = computeG_ST_csr(b_t, wy_t, r_t, n[t]);
@@ -702,6 +715,11 @@ run_csr_learned_annotation_bayesc(
  execution_result.convergence_eta_vb=std::move(convergence_eta_vb);
  execution_result.convergence_b=std::move(convergence_b);
  execution_result.convergence_d=std::move(convergence_d);
+ execution_result.requested_thread_count=ncores;
+ execution_result.configured_thread_count=nthreads;
+ execution_result.actual_team_size=*
+  std::max_element(team_size_used.begin(),team_size_used.end());
+ execution_result.trait_worker_id=std::move(thread_used);
  return execution_result;
 
 }

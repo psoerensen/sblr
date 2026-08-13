@@ -211,7 +211,6 @@
 #' @param sigma_eta_pi,sigma_eta_vb Annotation-effect prior scales.
 #' @param rw_sd_eta_pi,rw_sd_eta_vb Annotation-effect proposal scales.
 #' @param annot_update_every Iterations between annotation-effect updates.
-#' @param pi_min,pi_max Bounds for marker-specific inclusion probabilities.
 #' @param vb_multiplier_min,vb_multiplier_max Bounds for marker-specific
 #'   variance multipliers.
 #' @param .convergence_spec Internal pre-resolved diagnostic capture plan.
@@ -274,8 +273,6 @@ stblr_csr_learn_annot <- function(
   rw_sd_eta_pi = 0.05,
   rw_sd_eta_vb = 0.05,
   annot_update_every = 10,
-  pi_min = 1e-8,
-  pi_max = 0.5,
   vb_multiplier_min = 1e-3,
   vb_multiplier_max = 1e3,
   .convergence_spec = NULL
@@ -369,11 +366,17 @@ stblr_csr_learn_annot <- function(
  if (!all(dim(eta_vb_init) == c(K, nt))) {
   stop("eta_vb_init must be ncol(A) x nt.")
  }
+ if (any(!is.finite(eta_pi_init))) {
+  stop("eta_pi_init must contain only finite values.", call. = FALSE)
+ }
+ if (any(!is.finite(eta_vb_init))) {
+  stop("eta_vb_init must contain only finite values.", call. = FALSE)
+ }
 
  initial_annotation_prior <- .stblr_make_prior_from_annotations(
   A = A, nt = nt, pi_base = arch$pi_init,
   beta_pi = eta_pi_init, beta_vb = eta_vb_init,
-  pi_min = pi_min, pi_max = pi_max,
+  clip_probability = FALSE,
   vb_multiplier_min = vb_multiplier_min,
   vb_multiplier_max = vb_multiplier_max)
  pri <- .stblr_make_csr_variance_priors(
@@ -414,8 +417,6 @@ stblr_csr_learn_annot <- function(
   rw_sd_eta_pi = rw_sd_eta_pi,
   rw_sd_eta_vb = rw_sd_eta_vb,
   annot_update_every = as.integer(annot_update_every),
-  pi_min = pi_min,
-  pi_max = pi_max,
   vb_multiplier_min = vb_multiplier_min,
   vb_multiplier_max = vb_multiplier_max,
   nub = nub,

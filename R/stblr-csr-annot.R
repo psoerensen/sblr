@@ -1,3 +1,59 @@
+.stblr_validate_learned_forwarded_args <- function(extra) {
+ if (!length(extra)) return(invisible(TRUE))
+
+ extra_names <- names(extra)
+ if (is.null(extra_names)) extra_names <- rep("", length(extra))
+ invalid_names <- is.na(extra_names) | !nzchar(extra_names) | extra_names == "NA"
+ if (any(invalid_names)) {
+  stop(
+   paste0(
+    "Arguments forwarded to annotation_model = \"learned_logistic\" through ",
+    "`...` must have unique, nonempty names; unnamed, empty-name, and ",
+    "NA-name arguments are not accepted."
+   ),
+   call. = FALSE
+  )
+ }
+
+ duplicate_names <- unique(extra_names[duplicated(extra_names)])
+ if (length(duplicate_names)) {
+  stop(
+   paste0(
+    "Arguments forwarded to annotation_model = \"learned_logistic\" through ",
+    "`...` must have unique, nonempty names; duplicated argument(s): ",
+    paste(sprintf("`%s`", duplicate_names), collapse = ", "), "."
+   ),
+   call. = FALSE
+  )
+ }
+
+ learned_probability_controls <- c("pi_min", "pi_max", "pi_marker")
+ ambiguous_probability_controls <- vapply(
+  extra_names,
+  function(arg) {
+   if (identical(arg, "pi_marker")) return(FALSE)
+   any(startsWith(learned_probability_controls, arg))
+  },
+  logical(1)
+ )
+ if (any(ambiguous_probability_controls)) {
+  offending <- unique(extra_names[ambiguous_probability_controls])
+  stop(
+   paste0(
+    "Argument(s) ",
+    paste(sprintf("`%s`", offending), collapse = ", "),
+    " are not accepted for annotation_model = \"learned_logistic\". ",
+    "Use the exact name `pi_marker` for the maintained initial global ",
+    "probability. Learned annotation probabilities are not controlled by ",
+    "`pi_min` or `pi_max`."
+   ),
+   call. = FALSE
+  )
+ }
+
+ invisible(TRUE)
+}
+
 #' Fit Annotation-Aware CSR ST-BLR Models
 #'
 #' `stblr_csr_annot()` is the unified public entry point for the current
@@ -432,6 +488,7 @@ stblr_csr_annot <- function(
   if ("A" %in% names(extra)) {
    stop("Supply learned annotations through annotations, not both annotations and A.")
   }
+  .stblr_validate_learned_forwarded_args(extra)
   args <- c(common, list(A = annotations), extra)
   return(finish(do.call(stblr_csr_learn_annot, args)))
  }

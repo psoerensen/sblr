@@ -149,8 +149,20 @@ stblr_low_rank_bayesc_hot_path_benchmark_internal <- function(markers = 1000L, r
     .Call(`_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal`, markers, rank, repetitions, warmup, seed)
 }
 
-stblr_cpg_omp_csr_annot <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, pi_min, pi_max, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains = 1L, keep_chains = FALSE, chain_seeds = NULL, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L, convergence_markers = as.integer( c()), convergence_annotations = FALSE, convergence_b = FALSE, convergence_d = FALSE) {
-    .Call(`_sblr_stblr_cpg_omp_csr_annot`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, pi_min, pi_max, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, convergence_markers, convergence_annotations, convergence_b, convergence_d)
+stblr_learned_logistic_pi_draws_internal <- function(state, offset, pi_init, pi_prior_a, pi_prior_b, draws, burnin, seed) {
+    .Call(`_sblr_stblr_learned_logistic_pi_draws_internal`, state, offset, pi_init, pi_prior_a, pi_prior_b, draws, burnin, seed)
+}
+
+stblr_learned_logistic_eta_logpost_internal <- function(A, eta, state, base_pi, sigma_eta) {
+    .Call(`_sblr_stblr_learned_logistic_eta_logpost_internal`, A, eta, state, base_pi, sigma_eta)
+}
+
+stblr_learned_logistic_probability_terms_internal <- function(predictor) {
+    .Call(`_sblr_stblr_learned_logistic_probability_terms_internal`, predictor)
+}
+
+stblr_cpg_omp_csr_annot <- function(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains = 1L, keep_chains = FALSE, chain_seeds = NULL, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L, convergence_markers = as.integer( c()), convergence_annotations = FALSE, convergence_b = FALSE, convergence_d = FALSE) {
+    .Call(`_sblr_stblr_cpg_omp_csr_annot`, wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, convergence_markers, convergence_annotations, convergence_b, convergence_d)
 }
 
 stblr_cpg_omp_csr_bayesr <- function(wy, ww, yy, b_init, comp_init, use_comp_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, mixture_var, alpha, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, ncores, seed, nchains, keep_chains, chain_seeds, updateE_start = 0L, updateE_every = 1L, updateLDswap = FALSE, ld_swap_prob = 0.05, ld_swap_r2 = 0.8, ld_swap_max_friends = 50L, ld_swap_moves = 1L, maf_effect_s_prior_scale = NULL, estimate_maf_effect_s = FALSE, maf_effect_s_init = 0.0, maf_effect_s_prior = as.numeric( c(-3.0, 2.0)), maf_effect_s_proposal_sd = 0.35, maf_effect_s_log_h = NULL, convergence_markers = as.integer( c()), convergence_probability = FALSE, convergence_b = FALSE, convergence_d = FALSE, convergence_component = FALSE) {

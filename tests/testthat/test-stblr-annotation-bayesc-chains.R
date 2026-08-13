@@ -45,6 +45,22 @@ tiny_annotation_bayesc_chain_stats <- function(m = 4L) {
   )
 }
 
+tiny_annotation_bayesc_parallel_stats <- function(m = 4L) {
+  stats <- tiny_annotation_bayesc_chain_stats(m)
+  markers <- stats$marker_names
+  stats$wy <- list(
+    trait1 = stats::setNames(c(20, -10, 5, 10)[seq_len(m)], markers),
+    trait2 = stats::setNames(c(-15, 7.5, 12.5, -5)[seq_len(m)], markers)
+  )
+  stats$ww <- list(
+    trait1 = stats::setNames(rep(50, m), markers),
+    trait2 = stats::setNames(rep(50, m), markers)
+  )
+  stats$yy <- stats::setNames(c(50, 50), c("trait1", "trait2"))
+  stats$trait_names <- names(stats$yy)
+  stats
+}
+
 tiny_annotation_bayesc_chain_matrix <- function(m = 4L) {
   markers <- paste0("m", seq_len(m))
   matrix(
@@ -159,6 +175,126 @@ test_that("learned BayesC annotations support native chains", {
 
   expect_bayesc_chain_fit(fit, stats)
   expect_true(all(c("eta_pi", "eta_vb") %in% names(fit$chains[[1]])))
+})
+
+test_that("two-trait learned-logistic fits are reproducible across one and two workers", {
+  thread_info <- sblr:::sparseLD_thread_info(2L)
+  skip_if_not(isTRUE(thread_info$openmp), "OpenMP is unavailable")
+  skip_if_not(
+    as.integer(thread_info$actual_threads_requested_region) >= 2L,
+    "The OpenMP runtime cannot provide two workers"
+  )
+  stats <- tiny_annotation_bayesc_parallel_stats()
+  A <- tiny_annotation_bayesc_chain_matrix()
+  prefix <- make_tiny_annotation_bayesc_chain_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(
+    ".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
+    ".values.f32.bin", ".meta.txt"
+  ))), add = TRUE)
+  common <- list(
+    stats = stats,
+    ld_prefix = prefix,
+    annotations = A,
+    annotation_model = "learned_logistic",
+    pi_init = 0.35,
+    pi_prior_a = 0.7,
+    pi_prior_b = 1.3,
+    learn_pi_annot = TRUE,
+    learn_vb_annot = FALSE,
+    eta_pi_init = matrix(c(1, -0.8, 0.6, -0.4),
+                         nrow = ncol(A), ncol = length(stats$yy)),
+    rw_sd_eta_pi = 0,
+    annot_update_every = 1L,
+    d_init = list(c(1, 0, 0, 1), c(0, 1, 1, 0)),
+    use_d_init = TRUE,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = TRUE,
+    nit = 12L,
+    nburn = 3L,
+    nchains = 2L,
+    keep_chains = TRUE,
+    convergence = "none",
+    chain_seeds = c(7311L, 7312L),
+    seed = 7310L
+  )
+  run <- function(ncores) {
+    do.call(sblr::stblr_csr_annot, c(common, list(ncores = ncores)))
+  }
+  centered_offsets <- sweep(A %*% common$eta_pi_init, 2L,
+                            colMeans(A %*% common$eta_pi_init), "-")
+  expect_true(all(apply(centered_offsets, 2L, function(x) any(x != 0))))
+  serial <- expect_no_warning(run(1L))
+  serial_repeat <- expect_no_warning(run(1L))
+  parallel <- expect_no_warning(run(2L))
+  serial_workers <- serial$diagnostics$native$parallel
+  parallel_workers <- parallel$diagnostics$native$parallel
+  expect_identical(
+    parallel_workers$scope,
+    "learned_sampler_trait_parallel_region"
+  )
+  expect_true(isTRUE(parallel_workers$openmp))
+  expect_equal(parallel_workers$requested_thread_count, rep(2L, 2L))
+  expect_equal(parallel_workers$configured_thread_count, rep(2L, 2L))
+  expect_true(all(parallel_workers$actual_team_size >= 2L))
+  expect_true(
+    length(parallel_workers$runtime_max_threads_before_request) == 1L &&
+      is.finite(parallel_workers$runtime_max_threads_before_request) &&
+      parallel_workers$runtime_max_threads_before_request >= 1L
+  )
+  expect_equal(dim(parallel_workers$trait_worker_id), c(2L, 2L))
+  expect_true(all(apply(
+    parallel_workers$trait_worker_id,
+    2L,
+    function(worker) length(unique(worker)) >= 2L
+  )))
+  expect_equal(serial_workers$requested_thread_count, rep(1L, 2L))
+  expect_equal(serial_workers$configured_thread_count, rep(1L, 2L))
+  expect_equal(serial_workers$actual_team_size, rep(1L, 2L))
+  expect_equal(serial_workers$trait_worker_id, matrix(0L, 2L, 2L))
+  expect_true(all(diag(parallel$cov_g_mean) > 0))
+  for (field in c(
+    "bm", "dm", "wy", "r", "b", "d", "b_final", "d_final",
+    "pi_trace", "pi_final",
+    "pi_mean", "eta_pi", "eta_vb", "vbs", "vgs", "ves", "vle", "vld",
+    "chains", "convergence_traces"
+  )) {
+    expect_identical(serial[[field]], serial_repeat[[field]], info = field)
+    expect_identical(serial[[field]], parallel[[field]], info = field)
+  }
+})
+
+test_that("learned-logistic updatePi FALSE preserves the global probability", {
+  stats <- tiny_annotation_bayesc_chain_stats()
+  A <- tiny_annotation_bayesc_chain_matrix()
+  prefix <- make_tiny_annotation_bayesc_chain_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(
+    ".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
+    ".values.f32.bin", ".meta.txt"
+  ))), add = TRUE)
+  fit <- sblr::stblr_csr_annot(
+    stats = stats,
+    ld_prefix = prefix,
+    annotations = A,
+    annotation_model = "learned_logistic",
+    pi_init = 0.35,
+    pi_prior_mean = 0.35,
+    pi_prior_strength = 2,
+    learn_pi_annot = TRUE,
+    eta_pi_init = matrix(c(1, -0.8), nrow = ncol(A), ncol = 1L),
+    rw_sd_eta_pi = 0,
+    annot_update_every = 1L,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 5L,
+    nburn = 0L,
+    ncores = 1L,
+    seed = 7313L,
+    convergence = "none"
+  )
+  expect_equal(as.numeric(fit$pi_trace), rep(0.35, 5L), tolerance = 0)
+  expect_equal(unname(fit$pi_final), c(0.65, 0.35), tolerance = 0)
 })
 
 test_that("group BayesC annotations support native chains", {

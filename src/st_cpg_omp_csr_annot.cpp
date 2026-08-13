@@ -354,23 +354,74 @@ inline arma::rowvec centered_annotation_linear_predictor(
  return z;
 }
 
+inline double learned_logistic_log_probability(double x) {
+ if (!std::isfinite(x)) {
+  throw std::runtime_error("learned logistic predictor must be finite.");
+ }
+ return -log1pexp_stable(-x);
+}
+
+inline double learned_logistic_log_complement(double x) {
+ if (!std::isfinite(x)) {
+  throw std::runtime_error("learned logistic predictor must be finite.");
+ }
+ return -log1pexp_stable(x);
+}
+
+inline double learned_logistic_strict_logit(double probability) {
+ if (!std::isfinite(probability) || probability <= 0.0 || probability >= 1.0) {
+  throw std::runtime_error("learned logistic base probability must be inside (0, 1).");
+ }
+ return std::log(probability) - std::log1p(-probability);
+}
+
+inline double learned_logistic_open_probability(double x) {
+ const double probability = inv_logit_stable(x);
+ if (probability <= 0.0) return std::numeric_limits<double>::denorm_min();
+ if (probability >= 1.0) return std::nextafter(1.0, 0.0);
+ return probability;
+}
+
+inline arma::rowvec make_logit_from_annotation(
+  const arma::mat& A,
+  const arma::vec& eta_pi,
+  double base_pi
+) {
+ arma::rowvec out = centered_annotation_linear_predictor(A, eta_pi);
+ const double base = learned_logistic_strict_logit(base_pi);
+ for (arma::uword i = 0; i < out.n_elem; ++i) {
+  out(i) += base;
+  if (!std::isfinite(out(i))) {
+   throw std::runtime_error("learned logistic marker predictor became non-finite.");
+  }
+ }
+ return out;
+}
+
 inline arma::rowvec make_pi_from_annotation(
   const arma::mat& A,
   const arma::vec& eta_pi,
-  double base_pi,
-  double pi_min,
-  double pi_max
+  double base_pi
 ) {
- arma::rowvec z = centered_annotation_linear_predictor(A, eta_pi);
- const double base = logit_prob(base_pi);
- arma::rowvec out(z.n_elem, arma::fill::zeros);
+ const arma::rowvec logit = make_logit_from_annotation(A, eta_pi, base_pi);
+ arma::rowvec out(logit.n_elem, arma::fill::zeros);
 
- for (arma::uword i = 0; i < z.n_elem; ++i) {
-  const double p = inv_logit_stable(base + z(i));
-  out(i) = clamp_double(p, pi_min, pi_max);
+ for (arma::uword i = 0; i < logit.n_elem; ++i) {
+  out(i) = learned_logistic_open_probability(logit(i));
  }
 
  return out;
+}
+
+inline void validate_learned_marker_probabilities(const arma::rowvec& probability) {
+ for (arma::uword i = 0; i < probability.n_elem; ++i) {
+  if (!std::isfinite(probability(i)) ||
+      probability(i) <= 0.0 || probability(i) >= 1.0) {
+   throw std::runtime_error(
+    "learned logistic marker probabilities must be finite and inside (0, 1)."
+   );
+  }
+ }
 }
 
 inline arma::rowvec make_vb_multiplier_from_annotation(
@@ -395,24 +446,14 @@ inline double logpost_eta_pi(
   const arma::vec& eta_pi,
   const arma::Row<int>& d,
   double base_pi,
-  double pi_min,
-  double pi_max,
   double sigma_eta
 ) {
- arma::rowvec z = centered_annotation_linear_predictor(A, eta_pi);
- const double base = logit_prob(base_pi);
+ const arma::rowvec logit = make_logit_from_annotation(A, eta_pi, base_pi);
  double lp = 0.0;
 
- for (arma::uword i = 0; i < z.n_elem; ++i) {
-  const double eta_i = base + z(i);
-
-  // If caps are inactive for most markers, this is the exact Bernoulli-logit
-  // likelihood. When caps bind, it is still a stable pseudo-posterior update.
-  double p = inv_logit_stable(eta_i);
-  p = clamp_double(p, pi_min, pi_max);
-
-  if (d(i) > 0) lp += std::log(std::max(p, 1e-300));
-  else          lp += std::log(std::max(1.0 - p, 1e-300));
+ for (arma::uword i = 0; i < logit.n_elem; ++i) {
+  if (d(i) > 0) lp += learned_logistic_log_probability(logit(i));
+  else          lp += learned_logistic_log_complement(logit(i));
  }
 
  if (!std::isfinite(sigma_eta) || sigma_eta <= 0.0) {
@@ -466,8 +507,6 @@ inline void rw_update_eta_pi(
   arma::vec& eta_pi,
   const arma::Row<int>& d,
   double base_pi,
-  double pi_min,
-  double pi_max,
   double sigma_eta,
   double rw_sd,
   std::mt19937& gen,
@@ -484,8 +523,8 @@ inline void rw_update_eta_pi(
   prop(k) += rw_sd * norm01(gen);
  }
 
- const double lp_old = logpost_eta_pi(A, eta_pi, d, base_pi, pi_min, pi_max, sigma_eta);
- const double lp_new = logpost_eta_pi(A, prop,   d, base_pi, pi_min, pi_max, sigma_eta);
+ const double lp_old = logpost_eta_pi(A, eta_pi, d, base_pi, sigma_eta);
+ const double lp_new = logpost_eta_pi(A, prop,   d, base_pi, sigma_eta);
 
  ++proposed;
 
@@ -534,7 +573,7 @@ inline void rw_update_eta_vb(
 
 inline void sampleBetaC_ST_csr_prior(
   int i,
-  double pi1_i,
+  double prior_logit_i,
   double vb_t,
   double vb_mult_i,
   double vei_i,
@@ -563,8 +602,9 @@ inline void sampleBetaC_ST_csr_prior(
  std::uniform_real_distribution<double> runif(0.0, 1.0);
  std::normal_distribution<double> norm01(0.0, 1.0);
 
- pi1_i = clamp_prob(pi1_i);
- const double pi0_i = std::max(1.0 - pi1_i, 1e-300);
+ if (!std::isfinite(prior_logit_i)) {
+  throw std::runtime_error("sampleBetaC_ST_csr_prior: prior logit must be finite.");
+ }
  const double vbi = std::max(vb_t * vb_mult_i, 1e-12);
  const double vei_safe = std::max(vei_i, 1e-300);
 
@@ -575,8 +615,8 @@ inline void sampleBetaC_ST_csr_prior(
   0.5 * std::log(vei_safe / denom)
   + 0.5 * score * score * vbi / (vei_safe * denom);
 
- const double logp1 = std::log(pi1_i) + logBF;
- const double logp0 = std::log(pi0_i);
+ const double logp1 = learned_logistic_log_probability(prior_logit_i) + logBF;
+ const double logp0 = learned_logistic_log_complement(prior_logit_i);
  const double delta_log = logp0 - logp1;
 
  double p1 = 0.0;
@@ -906,7 +946,7 @@ inline double log_marker_prior_ratio_annot(
   int j,
   int k,
   double vb_t,
-  const arma::rowvec& pi_marker,
+  const arma::rowvec& marker_logit,
   bool use_pi_marker,
   const arma::rowvec& vb_multiplier,
   bool use_vb_multiplier
@@ -914,11 +954,12 @@ inline double log_marker_prior_ratio_annot(
  double log_ratio = 0.0;
 
  if (use_pi_marker) {
-  const double pi_j = clamp_prob(pi_marker(static_cast<arma::uword>(j)));
-  const double pi_k = clamp_prob(pi_marker(static_cast<arma::uword>(k)));
-  log_ratio +=
-   std::log(pi_k) + std::log(std::max(1.0 - pi_j, 1e-300)) -
-   std::log(pi_j) - std::log(std::max(1.0 - pi_k, 1e-300));
+  const double logit_j = marker_logit(static_cast<arma::uword>(j));
+  const double logit_k = marker_logit(static_cast<arma::uword>(k));
+  if (!std::isfinite(logit_j) || !std::isfinite(logit_k)) {
+   return -std::numeric_limits<double>::infinity();
+  }
+  log_ratio += logit_k - logit_j;
  }
 
  if (use_vb_multiplier) {
@@ -946,7 +987,7 @@ inline bool attempt_ld_swap_st_csr_annot(
   double vb_t,
   const arma::rowvec& ww,
   const arma::rowvec& wy,
-  const arma::rowvec& pi_marker,
+  const arma::rowvec& marker_logit,
   bool use_pi_marker,
   const arma::rowvec& vb_multiplier,
   bool use_vb_multiplier,
@@ -1032,7 +1073,7 @@ inline bool attempt_ld_swap_st_csr_annot(
     -std::log(static_cast<double>(n_reverse_candidates)) -
     std::log(static_cast<double>(n_reverse_friends));
    const double log_prior_ratio = log_marker_prior_ratio_annot(
-    b_j_old, j, k, vb_t, pi_marker, use_pi_marker,
+    b_j_old, j, k, vb_t, marker_logit, use_pi_marker,
     vb_multiplier, use_vb_multiplier
    );
    const double log_alpha =
@@ -1058,30 +1099,201 @@ inline bool attempt_ld_swap_st_csr_annot(
 
 inline void samplePi_ST_annot(
   const arma::Row<int>& d,
+  const arma::rowvec& offset,
   std::vector<double>& pi,
   double pi_prior_a,
   double pi_prior_b,
   std::mt19937& gen
 ) {
- // pi[1] is the inclusion probability; pi[0] is the exclusion probability.
- // Prior: pi[1] ~ Beta(pi_prior_a, pi_prior_b).
- double c1 = pi_prior_a;
- double c0 = pi_prior_b;
-
- for (arma::uword i = 0; i < d.n_elem; ++i) {
-  if (d(i) > 0) c1 += 1.0;
-  else c0 += 1.0;
+ if (offset.n_elem != d.n_elem) {
+  throw std::runtime_error("samplePi_ST_annot: offset and state lengths differ.");
+ }
+ if (pi.size() != 2 || !std::isfinite(pi[1]) || pi[1] <= 0.0 || pi[1] >= 1.0) {
+  throw std::runtime_error("samplePi_ST_annot: current active probability must be inside (0, 1).");
+ }
+ if (!std::isfinite(pi_prior_a) || !std::isfinite(pi_prior_b) ||
+     pi_prior_a <= 0.0 || pi_prior_b <= 0.0) {
+  throw std::runtime_error("samplePi_ST_annot: Beta prior shapes must be finite and positive.");
  }
 
- std::gamma_distribution<double> rg0(c0, 1.0);
- std::gamma_distribution<double> rg1(c1, 1.0);
+ bool zero_offset = true;
+ double active_shape = pi_prior_a;
+ double null_shape = pi_prior_b;
+ for (arma::uword i = 0; i < d.n_elem; ++i) {
+  if (d(i) != 0 && d(i) != 1) {
+   throw std::runtime_error("samplePi_ST_annot: states must be zero or one.");
+  }
+  if (!std::isfinite(offset(i))) {
+   throw std::runtime_error("samplePi_ST_annot: offsets must be finite.");
+  }
+  zero_offset = zero_offset && offset(i) == 0.0;
+  if (d(i) == 1) active_shape += 1.0;
+  else null_shape += 1.0;
+ }
 
- const double g0 = std::max(rg0(gen), 1e-300);
- const double g1 = std::max(rg1(gen), 1e-300);
- const double s = g0 + g1;
+ // Exact analytical reduction. The gamma draws and their order preserve the
+ // ordinary learned-route BayesC RNG path when all effective offsets are zero.
+ if (zero_offset) {
+  std::gamma_distribution<double> draw_null(null_shape, 1.0);
+  std::gamma_distribution<double> draw_active(active_shape, 1.0);
+  const double g0 = draw_null(gen);
+  const double g1 = draw_active(gen);
+  if (!std::isfinite(g0) || !std::isfinite(g1) || g0 <= 0.0 || g1 <= 0.0) {
+   throw std::runtime_error("samplePi_ST_annot: Beta gamma draw was not finite and positive.");
+  }
+  const double total = g0 + g1;
+  if (!std::isfinite(total) || total <= 0.0) {
+   throw std::runtime_error("samplePi_ST_annot: Beta gamma total was not finite and positive.");
+  }
+  pi[0] = g0 / total;
+  pi[1] = g1 / total;
+  if (pi[0] <= 0.0 || pi[1] <= 0.0) {
+   throw std::runtime_error("samplePi_ST_annot: Beta draw was not inside the open unit interval.");
+  }
+  return;
+ }
 
- pi[0] = g0 / s;
- pi[1] = g1 / s;
+ const auto log_density = [&](double z) {
+  if (!std::isfinite(z)) return -std::numeric_limits<double>::infinity();
+  double value =
+   pi_prior_a * learned_logistic_log_probability(z) +
+   pi_prior_b * learned_logistic_log_complement(z);
+  for (arma::uword i = 0; i < d.n_elem; ++i) {
+   const double marker_logit = z + offset(i);
+   if (!std::isfinite(marker_logit)) {
+    return -std::numeric_limits<double>::infinity();
+   }
+   value += d(i) == 1 ? learned_logistic_log_probability(marker_logit) :
+    learned_logistic_log_complement(marker_logit);
+  }
+  return value;
+ };
+
+ const auto uniform_open = [&]() {
+  double value = 0.0;
+  do {
+   value = std::generate_canonical<double, 53>(gen);
+  } while (value <= 0.0);
+  return value;
+ };
+
+ constexpr double width = 1.0;
+ constexpr int max_step_out = 100;
+ constexpr int max_shrink = 1000;
+ const double current = learned_logistic_strict_logit(pi[1]);
+ const double current_log_density = log_density(current);
+ if (!std::isfinite(current_log_density)) {
+  throw std::runtime_error("samplePi_ST_annot: current logit has invalid log density.");
+ }
+ const double slice_height = current_log_density + std::log(uniform_open());
+
+ double left = current - width * uniform_open();
+ double right = left + width;
+ int left_steps = static_cast<int>(std::floor(max_step_out * uniform_open()));
+ int right_steps = max_step_out - 1 - left_steps;
+ while (left_steps > 0 && log_density(left) > slice_height) {
+  left -= width;
+  --left_steps;
+ }
+ while (right_steps > 0 && log_density(right) > slice_height) {
+  right += width;
+  --right_steps;
+ }
+
+ for (int iteration = 0; iteration < max_shrink; ++iteration) {
+  const double proposal = left + (right - left) * uniform_open();
+  const double proposal_log_density = log_density(proposal);
+  if (std::isfinite(proposal_log_density) &&
+      proposal_log_density >= slice_height) {
+   pi[1] = learned_logistic_open_probability(proposal);
+   pi[0] = learned_logistic_open_probability(-proposal);
+   return;
+  }
+  if (proposal < current) left = proposal;
+  else right = proposal;
+ }
+
+ throw std::runtime_error(
+  "samplePi_ST_annot: logit-scale slice sampler exceeded 1000 shrink steps."
+ );
+}
+
+// [[Rcpp::export]]
+Rcpp::List stblr_learned_logistic_pi_draws_internal(
+  Rcpp::IntegerVector state,
+  Rcpp::NumericVector offset,
+  double pi_init,
+  double pi_prior_a,
+  double pi_prior_b,
+  int draws,
+  int burnin,
+  int seed
+) {
+ if (state.size() != offset.size() || state.size() == 0) {
+  throw std::runtime_error("state and offset must have the same positive length.");
+ }
+ if (draws <= 0 || burnin < 0) {
+  throw std::runtime_error("draws must be positive and burnin must be non-negative.");
+ }
+ arma::Row<int> d(static_cast<arma::uword>(state.size()));
+ arma::rowvec o(static_cast<arma::uword>(offset.size()));
+ bool conjugate = true;
+ for (R_xlen_t i = 0; i < state.size(); ++i) {
+  d(static_cast<arma::uword>(i)) = state[i];
+  o(static_cast<arma::uword>(i)) = offset[i];
+  conjugate = conjugate && offset[i] == 0.0;
+ }
+ std::vector<double> pi = {1.0 - pi_init, pi_init};
+ std::mt19937 gen(static_cast<std::mt19937::result_type>(seed));
+ Rcpp::NumericVector result(draws);
+ for (int iteration = 0; iteration < burnin + draws; ++iteration) {
+  samplePi_ST_annot(d, o, pi, pi_prior_a, pi_prior_b, gen);
+  if (iteration >= burnin) result[iteration - burnin] = pi[1];
+ }
+ Rcpp::NumericVector marker_probability(offset.size());
+ const double base = learned_logistic_strict_logit(pi[1]);
+ for (R_xlen_t i = 0; i < offset.size(); ++i) {
+  marker_probability[i] = learned_logistic_open_probability(base + offset[i]);
+ }
+ return Rcpp::List::create(
+  Rcpp::_["draws"] = result,
+  Rcpp::_["marker_probability"] = marker_probability,
+  Rcpp::_["conjugate_reduction"] = conjugate
+ );
+}
+
+// [[Rcpp::export]]
+double stblr_learned_logistic_eta_logpost_internal(
+  arma::mat A,
+  arma::vec eta,
+  Rcpp::IntegerVector state,
+  double base_pi,
+  double sigma_eta
+) {
+ if (A.n_rows != static_cast<arma::uword>(state.size())) {
+  throw std::runtime_error("A rows must match state length.");
+ }
+ arma::Row<int> d(static_cast<arma::uword>(state.size()));
+ for (R_xlen_t i = 0; i < state.size(); ++i) {
+  d(static_cast<arma::uword>(i)) = state[i];
+ }
+ return logpost_eta_pi(A, eta, d, base_pi, sigma_eta);
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericMatrix stblr_learned_logistic_probability_terms_internal(
+  Rcpp::NumericVector predictor
+) {
+ Rcpp::NumericMatrix result(predictor.size(), 3);
+ Rcpp::colnames(result) = Rcpp::CharacterVector::create(
+  "probability", "log_probability", "log_complement"
+ );
+ for (R_xlen_t i = 0; i < predictor.size(); ++i) {
+  result(i, 0) = learned_logistic_open_probability(predictor[i]);
+  result(i, 1) = learned_logistic_log_probability(predictor[i]);
+  result(i, 2) = learned_logistic_log_complement(predictor[i]);
+ }
+ return result;
 }
 
 #define SBLR_CSR_LEARNED_ANNOTATION_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
@@ -1114,8 +1326,6 @@ sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_si
   double rw_sd_eta_pi,
   double rw_sd_eta_vb,
   int annot_update_every,
-  double pi_min,
-  double pi_max,
   double vb_multiplier_min,
   double vb_multiplier_max,
   double nub,
@@ -1203,10 +1413,6 @@ sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_si
   if ((int)eta_vb_init.n_rows != K || (int)eta_vb_init.n_cols != nt) {
    throw std::runtime_error("stblr_cpg_omp_csr_annot: eta_vb_init must be K x nt.");
   }
- }
-
- if (!std::isfinite(pi_min) || !std::isfinite(pi_max) || pi_min <= 0.0 || pi_max >= 1.0 || pi_min >= pi_max) {
-  throw std::runtime_error("stblr_cpg_omp_csr_annot: invalid pi_min/pi_max.");
  }
 
  if (!std::isfinite(vb_multiplier_min) || !std::isfinite(vb_multiplier_max) ||
@@ -1399,8 +1605,6 @@ sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_si
  annotation_policy.probability_proposal_sd=rw_sd_eta_pi;
  annotation_policy.multiplier_proposal_sd=rw_sd_eta_vb;
  annotation_policy.update_every=annot_update_every;
- annotation_policy.probability_min=pi_min;
- annotation_policy.probability_max=pi_max;
  annotation_policy.multiplier_min=vb_multiplier_min;
  annotation_policy.multiplier_max=vb_multiplier_max;
 
@@ -1423,7 +1627,6 @@ sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_si
  context.multiplier_prior_sd=sigma_eta_vb;
  context.probability_proposal_sd=rw_sd_eta_pi;
  context.multiplier_proposal_sd=rw_sd_eta_vb;
- context.probability_min=pi_min; context.probability_max=pi_max;
  context.multiplier_min=vb_multiplier_min;
  context.multiplier_max=vb_multiplier_max;
  context.marker_degrees_freedom=nub; context.residual_degrees_freedom=nue;
@@ -1601,8 +1804,13 @@ static Rcpp::List stblr_csr_learned_annotation_bayesc_result_to_raw(
  const std::vector<arma::mat>& convergence_eta_vb,
  const std::vector<arma::mat>& convergence_b,
  const std::vector<arma::imat>& convergence_d,
- const std::vector<int>& convergence_markers
-) {
+ const std::vector<int>& convergence_markers,
+ int runtime_max_threads_before_request,
+ const std::vector<int>& requested_thread_count,
+ const std::vector<int>& configured_thread_count,
+ const std::vector<int>& actual_team_size,
+ const std::vector<std::vector<int>>& trait_worker_id
+ ) {
  const std::vector<std::vector<std::vector<double>>>& raw=result.raw;
  const int n_trace = nit + nburn;
  Rcpp::NumericVector nsamples(nt), n_used(nt), log_cpo(nt), mean_log_cpo(nt), seconds_mean(nt), seconds_max(nt);
@@ -1625,6 +1833,29 @@ static Rcpp::List stblr_csr_learned_annotation_bayesc_result_to_raw(
  Rcpp::RObject chains = keep_chains ? Rcpp::RObject(cpg_annot_chains_raw_v1(
   raw,m,nt,nanno,nchains,convergence_eta_pi,convergence_eta_vb,
   convergence_b,convergence_d,convergence_markers)) : Rcpp::RObject(R_NilValue);
+ Rcpp::IntegerMatrix worker_id(nt,nchains);
+ for (int chain=0; chain<nchains; ++chain) {
+  if (static_cast<std::size_t>(chain)>=trait_worker_id.size()) continue;
+  for (int trait=0; trait<nt; ++trait) {
+   if (static_cast<std::size_t>(trait)<trait_worker_id[chain].size())
+    worker_id(trait,chain)=trait_worker_id[chain][trait];
+  }
+ }
+ Rcpp::List parallel_diagnostics=Rcpp::List::create(
+  Rcpp::_["scope"]="learned_sampler_trait_parallel_region",
+  Rcpp::_["openmp"]=
+#ifdef _OPENMP
+   true,
+#else
+   false,
+#endif
+  Rcpp::_["requested_thread_count"]=Rcpp::wrap(requested_thread_count),
+  Rcpp::_["runtime_max_threads_before_request"]=runtime_max_threads_before_request,
+  Rcpp::_["configured_thread_count"]=Rcpp::wrap(configured_thread_count),
+  Rcpp::_["actual_team_size"]=Rcpp::wrap(actual_team_size),
+  Rcpp::_["trait_worker_id"]=worker_id,
+  Rcpp::_["worker_id_base"]=0
+ );
  Rcpp::List raw_out = Rcpp::List::create(
   Rcpp::_["schema"] = Rcpp::List::create(Rcpp::_["class"] = "stblr_raw", Rcpp::_["version"] = 1),
   Rcpp::_["meta"] = Rcpp::List::create(
@@ -1684,9 +1915,10 @@ static Rcpp::List stblr_csr_learned_annotation_bayesc_result_to_raw(
    Rcpp::_["n_used"] = n_used,
    Rcpp::_["log_cpo"] = log_cpo,
    Rcpp::_["mean_log_cpo"] = mean_log_cpo,
-   Rcpp::_["seconds_mean"] = seconds_mean,
-   Rcpp::_["seconds_max"] = seconds_max,
-   Rcpp::_["ld_swap"] = ld_swap
+    Rcpp::_["seconds_mean"] = seconds_mean,
+    Rcpp::_["seconds_max"] = seconds_max,
+    Rcpp::_["ld_swap"] = ld_swap,
+    Rcpp::_["parallel"] = parallel_diagnostics
   ),
   Rcpp::_["chains"] = chains,
   Rcpp::_["prior"] = Rcpp::List::create(),
@@ -1738,8 +1970,6 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   double rw_sd_eta_pi,
   double rw_sd_eta_vb,
   int annot_update_every,
-  double pi_min,
-  double pi_max,
   double vb_multiplier_min,
   double vb_multiplier_max,
   double nub,
@@ -1797,6 +2027,15 @@ Rcpp::List stblr_cpg_omp_csr_annot(
  std::vector<arma::mat> convergence_eta_pi,convergence_eta_vb,
   convergence_b_trace;
  std::vector<arma::imat> convergence_d_trace;
+ std::vector<int> requested_thread_count(static_cast<std::size_t>(nchains),1);
+ std::vector<int> configured_thread_count(static_cast<std::size_t>(nchains),1);
+ std::vector<int> actual_team_size(static_cast<std::size_t>(nchains),1);
+ std::vector<std::vector<int>> trait_worker_id(static_cast<std::size_t>(nchains));
+#ifdef _OPENMP
+ const int runtime_max_threads_before_request=omp_get_max_threads();
+#else
+ const int runtime_max_threads_before_request=1;
+#endif
  const std::size_t task_count=static_cast<std::size_t>(nchains*wy.size());
  convergence_eta_pi.reserve(task_count); convergence_eta_vb.reserve(task_count);
  convergence_b_trace.reserve(task_count); convergence_d_trace.reserve(task_count);
@@ -1815,7 +2054,7 @@ Rcpp::List stblr_cpg_omp_csr_annot(
     rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
     A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init,
     sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb,
-    annot_update_every, pi_min, pi_max, vb_multiplier_min,
+    annot_update_every, vb_multiplier_min,
     vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n,
     nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, chain_seed,
     updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
@@ -1828,6 +2067,14 @@ Rcpp::List stblr_cpg_omp_csr_annot(
    convergence_b_trace.push_back(chain_result.convergence_b[t]);
    convergence_d_trace.push_back(chain_result.convergence_d[t]);
   }
+  requested_thread_count[static_cast<std::size_t>(chain)]=
+   chain_result.requested_thread_count;
+  configured_thread_count[static_cast<std::size_t>(chain)]=
+   chain_result.configured_thread_count;
+  actual_team_size[static_cast<std::size_t>(chain)]=
+   chain_result.actual_team_size;
+  trait_worker_id[static_cast<std::size_t>(chain)]=
+   std::move(chain_result.trait_worker_id);
 
   if (chain == 0) {
    out = raw;
@@ -1937,8 +2184,10 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   return stblr_csr_learned_annotation_bayesc_result_to_raw(
    execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
    static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains,
-   convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
-   convergence_d_trace,convergence_markers_cpp
+    convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
+    convergence_d_trace,convergence_markers_cpp,
+    runtime_max_threads_before_request,requested_thread_count,
+    configured_thread_count,actual_team_size,trait_worker_id
   );
  }
 
@@ -1947,8 +2196,10 @@ Rcpp::List stblr_cpg_omp_csr_annot(
  return stblr_csr_learned_annotation_bayesc_result_to_raw(
   execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
   static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains,
-  convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
-  convergence_d_trace,convergence_markers_cpp
+   convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
+   convergence_d_trace,convergence_markers_cpp,
+   runtime_max_threads_before_request,requested_thread_count,
+   configured_thread_count,actual_team_size,trait_worker_id
  );
 }
 

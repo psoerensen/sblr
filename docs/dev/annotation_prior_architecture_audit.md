@@ -16,9 +16,32 @@ startup reference still say v1, while its appended section 27 contains the v2
 refinements. This is a documentation provenance inconsistency, not a statistical
 ambiguity.
 
-This is a read-only scientific/code audit plus documentation reorganization.
-No sampler, native binding, R function signature, default, output field, RNG
-path, or generated file was changed.
+During the original read-only scientific/code audit and documentation
+reorganization, no sampler, native binding, R function signature, default,
+output field, RNG path, or generated file was changed.
+
+## Current-state update
+
+This audit was originally completed as a read-only review at commit
+`2123699a9cc2e91059e7d81a745420b14eca7f6e`. Its learned-logistic probability
+findings were subsequently superseded by the Phase 3A correction documented in
+`docs/dev/learned_logistic_pi_correction.md`.
+
+The current maintained description of `learned_logistic` below incorporates
+that correction:
+
+- the probability target is now the unclipped logistic model;
+- nonzero annotation offsets use a nonconjugate global $\pi$ update;
+- exactly zero effective offsets retain the ordinary BayesC Beta reduction;
+- obsolete learned-provider probability bounds and ambiguous abbreviations are
+  rejected, while the exact `pi_marker` name remains supported; and
+- learned-provider arguments forwarded through `...` must have unique,
+  nonempty names, so unnamed, empty-name, `NA`-name, mixed, and duplicate
+  forwarding cannot bind positionally or ambiguously.
+
+Other sections retain the conclusions of the original architecture audit
+unless explicitly identified as current-state updates. Phase 3A did not
+implement the broader architecture proposed by this document.
 
 ## Scope and method
 
@@ -219,7 +242,7 @@ The ST CSR BayesC route accepts fixed marker inclusion probabilities and/or
 fixed relative variance multipliers. Either can be supplied directly or
 constructed from A and fixed coefficients.
 
-For probability, the historical implementation mean-centers the annotation
+For probability, the fixed-provider implementation mean-centers the annotation
 linear predictor, adds the global logit, applies `plogis`, then clamps to
 configured limits (defaults approximately \(10^{-8}\) and 0.5). For variance,
 it mean-centers the log-linear predictor, exponentiates, and clamps to configured
@@ -297,12 +320,22 @@ Each coefficient vector is proposed jointly by random-walk Metropolis, using
 separate proposal SDs and an update interval (default every ten iterations).
 The probability target uses the current Bernoulli marker states. The variance
 target uses the active-effect Gaussian likelihood with current b, d, and
-\(v_b\). When probability/q bounds bind, the clipped transform is part of the
-implemented target.
+\(v_b\). The probability target is the unclipped logistic model. Variance
+multiplier bounds remain part of the historical Q target when they bind.
+
+When global \(\pi\) is updated with nonzero centered annotation offsets, its
+conditional is nonconjugate and is sampled on the logit scale by a univariate
+slice update that includes the transformation Jacobian. Exactly zero effective
+offsets retain the analytical ordinary-BayesC Beta reduction and its established
+gamma-draw RNG path.
 
 The native update sequence is marker sweep, optional LD swap, annotation MH,
-\(v_b\), \(v_e\), and global pi update. Acceptance counts/rates are reported;
-coefficient traces are retained in extended modes.
+\(v_b\), \(v_e\), and global $\pi$ update. Acceptance counts/rates are reported;
+coefficient traces are retained in extended modes. Internal parallel
+diagnostics distinguish the requested and configured thread counts, the
+actual learned-sampler OpenMP team size, and the zero-based worker ID assigned
+to each trait; these diagnostics support reproducibility tests and do not
+change the maintained formatted-fit schema.
 
 #### Support and gaps
 
@@ -314,9 +347,10 @@ and bulk/tail ESS/MCSE for coefficients.
 
 The active-effect variance likelihood is the same underlying Gaussian
 calculation as BayesC-LV where clipping is inactive. The models nevertheless
-differ in preprocessing, bounds, coefficient prior parameterization, update
-schedule/order, and RW-MH versus ESS. Exact draw equivalence is neither expected
-nor an appropriate migration test.
+differ in preprocessing, historical $Q$ variance-multiplier bounds,
+coefficient-prior parameterization, update schedule/order, and RW-MH versus
+ESS. Exact draw equivalence is neither expected nor an appropriate migration
+test.
 
 #### Conclusion
 
@@ -395,7 +429,7 @@ scalar SD may be supplied. `theta_init` is separate. ESS samples theta, and an
 empty active set triggers a direct prior draw. Log-scale guards prevent overflow
 without silently clamping q.
 
-BayesC-LV retains global pi. BayesR-LV retains global mixture probabilities and
+BayesC-LV retains global $\pi$. BayesR-LV retains global mixture probabilities and
 uses one theta across non-null components. Scale-aware marker, global variance,
 and LD-swap mathematics reuse the qualified ordinary engines.
 
@@ -507,8 +541,9 @@ provenance. Binary variance ratios remain unchanged by the common shift.
 - fixed-marker A-derived q is centered before clipping; clipping can alter GM.
 - group optionally uses an arithmetic, marker-weighted normalization.
 - historical MAF-S is uncentered.
-- probability clipping and h2 calibration are different operations from q
-  identification.
+- fixed-provider probability bounds and $h^2$ calibration are distinct from
+  $q$ identification; the learned-logistic probability provider is now
+  unclipped.
 
 Do not force one convention into validated historical routes during a
 mechanical reorganization. A new combined provider can adopt the coherent

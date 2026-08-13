@@ -235,8 +235,6 @@ test_that("learned-annotation BayesC CSR backend returns raw v1 schema", {
     rw_sd_eta_pi = 0.01,
     rw_sd_eta_vb = 0.01,
     annot_update_every = 1L,
-    pi_min = 1e-8,
-    pi_max = 0.5,
     vb_multiplier_min = 1e-3,
     vb_multiplier_max = 1e3,
     pi_prior_a = 1,
@@ -331,6 +329,158 @@ test_that("stblr_csr_annot dispatches learned BayesC annotations", {
   expect_identical(fit$annotation_effects$pi, fit$eta_pi)
   expect_identical(fit$annotation_effects$variance, fit$eta_vb)
   expect_true(all(c("eta_pi", "eta_vb", "vle", "vld") %in% names(fit)))
+})
+
+test_that("learned-logistic probability controls require exact public names", {
+  expect_false(any(c("pi_min", "pi_max") %in%
+                   names(formals(sblr:::stblr_csr_learn_annot))))
+  stats <- tiny_annotation_interface_stats()
+  A <- tiny_annotation_interface_matrix()
+  prefix <- make_tiny_annotation_interface_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(
+    ".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
+    ".values.f32.bin", ".meta.txt"
+  ))), add = TRUE)
+  common <- list(
+    stats = stats,
+    ld_prefix = prefix,
+    annotations = A,
+    annotation_model = "learned_logistic",
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 1L,
+    nburn = 0L,
+    ncores = 1L
+  )
+  complete_public_args <- function(overrides) {
+    target <- sblr::stblr_csr_annot
+    defaults <- formals(target)
+    defaults$`...` <- NULL
+    out <- stats::setNames(vector("list", length(defaults)), names(defaults))
+    for (name in names(defaults)) {
+      value <- if (name %in% names(overrides)) {
+        overrides[[name]]
+      } else {
+        eval(defaults[[name]], envir = environment(target))
+      }
+      out[name] <- list(value)
+    }
+    out
+  }
+  complete <- complete_public_args(common)
+  forwarded_name_error <- "must have unique, nonempty names"
+  prefixes <- function(x) substring(x, 1L, seq_len(nchar(x)))
+  rejected <- unique(c(
+    prefixes("pi_min"),
+    prefixes("pi_max"),
+    prefixes("pi_marker")[-nchar("pi_marker")]
+  ))
+  for (arg_name in rejected) {
+    arg <- stats::setNames(list(0.25), arg_name)
+    expect_error(
+      do.call(sblr::stblr_csr_annot, c(common, arg)),
+      paste0("`", arg_name, "`.*not accepted.*not controlled by")
+    )
+  }
+
+  fit <- do.call(sblr::stblr_csr_annot, c(common, list(pi_marker = 0.37)))
+  expect_equal(fit$input$pi_init, 0.37, tolerance = 0)
+  expect_equal(as.numeric(fit$pi_trace), 0.37, tolerance = 0)
+
+  unnamed_cases <- list(
+    one = unname(list(0.25)),
+    several = unname(list(0.25, 0.30)),
+    positional_n_m_pi_marker = unname(list(NULL, NULL, 0.91)),
+    mixed = c(list(pi_marker = 0.25), unname(list(0.91))),
+    empty = stats::setNames(list(0.91), ""),
+    na_name = stats::setNames(list(0.91), NA_character_)
+  )
+  for (case in unnamed_cases) {
+    expect_error(
+      do.call(sblr::stblr_csr_annot, c(complete, case)),
+      forwarded_name_error
+    )
+  }
+  expect_error(
+    do.call(
+      sblr::stblr_csr_annot,
+      c(complete, stats::setNames(list(0.25, 0.91), c("pi_marker", "pi_marker")))
+    ),
+    "duplicated argument.*`pi_marker`"
+  )
+
+  fit_after_rejections <- do.call(
+    sblr::stblr_csr_annot,
+    c(common, list(pi_marker = 0.37))
+  )
+  expect_equal(fit_after_rejections$input$pi_init, 0.37, tolerance = 0)
+  expect_equal(as.numeric(fit_after_rejections$pi_trace), 0.37, tolerance = 0)
+
+  expect_error(
+    do.call(sblr::stblr_csr_annot, c(common, list(not_a_control = 1))),
+    "unused argument.*not_a_control"
+  )
+})
+
+test_that("fixed-provider probability bounds retain their calibration role", {
+  skip_if_not(exists("stblr_cpg_omp_csr_prior", mode = "function"))
+  stats <- tiny_annotation_interface_stats()
+  A <- tiny_annotation_interface_matrix()
+  prefix <- make_tiny_annotation_interface_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(
+    ".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
+    ".values.f32.bin", ".meta.txt"
+  ))), add = TRUE)
+  fit <- sblr::stblr_csr_annot(
+    stats = stats,
+    ld_prefix = prefix,
+    annotations = A,
+    annotation_model = "fixed_marker",
+    beta_pi = c(100, -100),
+    use_pi_marker = TRUE,
+    pi_min = 0.2,
+    pi_max = 0.25,
+    updateB = FALSE,
+    updateE = FALSE,
+    updatePi = FALSE,
+    nit = 1L,
+    nburn = 0L,
+    ncores = 1L
+  )
+  fixed_pi <- unlist(fit$input$pi_marker, use.names = FALSE)
+  expect_equal(range(fixed_pi), c(0.2, 0.25), tolerance = 1e-12)
+})
+
+test_that("learned-logistic annotations and initial coefficients must be finite", {
+  stats <- tiny_annotation_interface_stats()
+  A <- tiny_annotation_interface_matrix()
+  prefix <- make_tiny_annotation_interface_csr_prefix(stats$m)
+  on.exit(unlink(paste0(prefix, c(
+    ".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
+    ".values.f32.bin", ".meta.txt"
+  ))), add = TRUE)
+  common <- list(
+    stats = stats,
+    ld_prefix = prefix,
+    annotation_model = "learned_logistic",
+    nit = 1L,
+    nburn = 0L,
+    ncores = 1L
+  )
+  nonfinite_A <- A
+  nonfinite_A[1L, 1L] <- Inf
+  expect_error(
+    do.call(sblr::stblr_csr_annot, c(common, list(annotations = nonfinite_A))),
+    "non-finite"
+  )
+  expect_error(
+    do.call(sblr::stblr_csr_annot, c(common, list(
+      annotations = A,
+      eta_pi_init = matrix(Inf, nrow = ncol(A), ncol = 1L)
+    ))),
+    "eta_pi_init must contain only finite values"
+  )
 })
 
 test_that("stblr_csr_annot dispatches group BayesC annotations", {

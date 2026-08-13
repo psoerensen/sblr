@@ -66,7 +66,6 @@ struct LearnedAnnotationBayesCPolicyView {
  double probability_prior_sd=1.0, multiplier_prior_sd=1.0;
  double probability_proposal_sd=0.05, multiplier_proposal_sd=0.05;
  int update_every=10;
- double probability_min=1e-6, probability_max=1.0-1e-6;
  double multiplier_min=1e-3, multiplier_max=1e3;
  std::string probability_link="centered_logit_offset";
  std::string multiplier_link="centered_exponential";
@@ -129,8 +128,15 @@ inline void validate_learned_annotation_policy(const LearnedAnnotationBayesCPoli
  for(std::size_t i=0;i<p.annotation_value_count;++i) if(!std::isfinite(p.annotation[i])) throw std::invalid_argument("annotation values must be finite");
  const std::size_t n=p.annotation_count*nt;
  if(p.eta_probability_count!=n||p.eta_multiplier_count!=n) throw std::invalid_argument("annotation coefficient dimensions are inconsistent");
- if(p.probability_prior_sd<=0||p.multiplier_prior_sd<=0||p.probability_proposal_sd<0||p.multiplier_proposal_sd<0||p.update_every<=0) throw std::invalid_argument("annotation prior/proposal/update controls are invalid");
- if(!(p.probability_min>0&&p.probability_min<p.probability_max&&p.probability_max<1)) throw std::invalid_argument("annotation probability bounds are invalid");
+ for(std::size_t i=0;i<n;++i) {
+  if(!std::isfinite(p.eta_probability_init[i])||!std::isfinite(p.eta_multiplier_init[i]))
+   throw std::invalid_argument("annotation coefficients must be finite");
+ }
+ if(!std::isfinite(p.probability_prior_sd)||!std::isfinite(p.multiplier_prior_sd)||
+    !std::isfinite(p.probability_proposal_sd)||!std::isfinite(p.multiplier_proposal_sd)||
+    p.probability_prior_sd<=0||p.multiplier_prior_sd<=0||
+    p.probability_proposal_sd<0||p.multiplier_proposal_sd<0||p.update_every<=0)
+  throw std::invalid_argument("annotation prior/proposal/update controls are invalid");
  if(!(p.multiplier_min>0&&p.multiplier_min<p.multiplier_max)) throw std::invalid_argument("annotation multiplier bounds are invalid");
  if(p.probability_link!="centered_logit_offset"||p.multiplier_link!="centered_exponential") throw std::invalid_argument("annotation link tag is incompatible with production semantics");
  if(!p.shared_read_only||p.per_chain_payload||!p.storage_outlives_execution) throw std::invalid_argument("annotation storage must be borrowed immutable and outlive execution");

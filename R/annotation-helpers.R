@@ -311,6 +311,7 @@
   pi_base,
   beta_pi = NULL,
   beta_vb = NULL,
+  clip_probability = TRUE,
   pi_min = 1e-8,
   pi_max = 0.5,
   vb_multiplier_min = 1e-3,
@@ -349,7 +350,11 @@
   lp_pi <- lp_pi - mean(lp_pi)
 
   p <- stats::plogis(stats::qlogis(pi_base) + lp_pi)
-  p <- pmin(pmax(p, pi_min), pi_max)
+  if (isTRUE(clip_probability)) {
+   p <- pmin(pmax(p, pi_min), pi_max)
+  } else {
+   p <- pmin(pmax(p, .Machine$double.xmin), 1 - .Machine$double.eps)
+  }
 
   lp_vb <- as.numeric(A %*% beta_vb[, t])
   lp_vb <- lp_vb - mean(lp_vb)

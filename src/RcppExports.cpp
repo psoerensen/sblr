@@ -1144,9 +1144,53 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// stblr_learned_logistic_pi_draws_internal
+Rcpp::List stblr_learned_logistic_pi_draws_internal(Rcpp::IntegerVector state, Rcpp::NumericVector offset, double pi_init, double pi_prior_a, double pi_prior_b, int draws, int burnin, int seed);
+RcppExport SEXP _sblr_stblr_learned_logistic_pi_draws_internal(SEXP stateSEXP, SEXP offsetSEXP, SEXP pi_initSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP drawsSEXP, SEXP burninSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_init(pi_initSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_prior_a(pi_prior_aSEXP);
+    Rcpp::traits::input_parameter< double >::type pi_prior_b(pi_prior_bSEXP);
+    Rcpp::traits::input_parameter< int >::type draws(drawsSEXP);
+    Rcpp::traits::input_parameter< int >::type burnin(burninSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_learned_logistic_pi_draws_internal(state, offset, pi_init, pi_prior_a, pi_prior_b, draws, burnin, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stblr_learned_logistic_eta_logpost_internal
+double stblr_learned_logistic_eta_logpost_internal(arma::mat A, arma::vec eta, Rcpp::IntegerVector state, double base_pi, double sigma_eta);
+RcppExport SEXP _sblr_stblr_learned_logistic_eta_logpost_internal(SEXP ASEXP, SEXP etaSEXP, SEXP stateSEXP, SEXP base_piSEXP, SEXP sigma_etaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type A(ASEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< double >::type base_pi(base_piSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_eta(sigma_etaSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_learned_logistic_eta_logpost_internal(A, eta, state, base_pi, sigma_eta));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stblr_learned_logistic_probability_terms_internal
+Rcpp::NumericMatrix stblr_learned_logistic_probability_terms_internal(Rcpp::NumericVector predictor);
+RcppExport SEXP _sblr_stblr_learned_logistic_probability_terms_internal(SEXP predictorSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type predictor(predictorSEXP);
+    rcpp_result_gen = Rcpp::wrap(stblr_learned_logistic_probability_terms_internal(predictor));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stblr_cpg_omp_csr_annot
-Rcpp::List stblr_cpg_omp_csr_annot(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, arma::mat A, bool learn_pi_annot, bool learn_vb_annot, arma::mat eta_pi_init, arma::mat eta_vb_init, double sigma_eta_pi, double sigma_eta_vb, double rw_sd_eta_pi, double rw_sd_eta_vb, int annot_update_every, double pi_min, double pi_max, double vb_multiplier_min, double vb_multiplier_max, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::IntegerVector convergence_markers, bool convergence_annotations, bool convergence_b, bool convergence_d);
-RcppExport SEXP _sblr_stblr_cpg_omp_csr_annot(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP ASEXP, SEXP learn_pi_annotSEXP, SEXP learn_vb_annotSEXP, SEXP eta_pi_initSEXP, SEXP eta_vb_initSEXP, SEXP sigma_eta_piSEXP, SEXP sigma_eta_vbSEXP, SEXP rw_sd_eta_piSEXP, SEXP rw_sd_eta_vbSEXP, SEXP annot_update_everySEXP, SEXP pi_minSEXP, SEXP pi_maxSEXP, SEXP vb_multiplier_minSEXP, SEXP vb_multiplier_maxSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP convergence_markersSEXP, SEXP convergence_annotationsSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP) {
+Rcpp::List stblr_cpg_omp_csr_annot(std::vector<std::vector<double>> wy, std::vector<std::vector<double>> ww, std::vector<double> yy, std::vector<std::vector<double>> b_init, std::vector<std::vector<double>> d_init, bool use_d_init, std::vector<std::vector<double>> r_init, bool use_r_init, bool rebuild_r_before_updateE, std::string ld_prefix, arma::mat B, arma::mat E, std::vector<std::vector<double>> ssb_prior, std::vector<std::vector<double>> sse_prior, std::vector<double> pi, arma::mat A, bool learn_pi_annot, bool learn_vb_annot, arma::mat eta_pi_init, arma::mat eta_vb_init, double sigma_eta_pi, double sigma_eta_vb, double rw_sd_eta_pi, double rw_sd_eta_vb, int annot_update_every, double vb_multiplier_min, double vb_multiplier_max, double nub, double nue, bool updateB, bool updateE, bool updatePi, double adjE, std::vector<int> n, int nit, int nburn, int nthin, double pi_prior_a, double pi_prior_b, int ncores, int seed, int nchains, bool keep_chains, Rcpp::Nullable<Rcpp::IntegerVector> chain_seeds, bool updateLDswap, double ld_swap_prob, double ld_swap_r2, int ld_swap_max_friends, int ld_swap_moves, Rcpp::IntegerVector convergence_markers, bool convergence_annotations, bool convergence_b, bool convergence_d);
+RcppExport SEXP _sblr_stblr_cpg_omp_csr_annot(SEXP wySEXP, SEXP wwSEXP, SEXP yySEXP, SEXP b_initSEXP, SEXP d_initSEXP, SEXP use_d_initSEXP, SEXP r_initSEXP, SEXP use_r_initSEXP, SEXP rebuild_r_before_updateESEXP, SEXP ld_prefixSEXP, SEXP BSEXP, SEXP ESEXP, SEXP ssb_priorSEXP, SEXP sse_priorSEXP, SEXP piSEXP, SEXP ASEXP, SEXP learn_pi_annotSEXP, SEXP learn_vb_annotSEXP, SEXP eta_pi_initSEXP, SEXP eta_vb_initSEXP, SEXP sigma_eta_piSEXP, SEXP sigma_eta_vbSEXP, SEXP rw_sd_eta_piSEXP, SEXP rw_sd_eta_vbSEXP, SEXP annot_update_everySEXP, SEXP vb_multiplier_minSEXP, SEXP vb_multiplier_maxSEXP, SEXP nubSEXP, SEXP nueSEXP, SEXP updateBSEXP, SEXP updateESEXP, SEXP updatePiSEXP, SEXP adjESEXP, SEXP nSEXP, SEXP nitSEXP, SEXP nburnSEXP, SEXP nthinSEXP, SEXP pi_prior_aSEXP, SEXP pi_prior_bSEXP, SEXP ncoresSEXP, SEXP seedSEXP, SEXP nchainsSEXP, SEXP keep_chainsSEXP, SEXP chain_seedsSEXP, SEXP updateLDswapSEXP, SEXP ld_swap_probSEXP, SEXP ld_swap_r2SEXP, SEXP ld_swap_max_friendsSEXP, SEXP ld_swap_movesSEXP, SEXP convergence_markersSEXP, SEXP convergence_annotationsSEXP, SEXP convergence_bSEXP, SEXP convergence_dSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1175,8 +1219,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type rw_sd_eta_pi(rw_sd_eta_piSEXP);
     Rcpp::traits::input_parameter< double >::type rw_sd_eta_vb(rw_sd_eta_vbSEXP);
     Rcpp::traits::input_parameter< int >::type annot_update_every(annot_update_everySEXP);
-    Rcpp::traits::input_parameter< double >::type pi_min(pi_minSEXP);
-    Rcpp::traits::input_parameter< double >::type pi_max(pi_maxSEXP);
     Rcpp::traits::input_parameter< double >::type vb_multiplier_min(vb_multiplier_minSEXP);
     Rcpp::traits::input_parameter< double >::type vb_multiplier_max(vb_multiplier_maxSEXP);
     Rcpp::traits::input_parameter< double >::type nub(nubSEXP);
@@ -1205,7 +1247,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type convergence_annotations(convergence_annotationsSEXP);
     Rcpp::traits::input_parameter< bool >::type convergence_b(convergence_bSEXP);
     Rcpp::traits::input_parameter< bool >::type convergence_d(convergence_dSEXP);
-    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_annot(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, pi_min, pi_max, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, convergence_markers, convergence_annotations, convergence_b, convergence_d));
+    rcpp_result_gen = Rcpp::wrap(stblr_cpg_omp_csr_annot(wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init, rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi, A, learn_pi_annot, learn_vb_annot, eta_pi_init, eta_vb_init, sigma_eta_pi, sigma_eta_vb, rw_sd_eta_pi, rw_sd_eta_vb, annot_update_every, vb_multiplier_min, vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, seed, nchains, keep_chains, chain_seeds, updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves, convergence_markers, convergence_annotations, convergence_b, convergence_d));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2415,7 +2457,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_stblr_cpg_omp_csr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr, 46},
     {"_sblr_stblr_cpg_omp_csr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_block_eigen, 58},
     {"_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal", (DL_FUNC) &_sblr_stblr_low_rank_bayesc_hot_path_benchmark_internal, 5},
-    {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 55},
+    {"_sblr_stblr_learned_logistic_pi_draws_internal", (DL_FUNC) &_sblr_stblr_learned_logistic_pi_draws_internal, 8},
+    {"_sblr_stblr_learned_logistic_eta_logpost_internal", (DL_FUNC) &_sblr_stblr_learned_logistic_eta_logpost_internal, 5},
+    {"_sblr_stblr_learned_logistic_probability_terms_internal", (DL_FUNC) &_sblr_stblr_learned_logistic_probability_terms_internal, 1},
+    {"_sblr_stblr_cpg_omp_csr_annot", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_annot, 53},
     {"_sblr_stblr_cpg_omp_csr_bayesr", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr, 50},
     {"_sblr_stblr_cpg_omp_csr_bayesr_block_eigen", (DL_FUNC) &_sblr_stblr_cpg_omp_csr_bayesr_block_eigen, 63},
     {"_sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal", (DL_FUNC) &_sblr_stblr_low_rank_bayesr_hot_path_benchmark_internal, 5},

@@ -26,7 +26,6 @@ struct CsrLearnedAnnotationBayesCExecutionContext {
  int annotation_update_every=1, ld_swap_moves=0;
  double probability_prior_sd=1.0, multiplier_prior_sd=1.0;
  double probability_proposal_sd=0.0, multiplier_proposal_sd=0.0;
- double probability_min=0.0, probability_max=1.0;
  double multiplier_min=0.0, multiplier_max=1.0;
  double marker_degrees_freedom=0.0, residual_degrees_freedom=0.0;
  double residual_adjustment=0.0, global_probability_prior_a=0.0;
@@ -64,6 +63,9 @@ struct CsrLearnedAnnotationBayesCExecutionResult {
  std::vector<arma::mat> convergence_eta_pi, convergence_eta_vb;
  std::vector<arma::mat> convergence_b;
  std::vector<arma::imat> convergence_d;
+ int requested_thread_count=1, configured_thread_count=1;
+ int actual_team_size=1;
+ std::vector<int> trait_worker_id;
 };
 
 inline void validate_csr_learned_annotation_bayesc_execution_context(

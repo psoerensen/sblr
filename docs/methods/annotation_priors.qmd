@@ -337,8 +337,9 @@ $$
 $$
 
 with a zero-centered Gaussian coefficient prior and random-walk Metropolis
-updates. Marker probabilities are bounded. It is a learned probability
-architecture for ST CSR BayesC.
+updates. Marker probabilities lie naturally in $(0,1)$ under the logistic
+model; the learned provider does not apply an additional material hard cap. It
+is a learned probability architecture for ST CSR BayesC.
 
 Its probability and variance halves are mathematically separable. The future
 architecture should retain a logistic probability provider without requiring

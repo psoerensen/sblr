@@ -41,7 +41,16 @@ Annotation policies are:
 
 - `fixed_marker`: fixed marker inclusion probabilities/scales;
 - `group`: sampled group-level BayesC parameters;
-- `learned_logistic`: learned inclusion/variance annotation coefficients;
+- `learned_logistic`: learned inclusion/variance annotation coefficients. Its
+  inclusion provider is the unclipped offset-logistic model; obsolete
+  `pi_min`/`pi_max` controls and ambiguous abbreviations are rejected before
+  dispatch, while exact `pi_marker` remains the supported initial global
+  probability control. Arguments forwarded to this provider through `...`
+  must have unique, nonempty names; unnamed, empty-name, `NA`-name, mixed, and
+  duplicate forwarding is rejected before positional or ambiguous matching.
+  The global BayesC inclusion
+  probability has a nonconjugate logit-scale update when offsets are nonzero
+  and the ordinary Beta reduction when they are exactly zero;
 - `annotation_probit_stick`: annotation-dependent BayesR component
   probabilities.
 - `log_variance`: learned marker-specific relative non-null variance
