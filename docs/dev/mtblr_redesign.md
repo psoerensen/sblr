@@ -2,13 +2,16 @@
 
 ## Status
 
-**Document status:** Design draft 0.1
+**Document status:** Design draft 0.3; covariance, Cheng-pattern, regional
+reference, and heterogeneous-provider phases verified by standalone evidence
 
 **Package:** `sblr`
 
 **Scope:** Major redesign of the multi-trait Bayesian linear regression framework
 
-**Primary package baseline:** [`psoerensen/sblr@e11abdf9`](https://github.com/psoerensen/sblr/commit/e11abdf9f2f49b03169449c680ae033df4992acf)
+**Research-design checkpoint baseline:** [`psoerensen/sblr@52d5021`](https://github.com/psoerensen/sblr/commit/52d50219ead086245dc38cb5e5958a1403c78d1d)
+
+**Earlier Phase 3A package checkpoint:** [`psoerensen/sblr@e11abdf9`](https://github.com/psoerensen/sblr/commit/e11abdf9f2f49b03169449c680ae033df4992acf)
 
 **External design reference:** [`reworkhow/JWAS.jl@038c6c8`](https://github.com/reworkhow/JWAS.jl/commit/038c6c8a497ec6e17e957657a5c13ae698377132)
 
@@ -28,8 +31,12 @@ The document deliberately separates:
 - alternatives requiring an explicit scientific decision;
 - later extensions that should not enlarge the first implementation phase.
 
-No implementation should begin until the phase-1 decisions in the decision
-register have been approved.
+No production implementation should begin until the remaining phase-1 decisions
+in the decision register have been approved. The Cheng state geometry,
+inverse-Wishart reference parameterization, null-collapsed conditional
+completion and joint state transition are resolved by
+`mtblr_covariance_design.md`; this does not promote the current hybrid source
+transition.
 
 ## 1. Motivation
 
@@ -78,8 +85,12 @@ definitions, the distinction must be explicit.
 The target MTBLR framework should:
 
 1. provide one authoritative statistical definition for each model;
-2. use one global marker-effect covariance state at each MCMC iteration;
-3. update global parameters independently of marker-set or LD-block
+2. maintain exactly one authoritative sampled covariance state for each
+   declared statistical covariance unit at each MCMC iteration: one $V_b$ in
+   the global model, or one persistent $V_{b,r}$ per region in a regional
+   model;
+3. update global and regional statistical parameters according to their model
+   definitions, independently of marker-set, provider, LD-block, or eigenblock
    partitioning;
 4. distinguish latent base effects, realized marker effects, marker states,
    covariance parameters, and derived covariance quantities;
@@ -191,15 +202,18 @@ where:
 
 For marker $j$, distinguish four objects:
 
-1. $z_j$: the discrete marker state;
-2. $u_j\in\mathbb R^T$: a latent base-effect vector;
-3. $D_j$: a state- and scale-dependent diagonal transformation;
-4. $b_j=D_ju_j$: the realized effect entering the phenotype model.
+1. $\boldsymbol{\delta}_j$: the discrete trait-activity or mixture state;
+2. $\boldsymbol{\beta}_j\in\mathbb R^T$: a complete latent base-effect vector;
+3. $D_j=\operatorname{diag}(\boldsymbol{\delta}_j)$: the activity mask;
+4. $\boldsymbol{\alpha}_j=D_j\boldsymbol{\beta}_j$: the realised BayesC effect
+   entering the phenotype model.
 
-This distinction is central. A null or trait-inactive component of $b_j$ is
-exactly zero, while a corresponding component of $u_j$ may exist as an
-augmentation variable. Augmentation variables must not be reported as realized
-marker effects.
+The rows of $B$ are $\boldsymbol{\alpha}_j^\top$. This distinction is central.
+A null or trait-inactive component of $\boldsymbol{\alpha}_j$ is exactly zero,
+while the corresponding component of $\boldsymbol{\beta}_j$ may exist as an
+augmentation variable. Component or marker scaling in BayesR is represented by
+a separate scale matrix, not folded into $D_j$. Augmentation variables must not
+be reported as realised marker effects.
 
 The shared base marker-effect covariance is
 
@@ -231,7 +245,8 @@ provide:
 
 ### 7.1 MT BayesC
 
-For a binary activity pattern
+General trait-pattern MT-BayesC$\Pi$, as in Cheng et al. (2018), is an existing
+intended and publicly selectable model geometry. For a binary activity pattern
 
 $$
 a_p\in\{0,1\}^T,
@@ -246,40 +261,62 @@ $$
 and
 
 $$
-b_j=D_ju_j.
+\boldsymbol{\alpha}_j=D_j\boldsymbol{\beta}_j,
 $$
 
-The state space contains one null pattern and a declared set of non-null trait
-patterns.
+where $\boldsymbol{\beta}_j\sim N_T(0,V_b)$ is the complete latent slab vector
+and $\boldsymbol{\alpha}_j$ is the realised effect. The state space contains one
+null pattern and a declared set of non-null trait patterns. For $T=2$, the
+complete default state space is
+
+$$
+\{(0,0),(1,0),(0,1),(1,1)\}.
+$$
+
+The restricted shared-state model containing only $(0,0)$ and $(1,1)$ is a
+validation special case, not the general phase-1 target.
 
 ### 7.2 Shared-component MT BayesR
 
 This is the current `sblr` statistical model. A non-null state consists of a
 trait pattern $p$ and one positive component $k$ shared across active traits.
 
-With component multiplier $\gamma_k$ and marker multiplier $q_j$,
+With component multiplier $\gamma_k$ and marker multiplier $q_j$, the
+standalone shared-component prototype stores
+$\boldsymbol{\theta}_j\sim N_T(0,\gamma_kq_jV_b)$ and, for an active
+all-traits component, sets $\boldsymbol{\alpha}_j=\boldsymbol{\theta}_j$.
+Equivalently, define a base latent vector
+$\boldsymbol{\beta}_j\sim N_T(0,V_b)$ so that
 
 $$
 D_j
 =
-\sqrt{\gamma_kq_j}\operatorname{diag}(a_p),
+\operatorname{diag}(a_p),
 $$
 
 so that
 
 $$
-b_j
+\boldsymbol{\alpha}_j
 =
-\sqrt{\gamma_kq_j}\operatorname{diag}(a_p)u_j.
+\sqrt{\gamma_kq_j}\,D_j
+\boldsymbol{\beta}_j.
 $$
 
 The active-subspace covariance is
 
 $$
-\operatorname{Var}(b_{j,p}\mid V_b,z_j)
+\operatorname{Var}(\boldsymbol{\alpha}_{j,p}\mid V_b,z_j)
 =
 \gamma_kq_jV_{b,p}.
 $$
+
+Under the prototype's scaled-effect storage, the covariance sufficient
+statistic divides
+$\boldsymbol{\theta}_j\boldsymbol{\theta}_j^\top$ by $\gamma_kq_j$ exactly
+once. An implementation storing completed base vectors instead uses
+$\boldsymbol{\beta}_j\boldsymbol{\beta}_j^\top$ directly and must not remove
+the scale again. The $q_j=1$ case is only a reduction of this contract.
 
 There is one null state and $LK$ non-null states when $L$ non-null activity
 patterns and $K$ positive components are supplied.
@@ -295,10 +332,19 @@ c_j=(c_{j1},\ldots,c_{jT}),
 c_{jt}\in\{0,1,\ldots,K\}.
 $$
 
-Define
+Define the activity mask and scale matrix separately:
 
 $$
 D_j
+=
+\operatorname{diag}
+\left(
+\mathbf 1(c_{j1}>0),
+\ldots,
+\mathbf 1(c_{jT}>0)
+\right),
+\qquad
+G_j
 =
 \operatorname{diag}
 \left(
@@ -311,10 +357,17 @@ $$
 where $\gamma_0=0$. Then
 
 $$
-\operatorname{Var}(b_j\mid V_b,c_j)
+\boldsymbol{\alpha}_j=D_jG_j\boldsymbol{\beta}_j,
+\qquad
+\operatorname{Var}(\boldsymbol{\alpha}_j\mid V_b,c_j)
 =
-D_jV_bD_j.
+D_jG_jV_bG_jD_j.
 $$
+
+Because $\gamma_0=0$, $G_j$ already has zero entries for inactive traits, so
+$D_jG_j=G_j$. The mask is retained in the notation to distinguish activity
+from scale and to support implementations in which null-state masking is
+represented explicitly.
 
 This permits a marker to occupy a large-effect class for one trait and a
 smaller-effect class for another. The unrestricted state count is
@@ -327,7 +380,11 @@ so full joint enumeration is suitable only for small $T$ and $K$. Coordinate or
 structured transitions are required for larger problems.
 
 This policy is recommended as a planned extension, not as the first vertical
-slice.
+slice. Its marker transition, conditional completion, and covariance
+sufficient statistic require a separate derivation because $G_j$ is generally
+not a scalar multiple of the identity. The validated shared-component BayesR
+derivation must not be applied to this trait-specific scale geometry without
+that derivation.
 
 ### 7.4 Transition strategies
 
@@ -337,6 +394,11 @@ The engine should support at least two transition strategies:
   draw;
 - **coordinate transition:** update one trait indicator or component at a time
   while conditioning on the remaining state.
+
+Coordinate updating additionally requires the declared state graph to be
+connected under one-coordinate moves. Disconnected restricted spaces, such as
+only $(0,0)$ and $(1,1)$, require the joint transition or another separately
+derived irreducible kernel.
 
 When both strategies represent the same state model, they must be shown to
 leave the same posterior invariant. One-marker exact-probability tests should
@@ -350,7 +412,8 @@ not merely an optimization.
 
 ### 8.1 Required invariant
 
-At iteration $s$, there must be exactly one authoritative covariance state
+For the global model, at iteration $s$ there must be exactly one authoritative
+covariance state
 
 $$
 V_b^{(s)}.
@@ -360,6 +423,13 @@ The covariance used by marker transitions, stored in retained draws, included
 in posterior summaries, and returned as the final chain state must refer to the
 same MCMC state. A descriptive estimator must never overwrite the sampled
 covariance parameter.
+
+The corresponding invariant for a regional model is one persistent,
+authoritative $V_{b,r}^{(s)}$ for every declared statistical region $r$. Each
+regional state must be used consistently by its marker transitions, retained
+draws, summaries, and final chain state. Computational blocks and providers do
+not create additional covariance states unless the statistical model
+explicitly declares them.
 
 ### 8.2 Phase-1 prior family
 
@@ -391,25 +461,27 @@ The public and native contracts must state whether an input is a prior mean,
 scale, or mode. A generic name such as `ssb_prior` is insufficient for the new
 API unless accompanied by explicit parameterization metadata.
 
-### 8.3 Full-latent augmentation
+### 8.3 Cheng full-latent reference augmentation
 
-JWAS samples a complete latent $u_j$ for every marker, including fully null
+The Cheng/JWAS reference formulation samples a complete latent
+$\boldsymbol{\beta}_j$ for every marker, including fully null
 markers. Under
 
 $$
-u_j\mid V_b\sim N_T(0,V_b),
+\boldsymbol{\beta}_j\mid V_b\sim N_T(0,V_b),
 $$
 
 the conjugate update is
 
 $$
-V_b\mid u_1,\ldots,u_M
+V_b\mid \boldsymbol{\beta}_1,\ldots,\boldsymbol{\beta}_M
 \sim
 \operatorname{IW}
 \left(
 \nu_b+M,
 \Psi_b+
-\sum_{j=1}^M u_ju_j^\top
+\sum_{j=1}^M
+\boldsymbol{\beta}_j\boldsymbol{\beta}_j^\top
 \right).
 $$
 
@@ -417,11 +489,12 @@ This is a coherent data-augmentation scheme when inactive latent components are
 actually sampled from their correct conditional distributions. Setting those
 components to zero while retaining the $\nu_b+M$ update is not equivalent.
 
-### 8.4 Partially collapsed null augmentation
+### 8.4 Production partially collapsed and conditionally completed augmentation
 
-Fully null markers have no likelihood contribution. Their latent base effects
+Fully null markers have no likelihood contribution. Their latent slab effects
 can therefore be integrated out. For a non-null marker with only a subset of
-traits active, inactive elements of $u_j$ must still be augmented from their
+traits active, inactive elements of $\boldsymbol{\beta}_j$ must still be
+augmented from their
 conditional normal distribution if an inverse-Wishart update based on full
 outer products is used.
 
@@ -434,23 +507,40 @@ $$
 After completing the latent vector for each $j\in\mathcal A$, the update is
 
 $$
-V_b\mid\{u_j:j\in\mathcal A\}
+V_b\mid\{\boldsymbol{\beta}_j:j\in\mathcal A\}
 \sim
 \operatorname{IW}
 \left(
 \nu_b+M_+,
 \Psi_b+
-\sum_{j\in\mathcal A}u_ju_j^\top
+\sum_{j\in\mathcal A}
+\boldsymbol{\beta}_j\boldsymbol{\beta}_j^\top
 \right).
 $$
 
-This update must be derived and validated as a partially collapsed Gibbs step.
-It is not valid to embed observed active subvectors in a full vector of zeros
-and treat the result as a complete draw from $N_T(0,V_b)$.
+The inactive conditional is
+
+$$
+\boldsymbol{\beta}_{j,I}
+\mid
+\boldsymbol{\beta}_{j,A},V_b
+\sim
+N
+\left(
+V_{b,IA}V_{b,AA}^{-1}\boldsymbol{\beta}_{j,A},
+V_{b,II}-V_{b,IA}V_{b,AA}^{-1}V_{b,AI}
+\right).
+$$
+
+The standalone covariance prototype has derived and validated this partially
+collapsed Gibbs step against full augmentation and independent enumeration. It
+is not valid to embed observed active subvectors in a full vector of zeros and
+treat the result as a complete draw from $N_T(0,V_b)$.
 
 ### 8.5 Recommended augmentation decision
 
-The partially collapsed null scheme is the current recommendation because:
+The partially collapsed and conditionally completed scheme is the approved
+production recommendation because:
 
 - null markers need not introduce auxiliary covariance information;
 - sparse models avoid sampling large numbers of prior-only latent vectors;
@@ -458,13 +548,10 @@ The partially collapsed null scheme is the current recommendation because:
 - it should reduce dependence between $V_b$ and irrelevant null-marker
   augmentations.
 
-However, the final choice requires:
-
-1. an explicit derivation of the partially collapsed transition;
-2. a tiny-chain comparison against full-latent augmentation;
-3. verification of stationary moments under prior-only and likelihood-informed
-   simulations;
-4. a mixing comparison in sparse settings.
+The required derivation, exact-reference comparison, stationary-moment checks
+and sparse-inclusion mixing comparison are recorded in
+`mtblr_covariance_design.md`. Cheng full augmentation remains the principal
+reference sampler.
 
 ### 8.6 Later covariance-prior providers
 
@@ -481,6 +568,48 @@ providers such as:
 
 These alternatives must not be hidden behind the same arguments if they imply
 different priors or samplers.
+
+### 8.7 Regional covariance and pattern probabilities
+
+Region-specific activity and covariance are separate policies. For a declared
+region map $r(j)$, the first coherent regional extension is
+
+$$
+\boldsymbol{\delta}_j\mid r(j)=r
+\sim
+\operatorname{Categorical}(\boldsymbol{\Pi}_r),
+$$
+
+$$
+\boldsymbol{\beta}_j\mid r(j)=r,V_{b,r}
+\sim
+N_T(0,V_{b,r}).
+$$
+
+Each $V_{b,r}$ is a persistent chain state updated exactly once per complete
+iteration from markers in region $r$. Region-specific
+$\boldsymbol{\Pi}_r$, latent-effect covariance $V_{b,r}$, regional genomic
+covariance and descriptive regional summaries are not interchangeable.
+
+The current native `sets` loop is not a coherent implementation of this model.
+It owns one global covariance, immediately overwrites `sampleBset()` with an
+all-marker latent draw, repeats that global draw once per set, updates one global
+pattern simplex and retains only a final global heuristic covariance. Until a
+regional policy is implemented, sets must be treated only as traversal
+partitions and must not alter global parameter update frequency.
+
+The first regional **reference** should provide independent proper
+inverse-Wishart and Dirichlet priors, plus fixed-covariance and shared-global
+reductions for testing. Independent unrestricted matrices should not become the
+production default for low-information regions. Production should select a
+valid partial-pooling prior or a shared fixed/pre-estimated covariance-template
+library with region-specific weights after the reference passes exact
+small-region tests.
+
+Regional pattern probabilities use separately declared priors
+$\mathbf a_{\Pi,r}$. A shared-global pattern state instead uses one declared
+$\mathbf a_{\Pi,\mathrm{global}}$; it must not be constructed by summing
+replicated regional priors.
 
 ## 9. Residual covariance $V_e$
 
@@ -569,16 +698,21 @@ This regime identifies common-sample residual and genomic covariance.
 
 ### 10.2 Regime B: marginal summary data with no modeled overlap
 
-Inputs include, for each trait:
+Inputs include one or more declared providers $d$ for each trait $t$:
 
-- $X_t^\top y_t$;
-- $y_t^\top y_t$;
-- sample size $N_t$;
-- a compatible LD/cross-product operator;
-- marker, allele, scale, and population provenance.
+- $\mathbf s_{dt}=X_{dt}^\top\mathbf y_{dt}$;
+- $\mathbf y_{dt}^\top\mathbf y_{dt}$ when required by the residual policy;
+- sample size $N_{dt}$;
+- provider-local cross-product operator $C_{dt}=X_{dt}^\top X_{dt}$;
+- a local-to-global marker map $m_{dt}$;
+- marker, allele, coding, centering, standardization, effect-scale, population,
+  and summary-error provenance.
 
 This regime supports a joint marker prior but trait-marginal likelihood
-contributions. Off-diagonal residual covariance is not identified.
+contributions. Providers may have different sample sizes, marker coverage, LD
+populations, retained eigenspaces, ranks, and blocks. Cross-trait borrowing is
+through the marker prior; equal $C_{dt}$ is not required. Off-diagonal residual
+covariance is not identified.
 
 ### 10.3 Regime C: overlap-aware summary data
 
@@ -637,6 +771,43 @@ rules. Approximation status must remain visible in provenance and output.
 
 Filtered block-eigen output should not be described as exact full-data output.
 
+Every provider owns its own block representation,
+
+$$
+C_{dt,b}
+\approx
+Q_{dt,b}\Lambda_{dt,b}Q_{dt,b}^\top,
+$$
+
+including its local marker map, block structure and retained rank $r_{dt,b}$.
+No common eigenbasis across traits or providers is required. A full-rank
+representation must reduce to the corresponding provider cross-product;
+retained rank defines that provider's explicit approximate likelihood.
+
+### 11.4 Provider collection and overlap contract
+
+For providers estimating one shared trait effect, independent likelihood terms
+are accumulated through the operator interface rather than by requiring a
+materialized $\sum_d C_{dt}$. Combination is valid only after allele
+orientation, genotype coding, centering, standardization, phenotype/effect
+scale, marker maps, and operator scale are compatible. A marker missing from a
+provider supplies no likelihood term; it is not a zero-effect observation.
+Provider-local order is arbitrary when marker identifiers, scores, effect
+alleles, operator rows and columns, and the local-to-global map are permuted
+consistently. Reordering only a subset of these objects is misalignment, not an
+equivalent provider representation.
+
+Providers with overlapping samples require declared cross-provider
+summary-score error covariance. Marginal dense, CSR, or block-eigen operators
+do not identify this covariance. A future decomposition into shared and
+provider-specific effects is a separate multi-cohort model, not an adapter
+option.
+
+Computational eigenblocks, statistical covariance regions, and annotation or
+source groups are separate objects. Eigenblock traversal must not change the
+prior region map, and global or regional prior states are updated once per
+complete iteration rather than once per provider or eigenblock.
+
 ## 12. One authoritative MCMC schedule
 
 For one complete logical chain, the phase-1 schedule should be:
@@ -651,9 +822,12 @@ For one complete logical chain, the phase-1 schedule should be:
 6. calculate declared derived quantities;
 7. retain the completed iteration when required by the common retention rule.
 
-Marker sets, BED files, LD blocks, and eigen blocks may determine traversal and
-memory ownership. They must not determine how many times a global covariance
-parameter is updated.
+Marker sets, BED files, providers, LD blocks, and eigenblocks may determine
+traversal and memory ownership. They must not determine how many times a
+global or regional statistical parameter is updated. A global covariance is
+updated once per complete iteration; each persistent regional covariance is
+also updated once per complete iteration from the markers assigned to that
+region.
 
 ### 12.1 Retention rule
 
@@ -754,7 +928,7 @@ validated R model/data specification
       immutable prepared data
                 |
                 v
-       likelihood operator
+   provider/operator collection
                 |
                 +------------------+
                 |                  |
@@ -774,9 +948,10 @@ validated R model/data specification
 Prepared data are immutable and may be shared across logical chains. They own
 or reference:
 
-- genotype/LD/eigen resources;
-- aligned score vectors and phenotype cross-products;
-- marker and trait metadata;
+- provider-specific genotype/LD/eigen resources;
+- aligned provider-local score vectors and phenotype cross-products;
+- global marker universe and local provider maps;
+- marker, trait, provider, allele, scale, population, and overlap metadata;
 - state descriptors;
 - prior descriptors;
 - traversal sets;
@@ -1107,28 +1282,40 @@ Deliverables:
 
 - approved $V_b$ augmentation and prior parameterization;
 - approved $V_e$ policies;
-- approved BayesC phase-1 state model;
+- approved complete Cheng MT-BayesC$\Pi$ state model;
 - approved update and retention schedule;
 - approved genomic-covariance naming and identification policy;
 - approved raw-schema migration direction;
 - updated canonical Methods derivations where required.
 
-No sampler implementation should begin before this checkpoint.
+The covariance-design prototype resolves the $V_b$ augmentation, complete
+$T=2$ state geometry, pattern-probability and joint-transition portions of this
+checkpoint. Residual-covariance and public migration decisions remain separate.
 
 ### Phase 1: individual-level MT BayesC reference
+
+Phase 1 also fixes the representation-neutral scientific-kernel and likelihood
+operator contracts needed by later BED, CSR, and block-eigen adapters. It does
+not require the production summary-statistic adapters to be implemented in the
+same phase.
 
 Implement:
 
 - packed-BED common-sample likelihood;
 - complete centered $Y$;
+- all four $T=2$ activity patterns and one declared joint
+  $\boldsymbol{\Pi}$ simplex;
 - joint BayesC state transitions;
+- null collapse with conditional completion for partially active patterns;
 - one authoritative inverse-Wishart $V_b$ update;
-- full and diagonal $V_e$ policies;
+- the approved initial $V_e$ policy, with full and diagonal policies included
+  only after decision D3 is resolved;
 - one logical chain;
 - raw schema version 2;
 - exact analytical tests and tiny known-truth simulations.
 
-This is the scientific reference implementation.
+This is the scientific production reference. A transparent Cheng full-latent
+sampler remains the independent reference formulation used to validate it.
 
 ### Phase 2: multichain execution and formatted-fit migration
 
@@ -1147,7 +1334,8 @@ Implement:
 Implement:
 
 - deterministic pattern-by-component state descriptor;
-- component scaling through $D_j$;
+- component scaling through a separate $G_j$ while $D_j$ remains the activity
+  mask;
 - exact small-state joint transition;
 - scalable coordinate transition if required;
 - component posterior summaries;
@@ -1171,7 +1359,9 @@ separate theory extension is approved.
 
 Implement:
 
-- CSR likelihood operator;
+- heterogeneous independent-provider adapters using the operator contract
+  fixed in Phase 1;
+- provider-local marker maps and dense or CSR likelihood operators;
 - diagonal/fixed residual policy;
 - trait-specific or shared LD resources;
 - explicit no-overlap contract;
@@ -1182,7 +1372,8 @@ Implement:
 
 Implement:
 
-- the same scientific sampler through the block-eigen operator;
+- the same scientific sampler through provider-specific block-eigen
+  operators;
 - exact unfiltered reductions;
 - filtered-likelihood provenance;
 - block ownership and memory diagnostics;
@@ -1195,12 +1386,67 @@ Candidates include:
 - trait-specific BayesR component classes;
 - alternative covariance priors;
 - structured trait-pattern priors;
-- larger-$T$ coordinate or sparse state transitions.
+- larger-$T$ coordinate or sparse state transitions;
+- a persistent region-specific $V_{b,r}$ and $\boldsymbol{\Pi}_r$ reference,
+  beginning with independent proper priors and fixed/global reductions, then a
+  separately approved partial-pooling production policy;
+- fixed covariance-template libraries and region-specific template weights as
+  a later mash-like extension.
 
 ### Phase 8: overlap-aware summary likelihood
 
 Proceed only after a separate statistical design specifies the required
 cross-trait sufficient statistics and identification assumptions.
+
+### Consolidated priority layers
+
+The phase labels above describe implementation dependencies. The long-term
+scientific roadmap is grouped as follows so that heterogeneous summary
+providers are not postponed behind optional prior extensions.
+
+**Near-term core**
+
+1. MT-BRR as a dense/common-sample covariance reference.
+2. Correct Cheng MT-BayesC$\Pi$ with all declared activity patterns.
+3. A joint categorical pattern transition.
+4. Null collapse and conditional completion of partially active vectors.
+5. One authoritative sampled $V_b$ per completed iteration.
+6. A common-sample individual-level adapter.
+7. Heterogeneous independent-provider summary adapters.
+8. Provider-specific dense, CSR, and block-eigen operators, including distinct
+   marker maps, sample sizes, block structures, eigenvectors, eigenvalues, and
+   retained ranks.
+
+**Controlled extensions**
+
+9. Pattern-by-scale MT-BayesR using the same conditional-completion logic and
+   an explicitly selected base- or scaled-effect storage convention.
+10. Explicit set-, source-, and region-specific prior models.
+11. Fixed or pre-estimated covariance-template libraries.
+12. Region-specific weights over shared covariance templates.
+13. An overlap-aware summary likelihood with declared cross-provider error
+    information.
+
+**Larger-trait extensions**
+
+14. Restricted activity-pattern sets.
+15. Structured trait groups.
+16. Low-rank plus sparse marker effects,
+
+    $$
+    \boldsymbol{\beta}_j
+    =
+    \Lambda\mathbf f_j+\boldsymbol{\epsilon}_j.
+    $$
+
+17. Factor or structured-pattern transitions when enumeration of $2^T$ states
+    is infeasible.
+
+Research extensions include global-local shrinkage, sparse precision or
+graphical covariance models, multi-population effects, multi-environment or
+longitudinal effects, multivariate single-effect fine-mapping, and
+nonparametric covariance-template mixtures. These are not immediate
+implementation commitments.
 
 ## 20. Documentation migration
 
@@ -1225,7 +1471,8 @@ contracts.
 
 **Recommendation:** inverse-Wishart with explicit mean-to-scale conversion.
 
-**Status:** awaiting approval.
+**Status:** approved by the covariance-design derivation and prototype for the
+reference transition.
 
 ### D2. Latent augmentation for $V_b$
 
@@ -1235,10 +1482,12 @@ contracts.
 2. partially collapsed null augmentation with completed latent vectors for
    non-null markers.
 
-**Recommendation:** validate both; prefer partially collapsed null augmentation
-if the derivation and stationary-moment tests pass.
+**Recommendation:** retain Cheng full augmentation as the reference; use
+partially collapsed null augmentation with conditional completion for every
+non-null marker in production.
 
-**Status:** unresolved scientific decision.
+**Status:** resolved by exact enumeration, numerical reference cases and mixing
+comparisons in `mtblr_covariance_design.md`.
 
 ### D3. Phase-1 residual covariance
 
@@ -1252,14 +1501,21 @@ traitwise residual models for common-sample BED data.
 **Recommendation:** complete joint BayesC pattern draw for the reference
 implementation.
 
-**Status:** awaiting approval.
+**Status:** approved for the complete Cheng pattern space. Coordinate updates
+target the same posterior only on a one-coordinate-connected declared state
+graph and require explicit mixing qualification.
 
 ### D5. BayesR state geometry
 
 **Recommendation:** implement current shared-component `sblr` geometry first;
-retain an extension point for JWAS-inspired trait-specific components.
+retain an extension point for JWAS-inspired trait-specific components. The
+standalone prototype stores the scaled vector $\boldsymbol{\theta}_j$ and
+removes $\gamma_kq_j$ exactly once in the covariance statistic. A production
+base-vector implementation is equivalent only if it does not remove that scale
+again.
 
-**Status:** awaiting approval.
+**Status:** pattern-by-scale geometry and scale convention approved by the
+covariance design; production implementation remains future work.
 
 ### D6. Genomic covariance outputs for trait-specific summary operators
 
@@ -1286,6 +1542,39 @@ choice remains open.
 
 **Status:** unresolved API decision.
 
+### D9. Region-specific covariance
+
+**Recommendation:** no current support claim. Use persistent independent
+$V_{b,r}$ and $\boldsymbol{\Pi}_r$ as the reference, with fixed and
+shared-global reductions. Update every persistent regional covariance once per
+iteration. Select partial pooling or shared covariance templates before making
+unrestricted regional matrices a production default.
+
+The shared-global reduction uses one explicitly declared
+$\mathbf a_{\Pi,\mathrm{global}}$; it does not sum replicated regional prior
+vectors.
+
+**Status:** statistical transition validated in the standalone prototype;
+production and schema design remain future work.
+
+### D10. Covariance-template mixtures
+
+**Recommendation:** place mash-like fixed covariance templates after the Cheng
+and regional reference implementations. Singular trait-specific templates must
+use active-subspace calculations or explicit masks.
+
+**Status:** planned scientific extension, not current functionality.
+
+### D11. Heterogeneous summary providers
+
+**Recommendation:** make provider-local marker maps and dense, CSR, or
+block-eigen operators part of the near-term core. Independent provider
+likelihoods may differ in $C_{dt}$ and $N_{dt}$; overlapping providers require
+a separate declared summary-error covariance contract.
+
+**Status:** architecture and standalone operator reductions validated in
+`mtblr_covariance_design.md`; production adapter design remains future work.
+
 ## 22. Acceptance criteria for the design phase
 
 The design phase is complete only when:
@@ -1302,24 +1591,47 @@ The design phase is complete only when:
 7. schema version 2 has a field-level contract;
 8. the migration plan identifies reusable, replaced, and retired code;
 9. analytical, operator-reduction, RNG, and known-truth tests are specified;
-10. current and proposed capabilities are not conflated.
+10. heterogeneous provider maps, scale compatibility, independence, and
+    provider-specific block-eigen provenance are explicit;
+11. computational eigenblocks and statistical covariance regions are distinct;
+12. current and proposed capabilities are not conflated.
 
 ## 23. Immediate next design task
 
-The next task should be a focused covariance note that derives and compares:
+The covariance research-design checkpoint is complete for shared and complete
+$T=2$ Cheng patterns and for the heterogeneous independent-provider operator
+abstraction. This does not yet mean that every acceptance criterion for the
+full MTBLR design has been met: decisions D3, D6, D7, and D8 still contain
+contracts needed by production code.
 
-1. full-latent augmentation;
-2. partially collapsed null augmentation;
-3. the exact inactive-dimension conditional;
-4. inverse-Wishart prior mean, scale, and degrees-of-freedom conventions;
-5. expected behavior in the $T=1$ reduction;
-6. consequences for BayesC and shared-component BayesR.
+The next task should specify and implement a narrowly gated production vertical
+slice without changing the established posterior target. Its contract stage
+must precede edits to the production sampler:
 
-That note should resolve decisions D1 and D2 before implementation planning
-becomes code-specific.
+1. approve the public inverse-Wishart mean/scale migration;
+2. resolve the initial common-sample $V_e$ policy required by D3;
+3. define the version-2 raw-schema representation for actual $V_b$ and
+   $\boldsymbol{\Pi}$ draws and settle the minimum public prior interface
+   required by D7 and D8;
+4. record the D6 naming and identification boundary for genomic covariance
+   outputs, even if summary-statistic outputs are implemented later;
+5. implement the individual-level joint pattern transition with null collapse
+   and conditional completion;
+6. retain the full-latent standalone sampler as an independent oracle;
+7. define the provider-neutral adapter contract and provider-local maps during
+   the vertical slice, then implement dense/CSR and block-eigen adapters in
+   their declared phases without assuming common cross-products;
+8. add exact pattern, empty-active, BayesR scale, provider-order,
+   full-rank-eigen reduction and traversal-partition tests;
+9. defer region-specific covariance and mash-like templates to separately
+   gated milestones.
 
 ## 24. References
 
+- Cheng H, Kizilkaya K, Zeng J, Garrick D, Fernando R. Genomic prediction from
+  multiple-trait Bayesian regression methods using mixture priors. *Genetics*.
+  2018;209:89--103.
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC5937171/>.
 - `sblr` canonical Methods pages at the pinned baseline, especially
   `model_theory.qmd`, `multitrait_overlap.qmd`, `mt_bayesr_sbayesr.qmd`, and
   `mt_bayesrc_sbayesrc.qmd`.
