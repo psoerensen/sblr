@@ -53,3 +53,44 @@ Validation precedes one canonical family formatter; positional output and
 legacy schema fallback are not supported. Formatted fits use model-semantics
 version 2. See `blr_output_schema.md` for field ownership and
 `blr_convergence_contract.md` for observational trace capture.
+
+## Approved Phase 0 target architecture
+
+The preceding paragraphs describe current implementation. The approved target
+is the shared architecture in
+[the unified framework design](blr_unified_framework_design.md), especially
+Sections 24--30. It is not yet implemented.
+
+The target distinguishes analysis mode from execution policy:
+
+- `single_trait`, `independent_traits`, and `joint_multitrait` identify
+  posterior factorization and statistical coupling;
+- `serial`/`parallel` plus `none`, `chains`, `traits`, or `trait_chains`
+  identify execution only;
+- traits inside a joint chain are never independent tasks.
+
+ST and MT reuse one resolved-specification, global-marker, immutable operator-
+resource, likelihood-provider, scheduler, RNG, retention, diagnostics,
+provenance, raw-result, and formatted-fit infrastructure. Model-specific state,
+probability, covariance, residual, and marker-transition policies remain
+separate where posterior targets differ. A second MT BED/CSR/eigen/result stack
+is rejected.
+
+An operator resource owns reusable BED, dense, CSR, or block-eigen storage and
+provenance. A likelihood provider references a resource and owns a nonempty
+ordered trait set, sufficient statistics, local-to-global map, sample size,
+scale, population, and residual/error regime. Several providers may reference
+one resource. A common-sample full-$V_e$ MT likelihood uses a multi-trait
+provider and is not factorized into singleton providers; independent summary
+providers may have different $X_t^\top X_t$ and marker coverage.
+
+A full-rank block-eigen representation is exact for its declared block-
+diagonal operator. It equals an original dense cross-product only when omitted
+cross-block entries are zero or explicitly excluded by the declared
+likelihood. A retained-rank representation equals its reconstructed
+approximation, not the original dense operator.
+
+The current MT covariance hybrid is replacement-only evidence. It must not be
+reused in the target statistical policy or reported as authoritative sampled
+$V_b$. Phase 1 introduces contracts around current kernels; later phases
+replace the joint MT transition at an explicit scientific checkpoint.

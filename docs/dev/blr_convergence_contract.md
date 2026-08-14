@@ -64,3 +64,38 @@ covariance, probability, `maf_effect_s`, annotations, and selected markers.
 Advisories aggregate R-hat, ESS-per-chain, tail ESS, and relative-MCSE flags at
 most once per fit. Status is `ok`, `warning`, `partial`, `unavailable`, or
 `not_requested`—never a claim that a model has definitively converged.
+
+## Phase 0 task, retention, and seed target
+
+The preceding sections describe current convergence capture. It is unthinned,
+post-burn, observational, and remains unchanged until production migration.
+The exact target contracts and current-route evidence are in Sections 23--26
+of [the unified framework design](blr_unified_framework_design.md).
+
+Target retention-contract version 1 indexes post-burn transitions by
+$u=1,\ldots,n_{\mathrm{sampling}}$ and retains exactly those satisfying
+
+$$
+u\bmod n_{\mathrm{thin}}=0.
+$$
+
+Thus retained count is
+$\lfloor n_{\mathrm{sampling}}/n_{\mathrm{thin}}\rfloor$. The exact retained
+indices are stored in the resolved specification. Current native summaries
+generally retain $u=1,1+n_{\mathrm{thin}},\ldots$, while formal convergence
+captures every post-burn transition. Phase 1 labels and preserves those legacy
+contracts; it does not silently change current trajectories or draw counts.
+
+Logical task IDs are `chain` for `single_trait` and `joint_multitrait`, and
+`trait_id × chain` for `independent_traits`. Seed-contract version 1 uses the
+exact FNV-1a/SplitMix64 algorithm and reference vectors in the unified design
+and standalone fixtures. Current arithmetic seed rules remain explicit legacy
+versions during Phase 1. Their eventual replacement is a deliberate trajectory
+migration requiring deterministic tests and release notes; it is not described
+as a posterior-target change.
+
+Raw v2 convergence arrays preserve `draw × chain` axes plus fixed quantity
+axes. Diagnostics consume no RNG. Serial and parallel execution resolve the
+same logical task-seed table, and worker diagnostics separately report
+requested cores, configured workers, actual sampler team size, and task worker
+IDs.

@@ -76,3 +76,44 @@ for current and proposed scope.
 and-component-scaled effect. `d` is binary trait activity. BayesR/BayesRC
 component code is a separate ordered state with zero as null. `dm` is posterior
 trait activity/non-null probability, never a component mean.
+
+## Approved Phase 0 target policies
+
+Current behavior above remains in force until migrated. The target model-
+policy contract is defined by Sections 25--28 of
+[the unified framework design](blr_unified_framework_design.md) and is not yet
+implemented.
+
+`single_trait` and `independent_traits` use scalar policies, with the latter
+factorizing across traits. `joint_multitrait` uses an explicitly declared joint
+state space and covariance policy; diagonal covariance alone does not establish
+an independent-trait reduction. Probability inputs are named by their role:
+inclusion mass, component mass, activity-pattern mass, or annotation policy.
+They are not collapsed into generic `pi`.
+
+For marker covariance,
+
+$$
+V_b\sim\operatorname{IW}_T(\nu_b,\Psi_b)
+$$
+
+means a density proportional to
+
+$$
+|V_b|^{-(\nu_b+T+1)/2}
+\exp\left\{-\frac12\operatorname{tr}(\Psi_bV_b^{-1})\right\}.
+$$
+
+The canonical fields are `degrees_of_freedom = nu_b` and `scale = Psi_b`.
+The distribution is proper for $\nu_b>T-1$; its mean is finite only for
+$\nu_b>T+1$. A mean-calibration helper uses and records
+$\Psi_b=(\nu_b-T-1)M_b$. No ambiguous prior-covariance shortcut crosses the
+native boundary.
+
+The first corrected Cheng MT-BayesC$\Pi$ slice is staged. Phase 4a uses a
+supplied fixed symmetric positive-definite full $V_e$ for common-sample BED.
+Phase 4b samples full inverse-Wishart $V_e$ and must finish before promotion as
+the maintained MT replacement. Diagonal $V_e$ remains an explicit reduction;
+independent no-overlap summaries do not identify off-diagonal residual
+covariance. The current MT covariance hybrid is not the target and cannot be
+migrated as authoritative covariance draws.

@@ -115,3 +115,39 @@ new fits carry `model_semantics_version = 2` and
 validated before one family-specific formatter creates the canonical fit.
 There is no positional fallback, compatibility reader, or automatic
 reinterpretation of ambiguous older objects.
+
+## Approved `blr_raw` version 2 target
+
+The paragraph above remains the current implementation. The approved target is
+`blr_raw` schema version 2 in Sections 26 and 28 of
+[the unified framework design](blr_unified_framework_design.md), backed by
+`tests/research/blr_framework_contract/`. It is not yet produced by package
+fitters.
+
+The exact envelope is:
+
+```text
+schema, model, input, posterior, draws, final, derived, diagnostics, provenance
+```
+
+Raw v2 keeps `draw`, `chain`, `marker`, `trait`, state/component, region, and
+covariance-row/covariance-column axes even when their size is one. Canonical
+effect axes are `draw × chain × marker × trait`; covariance axes are
+`draw × chain × trait_row × trait_col`; final objects omit only `draw`.
+Independent-trait states and joint-state indices are separate fields, never
+rank-varying versions of one field. Model-inapplicable contracted fields remain
+present with `NULL`.
+
+Raw v2 retires unqualified `pi`, `pis`, `pim`, `state_probabilities`, and
+`pattern_probabilities`. It distinguishes sampled probability parameters,
+markerwise posterior state/component/activity probabilities, and PIPs. A
+formatted compatibility alias may view exactly one documented field; no
+universal `fit$pis` is manufactured.
+
+The native scientific state, stable raw-v2 R object, and formatted fit are
+separate layers. Formatting may simplify axes explicitly and create tables or
+read-only aliases. It must not replace sampled covariance with a descriptive
+estimate or convert the current MT covariance hybrid into sampled schema-v2
+$V_b$. Serialized v1 objects are converted only when semantics and dimensions
+are established by schema/compatibility metadata; otherwise conversion fails
+and a scientifically affected analysis must be rerun.

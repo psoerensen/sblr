@@ -2,7 +2,7 @@
 
 ## 1. Status and scope
 
-**Status:** `PROPOSED`
+**Status:** `READY FOR MANUAL PHASE 0 APPROVAL`
 
 This document defines a shared R/C++ architecture for three distinct analysis
 modes:
@@ -16,8 +16,8 @@ as proposed here is current merely because it appears in this document. Current
 support remains determined by executable public dispatch, source, schemas,
 tests, and maintained current contracts.
 
-The design checkpoint was prepared from branch `master` at commit
-`972de5adeda6b8703213190e40113b317fa52e65`. Its central decision is that STBLR
+The Phase 0 closeout was prepared from branch `master` at commit
+`b930c723d2ebf7351b8d7509bf9f4752820d1a86`. Its central decision is that STBLR
 and MTBLR must share infrastructure whenever the responsibility is the same,
 while using separate statistical policies whenever the posterior target differs.
 It must not create a second provider, operator, scheduler, retention, or result
@@ -582,24 +582,48 @@ each task retains its own state and RNG.
 
 ### 11.2 Seed derivation
 
-Seed-contract version 1 is backend-independent and uses stable 64-bit integer
-mixing. Define a logical identity from:
+Seed-contract version 1 is backend-independent and uses unsigned modular
+arithmetic. The public user seed is an integer in $[0,2^{32}-1]$; the chain
+index is zero-based and in the same range. Analysis-mode codes are
+`single_trait = 1`, `independent_traits = 2`, and `joint_multitrait = 3`.
+`single_trait` uses the UTF-8 sentinel `sblr:single_trait`,
+`joint_multitrait` uses `sblr:joint_multitrait`, and `independent_traits` uses
+the stable trait ID itself.
 
-- user seed;
-- analysis mode;
-- trait identity for single/independent analyses;
-- chain identity;
-- seed-contract version.
+The 64-bit FNV-1a hash of UTF-8 bytes is exact:
 
-Encode `analysis_mode` and the zero-based chain index as fixed integer codes.
-For `independent_traits`, hash the UTF-8 bytes of the stable trait ID with
-64-bit FNV-1a; for `single_trait` and `joint_multitrait`, use a fixed documented
-trait sentinel. Starting from the user seed interpreted modulo $2^{64}$, mix
-the contract version, analysis-mode code, trait hash/sentinel, and chain index
-in that order with the SplitMix64 output transformation. Fold the final 64-bit
-value into `std::mt19937::result_type` with a specified xor-fold; zero is a
-valid engine seed and is not silently replaced.
-Reference test vectors must freeze this procedure before implementation.
+```text
+h = 0xcbf29ce484222325
+for byte in utf8(identity):
+    h = (h xor uint64(byte)) * 0x00000100000001b3 mod 2^64
+```
+
+The exact SplitMix64 output transform is:
+
+```text
+splitmix64(x):
+    z = x + 0x9e3779b97f4a7c15 mod 2^64
+    z = (z xor (z >> 30)) * 0xbf58476d1ce4e5b9 mod 2^64
+    z = (z xor (z >> 27)) * 0x94d049bb133111eb mod 2^64
+    return z xor (z >> 31)
+```
+
+Seed-contract version 1 derives one native seed as follows:
+
+```text
+x = uint64(user_seed)
+x = splitmix64(x xor uint64(1))
+x = splitmix64(x xor uint64(analysis_mode_code))
+x = splitmix64(x xor fnv1a64_utf8(identity))
+x = splitmix64(x xor uint64(zero_based_chain_index))
+native_seed = uint32((x xor (x >> 32)) & 0xffffffff)
+```
+
+All multiplication and addition are modulo $2^{64}$. The final seed is passed
+unchanged to `std::mt19937::result_type`; zero is valid and is never replaced.
+The fixed vectors in
+`tests/research/blr_framework_contract/blr_contract_fixtures.R` are part of the
+contract.
 
 An explicit resolved `task_seeds` table bypasses derivation and supplies the
 final native seeds. Its dimensions are `chain` for `single_trait` and
@@ -609,6 +633,12 @@ it remains combined with each stable trait ID through the versioned derivation;
 it is not itself a final task-seed table. The resolved task-seed table is
 recorded in provenance. Changing any derivation rule requires a new seed-
 contract version.
+
+Current wrappers do not yet use this derivation. Phase 1 preserves each
+wrapper's source-traced legacy seed rule while it resolves the new
+specification. Migration to seed-contract version 1 is a later explicit
+checkpoint with trajectory tests and release notes. A changed deterministic
+trajectory is not, by itself, a changed posterior target.
 
 ### 11.3 RNG ownership and reproducibility
 
@@ -704,7 +734,7 @@ sample size is permitted only as a validated common-sample reduction.
 |---|---|
 | `family` | Explicit BayesC, BayesR, BayesRC, or future registered family |
 | `state_space` | Named states/patterns with exact ordering |
-| `effect_storage` | `base_latent`, `scaled_latent`, and/or `realised` as applicable |
+| `effect_storage_convention` | `base_latent`, `scaled_latent`, or `realised`, with realised output defined |
 | `probability_policy` | Fixed/global/trait-specific/annotation/pattern policy descriptor |
 | `marker_scale_policy` | Unit, component, MAF-S, annotation, or external $q_j$ descriptor |
 | `marker_covariance_policy` | Scalar, global matrix, regional, or template policy |
@@ -789,7 +819,7 @@ rather than silently reinterpret it.
 | `parallelization` | `none`, `chains`, `traits`, or `trait_chains`, validated against analysis mode |
 | `cores` | Positive requested worker count |
 | `schedule` | Versioned deterministic scheduler policy |
-| `seed_contract_version` | Explicit reproducibility contract |
+| `scheduler_version` | Explicit deterministic scheduling contract; seed version belongs in `schema` |
 | `memory_limit` | Optional validated preflight limit |
 | `operator_options` | Representation-specific numerical controls only |
 
@@ -802,12 +832,12 @@ provenance and the resolved model record.
 | Field | Requirement |
 |---|---|
 | `posterior_summaries` | Named requested summaries |
-| `parameter_draws` | Named scientific parameters to retain |
+| `retained_parameters` | Named scientific parameters to retain |
 | `effect_draw_policy` | `none`, selected markers, compact, or full |
 | `state_draw_policy` | `none`, selected markers, compact, or full |
 | `convergence` | Mode and selected quantities |
 | `derived_quantities` | Explicit requested derived statistics |
-| `keep_chain_results` | Whether compact per-chain results are retained |
+| `preserve_chains` | Whether chain identity is retained; raw v2 always preserves chain axes |
 
 Defaults belong to the resolver and are recorded after resolution. Native code
 does not invent omitted defaults.
@@ -824,7 +854,7 @@ must declare their own inputs:
 | Activity-pattern definition | `activity_patterns` | Cheng MT-BayesC$\Pi$ |
 | Activity-pattern mass | `activity_pattern_probabilities` | Cheng MT models |
 | Component multipliers | `component_multipliers` | BayesR |
-| Component mass | `component_probabilities` | ST or declared MT component model |
+| Component prior mass | `component_prior_mass` | ST or declared MT component model |
 | Marker multipliers | `marker_variance_multipliers` | $q_j$, MAF-S, annotation `Q` |
 | Probability architecture | `marker_probability_policy` | Annotation `P` |
 | Marker covariance prior | `marker_covariance_prior` | $V_b$ policy |
@@ -840,7 +870,7 @@ component, and activity-pattern masses retain their separate names.
 ### 14.1 Envelope
 
 ```text
-fit
+blr_raw
 ├── schema
 ├── model
 ├── input
@@ -862,8 +892,7 @@ Analysis mode and model family are fields, not separate schema classes.
 - `name = "blr_raw"`;
 - `version = 2L`;
 - `compatibility_id` identifying formatter/migration support;
-- `dimension_convention_version`;
-- `seed_contract_version`.
+- `dimension_contract_version`.
 
 #### `model`
 
@@ -892,12 +921,12 @@ to reconstruct the contract.
 
 #### `posterior`
 
-- `effect_mean` for realised marker effects;
+- `realised_effect_mean` for realised marker effects;
 - `latent_effect_mean` only when scientifically requested and interpretable;
 - `pips`;
 - explicitly named traitwise or joint marker-state probabilities;
 - `activity_pattern_probabilities` where applicable;
-- `component_probabilities` where applicable;
+- explicitly separate traitwise or joint component-assignment probabilities;
 - covariance/variance posterior summaries derived from draws;
 - uncertainty summaries with estimator and chain aggregation metadata.
 
@@ -975,7 +1004,7 @@ Do not invoke Git during every fit. At source-build or development-load time,
 resolve a build provenance record containing package version, SHA, and dirty
 indicator, then expose it through an installed package constant or compiled
 metadata. A release source archive without Git metadata records the package
-version and archive/build identifier with `git_sha = NA`; it must not invent a
+version and archive/build identifier with `git_sha = NULL`; it must not invent a
 SHA. A development build may record `dirty = TRUE` without enumerating user
 files in fit objects.
 
@@ -999,15 +1028,16 @@ Raw schema version 2 preserves all scientific axes:
 | Traitwise state-parameter draws | `draw × chain × trait × state` |
 | Joint state-parameter draws | `draw × chain × joint_state` |
 | Activity-pattern parameter draws | `draw × chain × activity_pattern` |
-| Component-assignment probabilities | Policy-specific named arrays whose complete axes are fixed by the registered state policy; never an unqualified variable-rank field |
-| $V_b$ and $V_e$ draws | `draw × chain × trait × trait` |
+| Traitwise component-assignment probabilities | `marker × trait × component` |
+| Joint component-assignment probabilities | `marker × component` |
+| $V_b$ and $V_e$ draws | `draw × chain × trait_row × trait_col` |
 | Scalar trait variances | `draw × chain × trait` |
 | Final effects | `chain × marker × trait` |
 | Final independent-trait states | `chain × marker × trait` |
 | Final joint states | `chain × marker` |
-| Final covariance states | `chain × trait × trait` |
+| Final covariance states | `chain × trait_row × trait_col` |
 | Predictions | `draw × chain × observation × trait`, or a documented summary without draw axis |
-| Regional covariance states | `draw × chain × region × trait × trait` |
+| Regional covariance states | `draw × chain × region × trait_row × trait_col` |
 | Provider diagnostics | `provider` plus named block/task axes as applicable |
 
 Every axis has stable `dimnames` or an adjacent ID vector. Every retained array
@@ -1033,13 +1063,14 @@ the field contract requires; do not repurpose another axis.
 | Name | Reserved meaning |
 |---|---|
 | `state_probabilities` | Retired as an unqualified variable-rank field; use an explicit traitwise, joint-state, activity-pattern, or component name in the appropriate namespace |
-| `trait_state_probabilities` | Trait-specific state mass or markerwise posterior mass with an explicit `trait × state` structure |
+| `traitwise_state_probabilities` | Markerwise posterior mass with explicit `marker × trait × state` structure |
 | `joint_state_probabilities` | Mass over one declared joint marker-state space |
 | `pattern_probabilities` | Retired as an unqualified field; use `activity_pattern_probabilities` with a prior/posterior/draw namespace |
-| `prior_state_probabilities` | Prior mass over the declared complete marker state space |
+| `prior_state_mass` | Resolved prior mass over the declared complete marker state space |
 | `posterior_state_probabilities` | Conceptual term only; raw fields use the explicit traitwise or joint-state name and fixed axes |
 | `activity_pattern_probabilities` | Probability parameters over trait-activity patterns |
-| `component_probabilities` | Probability mass over BayesR-type scale components, always qualified by prior/posterior/draw namespace |
+| `traitwise_component_assignment_probabilities` | Marker-by-trait posterior mass over BayesR-type scale components |
+| `joint_component_assignment_probabilities` | Markerwise posterior mass over one shared/joint component state |
 | `pips` | Marker-trait posterior inclusion probabilities |
 | `joint_non_null_probabilities` | Posterior probability that a marker is non-null in any declared joint sense, with definition metadata |
 | `pleiotropic_probabilities` | Posterior probability of a declared multi-trait active pattern or set of patterns |
@@ -1158,7 +1189,7 @@ specialized convenience wrappers.
 
 | Current field | Schema-v2 destination | Status |
 |---|---|---|
-| `bm` | `posterior$effect_mean` | Retain meaning, rename explicitly |
+| `bm` | `posterior$realised_effect_mean` | Retain meaning, rename explicitly |
 | `dm` | `posterior$pips` when verified | Retain only with model-specific definition |
 | `b`, `beta_final`, `d`, `component_final` | `final` named states | Preserve chain axis and storage convention |
 | `vbs` | `draws$marker_variance` or `draws$marker_covariance` | Split scalar/matrix semantics |
@@ -1167,7 +1198,7 @@ specialized convenience wrappers.
 | `cov_g_*` | `derived$genomic_covariance` only when identified | Otherwise rename descriptive bilinear |
 | `vle`, `vld` | `derived` with exact/operator-relative qualification | Preserve algebraic decomposition metadata |
 | `pis`, `pi_*`, `pi`, `pim` | policy-specific probability fields | Deprecate ambiguous names |
-| `component_probabilities` | `posterior$component_probabilities` | Namespace supplies the posterior qualifier |
+| `component_probabilities` | traitwise or joint component-assignment field after model-specific verification | Split rather than infer rank |
 | `chains` | chain axis in `draws` and `final` | Replace nested shape variability |
 | `convergence_traces` | `draws$convergence` plus metadata | Preserve chain and iteration axes |
 | `diagnostics` | `diagnostics` | Stabilize names and present-but-`NULL` fields |
@@ -1177,7 +1208,7 @@ specialized convenience wrappers.
 
 | Current formatted field | New formatted source | Migration status |
 |---|---|---|
-| `bm` | `posterior$effect_mean` | Retain temporary alias |
+| `bm` | `posterior$realised_effect_mean` | Retain temporary alias |
 | `dm` | `posterior$pips` | Retain temporary alias after semantic validation |
 | `b`, `d`, `component_final` | `final` chain states | Retain aliases only with explicit primary-chain policy |
 | `vbs`, `vgs`, `ves`, `vle`, `vld` | Named `draws` or `derived` quantities | Deprecate compact ambiguous names |
@@ -1461,3 +1492,397 @@ No production phase is accepted if it:
 - treats missing provider markers as zero effects;
 - reports retained-rank operators as exact dense operators;
 - silently accepts positional or partially matched scientific arguments.
+
+## 23. Phase 0 current-behavior trace
+
+This section freezes the migration evidence. It does not promote current
+schema version 1 or the current MT covariance transition into the target.
+
+### 23.1 Current iteration and retention semantics
+
+Current public wrappers use `nit`, `nburn`, and `nthin`. No maintained wrapper
+uses `niters`; `nsamples` is a derived native/output count, not an independent
+MCMC input. Native transition index `it` is zero-based and runs from zero
+through `nit + nburn - 1`. Final state is the state after the last transition.
+
+| Route class | Executable evidence | Current marker-summary retention | Current traces/convergence | Migration |
+|---|---|---|---|---|
+| ST CSR BayesC/BayesR and scheduled variants | `src/blr_scalar_execution.h`, `scalar_iteration_is_retained()`; scalar core implementations | `it >= nburn && (it - nburn) % nthin == 0`; post-burn indices $1,1+n_{\mathrm{thin}},\ldots$ and count $\lceil n_{\mathrm{sampling}}/n_{\mathrm{thin}}\rceil$ | Scientific variance/probability traces have `nit + nburn` entries including burn-in; formal convergence capture has `nit` unthinned post-burn entries | Legacy retention-contract `st_scalar_v1`; adapter records exact legacy indices until deliberate migration |
+| ST BED BayesC/BayesR/BayesRC | `src/blr_bed_scheduled_bayesc_core_impl.h`, `src/blr_bed_bayesr_core_impl.h`, `src/blr_bed_bayesrc_core_impl.h` | Same first-post-burn rule | Same full scientific traces and unthinned post-burn convergence capture | Legacy retention-contract `st_bed_v1` |
+| ST annotation providers | learned/group/prior/log-variance/SBayesRC cores under `src/` | Same repeated first-post-burn rule in maintained routes | Provider-specific parameter traces may be full or retained; formal convergence remains unthinned post-burn | Preserve route-specific v1 descriptor; do not infer from array length |
+| MT CSR/block-eigen default cores | `src/blr_mt_default_core_impl.h` | Marker and component summaries use the first-post-burn rule | Probability/covariance means use every post-burn transition; scientific traces include burn-in | Legacy retention-contract `mt_default_v1`; mixed aggregation is recorded, not normalized silently |
+| MT BED chains | `src/blr_mt_bed_core_impl.h` and chain execution wrappers | Marker and component summaries use the first-post-burn rule | Covariance/probability means and convergence use every post-burn transition; displayed traces are chain means | Legacy retention-contract `mt_bed_v1` |
+
+The route-level boundary trace is:
+
+| Route | R entry | Native boundary/core owner | Current output shape | Cross-route consistency | Migration action |
+|---|---|---|---|---|---|
+| ST CSR | `stblr_csr()` | `stblr_cpg_omp_csr()`, `stblr_cpg_omp_csr_bayesr()`, scalar CSR cores | marker × trait summaries; scientific traces `nit + nburn` × trait; convergence `nit × chain × quantity` | Same legacy retention helper in maintained scalar cores | Resolve into spec while retaining `st_scalar_v1` |
+| ST block eigen | `stblr_block_eigen()` | block-eigen adapters ending in scalar CSR/BayesR/SBayesRC cores | same scalar shapes plus block diagnostics | Retention follows the dispatched scalar kernel | Preserve kernel-specific legacy descriptor |
+| ST BED | `stblr_bed()` | scheduled chain BayesC/BayesR/BayesRC boundaries and BED cores | marker × trait summaries; full scientific traces; unthinned post-burn convergence | Same first-post-burn summary rule, separate BED seed implementation | Preserve `st_bed_v1` and compare backend reductions |
+| ST annotation | `stblr_csr_annot()` plus registered annotation routes | `stblr_cpg_omp_csr_annot()`, group/prior/log-variance/SBayesRC boundaries | common marker shapes plus provider-specific low-dimensional traces | Common convergence contract, heterogeneous provider trace retention | Record each provider trace descriptor explicitly |
+| MT CSR | `mtblr_csr()` | `mtblr_csr_chains_raw_internal()`, `run_mt_default_core()` | marker × trait summaries; full `nit + nburn` trait traces; covariance/probability summaries unthinned post-burn | Mixed thinned marker and unthinned covariance aggregation | Preserve `mt_default_v1`; do not normalize silently |
+| MT block eigen | `mtblr_block_eigen()` | `mtblr_block_eigen_chains_raw_internal()`, MT default core | MT shapes plus per-owner block metadata | Same MT default retention; operator representation differs | Preserve `mt_default_v1` and provenance |
+| MT BED | `mtblr_bed()` | `mtblr_bed_chains_internal()`, `run_mt_bed_bayesc_core()` | marker × trait summaries; full traces; chain-pooled means and primary-chain final state | Matches MT summary aggregation policy but uses distinct chain seed rule | Preserve `mt_bed_v1`; later replace covariance transition |
+
+Current raw marker matrices are $M\times T$. Current full scientific traces are
+stored as iteration-by-trait objects, often including burn-in; formal
+convergence bundles are unthinned post-burn `iteration × chain × quantity`.
+These shapes are evidence for converters, not target raw-v2 axis rules.
+
+Under target retention-contract version 1, post-burn transitions are
+$u=1,\ldots,n_{\mathrm{sampling}}$, retained exactly when
+$u\bmod n_{\mathrm{thin}}=0$. Thus the indices are
+$n_{\mathrm{thin}},2n_{\mathrm{thin}},\ldots$ and the count is the floor in
+Section 12. The legacy and target rules coincide when `thin_interval = 1` but
+not generally. Phase 1 wrappers preserve legacy indices and label them; the
+switch to target retention-contract version 1 requires an explicit migration
+checkpoint.
+
+### 23.2 Current RNG semantics
+
+| Route class | Current rule | Classification | Migration |
+|---|---|---|---|
+| Maintained scalar trait × chain kernels | Without explicit seeds: `seed + 1000003 * (trait_index + 1) + 9176 * (chain_index + 1)` modulo $2^{32}$; the one-chain helper includes the chain-zero `9176` term. With explicit chain bases: `chain_seed[chain] + 1000003 * (trait_index + 1)` | Reproducible but route-specific and trait-order dependent | Preserve as `legacy_st_arithmetic_v1` in Phase 1; later migrate to unified v1 using stable trait IDs |
+| Older sequential annotation chain wrappers | Per-chain arithmetic is resolved outside or around single-chain provider kernels; maintained paths remain `std::mt19937` based | Reproducible but route-specific | Record the resolved final seed rather than claim one universal legacy formula |
+| Current single-chain MT CSR/default | `std::mt19937(seed)` | Reproducible route-specific | Preserve as `legacy_mt_single_v1` |
+| Current MT BED multichain | Chain zero uses `uint32(seed)`; later chains use `uint32(seed + 9176 * chain_index)`; explicit signed values are reinterpreted as final uint32 seeds | Reproducible across the current static chain schedule | Preserve as `legacy_mt_bed_chains_v1` |
+
+Current logical tasks own `std::mt19937` engines, scheduled workers do not call
+R RNG, and current static task scheduling supports serial/parallel equality on
+qualified routes. Traversal order can still affect draws inside a logical task;
+the obsolete MT set loop is additionally posterior-state dependent. Unified
+seed version 1 removes worker and trait-position identity from task derivation,
+but it does not promise invariance to a scientifically meaningful update-order
+change.
+
+## 24. Frozen analysis, execution, and task contract
+
+| Analysis mode | Valid `parallelization` | Logical task ID | Canonical task order |
+|---|---|---|---|
+| `single_trait` | `none`, `chains` | `(chain_id)` | increasing zero-based chain index |
+| `independent_traits` | `none`, `chains`, `traits`, `trait_chains` | `(trait_id, chain_id)` | declared trait-ID order, then increasing chain index |
+| `joint_multitrait` | `none`, `chains` | `(chain_id)` | increasing zero-based chain index |
+
+`execution_mode = "serial"` requires `parallelization = "none"`.
+`execution_mode = "parallel"` requires a non-`none` value valid for the
+analysis mode. No other pair is accepted. Providers, sets, blocks, regions,
+and eigenblocks are traversal objects, not execution modes. Traits inside a
+joint chain are never separate logical tasks.
+
+Resolved final task seeds have named shape `chain` for `single_trait` and
+`joint_multitrait`, and `trait × chain` for `independent_traits`. An explicitly
+resolved table bypasses derivation only after exact shape, names, uint32 range,
+and uniqueness of task identity have been validated. A public independent-
+trait `chain_seeds` convenience vector supplies per-chain base seeds to the
+same versioned trait-ID derivation; it is not copied across traits as a final
+table.
+
+## 25. Frozen `blr_resolved_spec` version 1
+
+The top-level names, in order, are exactly `schema`, `data`, `model`, `prior`,
+`mcmc`, `compute`, and `output`. In the tables, **R** means required, **O** means
+optional with a named owner-supplied default, and **N** means required-present
+with value `NULL` when inapplicable. `Copy` identifies whether the resolved
+value is copied into `blr_raw$input`. All listed fields are copied. `Sci`
+identifies fields that can change a posterior, likelihood, transition, or
+retained scientific object.
+
+### 25.1 Schema and data fields
+
+| Path | Type/shape | Presence | Valid values/default owner | Validation owner | Sci |
+|---|---|---|---|---|---|
+| `schema$name` | character scalar | R | exactly `blr_resolved_spec` | schema resolver | no |
+| `schema$version` | integer scalar | R | exactly `1` | schema resolver | no |
+| `schema$compatibility_id` | character scalar | R | registered Phase 0 compatibility ID | schema resolver | no |
+| `schema$seed_contract_version` | integer scalar | R | legacy ID or unified `1` | seed resolver | yes |
+| `schema$retention_contract_version` | integer scalar | R | legacy ID or target `1` | MCMC resolver | yes |
+| `schema$dimension_contract_version` | integer scalar | R | exactly `1` for raw v2 | schema resolver | no |
+| `data$analysis_mode` | character scalar | R | three frozen modes | cross-field resolver | yes |
+| `data$trait_ids` | ordered character vector, length $T$ | R | unique, nonempty, non-`NA` | trait resolver | yes |
+| `data$global_markers` | ordered character vector, length $M$ | R | unique, nonempty, non-`NA` | marker resolver | yes |
+| `data$global_alleles` | table, $M$ rows | R | marker ID plus aligned effect/other allele and coding | alignment resolver | yes |
+| `data$operator_resources` | uniquely named list | R | one or more validated immutable resources | resource resolver | yes |
+| `data$providers` | uniquely named list | R | one or more providers with nonempty `trait_ids` | provider resolver | yes |
+| `data$provider_maps` | provider-named integer vectors | R | resource-local order to global indices; no implicit zeros | marker resolver | yes |
+| `data$likelihood_regime` | character scalar | R | `common_sample`, `independent_summary`, `overlap_aware` | likelihood resolver | yes |
+| `data$statistical_regions` | named marker-to-region vector or `NULL` | N | `NULL` unless a regional policy is selected | model/data cross-validator | yes |
+
+Operator resources require `resource_id`, `operator_type`, local `marker_ids`,
+alleles/coding, centering, standardization, `operator_scale`, immutable storage
+or view descriptor, block/eigen metadata or `NULL`, approximation status, and
+provenance. Providers require `provider_id`, nonempty ordered `trait_ids`,
+`operator_resource_id`, `local_to_global`, phenotype or summary sufficient
+statistics, trait-named sample size, likelihood regime, residual/error
+contract, population, effect scale, overlap/error group or `NULL`, and
+provenance. Resource resolution validates storage and operator algebra;
+provider resolution validates statistics, maps, trait ownership, scales, and
+likelihood regime. C++ receives immutable views. Several providers may
+reference one resource without duplicating BED or LD storage.
+
+A common-sample full-$V_e$ MT likelihood uses one provider owning all coupled
+traits. It must not be factorized into singleton providers. Independent
+summary providers normally own one trait and may have different
+$X_t^\top X_t$, sample sizes, marker sets, populations, blocks, eigenvectors,
+eigenvalues, and ranks. Missing markers contribute no likelihood term.
+
+### 25.2 Model and prior fields
+
+| Path | Type/shape | Presence | Contract/default owner | Validation owner | Sci |
+|---|---|---|---|---|---|
+| `model$family` | character scalar | R | registered family | model registry | yes |
+| `model$state_space` | ordered named table | R | exact state/pattern/component definition | model registry | yes |
+| `model$null_state_index` | integer scalar | R | one-based index into `state_space` | model registry | yes |
+| `model$effect_storage_convention` | character scalar | R | `realised`, `base_latent`, or `scaled_latent`, with realised output always defined | model registry | yes |
+| `model$probability_policy` | named descriptor | R | explicit inclusion/component/activity policy | probability resolver | yes |
+| `model$marker_scale_policy` | named descriptor | R | unit, component, MAF-S, annotation, or external $q_j$ | scale resolver | yes |
+| `model$marker_covariance_policy` | named descriptor | R | scalar, global matrix, regional, or template | covariance resolver | yes |
+| `model$residual_policy` | named descriptor | R | scalar, diagonal, fixed full, sampled full, or overlap-aware | residual resolver | yes |
+| `model$update_order_version` | integer scalar | R | registered transition version | model registry | yes |
+| `prior$probability` | named list or `NULL` | N | policy-specific prior | probability resolver | yes |
+| `prior$component_multipliers` | named numeric vector or `NULL` | N | finite nonnegative $\gamma_k$ with declared null | scale resolver | yes |
+| `prior$marker_multipliers` | marker-named numeric vector or `NULL` | N | finite positive $q_j$ when applicable | scale resolver | yes |
+| `prior$scalar_variance` | named list or `NULL` | N | explicit shape/scale convention | variance resolver | yes |
+| `prior$marker_covariance` | named list or `NULL` | N | `degrees_of_freedom`, `scale`, and sampled/fixed flag | covariance resolver | yes |
+| `prior$residual_covariance` | named list or `NULL` | N | explicit fixed value or inverse-Wishart parameters | residual resolver | yes |
+| `prior$annotation` | named list or `NULL` | N | registered annotation-policy prior | annotation resolver | yes |
+
+### 25.3 MCMC, compute, and output fields
+
+| Path | Type/shape | Presence | Contract/default owner | Validation owner | Sci |
+|---|---|---|---|---|---|
+| `mcmc$burn_in_iterations` | integer scalar | R | $\geq0$; wrapper adapter supplies | shared MCMC resolver | yes |
+| `mcmc$sampling_iterations` | integer scalar | R | $\geq1$ | shared MCMC resolver | yes |
+| `mcmc$thin_interval` | integer scalar | R | $\geq1$ | shared MCMC resolver | yes |
+| `mcmc$retained_draws` | integer scalar | R | derived floor under target v1 | shared MCMC resolver | no |
+| `mcmc$retained_transition_indices` | integer vector | R | exact indices under declared retention version | shared MCMC resolver | no |
+| `mcmc$chains` | integer scalar | R | $\geq1$ | shared MCMC resolver | yes |
+| `mcmc$seed` | numeric integer scalar | R | uint32 user seed for unified v1 | seed resolver | yes |
+| `mcmc$task_seeds` | named vector or matrix | R | final native uint32 seeds with contracted axes | seed resolver | yes |
+| `mcmc$update_flags` | uniquely named logical list | R | model-registry defaults, all recorded | model/MCMC cross-validator | yes |
+| `compute$execution_mode` | character scalar | R | `serial` or `parallel` | compute resolver | no |
+| `compute$parallelization` | character scalar | R | closed combination table in Section 24 | compute resolver | no |
+| `compute$cores` | integer scalar | R | $\geq1$ | compute resolver | no |
+| `compute$scheduler_version` | integer scalar | R | registered deterministic scheduler | compute resolver | no |
+| `compute$memory_limit_bytes` | finite nonnegative scalar, `Inf`, or `NULL` | N | output resolver default | memory resolver | no |
+| `compute$operator_numerical_controls` | uniquely named list | R | resource-specific registered defaults | resource resolver | potentially |
+| `output$posterior_summaries` | logical scalar | R | `TRUE` | output resolver | no |
+| `output$retained_parameters` | unique character vector | R | model-applicable names | output resolver | no |
+| `output$effect_draw_policy` | character scalar | R | `none`, `selected`, `compact`, or `full` | output resolver | no |
+| `output$state_draw_policy` | character scalar | R | `none`, `compact`, or `full` | output resolver | no |
+| `output$convergence_policy` | named descriptor | R | current convergence resolver | output resolver | no |
+| `output$derived_quantities` | unique character vector | R | empty unless requested | output resolver | no |
+| `output$preserve_chains` | logical scalar | R | `TRUE` for raw v2 | output resolver | no |
+| `output$memory_estimate_bytes` | finite nonnegative scalar | R | derived | memory resolver | no |
+
+Every list at every scientific forwarding boundary has exact unique nonempty,
+non-`NA` names. Unnamed, empty, duplicate, partial, positional, and unknown
+scientific arguments fail before native dispatch. Public wrappers may keep
+their flat formals initially, but they must resolve into this exact internal
+form rather than forward `...` positionally.
+
+## 26. Frozen `blr_raw` schema version 2
+
+The top-level order is exactly `schema`, `model`, `input`, `posterior`,
+`draws`, `final`, `derived`, `diagnostics`, and `provenance`. `schema`, `model`,
+`input`, `posterior`, `draws`, `final`, `derived`, `diagnostics`, and
+`provenance` are required. Model-inapplicable scientific fields listed below
+are required-present-`NULL`; assignment must preserve their names.
+
+| Namespace | Required fields | Required-present-`NULL` when inapplicable |
+|---|---|---|
+| `schema` | `name = "blr_raw"`, `version = 2`, `compatibility_id`, `dimension_contract_version` | none |
+| `model` | copied resolved family, modes, state space, null index, covariance/residual/probability policies, effect storage, update-order version | none |
+| `input` | complete validated `blr_resolved_spec` v1 | none |
+| `posterior` | `realised_effect_mean`, `pips` | `latent_effect_mean`, `scaled_effect_mean`, `traitwise_state_probabilities`, `joint_state_probabilities`, `activity_pattern_probabilities`, `traitwise_component_assignment_probabilities`, `joint_component_assignment_probabilities`, `marker_variance_mean`, `marker_covariance_mean`, `residual_variance_mean`, `residual_covariance_mean`, `uncertainty` |
+| `draws` | `realised_effects`, `traitwise_activity` when retained by output policy | `latent_effects`, `scaled_effects`, `independent_trait_states`, `joint_states`, `traitwise_probability_parameters`, `joint_probability_parameters`, `activity_pattern_parameters`, `traitwise_component_probability_parameters`, `joint_component_probability_parameters`, `marker_variance`, `marker_covariance`, `residual_variance`, `residual_covariance`, `regional_marker_covariance`, `convergence` |
+| `final` | `realised_effects` plus the applicable state and variance/covariance state | `latent_effects`, `scaled_effects`, `independent_trait_states`, `joint_states`, `traitwise_probability_parameters`, `joint_probability_parameters`, `activity_pattern_parameters`, `traitwise_component_probability_parameters`, `joint_component_probability_parameters`, `marker_variance`, `marker_covariance`, `residual_variance`, `residual_covariance`, `rng_continuation` |
+| `derived` | namespace present | `predictions`, `genetic_variance`, `genomic_covariance`, `operator_relative_quadratics`, `descriptive_bilinear_forms` |
+| `diagnostics` | namespace present | `convergence`, `acceptance`, `runtime`, `memory`, `workers`, `numerical_safeguards`, `approximation_warnings` |
+| `provenance` | `package_version`, `operator_resources`, `marker_alignment`, `seed_contract_version`, `task_seeds` | `git_sha`, `dirty_build`, `compiler`, `timestamp` when unavailable |
+
+Required array axes are fixed:
+
+| Field class | Axis order |
+|---|---|
+| retained realised/latent/scaled effects | `draw × chain × marker × trait` |
+| independent-trait states | `draw × chain × marker × trait` |
+| joint states | `draw × chain × marker` |
+| traitwise activity | `draw × chain × marker × trait` |
+| PIPs | `marker × trait` |
+| traitwise state probabilities | `marker × trait × state` |
+| joint-state probabilities | `marker × joint_state` |
+| activity-pattern probabilities | `marker × activity_pattern` |
+| traitwise component-assignment probabilities | `marker × trait × component` |
+| joint component-assignment probabilities | `marker × component` |
+| traitwise probability-parameter draws | `draw × chain × trait × state` |
+| joint probability-parameter draws | `draw × chain × joint_state` |
+| activity-pattern parameter draws | `draw × chain × activity_pattern` |
+| traitwise component-probability parameter draws | `draw × chain × trait × component` |
+| joint component-probability parameter draws | `draw × chain × component` |
+| marker/residual covariance draws | `draw × chain × trait_row × trait_col` |
+| scalar trait variance draws | `draw × chain × trait` |
+| final effects and independent states | `chain × marker × trait` |
+| final joint states | `chain × marker` |
+| final traitwise probability parameters | `chain × trait × state` |
+| final joint probability parameters | `chain × joint_state` |
+| final activity-pattern parameters | `chain × activity_pattern` |
+| final traitwise component-probability parameters | `chain × trait × component` |
+| final joint component-probability parameters | `chain × component` |
+| final covariance states | `chain × trait_row × trait_col` |
+| regional marker-covariance draws | `draw × chain × region × trait_row × trait_col` |
+| predictions | `draw × chain × observation × trait` when retained; summaries use `observation × trait` |
+| provider diagnostics | `provider` first, followed by a diagnostic-specific named axis; no anonymous list order |
+
+Every axis has its canonical axis name plus stable dimnames. Size-one axes are
+never dropped in raw v2. Native memory may remain task-major; `RawResultBuilder`
+owns the checked conversion. The formatted layer may explicitly simplify
+dimensions while recording that transformation.
+
+Raw v2 retires unqualified `pi`, `pis`, `pim`, `state_probabilities`, and
+`pattern_probabilities`. The explicit concepts are:
+
+| Name | Fixed meaning |
+|---|---|
+| `prior_state_mass` | resolved prior mass before marker data |
+| `traitwise_probability_parameters` | sampled trait-specific state-mass parameters |
+| `joint_probability_parameters` | sampled joint-state simplex parameters |
+| `activity_pattern_parameters` | sampled Cheng activity-pattern simplex parameters |
+| `traitwise_state_probabilities` | markerwise posterior probabilities over traitwise states |
+| `joint_state_probabilities` | markerwise posterior probabilities over declared joint states |
+| `activity_pattern_probabilities` | markerwise posterior probabilities over activity patterns |
+| `traitwise_component_assignment_probabilities` | marker-by-trait posterior component allocation probabilities |
+| `joint_component_assignment_probabilities` | markerwise posterior shared/joint component allocation probabilities |
+| `pips` | marker-by-trait posterior non-null probabilities |
+| `joint_non_null_probabilities` | markerwise probability that at least one trait is active |
+| `pleiotropic_probabilities` | markerwise probability of the explicitly declared pleiotropic pattern set |
+
+A temporary formatted alias is a read-only view of exactly one documented v2
+field. There is no universal `fit$pis`.
+
+Git provenance is resolved at build/load time, not by invoking Git for every
+fit. Development builds record the SHA and dirty indicator when the build
+system supplies them. Installed release packages use package version and build
+ID and store `git_sha = NULL` and `dirty_build = NULL` if unavailable.
+
+## 27. Covariance and initial residual contracts
+
+For $V_b\sim\operatorname{IW}_T(\nu_b,\Psi_b)$, the density is proportional to
+
+$$
+|V_b|^{-(\nu_b+T+1)/2}
+\exp\left\{-\frac12\operatorname{tr}(\Psi_bV_b^{-1})\right\}.
+$$
+
+The only canonical internal/public parameters are
+`degrees_of_freedom = nu_b` and `scale = Psi_b`. A distribution is proper for
+$\nu_b>T-1$. Its mean is finite only for $\nu_b>T+1$, in which case a helper
+may accept a desired mean $M_b$ and record the conversion
+$\Psi_b=(\nu_b-T-1)M_b$ in the resolved spec and provenance. No backend may
+reinterpret the scale as a mean.
+
+Phase 4a uses a supplied fixed symmetric positive-definite full $V_e$ with a
+common-sample multi-trait BED provider. Raw v2 records the fixed policy and
+final fixed state but does not manufacture posterior $V_e$ draws. Phase 4b
+adds sampled full inverse-Wishart $V_e$ and is required before the new MT route
+replaces maintained production MT. A diagonal $V_e$ is an explicit common-
+sample reduction. Independent no-overlap summaries use diagonal/fixed marginal
+residual policies because they do not identify off-diagonal residual
+covariance. Overlap-aware error covariance remains separately gated.
+
+The current MT covariance hybrid is not a sampled schema-v2 $V_b$. Its
+full-latent/set updates and later heuristic replacement cannot be converted
+into an authoritative draw; affected analyses require rerunning under the
+corrected model.
+
+## 28. Wrapper and raw-v1 migration
+
+### 28.1 Current argument mapping
+
+| Current argument | Target path | Phase 1 action |
+|---|---|---|
+| `nit` | `mcmc$sampling_iterations` | Preserve current transition count and legacy retention version |
+| `nburn` | `mcmc$burn_in_iterations` | Exact alias |
+| `nthin` | `mcmc$thin_interval` | Preserve current first-post-burn rule until explicit retention migration |
+| `nchains` | `mcmc$chains` | Exact validated alias |
+| `seed` | `mcmc$seed` | Preserve route-specific legacy seed version initially |
+| `chain_seeds` | wrapper convenience, then final `mcmc$task_seeds` | Preserve current route behavior initially; never treat an independent-trait chain vector as a final trait × chain table under unified v1 |
+| `ncores` | `compute$cores` plus execution-policy resolution | Derive valid mode/policy explicitly |
+| `keep_chains` | `output$preserve_chains` and compact draw policy | Preserve current request, but raw v2 always preserves chain axes |
+| `updateB`, `updateE`, `updatePi`, provider flags | `mcmc$update_flags` with policy-specific names | Exact-name model resolver; no generic partial matching |
+| `method` | `model$family` plus data-level/provider semantics | Resolve aliases explicitly; reject ambiguous values |
+| `stats`, `Glist`, BED inputs, LD/eigen inputs | `data$operator_resources`, `data$providers`, and maps | Separate reusable representation from likelihood statistics |
+| `pi`, `joint_pi`, component and annotation controls | `model$probability_policy` and `prior$probability` | Split by scientific meaning; no generic internal `pi` |
+| `vb`, `ve`, `ssb_prior`, `sse_prior`, `nub`, `nue` | explicit initial states and covariance-prior objects | Convert only where parameterization is source-known; otherwise fail |
+
+`niters` and `nsamples` are not accepted target aliases. Structured public
+arguments are deferred; current wrappers are compatibility adapters into the
+structured internal spec during Phase 1.
+
+### 28.2 Raw and formatted migration
+
+| Current v1 field | V2 treatment |
+|---|---|
+| `marker$bm`, formatted `bm` | rename to `posterior$realised_effect_mean`; expand trait axis if needed |
+| `marker$dm`, formatted `dm` | rename to `posterior$pips` only where it is verified binary non-null probability |
+| `marker$b`, `marker$beta`, final fields | split into realised, latent, or scaled `final` fields under declared storage convention |
+| `marker$state`, `component_final` | split into independent-trait or joint-state fields; never infer from rank alone |
+| `component_probabilities` | map only when verified as markerwise posterior allocation probabilities |
+| `pi_*`, `pis`, `pim`, pattern fields | split into explicit sampled-parameter and markerwise posterior fields; ambiguous objects are unsupported |
+| `vbs`, `ves` | map to scalar variance draws only with known iteration/chain ownership; otherwise require rerun |
+| `cov_b_*`, `cov_e_*` | expand to explicit draw/final axes only when they are actual sampled states with known semantics |
+| `cov_g_*`, `vgs`, `vle`, `vld` | place under derived quantities using identified or operator-relative names; do not relabel descriptive bilinear forms as covariance |
+| convergence bundle v1 | retain through a versioned converter when iteration and chain identities are explicit |
+| diagnostic/provider metadata | normalize into diagnostics/provenance without changing scientific arrays |
+
+A compatibility wrapper resolves new calls. A schema converter accepts a
+serialized v1 object only when field meaning, axes, retention, and chain
+ownership are known from its schema and compatibility ID. A formatted alias is
+a read-only view. A scientific migration requires rerunning. There is no
+positional fallback, no dimension-only guessing, and unsupported versions fail
+with the exact missing semantic requirement.
+
+## 29. Phase 0 fixture evidence
+
+The base-R files under `tests/research/blr_framework_contract/` are independent
+contract fixtures, not production validators. They cover one-chain/one-axis
+single-trait raw arrays, two-trait/two-chain independent and joint modes, one
+BED resource shared by several providers, one joint multi-trait provider,
+heterogeneous singleton summary providers, required-present-`NULL` fields,
+fixed and sampled full $V_e$, exact retention indices, execution-policy
+failures, and fixed task-seed vectors.
+
+Seed-contract version-1 reference vectors are:
+
+| User seed | Analysis mode | Trait ID | Zero-based chain | Native uint32 seed |
+|---:|---|---|---:|---:|
+| 0 | `single_trait` | sentinel | 0 | 830191578 |
+| 0 | `single_trait` | sentinel | 1 | 160141543 |
+| 0 | `independent_traits` | `traitA` | 0 | 226943096 |
+| 0 | `independent_traits` | `traitB` | 1 | 286956759 |
+| 0 | `joint_multitrait` | sentinel | 0 | 3100589946 |
+| 17 | `single_trait` | sentinel | 0 | 3397578794 |
+| 17 | `independent_traits` | `traitB` | 1 | 1132619387 |
+| 17 | `joint_multitrait` | sentinel | 1 | 3700933392 |
+
+Stable trait-ID reordering leaves each independent trait's row unchanged.
+Serial versus parallel execution consumes the same resolved table.
+
+## 30. Phase 0 completion table
+
+| Contract | Decision | Evidence | Remaining implementation phase |
+|---|---|---|---|
+| Analysis/execution | Separate closed enumerations and task identities | Source task topology plus executable fixtures | Phase 1 resolver; Phase 3 scheduler |
+| Retention | Target version 1 uses divisible post-burn indices; legacy rules remain versioned | Native source trace and exact fixture calculations | Phase 1 adapters; deliberate migration checkpoint |
+| RNG | Exact FNV-1a/SplitMix64 seed-contract version 1; zero valid | Constants, pseudocode, and eight fixed vectors | Phase 3 implementation; wrapper trajectory migration later |
+| Resolved input | `blr_resolved_spec` version 1 with seven exact namespaces | Field tables and fixtures | Phase 1 |
+| Resource/provider | Immutable reusable resources; providers own nonempty trait sets and statistics | Shared BED and joint-provider fixtures | Phase 2 |
+| Raw result | `blr_raw` version 2 with fixed names and axes | Single/independent/joint raw fixtures | Phase 1 builder and converters |
+| Dimensions | Draw × chain first; no size-one dropping | Exact dim/dimname assertions | Phase 1 builder/validator |
+| Probability names | Explicit parameter versus posterior concepts; no universal `pis` | Schema fixture rejects ambiguous names | Phase 1 schema/formatter migration |
+| Inverse-Wishart | Explicit degrees of freedom and scale; mean conversion recorded | Density and propriety/mean conditions | Phase 4 covariance policies |
+| Initial MT residual | Fixed full SPD in Phase 4a, sampled full IW in Phase 4b before promotion | Research oracle design and identifiability boundary | Phase 4a/4b |
+| V1 migration | Convert only source-known semantics; current hybrid requires rerun | Current raw/source audit | Phase 1 converters and release notes |
+
+All Phase 0 decisions have recommendations. No production phase is marked
+implemented by this status change.
