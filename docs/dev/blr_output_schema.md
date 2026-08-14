@@ -116,13 +116,16 @@ validated before one family-specific formatter creates the canonical fit.
 There is no positional fallback, compatibility reader, or automatic
 reinterpretation of ambiguous older objects.
 
-## Approved `blr_raw` version 2 target
+## `blr_raw` version 2 target and Phase 1 implementation
 
-The paragraph above remains the current implementation. The approved target is
-`blr_raw` schema version 2 in Sections 26 and 28 of
+Native backends still return the current version-1 objects described above.
+Phase 1 implements `blr_raw` schema version 2 in R, following Sections 26 and
+28 of
 [the unified framework design](blr_unified_framework_design.md), backed by
-`tests/research/blr_framework_contract/`. It is not yet produced by package
-fitters.
+`tests/research/blr_framework_contract/`. Eligible one-chain maintained ST
+fits now follow the explicit path `stblr_raw` v1 to validated `blr_raw` v2 to
+formatted fit. The validated v2 object is retained as the `blr_raw` attribute
+of the formatted fit. Native output and trajectories are unchanged.
 
 The exact envelope is:
 
@@ -138,6 +141,19 @@ Independent-trait states and joint-state indices are separate fields, never
 rank-varying versions of one field. Model-inapplicable contracted fields remain
 present with `NULL`.
 
+Every present scientific array is validated against IDs declared by the
+resolved specification: counts, order, uniqueness, nonmissing dimnames, and
+axis names must agree for draw, chain, marker, trait, state, joint-state,
+component, activity-pattern, region, covariance-row, covariance-column, and
+declared observation/provider axes. A compatibility identifier cannot bypass
+axis, probability-simplex, covariance, or provenance validation.
+
+The provenance namespace keeps `git_sha`, `dirty_build`, `compiler`, and
+`timestamp` present with `NULL` when unavailable. A present SHA is a validated
+Git identifier and `dirty_build` is a nonmissing logical scalar. Development
+provenance is cached once per session; reliable build-time Git injection
+remains future promotion work.
+
 Raw v2 retires unqualified `pi`, `pis`, `pim`, `state_probabilities`, and
 `pattern_probabilities`. It distinguishes sampled probability parameters,
 markerwise posterior state/component/activity probabilities, and PIPs. A
@@ -151,3 +167,28 @@ estimate or convert the current MT covariance hybrid into sampled schema-v2
 $V_b$. Serialized v1 objects are converted only when semantics and dimensions
 are established by schema/compatibility metadata; otherwise conversion fails
 and a scientifically affected analysis must be rerun.
+
+### Phase 1 conversion boundary
+
+The initial production converter covers one-chain ST BayesC, BayesR, and
+BayesRC-family raw semantics reached through maintained CSR, BED, block-eigen,
+and supported annotation wrappers. Independent traits preserve their trait
+axis. Multi-chain ST results remain explicitly on v1 because the native v1
+object does not expose the final effect vector for every chain; Phase 1 does
+not fabricate those states. Current MT v1 objects are rejected because their
+hybrid covariance cannot be labelled as sampled schema-v2 $V_b$.
+
+The temporary formatted aliases have exactly these sources:
+
+| Alias | Schema-v2 source |
+|---|---|
+| `bm`, `dm` | `posterior$realised_effect_mean`, `posterior$pips` |
+| `b`, `d` | `final$realised_effects`, `final$independent_trait_states` |
+| `vbs`, `vgs`, `ves`, `vle`, `vld` | named fields under `derived$legacy_iteration_quantities` |
+| `pi_trace` | `derived$legacy_iteration_quantities$non_null_probability_parameter` |
+| `pi_mean`, `pi_final` | family-specific explicit probability-parameter mean/final fields |
+| `component_probabilities` | `posterior$traitwise_component_assignment_probabilities` |
+| `cov_b_*`, `cov_g_*`, `cov_e_*` | corresponding explicit scalar variance posterior/final fields |
+
+These aliases are read-only views in meaning. In particular, `fit$pis` is not
+manufactured as a universal schema-v2 probability field.

@@ -864,7 +864,7 @@
   }
   if (is.null(fit$ld_swap)) native_diagnostics$ld_swap <- NULL
   if (is.null(fit$ld_swap_chains)) native_diagnostics$ld_swap_chains <- NULL
-  .blr_finalize_fit(
+  out <- .blr_finalize_fit(
     fit, "stblr", model, operator,
     data = list(
       marker_ids = rownames(fit$bm), trait_names = trait_names,
@@ -879,4 +879,5 @@
       native = native_diagnostics,
       packed_bed = fit$bed_diagnostics %||% NULL),
     memory_estimate = memory)
+  .blr_phase1_finalize_st(out, chain, model, operator)
 }

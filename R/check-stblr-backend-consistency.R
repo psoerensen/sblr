@@ -75,6 +75,39 @@ check_stblr_consistency <- function(
     )
   }
 
+  raw_v2 <- attr(fit, "blr_raw", exact = TRUE)
+  if (!is.null(raw_v2)) {
+    raw_error <- tryCatch({
+      validate_blr_raw_v2(raw_v2)
+      NULL
+    }, error = conditionMessage)
+    add_check(
+      "schema.blr_raw_v2",
+      is.null(raw_error),
+      if (is.null(raw_error)) "attached blr_raw schema version 2 is valid" else
+        paste("attached blr_raw schema version 2 is invalid:", raw_error)
+    )
+    if (is.null(raw_error)) {
+      add_check(
+        "schema.alias.bm",
+        isTRUE(all.equal(fit$bm, raw_v2$posterior$realised_effect_mean,
+                         tolerance = 0, check.attributes = FALSE)) &&
+          identical(dim(fit$bm), dim(raw_v2$posterior$realised_effect_mean)) &&
+          identical(dimnames(fit$bm),
+                    dimnames(raw_v2$posterior$realised_effect_mean)),
+        "fit$bm is an exact view of posterior$realised_effect_mean"
+      )
+      add_check(
+        "schema.alias.dm",
+        isTRUE(all.equal(fit$dm, raw_v2$posterior$pips,
+                         tolerance = 0, check.attributes = FALSE)) &&
+          identical(dim(fit$dm), dim(raw_v2$posterior$pips)) &&
+          identical(dimnames(fit$dm), dimnames(raw_v2$posterior$pips)),
+        "fit$dm is an exact view of posterior$pips"
+      )
+    }
+  }
+
   dm <- .stblr_backend_as_matrix(fit$dm)
   bm <- .stblr_backend_as_matrix(fit$bm)
   input <- fit$input

@@ -54,12 +54,23 @@ legacy schema fallback are not supported. Formatted fits use model-semantics
 version 2. See `blr_output_schema.md` for field ownership and
 `blr_convergence_contract.md` for observational trace capture.
 
-## Approved Phase 0 target architecture
+## Approved Phase 0 target architecture and Phase 1 bridge
 
-The preceding paragraphs describe current implementation. The approved target
-is the shared architecture in
+The preceding paragraphs describe the native implementation. The approved
+target is the shared architecture in
 [the unified framework design](blr_unified_framework_design.md), especially
-Sections 24--30. It is not yet implemented.
+Sections 24--30. Phase 1 now implements the R-side resolved specification and
+validated raw-v2 bridge for eligible maintained ST fits while preserving the
+existing native version-1 result and all native calls. Shared native providers,
+operators, scheduling, retention, and corrected joint-MT policies remain later
+phases.
+
+Phase 1 public wrappers inspect original call spellings before R partial
+matching can accept a scientific-control prefix. Resolved specifications then
+validate global marker/allele order, registered likelihood and model policies,
+provider/resource alignment, declared priors, and compute bounds before native
+dispatch. Compatibility identifiers select migration/formatting behavior only;
+they never weaken scientific validation.
 
 The target distinguishes analysis mode from execution policy:
 
@@ -90,7 +101,8 @@ cross-block entries are zero or explicitly excluded by the declared
 likelihood. A retained-rank representation equals its reconstructed
 approximation, not the original dense operator.
 
-The current MT covariance hybrid is replacement-only evidence. It must not be
+The current MT covariance hybrid is replacement-only evidence. It is rejected
+by the Phase 1 converter and must not be
 reused in the target statistical policy or reported as authoritative sampled
-$V_b$. Phase 1 introduces contracts around current kernels; later phases
-replace the joint MT transition at an explicit scientific checkpoint.
+$V_b$. Later phases replace the joint MT transition at an explicit scientific
+checkpoint.

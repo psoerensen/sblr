@@ -20,9 +20,9 @@ The `s` prefix means summary statistics and never activates MAF scaling.
 
 `maf_effect_s = NULL` means no MAF scale. A finite scalar activates
 
-\[
+$$
 q_j(S)=\{2p_j(1-p_j)\}^{S+1}.
-\]
+$$
 
 `maf_effect_s = -1` records explicit user intent but gives a unit numerical
 scale. BayesC changes from `unit` to `maf_s`; BayesR/BayesRC changes from
@@ -54,7 +54,7 @@ Annotation policies are:
 - `annotation_probit_stick`: annotation-dependent BayesR component
   probabilities.
 - `log_variance`: learned marker-specific relative non-null variance
-  \(q_j=\exp(X_j\theta)\) with global BayesC inclusion or global BayesR
+  $q_j=\exp(X_j\theta)$ with global BayesC inclusion or global BayesR
   component probabilities.
 
 MT BayesRC factorizes annotation-dependent component probabilities and global
@@ -62,7 +62,7 @@ conditional non-null trait-pattern probabilities. Annotations do not alter
 covariance matrices, component multipliers, operators, or residual likelihoods.
 Ordinary MT BayesR instead uses one global `joint_pi` simplex over complete
 joint states; its component and pattern probabilities are marginals, not a
-current factorized \(P\times H\) parameterization.
+current factorized $P\times H$ parameterization.
 
 Current `log_variance` support is ST CSR and retained block eigen with
 the public `sbayesc` and `sbayesr` methods. BED-LV, MT-LV, and simultaneous learned
@@ -77,12 +77,14 @@ and-component-scaled effect. `d` is binary trait activity. BayesR/BayesRC
 component code is a separate ordered state with zero as null. `dm` is posterior
 trait activity/non-null probability, never a component mean.
 
-## Approved Phase 0 target policies
+## Approved target policies and Phase 1 boundary
 
-Current behavior above remains in force until migrated. The target model-
-policy contract is defined by Sections 25--28 of
-[the unified framework design](blr_unified_framework_design.md) and is not yet
-implemented.
+Current native behavior above remains in force. The target model-policy
+contract is defined by Sections 25--28 of
+[the unified framework design](blr_unified_framework_design.md). Phase 1
+resolves maintained ST wrapper semantics into that contract and converts only
+source-understood ST raw fields. It does not change a statistical policy or
+implement a joint-MT transition.
 
 `single_trait` and `independent_traits` use scalar policies, with the latter
 factorizing across traits. `joint_multitrait` uses an explicitly declared joint
@@ -117,3 +119,17 @@ the maintained MT replacement. Diagonal $V_e$ remains an explicit reduction;
 independent no-overlap summaries do not identify off-diagonal residual
 covariance. The current MT covariance hybrid is not the target and cannot be
 migrated as authoritative covariance draws.
+
+Resolved Phase 1 objects accept only registered exact model-policy values and
+declared descriptor structures. Compatibility identifiers do not relax model,
+prior, state, covariance, probability, or axis validation. Scalar-variance and
+matrix-covariance priors are checked under their declared parameterizations;
+fixed full residual covariance must be finite, symmetric, positive definite,
+and ordered by the resolved trait IDs.
+
+For Phase 1 ST conversion, `posterior$pips` is the posterior non-null marker
+summary, while inclusion- or component-probability parameter draws and final
+states occupy separate explicit fields. BayesR/BayesRC component assignment
+probabilities remain distinct from PIPs. If a native v1 route does not expose
+a contracted chain state, the route remains v1 rather than receiving an
+inferred value.

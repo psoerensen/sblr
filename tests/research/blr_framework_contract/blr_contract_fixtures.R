@@ -289,8 +289,8 @@ blr_spec_fixture <- function(analysis_mode = c("single_trait", "independent_trai
                                         global_markers, "common_sample", 100))
   } else if (analysis_mode == "independent_traits") {
     providers <- list(
-      p1 = blr_provider("p1", "trait1", "bed_shared", global_markers, global_markers, "independent", 100),
-      p2 = blr_provider("p2", "trait2", "bed_shared", global_markers, global_markers, "independent", 100)
+      p1 = blr_provider("p1", "trait1", "bed_shared", global_markers, global_markers, "independent_summary", 100),
+      p2 = blr_provider("p2", "trait2", "bed_shared", global_markers, global_markers, "independent_summary", 100)
     )
   } else {
     providers <- list(p_joint = blr_provider("p_joint", trait_ids, "bed_shared", global_markers,
@@ -307,23 +307,34 @@ blr_spec_fixture <- function(analysis_mode = c("single_trait", "independent_trai
                   retention_contract_version = 1L, dimension_contract_version = 1L),
     data = list(analysis_mode = analysis_mode, trait_ids = trait_ids,
                 global_markers = global_markers,
-                global_alleles = data.frame(marker_id = global_markers, effect = "A", other = "C"),
+                global_alleles = data.frame(marker_id = global_markers,
+                                            effect = "A", other = "C",
+                                            coding = "effect_allele_count"),
                 operator_resources = resources, providers = providers,
                 provider_maps = lapply(providers, `[[`, "local_to_global"),
                 likelihood_regime = if (analysis_mode == "independent_traits") "independent_summary" else "common_sample",
                 statistical_regions = NULL),
-    model = list(family = "bayesc", state_space = c("null", "active"), null_state_index = 1L,
+    model = list(family = "bayesc",
+                 state_space = if (analysis_mode == "joint_multitrait")
+                   c("00", "10", "01", "11") else c("null", "active"),
+                 null_state_index = 1L,
                  effect_storage_convention = "realised",
-                 probability_policy = "global_inclusion",
-                 marker_scale_policy = "unit", marker_covariance_policy = if (length(trait_ids) == 1L) "scalar" else "global_matrix",
+                 probability_policy = "global",
+                 marker_scale_policy = "unit", marker_covariance_policy = if (length(trait_ids) == 1L) "traitwise_scalar" else "global_matrix",
                  residual_policy = residual_policy, update_order_version = 1L),
     prior = list(probability = list(alpha = 1, beta = 1), component_multipliers = NULL,
                  marker_multipliers = setNames(rep(1, length(global_markers)), global_markers),
                  scalar_variance = if (length(trait_ids) == 1L) list(shape = 2, scale = 1) else NULL,
-                 marker_covariance = if (length(trait_ids) > 1L) list(degrees_of_freedom = 4, scale = diag(2), sampled = TRUE) else NULL,
+                 marker_covariance = if (length(trait_ids) > 1L) list(
+                   degrees_of_freedom = 4,
+                   scale = structure(diag(2), dimnames = list(trait_ids, trait_ids)),
+                   fixed_value = NULL, sampled = TRUE) else NULL,
                  residual_covariance = list(degrees_of_freedom = if (residual_policy == "sampled_full") 4 else NULL,
-                                            scale = if (residual_policy == "sampled_full") diag(2) else NULL,
-                                            fixed_value = if (residual_policy == "fixed_full") diag(length(trait_ids)) else NULL,
+                                            scale = if (residual_policy == "sampled_full")
+                                              structure(diag(2), dimnames = list(trait_ids, trait_ids)) else NULL,
+                                            fixed_value = if (residual_policy == "fixed_full")
+                                              structure(diag(length(trait_ids)),
+                                                        dimnames = list(trait_ids, trait_ids)) else NULL,
                                             sampled = residual_policy == "sampled_full"),
                  annotation = NULL),
     mcmc = list(burn_in_iterations = burn_in, sampling_iterations = sampling, thin_interval = 2L,
@@ -337,7 +348,9 @@ blr_spec_fixture <- function(analysis_mode = c("single_trait", "independent_trai
                    operator_numerical_controls = list()),
     output = list(posterior_summaries = TRUE, retained_parameters = c("marker_covariance"),
                   effect_draw_policy = "full", state_draw_policy = "full",
-                  convergence_policy = "core", derived_quantities = character(),
+                  convergence_policy = list(mode = "core",
+                                            quantities = character()),
+                  derived_quantities = character(),
                   preserve_chains = TRUE, memory_estimate_bytes = 0)
   )
 }
@@ -370,12 +383,35 @@ blr_summary_spec_fixture <- function() {
   out
 }
 
+.blr_probability_fixture <- function(axes) {
+  .blr_array(vapply(axes, length, integer(1)), axes,
+             value = 1 / length(axes[[length(axes)]]))
+}
+
+.blr_covariance_draw_fixture <- function(draws, chains, traits) {
+  axes <- list(draw = draws, chain = chains,
+               trait_row = traits, trait_col = traits)
+  out <- .blr_array(vapply(axes, length, integer(1)), axes)
+  for (draw in seq_along(draws)) for (chain in seq_along(chains)) {
+    out[draw, chain, , ] <- diag(length(traits))
+  }
+  out
+}
+
+.blr_final_covariance_fixture <- function(chains, traits) {
+  axes <- list(chain = chains, trait_row = traits, trait_col = traits)
+  out <- .blr_array(vapply(axes, length, integer(1)), axes)
+  for (chain in seq_along(chains)) out[chain, , ] <- diag(length(traits))
+  out
+}
+
 blr_raw_fixture <- function(analysis_mode = c("single_trait", "independent_traits", "joint_multitrait")) {
   analysis_mode <- match.arg(analysis_mode)
   spec <- blr_spec_fixture(analysis_mode, if (analysis_mode == "joint_multitrait") "sampled_full" else "fixed_full")
   traits <- spec$data$trait_ids; markers <- spec$data$global_markers
   chains <- paste0("chain", seq_len(spec$mcmc$chains)); draws <- paste0("draw", seq_len(spec$mcmc$retained_draws))
-  states <- c("null", "active"); patterns <- if (analysis_mode == "joint_multitrait") c("00", "10", "01", "11") else character()
+  states <- spec$model$state_space
+  patterns <- if (analysis_mode == "joint_multitrait") states else character()
   d_eff <- list(draw = draws, chain = chains, marker = markers, trait = traits)
   effect_draws <- .blr_array(vapply(d_eff, length, integer(1)), d_eff)
   cov_dims <- list(draw = draws, chain = chains, trait_row = traits, trait_col = traits)
@@ -385,9 +421,9 @@ blr_raw_fixture <- function(analysis_mode = c("single_trait", "independent_trait
     latent_effect_mean = NULL,
     scaled_effect_mean = NULL,
     pips = .blr_array(c(length(markers), length(traits)), list(marker = markers, trait = traits)),
-    traitwise_state_probabilities = if (analysis_mode != "joint_multitrait") .blr_array(c(length(markers), length(traits), 2L), list(marker = markers, trait = traits, state = states)) else NULL,
-    joint_state_probabilities = if (analysis_mode == "joint_multitrait") .blr_array(c(length(markers), length(patterns)), list(marker = markers, joint_state = patterns)) else NULL,
-    activity_pattern_probabilities = if (analysis_mode == "joint_multitrait") .blr_array(c(length(markers), length(patterns)), list(marker = markers, activity_pattern = patterns)) else NULL,
+    traitwise_state_probabilities = if (analysis_mode != "joint_multitrait") .blr_probability_fixture(list(marker = markers, trait = traits, state = states)) else NULL,
+    joint_state_probabilities = if (analysis_mode == "joint_multitrait") .blr_probability_fixture(list(marker = markers, joint_state = patterns)) else NULL,
+    activity_pattern_probabilities = if (analysis_mode == "joint_multitrait") .blr_probability_fixture(list(marker = markers, activity_pattern = patterns)) else NULL,
     traitwise_component_assignment_probabilities = NULL,
     joint_component_assignment_probabilities = NULL,
     marker_covariance_mean = if (length(traits) > 1L) .blr_identity(traits) else NULL,
@@ -403,13 +439,13 @@ blr_raw_fixture <- function(analysis_mode = c("single_trait", "independent_trait
     independent_trait_states = if (analysis_mode != "joint_multitrait") .blr_array(vapply(d_eff, length, integer(1)), d_eff) else NULL,
     joint_states = if (analysis_mode == "joint_multitrait") .blr_array(c(length(draws), length(chains), length(markers)), list(draw = draws, chain = chains, marker = markers)) else NULL,
     traitwise_activity = effect_draws,
-    traitwise_probability_parameters = if (analysis_mode != "joint_multitrait") .blr_array(c(length(draws), length(chains), length(traits), 2L), list(draw = draws, chain = chains, trait = traits, state = states)) else NULL,
-    joint_probability_parameters = if (analysis_mode == "joint_multitrait") .blr_array(c(length(draws), length(chains), length(patterns)), list(draw = draws, chain = chains, joint_state = patterns)) else NULL,
-    activity_pattern_parameters = if (analysis_mode == "joint_multitrait") .blr_array(c(length(draws), length(chains), length(patterns)), list(draw = draws, chain = chains, activity_pattern = patterns)) else NULL,
+    traitwise_probability_parameters = if (analysis_mode != "joint_multitrait") .blr_probability_fixture(list(draw = draws, chain = chains, trait = traits, state = states)) else NULL,
+    joint_probability_parameters = if (analysis_mode == "joint_multitrait") .blr_probability_fixture(list(draw = draws, chain = chains, joint_state = patterns)) else NULL,
+    activity_pattern_parameters = if (analysis_mode == "joint_multitrait") .blr_probability_fixture(list(draw = draws, chain = chains, activity_pattern = patterns)) else NULL,
     traitwise_component_probability_parameters = NULL,
     joint_component_probability_parameters = NULL,
-    marker_covariance = if (length(traits) > 1L) .blr_array(vapply(cov_dims, length, integer(1)), cov_dims) else NULL,
-    residual_covariance = if (length(traits) > 1L) .blr_array(vapply(cov_dims, length, integer(1)), cov_dims) else NULL,
+    marker_covariance = if (length(traits) > 1L) .blr_covariance_draw_fixture(draws, chains, traits) else NULL,
+    residual_covariance = if (length(traits) > 1L) .blr_covariance_draw_fixture(draws, chains, traits) else NULL,
     marker_variance = if (length(traits) == 1L) .blr_array(c(length(draws), length(chains), 1L), list(draw = draws, chain = chains, trait = traits)) else NULL,
     residual_variance = if (length(traits) == 1L) .blr_array(c(length(draws), length(chains), 1L), list(draw = draws, chain = chains, trait = traits)) else NULL,
     regional_marker_covariance = NULL,
@@ -426,16 +462,22 @@ blr_raw_fixture <- function(analysis_mode = c("single_trait", "independent_trait
     activity_pattern_parameters = NULL,
     traitwise_component_probability_parameters = NULL,
     joint_component_probability_parameters = NULL,
-    marker_covariance = if (length(traits) > 1L) .blr_array(c(length(chains), length(traits), length(traits)), list(chain = chains, trait_row = traits, trait_col = traits)) else NULL,
-    residual_covariance = if (length(traits) > 1L) .blr_array(c(length(chains), length(traits), length(traits)), list(chain = chains, trait_row = traits, trait_col = traits)) else NULL,
+    marker_covariance = if (length(traits) > 1L) .blr_final_covariance_fixture(chains, traits) else NULL,
+    residual_covariance = if (length(traits) > 1L) .blr_final_covariance_fixture(chains, traits) else NULL,
     marker_variance = if (length(traits) == 1L) .blr_array(c(length(chains), 1L), list(chain = chains, trait = traits)) else NULL,
     residual_variance = if (length(traits) == 1L) .blr_array(c(length(chains), 1L), list(chain = chains, trait = traits)) else NULL,
     rng_continuation = NULL
   )
   list(
-    schema = list(name = "blr_raw", version = 2L, compatibility_id = "phase0-v2",
-                  dimension_contract_version = 1L),
-    model = spec$model,
+    schema = list(name = "blr_raw", version = 2L,
+                  compatibility_id = "phase0-v2",
+                  dimension_contract_version = 1L,
+                  seed_contract_version = spec$schema$seed_contract_version,
+                  retention_contract_version = spec$schema$retention_contract_version,
+                  source_schema = list(name = "phase0_contract_fixture",
+                                       version = 1L),
+                  migration = NULL),
+    model = c(list(analysis_mode = analysis_mode), spec$model),
     input = spec,
     posterior = posterior,
     draws = draws_list,

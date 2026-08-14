@@ -290,6 +290,10 @@ stblr_csr_annot <- function(
   ld_prefix = NULL,
   ...
 ) {
+ .blr_validate_exact_public_call(
+  sys.call(), sys.function(), "stblr_csr_annot()")
+ raw_capture <- .blr_begin_st_raw_capture()
+ on.exit(.blr_end_st_raw_capture(raw_capture), add = TRUE)
  if (missing(annotations)) {
   stop("annotations must be supplied.")
  }
@@ -301,8 +305,37 @@ stblr_csr_annot <- function(
  conv <- .blr_convergence_controls(
   convergence, convergence_control, chain$nchains)
  extra <- list(...)
+ if (annotation_model == "learned") {
+  .stblr_validate_learned_forwarded_args(extra)
+ }
+ annotation_targets <- list(
+  stblr_csr_prior_annot, stblr_csr_learn_annot,
+  stblr_csr_group_annot, stblr_csr_sbayesrc_generic,
+  .stblr_csr_logvar_bayesc, .stblr_csr_logvar_bayesr)
+ annotation_dot_names <- unique(c(
+  "mixture_var",
+  unlist(lapply(annotation_targets, function(fun) names(formals(fun))),
+         use.names = FALSE)))
+ extra <- .blr_capture_forwarded_args(
+  extra,
+  accepted = setdiff(annotation_dot_names, c(
+   "", "...", "stats", "Glist", "ld_prefix", "annotations", "annotation",
+   "annotation_info", "A", "group", "method", "nit", "nburn", "nthin",
+   "seed", "nchains", "ncores", "chain_seeds", "keep_chains", "h2",
+   "adjE", "updateB", "updateE", "updatePi", "updateLDswap",
+   "maf_effect_s", "estimate_maf_effect_s", "maf_effect_s_init",
+   "maf_effect_s_prior", "maf_effect_s_proposal_sd", "ld_swap_prob",
+   "ld_swap_r2", "ld_swap_max_friends", "ld_swap_moves",
+   "theta_prior_sd", "theta_init", "updateTheta", ".convergence_spec")),
+  what = "stblr_csr_annot(...)"
+ )
  marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id
  if (!length(marker_ids)) marker_ids <- paste0("V", seq_along(stats$ww[[1L]]))
+ trait_ids <- stats$trait_names %||% names(stats$wy)
+ if (is.null(trait_ids) || length(trait_ids) != length(stats$wy) ||
+     anyNA(trait_ids) || any(!nzchar(trait_ids)) || anyDuplicated(trait_ids)) {
+  trait_ids <- paste0("T", seq_along(stats$wy))
+ }
  if (annotation_model == "logvar") {
   method <- method %||% "sbayesc"
   if (length(method) != 1L || is.na(method) ||
@@ -330,6 +363,15 @@ stblr_csr_annot <- function(
   memory <- .blr_st_preflight_memory(
    stats = stats, operator = "csr", chain = chain, conv = conv,
    memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
+  resolved_spec <- resolve_blr_spec_from_wrapper(
+   method, "csr", trait_ids, marker_ids, chain, sample_sizes = stats$n,
+   probability_policy = "global",
+   marker_scale_policy = "annotation_log_variance",
+   update_flags = list(
+    marker_effects = isTRUE(updateB), residual_variance = isTRUE(updateE),
+    probability = isTRUE(updatePi), annotation_scale = isTRUE(updateTheta)),
+   migration_actions = attr(extra, "migration_actions") %||% character()
+  )
   .validate_ld_swap_args(
    updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves)
   ld_prefix <- .stblr_resolve_csr_annotation_ld_prefix(Glist, ld_prefix)
@@ -351,6 +393,7 @@ stblr_csr_annot <- function(
   } else {
    do.call(.stblr_csr_logvar_bayesc, args)
   }
+  attr(fit, "blr_resolved_spec") <- resolved_spec
   logvar_diagnostics <- fit$diagnostics$logvar
   out <- .blr_finalize_st_public(
    fit, method, "csr", chain, conv, memory_warning_gb, verbose, memory)
@@ -443,7 +486,23 @@ stblr_csr_annot <- function(
  probability_policy <- switch(
   annotation_model, prior = "fixed_marker", learned = "learned_logistic",
   group = "group", sbayesrc = "annotation_probit_stick")
+ resolved_spec <- resolve_blr_spec_from_wrapper(
+  if (annotation_model == "sbayesrc") "sbayesrc" else "sbayesc",
+  "csr", trait_ids, marker_ids, chain, sample_sizes = stats$n,
+  probability_policy = probability_policy,
+  marker_scale_policy = if (annotation_model == "sbayesrc" &&
+    (!is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s)))
+    "component_maf_s" else if (annotation_model == "sbayesrc")
+      "component" else "unit",
+  component_multipliers = if (annotation_model == "sbayesrc")
+    extra$mixture_var %||% c(0, 0.01, 0.1, 1) else NULL,
+  update_flags = list(
+   marker_effects = isTRUE(updateB), residual_variance = isTRUE(updateE),
+   probability = isTRUE(updatePi)),
+  migration_actions = attr(extra, "migration_actions") %||% character()
+ )
  finish <- function(fit) {
+  attr(fit, "blr_resolved_spec") <- resolved_spec
   model <- if (annotation_model == "sbayesrc") "sbayesrc" else "sbayesc"
   out <- .blr_finalize_st_public(
    fit, model, "csr", chain, conv, memory_warning_gb, verbose, memory)
@@ -488,7 +547,6 @@ stblr_csr_annot <- function(
   if ("A" %in% names(extra)) {
    stop("Supply learned annotations through annotations, not both annotations and A.")
   }
-  .stblr_validate_learned_forwarded_args(extra)
   args <- c(common, list(A = annotations), extra)
   return(finish(do.call(stblr_csr_learn_annot, args)))
  }

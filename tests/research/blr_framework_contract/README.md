@@ -23,6 +23,8 @@ Rscript tests/research/blr_framework_contract/test_contract_fixtures.R
 ```
 
 The fixtures deliberately do not emulate current raw schema version 1. Current
-behavior and migration rules are maintained in the developer contracts. A
-passing fixture test establishes internal consistency of the proposed contract,
-not that production code already implements it.
+behavior, Phase 1 implementation status, and migration rules are maintained in
+the developer contracts. A passing fixture test remains an independent
+contract oracle rather than evidence derived from production constructors.
+Fixture compatibility identifiers never bypass probability, covariance, axis,
+or provenance validation.

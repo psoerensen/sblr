@@ -82,6 +82,10 @@ stblr_block_eigen <- function(
   convergence_control = NULL, memory_warning_gb = 8,
   verbose = FALSE, ...
 ) {
+  .blr_validate_exact_public_call(
+    sys.call(), sys.function(), "stblr_block_eigen()")
+  raw_capture <- .blr_begin_st_raw_capture()
+  on.exit(.blr_end_st_raw_capture(raw_capture), add = TRUE)
   rebuild_interval_supplied <- !missing(low_rank_residual_rebuild_every)
   if (!is.null(annotation_model)) {
     if (length(annotation_model) != 1L || is.na(annotation_model) ||
@@ -102,6 +106,31 @@ stblr_block_eigen <- function(
     }
   }
   dots <- list(...)
+  block_targets <- list(
+    .stblr_csr_bayesc_block_eigen, .stblr_csr_bayesr_block_eigen,
+    .stblr_csr_sbayesrc_block_eigen, .stblr_block_logvar_bayesc,
+    .stblr_block_logvar_bayesr)
+  block_dot_names <- unique(c(
+    "eigen_filter",
+    names(formals(.stblr_csr_sbayesrc_generic_impl)),
+    unlist(lapply(block_targets, function(fun) names(formals(fun))),
+           use.names = FALSE)))
+  dots <- .blr_capture_forwarded_args(
+    dots,
+    accepted = setdiff(block_dot_names, c(
+      "", "...", "stats", "Glist", "block_start", "representation",
+      "eigen_policy", "eigen_prop", "eigen_tau",
+      "eigen_eta", "low_rank_residual_rebuild_every", "residual_policy",
+      "block_ve_mode", "resam_thresh", "minimum_ve_ratio",
+      "block_ve_keep_history", "nit", "nburn", "nthin", "seed",
+      "nchains", "ncores", "chain_seeds", "keep_chains",
+      ".convergence_spec", ".native_fun", ".native_args", ".input_extra",
+      ".return_raw", ".information_diagnostics",
+      ".diagnostic_block_px", ".diagnostic_block_px_log_scale_sd",
+      "ld_prefix", "annotation", "annotation_info", "A",
+      "theta_prior_sd", "theta_init", "updateTheta")),
+    what = "stblr_block_eigen(...)"
+  )
   legacy_filter <- dots$eigen_filter
   dots$eigen_filter <- NULL
   if (!is.null(legacy_filter) && missing(representation)) {
@@ -263,6 +292,11 @@ stblr_block_eigen <- function(
   marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id %||%
     unlist(Glist$rsids %||% Glist$rsidsLD, use.names = FALSE)
   if (!length(marker_ids)) marker_ids <- paste0("V", seq_along(stats$ww[[1L]]))
+  trait_ids <- stats$trait_names %||% names(stats$wy)
+  if (is.null(trait_ids) || length(trait_ids) != length(stats$wy) ||
+      anyNA(trait_ids) || any(!nzchar(trait_ids)) || anyDuplicated(trait_ids)) {
+    trait_ids <- paste0("T", seq_along(stats$wy))
+  }
   annotation_info <- NULL
   if (logvar) {
     logvar_annotations <- annotations %||% annotation
@@ -286,6 +320,27 @@ stblr_block_eigen <- function(
   memory <- .blr_st_preflight_memory(
     stats = stats, operator = "block_eigen", chain = chain, conv = conv,
     memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
+  resolved_spec <- resolve_blr_spec_from_wrapper(
+    method, "block_eigen", trait_ids, marker_ids, chain,
+    sample_sizes = stats$n,
+    probability_policy = if (method == "sbayesrc")
+      "annotation_probit_stick" else "global",
+    marker_scale_policy = if (logvar) "annotation_log_variance" else
+      resolved_model$effect_scale,
+    residual_policy = residual_policy,
+    component_multipliers = if (
+      resolved_model$prior_kernel %in% c("bayesr", "bayesrc"))
+      dots$mixture_var %||% c(0, 0.01, 0.1, 1) else NULL,
+    update_flags = list(
+      marker_effects = isTRUE(dots$updateB %||% TRUE),
+      residual_variance = isTRUE(dots$updateE %||% TRUE),
+      probability = isTRUE(dots$updatePi %||% TRUE)),
+    numerical_controls = list(
+      representation = representation, eigen_policy = eigen_policy,
+      eigen_prop = eigen_prop, eigen_tau = eigen_tau, eigen_eta = eigen_eta,
+      low_rank_residual_rebuild_every = low_rank_residual_rebuild_every),
+    migration_actions = attr(dots, "migration_actions") %||% character()
+  )
   common <- list(
     stats = stats, Glist = Glist, block_start = block_start,
     representation = representation, eigen_policy = eigen_policy,
@@ -342,6 +397,7 @@ stblr_block_eigen <- function(
                          "ncores", "chain_seeds", "keep_chains",
                          ".convergence_spec")], dots))
     })
+  attr(fit, "blr_resolved_spec") <- resolved_spec
   logvar_diagnostics <- if (logvar) fit$diagnostics$logvar else NULL
   fit <- .blr_finalize_st_public(
     fit, method, "block_eigen", chain, conv, memory_warning_gb, verbose,

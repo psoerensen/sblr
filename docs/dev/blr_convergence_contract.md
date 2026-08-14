@@ -99,3 +99,21 @@ axes. Diagnostics consume no RNG. Serial and parallel execution resolve the
 same logical task-seed table, and worker diagnostics separately report
 requested cores, configured workers, actual sampler team size, and task worker
 IDs.
+
+## Phase 1 implementation status
+
+Phase 1 records, but does not replace, the current ST contracts. The resolved
+specification uses `seed_contract_version = 0` with final legacy task seeds and
+`retention_contract_version = 0` with exact indices
+$1,1+n_{\mathrm{thin}},\ldots$. Scientific traces that currently include
+burn-in remain available under the explicitly named
+`derived$legacy_iteration_quantities`; formal convergence capture remains the
+existing unthinned post-burn sequence. Activating unified seed-contract version
+1 or target retention-contract version 1 remains a Phase 3 trajectory
+migration.
+
+The Phase 1 compute contract represents `memory_limit_bytes` as `NULL`, a
+finite nonnegative scalar (including zero), or positive `Inf`. It does not
+alter native scheduling or retention. Original public call spellings are
+validated exactly before abbreviated iteration, chain, thinning, seed, or core
+controls can be partially matched by R.

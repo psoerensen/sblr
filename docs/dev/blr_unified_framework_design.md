@@ -2,7 +2,7 @@
 
 ## 1. Status and scope
 
-**Status:** `READY FOR MANUAL PHASE 0 APPROVAL`
+**Status:** `PHASE 1 CORRECTED - READY FOR FINAL INDEPENDENT VERIFICATION`
 
 This document defines a shared R/C++ architecture for three distinct analysis
 modes:
@@ -11,9 +11,11 @@ modes:
 2. several independent single-trait posteriors fitted in one invocation;
 3. a genuinely joint multi-trait posterior.
 
-It is a design contract, not an implementation record. No capability described
-as proposed here is current merely because it appears in this document. Current
-support remains determined by executable public dispatch, source, schemas,
+This document defines the target architecture and records completed
+checkpoints. Phase 1 has implemented the shared production R specification,
+validation, schema-v2 conversion, and formatting infrastructure described in
+Section 31. A capability described only as proposed remains unimplemented;
+current support is determined by executable public dispatch, source, schemas,
 tests, and maintained current contracts.
 
 The Phase 0 closeout was prepared from branch `master` at commit
@@ -36,8 +38,11 @@ The design covers:
 - formatted-fit responsibilities;
 - reductions, tests, migration, and implementation phases.
 
-It does not implement any production code, change any public interface, or
-approve a new statistical model.
+Phase 1 did not change native interfaces, statistical kernels, posterior
+targets, seed behavior, or retention behavior. Phase 2 and later native,
+provider/operator, scheduler/RNG, and corrected joint-MT capabilities remain
+proposed, and this document does not approve a new statistical model merely by
+describing it.
 
 ## 2. Authority hierarchy
 
@@ -739,7 +744,7 @@ sample size is permitted only as a validated common-sample reduction.
 | `marker_scale_policy` | Unit, component, MAF-S, annotation, or external $q_j$ descriptor |
 | `marker_covariance_policy` | Scalar, global matrix, regional, or template policy |
 | `residual_policy` | Scalar, diagonal, full common-sample, or overlap-aware |
-| `update_order` | Versioned model transition identifier |
+| `update_order_version` | Registered versioned model transition identifier |
 
 #### `prior`
 
@@ -818,10 +823,9 @@ rather than silently reinterpret it.
 | `execution_mode` | `serial` or `parallel` |
 | `parallelization` | `none`, `chains`, `traits`, or `trait_chains`, validated against analysis mode |
 | `cores` | Positive requested worker count |
-| `schedule` | Versioned deterministic scheduler policy |
-| `scheduler_version` | Explicit deterministic scheduling contract; seed version belongs in `schema` |
-| `memory_limit` | Optional validated preflight limit |
-| `operator_options` | Representation-specific numerical controls only |
+| `scheduler_version` | Explicit deterministic scheduling-contract integer; seed version belongs in `schema` |
+| `memory_limit_bytes` | `NULL`, a finite nonnegative scalar, or positive `Inf` |
+| `operator_numerical_controls` | Uniquely named representation-specific numerical controls only |
 
 Scientific controls must not be hidden in `compute`. For example, retained rank
 changes the approximate likelihood and therefore also appears in provider
@@ -831,11 +835,11 @@ provenance and the resolved model record.
 
 | Field | Requirement |
 |---|---|
-| `posterior_summaries` | Named requested summaries |
+| `posterior_summaries` | Logical scalar selecting the contracted posterior-summary set |
 | `retained_parameters` | Named scientific parameters to retain |
 | `effect_draw_policy` | `none`, selected markers, compact, or full |
 | `state_draw_policy` | `none`, selected markers, compact, or full |
-| `convergence` | Mode and selected quantities |
+| `convergence_policy` | Registered mode and selected-quantity policy |
 | `derived_quantities` | Explicit requested derived statistics |
 | `preserve_chains` | Whether chain identity is retained; raw v2 always preserves chain axes |
 
@@ -1443,7 +1447,7 @@ prior checkpoint, not silently mixing old and new schema or posterior logic.
 | Retention indexing | Retain first post-burn draw; retain every divisible post-burn index; backend-specific | Current kernels have repeated local rules | Index post-burn transitions from one and retain $u\bmod n_{\mathrm{thin}}=0$; source-trace wrapper aliases during migration | Fixes draw counts and iteration indices | Yes, Phase 1 |
 | R-facing dimension order | Task-major; variable-major; draw-first | R convergence use and current arrays favor explicit draw/chain axes | Draw, chain, scientific object axes; marker before trait | Native builder performs one conversion | Yes, Phase 1 |
 | Raw schema versioning | Extend v1 in place; v2 envelope | ST/MT v1 schemas differ and names are overloaded | New `blr_raw` v2 with strict compatibility ID | Requires explicit v1 handling | Yes, Phase 1 |
-| Git provenance | Runtime Git; build-time record; omit | Runtime Git is unreliable for installed packages | Build/load-time record; release fallback to version/build ID and `NA` SHA | Reproducible without fit-time subprocesses | No Phase 1, required before promotion |
+| Git provenance | Runtime Git; build-time record; omit | Runtime Git is unreliable for installed packages | Once-per-session load/development cache; unavailable `git_sha` and `dirty_build` remain present with `NULL`; future build-time injection is a promotion task | Reproducible without fit-time subprocesses | Phase 1 cache implemented; build-time injection remains |
 | Initial MT $V_e$ policy | Fixed full; sampled full; sampled diagonal; staged combination | Common-sample identifies full; fixing $V_e$ isolates the marker/$V_b$ oracle; independent summaries do not identify off-diagonals | Phase 4a uses supplied fixed SPD full $V_e$; Phase 4b adds sampled full inverse-Wishart $V_e$ before promotion; diagonal is a declared reduction and the default class for no-overlap summaries | Gives an exact first oracle without leaving residual uncertainty out of the maintained model | Yes, MT slice |
 | Inverse-Wishart public prior | Mean/df shortcut; explicit $(\nu,\Psi)$; both | Current scale collision is documented | Canonical explicit df and scale; optional R calibration helper with recorded conversion | Removes backend ambiguity | Yes, MT slice |
 | Effect draw retention | Always full; never; policy-based | Full marker draws are costly but selected convergence is useful | Default summaries plus selected/compact draws; full draws opt-in with memory guard | Raw dimensions remain stable when present | No Phase 1 |
@@ -1884,5 +1888,24 @@ Serial versus parallel execution consumes the same resolved table.
 | Initial MT residual | Fixed full SPD in Phase 4a, sampled full IW in Phase 4b before promotion | Research oracle design and identifiability boundary | Phase 4a/4b |
 | V1 migration | Convert only source-known semantics; current hybrid requires rerun | Current raw/source audit | Phase 1 converters and release notes |
 
-All Phase 0 decisions have recommendations. No production phase is marked
-implemented by this status change.
+All Phase 0 decisions have recommendations. This Phase 0 table does not by
+itself mark a production phase implemented.
+
+## 31. Phase 1 R-infrastructure checkpoint
+
+Phase 1 implements the R-side contracts without changing native interfaces or
+scientific kernels:
+
+| Contract | Implemented evidence | Boundary retained |
+|---|---|---|
+| Resolved specification | `R/blr-resolved-spec.R`; exact namespaces, names, resources/providers, execution policy, task-seed shapes, and legacy retention indices | Current wrappers and native arguments remain unchanged |
+| Raw schema v2 | `R/blr-raw-v2.R`; fixed axes, required-present-`NULL`, probability semantics, covariance checks, and cached provenance | Native backends still return schema v1 |
+| ST conversion | Explicit one-chain BayesC/BayesR/BayesRC-family converter used by maintained CSR, BED, block-eigen, and supported annotation wrappers | Multi-chain final effects unavailable in v1; those fits remain legacy |
+| Formatting | Validated v2 precedes Phase 1 alias construction; each alias records one schema-v2 source | No universal ambiguous `pis` field |
+| Legacy trajectories | Seed and retention contract version 0 plus exact final task seeds and retained indices | Unified seed and retention version 1 remain Phase 3 |
+| Provenance | Once-per-session cached package/load metadata; absent Git metadata is present with `NULL` | Build-time Git injection remains a promotion task |
+| MT restriction | Current MT raw is rejected by the v2 converter | Corrected Cheng MT implementation remains Phase 4 |
+
+Phase 1 does not implement shared native operator adapters, unified native
+scheduling, the unified seed derivation, or a corrected joint-MT covariance
+transition. Those roadmap boundaries remain unchanged.

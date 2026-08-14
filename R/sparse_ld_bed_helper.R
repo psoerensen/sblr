@@ -57,6 +57,8 @@ sparseLD_stream_CSR <- function(bed_files, n, cls, out_prefix, rows = NULL,
                                 block_size = 1024L,
                                 nthreads = 1L,
                                 allow_full_ld = FALSE) {
+  .blr_validate_exact_public_call(
+    sys.call(), sys.function(), "sparseLD_stream_CSR()")
   pos_bp_empty <- is.null(pos_bp) ||
     length(pos_bp) == 0L ||
     (is.list(pos_bp) && sum(lengths(pos_bp)) == 0L)
@@ -1291,7 +1293,9 @@ NULL
  if (sum(diag(out$covb)) > 0) out$rb <- cov2cor(out$covb)
  if (sum(diag(out$covg)) > 0) out$rg <- cov2cor(out$covg)
  if (sum(diag(out$cove)) > 0) out$re <- cov2cor(out$cove)
- .stblr_ensure_ld_swap_fields(out)
+ out <- .stblr_ensure_ld_swap_fields(out)
+ if (.blr_st_raw_capture_active()) attr(out, "stblr_raw_v1") <- raw
+ out
 }
 
 .format_stblr_bayesr_fit <- function(fit, nt, m, trait_names, variable_names,
@@ -4663,6 +4667,8 @@ stblr_bed_marker <- function(
 #' @export
 make_summary_stats <- function(Glist, y, chr = NULL, cls = NULL, rows = NULL,
                        scale = TRUE, nthreads = 1) {
+  .blr_validate_exact_public_call(
+    sys.call(), sys.function(), "make_summary_stats()")
   bedfiles <- as.character(Glist$bedfiles)
   has_bedfile <- !is.na(bedfiles) & nzchar(bedfiles)
 
@@ -4920,6 +4926,8 @@ make_sparse_ld <- function(Glist,
                           block_size = 1024,
                           nthreads = 1,
                           allow_full_ld = FALSE) {
+  .blr_validate_exact_public_call(
+    sys.call(), sys.function(), "make_sparse_ld()")
   bedfiles <- as.character(Glist$bedfiles)
   chr <- if (is.null(chr)) which(!is.na(bedfiles) & nzchar(bedfiles)) else as.integer(chr)
 

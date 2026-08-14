@@ -90,7 +90,18 @@ stblr_csr <- function(
   keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
+  .blr_validate_exact_public_call(sys.call(), sys.function(), "stblr_csr()")
+  raw_capture <- .blr_begin_st_raw_capture()
+  on.exit(.blr_end_st_raw_capture(raw_capture), add = TRUE)
   dots <- list(...)
+  dots <- .blr_capture_forwarded_args(
+    dots,
+    accepted = setdiff(names(formals(.stblr_csr_impl)), c(
+      "", "...", "stats", "Glist", "ld_prefix", "method", "nit", "nburn",
+      "nthin", "seed", "nchains", "ncores", "chain_seeds", "keep_chains",
+      ".convergence_spec")),
+    what = "stblr_csr(...)"
+  )
   resolved_model <- .blr_resolve_st_model(
     method, dots, c("sbayesc", "sbayesr"), "csr")
   method <- resolved_model$model
@@ -105,6 +116,28 @@ stblr_csr <- function(
                                     chain$nchains)
   marker_ids <- names(stats$ww[[1L]]) %||% stats$marker_id %||%
     paste0("V", seq_along(stats$ww[[1L]]))
+  trait_ids <- stats$trait_names %||% names(stats$wy)
+  if (is.null(trait_ids) || length(trait_ids) != length(stats$wy) ||
+      anyNA(trait_ids) || any(!nzchar(trait_ids)) || anyDuplicated(trait_ids)) {
+    trait_ids <- paste0("T", seq_along(stats$wy))
+  }
+  sample_sizes <- stats$n
+  can_resolve_spec <- length(trait_ids) > 0L && is.numeric(sample_sizes) &&
+    length(sample_sizes) %in% c(1L, length(trait_ids)) &&
+    !anyNA(sample_sizes) && all(is.finite(sample_sizes)) &&
+    all(sample_sizes > 0)
+  resolved_spec <- if (can_resolve_spec) resolve_blr_spec_from_wrapper(
+    method, "csr", trait_ids, marker_ids, chain, sample_sizes = sample_sizes,
+    probability_policy = resolved_model$probability_policy,
+    marker_scale_policy = resolved_model$effect_scale,
+    component_multipliers = if (resolved_model$prior_kernel == "bayesr")
+      dots$mixture_var %||% c(0, 0.01, 0.1, 1) else NULL,
+    update_flags = list(
+      marker_effects = isTRUE(dots$updateB %||% TRUE),
+      residual_variance = isTRUE(dots$updateE %||% TRUE),
+      probability = isTRUE(dots$updatePi %||% TRUE)),
+    migration_actions = attr(dots, "migration_actions") %||% character()
+  ) else NULL
   trace_spec <- .blr_st_native_trace_spec(
     conv, marker_ids, resolved_model$prior_kernel,
     component_count = if (resolved_model$prior_kernel == "bayesr")
@@ -127,6 +160,7 @@ stblr_csr <- function(
       chain$chain_seeds_native else NULL,
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
     .convergence_spec = trace_spec), dots))
+  attr(fit, "blr_resolved_spec") <- resolved_spec
   fit <- .blr_finalize_st_public(
     fit, method, "csr", chain, conv, memory_warning_gb, verbose, memory)
   fit$input$effect_scale <- resolved_model$effect_scale
@@ -162,7 +196,20 @@ stblr_bed <- function(
   keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
   convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE
 ) {
+  .blr_validate_exact_public_call(sys.call(), sys.function(), "stblr_bed()")
+  raw_capture <- .blr_begin_st_raw_capture()
+  on.exit(.blr_end_st_raw_capture(raw_capture), add = TRUE)
   dots <- list(...)
+  dots <- .blr_capture_forwarded_args(
+    dots,
+    accepted = setdiff(names(formals(.stblr_bed_impl)), c(
+      "", "...", "y", "Glist", "method", "nit", "nburn", "nthin",
+      "seed", "nchains", "ncores", "chain_seeds", "keep_chains",
+      ".convergence_spec", ".diagnostic_updateSigmaSqAlpha",
+      ".diagnostic_allocation_updates_per_cycle",
+      ".diagnostic_annotation_updates_per_cycle")),
+    what = "stblr_bed(...)"
+  )
   if (length(method) > 1L) method <- method[[1L]]
   if (!is.character(method) || length(method) != 1L || is.na(method) ||
       !method %in% c("bayesc", "bayesr", "bayesrc")) {
@@ -173,6 +220,11 @@ stblr_bed <- function(
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
   conv <- .blr_convergence_controls(convergence, convergence_control,
                                     chain$nchains)
+  trait_ids <- colnames(as.matrix(y))
+  if (is.null(trait_ids) || length(trait_ids) != ncol(as.matrix(y)) ||
+      anyNA(trait_ids) || any(!nzchar(trait_ids)) || anyDuplicated(trait_ids)) {
+    trait_ids <- paste0("T", seq_len(ncol(as.matrix(y))))
+  }
   if (length(conv$selected_markers %||% character())) {
     trace_data <- .make_bed_marker_data(
       Glist = Glist, y = y, chr = dots$chr %||% NULL,
@@ -185,6 +237,28 @@ stblr_bed <- function(
     if (!length(bed_marker_ids)) bed_marker_ids <- paste0(
       "V", seq_len(sum(lengths(Glist$cls))))
   }
+  if (anyNA(bed_marker_ids) || any(!nzchar(bed_marker_ids))) {
+    stop("Selected BED marker IDs must be non-missing and nonempty.",
+         call. = FALSE)
+  }
+  if (anyDuplicated(bed_marker_ids)) {
+    stop("Selected BED marker IDs must be unique.", call. = FALSE)
+  }
+  resolved_spec <- resolve_blr_spec_from_wrapper(
+    method, "packed_bed", trait_ids, bed_marker_ids, chain,
+    sample_sizes = nrow(as.matrix(y)),
+    probability_policy = if (method == "bayesrc")
+      "annotation_probit_stick" else "global",
+    marker_scale_policy = if (method %in% c("bayesr", "bayesrc"))
+      "component" else "unit",
+    component_multipliers = if (method %in% c("bayesr", "bayesrc"))
+      dots$mixture_var %||% c(0, 0.01, 0.1, 1) else NULL,
+    update_flags = list(
+      marker_effects = isTRUE(dots$updateB %||% TRUE),
+      residual_variance = isTRUE(dots$updateE %||% TRUE),
+      probability = isTRUE(dots$updatePi %||% TRUE)),
+    migration_actions = attr(dots, "migration_actions") %||% character()
+  )
   trace_spec <- .blr_st_native_trace_spec(
     conv, bed_marker_ids, method,
     annotations = identical(method, "bayesrc"),
@@ -213,6 +287,7 @@ stblr_bed <- function(
       chain$chain_seeds_native else NULL,
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
     .convergence_spec = trace_spec), dots))
+  attr(fit, "blr_resolved_spec") <- resolved_spec
   fit <- .blr_finalize_st_public(
     fit, method, "packed_bed", chain, conv, memory_warning_gb, verbose,
     memory)

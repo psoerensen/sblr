@@ -97,6 +97,10 @@ test_that("stblr_bed fits BayesC BED scheduled chains", {
   expect_equal(fit$input$data_level, "individual")
   expect_equal(fit$input$scheduled, TRUE)
   expect_equal(fit$input$nchains, 1L)
+  raw_v2 <- attr(fit, "blr_raw", exact = TRUE)
+  expect_s3_class(raw_v2, "blr_raw_v2")
+  expect_true(sblr:::validate_blr_raw_v2(raw_v2))
+  expect_identical(dim(raw_v2$final$realised_effects), c(1L, 2L, 1L))
 })
 
 test_that("stblr_bed fits BayesR BED scheduled chains", {

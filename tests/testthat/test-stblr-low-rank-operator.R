@@ -168,6 +168,9 @@ test_that("all scalar block-eigen models run with reduced residual state", {
     expect_identical(fit$input$operator_contract, "block_low_rank_v1")
     expect_true(all(is.finite(fit$bm)))
     expect_true("r" %in% names(fit))
+    raw_v2 <- attr(fit, "blr_raw", exact = TRUE)
+    expect_s3_class(raw_v2, "blr_raw_v2")
+    expect_true(sblr:::validate_blr_raw_v2(raw_v2))
   }
   for (fit in list(bayesc, bayesr, sbayesrc)) {
     expect_identical(fit$input$low_rank_residual_rebuild_every, 100L)
@@ -227,6 +230,11 @@ test_that("projected residual variance updates remain finite", {
   expect_true(all(is.finite(fit$ves)))
   expect_true(all(fit$ves > 0))
   expect_true(all(is.finite(fit$vgs)))
+  raw_v2 <- attr(fit, "blr_raw", exact = TRUE)
+  expect_s3_class(raw_v2, "blr_raw_v2")
+  expect_true(sblr:::validate_blr_raw_v2(raw_v2))
+  expect_identical(raw_v2$provenance$operator_resources[[1L]]$operator_type,
+                   "block_eigen")
 })
 
 test_that("periodic rebuilding preserves fixed-seed scalar transitions", {
