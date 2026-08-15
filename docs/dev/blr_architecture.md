@@ -67,7 +67,13 @@ existing immutable native views as the shared native operator boundary:
 `SparseLdCsrView`, `BlockEigenView`, and `BedPackedGenotypeView`. Phase 3 adds
 one R logical-task plan and one native execution contract around the qualified
 existing ST schedulers. It does not replace representation-specific hot loops
-or their arithmetic. Corrected joint-MT policies remain later phases.
+or their arithmetic. Phase 4a adds one internal qualification-only joint-MT
+policy: two common-sample traits, one packed-BED resource/provider, Cheng
+MT-BayesC$\Pi$, fixed full $V_e$, and an authoritative sampled $V_b$. It
+composes the shared Phase 1--3 infrastructure and existing immutable BED view
+rather than creating a second MT stack. Public legacy MT routes remain
+unchanged. See
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then

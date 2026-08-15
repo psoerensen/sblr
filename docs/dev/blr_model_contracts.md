@@ -137,8 +137,18 @@ $\nu_b>T+1$. A mean-calibration helper uses and records
 $\Psi_b=(\nu_b-T-1)M_b$. No ambiguous prior-covariance shortcut crosses the
 native boundary.
 
-The first corrected Cheng MT-BayesC$\Pi$ slice is staged. Phase 4a uses a
-supplied fixed symmetric positive-definite full $V_e$ for common-sample BED.
+The first corrected Cheng MT-BayesC$\Pi$ slice is implemented as an internal
+qualification-only route. Phase 4a uses a supplied fixed symmetric
+positive-definite full $V_e$ for common-sample BED, joint categorical updates
+over $(0,0),(1,0),(0,1),(1,1)$, null collapse, conditional completion, a
+Dirichlet activity-pattern update, and one authoritative inverse-Wishart
+$V_b$. The exact contract and evidence are in
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
+For this joint activity policy, `posterior$pleiotropic_probabilities` is a
+marker-axis posterior summary in $[0,1]$ and is required to equal the
+markerwise probability of the declared all-traits-active pattern $(1,1)$,
+identified by `1_1`. Models for which pleiotropy is not scientifically defined
+do not manufacture or require this field.
 Phase 4b samples full inverse-Wishart $V_e$ and must finish before promotion as
 the maintained MT replacement. Diagonal $V_e$ remains an explicit reduction;
 independent no-overlap summaries do not identify off-diagonal residual

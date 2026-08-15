@@ -55,6 +55,27 @@ Posterior means and final mutable states are not interchangeable. Primary
 chain 1 owns final state; posterior means pool retained draws across chains.
 `dm` does not encode the component number.
 
+The internal Phase 4a qualification route returns `blr_raw` version 2 directly
+and does not create a promoted formatted MT fit. It preserves draw, chain,
+marker, trait, activity-pattern, observation, and covariance axes. Collapsed
+null-marker latent effects are unavailable values on the fixed latent array
+axes, while realised effects are exactly zero. `activity_pattern_parameters`,
+markerwise `activity_pattern_probabilities`, traitwise `pips`, and
+`pleiotropic_probabilities` have separate meanings. Fixed $V_e$ is recorded as
+input and final state; no residual-covariance draws or posterior mean are
+manufactured. See
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
+
+`posterior$pleiotropic_probabilities` has one finite value in $[0,1]$ per
+declared marker, in global marker order. It is conditionally required when the
+resolved model declares a joint activity-pattern probability policy with an
+identifiable all-traits-active pattern. Its values must equal the corresponding
+column of `posterior$activity_pattern_probabilities`, aligned by the declared
+activity-pattern ID rather than by column position, using a raw-object
+consistency tolerance of $10^{-12}$. Phase 4a declares $(1,1)$ with ID `1_1`.
+The field is not required for single-trait, independent-trait, or other models
+for which pleiotropy is scientifically undefined.
+
 ## Variance and covariance fields
 
 `vbs`, `vgs`, `ves`, `vle`, and `vld` are iteration × trait traces of marker

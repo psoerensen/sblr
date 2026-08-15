@@ -1457,7 +1457,30 @@ reductions remain mandatory test cases.
    pooling or shared covariance-template libraries are the likely production
    model for low-information regions.
 
-## 28. Additional references
+## 28. Phase 4a qualification implementation status
+
+The validated null-collapsed, conditionally completed transition is now
+implemented in one internal qualification-only vertical slice for exactly two
+common-sample traits, packed BED, and supplied fixed full $V_e$. It uses the
+canonical four-pattern joint draw, samples the global Dirichlet
+$\boldsymbol{\Pi}$ state, and performs exactly one authoritative
+inverse-Wishart $V_b$ update from completed non-null latent vectors per
+iteration. Null markers have no production latent draw and contribute neither
+an outer product nor a degree of freedom. No heuristic covariance replaces
+the draw.
+
+This implementation composes the shared resolved-specification,
+resource/provider, task-seed, retention, convergence, worker-diagnostic, and
+raw-v2 contracts. It does not call or repair the legacy public MT route. Exact
+four-pattern algebra, a one-marker enumeration comparison, covariance-
+sufficient-statistic reconstruction, and serial/parallel reproducibility are
+recorded in
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). The
+full-latent R sampler remains the independent reference. Sampled full $V_e$,
+summary-statistic MT likelihoods, MT-BayesR, regional covariance, and
+covariance templates remain deferred.
+
+## 29. Additional references
 
 - Cheng H, Kizilkaya K, Zeng J, Garrick D, Fernando R. Genomic prediction from
   multiple-trait Bayesian regression methods using mixture priors. *Genetics*.

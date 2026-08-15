@@ -92,8 +92,14 @@ Logical task IDs are `chain` for `single_trait` and `joint_multitrait`, and
 `trait_id × chain` for `independent_traits`. Seed-contract version 1 uses the
 exact FNV-1a/SplitMix64 algorithm and reference vectors in the unified design
 and standalone fixtures. Qualified Phase 3 ST routes use this derivation.
-Scheduled CSR, log-variance, group, BayesRC/SBayesRC, and current MT routes
-retain explicit version-0 rules. The version change is a deterministic
+Scheduled CSR, log-variance, group, BayesRC/SBayesRC, and current public legacy
+MT routes retain explicit version-0 rules. The internal Phase 4a Cheng
+qualification route uses a `joint_multitrait` chain task with seed, retention,
+and scheduler contract version 1. Its post-burn convergence capture is
+unthinned, completed-iteration, task-private, and zero-RNG; keeping or
+discarding the trace does not change its scientific state. See
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). The
+version change is a deterministic
 trajectory migration, not a posterior-target change.
 
 Raw v2 convergence arrays preserve `draw × chain` axes plus fixed quantity

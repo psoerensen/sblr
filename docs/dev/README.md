@@ -44,6 +44,7 @@ These are the normal starting set before changing the BLR framework.
 | [`blr_convergence_contract.md`](blr_convergence_contract.md) | convergence modes, traces, diagnostics, and warnings |
 | [`blr_phase2_provider_operator_checkpoint.md`](blr_phase2_provider_operator_checkpoint.md) | implemented shared marker/resource/provider adapters and native-view qualification boundary |
 | [`blr_phase3_execution_checkpoint.md`](blr_phase3_execution_checkpoint.md) | activated logical-task, seed-v1, retention-v1, convergence-capture, and sampler-worker boundary |
+| [`blr_phase4a_cheng_mt_bayesc_checkpoint.md`](blr_phase4a_cheng_mt_bayesc_checkpoint.md) | qualification-only corrected two-trait common-sample BED Cheng MT-BayesC$\Pi$ slice with fixed full $V_e$ |
 | [`blr_test_ownership.md`](blr_test_ownership.md) | permanent tests and validation tiers |
 | [`blr_block_eigen_contract.md`](blr_block_eigen_contract.md) | current scalar retained/dense block-eigen route contract |
 | [`stblr_low_rank_operator_design.md`](stblr_low_rank_operator_design.md) | retained low-rank scalar operator mathematics |

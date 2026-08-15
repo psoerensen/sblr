@@ -12,6 +12,7 @@
   traitwise_state_probabilities = c("marker", "trait", "state"),
   joint_state_probabilities = c("marker", "joint_state"),
   activity_pattern_probabilities = c("marker", "activity_pattern"),
+  pleiotropic_probabilities = c("marker"),
   traitwise_component_assignment_probabilities = c("marker", "trait", "component"),
   joint_component_assignment_probabilities = c("marker", "component"),
   traitwise_probability_parameter_mean = c("trait", "state"),
@@ -21,6 +22,8 @@
   activity_pattern_parameters = c("draw", "chain", "activity_pattern"),
   traitwise_component_probability_parameters = c("draw", "chain", "trait", "component"),
   joint_component_probability_parameters = c("draw", "chain", "component"),
+  marker_covariance_mean = c("trait_row", "trait_col"),
+  residual_covariance_mean = c("trait_row", "trait_col"),
   marker_variance = c("draw", "chain", "trait"),
   residual_variance = c("draw", "chain", "trait"),
   marker_covariance = c("draw", "chain", "trait_row", "trait_col"),
@@ -228,6 +231,76 @@ is_blr_raw_v2 <- function(x) {
   invisible(TRUE)
 }
 
+.blr_pleiotropic_activity_pattern_id <- function(input) {
+  if (!identical(input$data$analysis_mode, "joint_multitrait") ||
+      !identical(input$model$probability_policy,
+                 "joint_activity_dirichlet")) {
+    return(NULL)
+  }
+  state_ids <- input$model$state_space
+  trait_count <- length(input$data$trait_ids)
+  encoded <- gsub("_", "", state_ids, fixed = TRUE)
+  valid <- nchar(encoded) == trait_count & grepl("^[01]+$", encoded)
+  if (!all(valid)) {
+    stop(paste0(
+      "A joint activity-pattern model must declare identifiable binary ",
+      "activity-pattern IDs with one coordinate per trait."), call. = FALSE)
+  }
+  pleiotropic <- which(encoded == paste(rep("1", trait_count),
+                                        collapse = ""))
+  if (length(pleiotropic) != 1L) {
+    stop(paste0(
+      "A joint activity-pattern model must declare exactly one identifiable ",
+      "pleiotropic all-traits-active pattern."), call. = FALSE)
+  }
+  state_ids[[pleiotropic]]
+}
+
+.blr_validate_pleiotropic_probabilities <- function(raw, pattern_id,
+                                                     tolerance = 1e-12) {
+  field <- raw$posterior$pleiotropic_probabilities
+  required <- !is.null(pattern_id)
+  if (required &&
+      (!"pleiotropic_probabilities" %in% names(raw$posterior) ||
+       is.null(field))) {
+    stop(paste0(
+      "posterior$pleiotropic_probabilities is required for a joint ",
+      "activity-pattern model with a declared pleiotropic pattern."),
+      call. = FALSE)
+  }
+  if (is.null(field)) return(invisible(TRUE))
+  if (any(field < 0 | field > 1)) {
+    stop("posterior$pleiotropic_probabilities must lie in [0, 1].",
+         call. = FALSE)
+  }
+  if (!required) return(invisible(TRUE))
+
+  pattern_probability <- raw$posterior$activity_pattern_probabilities
+  if (is.null(pattern_probability)) {
+    stop(paste0(
+      "posterior$activity_pattern_probabilities is required to validate ",
+      "pleiotropic probabilities."), call. = FALSE)
+  }
+  pattern_axis <- match(
+    "activity_pattern", attr(pattern_probability, "dim_axis_names"))
+  pattern_ids <- dimnames(pattern_probability)[[pattern_axis]]
+  pattern_column <- match(pattern_id, pattern_ids)
+  if (is.na(pattern_column)) {
+    stop("The declared pleiotropic activity-pattern ID is unavailable.",
+         call. = FALSE)
+  }
+  expected <- pattern_probability[, pattern_column, drop = TRUE]
+  if (!isTRUE(all.equal(
+      as.numeric(field), as.numeric(expected), tolerance = tolerance,
+      check.attributes = FALSE))) {
+    stop(paste0(
+      "posterior$pleiotropic_probabilities must equal the markerwise ",
+      "probability of declared pleiotropic activity pattern ", pattern_id,
+      "."), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
 .blr_validate_raw_axis_ids <- function(raw) {
   input <- raw$input
   regions <- input$data$statistical_regions
@@ -400,6 +473,7 @@ validate_blr_raw_v2 <- function(raw) {
     stop("blr_raw model or contract versions disagree with input.",
          call. = FALSE)
   }
+  pleiotropic_pattern_id <- .blr_pleiotropic_activity_pattern_id(raw$input)
   .blr_validate_raw_axis_ids(raw)
   forbidden <- c("pi", "pis", "pim", "state_probabilities",
                  "pattern_probabilities")
@@ -424,13 +498,18 @@ validate_blr_raw_v2 <- function(raw) {
                                paste0("posterior$", field))
     }
   }
+  .blr_validate_pleiotropic_probabilities(raw, pleiotropic_pattern_id)
   for (field in intersect(names(.blr_raw_axis_contract), names(raw$draws))) {
     if (!is.null(raw$draws[[field]])) {
+      allow_collapsed_latent <- field == "latent_effects" &&
+        identical(raw$input$model$probability_policy,
+                  "joint_activity_dirichlet")
       .blr_validate_axis_array(raw$draws[[field]],
                                .blr_raw_axis_contract[[field]],
                                paste0("draws$", field),
-                               finite = !field %in% c("independent_trait_states",
-                                                      "joint_states"))
+                               finite = !allow_collapsed_latent &&
+                                 !field %in% c("independent_trait_states",
+                                               "joint_states"))
     }
   }
   for (field in intersect(names(.blr_raw_axis_contract), names(raw$derived))) {
@@ -458,10 +537,14 @@ validate_blr_raw_v2 <- function(raw) {
     residual_covariance = c("chain", "trait_row", "trait_col"))
   for (field in intersect(names(final_axes), names(raw$final))) {
     if (!is.null(raw$final[[field]])) {
+      allow_collapsed_latent <- field == "latent_effects" &&
+        identical(raw$input$model$probability_policy,
+                  "joint_activity_dirichlet")
       .blr_validate_axis_array(raw$final[[field]], final_axes[[field]],
                                paste0("final$", field),
-                               finite = !field %in% c("independent_trait_states",
-                                                      "joint_states"))
+                               finite = !allow_collapsed_latent &&
+                                 !field %in% c("independent_trait_states",
+                                               "joint_states"))
     }
   }
   if (!is.null(raw$posterior$pips) &&
@@ -491,6 +574,70 @@ validate_blr_raw_v2 <- function(raw) {
                                   "final$joint_states", maximum_state)
     .blr_validate_discrete_states(raw$draws$traitwise_activity,
                                   "draws$traitwise_activity", 1L)
+    if (identical(raw$input$model$probability_policy,
+                  "joint_activity_dirichlet") &&
+        !is.null(raw$draws$latent_effects) &&
+        !is.null(raw$draws$joint_states)) {
+      if (is.null(raw$draws$realised_effects)) {
+        stop("Joint activity latent draws require realised-effect draws.",
+             call. = FALSE)
+      }
+      patterns <- rbind(c(0L, 0L), c(1L, 0L), c(0L, 1L), c(1L, 1L))
+      latent <- raw$draws$latent_effects
+      realised <- raw$draws$realised_effects
+      state <- raw$draws$joint_states
+      for (draw in seq_len(dim(state)[1L])) {
+        for (chain in seq_len(dim(state)[2L])) {
+          for (marker in seq_len(dim(state)[3L])) {
+            current <- state[draw, chain, marker] + 1L
+            latent_value <- latent[draw, chain, marker, ]
+            realised_value <- realised[draw, chain, marker, ]
+            if (current == 1L) {
+              if (!all(is.na(latent_value)) || any(realised_value != 0)) {
+                stop("Collapsed null markers require unavailable latent effects and zero realised effects.",
+                     call. = FALSE)
+              }
+            } else if (any(!is.finite(latent_value)) ||
+                       !isTRUE(all.equal(
+                         realised_value,
+                         patterns[current, ] * latent_value,
+                         tolerance = 1e-12, check.attributes = FALSE))) {
+              stop("Completed latent and realised effects disagree with the declared activity pattern.",
+                   call. = FALSE)
+            }
+          }
+        }
+      }
+    }
+    if (identical(raw$input$model$probability_policy,
+                  "joint_activity_dirichlet") &&
+        !is.null(raw$final$latent_effects) &&
+        !is.null(raw$final$joint_states)) {
+      if (is.null(raw$final$realised_effects)) {
+        stop("Joint activity final latent effects require realised effects.",
+             call. = FALSE)
+      }
+      patterns <- rbind(c(0L, 0L), c(1L, 0L), c(0L, 1L), c(1L, 1L))
+      for (chain in seq_len(dim(raw$final$joint_states)[1L])) {
+        for (marker in seq_len(dim(raw$final$joint_states)[2L])) {
+          current <- raw$final$joint_states[chain, marker] + 1L
+          latent_value <- raw$final$latent_effects[chain, marker, ]
+          realised_value <- raw$final$realised_effects[chain, marker, ]
+          if (current == 1L) {
+            if (!all(is.na(latent_value)) || any(realised_value != 0)) {
+              stop("Collapsed final null markers require unavailable latent effects and zero realised effects.",
+                   call. = FALSE)
+            }
+          } else if (any(!is.finite(latent_value)) ||
+                     !isTRUE(all.equal(
+                       realised_value, patterns[current, ] * latent_value,
+                       tolerance = 1e-12, check.attributes = FALSE))) {
+            stop("Final completed latent and realised effects disagree with the declared activity pattern.",
+                 call. = FALSE)
+          }
+        }
+      }
+    }
     .blr_probability_array(raw$posterior$traitwise_state_probabilities,
                            "posterior$traitwise_state_probabilities", 3L)
     .blr_probability_array(raw$posterior$joint_state_probabilities,

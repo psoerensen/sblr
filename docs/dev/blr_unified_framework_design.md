@@ -2,7 +2,7 @@
 
 ## 1. Status and scope
 
-**Status:** `PHASE 3 IMPLEMENTED - READY FOR INDEPENDENT VERIFICATION`
+**Status:** `PHASE 4A QUALIFICATION SLICE IMPLEMENTED - READY FOR INDEPENDENT VERIFICATION`
 
 This document defines a shared R/C++ architecture for three distinct analysis
 modes:
@@ -22,7 +22,12 @@ implementation boundary is recorded in
 adds the versioned logical-task, seed, retention, observational convergence,
 and sampler-local worker-diagnostic contract for the qualified ST routes
 listed in [the Phase 3 checkpoint](blr_phase3_execution_checkpoint.md). A
-capability described only as proposed remains unimplemented; current support
+qualification-only Phase 4a route now composes those shared contracts with the
+corrected two-trait common-sample packed-BED Cheng MT-BayesC$\Pi$ policy and a
+fixed full $V_e$; see
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). It does
+not replace or alter a public legacy MT route. A capability described only as
+proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
 
@@ -1411,8 +1416,11 @@ See [the Phase 3 checkpoint](blr_phase3_execution_checkpoint.md).
 | Rollback boundary | New method/version identifier; old MT route remains clearly deprecated until qualification completes |
 
 The first slice is common-sample BED MT-BayesC$\Pi$. Its first scientific
-sub-checkpoint fixes a supplied symmetric positive-definite full $V_e$, which
-isolates and validates the Cheng marker-state and $V_b$ transition. Before the
+sub-checkpoint is now implemented behind an internal qualification-only entry
+point. It fixes a supplied symmetric positive-definite full $V_e$, which
+isolates and validates the Cheng marker-state and $V_b$ transition. The
+implementation uses joint activity-pattern draws, null collapse, conditional
+completion, and one authoritative inverse-Wishart $V_b$ state. Before the
 vertical slice is promoted as the maintained production replacement, a second
 sub-checkpoint adds a sampled full inverse-Wishart $V_e$ under the explicitly
 declared parameterization; a diagonal policy is retained as a separate

@@ -1600,31 +1600,19 @@ The design phase is complete only when:
 
 The covariance research-design checkpoint is complete for shared and complete
 $T=2$ Cheng patterns and for the heterogeneous independent-provider operator
-abstraction. This does not yet mean that every acceptance criterion for the
-full MTBLR design has been met: decisions D3, D6, D7, and D8 still contain
-contracts needed by production code.
+abstraction. The internal Phase 4a qualification route now implements the
+narrow first vertical slice without changing a public MT route: two
+common-sample traits, packed BED, supplied fixed full $V_e$, joint pattern
+updates, null collapse, conditional completion, sampled
+$\boldsymbol{\Pi}$, and one authoritative sampled $V_b$. Its exact scope and
+evidence are recorded in
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
 
-The next task should specify and implement a narrowly gated production vertical
-slice without changing the established posterior target. Its contract stage
-must precede edits to the production sampler:
-
-1. approve the public inverse-Wishart mean/scale migration;
-2. resolve the initial common-sample $V_e$ policy required by D3;
-3. define the version-2 raw-schema representation for actual $V_b$ and
-   $\boldsymbol{\Pi}$ draws and settle the minimum public prior interface
-   required by D7 and D8;
-4. record the D6 naming and identification boundary for genomic covariance
-   outputs, even if summary-statistic outputs are implemented later;
-5. implement the individual-level joint pattern transition with null collapse
-   and conditional completion;
-6. retain the full-latent standalone sampler as an independent oracle;
-7. define the provider-neutral adapter contract and provider-local maps during
-   the vertical slice, then implement dense/CSR and block-eigen adapters in
-   their declared phases without assuming common cross-products;
-8. add exact pattern, empty-active, BayesR scale, provider-order,
-   full-rank-eigen reduction and traversal-partition tests;
-9. defer region-specific covariance and mash-like templates to separately
-   gated milestones.
+This does not promote the route as the maintained MTBLR replacement. Phase 4b
+must add and qualify sampled full $V_e$ first. Public migration, genomic-
+covariance output identification, heterogeneous summary providers, regional
+covariance, and mash-like templates remain separately gated. The full-latent
+standalone Cheng sampler remains the independent scientific oracle.
 
 ## 24. References
 

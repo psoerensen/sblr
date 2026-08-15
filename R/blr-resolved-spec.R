@@ -450,10 +450,16 @@ validate_blr_resolved_spec <- function(spec) {
     stop("Unsupported blr_resolved_spec schema or dimension version.",
          call. = FALSE)
   }
-  .blr_exact_fields(spec$data, "data", c(
+  data_required <- c(
     "analysis_mode", "trait_ids", "global_markers", "global_alleles",
     "operator_resources", "providers", "provider_maps",
-    "likelihood_regime", "statistical_regions"))
+    "likelihood_regime", "statistical_regions")
+  .blr_exact_names(spec$data, "data", c(data_required, "observation_ids"))
+  missing_data <- setdiff(data_required, names(spec$data))
+  if (length(missing_data)) {
+    stop("data is missing required field(s): ",
+         paste(missing_data, collapse = ", "), ".", call. = FALSE)
+  }
   if (!spec$data$analysis_mode %in% c(
       "single_trait", "independent_traits", "joint_multitrait")) {
     stop("data$analysis_mode is invalid.", call. = FALSE)
@@ -468,6 +474,22 @@ validate_blr_resolved_spec <- function(spec) {
          call. = FALSE)
   }
   .blr_validate_resource_provider_contract(spec$data)
+  if ("observation_ids" %in% names(spec$data)) {
+    observations <- .blr_ids(spec$data$observation_ids,
+                             "data$observation_ids")
+    common_providers <- spec$data$providers[vapply(
+      spec$data$providers,
+      function(provider) identical(provider$likelihood_regime,
+                                    "common_sample"), logical(1))]
+    for (provider in common_providers) {
+      phenotype <- provider$sufficient_statistics$phenotype %||% NULL
+      if (!is.null(phenotype) &&
+          !identical(rownames(phenotype), observations)) {
+        stop("Common-sample provider phenotype rows must match data$observation_ids.",
+             call. = FALSE)
+      }
+    }
+  }
   .blr_exact_fields(spec$model, "model", c(
     "family", "state_space", "null_state_index",
     "effect_storage_convention", "probability_policy", "marker_scale_policy",
@@ -480,7 +502,8 @@ validate_blr_resolved_spec <- function(spec) {
   .blr_character_scalar(spec$model$probability_policy,
                         "model$probability_policy",
                         c("global", "fixed_marker", "learned_logistic",
-                          "group", "annotation_probit_stick"))
+                          "group", "annotation_probit_stick",
+                          "joint_activity_dirichlet"))
   .blr_character_scalar(spec$model$marker_scale_policy,
                         "model$marker_scale_policy",
                         c("unit", "component", "maf_s",

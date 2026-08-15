@@ -164,6 +164,15 @@ test_that("raw v2 retains size-one axes and probability meanings", {
   expect_null(raw$draws$latent_effects)
 })
 
+test_that("non-joint raw v2 does not manufacture pleiotropic probability", {
+  fixture <- phase1_fixture_environment()
+  for (mode in c("single_trait", "independent_traits")) {
+    raw <- fixture$blr_raw_fixture(mode)
+    expect_false("pleiotropic_probabilities" %in% names(raw$posterior))
+    expect_true(sblr:::validate_blr_raw_v2(raw))
+  }
+})
+
 test_that("maintained public CSR fits attach validated raw v2 explicitly", {
   prefix <- phase1_public_csr_prefix(3L)
   on.exit(unlink(paste0(prefix, c(

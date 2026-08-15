@@ -9,6 +9,14 @@ blr_scalar_seeds_cpp <- function(seed, ntraits, nchains, chain_seeds) {
     .Call(`_sblr_blr_scalar_seeds_cpp`, seed, ntraits, nchains, chain_seeds)
 }
 
+mtblr_phase4a_pattern_contract_internal <- function(score, marker_sum_squares, marker_covariance, residual_covariance, activity_pattern_probability) {
+    .Call(`_sblr_mtblr_phase4a_pattern_contract_internal`, score, marker_sum_squares, marker_covariance, residual_covariance, activity_pattern_probability)
+}
+
+mtblr_phase4a_cheng_bed_internal <- function(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, fixed_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract) {
+    .Call(`_sblr_mtblr_phase4a_cheng_bed_internal`, bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, fixed_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }
