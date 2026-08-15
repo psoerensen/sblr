@@ -5,6 +5,7 @@
 
 #include "blr_csr_bayesc_policy.h"
 #include "blr_csr_bayesr_policy.h"
+#include "blr_phase3_execution.h"
 
 Rcpp::List stblr_cpg_omp_csr_block_eigen_with_policy(
   std::vector<std::vector<double>>, std::vector<std::vector<double>>,
@@ -20,7 +21,7 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen_with_policy(
   bool, bool, Rcpp::CharacterVector, int, Rcpp::List,
   Rcpp::Nullable<Rcpp::IntegerVector>, Rcpp::NumericVector,
   Rcpp::IntegerVector, std::string, double, double, std::string, double, int,
-  CsrBayesCPolicyFactory*
+  CsrBayesCPolicyFactory*, const BlrPhase3ExecutionContract&
 );
 
 Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
@@ -38,7 +39,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
   bool, bool, bool, bool, Rcpp::CharacterVector, int, Rcpp::List,
   Rcpp::Nullable<Rcpp::IntegerVector>, Rcpp::NumericVector,
   Rcpp::IntegerVector, std::string, double, double, std::string, double, int,
-  Rcpp::List, CsrBayesRPolicyFactory*
+  Rcpp::List, CsrBayesRPolicyFactory*, const BlrPhase3ExecutionContract&
 );
 
 #endif

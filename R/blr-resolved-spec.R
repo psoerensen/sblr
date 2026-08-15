@@ -653,8 +653,10 @@ validate_blr_resolved_spec <- function(spec) {
     stop("MCMC retained indices or draw count do not match the declared retention contract.",
          call. = FALSE)
   }
-  if (!length(expected_index) && length(spec$output$retained_parameters)) {
-    stop("Retained parameters were requested but no transition is retained.",
+  if (!length(expected_index) &&
+      (length(spec$output$retained_parameters) ||
+       isTRUE(spec$output$posterior_summaries))) {
+    stop("Retained output was requested but no transition is retained.",
          call. = FALSE)
   }
   .blr_exact_names(spec$mcmc$update_flags, "mcmc$update_flags")
@@ -780,7 +782,8 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
                                                               residual_variance = TRUE,
                                                               probability = TRUE),
                                           numerical_controls = list(),
-                                          migration_actions = character()) {
+                                          migration_actions = character(),
+                                          execution_contract_version = 1L) {
   trait_ids <- .blr_ids(trait_ids, "trait_ids")
   marker_ids <- .blr_ids(marker_ids, "marker_ids")
   if (!is.numeric(sample_sizes) ||
@@ -822,7 +825,13 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
     "independent_summary"
   collection <- .blr_new_provider_collection(
     global_map, resources, providers, regime, analysis_mode)
-  retained <- .blr_legacy_retained_indices(chain$nit, chain$nthin)
+  execution_contract_version <- as.integer(.blr_scalar_whole(
+    execution_contract_version, "execution_contract_version", 0, 1))
+  retention_plan <- .blr_retention_plan(
+    chain$nburn, chain$nit, chain$nthin,
+    contract_version = execution_contract_version,
+    retained_requested = TRUE)
+  retained <- retention_plan$post_burn
   tasks <- length(trait_ids) * chain$nchains
   parallelization <- if (tasks <= 1L || chain$ncores <= 1L) "none" else if (
     length(trait_ids) > 1L && chain$nchains > 1L) "trait_chains" else if (
@@ -857,10 +866,14 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
   spec <- new_blr_resolved_spec(
     schema = list(
       name = "blr_resolved_spec", version = 1L,
-      compatibility_id = paste0("phase1-legacy-st-v1;seed=legacy_st_arithmetic_v1;retention=",
-                                if (operator == "packed_bed") "st_bed_v1" else "st_scalar_v1",
+      compatibility_id = paste0(
+        if (execution_contract_version == 1L) "phase3-st-v1" else "phase1-legacy-st-v1",
+        ";seed=", if (execution_contract_version == 1L) "unified_fnv_splitmix_v1" else "legacy_st_arithmetic_v1",
+        ";retention=", if (execution_contract_version == 1L) "postburn_divisible_v1" else
+          if (operator == "packed_bed") "st_bed_v1" else "st_scalar_v1",
                                 if (length(migration_actions)) paste0(";aliases=", paste(migration_actions, collapse = ",")) else ""),
-      seed_contract_version = 0L, retention_contract_version = 0L,
+      seed_contract_version = execution_contract_version,
+      retention_contract_version = execution_contract_version,
       dimension_contract_version = 1L),
     data = list(
       analysis_mode = analysis_mode, trait_ids = trait_ids,
@@ -892,11 +905,16 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
       sampling_iterations = chain$nit, thin_interval = chain$nthin,
       retained_draws = length(retained),
       retained_transition_indices = retained, chains = chain$nchains,
-      seed = chain$seed, task_seeds = .blr_legacy_task_seed_table(chain, trait_ids),
+      seed = chain$seed,
+      task_seeds = if (execution_contract_version == 1L)
+        .blr_task_seeds_v1(
+          chain$seed, analysis_mode, trait_ids, chain$nchains,
+          chain$chain_seeds_requested) else
+        .blr_legacy_task_seed_table(chain, trait_ids),
       update_flags = update_flags),
     compute = list(
       execution_mode = execution, parallelization = parallelization,
-      cores = chain$ncores, scheduler_version = 0L,
+      cores = chain$ncores, scheduler_version = execution_contract_version,
       memory_limit_bytes = NULL,
       operator_numerical_controls = numerical_controls),
     output = list(

@@ -4,6 +4,7 @@
 #include <armadillo>
 
 #include "blr_csr_annotation_bayesc_types.h"
+#include "blr_phase3_execution.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
@@ -22,6 +23,7 @@ struct CsrPriorBayesCLdFriendsView {
 struct CsrPriorBayesCExecutionContext {
  int marker_count=0, trait_count=0;
  int iterations=0, burnin=0, thinning=1, cores=1, seed=0;
+ int chain_index=0, chain_count=1;
  bool use_initial_inclusion=false, use_initial_residual=false;
  bool rebuild_residual_before_update=false;
  bool use_marker_probability=false, use_marker_multiplier=false;
@@ -55,12 +57,16 @@ struct CsrPriorBayesCExecutionContext {
  const std::vector<int>* marker_order=nullptr;
  const std::vector<int>* convergence_markers=nullptr;
  bool convergence_b=false, convergence_d=false;
+ const BlrPhase3ExecutionContract* execution_contract=nullptr;
 };
 
 struct CsrPriorBayesCExecutionResult {
  std::vector<std::vector<std::vector<double>>> raw;
  std::vector<arma::mat> convergence_b;
  std::vector<arma::imat> convergence_d;
+ int requested_thread_count=1, configured_thread_count=1;
+ int actual_team_size=1;
+ std::vector<int> trait_worker_id;
 };
 
 inline void validate_csr_prior_bayesc_execution_context(

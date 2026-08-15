@@ -20,6 +20,10 @@ run_csr_learned_annotation_bayesc(
  const int m=context.marker_count, nt=context.trait_count, K=context.annotation_count;
  const int nit=context.iterations, nburn=context.burnin, nthin=context.thinning;
  const int ncores=context.cores, seed=context.seed;
+ const BlrPhase3ExecutionContract empty_execution_contract;
+ const BlrPhase3ExecutionContract& execution_contract =
+  context.execution_contract ? *context.execution_contract :
+  empty_execution_contract;
  const bool use_d_init=context.use_initial_inclusion;
  const bool use_r_init=context.use_initial_residual;
  const bool rebuild_r_before_updateE=context.rebuild_residual_before_update;
@@ -136,7 +140,12 @@ run_csr_learned_annotation_bayesc(
 #endif
 
   try {
-   std::mt19937 gen_t(static_cast<unsigned int>(seed + 1000003 * (t + 1)));
+   const std::size_t task = static_cast<std::size_t>(
+    t * context.chain_count + context.chain_index);
+   const std::uint32_t task_seed = blr_phase3_task_seed(
+    execution_contract, task,
+    static_cast<std::uint32_t>(seed + 1000003 * (t + 1)));
+   std::mt19937 gen_t(task_seed);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
    arma::rowvec ww_t = ww_mat.row(static_cast<arma::uword>(t));
@@ -475,7 +484,8 @@ run_csr_learned_annotation_bayesc(
      }
     }
 
-    if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+    if (blr_phase3_iteration_is_retained(
+        execution_contract, it, nburn, nthin)) {
      nsamples_t += 1.0;
 
      for (int i = 0; i < m; ++i) {

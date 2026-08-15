@@ -1342,6 +1342,9 @@ sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_si
   double pi_prior_b,
   int ncores,
   int seed,
+  const BlrPhase3ExecutionContract& execution_contract,
+  int chain_index,
+  int chain_count,
   bool updateLDswap = false,
   double ld_swap_prob = 0.05,
   double ld_swap_r2 = 0.8,
@@ -1612,6 +1615,8 @@ sblr::core::CsrLearnedAnnotationBayesCExecutionResult stblr_cpg_omp_csr_annot_si
  context.marker_count=m; context.trait_count=nt; context.annotation_count=K;
  context.iterations=nit; context.burnin=nburn; context.thinning=nthin;
  context.cores=ncores; context.seed=seed;
+ context.chain_index=chain_index; context.chain_count=chain_count;
+ context.execution_contract=&execution_contract;
  context.use_initial_inclusion=use_d_init;
  context.use_initial_residual=use_r_init;
  context.rebuild_residual_before_update=rebuild_r_before_updateE;
@@ -1997,7 +2002,8 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
   bool convergence_annotations=false,
   bool convergence_b=false,
-  bool convergence_d=false
+  bool convergence_d=false,
+  Rcpp::Nullable<Rcpp::List> execution_contract=R_NilValue
 ) {
  if (nchains <= 0) {
   throw std::runtime_error("stblr_cpg_omp_csr_annot: nchains must be positive.");
@@ -2010,6 +2016,10 @@ Rcpp::List stblr_cpg_omp_csr_annot(
  if (!chain_seeds_vec.empty() && static_cast<int>(chain_seeds_vec.size()) != nchains) {
   throw std::runtime_error("stblr_cpg_omp_csr_annot: chain_seeds must have length nchains.");
  }
+ const int trait_count=static_cast<int>(wy.size());
+ const BlrPhase3ExecutionContract phase3 =
+  parse_blr_phase3_execution_contract(
+   execution_contract, trait_count*nchains, nit);
 
  std::vector<std::vector<std::vector<double>>> out;
  std::vector<std::vector<std::vector<double>>> sumsq;
@@ -2057,6 +2067,7 @@ Rcpp::List stblr_cpg_omp_csr_annot(
     annot_update_every, vb_multiplier_min,
     vb_multiplier_max, nub, nue, updateB, updateE, updatePi, adjE, n,
     nit, nburn, nthin, pi_prior_a, pi_prior_b, ncores, chain_seed,
+    phase3, chain, nchains,
     updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves,
     convergence_markers_cpp,convergence_annotations,convergence_b,convergence_d
    );
@@ -2147,6 +2158,30 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   }
  }
 
+ std::vector<int> task_worker_ids(task_count,0);
+ std::vector<int> task_team_sizes(task_count,1);
+ int configured_workers=1;
+ for (int chain=0;chain<nchains;++chain) {
+  configured_workers=std::max(
+   configured_workers,configured_thread_count[static_cast<std::size_t>(chain)]);
+  for (int t=0;t<trait_count;++t) {
+   const std::size_t task=static_cast<std::size_t>(t*nchains+chain);
+   task_worker_ids[task]=trait_worker_id[static_cast<std::size_t>(chain)][
+    static_cast<std::size_t>(t)];
+   task_team_sizes[task]=actual_team_size[static_cast<std::size_t>(chain)];
+  }
+ }
+ auto attach_phase3_workers = [&](Rcpp::List raw_result) {
+  if (phase3.active()) {
+   Rcpp::List diagnostics=raw_result["diagnostics"];
+   diagnostics.push_back(blr_phase3_worker_diagnostics(
+    phase3,ncores,configured_workers,task_worker_ids,task_team_sizes),
+    "workers");
+   raw_result["diagnostics"]=diagnostics;
+  }
+  return raw_result;
+ };
+
  const bool return_chain_summaries = (nchains > 1) || keep_chains;
  if (return_chain_summaries) {
   std::vector<std::vector<std::vector<double>>> extended(keep_chains ? 35 : 30);
@@ -2181,26 +2216,26 @@ Rcpp::List stblr_cpg_omp_csr_annot(
   }
   sblr::core::CsrLearnedAnnotationBayesCExecutionResult execution_result;
   execution_result.raw=std::move(extended);
-  return stblr_csr_learned_annotation_bayesc_result_to_raw(
+  return attach_phase3_workers(stblr_csr_learned_annotation_bayesc_result_to_raw(
    execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
    static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains,
     convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
     convergence_d_trace,convergence_markers_cpp,
     runtime_max_threads_before_request,requested_thread_count,
     configured_thread_count,actual_team_size,trait_worker_id
-  );
+  ));
  }
 
  sblr::core::CsrLearnedAnnotationBayesCExecutionResult execution_result;
  execution_result.raw=std::move(out);
- return stblr_csr_learned_annotation_bayesc_result_to_raw(
+ return attach_phase3_workers(stblr_csr_learned_annotation_bayesc_result_to_raw(
   execution_result, updateLDswap, static_cast<int>(wy[0].size()), static_cast<int>(wy.size()),
   static_cast<int>(A.n_cols), nit, nburn, nthin, nchains, keep_chains,
    convergence_eta_pi,convergence_eta_vb,convergence_b_trace,
    convergence_d_trace,convergence_markers_cpp,
    runtime_max_threads_before_request,requested_thread_count,
    configured_thread_count,actual_team_size,trait_worker_id
- );
+ ));
 }
 
 // // [[Rcpp::depends(RcppArmadillo)]]

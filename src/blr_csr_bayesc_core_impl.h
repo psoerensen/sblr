@@ -474,6 +474,25 @@ inline void validate_csr_bayesc_execution_input(
       controls.chain_seeds.size() != static_cast<std::size_t>(controls.nchains)) {
     throw std::invalid_argument("csr_bayesc chain seeds must match nchains");
   }
+  const std::size_t task_count = traits *
+    static_cast<std::size_t>(controls.nchains);
+  if (controls.seed_contract_version == 1 &&
+      controls.task_seeds.size() != task_count) {
+    throw std::invalid_argument(
+      "csr_bayesc Phase 3 task seeds must match the logical task count"
+    );
+  }
+  if (controls.retention_contract_version == 1) {
+    int previous = 0;
+    for (int index : controls.retained_transition_indices) {
+      if (index <= previous || index < 1 || index > controls.nit) {
+        throw std::invalid_argument(
+          "csr_bayesc Phase 3 retained indices must be ordered post-burn transitions"
+        );
+      }
+      previous = index;
+    }
+  }
   if (controls.use_fixed_maf_effect_scale &&
       (controls.fixed_maf_effect_scale == nullptr ||
        controls.fixed_maf_effect_scale->n_elem != markers)) {
@@ -561,14 +580,18 @@ CsrBayesCResult run_csr_bayesc_engine(
     CsrBayesCChainResult& output = chains[static_cast<std::size_t>(task)];
 #ifdef _OPENMP
     output.thread_used = omp_get_thread_num();
+    output.team_size_used = omp_get_num_threads();
 #endif
     try {
-      const unsigned int task_seed = resolve_scalar_chain_seed(
-        input.controls.seed,
-        static_cast<std::size_t>(input.controls.nchains),
-        input.controls.chain_seeds,
-        identity
-      );
+      const unsigned int task_seed =
+        input.controls.seed_contract_version == 1
+          ? input.controls.task_seeds[static_cast<std::size_t>(task)]
+          : resolve_scalar_chain_seed(
+              input.controls.seed,
+              static_cast<std::size_t>(input.controls.nchains),
+              input.controls.chain_seeds,
+              identity
+            );
       status.seed = task_seed;
       std::mt19937 gen(task_seed);
       auto policy = policy_factory.make(task, trait, chain, m);
@@ -831,8 +854,17 @@ CsrBayesCResult run_csr_bayesc_engine(
             if (input.controls.convergence_d) output.convergence_d(draw,s)=state(marker);
           }
         }
-        if (scalar_iteration_is_retained(
-              iteration, input.controls.nburn, input.controls.nthin)) {
+        const int post_burn = iteration - input.controls.nburn + 1;
+        const bool retained = input.controls.retention_contract_version == 1
+          ? std::binary_search(
+              input.controls.retained_transition_indices.begin(),
+              input.controls.retained_transition_indices.end(),
+              post_burn
+            )
+          : scalar_iteration_is_retained(
+              iteration, input.controls.nburn, input.controls.nthin
+            );
+        if (retained) {
           policy.retain(iteration);
           output.retained_samples += 1.0;
           for (int marker = 0; marker < m; ++marker) {

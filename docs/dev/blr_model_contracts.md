@@ -107,9 +107,16 @@ This representation does not change a model policy or native transition.
 Multiple independent providers and a coupled common-sample multi-trait BED
 provider are structurally representable, but Phase 2 does not combine them in
 a new posterior. Existing native CSR, BED, and block-eigen views remain the
-authoritative operator implementations and are unchanged. In particular, the
-current MT covariance hybrid remains legacy, and no Phase 3 seed, schedule, or
-retention contract is active.
+authoritative operator implementations. Phase 3 layers versioned task seeds,
+retention, and worker observations around qualified ST routes without changing
+likelihood or model policies. The current MT covariance hybrid remains legacy
+and is not routed through the Phase 3 scheduler.
+
+Phase 3 is active for ordinary CSR, packed-BED, and block-eigen BayesC/BayesR,
+plus fixed-marker and learned-logistic BayesC. Scheduled CSR, log-variance,
+group, BayesRC/SBayesRC, and current MT routes retain version 0. A version-1
+seed changes a deterministic trajectory but not the posterior target or the
+within-chain transition.
 
 For marker covariance,
 

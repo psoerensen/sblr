@@ -19,6 +19,7 @@ struct CsrBayesRExecutionContext {
  const arma::rowvec* prior_scale = nullptr; const arma::rowvec* maf_effect_s_log_h_row = nullptr;
  const std::vector<int>* convergence_markers = nullptr;
  const std::vector<double>* phenotype_variance = nullptr;
+ const BlrPhase3ExecutionContract* execution_contract = nullptr;
  sblr::core::BlockResidualControl block_residual_control;
  int K=0,m=0,nt=0,nchains=1,ncores=1,nit=0,nburn=0,nthin=1,seed=1;
  int updateE_start=0,updateE_every=1,ld_swap_moves=1;
@@ -53,6 +54,8 @@ struct CsrBayesRExecutionResult {
  arma::vec final_vb,final_vg,final_ve,maf_effect_s_attempted,maf_effect_s_accepted,nsamples;
  std::vector<arma::mat> comp_prob;
  arma::mat ncomp,covb,covg,cove,vb,vg,ve;
+ std::vector<int> worker_ids, team_sizes;
+ int configured_workers = 1;
 };
 
 // The policy surface is deliberately limited to a marker-scale provider and
@@ -121,6 +124,9 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
 
  const int ntasks = stblr_num_chain_tasks(nt, nchains);
  const int nthreads = stblr_num_threads_for_tasks(ncores, ntasks);
+ const BlrPhase3ExecutionContract empty_execution_contract;
+ const BlrPhase3ExecutionContract& execution_contract = context.execution_contract ?
+  *context.execution_contract : empty_execution_contract;
  const int trace_len = nit + nburn;
  const int block_count = op.block_count();
  if (block_residual_control.uses_block_variance() &&
@@ -186,6 +192,8 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
  std::vector<arma::vec> ncomp_task(static_cast<std::size_t>(ntasks));
  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
  std::vector<std::string> errors(static_cast<std::size_t>(ntasks));
+ std::vector<int> worker_ids(static_cast<std::size_t>(ntasks), 0);
+ std::vector<int> team_sizes(static_cast<std::size_t>(ntasks), 1);
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -194,6 +202,10 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
   const int t = stblr_task_trait(task, nchains);
   const int chain = stblr_task_chain(task, nchains);
   const arma::uword task_u = static_cast<arma::uword>(task);
+#ifdef _OPENMP
+  worker_ids[static_cast<std::size_t>(task)] = omp_get_thread_num();
+  team_sizes[static_cast<std::size_t>(task)] = omp_get_num_threads();
+#endif
 
   try {
    unsigned int task_seed = 0u;
@@ -205,6 +217,7 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
     task_seed = stblr_chain_seed(seed, t, chain);
    }
 
+   task_seed = blr_phase3_task_seed(execution_contract, task, task_seed);
    std::mt19937 gen_t(task_seed);
    std::vector<int> order_t = order;
    std::shuffle(order_t.begin(), order_t.end(), gen_t);
@@ -505,8 +518,8 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
     }
 
     if (block_residual_control.uses_block_variance()) {
-     const bool retain_block =
-      it >= nburn && ((it - nburn) % nthin == 0);
+     const bool retain_block = blr_phase3_iteration_is_retained(
+      execution_contract, it, nburn, nthin);
      sblr::core::update_block_residual_variance(
       op, t, it, retain_block, static_cast<double>(n[t]),
       phenotype_variance[static_cast<std::size_t>(t)], nue, b_t, r_t,
@@ -559,7 +572,8 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
       convergence_aggregate_task[static_cast<std::size_t>(task)]);
     }
 
-    if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+    if (blr_phase3_iteration_is_retained(
+        execution_contract, it, nburn, nthin)) {
      policy.retain(it);
      nsamples_t += 1.0;
      for (int k = 0; k < K; ++k) {
@@ -867,7 +881,8 @@ CsrBayesRExecutionResult run_csr_bayesr_engine(
   std::move(block_ve_resampled_task),std::move(block_ve_reset_task),
   std::move(summary_heritability_task),std::move(block_ve_history_task),
   std::move(final_vb),std::move(final_vg),std::move(final_ve),std::move(maf_effect_s_attempted),std::move(maf_effect_s_accepted),
-  std::move(nsamples),std::move(comp_prob),std::move(ncomp),std::move(covb),std::move(covg),std::move(cove),std::move(vb),std::move(vg),std::move(ve)};
+  std::move(nsamples),std::move(comp_prob),std::move(ncomp),std::move(covb),std::move(covg),std::move(cove),std::move(vb),std::move(vg),std::move(ve),
+  std::move(worker_ids),std::move(team_sizes),nthreads};
 }
 
 #ifdef SBLR_CSR_BAYESR_DEFINE_ORDINARY_RUNNER

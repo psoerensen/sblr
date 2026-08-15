@@ -945,7 +945,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   Rcpp::IntegerVector chain_seeds=Rcpp::IntegerVector::create(),
   Rcpp::IntegerVector convergence_markers=Rcpp::IntegerVector::create(),
   bool convergence_b=false,
-  bool convergence_d=false
+  bool convergence_d=false,
+  Rcpp::Nullable<Rcpp::List> execution_contract=R_NilValue
 ) {
  if (nit <= 0 || nburn < 0) {
   throw std::runtime_error("stblr_cpg_omp_bed_marker_scheduled_chains: nit must be positive and nburn non-negative.");
@@ -1035,6 +1036,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
  if (static_cast<int>(af_cpp.size()) != m) throw std::runtime_error("af must have one value per marker.");
 
  const int njobs = nchains * nt;
+ const BlrPhase3ExecutionContract phase3 =
+  parse_blr_phase3_execution_contract(execution_contract, njobs, nit);
  int nthreads = 1;
 #ifdef _OPENMP
  if (ncores > 0) {
@@ -1067,6 +1070,8 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
 
  std::vector<sblr::core::BedScheduledBayesCChainExecutionResult> job_results(
   static_cast<std::size_t>(njobs));
+ std::vector<int> worker_ids(static_cast<std::size_t>(njobs),0);
+ std::vector<int> team_sizes(static_cast<std::size_t>(njobs),1);
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nthreads) schedule(static)
@@ -1075,10 +1080,17 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   const auto task=sblr::core::make_bed_family_task_index(job,nt);
   const int chain=task.chain;
   const int t=task.trait;
-  const std::uint64_t chain_seed=chain_seeds.size()==0 ?
+  const int canonical_task=t*nchains+chain;
+#ifdef _OPENMP
+  worker_ids[static_cast<std::size_t>(canonical_task)]=omp_get_thread_num();
+  team_sizes[static_cast<std::size_t>(canonical_task)]=omp_get_num_threads();
+#endif
+  const std::uint64_t legacy_seed=chain_seeds.size()==0 ?
    sblr::core::resolve_bed_family_logical_chain_seed(seed,t,chain) :
    static_cast<unsigned int>(chain_seeds[static_cast<std::size_t>(chain)]+
                              1000003*(t+1));
+  const std::uint64_t chain_seed=blr_phase3_task_seed(
+   phase3,canonical_task,static_cast<std::uint32_t>(legacy_seed));
   const sblr::core::BedPackedGenotypeView<FastPackedBedMatrix> genotype{
    G,G.data.data(),G.data.size(),static_cast<std::size_t>(G.m),
    static_cast<std::size_t>(G.n),G.nbytes,G.stride};
@@ -1091,7 +1103,7 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
    genotype,marker_maps,marker_order,y_mat,b_init,B,E,ssb_prior_mat,sse_prior_mat,
    pi,sweep,skip,candidate,nub,nue,adjE,pi_prior_a,pi_prior_b,nit,nburn,nthin,
    rebuild_every,progress_every,chain_seed,t,chain,updateB,updateE,updatePi,
-   convergence_markers_cpp,convergence_b,convergence_d};
+   convergence_markers_cpp,convergence_b,convergence_d,&phase3};
 
   job_results[static_cast<std::size_t>(job)]=
    sblr::core::run_bed_scheduled_bayesc_chain(context);
@@ -1138,6 +1150,13 @@ Rcpp::List stblr_cpg_omp_bed_marker_scheduled_chains(
   job_results,aggregation_context);
  const BedScheduledBayesCBindingMetadata binding_metadata{
   nit,nburn,nthin,n_used,convergence_markers_cpp};
- return stblr_bed_scheduled_bayesc_result_to_raw(
+ Rcpp::List raw=stblr_bed_scheduled_bayesc_result_to_raw(
   execution_result,binding_metadata,job_results);
+ if (phase3.active()) {
+  Rcpp::List diagnostics=raw["diagnostics"];
+  diagnostics.push_back(blr_phase3_worker_diagnostics(
+   phase3,ncores,nthreads,worker_ids,team_sizes),"workers");
+  raw["diagnostics"]=diagnostics;
+ }
+ return raw;
 }

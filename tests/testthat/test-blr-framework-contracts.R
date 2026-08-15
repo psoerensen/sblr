@@ -193,7 +193,8 @@ test_that("maintained public CSR fits attach validated raw v2 explicitly", {
   expect_false(any(c("pi", "pis", "pim") %in%
                      names(spec$prior$probability$values)))
   expect_identical(dim(raw$posterior$pips), c(3L, 2L))
-  expect_identical(dim(raw$draws$marker_variance), c(2L, 1L, 2L))
+  expect_identical(dim(raw$draws$marker_variance), c(1L, 1L, 2L))
+  expect_identical(raw$input$mcmc$retained_transition_indices, 2L)
   expect_identical(dim(raw$final$realised_effects), c(1L, 3L, 2L))
   expect_identical(as.numeric(fit$bm),
                    as.numeric(raw$posterior$realised_effect_mean))

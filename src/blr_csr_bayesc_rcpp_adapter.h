@@ -4,6 +4,7 @@
 #include <RcppArmadillo.h>
 
 #include "blr_csr_bayesc_types.h"
+#include "blr_phase3_execution.h"
 
 struct CsrBayesCRawConversionContext {
  int marker_count;
@@ -21,6 +22,7 @@ struct CsrBayesCRawConversionContext {
  bool estimate_maf_effect_s;
  const std::vector<int>* sample_size;
  const std::vector<int>* convergence_markers;
+ const BlrPhase3ExecutionContract* execution_contract;
 };
 
 Rcpp::List stblr_csr_bayesc_result_to_raw(

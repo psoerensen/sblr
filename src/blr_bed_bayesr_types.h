@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include "blr_phase3_execution.h"
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -102,6 +103,7 @@ struct BedBayesRChainExecutionContext {
  const std::vector<int>& convergence_markers;
  bool convergence_probability, convergence_b, convergence_d;
  bool convergence_component;
+ const BlrPhase3ExecutionContract* execution_contract = nullptr;
 };
 
 template <class PackedGenotype, class MarkerMap>

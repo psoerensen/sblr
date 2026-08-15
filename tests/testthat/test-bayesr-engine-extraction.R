@@ -26,13 +26,15 @@ test_that("BayesR reusable-engine no-op policy preserves frozen trajectory", {
     ".meta.txt", ".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
     ".values.f32.bin"))), add = TRUE)
 
-  fit <- stblr_csr(
-    stats = fixture$stats,
-    Glist = list(sparseLD = list(prefix = fixture$prefix)),
-    method = "sbayesr", mixture_var = c(0, 0.1, 1),
-    nit = 12L, nburn = 4L, nchains = 2L, ncores = 1L, seed = 902L,
-    keep_chains = TRUE, convergence = "none"
-  )
+  fit <- blr_with_legacy_execution(function() {
+    stblr_csr(
+      stats = fixture$stats,
+      Glist = list(sparseLD = list(prefix = fixture$prefix)),
+      method = "sbayesr", mixture_var = c(0, 0.1, 1),
+      nit = 12L, nburn = 4L, nchains = 2L, ncores = 1L, seed = 902L,
+      keep_chains = TRUE, convergence = "none"
+    )
+  })
   trajectory <- fit[c(
     "bm", "dm", "b", "d", "b_final", "d_final", "vbs", "vgs",
     "ves", "vle", "vld", "pis", "pi", "pim",

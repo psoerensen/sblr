@@ -136,8 +136,11 @@ stblr_csr <- function(
       marker_effects = isTRUE(dots$updateB %||% TRUE),
       residual_variance = isTRUE(dots$updateE %||% TRUE),
       probability = isTRUE(dots$updatePi %||% TRUE)),
-    migration_actions = attr(dots, "migration_actions") %||% character()
+    migration_actions = attr(dots, "migration_actions") %||% character(),
+    execution_contract_version = if (isTRUE(dots$scheduled)) 0L else 1L
   ) else NULL
+  execution_contract <- if (is.null(resolved_spec)) NULL else
+    .blr_native_execution_contract(resolved_spec)
   trace_spec <- .blr_st_native_trace_spec(
     conv, marker_ids, resolved_model$prior_kernel,
     component_count = if (resolved_model$prior_kernel == "bayesr")
@@ -155,11 +158,12 @@ stblr_csr <- function(
     stats = stats, Glist = Glist, ld_prefix = ld_prefix,
     method = resolved_model$kernel,
     nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
-    seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
+    seed = chain$seed_native, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
       chain$chain_seeds_native else NULL,
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
-    .convergence_spec = trace_spec), dots))
+    .convergence_spec = trace_spec,
+    .execution_contract = execution_contract), dots))
   attr(fit, "blr_resolved_spec") <- resolved_spec
   fit <- .blr_finalize_st_public(
     fit, method, "csr", chain, conv, memory_warning_gb, verbose, memory)
@@ -257,8 +261,10 @@ stblr_bed <- function(
       marker_effects = isTRUE(dots$updateB %||% TRUE),
       residual_variance = isTRUE(dots$updateE %||% TRUE),
       probability = isTRUE(dots$updatePi %||% TRUE)),
-    migration_actions = attr(dots, "migration_actions") %||% character()
+    migration_actions = attr(dots, "migration_actions") %||% character(),
+    execution_contract_version = if (method %in% c("bayesc", "bayesr")) 1L else 0L
   )
+  execution_contract <- .blr_native_execution_contract(resolved_spec)
   trace_spec <- .blr_st_native_trace_spec(
     conv, bed_marker_ids, method,
     annotations = identical(method, "bayesrc"),
@@ -282,11 +288,12 @@ stblr_bed <- function(
   fit <- do.call(.stblr_bed_impl, c(list(
     y = y, Glist = Glist, method = method,
     nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
-    seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
+    seed = chain$seed_native, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
       chain$chain_seeds_native else NULL,
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
-    .convergence_spec = trace_spec), dots))
+    .convergence_spec = trace_spec,
+    .execution_contract = execution_contract), dots))
   attr(fit, "blr_resolved_spec") <- resolved_spec
   fit <- .blr_finalize_st_public(
     fit, method, "packed_bed", chain, conv, memory_warning_gb, verbose,

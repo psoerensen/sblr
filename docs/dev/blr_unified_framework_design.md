@@ -2,7 +2,7 @@
 
 ## 1. Status and scope
 
-**Status:** `PHASE 2 IMPLEMENTED - READY FOR INDEPENDENT VERIFICATION`
+**Status:** `PHASE 3 IMPLEMENTED - READY FOR INDEPENDENT VERIFICATION`
 
 This document defines a shared R/C++ architecture for three distinct analysis
 modes:
@@ -18,7 +18,10 @@ Section 31. Phase 2 adds the shared R global-marker, immutable operator-resource
 and likelihood-provider adapters and qualifies the existing native immutable
 CSR, BED, and block-eigen views without changing a native call. The exact
 implementation boundary is recorded in
-[the Phase 2 checkpoint](blr_phase2_provider_operator_checkpoint.md). A
+[the Phase 2 checkpoint](blr_phase2_provider_operator_checkpoint.md). Phase 3
+adds the versioned logical-task, seed, retention, observational convergence,
+and sampler-local worker-diagnostic contract for the qualified ST routes
+listed in [the Phase 3 checkpoint](blr_phase3_execution_checkpoint.md). A
 capability described only as proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
@@ -44,11 +47,13 @@ The design covers:
 - reductions, tests, migration, and implementation phases.
 
 Phases 1 and 2 did not change native interfaces, statistical kernels, posterior
-targets, seed behavior, or retention behavior. Phase 2 multi-trait BED support
-is representational only: it does not invoke the current MT sampler. Phase 3
-scheduler/RNG work, heterogeneous multi-provider posterior likelihoods, and
-corrected joint-MT capabilities remain proposed, and this document does not
-approve a new statistical model merely by describing it.
+targets, seed behavior, or retention behavior. Phase 3 deliberately activates
+seed-contract version 1 and retention-contract version 1 for qualified ST
+routes; deterministic trajectories therefore migrate while posterior targets
+and within-task update order do not. Phase 2 multi-trait BED support and Phase
+3 joint-MT task planning are representational only: neither invokes the
+current MT sampler. Heterogeneous multi-provider likelihoods and corrected
+joint-MT capabilities remain proposed.
 
 ## 2. Authority hierarchy
 
@@ -1242,13 +1247,14 @@ unsupported-version error. Silent positional fallback remains prohibited.
 
 ### 18.4 Generated interfaces
 
-Future native entry points will change `R/RcppExports.R` and
-`src/RcppExports.cpp` as generated consequences. The current
+Phase 3 adds an internal nullable execution-contract argument to qualified ST
+native boundaries; `R/RcppExports.R` and `src/RcppExports.cpp` are regenerated
+consequences, while public R formals remain unchanged. Future
 `mtblr_csr_chains_raw_internal()`, `mtblr_block_eigen_chains_raw_internal()`,
 `mtblr_bed_chains_internal()`, and corresponding scalar scheduled entry points
 are expected to become adapters to a small number of versioned
 resolved-spec/result boundaries. Old wrappers remain until their vertical slice
-is qualified. Generated files are not changed at the design checkpoint.
+is qualified. Current MT generated boundaries are unchanged by Phase 3.
 
 ## 19. Reductions and validation strategy
 
@@ -1379,6 +1385,12 @@ No statistical kernel changes in this phase.
 | Rollback boundary | One operator representation at a time behind the common contract |
 
 ### Phase 3: shared scheduler, RNG, retention, and diagnostics
+
+**Implemented boundary:** qualified ordinary CSR BayesC/BayesR, packed-BED
+BayesC/BayesR, block-eigen BayesC/BayesR, fixed-marker BayesC, and
+learned-logistic BayesC use contract version 1. Scheduled CSR, log-variance,
+group, BayesRC/SBayesRC, and all current MT routes remain explicitly version 0.
+See [the Phase 3 checkpoint](blr_phase3_execution_checkpoint.md).
 
 | Item | Detail |
 |---|---|
@@ -1883,8 +1895,8 @@ Serial versus parallel execution consumes the same resolved table.
 | Contract | Decision | Evidence | Remaining implementation phase |
 |---|---|---|---|
 | Analysis/execution | Separate closed enumerations and task identities | Source task topology plus executable fixtures | Phase 1 resolver; Phase 3 scheduler |
-| Retention | Target version 1 uses divisible post-burn indices; legacy rules remain versioned | Native source trace and exact fixture calculations | Phase 1 adapters; deliberate migration checkpoint |
-| RNG | Exact FNV-1a/SplitMix64 seed-contract version 1; zero valid | Constants, pseudocode, and eight fixed vectors | Phase 3 implementation; wrapper trajectory migration later |
+| Retention | Target version 1 uses divisible post-burn indices; legacy rules remain versioned | Native source trace and exact fixture calculations | Phase 3 active on qualified ST routes; remaining routes migrate explicitly |
+| RNG | Exact FNV-1a/SplitMix64 seed-contract version 1; zero valid | Constants, pseudocode, and eight fixed vectors | Phase 3 active on qualified ST routes; remaining routes migrate explicitly |
 | Resolved input | `blr_resolved_spec` version 1 with seven exact namespaces | Field tables and fixtures | Phase 1 |
 | Resource/provider | Immutable reusable resources; providers own nonempty trait sets and statistics | Shared BED and joint-provider fixtures | Phase 2 |
 | Raw result | `blr_raw` version 2 with fixed names and axes | Single/independent/joint raw fixtures | Phase 1 builder and converters |
@@ -1908,7 +1920,7 @@ scientific kernels:
 | Raw schema v2 | `R/blr-raw-v2.R`; fixed axes, required-present-`NULL`, probability semantics, covariance checks, and cached provenance | Native backends still return schema v1 |
 | ST conversion | Explicit one-chain BayesC/BayesR/BayesRC-family converter used by maintained CSR, BED, block-eigen, and supported annotation wrappers | Multi-chain final effects unavailable in v1; those fits remain legacy |
 | Formatting | Validated v2 precedes Phase 1 alias construction; each alias records one schema-v2 source | No universal ambiguous `pis` field |
-| Legacy trajectories | Seed and retention contract version 0 plus exact final task seeds and retained indices | Unified seed and retention version 1 remain Phase 3 |
+| Legacy trajectories | Seed and retention contract version 0 plus exact final task seeds and retained indices | Preserved for explicitly ineligible routes and old-schema interpretation |
 | Provenance | Once-per-session cached package/load metadata; absent Git metadata is present with `NULL` | Build-time Git injection remains a promotion task |
 | MT restriction | Current MT raw is rejected by the v2 converter | Corrected Cheng MT implementation remains Phase 4 |
 

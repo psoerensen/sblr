@@ -12,6 +12,7 @@
 #include "blr_csr_bayesc_operator_adapter.h"
 #include "blr_csr_bayesc_policy.h"
 #include "blr_csr_bayesc_rcpp_adapter.h"
+#include "blr_phase3_execution.h"
 #define SBLR_CSR_BAYESC_CORE_IMPL_TRANSLATION_UNIT 1
 // Emit the ordinary no-op-policy entry point from the reusable engine.
 #include "blr_csr_bayesc_core_impl.h"
@@ -828,6 +829,10 @@ Rcpp::List stblr_csr_bayesc_result_to_raw(
   );
  }
  const std::vector<int>& convergence_markers = *context.convergence_markers;
+ const BlrPhase3ExecutionContract legacy_execution;
+ const BlrPhase3ExecutionContract& execution_contract =
+  context.execution_contract == nullptr
+   ? legacy_execution : *context.execution_contract;
 
 #ifdef _OPENMP
  const int nthreads = stblr_num_threads_for_tasks(
@@ -992,6 +997,21 @@ Rcpp::List stblr_csr_bayesc_result_to_raw(
   Rcpp::Named("seconds_max") = seconds_max,
   Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap) : R_NilValue
  );
+ if (execution_contract.active()) {
+  diagnostics.push_back([&]() {
+   std::vector<int> worker_ids(result.chains.size(), 0);
+   std::vector<int> team_sizes(result.chains.size(), 1);
+   for (std::size_t task = 0; task < result.chains.size(); ++task) {
+    worker_ids[task] = result.chains[task].thread_used;
+    team_sizes[task] = result.chains[task].team_size_used;
+   }
+   return blr_phase3_worker_diagnostics(
+    execution_contract, ncores,
+    stblr_num_threads_for_tasks(ncores, static_cast<int>(result.chains.size())),
+    worker_ids, team_sizes
+   );
+  }(), "workers");
+ }
 
  Rcpp::List chains = R_NilValue;
  if (keep_chains) {
@@ -1184,7 +1204,8 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
   const std::vector<int>& convergence_markers,
   bool convergence_b,
   bool convergence_d,
-  const std::vector<int>& order
+  const std::vector<int>& order,
+  const BlrPhase3ExecutionContract& execution_contract
 ) {
  sblr::core::ResolvedSpec specification;
  specification.data.marker_count = static_cast<std::size_t>(m);
@@ -1243,6 +1264,13 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
  input.controls.ncores = ncores;
  input.controls.seed = seed;
  input.controls.chain_seeds = chain_seeds;
+ input.controls.seed_contract_version = execution_contract.seed_contract_version;
+ input.controls.retention_contract_version =
+  execution_contract.retention_contract_version;
+ input.controls.scheduler_version = execution_contract.scheduler_version;
+ input.controls.task_seeds = execution_contract.task_seeds;
+ input.controls.retained_transition_indices =
+  execution_contract.retained_transition_indices;
  input.controls.keep_chains = keep_chains;
  input.controls.update_marker_variance = updateB;
  input.controls.update_residual_variance = updateE;
@@ -1279,7 +1307,7 @@ static Rcpp::List stblr_csr_bayesc_run_canonical(
  const CsrBayesCRawConversionContext conversion = {
   m, nt, nit, nburn, nthin, ncores, nchains, keep_chains,
   pi_prior_a, pi_prior_b, updateLDswap, use_maf_effect_s_prior_scale,
-  estimate_maf_effect_s, &n, &convergence_markers
+  estimate_maf_effect_s, &n, &convergence_markers, &execution_contract
  };
  return stblr_csr_bayesc_result_to_raw(result, conversion);
 }
@@ -1338,6 +1366,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
   bool convergence_d,
   int low_rank_residual_rebuild_every,
   CsrBayesCPolicyFactory* policy_factory,
+  const BlrPhase3ExecutionContract& execution_contract,
   OperatorFactory make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1670,7 +1699,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    ld_swap_prob, ld_swap_moves, use_maf_effect_s_prior_scale, prior_scale,
    estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
    maf_effect_s_proposal_sd, maf_effect_s_log_h_row, convergence_markers,
-   convergence_b, convergence_d, order
+   convergence_b, convergence_d, order, execution_contract
   );
  } else {
 
@@ -1752,6 +1781,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
  std::vector<int> failed(static_cast<std::size_t>(ntasks), 0);
  std::vector<std::string> errors(static_cast<std::size_t>(ntasks));
  std::vector<int> thread_used(static_cast<std::size_t>(ntasks), 0);
+ std::vector<int> team_size_used(static_cast<std::size_t>(ntasks), 1);
  std::vector<double> task_seconds(static_cast<std::size_t>(ntasks), 0.0);
 
  int nthreads = 1;
@@ -1791,6 +1821,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
 #ifdef _OPENMP
   const double wall_start = omp_get_wtime();
   thread_used[static_cast<std::size_t>(task)] = omp_get_thread_num();
+  team_size_used[static_cast<std::size_t>(task)] = omp_get_num_threads();
 #else
   const double wall_start = 0.0;
   thread_used[static_cast<std::size_t>(task)] = 0;
@@ -1808,6 +1839,7 @@ Rcpp::List stblr_cpg_omp_csr_impl(
    } else {
     task_seed = stblr_chain_seed(seed, t, chain);
    }
+   task_seed = blr_phase3_task_seed(execution_contract, task, task_seed);
    std::mt19937 gen_t(task_seed);
    CsrBayesCPolicyHandle policy = policy_factory
     ? policy_factory->make(task, t, chain, m)
@@ -2160,7 +2192,8 @@ Rcpp::List stblr_cpg_omp_csr_impl(
     // -------------------------------------------------------
     // Store posterior summaries
     // -------------------------------------------------------
-    if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+    if (blr_phase3_iteration_is_retained(
+        execution_contract, it, nburn, nthin)) {
      policy.retain(it);
      nsamples_t += 1.0;
 
@@ -2539,6 +2572,11 @@ Rcpp::List stblr_cpg_omp_csr_impl(
   Rcpp::Named("seconds_max") = seconds_max,
   Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap) : R_NilValue
  );
+ if (execution_contract.active()) {
+  diagnostics.push_back(blr_phase3_worker_diagnostics(
+   execution_contract, ncores, nthreads, thread_used, team_size_used),
+   "workers");
+ }
  if (operator_context.diagnostics.size() > 0) {
   diagnostics["block_eigen"] = operator_context.diagnostics;
  }
@@ -2746,7 +2784,8 @@ Rcpp::List stblr_cpg_omp_csr(
   Rcpp::Nullable<Rcpp::NumericVector> maf_effect_s_log_h = R_NilValue,
   Rcpp::IntegerVector convergence_markers = Rcpp::IntegerVector::create(),
   bool convergence_b = false,
-  bool convergence_d = false
+  bool convergence_d = false,
+  Rcpp::Nullable<Rcpp::List> execution_contract = R_NilValue
 ) {
  auto make_csr_operator = [&](int m,
                               const std::vector<double>& xx,
@@ -2777,6 +2816,9 @@ Rcpp::List stblr_cpg_omp_csr(
   );
  };
 
+ const int expected_tasks = static_cast<int>(wy.size()) * nchains;
+ const BlrPhase3ExecutionContract phase3 =
+  parse_blr_phase3_execution_contract(execution_contract, expected_tasks, nit);
  return stblr_cpg_omp_csr_impl(
   wy, ww, yy, b_init, d_init, use_d_init, r_init, use_r_init,
   rebuild_r_before_updateE, ld_prefix, B, E, ssb_prior, sse_prior, pi,
@@ -2787,7 +2829,7 @@ Rcpp::List stblr_cpg_omp_csr(
   maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers), convergence_b,
   convergence_d,
-  0, nullptr, make_csr_operator
+  0, nullptr, phase3, make_csr_operator
  );
 }
 
@@ -2850,7 +2892,8 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen_with_policy(
   std::string representation,
   double eigen_prop,
   int low_rank_residual_rebuild_every,
-  CsrBayesCPolicyFactory* policy_factory
+  CsrBayesCPolicyFactory* policy_factory,
+  const BlrPhase3ExecutionContract& execution_contract
 ) {
  if (updateLDswap) {
   throw std::runtime_error(
@@ -2961,7 +3004,8 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen_with_policy(
   maf_effect_s_prior, maf_effect_s_proposal_sd, maf_effect_s_log_h,
   Rcpp::as<std::vector<int>>(convergence_markers), convergence_b,
   convergence_d,
-  low_rank_residual_rebuild_every, policy_factory, make_block_eigen_operator
+  low_rank_residual_rebuild_every, policy_factory, execution_contract,
+  make_block_eigen_operator
  );
 }
 
@@ -3024,8 +3068,12 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   double eigen_eta = 0.0,
   std::string representation = "dense_reconstructed",
   double eigen_prop = 0.995,
-  int low_rank_residual_rebuild_every = 100
+  int low_rank_residual_rebuild_every = 100,
+  Rcpp::Nullable<Rcpp::List> execution_contract = R_NilValue
 ) {
+ const int expected_tasks = static_cast<int>(wy.size()) * nchains;
+ const BlrPhase3ExecutionContract phase3 =
+  parse_blr_phase3_execution_contract(execution_contract, expected_tasks, nit);
  return stblr_cpg_omp_csr_block_eigen_with_policy(
   std::move(wy), std::move(ww), std::move(yy), std::move(b_init),
   std::move(d_init), use_d_init, std::move(r_init), use_r_init,
@@ -3040,7 +3088,7 @@ Rcpp::List stblr_cpg_omp_csr_block_eigen(
   convergence_b, convergence_d, bed_files, n_bed, cls, rows, af,
   block_start, std::move(eigen_filter), eigen_tau, eigen_eta,
   std::move(representation), eigen_prop, low_rank_residual_rebuild_every,
-  nullptr
+  nullptr, phase3
  );
 }
 

@@ -325,7 +325,12 @@ BedScheduledBayesCChainExecutionResult run_bed_scheduled_bayesc_chain(
     }
    }
 
-   if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+   const BlrPhase3ExecutionContract empty_execution_contract;
+   const BlrPhase3ExecutionContract& execution_contract =
+    context.execution_contract ? *context.execution_contract :
+    empty_execution_contract;
+   if (blr_phase3_iteration_is_retained(
+       execution_contract, it, nburn, nthin)) {
     nsamples_t += 1.0;
 
     update_log_inv_cpo_gaussian_scheduled_chains(e_t, ve_t, log_inv_cpo_t);

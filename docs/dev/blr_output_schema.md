@@ -192,3 +192,18 @@ The temporary formatted aliases have exactly these sources:
 
 These aliases are read-only views in meaning. In particular, `fit$pis` is not
 manufactured as a universal schema-v2 probability field.
+
+### Phase 3 execution metadata
+
+Eligible newly created ST fits record `seed_contract_version = 1`,
+`retention_contract_version = 1`, and `scheduler_version = 1` in the resolved
+input and raw-v2 provenance. They also record canonical logical task IDs,
+exact final uint32 task seeds, exact retained post-burn transition indices,
+and unthinned convergence iteration indices. Native worker diagnostics keep
+requested cores, configured workers, actual sampler-region team size, and one
+zero-based worker ID per canonical task as distinct fields.
+
+These fields describe execution and do not change posterior field meanings.
+Scheduled CSR, log-variance, group, BayesRC/SBayesRC, multi-chain raw-v2 gates,
+and current MT results remain explicitly version 0 or legacy as applicable.
+Current MT covariance is never promoted to `draws$marker_covariance`.

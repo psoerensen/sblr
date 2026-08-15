@@ -74,6 +74,11 @@ struct CsrBayesCControls {
   int ncores = 1;
   int seed = 1;
   std::vector<int> chain_seeds;
+  int seed_contract_version = 0;
+  int retention_contract_version = 0;
+  int scheduler_version = 0;
+  std::vector<std::uint32_t> task_seeds;
+  std::vector<int> retained_transition_indices;
   bool keep_chains = false;
   bool update_marker_variance = true;
   bool update_residual_variance = true;
@@ -148,6 +153,7 @@ struct CsrBayesCChainResult {
   double maf_effect_s_attempted = 0.0;
   double maf_effect_s_accepted = 0.0;
   int thread_used = 0;
+  int team_size_used = 1;
   double seconds = 0.0;
 };
 

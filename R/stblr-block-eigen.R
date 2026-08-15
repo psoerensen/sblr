@@ -320,6 +320,7 @@ stblr_block_eigen <- function(
   memory <- .blr_st_preflight_memory(
     stats = stats, operator = "block_eigen", chain = chain, conv = conv,
     memory_warning_gb = memory_warning_gb, trace_spec = trace_spec)
+  execution_version <- if (!logvar && method %in% c("sbayesc", "sbayesr")) 1L else 0L
   resolved_spec <- resolve_blr_spec_from_wrapper(
     method, "block_eigen", trait_ids, marker_ids, chain,
     sample_sizes = stats$n,
@@ -339,8 +340,10 @@ stblr_block_eigen <- function(
       representation = representation, eigen_policy = eigen_policy,
       eigen_prop = eigen_prop, eigen_tau = eigen_tau, eigen_eta = eigen_eta,
       low_rank_residual_rebuild_every = low_rank_residual_rebuild_every),
-    migration_actions = attr(dots, "migration_actions") %||% character()
+    migration_actions = attr(dots, "migration_actions") %||% character(),
+    execution_contract_version = execution_version
   )
+  execution_contract <- .blr_native_execution_contract(resolved_spec)
   common <- list(
     stats = stats, Glist = Glist, block_start = block_start,
     representation = representation, eigen_policy = eigen_policy,
@@ -351,13 +354,14 @@ stblr_block_eigen <- function(
     resam_thresh = resam_thresh, minimum_ve_ratio = minimum_ve_ratio,
     block_ve_keep_history = block_ve_keep_history,
     nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
-    seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
+    seed = chain$seed_native, nchains = chain$nchains, ncores = chain$ncores,
     chain_seeds = if (length(chain$chain_seeds_native))
       chain$chain_seeds_native else NULL,
     keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
-    .convergence_spec = trace_spec)
+    .convergence_spec = trace_spec,
+    .execution_contract = execution_contract)
   fit <- if (logvar) {
-    logvar_common <- c(common, list(
+    logvar_common <- c(common[setdiff(names(common), ".execution_contract")], list(
       annotation_info = annotation_info,
       theta_prior_sd = theta_prior_sd,
       theta_init = theta_init,

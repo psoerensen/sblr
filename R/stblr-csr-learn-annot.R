@@ -275,6 +275,7 @@ stblr_csr_learn_annot <- function(
   annot_update_every = 10,
   vb_multiplier_min = 1e-3,
   vb_multiplier_max = 1e3,
+  .execution_contract = NULL,
   .convergence_spec = NULL
 ) {
  .validate_ld_swap_args(
@@ -444,7 +445,8 @@ stblr_csr_learn_annot <- function(
   convergence_markers = .convergence_spec$markers %||% integer(),
   convergence_annotations = isTRUE(.convergence_spec$annotations),
   convergence_b = isTRUE(.convergence_spec$b),
-  convergence_d = isTRUE(.convergence_spec$d)
+  convergence_d = isTRUE(.convergence_spec$d),
+  execution_contract = .execution_contract
  )
 
  if (.is_stblr_raw(raw_fit)) {

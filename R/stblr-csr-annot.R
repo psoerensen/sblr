@@ -370,7 +370,8 @@ stblr_csr_annot <- function(
    update_flags = list(
     marker_effects = isTRUE(updateB), residual_variance = isTRUE(updateE),
     probability = isTRUE(updatePi), annotation_scale = isTRUE(updateTheta)),
-   migration_actions = attr(extra, "migration_actions") %||% character()
+   migration_actions = attr(extra, "migration_actions") %||% character(),
+   execution_contract_version = 0L
   )
   .validate_ld_swap_args(
    updateLDswap, ld_swap_prob, ld_swap_r2, ld_swap_max_friends, ld_swap_moves)
@@ -380,7 +381,7 @@ stblr_csr_annot <- function(
    theta_prior_sd = theta_prior_sd, theta_init = theta_init,
    updateTheta = updateTheta, h2 = h2, adjE = adjE,
    nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
-   ncores = chain$ncores, seed = chain$seed, nchains = chain$nchains,
+   ncores = chain$ncores, seed = chain$seed_native, nchains = chain$nchains,
    keep_chains = chain$keep_chains || conv$compute || conv$keep_traces,
    chain_seeds = if (length(chain$chain_seeds_native))
     chain$chain_seeds_native else NULL,
@@ -476,7 +477,7 @@ stblr_csr_annot <- function(
   nburn = chain$nburn,
   nthin = chain$nthin,
   ncores = chain$ncores,
-  seed = chain$seed,
+  seed = chain$seed_native,
   nchains = chain$nchains,
   chain_seeds = if (length(chain$chain_seeds_native))
     chain$chain_seeds_native else NULL,
@@ -499,8 +500,13 @@ stblr_csr_annot <- function(
   update_flags = list(
    marker_effects = isTRUE(updateB), residual_variance = isTRUE(updateE),
    probability = isTRUE(updatePi)),
-  migration_actions = attr(extra, "migration_actions") %||% character()
+  migration_actions = attr(extra, "migration_actions") %||% character(),
+  execution_contract_version = if (annotation_model %in% c("prior", "learned"))
+   1L else 0L
  )
+ if (annotation_model %in% c("prior", "learned")) {
+  common$.execution_contract <- .blr_native_execution_contract(resolved_spec)
+ }
  finish <- function(fit) {
   attr(fit, "blr_resolved_spec") <- resolved_spec
   model <- if (annotation_model == "sbayesrc") "sbayesrc" else "sbayesc"

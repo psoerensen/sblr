@@ -20,7 +20,7 @@
   nit <- .blr_scalar_integer(nit, "nit")
   nburn <- .blr_scalar_integer(nburn, "nburn", 0L)
   nthin <- .blr_scalar_integer(nthin, "nthin")
-  seed <- .blr_scalar_integer(seed, "seed")
+  seed <- .blr_scalar_whole(seed, "seed", 0, 4294967295)
   nchains <- .blr_scalar_integer(nchains, "nchains")
   ncores <- .blr_scalar_integer(ncores, "ncores")
   keep_chains <- .blr_logical_scalar(keep_chains, "keep_chains")
@@ -32,13 +32,15 @@
         anyNA(chain_seeds) || any(!is.finite(chain_seeds)) ||
         any(chain_seeds != floor(chain_seeds)) ||
         any(chain_seeds < -2147483648) ||
-        any(chain_seeds > .Machine$integer.max)) {
-      stop("chain_seeds must contain exactly one signed 32-bit integer per chain.",
+        any(chain_seeds > 4294967295)) {
+      stop("chain_seeds must contain exactly one signed-int32 or uint32-compatible value per chain.",
            call. = FALSE)
     }
-    native <- unname(chain_seeds)
+    native <- unname(ifelse(chain_seeds > .Machine$integer.max,
+                            chain_seeds - 4294967296, chain_seeds))
   }
   list(nit = nit, nburn = nburn, nthin = nthin, seed = seed,
+       seed_native = if (seed > .Machine$integer.max) 0L else as.integer(seed),
        nchains = nchains, ncores = ncores,
        chain_seeds_requested = requested, chain_seeds_native = native,
        keep_chains = keep_chains)
@@ -785,7 +787,7 @@
       trait_names, TRUE, TRUE, chain$nchains, chain$nit, conv$thresholds,
       groups = groups, updated = updated)
   }
-  if (conv$compute) {
+  if (conv$compute || conv$keep_traces) {
     bundle <- tryCatch(
       .blr_st_convergence_bundle(
         original_chains, trait_names, model, operator,
@@ -823,11 +825,30 @@
   } else {
     fit$convergence <- unavailable_result()
   }
-  task_seeds <- .blr_st_task_seeds(chain, length(trait_names))
+  resolved_spec <- attr(fit, "blr_resolved_spec", exact = TRUE)
+  task_seeds <- if (!is.null(resolved_spec) &&
+                    identical(resolved_spec$schema$seed_contract_version, 1L)) {
+    resolved_spec$mcmc$task_seeds
+  } else .blr_st_task_seeds(chain, length(trait_names))
+  task_seed_vector <- if (is.matrix(task_seeds)) as.vector(t(task_seeds)) else
+    as.vector(task_seeds)
   fit$chains <- if (chain$keep_chains) .blr_flatten_st_chains(
-    original_chains, trait_names, model, operator, task_seeds) else NULL
+    original_chains, trait_names, model, operator, task_seed_vector) else NULL
   fit$input$chain_seeds_requested <- chain$chain_seeds_requested
-  fit$input$task_seeds_resolved <- as.numeric(task_seeds)
+  fit$input$task_seeds_resolved <- task_seed_vector
+  fit$input$logical_task_ids <- if (!is.null(resolved_spec))
+    .blr_logical_task_plan(
+      resolved_spec$data$analysis_mode, resolved_spec$data$trait_ids,
+      resolved_spec$mcmc$chains)$task_id else NULL
+  fit$input$seed_contract_version <-
+    resolved_spec$schema$seed_contract_version %||% 0L
+  fit$input$retention_contract_version <-
+    resolved_spec$schema$retention_contract_version %||% 0L
+  fit$input$scheduler_version <- resolved_spec$compute$scheduler_version %||% 0L
+  fit$input$retained_transition_indices <-
+    resolved_spec$mcmc$retained_transition_indices %||%
+      .blr_legacy_retained_indices(chain$nit, chain$nthin)
+  fit$input$convergence_iteration_indices <- seq_len(chain$nit)
   fit$input$nchains <- chain$nchains
   fit$input$ncores <- chain$ncores
   fit$input$keep_chains <- chain$keep_chains
@@ -879,5 +900,8 @@
       native = native_diagnostics,
       packed_bed = fit$bed_diagnostics %||% NULL),
     memory_estimate = memory)
+  for (name in c("rb", "rg", "re")) if (!name %in% names(out)) {
+    out[name] <- list(NULL)
+  }
   .blr_phase1_finalize_st(out, chain, model, operator)
 }

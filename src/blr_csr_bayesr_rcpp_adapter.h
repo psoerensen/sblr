@@ -4,6 +4,7 @@
 #include <RcppArmadillo.h>
 
 #include "blr_csr_bayesr_policy.h"
+#include "blr_phase3_execution.h"
 
 Rcpp::List stblr_cpg_omp_csr_bayesr_with_policy(
  std::vector<std::vector<double>> wy,
@@ -56,7 +57,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_with_policy(
  bool convergence_b,
  bool convergence_d,
  bool convergence_component,
- CsrBayesRPolicyFactory* policy_factory
+ CsrBayesRPolicyFactory* policy_factory,
+ const BlrPhase3ExecutionContract& execution_contract
 );
 
 #endif

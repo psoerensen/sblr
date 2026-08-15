@@ -105,7 +105,8 @@ Rcpp::List stblr_cpg_omp_csr_logvar_bayesr(
   ld_swap_moves, R_NilValue, false, 0.0,
   Rcpp::NumericVector::create(-3.0, 2.0), 0.35, R_NilValue,
   convergence_markers, convergence_probability, convergence_b,
-  convergence_d, convergence_component, &policy_factory);
+  convergence_d, convergence_component, &policy_factory,
+  BlrPhase3ExecutionContract());
 
  Rcpp::List meta = raw["meta"];
  meta["model"] = "sbayesr_logvar";

@@ -54,7 +54,7 @@ legacy schema fallback are not supported. Formatted fits use model-semantics
 version 2. See `blr_output_schema.md` for field ownership and
 `blr_convergence_contract.md` for observational trace capture.
 
-## Approved Phase 0 target architecture and Phase 2 bridge
+## Approved unified architecture and Phase 3 execution bridge
 
 The preceding paragraphs describe the native implementation. The approved
 target is the shared architecture in
@@ -64,9 +64,10 @@ validated raw-v2 bridge for eligible maintained ST fits. Phase 2 implements
 the common R global-marker map, immutable operator-resource, and likelihood-
 provider adapters used by those resolved specifications. It also adopts the
 existing immutable native views as the shared native operator boundary:
-`SparseLdCsrView`, `BlockEigenView`, and `BedPackedGenotypeView`. Native
-version-1 results and all native calls remain unchanged. Shared scheduling,
-retention, and corrected joint-MT policies remain later phases.
+`SparseLdCsrView`, `BlockEigenView`, and `BedPackedGenotypeView`. Phase 3 adds
+one R logical-task plan and one native execution contract around the qualified
+existing ST schedulers. It does not replace representation-specific hot loops
+or their arithmetic. Corrected joint-MT policies remain later phases.
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then
@@ -119,3 +120,19 @@ by the Phase 1 converter and must not be
 reused in the target statistical policy or reported as authoritative sampled
 $V_b$. Later phases replace the joint MT transition at an explicit scientific
 checkpoint.
+
+## Phase 3 execution boundary
+
+Qualified ordinary CSR, packed-BED, block-eigen, fixed-marker annotation, and
+learned-logistic annotation routes resolve canonical logical tasks, exact
+uint32 task seeds, and retained post-burn indices before native dispatch.
+Existing static OpenMP loops consume those immutable descriptors; task-local
+RNGs and mutable states remain private. Sampler-local diagnostics distinguish
+requested cores, configured workers, actual team size, and the worker ID of
+each canonical task without consuming RNG.
+
+Scheduled CSR, log-variance annotation, group annotation, BayesRC/SBayesRC,
+and current MT samplers remain version 0. The joint-MT task topology can be
+constructed and tested without calling the legacy MT covariance sampler.
+Provider, block, set, and region traversal are not logical execution modes.
+See [the Phase 3 checkpoint](blr_phase3_execution_checkpoint.md).

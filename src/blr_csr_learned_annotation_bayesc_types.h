@@ -4,6 +4,7 @@
 #include <armadillo>
 
 #include "blr_csr_annotation_bayesc_types.h"
+#include "blr_phase3_execution.h"
 
 #include <cstddef>
 #include <stdexcept>
@@ -18,6 +19,7 @@ namespace sblr { namespace core {
 struct CsrLearnedAnnotationBayesCExecutionContext {
  int marker_count=0, trait_count=0, annotation_count=0;
  int iterations=0, burnin=0, thinning=1, cores=1, seed=0;
+ int chain_index=0, chain_count=1;
  bool use_initial_inclusion=false, use_initial_residual=false;
  bool rebuild_residual_before_update=false;
  bool learn_probability=true, learn_multiplier=false;
@@ -56,6 +58,7 @@ struct CsrLearnedAnnotationBayesCExecutionContext {
  const std::vector<int>* convergence_markers=nullptr;
  bool convergence_annotations=false, convergence_b=false,
   convergence_d=false;
+ const BlrPhase3ExecutionContract* execution_contract=nullptr;
 };
 
 struct CsrLearnedAnnotationBayesCExecutionResult {

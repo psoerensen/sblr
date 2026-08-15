@@ -16,6 +16,10 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
  const int m=context.marker_count, nt=context.trait_count;
  const int nit=context.iterations, nburn=context.burnin;
  const int nthin=context.thinning, ncores=context.cores, seed=context.seed;
+ const BlrPhase3ExecutionContract empty_execution_contract;
+ const BlrPhase3ExecutionContract& execution_contract =
+  context.execution_contract ? *context.execution_contract :
+  empty_execution_contract;
  const bool use_d_init=context.use_initial_inclusion;
  const bool use_r_init=context.use_initial_residual;
  const bool rebuild_r_before_updateE=context.rebuild_residual_before_update;
@@ -91,6 +95,7 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
  std::vector<int> failed(static_cast<std::size_t>(nt), 0);
  std::vector<std::string> errors(static_cast<std::size_t>(nt));
  std::vector<int> thread_used(static_cast<std::size_t>(nt), 0);
+ std::vector<int> team_size_used(static_cast<std::size_t>(nt), 1);
  std::vector<double> trait_seconds(static_cast<std::size_t>(nt), 0.0);
 
  int nthreads = 1;
@@ -110,13 +115,19 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
 #ifdef _OPENMP
   const double wall_start = omp_get_wtime();
   thread_used[static_cast<std::size_t>(t)] = omp_get_thread_num();
+  team_size_used[static_cast<std::size_t>(t)] = omp_get_num_threads();
 #else
   const double wall_start = 0.0;
   thread_used[static_cast<std::size_t>(t)] = 0;
 #endif
 
   try {
-   std::mt19937 gen_t(static_cast<unsigned int>(seed + 1000003 * (t + 1)));
+   const std::size_t task = static_cast<std::size_t>(
+    t * context.chain_count + context.chain_index);
+   const std::uint32_t task_seed = blr_phase3_task_seed(
+    execution_contract, task,
+    static_cast<std::uint32_t>(seed + 1000003 * (t + 1)));
+   std::mt19937 gen_t(task_seed);
 
    arma::rowvec wy_t = wy_mat.row(static_cast<arma::uword>(t));
    arma::rowvec ww_t = ww_mat.row(static_cast<arma::uword>(t));
@@ -366,7 +377,8 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
     // -------------------------------------------------------
     // Store posterior summaries
     // -------------------------------------------------------
-    if ((it >= nburn) && ((it - nburn) % nthin == 0)) {
+    if (blr_phase3_iteration_is_retained(
+        execution_contract, it, nburn, nthin)) {
      nsamples_t += 1.0;
 
      for (int i = 0; i < m; ++i) {
@@ -589,6 +601,11 @@ inline CsrPriorBayesCExecutionResult run_csr_prior_bayesc(
  execution_result.raw = std::move(result);
  execution_result.convergence_b=std::move(convergence_b);
  execution_result.convergence_d=std::move(convergence_d);
+ execution_result.requested_thread_count=ncores;
+ execution_result.configured_thread_count=nthreads;
+ execution_result.actual_team_size=*
+  std::max_element(team_size_used.begin(),team_size_used.end());
+ execution_result.trait_worker_id=std::move(thread_used);
  return execution_result;
 
 }

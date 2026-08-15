@@ -1431,7 +1431,8 @@ NULL
   trait_names = NULL,
   variable_names = NULL,
   keep_diagnostics = TRUE,
-  .convergence_spec = NULL
+  .convergence_spec = NULL,
+  .execution_contract = NULL
 ) {
  if (!is.numeric(nchains) || length(nchains) != 1L ||
      !is.finite(nchains) || nchains < 1 || nchains != floor(nchains)) {
@@ -1935,6 +1936,7 @@ stblr_csr_bayesr <- function(
   r_init = NULL,
   rebuild_r_before_updateE = FALSE,
   .convergence_spec = NULL,
+  .execution_contract = NULL,
   ...
 ) {
  dots <- list(...)
@@ -2110,6 +2112,7 @@ stblr_csr_bayesr <- function(
   ,convergence_b = isTRUE(.convergence_spec$b)
   ,convergence_d = isTRUE(.convergence_spec$d)
   ,convergence_component = isTRUE(.convergence_spec$component)
+  ,execution_contract = .execution_contract
  )
 
  if (.is_stblr_raw(raw)) {
@@ -2480,7 +2483,8 @@ stblr_csr_bayesr <- function(
                       mixture_var = NULL, pi = NULL, alpha = NULL,
                       updateE_start = NULL, updateE_every = NULL,
                       use_comp_init = FALSE, comp_init = NULL,
-                      .convergence_spec = NULL) {
+                      .convergence_spec = NULL,
+                      .execution_contract = NULL) {
  if (length(method) != 1L || is.na(method) ||
      !method %in% c("bayesc", "bayesr")) {
   stop("method must be one of 'bayesc' or 'bayesr'.")
@@ -2559,7 +2563,8 @@ stblr_csr_bayesr <- function(
    maf_effect_s_init = maf_effect_s_init,
    maf_effect_s_prior = maf_effect_s_prior,
    maf_effect_s_proposal_sd = maf_effect_s_proposal_sd
-   ,.convergence_spec = .convergence_spec
+   ,.convergence_spec = .convergence_spec,
+   .execution_contract = .execution_contract
   )
   if (!is.null(mixture_var)) br_args$mixture_var <- mixture_var
   if (!is.null(pi)) br_args$pi <- pi
@@ -2687,7 +2692,8 @@ stblr_csr_bayesr <- function(
    maf_effect_s_log_h = maf_effect_s_info$log_h,
    convergence_markers = .convergence_spec$markers %||% integer(),
    convergence_b = isTRUE(.convergence_spec$b),
-   convergence_d = isTRUE(.convergence_spec$d)
+   convergence_d = isTRUE(.convergence_spec$d),
+   execution_contract = .execution_contract
   )))
  }
  if (.is_stblr_raw(raw)) {
@@ -2842,7 +2848,8 @@ stblr_csr_bayesr <- function(
     identical(representation, "low_rank")) 100L else 0L,
   updateLDswap = FALSE, ld_swap_prob = 0.05,
   ld_swap_r2 = 0.8, ld_swap_max_friends = 50,
-  ld_swap_moves = 1, .convergence_spec = NULL
+  ld_swap_moves = 1, .convergence_spec = NULL,
+  .execution_contract = NULL
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
   eigen_filter <- eigen_filter[1L]
@@ -2968,7 +2975,8 @@ stblr_csr_bayesr <- function(
   eigen_eta = eigen_eta,
   representation = representation,
   eigen_prop = eigen_prop,
-  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every
+  low_rank_residual_rebuild_every = low_rank_residual_rebuild_every,
+  execution_contract = .execution_contract
  )
  if (.is_stblr_raw(raw)) {
   if (isTRUE(maf_effect_s_info$fixed)) {
@@ -3073,7 +3081,8 @@ stblr_csr_bayesr <- function(
   resam_thresh = 1.1,
   minimum_ve_ratio = 0.7,
   block_ve_keep_history = FALSE,
-  .convergence_spec = NULL
+  .convergence_spec = NULL,
+  .execution_contract = NULL
 ) {
  if (identical(eigen_filter, c("hard_truncate", "ridge_fixed", "ridge_lw"))) {
   eigen_filter <- eigen_filter[1L]
@@ -3221,7 +3230,8 @@ stblr_csr_bayesr <- function(
     resam_thresh = resam_thresh,
     minimum_ve_ratio = minimum_ve_ratio,
     block_ve_keep_history = block_ve_keep_history
-  )
+  ),
+  execution_contract = .execution_contract
  )
  if (!.is_stblr_raw(raw)) {
   .stblr_stop_unsupported_raw_output("csr_bayesr_block_eigen")
@@ -4004,6 +4014,7 @@ stblr_bed_marker <- function(
   read_block_size = 64,
   progress_every = 0,
   .convergence_spec = NULL,
+  .execution_contract = NULL,
   .diagnostic_updateSigmaSqAlpha = TRUE,
   .diagnostic_allocation_updates_per_cycle = 1L,
   .diagnostic_annotation_updates_per_cycle = 1L,
@@ -4437,7 +4448,8 @@ stblr_bed_marker <- function(
    variable_names = dat$variable_names,
    keep_diagnostics = TRUE,
    .convergence_spec = .convergence_spec,
-   chain_seeds = chain_seeds
+   chain_seeds = chain_seeds,
+   .execution_contract = .execution_contract
   )
   fit$input <- c(list(
    method = "bayesr",
@@ -4549,7 +4561,8 @@ stblr_bed_marker <- function(
   chain_seeds = if (is.null(chain_seeds)) integer() else as.integer(chain_seeds),
   convergence_markers = .convergence_spec$markers %||% integer(),
   convergence_b = isTRUE(.convergence_spec$b),
-  convergence_d = isTRUE(.convergence_spec$d)
+  convergence_d = isTRUE(.convergence_spec$d),
+  execution_contract = .execution_contract
  )
  raw <- do.call(stblr_cpg_omp_bed_marker_scheduled_chains, common)
  if (.is_stblr_raw(raw)) {

@@ -8,6 +8,7 @@
 #include "st_csr_common.h"
 #include "st_ld_operator.h"
 #include "blr_csr_bayesr_rcpp_adapter.h"
+#include "blr_phase3_execution.h"
 
 #include <algorithm>
 #include <chrono>
@@ -1304,6 +1305,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   double minimum_ve_ratio,
   bool block_ve_keep_history,
   CsrBayesRPolicyFactory* policy_factory,
+  const BlrPhase3ExecutionContract& execution_contract,
   MakeOperator make_operator
 ) {
  const int nt = static_cast<int>(wy.size());
@@ -1547,6 +1549,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
  execution_context.prior_scale=&prior_scale; execution_context.maf_effect_s_log_h_row=&maf_effect_s_log_h_row;
  execution_context.convergence_markers=&convergence_markers;
  execution_context.phenotype_variance=&phenotype_variance;
+ execution_context.execution_contract=&execution_contract;
  execution_context.block_residual_control=block_residual_control;
  execution_context.K=K; execution_context.m=m; execution_context.nt=nt; execution_context.nchains=nchains;
  execution_context.ncores=ncores; execution_context.nit=nit; execution_context.nburn=nburn; execution_context.nthin=nthin;
@@ -1743,6 +1746,11 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_impl(
   Rcpp::Named("ld_swap") = updateLDswap ? Rcpp::wrap(ld_swap_diagnostics) : R_NilValue,
   Rcpp::Named("updateE") = updateE_diagnostics
  );
+ if (execution_contract.active()) {
+  diagnostics.push_back(blr_phase3_worker_diagnostics(
+   execution_contract, ncores, execution_result.configured_workers,
+   execution_result.worker_ids, execution_result.team_sizes), "workers");
+ }
  if (operator_context.diagnostics.size() > 0) {
   diagnostics["block_eigen"] = operator_context.diagnostics;
  }
@@ -2006,7 +2014,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_with_policy(
   bool convergence_b,
   bool convergence_d,
   bool convergence_component,
-  CsrBayesRPolicyFactory* policy_factory
+  CsrBayesRPolicyFactory* policy_factory,
+  const BlrPhase3ExecutionContract& execution_contract
 ) {
  auto make_csr_operator = [&](int m,
                               const std::vector<double>& xx,
@@ -2044,6 +2053,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_with_policy(
   convergence_probability, convergence_b, convergence_d,
   convergence_component, 0, std::vector<double>(),
   "global_projected_legacy", "fixVe", 1.1, 0.7, false, policy_factory,
+  execution_contract,
   make_csr_operator
  );
 }
@@ -2099,8 +2109,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   bool convergence_probability = false,
   bool convergence_b = false,
   bool convergence_d = false,
-  bool convergence_component = false
+  bool convergence_component = false,
+  Rcpp::Nullable<Rcpp::List> execution_contract = R_NilValue
 ) {
+ const int expected_tasks = static_cast<int>(wy.size()) * nchains;
+ const BlrPhase3ExecutionContract phase3 =
+  parse_blr_phase3_execution_contract(execution_contract, expected_tasks, nit);
  return stblr_cpg_omp_csr_bayesr_with_policy(
   std::move(wy), std::move(ww), std::move(yy), std::move(b_init),
   std::move(comp_init), use_comp_init, std::move(r_init), use_r_init,
@@ -2113,7 +2127,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr(
   ld_swap_moves, maf_effect_s_prior_scale, estimate_maf_effect_s,
   maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd,
   maf_effect_s_log_h, convergence_markers, convergence_probability,
-  convergence_b, convergence_d, convergence_component, nullptr);
+  convergence_b, convergence_d, convergence_component, nullptr, phase3);
 }
 
 Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
@@ -2180,7 +2194,8 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
   double eigen_prop,
   int low_rank_residual_rebuild_every,
   Rcpp::List block_residual_config,
-  CsrBayesRPolicyFactory* policy_factory
+  CsrBayesRPolicyFactory* policy_factory,
+  const BlrPhase3ExecutionContract& execution_contract
 ) {
  const bool has_block_residual_config = block_residual_config.size() > 0;
  Rcpp::NumericVector phenotype_variance = has_block_residual_config ?
@@ -2305,6 +2320,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
   Rcpp::as<std::vector<double>>(phenotype_variance),
   residual_policy, block_ve_mode, resam_thresh,
   minimum_ve_ratio, block_ve_keep_history, policy_factory,
+  execution_contract,
   make_block_eigen_operator
  );
 }
@@ -2373,8 +2389,12 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   std::string representation = "dense_reconstructed",
   double eigen_prop = 0.995,
   int low_rank_residual_rebuild_every = 100,
-  Rcpp::List block_residual_config = R_NilValue
+  Rcpp::List block_residual_config = R_NilValue,
+  Rcpp::Nullable<Rcpp::List> execution_contract = R_NilValue
 ) {
+ const int expected_tasks = static_cast<int>(wy.size()) * nchains;
+ const BlrPhase3ExecutionContract phase3 =
+  parse_blr_phase3_execution_contract(execution_contract, expected_tasks, nit);
  return stblr_cpg_omp_csr_bayesr_block_eigen_with_policy(
   std::move(wy), std::move(ww), std::move(yy), std::move(b_init),
   std::move(comp_init), use_comp_init, std::move(r_init), use_r_init,
@@ -2390,7 +2410,7 @@ Rcpp::List stblr_cpg_omp_csr_bayesr_block_eigen(
   convergence_b, convergence_d, convergence_component, bed_files, n_bed,
   cls, rows, af, block_start, std::move(eigen_filter), eigen_tau, eigen_eta,
   std::move(representation), eigen_prop, low_rank_residual_rebuild_every,
-  block_residual_config, nullptr
+  block_residual_config, nullptr, phase3
  );
 }
 

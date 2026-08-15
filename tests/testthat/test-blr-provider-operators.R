@@ -345,6 +345,6 @@ test_that("maintained resolved specifications use Phase 2 constructors", {
   expect_s3_class(resolved$data$providers[[1L]],
                   "blr_likelihood_provider_v1")
   expect_true(sblr:::validate_blr_resolved_spec(resolved))
-  expect_identical(resolved$schema$seed_contract_version, 0L)
-  expect_identical(resolved$schema$retention_contract_version, 0L)
+  expect_identical(resolved$schema$seed_contract_version, 1L)
+  expect_identical(resolved$schema$retention_contract_version, 1L)
 })

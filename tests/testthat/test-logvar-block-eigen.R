@@ -95,9 +95,10 @@ logvar_block_gate_hash <- function(value) {
 
 test_that("ordinary retained block BayesC trajectory remains frozen", {
   fixture <- make_logvar_block_gate_fixture()
-  fit <- do.call(stblr_block_eigen, c(
-    logvar_block_gate_common(fixture),
-    list(
+  fit <- blr_with_legacy_execution(function() {
+    do.call(stblr_block_eigen, c(
+      logvar_block_gate_common(fixture),
+      list(
       method = "sbayesc",
       pi_init = 0.35,
       pi_prior_mean = 0.35,
@@ -110,8 +111,9 @@ test_that("ordinary retained block BayesC trajectory remains frozen", {
         selected_marker_quantities = c("b", "d"),
         keep_traces = TRUE
       )
-    )
-  ))
+      )
+    ))
+  })
   expect_identical(
     logvar_block_gate_hash(logvar_block_gate_trajectory(fit)),
     "0e54c7ec18d4183c1351f657efcfeab2"
@@ -120,9 +122,10 @@ test_that("ordinary retained block BayesC trajectory remains frozen", {
 
 test_that("ordinary retained block BayesR trajectory remains frozen", {
   fixture <- make_logvar_block_gate_fixture()
-  fit <- do.call(stblr_block_eigen, c(
-    logvar_block_gate_common(fixture),
-    list(
+  fit <- blr_with_legacy_execution(function() {
+    do.call(stblr_block_eigen, c(
+      logvar_block_gate_common(fixture),
+      list(
       method = "sbayesr",
       mixture_var = c(0, 0.05, 0.2),
       pi = c(0.6, 0.25, 0.15),
@@ -138,8 +141,9 @@ test_that("ordinary retained block BayesR trajectory remains frozen", {
         selected_marker_quantities = c("b", "d", "component"),
         keep_traces = TRUE
       )
-    )
-  ))
+      )
+    ))
+  })
   expect_identical(
     logvar_block_gate_hash(logvar_block_gate_trajectory(fit, bayesr = TRUE)),
     "aa329728ea6a3defd6d61f37ca1cea59"
@@ -169,7 +173,9 @@ test_that("zero-theta retained block BayesC-LV is an ordinary trajectory", {
     chain_seeds = c(1811L, 2811L), keep_chains = TRUE,
     convergence = "none"
   )
-  ordinary <- do.call(stblr_block_eigen, common)
+  ordinary <- blr_with_legacy_execution(function() {
+    do.call(stblr_block_eigen, common)
+  })
   lv <- do.call(stblr_block_eigen, c(common, list(
     annotations = matrix(c(0, 1, 1), ncol = 1,
       dimnames = list(fixture$stats$marker_names, "binary")),
@@ -193,7 +199,9 @@ test_that("zero-theta retained block BayesR-LV is an ordinary trajectory", {
     nchains = 2L, ncores = 1L, chain_seeds = c(1812L, 2812L),
     keep_chains = TRUE, convergence = "none"
   )
-  ordinary <- do.call(stblr_block_eigen, common)
+  ordinary <- blr_with_legacy_execution(function() {
+    do.call(stblr_block_eigen, common)
+  })
   lv <- do.call(stblr_block_eigen, c(common, list(
     annotations = matrix(c(0, 1, 1), ncol = 1,
       dimnames = list(fixture$stats$marker_names, "binary")),

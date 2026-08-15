@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include "blr_phase3_execution.h"
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -134,6 +135,7 @@ struct BedScheduledBayesCChainExecutionContext {
  const std::vector<int>& convergence_markers;
  bool convergence_b;
  bool convergence_d;
+ const BlrPhase3ExecutionContract* execution_contract = nullptr;
 };
 
 template <class PackedGenotype>

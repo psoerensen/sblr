@@ -116,7 +116,7 @@ Rcpp::List stblr_cpg_omp_block_eigen_logvar_bayesr(
     convergence_d, convergence_component, bed_files, n_bed, cls, rows, af,
     block_start, std::move(eigen_filter), eigen_tau, eigen_eta,
     std::move(representation), eigen_prop, low_rank_residual_rebuild_every,
-    block_residual_config, &policy_factory
+    block_residual_config, &policy_factory, BlrPhase3ExecutionContract()
   );
   return decorate_logvar_raw(
     raw, outputs, m, nt, p, nit + nburn, nchains, theta_prior_sd,

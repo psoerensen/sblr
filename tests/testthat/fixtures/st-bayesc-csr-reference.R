@@ -125,7 +125,8 @@ st_bayesc_csr_reference_inputs <- function(traits) {
   list(stats = stats, glist = glist)
 }
 
-st_bayesc_csr_reference_native <- function(config, prefix, inputs) {
+st_bayesc_csr_reference_native <- function(config, prefix, inputs,
+                                            execution_contract = NULL) {
   stats <- inputs$stats
   nt <- length(stats$yy)
   m <- stats$m
@@ -158,7 +159,8 @@ st_bayesc_csr_reference_native <- function(config, prefix, inputs) {
     keep_chains = config$keep_chains,
     chain_seeds = if (is.null(config$chain_seeds)) integer() else config$chain_seeds,
     updateLDswap = FALSE,
-    maf_effect_s_prior_scale = selection$prior_scale
+    maf_effect_s_prior_scale = selection$prior_scale,
+    execution_contract = execution_contract
   )
 }
 

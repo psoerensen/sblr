@@ -43,6 +43,7 @@ These are the normal starting set before changing the BLR framework.
 | [`blr_output_schema.md`](blr_output_schema.md) | named raw schemas and formatted-output ownership |
 | [`blr_convergence_contract.md`](blr_convergence_contract.md) | convergence modes, traces, diagnostics, and warnings |
 | [`blr_phase2_provider_operator_checkpoint.md`](blr_phase2_provider_operator_checkpoint.md) | implemented shared marker/resource/provider adapters and native-view qualification boundary |
+| [`blr_phase3_execution_checkpoint.md`](blr_phase3_execution_checkpoint.md) | activated logical-task, seed-v1, retention-v1, convergence-capture, and sampler-worker boundary |
 | [`blr_test_ownership.md`](blr_test_ownership.md) | permanent tests and validation tiers |
 | [`blr_block_eigen_contract.md`](blr_block_eigen_contract.md) | current scalar retained/dense block-eigen route contract |
 | [`stblr_low_rank_operator_design.md`](stblr_low_rank_operator_design.md) | retained low-rank scalar operator mathematics |
@@ -145,13 +146,13 @@ specific scientific question they document.
 
 ## Inventory checkpoint
 
-At this checkpoint the classification covers all 59 developer records: 58
-files directly under `docs/dev/` (54 Markdown and four decision JSON files)
+At this checkpoint the classification covers all 60 developer records: 59
+files directly under `docs/dev/` (55 Markdown and four decision JSON files)
 and one file under `docs/dev/history/`. Counts are:
 
 | Status | Count |
 |---|---:|
-| `CURRENT_CONTRACT` | 11 |
+| `CURRENT_CONTRACT` | 12 |
 | `CURRENT_PLAN` | 3 |
 | `CURRENT_QUALIFICATION` | 9 |
 | `RESEARCH_EXPERIMENTAL` | 27 |
