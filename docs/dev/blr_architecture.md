@@ -54,16 +54,19 @@ legacy schema fallback are not supported. Formatted fits use model-semantics
 version 2. See `blr_output_schema.md` for field ownership and
 `blr_convergence_contract.md` for observational trace capture.
 
-## Approved Phase 0 target architecture and Phase 1 bridge
+## Approved Phase 0 target architecture and Phase 2 bridge
 
 The preceding paragraphs describe the native implementation. The approved
 target is the shared architecture in
 [the unified framework design](blr_unified_framework_design.md), especially
-Sections 24--30. Phase 1 now implements the R-side resolved specification and
-validated raw-v2 bridge for eligible maintained ST fits while preserving the
-existing native version-1 result and all native calls. Shared native providers,
-operators, scheduling, retention, and corrected joint-MT policies remain later
-phases.
+Sections 24--30. Phase 1 implements the R-side resolved specification and
+validated raw-v2 bridge for eligible maintained ST fits. Phase 2 implements
+the common R global-marker map, immutable operator-resource, and likelihood-
+provider adapters used by those resolved specifications. It also adopts the
+existing immutable native views as the shared native operator boundary:
+`SparseLdCsrView`, `BlockEigenView`, and `BedPackedGenotypeView`. Native
+version-1 results and all native calls remain unchanged. Shared scheduling,
+retention, and corrected joint-MT policies remain later phases.
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then
@@ -94,6 +97,16 @@ scale, population, and residual/error regime. Several providers may reference
 one resource. A common-sample full-$V_e$ MT likelihood uses a multi-trait
 provider and is not factorized into singleton providers; independent summary
 providers may have different $X_t^\top X_t$ and marker coverage.
+
+The R collection owns each resource once; providers retain only its resource
+ID and their own ordered map and sufficient statistics. Production legacy
+wrappers currently resolve this metadata before dispatch, while their existing
+native kernels keep constructing the same representation-specific immutable
+owner/view in the same place and order. Dense/CSR/eigen vector evaluation in
+the Phase 2 R adapter is a qualification oracle, not a replacement sampler
+kernel. A common-sample provider may own several ordered traits and reference
+one BED resource, but that representation is not connected to the legacy MT
+sampler. See [the Phase 2 checkpoint](blr_phase2_provider_operator_checkpoint.md).
 
 A full-rank block-eigen representation is exact for its declared block-
 diagonal operator. It equals an original dense cross-product only when omitted

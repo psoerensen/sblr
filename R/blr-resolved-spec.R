@@ -284,6 +284,7 @@
   markers <- .blr_ids(data$global_markers, "data$global_markers")
   .blr_validate_allele_table(data$global_alleles, markers,
                              "data$global_alleles", require_coding = TRUE)
+  global_map <- .blr_new_global_marker_map(markers, data$global_alleles)
   regimes <- c("common_sample", "independent_summary", "overlap_aware")
   .blr_character_scalar(data$likelihood_regime, "data$likelihood_regime",
                         regimes)
@@ -305,6 +306,7 @@
   }
   resource_names <- names(data$operator_resources)
   resource_ids <- unname(vapply(data$operator_resources, function(resource) {
+    .blr_validate_operator_resource(resource)
     .blr_exact_fields(resource, "operator resource", c(
       "resource_id", "operator_type", "marker_ids", "alleles",
       "genotype_coding", "centering", "standardization", "operator_scale",
@@ -327,6 +329,7 @@
          call. = FALSE)
   }
   provider_ids <- unname(vapply(data$providers, function(provider) {
+    .blr_validate_likelihood_provider(provider)
     .blr_exact_fields(provider, "likelihood provider", c(
       "provider_id", "trait_ids", "operator_resource_id", "local_to_global",
       "sufficient_statistics", "sample_size", "likelihood_regime",
@@ -371,6 +374,8 @@
       stop("A provider sample_size must be a finite positive trait-named vector.",
            call. = FALSE)
     }
+    .blr_validate_phase2_provider_alignment(provider, resource, global_map)
+    .blr_validate_provider_statistics(provider, resource)
     as.character(provider$provider_id)
   }, character(1)))
   if (anyDuplicated(provider_ids) ||
@@ -743,23 +748,23 @@ new_blr_resolved_spec <- function(schema, data, model, prior, mcmc, compute,
 .blr_legacy_resource <- function(operator, marker_ids) {
   type <- switch(operator, packed_bed = "bed", csr = "csr",
                  block_eigen = "block_eigen", operator)
-  list(
+  alleles <- data.frame(
+    marker_id = marker_ids, effect = NA_character_, other = NA_character_,
+    stringsAsFactors = FALSE)
+  .blr_new_operator_resource(
     resource_id = paste0(type, "_legacy_resource"), operator_type = type,
-    marker_ids = marker_ids,
-    alleles = data.frame(marker_id = marker_ids, effect = NA_character_,
-                         other = NA_character_, stringsAsFactors = FALSE),
+    marker_ids = marker_ids, alleles = alleles,
     genotype_coding = "legacy_wrapper_declared",
     centering = "legacy_wrapper_declared",
     standardization = "legacy_wrapper_declared",
-    operator_scale = if (operator == "packed_bed") "individual_genotypes" else
-      "cross_product",
+    operator_scale = if (operator == "packed_bed")
+      "individual_genotypes" else "cross_product",
     storage = list(kind = "legacy_immutable_view", payload = NULL),
     block_eigen = if (operator == "block_eigen")
       list(contract = "legacy_provider_operator") else NULL,
-    approximation = if (operator == "block_eigen") "declared_approximation" else
-      "legacy_route_contract",
-    provenance = list(source = "maintained Phase 1 compatibility wrapper")
-  )
+    approximation = if (operator == "block_eigen")
+      "declared_approximation" else "legacy_route_contract",
+    provenance = list(source = "maintained Phase 1 compatibility wrapper"))
 }
 
 resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids,
@@ -789,12 +794,16 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
   names(sample_sizes) <- trait_ids
   analysis_mode <- if (length(trait_ids) == 1L) "single_trait" else
     "independent_traits"
+  global_alleles <- data.frame(
+    marker_id = marker_ids, effect = NA_character_, other = NA_character_,
+    coding = "legacy_wrapper_declared", stringsAsFactors = FALSE)
+  global_map <- .blr_new_global_marker_map(marker_ids, global_alleles)
   resource <- .blr_legacy_resource(operator, marker_ids)
   resource_id <- resource$resource_id
   resources <- stats::setNames(list(resource), resource_id)
   providers <- lapply(seq_along(trait_ids), function(index) {
     id <- paste0("provider_", index)
-    list(
+    .blr_new_likelihood_provider(
       provider_id = id, trait_ids = trait_ids[index],
       operator_resource_id = resource_id,
       local_to_global = stats::setNames(seq_along(marker_ids), marker_ids),
@@ -803,12 +812,16 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
       likelihood_regime = if (operator == "packed_bed") "common_sample" else
         "independent_summary",
       residual_contract = "traitwise_scalar",
-      population = NA_character_, effect_scale = "legacy_declared",
+      population = NULL, effect_scale = "legacy_declared",
       overlap_group = NULL,
       provenance = list(source = "maintained Phase 1 compatibility wrapper")
     )
   })
   names(providers) <- vapply(providers, `[[`, character(1), "provider_id")
+  regime <- if (operator == "packed_bed") "common_sample" else
+    "independent_summary"
+  collection <- .blr_new_provider_collection(
+    global_map, resources, providers, regime, analysis_mode)
   retained <- .blr_legacy_retained_indices(chain$nit, chain$nthin)
   tasks <- length(trait_ids) * chain$nchains
   parallelization <- if (tasks <= 1L || chain$ncores <= 1L) "none" else if (
@@ -852,14 +865,12 @@ resolve_blr_spec_from_wrapper <- function(model, operator, trait_ids, marker_ids
     data = list(
       analysis_mode = analysis_mode, trait_ids = trait_ids,
       global_markers = marker_ids,
-      global_alleles = data.frame(marker_id = marker_ids,
-                                  effect = NA_character_, other = NA_character_,
-                                  coding = "legacy_wrapper_declared",
-                                  stringsAsFactors = FALSE),
-      operator_resources = resources, providers = providers,
+      global_alleles = global_map$alleles,
+      operator_resources = collection$operator_resources,
+      providers = collection$providers,
       provider_maps = lapply(providers, `[[`, "local_to_global"),
-      likelihood_regime = if (operator == "packed_bed") "common_sample" else
-        "independent_summary", statistical_regions = NULL),
+      likelihood_regime = collection$likelihood_regime,
+      statistical_regions = NULL),
     model = list(
       family = family, state_space = states, null_state_index = 1L,
       effect_storage_convention = "realised",

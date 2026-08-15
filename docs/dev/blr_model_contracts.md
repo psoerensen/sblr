@@ -93,6 +93,24 @@ an independent-trait reduction. Probability inputs are named by their role:
 inclusion mass, component mass, activity-pattern mass, or annotation policy.
 They are not collapsed into generic `pi`.
 
+## Phase 2 provider/operator boundary
+
+Phase 2 adds shared global-marker, immutable operator-resource, and likelihood-
+provider contracts around maintained ST routes. The resolved specification
+owns each resource once; providers reference it by ID and carry their own
+ordered trait set, local-to-global marker map, sufficient statistics, sample
+size, likelihood regime, scales, and provenance. Missing provider markers
+contribute no likelihood information and are not interpreted as null states or
+zero effects.
+
+This representation does not change a model policy or native transition.
+Multiple independent providers and a coupled common-sample multi-trait BED
+provider are structurally representable, but Phase 2 does not combine them in
+a new posterior. Existing native CSR, BED, and block-eigen views remain the
+authoritative operator implementations and are unchanged. In particular, the
+current MT covariance hybrid remains legacy, and no Phase 3 seed, schedule, or
+retention contract is active.
+
 For marker covariance,
 
 $$

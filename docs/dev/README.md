@@ -42,6 +42,7 @@ These are the normal starting set before changing the BLR framework.
 | [`blr_model_contracts.md`](blr_model_contracts.md) | current model semantics and distinctions |
 | [`blr_output_schema.md`](blr_output_schema.md) | named raw schemas and formatted-output ownership |
 | [`blr_convergence_contract.md`](blr_convergence_contract.md) | convergence modes, traces, diagnostics, and warnings |
+| [`blr_phase2_provider_operator_checkpoint.md`](blr_phase2_provider_operator_checkpoint.md) | implemented shared marker/resource/provider adapters and native-view qualification boundary |
 | [`blr_test_ownership.md`](blr_test_ownership.md) | permanent tests and validation tiers |
 | [`blr_block_eigen_contract.md`](blr_block_eigen_contract.md) | current scalar retained/dense block-eigen route contract |
 | [`stblr_low_rank_operator_design.md`](stblr_low_rank_operator_design.md) | retained low-rank scalar operator mathematics |
@@ -58,7 +59,7 @@ to executable evidence.
 
 | Document | Role |
 |---|---|
-| [`annotation_prior_architecture_audit.md`](annotation_prior_architecture_audit.md) | audited current observations and approved P/Q/H/\(V_b\) conclusions |
+| [`annotation_prior_architecture_audit.md`](annotation_prior_architecture_audit.md) | audited current observations and approved P/Q/H/$V_b$ conclusions |
 | [`annotation_prior_architecture_matrix.md`](annotation_prior_architecture_matrix.md) | audited current-versus-proposed capability map |
 | [`annotation_prior_architecture_implementation_plan.md`](annotation_prior_architecture_implementation_plan.md) | gated future reorganization sequence |
 

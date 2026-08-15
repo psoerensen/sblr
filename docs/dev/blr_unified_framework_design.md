@@ -2,7 +2,7 @@
 
 ## 1. Status and scope
 
-**Status:** `PHASE 1 CORRECTED - READY FOR FINAL INDEPENDENT VERIFICATION`
+**Status:** `PHASE 2 IMPLEMENTED - READY FOR INDEPENDENT VERIFICATION`
 
 This document defines a shared R/C++ architecture for three distinct analysis
 modes:
@@ -12,11 +12,16 @@ modes:
 3. a genuinely joint multi-trait posterior.
 
 This document defines the target architecture and records completed
-checkpoints. Phase 1 has implemented the shared production R specification,
+checkpoints. Phase 1 implemented the shared production R specification,
 validation, schema-v2 conversion, and formatting infrastructure described in
-Section 31. A capability described only as proposed remains unimplemented;
-current support is determined by executable public dispatch, source, schemas,
-tests, and maintained current contracts.
+Section 31. Phase 2 adds the shared R global-marker, immutable operator-resource,
+and likelihood-provider adapters and qualifies the existing native immutable
+CSR, BED, and block-eigen views without changing a native call. The exact
+implementation boundary is recorded in
+[the Phase 2 checkpoint](blr_phase2_provider_operator_checkpoint.md). A
+capability described only as proposed remains unimplemented; current support
+is determined by executable public dispatch, source, schemas, tests, and
+maintained current contracts.
 
 The Phase 0 closeout was prepared from branch `master` at commit
 `b930c723d2ebf7351b8d7509bf9f4752820d1a86`. Its central decision is that STBLR
@@ -38,11 +43,12 @@ The design covers:
 - formatted-fit responsibilities;
 - reductions, tests, migration, and implementation phases.
 
-Phase 1 did not change native interfaces, statistical kernels, posterior
-targets, seed behavior, or retention behavior. Phase 2 and later native,
-provider/operator, scheduler/RNG, and corrected joint-MT capabilities remain
-proposed, and this document does not approve a new statistical model merely by
-describing it.
+Phases 1 and 2 did not change native interfaces, statistical kernels, posterior
+targets, seed behavior, or retention behavior. Phase 2 multi-trait BED support
+is representational only: it does not invoke the current MT sampler. Phase 3
+scheduler/RNG work, heterogeneous multi-provider posterior likelihoods, and
+corrected joint-MT capabilities remain proposed, and this document does not
+approve a new statistical model merely by describing it.
 
 ## 2. Authority hierarchy
 
