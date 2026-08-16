@@ -45,7 +45,10 @@ Files:
   dense, CSR, and block-eigen summary-likelihood operators;
 - `test_provider_operators.R`: heterogeneous-provider compatibility,
   exact-representation, retained-rank, provider-local/order invariance, and
-  overlap-boundary checks.
+  overlap-boundary checks;
+- `mtblr_summary_provider_reference.R`: independent dense Phase 6A marker
+  conditional, residual-score, provider aggregation, and additive-likelihood
+  calculations used by focused qualification tests.
 
 From the repository root, run:
 

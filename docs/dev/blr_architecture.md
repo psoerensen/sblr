@@ -9,7 +9,9 @@ The package has two statistical families and three operator families:
 
 The currently exported canonical fitting functions are `stblr_csr()`,
 `stblr_csr_annot()`, `stblr_block_eigen()`, `stblr_bed()`, and `mtblr_bed()`.
-Corrected MT CSR and block-eigen likelihoods are not currently available.
+Corrected MT CSR and block-eigen likelihoods are not currently public. Phase
+6A qualifies an internal independent-summary Cheng route through heterogeneous
+CSR and block-eigen providers; public promotion remains Phase 6B work.
 
 Current annotation-informed effect-variance LV backends are available only for
 ST CSR and retained block eigen through `annotation_model = "log_variance"`
@@ -92,6 +94,13 @@ when source rows are selected or reordered, the temporary source-row decode
 buffer using the source rather than selected sample count. Dense $4^T$
 transition matrices are not part of the execution path;
 compact per-pattern occupancy and total-change diagnostics are used instead.
+Phase 6A adds one separate likelihood policy, not a second Cheng model kernel:
+independent singleton-trait summary providers contribute additive scores and
+diagonal likelihood precision through shared CSR or factorized block-eigen
+adapters. Provider residual scores are chain-private, operator resources are
+immutable and shared, and the authoritative Dirichlet/$V_b$ updates remain the
+Phase 5A transitions. See
+[the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then

@@ -187,6 +187,16 @@ CSR, block-eigen, BayesR, BayesRC, annotation, overlap, and missing-phenotype
 policies remain unavailable. See
 [the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 
+Phase 6A qualifies, internally only, the independent-summary residual policy.
+Each singleton-trait provider supplies a fixed positive scale $\phi_p$ and
+contributes its own $s_p=X_p^\top y_p$ and $C_p=X_p^\top X_p$. Scores and
+diagonal precisions add only over providers containing the current marker.
+There is no full $V_e$ state in this likelihood, and declared provider overlap
+is rejected rather than treated as independent. The Cheng pattern,
+conditional-completion, Dirichlet, and authoritative inverse-Wishart $V_b$
+contracts are unchanged. See
+[the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
+
 Resolved Phase 1 objects accept only registered exact model-policy values and
 declared descriptor structures. Compatibility identifiers do not relax model,
 prior, state, covariance, probability, or axis validation. Scalar-variance and

@@ -1603,8 +1603,11 @@ implementation is promoted through public `mtblr_bed()` in Phase 5B. The
 public route accepts explicit inverse-Wishart degrees-of-freedom/scale priors,
 uses the validated raw-v2 and formatted-result boundaries, and cannot dispatch
 to the covariance hybrid. Corrected MT CSR and block-eigen likelihoods remain
-unavailable and are no longer exported. See
+unavailable publicly and are no longer exported. Phase 6A qualifies the
+independent-provider summary likelihood internally through one shared CSR/
+block-eigen Cheng kernel; overlap-aware summaries remain deferred. See
 [`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md).
+See also [`blr_phase6a_summary_mt_checkpoint.md`](blr_phase6a_summary_mt_checkpoint.md).
 
 ## 24. Immediate next design task
 

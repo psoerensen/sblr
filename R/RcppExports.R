@@ -25,6 +25,14 @@ mtblr_phase4a_cheng_bed_internal <- function(bed_files, source_sample_count, sel
     .Call(`_sblr_mtblr_phase4a_cheng_bed_internal`, bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, activity_patterns, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes)
 }
 
+mtblr_phase6a_summary_pattern_contract_internal <- function(aggregated_score, aggregated_diagonal, marker_covariance, activity_pattern_probability, activity_patterns) {
+    .Call(`_sblr_mtblr_phase6a_summary_pattern_contract_internal`, aggregated_score, aggregated_diagonal, marker_covariance, activity_pattern_probability, activity_patterns)
+}
+
+mtblr_phase6a_summary_cheng_internal <- function(operator_resources, likelihood_providers, global_marker_count, trait_count, activity_patterns, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes) {
+    .Call(`_sblr_mtblr_phase6a_summary_cheng_internal`, operator_resources, likelihood_providers, global_marker_count, trait_count, activity_patterns, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes)
+}
+
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }

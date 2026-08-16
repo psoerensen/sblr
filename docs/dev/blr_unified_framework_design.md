@@ -44,8 +44,13 @@ $\lceil N_{\mathrm{source}}/4\rceil$ selected-row decoding buffer before
 provider construction.
 Phase 5B promotes this exact corrected route through public `mtblr_bed()` and
 removes public access to the legacy MT covariance hybrid. Corrected MT CSR and
-block-eigen likelihoods remain unavailable. See
+block-eigen likelihoods remain unavailable publicly. Phase 6A now qualifies
+an internal independent-summary likelihood with heterogeneous singleton-trait
+CSR or block-eigen providers, fixed positive provider residual scales, and the
+same Cheng/Dirichlet/$V_b$ transition. Overlap-aware likelihoods remain
+deferred. See
 [the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
+See also [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
 A capability described only as proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
@@ -594,6 +599,12 @@ Three likelihood regimes must be explicit:
 Marginal provider-specific block-eigen decompositions do not identify
 cross-provider summary-error covariance. Overlap-aware likelihoods are a later
 gated model, not an operator flag.
+
+The second regime is implemented for qualification in Phase 6A. Its native
+kernel keeps one residual score per provider, aggregates $h_{jt}$ and $d_{jt}$
+over providers containing marker $j$, and dispatches only operator column
+actions and diagonal reads through representation adapters. This status does
+not make `mtblr_csr()` or `mtblr_block_eigen()` public.
 
 For common-sample MT data, one multi-trait provider may reference one shared
 BED resource and evaluate the joint residual likelihood directly. For future

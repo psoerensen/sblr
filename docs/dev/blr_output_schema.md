@@ -109,6 +109,17 @@ burn-in and sampling sweeps, and changes cannot exceed that total.
 The field is not required for single-trait, independent-trait, or other models
 for which pleiotropy is scientifically undefined.
 
+The internal Phase 6A independent-summary route uses the same general-$T$
+activity, effect, probability, covariance, task, and compact-diagnostic axes.
+Its resolved input retains every provider, local-to-global map, fixed
+$\phi_p$, and operator approximation descriptor. Because marginal independent
+summary providers do not identify individual fitted values or a full residual
+covariance, `derived$predictions`, `draws$residual_covariance`,
+`posterior$residual_covariance_mean`, and `final$residual_covariance` remain
+present with value `NULL`. No operator-relative quadratic is relabelled as SSE
+or genomic covariance. See
+[the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
+
 ## Variance and covariance fields
 
 `vbs`, `vgs`, `ves`, `vle`, and `vld` are iteration × trait traces of marker

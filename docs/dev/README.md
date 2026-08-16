@@ -48,6 +48,7 @@ These are the normal starting set before changing the BLR framework.
 | [`blr_phase4b_sampled_residual_covariance_checkpoint.md`](blr_phase4b_sampled_residual_covariance_checkpoint.md) | qualification-only extension with one authoritative sampled full inverse-Wishart $V_e$ transition |
 | [`blr_phase5a_general_t_cheng_mt_checkpoint.md`](blr_phase5a_general_t_cheng_mt_checkpoint.md) | qualification-only general-$T$ complete-pattern Cheng MT-BayesC$\Pi$ implementation, checked $M2^T$ plus aligned packed-BED fit-memory boundary, validated compact diagnostics, and $T=2$--$4$ evidence |
 | [`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md) | public promotion of corrected general-$T$ Cheng MT-BayesC$\Pi$ through `mtblr_bed()`, with legacy hybrid public dispatch retired |
+| [`blr_phase6a_summary_mt_checkpoint.md`](blr_phase6a_summary_mt_checkpoint.md) | qualification-only general-$T$ independent-summary Cheng likelihood with heterogeneous CSR/block-eigen providers and fixed provider residual scales |
 | [`blr_test_ownership.md`](blr_test_ownership.md) | permanent tests and validation tiers |
 | [`blr_block_eigen_contract.md`](blr_block_eigen_contract.md) | current scalar retained/dense block-eigen route contract |
 | [`stblr_low_rank_operator_design.md`](stblr_low_rank_operator_design.md) | retained low-rank scalar operator mathematics |
@@ -150,15 +151,15 @@ specific scientific question they document.
 
 ## Inventory checkpoint
 
-At this checkpoint the classification covers all 60 developer records: 59
-files directly under `docs/dev/` (55 Markdown and four decision JSON files)
+At this checkpoint the classification covers all 61 developer records: 60
+files directly under `docs/dev/` (56 Markdown and four decision JSON files)
 and one file under `docs/dev/history/`. Counts are:
 
 | Status | Count |
 |---|---:|
 | `CURRENT_CONTRACT` | 12 |
 | `CURRENT_PLAN` | 3 |
-| `CURRENT_QUALIFICATION` | 9 |
+| `CURRENT_QUALIFICATION` | 10 |
 | `RESEARCH_EXPERIMENTAL` | 27 |
 | `HISTORICAL` | 4 |
 | `SUPERSEDED` | 1 |

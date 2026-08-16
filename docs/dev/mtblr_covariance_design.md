@@ -1443,8 +1443,11 @@ Phase 5B promotes the independently qualified general-$T$ Cheng transition
 through public `mtblr_bed()` without changing this covariance target. The
 legacy heuristic covariance hybrid is unreachable from public dispatch and
 cannot be converted into corrected $V_b$ or $V_e$ fields. Corrected summary-
-statistic MT likelihoods remain deferred. See
+statistic MT likelihoods remain unavailable publicly. Phase 6A qualifies the
+independent-provider CSR/block-eigen likelihood internally, with fixed
+provider residual scales and no overlap covariance. See
 [`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md).
+See also [`blr_phase6a_summary_mt_checkpoint.md`](blr_phase6a_summary_mt_checkpoint.md).
 
 ## 28. Closeout decisions
 
