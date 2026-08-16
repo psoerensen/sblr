@@ -8,10 +8,11 @@ The package has two statistical families and three operator families:
 | `mtblr` | one complete joint chain | `csr`, `block_eigen`, `packed_bed` |
 
 The currently exported canonical fitting functions are `stblr_csr()`,
-`stblr_csr_annot()`, `stblr_block_eigen()`, `stblr_bed()`, and `mtblr_bed()`.
-Corrected MT CSR and block-eigen likelihoods are not currently public. Phase
-6A qualifies an internal independent-summary Cheng route through heterogeneous
-CSR and block-eigen providers; public promotion remains Phase 6B work.
+`stblr_csr_annot()`, `stblr_block_eigen()`, `stblr_bed()`, `mtblr_bed()`,
+`mtblr_csr()`, and `mtblr_block_eigen()`. Phase 6B exposes the qualified
+independent-summary Cheng route through heterogeneous CSR and block-eigen
+providers. The historical MT summary covariance hybrid is unregistered and
+unreachable.
 
 Current annotation-informed effect-variance LV backends are available only for
 ST CSR and retained block eigen through `annotation_model = "log_variance"`
@@ -101,6 +102,8 @@ adapters. Provider residual scores are chain-private, operator resources are
 immutable and shared, and the authoritative Dirichlet/$V_b$ updates remain the
 Phase 5A transitions. See
 [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
+Phase 6B promotes that exact kernel through two thin public resolution paths;
+see [the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then

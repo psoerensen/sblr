@@ -35,8 +35,8 @@ test_that("operator model matrices are failure-closed before preparation", {
                "s.*prefix denotes summary statistics")
   expect_error(stblr_bed(numeric(), list(), method = "sbayesr"),
                "s.*prefix denotes summary statistics")
-  expect_error(sblr:::mtblr_csr(), "not currently available")
-  expect_error(sblr:::mtblr_block_eigen(), "not currently available")
+  expect_identical(formals(mtblr_csr)$method, "bayesc")
+  expect_identical(formals(mtblr_block_eigen)$method, "bayesc")
   expect_error(mtblr_bed(numeric(), list(bedfiles = "x"), method = "sbayesr"),
                "supports only method = 'bayesc'")
 })

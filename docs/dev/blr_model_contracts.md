@@ -182,12 +182,13 @@ Phase 5B promotes the corrected complete-pattern Cheng policy through
 `mtblr_bed()` for common-sample packed BED only. Public $V_b$ and sampled
 $V_e$ priors use explicit inverse-Wishart degrees-of-freedom/scale arguments;
 fixed $V_e$ remains a zero-update, zero-residual-covariance-RNG policy. The
-legacy covariance hybrid is unreachable from public dispatch. Corrected MT
-CSR, block-eigen, BayesR, BayesRC, annotation, overlap, and missing-phenotype
-policies remain unavailable. See
+legacy covariance hybrid is unreachable from public dispatch. MT BayesR,
+BayesRC, annotation, overlap, and missing-phenotype policies remain
+unavailable. See
 [the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 
-Phase 6A qualifies, internally only, the independent-summary residual policy.
+Phase 6A qualified, and Phase 6B publicly promotes, the independent-summary
+residual policy through `mtblr_csr()` and `mtblr_block_eigen()`.
 Each singleton-trait provider supplies a fixed positive scale $\phi_p$ and
 contributes its own $s_p=X_p^\top y_p$ and $C_p=X_p^\top X_p$. Scores and
 diagonal precisions add only over providers containing the current marker.
@@ -196,6 +197,8 @@ is rejected rather than treated as independent. The Cheng pattern,
 conditional-completion, Dirichlet, and authoritative inverse-Wishart $V_b$
 contracts are unchanged. See
 [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
+The public boundary is recorded in
+[the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
 
 Resolved Phase 1 objects accept only registered exact model-policy values and
 declared descriptor structures. Compatibility identifiers do not relax model,

@@ -88,8 +88,8 @@ BED + phenotype
   -> stblr_csr(...) / stblr_csr_annot(...)
 ```
 
-Corrected MT CSR likelihoods are not currently public. This does not affect
-the supported STBLR CSR routes above.
+Corrected independent-summary Cheng MT-BayesC-Pi is public through
+`mtblr_csr()`. This does not change the supported STBLR CSR routes above.
 
 See [Summary Statistics](summary_statistics.qmd) for the complete
 cross-product derivation.
@@ -821,9 +821,10 @@ Their differences concern the prior, not the CSR artifact.
 
 ## Multi-trait CSR use
 
-A future corrected MT CSR route could use the same principle: aligned
-marker-trait cross-products and marker diagonals combined with one shared
-sparse-LD representation. No public MT CSR likelihood currently exists.
+The public corrected MT CSR route uses aligned provider-local marker-trait
+cross-products and marker diagonals with provider-specific sparse operators.
+Providers may differ in marker coverage, local order, sample size, and LD
+population under an explicit independent-summary regime.
 
 Mathematically, the marker-trait quantity is
 
@@ -831,9 +832,9 @@ $$
 X^\top Y.
 $$
 
-Such a likelihood would require shared LD scaling and matching marker diagonal
-cross-products across traits. It could not infer arbitrary pairwise sample
-overlap merely from the sparse-LD prefix.
+Such a likelihood requires compatible declared effect scales and allele
+coding. It cannot infer arbitrary pairwise sample overlap from marginal
+summary inputs, and declared overlap is rejected.
 
 Cross-trait phenotype products and overlap assumptions required for full
 residual covariance are separate likelihood inputs; see

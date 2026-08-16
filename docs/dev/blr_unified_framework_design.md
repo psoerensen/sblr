@@ -43,14 +43,15 @@ $M\operatorname{round\_up}(\lceil N/4\rceil,64)$ bytes, and the conditional
 $\lceil N_{\mathrm{source}}/4\rceil$ selected-row decoding buffer before
 provider construction.
 Phase 5B promotes this exact corrected route through public `mtblr_bed()` and
-removes public access to the legacy MT covariance hybrid. Corrected MT CSR and
-block-eigen likelihoods remain unavailable publicly. Phase 6A now qualifies
-an internal independent-summary likelihood with heterogeneous singleton-trait
-CSR or block-eigen providers, fixed positive provider residual scales, and the
-same Cheng/Dirichlet/$V_b$ transition. Overlap-aware likelihoods remain
+removes public access to the legacy MT covariance hybrid. Phase 6A qualifies
+an independent-summary likelihood with heterogeneous singleton-trait CSR or
+block-eigen providers, fixed positive provider residual scales, and the same
+Cheng/Dirichlet/$V_b$ transition. Phase 6B exposes that single kernel through
+public `mtblr_csr()` and `mtblr_block_eigen()`. Overlap-aware likelihoods remain
 deferred. See
 [the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 See also [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
+See also [the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
 A capability described only as proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
@@ -600,11 +601,12 @@ Marginal provider-specific block-eigen decompositions do not identify
 cross-provider summary-error covariance. Overlap-aware likelihoods are a later
 gated model, not an operator flag.
 
-The second regime is implemented for qualification in Phase 6A. Its native
+The second regime is implemented in Phase 6A. Its native
 kernel keeps one residual score per provider, aggregates $h_{jt}$ and $d_{jt}$
 over providers containing marker $j$, and dispatches only operator column
-actions and diagonal reads through representation adapters. This status does
-not make `mtblr_csr()` or `mtblr_block_eigen()` public.
+actions and diagonal reads through representation adapters. Phase 6B makes
+`mtblr_csr()` and `mtblr_block_eigen()` thin public resolvers for this exact
+kernel without changing the likelihood.
 
 For common-sample MT data, one multi-trait provider may reference one shared
 BED resource and evaluate the joint residual likelihood directly. For future
@@ -1591,9 +1593,9 @@ The route-level boundary trace is:
 | ST block eigen | `stblr_block_eigen()` | block-eigen adapters ending in scalar CSR/BayesR/SBayesRC cores | same scalar shapes plus block diagnostics | Retention follows the dispatched scalar kernel | Preserve kernel-specific legacy descriptor |
 | ST BED | `stblr_bed()` | scheduled chain BayesC/BayesR/BayesRC boundaries and BED cores | marker × trait summaries; full scientific traces; unthinned post-burn convergence | Same first-post-burn summary rule, separate BED seed implementation | Preserve `st_bed_v1` and compare backend reductions |
 | ST annotation | `stblr_csr_annot()` plus registered annotation routes | `stblr_cpg_omp_csr_annot()`, group/prior/log-variance/SBayesRC boundaries | common marker shapes plus provider-specific low-dimensional traces | Common convergence contract, heterogeneous provider trace retention | Record each provider trace descriptor explicitly |
-| MT CSR | `mtblr_csr()` | `mtblr_csr_chains_raw_internal()`, `run_mt_default_core()` | marker × trait summaries; full `nit + nburn` trait traces; covariance/probability summaries unthinned post-burn | Mixed thinned marker and unthinned covariance aggregation | Preserve `mt_default_v1`; do not normalize silently |
-| MT block eigen | `mtblr_block_eigen()` | `mtblr_block_eigen_chains_raw_internal()`, MT default core | MT shapes plus per-owner block metadata | Same MT default retention; operator representation differs | Preserve `mt_default_v1` and provenance |
-| MT BED | `mtblr_bed()` | `mtblr_bed_chains_internal()`, `run_mt_bed_bayesc_core()` | marker × trait summaries; full traces; chain-pooled means and primary-chain final state | Matches MT summary aggregation policy but uses distinct chain seed rule | Preserve `mt_bed_v1`; later replace covariance transition |
+| MT CSR | `mtblr_csr()` | `mtblr_phase6a_summary_cheng_internal()`, shared summary Cheng kernel | raw-v2 general-$T$ effects, patterns, $V_b$, provider diagnostics; prediction/$V_e$ fields `NULL` | Phase 3 seed and retention contracts | Public Phase 6B corrected Cheng route |
+| MT block eigen | `mtblr_block_eigen()` | same Phase 6A summary Cheng kernel with factorized adapter | same raw-v2 axes plus provider-local block/rank metadata | Same chain transition as CSR for its declared operator | Public Phase 6B corrected Cheng route |
+| MT BED | `mtblr_bed()` | `mtblr_phase4a_cheng_bed_internal()`, corrected general-$T$ Cheng kernel | raw-v2 general-$T$ effects, patterns, $V_b$, fixed or sampled $V_e$, predictions | Phase 3 seed and retention contracts | Public Phase 5B corrected Cheng route |
 
 Current raw marker matrices are $M\times T$. Current full scientific traces are
 stored as iteration-by-trait objects, often including burn-in; formal

@@ -2759,8 +2759,9 @@ rownames(sse_prior) <- colnames(sse_prior) <- trait_names
 
 
 
-# The former direct low-level MT CSR experiment is retired. There is currently
-# no public corrected MT CSR replacement; this remains research evidence only.
+# The former direct low-level MT CSR experiment is retired. Public corrected
+# MT CSR now uses independent provider descriptors through mtblr_csr(); this
+# block remains historical research evidence only.
 
 m <- length(cls)
 n <- Glist$n

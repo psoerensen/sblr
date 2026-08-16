@@ -19,11 +19,12 @@ regressions must request it explicitly.
 
 The public retained operator is scalar-only. The obsolete MT reconstructed
 block-eigen covariance-hybrid route is no longer exported in Phase 5B.
-Phase 6A separately qualifies an internal Cheng MT independent-summary adapter
-that applies provider-declared $U\sqrt{\Lambda}$ factors without densifying
-them; it does not make a public MT block-eigen route available. The scalar
-route does not discover blocks, represent cross-block LD, or select a hybrid
-operator automatically.
+Phase 6A qualified a Cheng MT independent-summary adapter that applies
+provider-declared $U\sqrt{\Lambda}$ factors without densifying them. Phase 6B
+exposes that same adapter through public `mtblr_block_eigen()`. Full-rank blocks
+are exact relative to the declared block-diagonal operator; retained-rank
+blocks target the retained reconstruction. Neither route discovers omitted
+cross-block LD or selects a hybrid operator automatically.
 
 See `stblr_low_rank_operator_design.md`, `stblr_low_rank_gctb_crosswalk.md`, and
 `stblr_low_rank_performance.md` for mathematics, external scale mapping, and

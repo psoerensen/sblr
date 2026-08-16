@@ -12,12 +12,11 @@ text <- function(paths) paste(unlist(lapply(paths, readLines, warn = FALSE)), co
 
 exports <- getNamespaceExports("sblr")
 fitters <- c("stblr_csr", "stblr_csr_annot", "stblr_block_eigen", "stblr_bed",
-             "mtblr_bed")
-record("five canonical fitting exports", all(fitters %in% exports))
+             "mtblr_bed", "mtblr_csr", "mtblr_block_eigen")
+record("seven canonical fitting exports", all(fitters %in% exports))
 record("obsolete fitting exports absent", !any(c("sblr", "stblr_bed_marker",
   "check_stblr_convergence", "stblr_csr_bayesr", "stblr_csr_prior_annot",
-  "stblr_csr_group_annot", "stblr_csr_learn_annot", "mtblr_csr",
-  "mtblr_block_eigen") %in% exports))
+  "stblr_csr_group_annot", "stblr_csr_learn_annot") %in% exports))
 matrix <- sblr:::.blr_model_capability_matrix()
 record("six canonical model semantics", setequal(unique(matrix$model),
   c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc", "sbayesrc")))

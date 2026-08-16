@@ -58,11 +58,13 @@ scale.
 | `stblr_block_eigen()` | retained low-rank block eigen (default); reconstructed dense by request | ordinary `sbayesc`, `sbayesr`, `sbayesrc`; `sbayesc`/`sbayesr` with `annotation_model = "log_variance"` |
 | `stblr_csr_annot()` | CSR sparse LD | `sbayesc` with `fixed_marker`, `group`, `learned_logistic`, or `log_variance`; `sbayesr` with `log_variance`; `sbayesrc` with `annotation_probit_stick` |
 | `mtblr_bed()` | common-sample packed BED | corrected general-$T$ Cheng `bayesc` with fixed or sampled full residual covariance |
+| `mtblr_csr()` | independent-provider CSR sparse LD | corrected general-$T$ Cheng `bayesc` with fixed provider residual scales |
+| `mtblr_block_eigen()` | independent-provider block eigen | corrected general-$T$ Cheng `bayesc` with fixed provider residual scales |
 
 Unsupported combinations fail before numerical execution.
 Current log-variance models are ST CSR/block-eigen only; BED-LV and MT-LV are
-not implemented. Corrected MT CSR and block-eigen likelihoods are not currently
-publicly available.
+not implemented. MT summary-statistic interfaces require providers declared
+independent; overlap-aware MT likelihoods remain unavailable.
 
 The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
 strategy, represented in `sblr` cross-product units with a global projected

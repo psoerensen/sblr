@@ -37,40 +37,8 @@ readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, on
     .Call(`_sblr_readLD_to_CSR_R`, filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP)
 }
 
-mtblr_cpg_omp_csr <- function(wy, ww, yy, b_init, ld_prefix, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_cpg_omp_csr`, wy, ww, yy, b_init, ld_prefix, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, adjE, n, nit, nburn, nthin, seed, method)
-}
-
 bed_xtx_xty <- function(bed_file, n, cls, af, y, rows = NULL, scale = TRUE, nthreads = 1L, MG = 64L, JB = 1024L, TB = 32L) {
     .Call(`_sblr_bed_xtx_xty`, bed_file, n, cls, af, y, rows, scale, nthreads, MG, JB, TB)
-}
-
-mtblr <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_csr_internal <- function(wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_csr_internal`, wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_block_eigen_internal <- function(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method = 4L) {
-    .Call(`_sblr_mtblr_block_eigen_internal`, wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_csr_raw_internal <- function(wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_csr_raw_internal`, wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_csr_chains_raw_internal <- function(wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, joint_component, joint_multiplier, joint_names, component_count, marker_scale, component_init, pi_prior, beta_init, state_init, annotations, alpha_init, sigma_alpha_init, pattern_pi_init, pattern_pi_prior, updateAlpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, pi_floor, alpha_update_every, convergence_covariance = FALSE, convergence_probability = FALSE, convergence_annotations = FALSE, convergence_full_probability = FALSE, convergence_markers = NULL, convergence_b = FALSE, convergence_d = FALSE, convergence_component = FALSE) {
-    .Call(`_sblr_mtblr_csr_chains_raw_internal`, wy, ww, yy, b, ld_prefixes, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, joint_component, joint_multiplier, joint_names, component_count, marker_scale, component_init, pi_prior, beta_init, state_init, annotations, alpha_init, sigma_alpha_init, pattern_pi_init, pattern_pi_prior, updateAlpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, pi_floor, alpha_update_every, convergence_covariance, convergence_probability, convergence_annotations, convergence_full_probability, convergence_markers, convergence_b, convergence_d, convergence_component)
-}
-
-mtblr_block_eigen_raw_internal <- function(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method = 4L) {
-    .Call(`_sblr_mtblr_block_eigen_raw_internal`, wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
-}
-
-mtblr_block_eigen_chains_raw_internal <- function(wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, joint_component, joint_multiplier, joint_names, component_count, marker_scale, component_init, pi_prior, beta_init, state_init, annotations, alpha_init, sigma_alpha_init, pattern_pi_init, pattern_pi_prior, updateAlpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, pi_floor, alpha_update_every, convergence_covariance = FALSE, convergence_probability = FALSE, convergence_annotations = FALSE, convergence_full_probability = FALSE, convergence_markers = NULL, convergence_b = FALSE, convergence_d = FALSE, convergence_component = FALSE) {
-    .Call(`_sblr_mtblr_block_eigen_chains_raw_internal`, wy, yy, b, operator_descriptors, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, joint_component, joint_multiplier, joint_names, component_count, marker_scale, component_init, pi_prior, beta_init, state_init, annotations, alpha_init, sigma_alpha_init, pattern_pi_init, pattern_pi_prior, updateAlpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, pi_floor, alpha_update_every, convergence_covariance, convergence_probability, convergence_annotations, convergence_full_probability, convergence_markers, convergence_b, convergence_d, convergence_component)
 }
 
 mtblr_bed_marker_contract_internal <- function(score, xx, B, E, models, pi) {
@@ -91,10 +59,6 @@ mtblr_bed_chains_internal <- function(bed_files, n_bed, cls, rows, af, Y, beta_i
 
 mtblr_bed_convergence_trace_internal <- function(bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, keep_chains, joint_component, joint_multiplier, joint_names, component_count, marker_scale, pi_prior, component_init, annotations, alpha_init, sigma_alpha_init, pattern_pi_init, pattern_pi_prior, updateAlpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, pi_floor, alpha_update_every, convergence_covariance = FALSE, convergence_probability = FALSE, convergence_annotations = FALSE, convergence_full_probability = FALSE, convergence_markers = NULL, convergence_b = FALSE, convergence_d = FALSE, convergence_component = FALSE) {
     .Call(`_sblr_mtblr_bed_convergence_trace_internal`, bed_files, n_bed, cls, rows, af, Y, beta_init, b_init, state_init, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, residual_covariance, nit, nburn, nthin, seed, method, nchains, ncores, chain_seeds, keep_chains, joint_component, joint_multiplier, joint_names, component_count, marker_scale, pi_prior, component_init, annotations, alpha_init, sigma_alpha_init, pattern_pi_init, pattern_pi_prior, updateAlpha, intercept_prior_resolved, sigma_alpha_a, sigma_alpha_b, pi_floor, alpha_update_every, convergence_covariance, convergence_probability, convergence_annotations, convergence_full_probability, convergence_markers, convergence_b, convergence_d, convergence_component)
-}
-
-mtblr_eigen <- function(wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method) {
-    .Call(`_sblr_mtblr_eigen`, wy, ww, yy, b, XXvalues, XXindices, sets, B, E, ssb_prior, sse_prior, models, pi, nub, nue, updateB, updateE, updatePi, n, nit, nburn, nthin, seed, method)
 }
 
 test_read_bedfiles_to_packed_matrix <- function(bedfiles, n, rows, cls) {

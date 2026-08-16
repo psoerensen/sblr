@@ -1090,10 +1090,22 @@
   raw
 }
 
-.blr_format_cheng_mt_raw_v2 <- function(raw, keep_chains = FALSE) {
+.blr_format_cheng_mt_raw_v2 <- function(raw, keep_chains = FALSE,
+                                        operator = NULL) {
   validate_blr_raw_v2(raw)
   keep_chains <- .blr_logical_scalar(keep_chains, "keep_chains")
   spec <- raw$input
+  summary_data <- identical(spec$data$likelihood_regime,
+                            "independent_summary")
+  if (is.null(operator)) {
+    operator <- if (summary_data) {
+      types <- unique(vapply(
+        spec$data$operator_resources, `[[`, character(1), "operator_type"))
+      if (identical(types, "csr")) "csr" else "block_eigen"
+    } else "packed_bed"
+  }
+  operator <- .blr_character_scalar(
+    operator, "operator", c("packed_bed", "csr", "block_eigen"))
   markers <- spec$data$global_markers
   traits <- spec$data$trait_ids
   chains <- dimnames(raw$final$realised_effects)[[1L]]
@@ -1158,6 +1170,20 @@
       raw$final$activity_pattern_parameters[chain, , drop = FALSE]))
   names(chain_records) <- chains
 
+  observation_ids <- spec$data$observation_ids %||% character()
+  provider_sample_sizes <- if (summary_data) stats::setNames(vapply(
+    spec$data$providers, function(provider) provider$sample_size[[1L]],
+    numeric(1)), names(spec$data$providers)) else NULL
+  n_by_trait <- if (summary_data) stats::setNames(vapply(
+    traits, function(trait) {
+      values <- provider_sample_sizes[vapply(
+        spec$data$providers, function(provider) {
+          identical(provider$trait_ids, trait)
+        }, logical(1))]
+      if (length(unique(values)) == 1L) unname(values[[1L]]) else NA_real_
+    }, numeric(1)), traits) else stats::setNames(
+      rep(length(observation_ids), length(traits)), traits)
+
   fit <- list(
     bm = raw$posterior$realised_effect_mean,
     dm = raw$posterior$pips,
@@ -1211,9 +1237,9 @@
     raw_schema_version = 2L,
     input = list(
       resolved_spec = spec, analysis_mode = "joint_multitrait",
-      nt = length(traits), n = length(spec$data$observation_ids),
-      n_used = length(spec$data$observation_ids),
-      n_total = length(spec$data$observation_ids),
+      nt = length(traits), n = n_by_trait,
+      n_used = if (summary_data) NA_integer_ else length(observation_ids),
+      n_total = if (summary_data) NA_integer_ else length(observation_ids),
       residual_covariance_policy = spec$model$residual_policy,
       probability_policy = spec$model$probability_policy,
       task_seeds_resolved = spec$mcmc$task_seeds,
@@ -1224,20 +1250,22 @@
           raw$draws$convergence$transition_indices),
     data = list(
       marker_ids = markers, trait_names = traits,
-      observation_ids = spec$data$observation_ids,
-      n_by_trait = stats::setNames(
-        rep(length(spec$data$observation_ids), length(traits)), traits),
-      n_total = length(spec$data$observation_ids),
-      n_used = length(spec$data$observation_ids),
-      data_level = "individual",
-      genotype_scale = "standardized_genotype",
-      phenotype_scale = "centred_or_residualized_unscaled",
+      observation_ids = if (summary_data) NULL else observation_ids,
+      n_by_trait = n_by_trait,
+      n_by_provider = provider_sample_sizes,
+      n_total = if (summary_data) NA_integer_ else length(observation_ids),
+      n_used = if (summary_data) NA_integer_ else length(observation_ids),
+      data_level = if (summary_data) "summary_statistics" else "individual",
+      genotype_scale = if (summary_data) "declared_cross_product" else
+        "standardized_genotype",
+      phenotype_scale = if (summary_data) "summary_crossproduct" else
+        "centred_or_residualized_unscaled",
       operator_resources = spec$data$operator_resources,
       providers = spec$data$providers),
     diagnostics = raw$diagnostics,
     memory_estimate = raw$diagnostics$memory)
   fit <- .blr_finalize_fit(
-    fit, "mtblr", "bayesc", "packed_bed", data = fit$data,
+    fit, "mtblr", "bayesc", operator, data = fit$data,
     diagnostics = raw$diagnostics, memory_estimate = raw$diagnostics$memory)
   attr(fit, "blr_raw") <- raw
   attr(fit, "blr_resolved_spec") <- spec

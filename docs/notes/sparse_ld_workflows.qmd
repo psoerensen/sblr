@@ -111,10 +111,11 @@ MAF.
 
 ## Multi-trait routes
 
-The public multi-trait route is `mtblr_bed(method = "bayesc")` for complete
-common-sample packed-BED data. Corrected MT CSR and MT block-eigen
-summary-statistics likelihoods are not currently available. The sparse-LD
-workflows on this page therefore apply to supported STBLR analyses only.
+Public multi-trait Cheng MT-BayesC-Pi routes are `mtblr_bed()` for complete
+common-sample packed-BED data and `mtblr_csr()` or `mtblr_block_eigen()` for
+declared independent summary providers with fixed positive residual scales.
+The summary routes support heterogeneous marker maps and provider-specific
+operators, but not declared sample overlap.
 
 ## Maintained executable workflows
 
@@ -123,6 +124,7 @@ workflows on this page therefore apply to supported STBLR analyses only.
 - [Operator comparison workflow](../../examples/workflows/operator_comparison_workflow.R)
 - [ST annotation workflow](../../examples/workflows/st_annotation_workflow.R)
 - [Corrected Cheng MT-BayesC-Pi packed-BED workflow](../../examples/workflows/mt_models_workflow.R)
+- [Corrected Cheng MT-BayesC-Pi summary-provider workflow](../../examples/workflows/mt_summary_cheng_workflow.R)
 
 The scripts use small demonstration settings. Real analyses need scientifically
 appropriate chain lengths, memory review, convergence diagnostics, and

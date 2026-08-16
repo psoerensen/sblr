@@ -570,10 +570,10 @@ inferring unmodeled cross-trait overlap.
 
 ### Block-eigen summary-statistics likelihood
 
-A future MT-SBayesR block-eigen likelihood would require separate scientific
-qualification. No public MT block-eigen route currently exists. This does not
-affect the canonical retained-factor low-rank operator used by current scalar
-block-eigen fits.
+A future MT-SBayesR block-eigen likelihood requires separate scientific
+qualification. Public `mtblr_block_eigen()` currently implements only the
+corrected Cheng BayesC-Pi prior. This does not affect the canonical
+retained-factor low-rank operator used by current scalar block-eigen fits.
 
 The prior state model remains ordinary MT BayesR in either case; only the
 likelihood representation changes.

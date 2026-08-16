@@ -67,7 +67,7 @@ theory notation.
 | Statistical quantity | Theory notation | Current input/object | Qualification |
 |---|---|---|---|
 | Marker-phenotype cross-products | $X^\top y$ | commonly `stats$wy` | Trait-specific vectors in ST-style summary objects. |
-| Marker-trait cross-products | $X^\top Y$ | historical or research lower-level MT interfaces | Corrected public MT summary-statistics likelihoods are not currently available. |
+| Marker-trait cross-products | $X^\top Y$ | public `mtblr_csr()` and `mtblr_block_eigen()` provider scores | Each provider is assigned to one trait with a declared independent-summary likelihood and fixed residual scale. |
 | Marker diagonal cross-products | $\operatorname{diag}(X^\top X)$ | commonly `stats$ww` | Must use the same marker order and genotype scale as the LD operator. |
 | Phenotype sum of squares | $y^\top y$ | commonly `stats$yy` | For parallel ST fits this is marginal by trait. |
 | Pairwise phenotype cross-products | $S_Y$ | often called `SSY` in theoretical or research MT summary workflows | A full matrix is required for a future summary-statistics residual-covariance likelihood; the public packed-BED route uses individual-level residuals. |

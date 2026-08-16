@@ -777,8 +777,9 @@ Current MT BayesRC/SBayesRC has the following important boundaries:
   enrichment estimates;
 - the proposed multi-trait factorization is package-specific and should not be
   assumed to define all methods called BayesRC;
-- no corrected MT block-eigen likelihood is currently public, while the scalar
-  retained-factor block-eigen implementation remains supported.
+- public MT block-eigen fitting currently supports only corrected Cheng
+  BayesC-Pi with independent summary providers; MT-BayesRC remains deferred,
+  while the scalar retained-factor implementation remains supported.
 
 These are model boundaries, not missing values that should be silently supplied
 by the future provider architecture.

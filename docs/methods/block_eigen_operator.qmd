@@ -654,10 +654,11 @@ reference and explicit use.
 
 ### Multi trait
 
-No corrected MT block-eigen likelihood is currently public. MT-SBayesC,
-MT-SBayesR, MT-SBayesRC, and MT-LV block-eigen models remain deferred. This
-restriction does not affect the supported `stblr_block_eigen()` implementation
-described above.
+Corrected independent-summary Cheng MT-BayesC-Pi is public through
+`mtblr_block_eigen()`. Its full-rank target is the declared block-diagonal
+operator and its retained-rank target is the retained reconstruction.
+MT-SBayesR, MT-SBayesRC, annotation-informed MT, and MT-LV block-eigen models
+remain deferred. This does not affect `stblr_block_eigen()`.
 
 These capability distinctions are model/operator facts; they should not be
 inferred merely from the presence of similarly named arguments on another
@@ -762,7 +763,8 @@ Important limitations of the current block-eigen operator include:
 - reconstructed dense blocks can become expensive for large blocks;
 - current arbitrary external-GWAS/reference-LD projection is not supported by
   the public block-eigen contract;
-- corrected MT block-eigen fitting is not currently public;
+- corrected Cheng MT-BayesC-Pi block-eigen fitting is public only for declared
+  independent summary providers;
 - reference sample, marker order, allele orientation, missing-value handling,
   allele frequencies, block boundaries, and filter settings are required
   provenance.

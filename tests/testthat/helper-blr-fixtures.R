@@ -204,13 +204,6 @@ blr_csr_fixture_case <- function(nt = 2L, trait_specific = FALSE,
   list(dense=dense, csr=csr, prefixes=prefixes)
 }
 
-blr_csr_fixture_compare <- function(case, tolerance = 1e-12) {
-  dense <- do.call(sblr:::mtblr, case$dense)
-  csr <- do.call(sblr:::mtblr_csr_internal, case$csr)
-  testthat::expect_equal(csr, dense, tolerance = tolerance)
-  invisible(csr)
-}
-
 blr_csr_public_public_case <- function(trait_specific = FALSE, independent = FALSE) {
   x <- blr_csr_fixture_case(trait_specific = trait_specific, independent = independent,
                      updates = FALSE)
@@ -328,34 +321,6 @@ blr_block_fixture_case <- function(nt=2L, filters=rep("hard_truncate",nt), share
              common[setdiff(names(common),c("yy","b"))])
   list(dense=dense, block=block, inspections=inspections, matrices=op$matrices,
        transformed=transformed)
-}
-
-blr_block_fixture_compare <- function(case, tolerance=1e-12) {
-  dense <- do.call(sblr:::mtblr, case$dense)
-  block <- do.call(sblr:::mtblr_block_eigen_internal, case$block)
-  testthat::expect_equal(block, dense, tolerance=tolerance)
-  invisible(block)
-}
-
-blr_block_fixture_compare_csr <- function(case, tolerance=1e-10) {
-  nt <- length(case$transformed); prefixes <- character(nt)
-  diagonals <- lapply(case$matrices, diag)
-  for (t in seq_len(nt)) {
-    prefixes[t] <- tempfile(paste0("blr_block_fixture_csr_",t,"_"))
-    W <- case$matrices[[t]]
-    correlation <- W / outer(sqrt(diag(W)),sqrt(diag(W)))
-    diag(correlation) <- 1
-    blr_csr_fixture_write_operator(prefixes[t],correlation,diagonals[[t]])
-  }
-  args <- case$block
-  args$wy <- case$transformed; args$ww <- diagonals
-  args$ld_prefixes <- prefixes; args$operator_descriptors <- NULL
-  args <- args[c("wy","ww","yy","b","ld_prefixes","sets","B","E",
-    "ssb_prior","sse_prior","models","pi","nub","nue","updateB","updateE",
-    "updatePi","n","nit","nburn","nthin","seed","method")]
-  block <- do.call(sblr:::mtblr_block_eigen_internal,case$block)
-  csr <- do.call(sblr:::mtblr_csr_internal,args)
-  testthat::expect_equal(block,csr,tolerance=tolerance)
 }
 
 blr_block_public_public_case <- function(nt = 2L, filters = rep("hard_truncate", nt),

@@ -144,12 +144,15 @@ test_that("four-trait public chains are serial-parallel identical", {
   }
 })
 
-test_that("unsupported MT operators cannot reach legacy execution", {
-  expect_false("mtblr_csr" %in% getNamespaceExports("sblr"))
-  expect_false("mtblr_block_eigen" %in% getNamespaceExports("sblr"))
-  expect_error(sblr:::mtblr_csr(), "not currently available.*not reachable")
-  expect_error(sblr:::mtblr_block_eigen(),
-               "not currently available.*not reachable")
+test_that("public summary MT operators expose only corrected Cheng interfaces", {
+  expect_true("mtblr_csr" %in% getNamespaceExports("sblr"))
+  expect_true("mtblr_block_eigen" %in% getNamespaceExports("sblr"))
+  expect_identical(formals(mtblr_csr)$method, "bayesc")
+  expect_identical(formals(mtblr_block_eigen)$method, "bayesc")
+  expect_false(exists("mtblr_csr_chains_raw_internal",
+                      envir = asNamespace("sblr"), inherits = FALSE))
+  expect_false(exists("mtblr_block_eigen_chains_raw_internal",
+                      envir = asNamespace("sblr"), inherits = FALSE))
 })
 
 test_that("public covariance inputs must follow declared trait order", {

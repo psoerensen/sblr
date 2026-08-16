@@ -14,9 +14,12 @@ inverse-Wishart prior. The marker covariance $V_b$ and Dirichlet
 activity-pattern probabilities are sampled authoritatively. Feasible trait
 count depends on complete-pattern and memory limits.
 
-MT-BayesR, MT-BayesRC, annotation-informed MTBLR, MT CSR, and MT block-eigen
-likelihoods are not currently public. Their Methods pages describe theoretical
-or planned models rather than executable package capabilities.
+Corrected independent-summary Cheng MT-BayesC-Pi is public through
+`mtblr_csr()` and `mtblr_block_eigen()`. Providers must declare independence
+and fixed positive residual scales; predictions and full $V_e$ fields are
+unavailable. MT-BayesR, MT-BayesRC, annotation-informed MTBLR, and overlap-aware
+summary likelihoods remain theoretical or planned rather than executable
+package capabilities.
 
 Full covariance summaries are distinct from the five iteration × trait
 variance traces. Multichain seeds and results are deterministic and independent

@@ -557,308 +557,83 @@
   fit
 }
 
-#' Joint multivariate BayesC, BayesR, and SBayesR with sparse LD
-#'
-#' Fits aligned joint multivariate mixture models from standardized
-#' summary statistics and one shared or one-per-trait disk-backed CSR LD
-#' resource. Marker identity, order, scale, and available allele orientation
-#' metadata are validated before native execution. The function uses marginal
-#' `yy` only; sample overlap is not modeled and residual covariance is diagonal.
-#'
-#' @param stats A multi-trait sufficient-statistics object or named list of
-#'   single-trait objects containing `wy`, `ww`, `yy`, `n`, and marker IDs.
-#' @param Glist One Glist or a list of one Glist per trait.
-#' @param ld_prefix One CSR prefix or one prefix per trait.
-#' @param ld_metadata LD descriptors required when no Glist is supplied.
-#' @param trait_metadata Optional data frame with trait/study provenance.
-#' @param marker_policy Either strict order matching or R-side stats reordering.
-#' @param sample_overlap Must be `"not_modeled"`.
-#' @param method Exactly `"sbayesc"`, `"sbayesr"`, or `"sbayesrc"`; the `s` prefix denotes
-#'   summary-statistics data and does not activate MAF scaling.
-#' @param n Optional sample sizes overriding identical values only.
-#' @param sets Optional disjoint complete marker partition (1-based).
-#' @param beta,b,state Optional BayesR latent effects, effective effects, and
-#'   binary trait-pattern states. BayesC accepts `b` only.
-#' @param h2 Requested initial expected genetic-variance fraction, scalar or
-#'   one value per trait, under resolved joint trait-pattern, component,
-#'   annotation, and fixed MAF-S weights.
-#' @param pi Initial non-null probability or complete pattern probabilities.
-#' @param models,pimodels Pattern matrix and probabilities.
-#' @param mixture_var Fixed BayesR component-variance multipliers: one leading
-#'   zero followed by unique ascending positive values.
-#' @param joint_pi Optional initial probability vector over the deterministic
-#'   joint pattern-by-component states.
-#' @param joint_pi_prior Optional positive Dirichlet prior over joint states.
-#' @param component Optional zero-based component initialization per marker.
-#' @param annotations Required marker-by-annotation numeric matrix or data
-#'   frame for `"sbayesrc"`. Explicit unique marker IDs are required and are
-#'   matched to the final marker order.
-#' @param add_intercept Add one intercept when none is supplied.
-#' @param standardize_annotations Standardize eligible non-intercept columns.
-#' @param center_binary_annotations Center and scale binary annotations when
-#'   standardization is enabled.
-#' @param alpha_init Optional processed-annotation-by-stick coefficient matrix.
-#' @param sigmaSqAlpha_init Optional positive variance initialization per stick.
-#' @param annotation_intercept_prior Proper normal probit-stick intercept prior.
-#' @param intercept_flat Deprecated opt-in legacy flat prior.
-#' @param sigmaSqAlpha_a,sigmaSqAlpha_b Positive annotation-variance prior
-#'   hyperparameters.
-#' @param pi_floor Probability floor used by probit stick-breaking.
-#' @param alpha_update_every Positive iteration interval for coefficient updates.
-#' @param updateAlpha Update annotation coefficients and their variances.
-#' @param maf_effect_s Optional fixed scalar MAF-S exponent, independent of the
-#'   summary-statistics `sbayesr` model name.
-#' @param effect_maf Optional allele frequencies aligned to the final marker
-#'   order for the independent `maf_effect_s` scale policy.
-#' @param allow_reference_maf_for_maf_effect_s Allow explicit fallback to
-#'   reference-panel MAF when GWAS-summary MAF is unavailable.
-#' @param estimate_maf_effect_s Logical; sampled MT S is currently unsupported.
-#' @param maf_effect_s_init,maf_effect_s_prior,maf_effect_s_proposal_sd Reserved
-#'   sampled-S controls, rejected while `estimate_maf_effect_s` is unsupported.
-#' @param vg,vb,ve Initial covariance matrices.
-#' @param ssb_prior,sse_prior Covariance prior scale matrices.
-#' @param updateB,updateE,updatePi Update controls.
-#' @param nub,nue Prior degrees of freedom.
-#' @param nit,nburn,nthin MCMC controls.
-#' @param seed Explicit native RNG seed.
-#' @param nchains Number of complete joint-MT logical chains.
-#' @param ncores Requested logical-chain workers.
-#' @param chain_seeds Optional signed integer seed per chain.
-#' @param keep_chains Retain compact logical-chain records.
-#' @param convergence Convergence mode: `"auto"`, `"none"`, `"core"`, or
-#'   `"extended"`. Automatic mode remains core-only.
-#' @param convergence_control Optional uniquely named convergence-control list.
-#'   Extended mode can request covariance, probability, annotation, or
-#'   selection-S groups plus explicitly selected marker traces, subject to a
-#'   pre-execution hard memory guard.
-#' @param memory_warning_gb Analytical memory-warning threshold in GiB.
-#' @param verbose Print resolved execution metadata.
-#' @return An object of class `mtblr_fit`.
-#' @noRd
-.mtblr_csr_legacy_covariance_hybrid <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
-  trait_metadata = NULL, marker_policy = c("strict", "reorder_stats"),
-  sample_overlap = "not_modeled", method = "sbayesc", n = NULL, sets = NULL,
-  beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
-  models = NULL, pimodels = NULL, mixture_var = NULL, joint_pi = NULL,
-  joint_pi_prior = NULL, component = NULL,
-  annotations = NULL, add_intercept = TRUE,
-  standardize_annotations = TRUE, center_binary_annotations = FALSE,
-  alpha_init = NULL, sigmaSqAlpha_init = NULL,
-  annotation_intercept_prior = NULL, intercept_flat = NULL,
-  sigmaSqAlpha_a = 2, sigmaSqAlpha_b = 2, pi_floor = 1e-12,
-  alpha_update_every = 1L, updateAlpha = TRUE, maf_effect_s = NULL,
-  effect_maf = NULL, allow_reference_maf_for_maf_effect_s = FALSE,
-  estimate_maf_effect_s = FALSE, maf_effect_s_init = NULL,
-  maf_effect_s_prior = NULL, maf_effect_s_proposal_sd = NULL,
-  vg = NULL, vb = NULL, ve = NULL, ssb_prior = NULL, sse_prior = NULL,
-  updateB = TRUE, updateE = TRUE, updatePi = TRUE, nub = 4, nue = 4,
-  nit = 1000, nburn = 500, nthin = 1, seed = 1,
-  nchains = 1L, ncores = 1L, chain_seeds = NULL,
-  keep_chains = FALSE, convergence = c("auto", "none", "core", "extended"),
-  convergence_control = NULL, memory_warning_gb = 8, verbose = FALSE) {
-  marker_policy <- match.arg(marker_policy)
-  chain <- .blr_chain_controls(
-    nit, nburn, nthin, seed, nchains, ncores, chain_seeds, keep_chains)
-  conv <- .blr_convergence_controls(
-    convergence, convergence_control, chain$nchains)
-  if (!identical(sample_overlap, "not_modeled")) stop("sample_overlap must be exactly 'not_modeled'.", call. = FALSE)
-  semantics <- .mtblr_resolve_public_method(method, "csr")
-  st <- .mtblr_normalize_stats(stats); if (!is.null(n) && !identical(as.integer(rep(n, length.out = st$nt)), st$n)) stop("n conflicts with stats sample sizes.", call. = FALSE)
-  ld <- .mtblr_resolve_ld(Glist, ld_prefix, ld_metadata, st$nt)
-  aligned <- .mtblr_align(st, ld, marker_policy); st <- aligned$stats
-  shared <- length(ld$prefixes) == 1L
-  sharing <- if (shared && all(vapply(st$ww[-1L], identical, logical(1), st$ww[[1L]]))) "fully_shared_operator" else if (shared) "shared_correlation_reference" else "trait_specific_reference"
-  native_prefix <- if (sharing == "shared_correlation_reference") rep(ld$prefixes, st$nt) else ld$prefixes
-  pattern_spec <- .mtblr_models(models, pimodels, pi, st$nt)
-  maf_info <- .mtblr_resolve_effect_maf(
-    effect_maf, !is.null(maf_effect_s) || isTRUE(estimate_maf_effect_s),
-    st$m, summary_marker_metadata = aligned$marker_metadata,
-    reference_marker_metadata = ld$descriptors[[1L]]$marker_metadata,
-    allow_reference_maf_for_maf_effect_s =
-      allow_reference_maf_for_maf_effect_s)
-  mixture <- .mtblr_bayesr_spec(
-    semantics$prior_kernel, pattern_spec, maf_info$values,
-    st$m, mixture_var, joint_pi, joint_pi_prior, component, maf_effect_s,
-    estimate_maf_effect_s, maf_effect_s_init, maf_effect_s_prior,
-    maf_effect_s_proposal_sd)
-  if (identical(semantics$prior_kernel, "bayesrc")) {
-    if (!is.null(joint_pi) || !is.null(joint_pi_prior))
-      stop("joint_pi and joint_pi_prior are not BayesRC controls; use pimodels for conditional pattern initialization.", call. = FALSE)
-    mixture$method_code <- 6L
-  }
-  bayesrc <- .mtblr_bayesrc_controls(
-    semantics$prior_kernel, annotations, aligned$marker_ids, pattern_spec,
-    mixture, add_intercept, standardize_annotations,
-    center_binary_annotations, alpha_init, sigmaSqAlpha_init,
-    annotation_intercept_prior, intercept_flat, sigmaSqAlpha_a,
-    sigmaSqAlpha_b, pi_floor,
-    alpha_update_every, updateAlpha)
-  extended_plan <- .blr_mtblr_extended_plan(
-    conv, aligned$marker_ids, st$trait_names, method, mixture, bayesrc,
-    updateB, updateE, updatePi, "diagonal", chain$nchains, chain$nit)
-  conv$selected_markers_resolved <- extended_plan$selected
-  mod <- mixture$patterns
-  set_spec <- .mtblr_sets(sets, st$m)
-  h2 <- rep(h2, length.out = st$nt); if (any(!is.finite(h2)) || any(h2 <= 0 | h2 >= 1)) stop("h2 must be in (0, 1).", call. = FALSE)
-  vy <- st$yy / (st$n - 1)
-  calibration_inputs <- .mtblr_calibration_inputs(mixture, bayesrc, st$m)
-  calibrated <- .mtblr_prior_calibration(
-   vy, h2, nub, nue, calibration_inputs$patterns,
-   calibration_inputs$initial, calibration_inputs$prior,
-   calibration_inputs$gamma, calibration_inputs$marker_scale,
-   vg, vb, ve, ssb_prior, sse_prior,
-   calibration_inputs$component_probability_source,
-   calibration_inputs$annotation_probability_policy)
-  vg <- calibrated$vg; vb <- calibrated$vb; ve <- calibrated$ve
-  ssb_prior <- calibrated$ssb_prior; sse_prior <- calibrated$sse_prior
-  if (any(ve[row(ve) != col(ve)] != 0) ||
-      any(sse_prior[row(sse_prior) != col(sse_prior)] != 0)) {
-   stop("ve and sse_prior must be diagonal for the public MT CSR route.",
-        call. = FALSE)
-  }
-  initialization <- .mtblr_bayesr_initialization(
-    beta,b,state,mixture$component_init,pattern_spec$matrix,st$m,st$nt,
-    semantics$prior_kernel)
-  b <- initialization$b
-  trait_metadata <- if (is.null(trait_metadata)) data.frame(trait_id = st$trait_names) else as.data.frame(trait_metadata, stringsAsFactors = FALSE)
-  if (is.null(trait_metadata$trait_id)) trait_metadata$trait_id <- st$trait_names
-  if (nrow(trait_metadata) != st$nt || !identical(as.character(trait_metadata$trait_id), st$trait_names) || anyDuplicated(trait_metadata$trait_id)) stop("trait_metadata trait_id must uniquely match trait order.", call. = FALSE)
-  for (x in c("study_id", "ancestry", "population", "ld_reference")) if (is.null(trait_metadata[[x]])) trait_metadata[[x]] <- NA_character_
-  trait_metadata$sample_size <- st$n; trait_metadata$ld_prefix <- rep(native_prefix, length.out = st$nt); trait_metadata$ld_sharing_mode <- sharing
-  operator_bytes <- sum(file.info(unlist(lapply(unique(native_prefix), function(x)
-    paste0(x, c(".row_ptr.u64.bin", ".col_idx.u32.0based.bin",
-                ".values.f32.bin")))))$size, na.rm = TRUE)
-  memory <- .blr_memory_estimate(
-    "mtblr", "csr", st$m, st$nt, chain$nchains, chain$ncores,
-    chain$nit, chain$nit + chain$nburn, chain$keep_chains,
-    convergence_quantities = if (conv$compute || conv$keep_traces) 5L * st$nt else 0L,
-    keep_traces = conv$keep_traces, operator_bytes = operator_bytes)
-  memory <- .mtblr_bayesr_memory(
-    memory,method,st$m,chain$nchains,chain$ncores,chain$nit+chain$nburn,
-    nrow(mod$matrix),mixture$component_count)
-  memory <- .mtblr_bayesrc_memory(
-    memory,bayesrc,st$m,chain$nchains,chain$ncores,
-    chain$nit+chain$nburn)
-  memory <- .blr_add_extended_memory(memory, extended_plan)
-  .blr_memory_warning(memory, memory_warning_gb, conv$mode,
-                      conv$compute || conv$keep_traces, conv$keep_traces)
-  native_execution <- mtblr_csr_chains_raw_internal(
-    st$wy, st$ww, st$yy,
-    lapply(seq_len(st$nt), function(t) b[, t]), native_prefix,
-    set_spec$native, vb, ve,
-    lapply(seq_len(st$nt), function(i) ssb_prior[, i]),
-    lapply(seq_len(st$nt), function(i) sse_prior[, i]), mod$native,
-    mod$probabilities, nub, nue, updateB, updateE, updatePi, st$n,
-    chain$nit, chain$nburn, chain$nthin, chain$seed, mixture$method_code,
-    chain$nchains, chain$ncores, chain$chain_seeds_native,
-    mixture$joint_component,mixture$joint_multiplier,mixture$joint_names,
-    mixture$component_count,mixture$marker_scale,initialization$component,
-    mixture$pi_prior,
-    lapply(seq_len(st$nt), function(t) initialization$beta[,t]),
-    lapply(seq_len(st$nt), function(t) initialization$state[,t]),
-    bayesrc$annotations,bayesrc$alpha_init,bayesrc$sigma_alpha_init,
-    bayesrc$pattern_pi_init,bayesrc$pattern_pi_prior,bayesrc$updateAlpha,
-    bayesrc$intercept_prior_resolved,bayesrc$sigma_alpha_a,bayesrc$sigma_alpha_b,
-    bayesrc$pi_floor,bayesrc$alpha_update_every,
-    extended_plan$native$convergence_covariance,
-    extended_plan$native$convergence_probability,
-    extended_plan$native$convergence_annotations,
-    extended_plan$native$convergence_full_probability,
-    extended_plan$native$convergence_markers,
-    extended_plan$native$convergence_b,
-    extended_plan$native$convergence_d,
-    extended_plan$native$convergence_component)
-  if (!is.null(bayesrc$model_parameters))
-    native_execution$raws <- lapply(native_execution$raws,
-      .mtblr_bayesrc_enrich_raw, bayesrc = bayesrc, method = method,
-      updatePi = updatePi)
-  execution <- .mtblr_summary_multichain(
-    native_execution, chain, conv, st$trait_names, method, "csr",
-    updateB, updateE, mixture$model_parameters, extended_plan)
-  raw <- execution$raw
-  raw$model$names <- mod$names; raw$pi$names <- mod$names
-  raw$data <- list(marker_metadata = aligned$marker_metadata, trait_metadata = trait_metadata,
-    sample_size = st$n, ld_prefix = native_prefix, ld_sharing_mode = sharing,
-    scale = "standardized_genotype", data_level = "summary_statistics",
-    effect_maf_source = maf_info$effect_maf_source,
-    effect_maf_population = maf_info$effect_maf_population,
-    effect_maf_alignment_status = maf_info$effect_maf_alignment_status,
-    effect_maf_fallback_used = maf_info$effect_maf_fallback_used,
-    annotation_source = bayesrc$metadata$annotation_source %||% "not_applicable",
-    annotation_marker_alignment_status =
-      bayesrc$metadata$annotation_marker_alignment_status %||% "not_applicable")
-  raw$alignment <- list(marker_policy = marker_policy, intersection_policy = "error", per_trait = aligned$report,
-    orientation_status = aligned$report$allele_status)
-  input <- list(method = method, model = method,
-    backend = paste0("mt_csr_", semantics$prior_kernel),
-    prior_kernel = semantics$prior_kernel,
-    data_level = "summary_statistics",
-    effect_scale_policy = if (!is.null(maf_effect_s))
-      if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component_maf_s" else "maf_s"
-      else if (semantics$prior_kernel %in% c("bayesr", "bayesrc")) "component" else "unit",
-    model_semantics_version = 2L,
-    model_semantics = "s_prefix_means_summary_statistics",
-    m = st$m, nt = st$nt, n = st$n, h2 = h2, nub = nub, nue = nue,
-    nit = chain$nit, nburn = chain$nburn, nthin = chain$nthin,
-    seed = chain$seed, nchains = chain$nchains, ncores = chain$ncores,
-    chain_seeds_requested = chain$chain_seeds_requested,
-    chain_seeds_resolved = execution$seeds,
-    keep_chains = chain$keep_chains, convergence = conv$mode,
-    convergence_control = conv[c("warn", "rhat_threshold",
-      "ess_per_chain_threshold", "mcse_mean_over_sd_threshold",
-      "keep_traces", "extended_groups_requested",
-      "extended_groups_resolved", "selected_markers",
-      "selected_markers_resolved",
-      "selected_marker_quantities", "full_probability_states",
-      "aggregate_component_states",
-      "max_trace_gb", "allow_large_traces")], memory_warning_gb = memory_warning_gb,
-    updateB = updateB, updateE = updateE, updatePi = updatePi,
-    updateAlpha = bayesrc$updateAlpha,
-    annotation_policy = if (is.null(bayesrc$model_parameters)) "global" else
-      "annotation_probit_stick",
-    models = mod$matrix, model_names = mod$names, pimodels = mod$probabilities,
-    mixture_var = mixture$mixture_var, joint_pi_prior = mixture$pi_prior,
-    maf_effect_s = mixture$maf_effect_s,
-    estimate_maf_effect_s = estimate_maf_effect_s,
-    effect_maf_source = maf_info$effect_maf_source,
-    effect_maf_population = maf_info$effect_maf_population,
-    effect_maf_alignment_status = maf_info$effect_maf_alignment_status,
-    effect_maf_fallback_used = maf_info$effect_maf_fallback_used,
-    sets = set_spec$public,
-    ld_prefix = native_prefix, ld_sharing_mode = sharing, ld_reference = trait_metadata$ld_reference,
-    marker_policy = marker_policy, marker_intersection_policy = "error", scale = "standardized_genotype",
-    sample_overlap = "not_modeled", phenotype_crossproduct_policy = "marginal_yy_only",
-    residual_covariance_policy = "diagonal", trait_metadata = trait_metadata, alignment = raw$alignment)
-  input <- c(input, calibrated$calibration)
-  if (isTRUE(verbose)) print(input[c("backend", "m", "nt", "ld_sharing_mode", "seed", "nchains", "ncores")])
-  fit <- .as_mtblr_fit(raw, aligned$marker_ids, st$trait_names,
-                       aligned$marker_metadata, trait_metadata,
-                       raw$alignment, input)
-  fit$chains <- execution$chains
-  fit$convergence <- execution$convergence
-  fit["convergence_traces"] <- list(execution$convergence_traces)
-  fit$input$memory_estimate <- memory
-  fit <- .mtblr_bayesr_format_fit(fit, mixture$model_parameters)
-  fit <- .mtblr_bayesrc_format_fit(fit, raw$annotations, bayesrc)
-  if (isTRUE(bayesrc$maf_annotation_overlap) && !is.null(maf_effect_s))
-    warning("MAF-derived annotations and maf_effect_s are both active; MAF may influence component probabilities and effect-size variance.", call. = FALSE)
-  messages <- .blr_convergence_warning_messages(
-    fit$convergence, if (conv$mode == "core") "core" else "auto",
-    "mtblr", "csr")
-  if (isTRUE(conv$warn) && conv$mode != "none" &&
-      !(conv$mode == "auto" && chain$nchains == 1L) && length(messages)) {
-    warning(messages[[1L]], call. = FALSE)
-  }
-  .blr_finalize_fit(
-    fit,
-    "mtblr", method, "csr", data = raw$data,
-    diagnostics = raw$diagnostics, memory_estimate = memory)
-}
 
-#' @noRd
-mtblr_csr <- function(...) {
-  stop(paste0(
-    "Corrected multi-trait CSR likelihoods are not currently available. ",
-    "Use mtblr_bed() with common-sample packed BED data; the obsolete MT ",
-    "covariance-hybrid CSR sampler is not reachable."), call. = FALSE)
+#' Fit Cheng Multi-Trait BayesC-Pi with Sparse LD
+#'
+#' Fits the corrected Cheng MT-BayesC-Pi model from independent summary-
+#' statistic providers backed by sparse CSR cross-product operators. Each
+#' provider contributes to exactly one declared trait and may have its own
+#' marker subset, order, sample size, residual scale, and LD population.
+#' Multiple providers for one trait are allowed only when their likelihoods
+#' are declared independent. Missing provider markers contribute no likelihood
+#' information.
+#'
+#' CSR resources may describe an exact declared operator or an approximation.
+#' The sampler does not densify or combine provider operators. Individual-level
+#' predictions and full residual-covariance draws are unavailable for this
+#' likelihood.
+#'
+#' @param providers A nonempty list of named provider descriptors. Each must
+#'   contain `provider_id`, `trait_id`, `operator_resource_id`, a named `score`
+#'   vector, `sample_size`, positive fixed `residual_scale`,
+#'   `likelihood_regime = "independent_summary"`, and `effect_scale`.
+#' @param operator_resources A nonempty list of CSR resource descriptors. Each
+#'   must contain `resource_id`, `marker_ids`, `alleles`, genotype coding and
+#'   scaling metadata, an approximation declaration, provenance, `csr`, and
+#'   the cross-product `diagonal`.
+#' @param global_marker_ids Ordered unique global marker identifiers.
+#' @param global_alleles Global allele metadata aligned to
+#'   `global_marker_ids`.
+#' @param trait_ids Ordered unique trait identifiers.
+#' @param method Model identifier. Phase 6B supports only `"bayesc"`.
+#' @param initial_marker_covariance Initial finite SPD marker covariance
+#'   matrix, ordered by `trait_ids`.
+#' @param marker_covariance_prior_degrees_of_freedom Inverse-Wishart prior
+#'   degrees of freedom for the marker covariance.
+#' @param marker_covariance_prior_scale Finite SPD inverse-Wishart prior scale
+#'   matrix, ordered by `trait_ids`.
+#' @param initial_activity_pattern_probability Optional initial probability
+#'   vector over the complete binary activity patterns.
+#' @param activity_pattern_dirichlet_prior Optional positive Dirichlet prior
+#'   vector over the complete binary activity patterns.
+#' @param nit Number of post-burn-in sampling iterations.
+#' @param nburn Number of burn-in iterations.
+#' @param nthin Positive retention interval.
+#' @param seed Master seed used by the Phase 3 seed contract.
+#' @param nchains Number of complete joint chains.
+#' @param ncores Number of requested chain workers.
+#' @param chain_seeds Optional exact task seed per chain.
+#' @param keep_chains Retain compact chain records in the formatted fit.
+#' @param convergence Convergence capture policy, `"core"` or `"none"`.
+#' @param convergence_control Reserved; must be `NULL`.
+#' @param keep_traces Capture the established unthinned convergence state.
+#' @param memory_limit_bytes Incremental fit-memory limit checked before native
+#'   sampling.
+#' @return An object of class `mtblr_fit`. The validated `blr_raw` version 2
+#'   object is available according to the standard output contract.
+#' @export
+mtblr_csr <- function(
+    providers, operator_resources, global_marker_ids, global_alleles,
+    trait_ids, method = "bayesc", initial_marker_covariance,
+    marker_covariance_prior_degrees_of_freedom,
+    marker_covariance_prior_scale,
+    initial_activity_pattern_probability = NULL,
+    activity_pattern_dirichlet_prior = NULL,
+    nit = 1000L, nburn = 500L, nthin = 1L, seed = 1,
+    nchains = 1L, ncores = 1L, chain_seeds = NULL,
+    keep_chains = FALSE, convergence = c("core", "none"),
+    convergence_control = NULL, keep_traces = TRUE,
+    memory_limit_bytes = 256 * 1024^2) {
+  .blr_validate_exact_public_call(sys.call(), sys.function(), "mtblr_csr()")
+  .mtblr_summary_public_fit(
+    providers, operator_resources, global_marker_ids, global_alleles,
+    trait_ids, "csr", "mtblr_csr", method,
+    initial_marker_covariance,
+    marker_covariance_prior_degrees_of_freedom,
+    marker_covariance_prior_scale,
+    initial_activity_pattern_probability,
+    activity_pattern_dirichlet_prior,
+    nit, nburn, nthin, seed, nchains, ncores, chain_seeds,
+    keep_chains, convergence, convergence_control, keep_traces,
+    memory_limit_bytes)
 }

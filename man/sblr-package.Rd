@@ -11,7 +11,8 @@ and summary statistics represented by CSR sparse-LD or block-eigen
 operators. Canonical prior families are BayesC, BayesR, and
 annotation-informed BayesRC. See [stblr_csr()], [stblr_csr_annot()],
 [stblr_block_eigen()], [stblr_bed()], and [mtblr_bed()]. Corrected
-multi-trait CSR and block-eigen likelihoods are not currently available.
+independent-summary multi-trait Cheng BayesC-Pi analyses use the public CSR
+and block-eigen interfaces.
 }
 \details{
 The public `s` model prefix denotes summary-statistics data and is

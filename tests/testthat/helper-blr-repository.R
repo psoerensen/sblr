@@ -131,13 +131,3 @@ blr_expect_fixture_md5 <- function(paths, expected) {
   }, character(1))
   testthat::expect_identical(unname(tools::md5sum(resolved)), unname(expected))
 }
-
-blr_mt_public_source <- function() {
-  adapter <- blr_source_text("src/mtblr.cpp")
-  first <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr(",
-                   adapter, fixed = TRUE)[1]
-  last <- regexpr("std::vector<std::vector<std::vector<double>>>  mtblr_eigen(",
-                  adapter, fixed = TRUE)[1]
-  substr(adapter, first, last - 1L)
-}
-

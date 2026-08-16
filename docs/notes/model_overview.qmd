@@ -3,22 +3,23 @@ title: "Model overview"
 format: html
 ---
 
-STBLR fits traits independently. The current public MTBLR implementation
-jointly models a modest trait set with complete common-sample packed-BED data.
+STBLR fits traits independently. Current public MTBLR jointly models a modest
+trait set from complete common-sample packed-BED data or declared independent
+summary providers.
 
 | Analysis | Data level | Currently supported public models |
 |---|---|---|
 | STBLR | Individual packed BED | `bayesc`, `bayesr` |
 | STBLR | Summary statistics | `sbayesc`, `sbayesr`, and supported annotation-informed variants |
 | MTBLR | Individual packed BED | corrected Cheng MT-BayesC-Pi (`bayesc`) |
-| MTBLR | Summary statistics | Not currently available |
+| MTBLR | Independent summary statistics | corrected Cheng MT-BayesC-Pi (`bayesc`) with CSR or block-eigen operators |
 
 The `s` prefix means summary statistics, not MAF scaling. Optional
 `maf_effect_s` controls MAF-dependent effect-variance scaling independently.
 
 Public fitters are `stblr_csr()`, `stblr_csr_annot()`,
-`stblr_block_eigen()`, `stblr_bed()`, and `mtblr_bed()`. Corrected MT CSR and
-MT block-eigen likelihoods are deferred.
+`stblr_block_eigen()`, `stblr_bed()`, `mtblr_bed()`, `mtblr_csr()`, and
+`mtblr_block_eigen()`. Overlap-aware MT summary likelihoods remain deferred.
 
 See the [single-trait](single_trait_models.qmd) and
 [multi-trait](multi_trait_models.qmd) practical pages, or the
@@ -35,6 +36,8 @@ BayesRC annotation coefficients, the inverse-chi-square scale uses the explicitl
 recorded resolved-initial-probability policy because no exact closed-form prior
 expectation over the coefficients is available.
 
-The public MTBLR route requires explicit initial covariance matrices and
-inverse-Wishart degrees-of-freedom/scale parameters for $V_b$ and for sampled
-$V_e$. It does not recycle scalar ST variance calibration into matrix priors.
+Public MTBLR routes require an explicit initial $V_b$ and inverse-Wishart
+degrees-of-freedom/scale prior. The BED route additionally uses fixed or
+sampled full $V_e$; independent-summary routes instead use fixed positive
+provider residual scales. Scalar ST variance priors are not recycled into
+matrix priors.

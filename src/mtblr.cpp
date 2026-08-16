@@ -4023,7 +4023,7 @@ void sampleBetaCSt(int i,
 #include "blr_mt_default_finalize_impl.h"
 #include "blr_mt_default_legacy_adapter.h"
 
-// [[Rcpp::export]]
+// Superseded Phase 5B/6B covariance-hybrid entry; intentionally unregistered.
 std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<double>> wy,
                                                         std::vector<std::vector<double>> ww,
                                                         std::vector<double> yy,
@@ -4074,7 +4074,7 @@ std::vector<std::vector<std::vector<double>>>  mtblr(   std::vector<std::vector<
 
 // Internal canonical trait-specific CSR execution. This native maintenance
 // route is deliberately not selected by sblr() and is not namespace-exported.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 std::vector<std::vector<std::vector<double>>> mtblr_csr_internal(
  std::vector<std::vector<double>> wy,
  std::vector<std::vector<double>> ww,
@@ -4363,7 +4363,7 @@ MtBlockEigenAdapterResult run_mt_block_eigen_adapter(
 // Internal canonical trait-specific block-eigen execution. Operator building
 // and any matching wy projection complete before the shared MT core creates
 // its fit-local RNG. This maintenance route is not namespace-exported.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 std::vector<std::vector<std::vector<double>>> mtblr_block_eigen_internal(
  std::vector<std::vector<double>> wy,
  std::vector<double> yy,
@@ -4516,7 +4516,7 @@ std::string mt_block_eigen_filter_name(EigenFilterMode mode) {
 // Named schema adapter for the public R mtblr_csr() boundary. Numerical
 // execution remains exclusively owned by mtblr_csr_internal() and its shared
 // This adapter only names and shapes finalized values.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 Rcpp::List mtblr_csr_raw_internal(
  std::vector<std::vector<double>> wy,
  std::vector<std::vector<double>> ww,
@@ -4726,7 +4726,7 @@ Rcpp::List mt_summary_raw_list(
 }  // namespace
 
 // Shared-preparation deterministic logical-chain execution for MT CSR.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 Rcpp::List mtblr_csr_chains_raw_internal(
  std::vector<std::vector<double>> wy,
  std::vector<std::vector<double>> ww,
@@ -4884,7 +4884,7 @@ Rcpp::List mtblr_csr_chains_raw_internal(
 
 // Named schema adapter for the public R mtblr_block_eigen() boundary. The
 // The adapter builds operators and executes the core exactly once.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 Rcpp::List mtblr_block_eigen_raw_internal(
  std::vector<std::vector<double>> wy,
  std::vector<double> yy,
@@ -4947,7 +4947,7 @@ Rcpp::List mtblr_block_eigen_raw_internal(
 }
 
 // Shared-preparation deterministic logical-chain execution for MT block eigen.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 Rcpp::List mtblr_block_eigen_chains_raw_internal(
  std::vector<std::vector<double>> wy, std::vector<double> yy,
  std::vector<std::vector<double>> b, Rcpp::List operator_descriptors,
@@ -6085,7 +6085,7 @@ Rcpp::List mtblr_bed_convergence_trace_internal(
 
 // INTERNAL RESEARCH ONLY: not publicly routed or supported. Retained until the
 // shared scalar/MT block-eigen representation and per-trait operators exist.
-// [[Rcpp::export]]
+// Superseded Phase 6B covariance-hybrid entry; intentionally unregistered.
 std::vector<std::vector<std::vector<double>>>  mtblr_eigen(   std::vector<std::vector<double>> wy,
                                                               std::vector<std::vector<double>> ww,
                                                               std::vector<double> yy,

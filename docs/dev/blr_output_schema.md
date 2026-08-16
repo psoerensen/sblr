@@ -109,7 +109,8 @@ burn-in and sampling sweeps, and changes cannot exceed that total.
 The field is not required for single-trait, independent-trait, or other models
 for which pleiotropy is scientifically undefined.
 
-The internal Phase 6A independent-summary route uses the same general-$T$
+The Phase 6A independent-summary route, public through `mtblr_csr()` and
+`mtblr_block_eigen()` since Phase 6B, uses the same general-$T$
 activity, effect, probability, covariance, task, and compact-diagnostic axes.
 Its resolved input retains every provider, local-to-global map, fixed
 $\phi_p$, and operator approximation descriptor. Because marginal independent
@@ -119,6 +120,8 @@ covariance, `derived$predictions`, `draws$residual_covariance`,
 present with value `NULL`. No operator-relative quadratic is relabelled as SSE
 or genomic covariance. See
 [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
+Public promotion does not change these fields; see
+[the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
 
 ## Variance and covariance fields
 

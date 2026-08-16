@@ -987,8 +987,8 @@
 #' complete binary activity patterns, one authoritative marker covariance,
 #' and either a fixed or sampled full residual covariance. Phenotypes must be
 #' complete and already centred or residualized as appropriate for the
-#' intended analysis. Corrected summary-statistic MT likelihoods are not yet
-#' available.
+#' intended analysis. Independent-provider summary-statistic analyses use
+#' [mtblr_csr()] or [mtblr_block_eigen()] instead.
 #'
 #' @param y Complete numeric phenotype matrix with one column per trait.
 #' @param Glist One packed-BED genotype list shared by all traits.

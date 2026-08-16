@@ -2,8 +2,7 @@ test_that("unified public fitting routes and identifiers are canonical", {
   exports <- getNamespaceExports("sblr")
   expect_true(all(c(
     "stblr_csr", "stblr_block_eigen", "stblr_bed", "stblr_csr_annot",
-    "mtblr_bed") %in% exports))
-  expect_false(any(c("mtblr_csr", "mtblr_block_eigen") %in% exports))
+    "mtblr_bed", "mtblr_csr", "mtblr_block_eigen") %in% exports))
   expect_false(any(c(
     "sblr", "stblr_bed_marker", "stblr_csr_bayesr",
     "stblr_csr_prior_annot", "stblr_csr_learn_annot",
@@ -21,6 +20,15 @@ test_that("unified public fitting routes and identifiers are canonical", {
     "nit", "nburn", "nthin", "seed", "nchains", "ncores",
     "chain_seeds", "keep_chains", "convergence", "convergence_control",
     "keep_traces", "memory_limit_bytes") %in% mt_args))
+  for (fun in list(mtblr_csr, mtblr_block_eigen)) {
+    summary_args <- names(formals(fun))
+    expect_true(all(c(
+      "providers", "operator_resources", "global_marker_ids",
+      "global_alleles", "trait_ids", "method", "nit", "nburn",
+      "nthin", "seed", "nchains", "ncores", "chain_seeds",
+      "keep_chains", "convergence", "convergence_control",
+      "keep_traces", "memory_limit_bytes") %in% summary_args))
+  }
   expect_identical(eval(formals(stblr_csr)$method),
                    c("sbayesc", "sbayesr"))
   expect_identical(eval(formals(stblr_bed)$method),
@@ -71,7 +79,7 @@ test_that("unsupported scientific model/operator combinations fail early", {
     fixture$y, fixture$Glist, method = "sbayesc",
     nit = 1L, nburn = 0L, convergence = "none"),
     "s.*prefix denotes summary statistics")
-  expect_error(sblr:::mtblr_csr(), "not currently available")
+  expect_error(mtblr_csr(method = "bayesr"), "only method = 'bayesc'")
 })
 
 test_that("unified fit finalizer owns explicit names without aliases", {

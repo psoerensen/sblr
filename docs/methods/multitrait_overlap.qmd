@@ -732,10 +732,10 @@ observations do not exist.
 
 ## Current operator restrictions
 
-The current public multi-trait fitter is `mtblr_bed()` for complete
-common-sample packed-BED data under the corrected Cheng MT-BayesC-Pi model.
-Corrected MT CSR and MT block-eigen summary-statistics likelihoods are not
-currently available.
+Public corrected Cheng MT-BayesC-Pi uses `mtblr_bed()` for complete
+common-sample packed-BED data and `mtblr_csr()` or `mtblr_block_eigen()` for
+declared independent summary providers. The summary likelihood does not infer
+cross-provider score-error covariance and rejects declared sample overlap.
 
 The underlying likelihood objects are:
 
@@ -747,7 +747,7 @@ X^\top Y,
 S_Y.
 $$
 
-Conceptually, a future MT CSR likelihood would require:
+An overlap-aware future MT CSR likelihood would additionally require:
 
 - marker-trait cross-products corresponding to $X^\top Y$;
 - marker diagonal cross-products corresponding to

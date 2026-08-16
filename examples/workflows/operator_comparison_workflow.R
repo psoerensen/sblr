@@ -23,9 +23,9 @@ fit_st_block_dense_reference <- do.call(stblr_block_eigen, c(
 fit_st_bed <- do.call(stblr_bed, c(
   list(y = y, Glist = Glist, method = "bayesc"), common))
 
-# Corrected MT CSR and block-eigen likelihoods are not currently public. The
-# supported MT packed-BED route has its own explicit covariance-prior contract;
-# see mt_models_workflow.R.
+# Corrected independent-summary MT CSR and block-eigen likelihoods are public;
+# see mt_summary_cheng_workflow.R. The packed-BED route has a distinct full
+# residual-covariance contract; see mt_models_workflow.R.
 
 # Every supported scalar fit shares these top-level contracts.
 lapply(list(fit_st_csr, fit_st_block, fit_st_bed), function(fit) {

@@ -11,10 +11,16 @@ if (!setequal(calls, registered)) stop("R/native generated wrapper mismatch", ca
 exports <- sub("^export[(]([^)]*)[)]$", "\\1",
   grep("^export[(]", readLines("NAMESPACE", warn = FALSE), value = TRUE))
 canonical <- c("stblr_csr", "stblr_csr_annot", "stblr_block_eigen", "stblr_bed",
-               "mtblr_bed")
+               "mtblr_bed", "mtblr_csr", "mtblr_block_eigen")
 if (!all(canonical %in% exports)) stop("canonical fitter export missing", call. = FALSE)
-if (any(c("sblr", "stblr_bed_marker", "check_stblr_convergence",
-          "mtblr_csr", "mtblr_block_eigen") %in% exports))
+if (any(c("sblr", "stblr_bed_marker", "check_stblr_convergence") %in% exports))
   stop("obsolete public export", call. = FALSE)
+legacy <- paste0("_sblr_", c(
+  "mtblr_csr_internal", "mtblr_block_eigen_internal",
+  "mtblr_csr_raw_internal", "mtblr_csr_chains_raw_internal",
+  "mtblr_block_eigen_raw_internal", "mtblr_block_eigen_chains_raw_internal",
+  "mt_cpg_omp_csr"))
+if (any(legacy %in% calls) || any(legacy %in% registered))
+  stop("legacy MT summary registration remains", call. = FALSE)
 cat(sprintf("generated_interfaces=PASS wrappers=%d registrations=%d exports=%d\n",
             length(calls), length(registered), length(exports)))
