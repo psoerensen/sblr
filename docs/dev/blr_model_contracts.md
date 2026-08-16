@@ -149,8 +149,14 @@ marker-axis posterior summary in $[0,1]$ and is required to equal the
 markerwise probability of the declared all-traits-active pattern $(1,1)$,
 identified by `1_1`. Models for which pleiotropy is not scientifically defined
 do not manufacture or require this field.
-Phase 4b samples full inverse-Wishart $V_e$ and must finish before promotion as
-the maintained MT replacement. Diagonal $V_e$ remains an explicit reduction;
+Phase 4b extends the qualification route with sampled full inverse-Wishart
+$V_e$. Its update is
+$\operatorname{IW}_2(\nu_{e0}+N,\Psi_{e0}+E^\top E)$ after the complete marker
+sweep, and the resulting matrix is the sole next-sweep, convergence, retained,
+posterior-summary, and final residual-covariance state. The fixed policy skips
+the update with zero residual-covariance RNG. See
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+Public promotion remains gated. Diagonal $V_e$ remains an explicit reduction;
 independent no-overlap summaries do not identify off-diagonal residual
 covariance. The current MT covariance hybrid is not the target and cannot be
 migrated as authoritative covariance draws.

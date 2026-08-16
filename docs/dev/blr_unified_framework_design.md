@@ -25,8 +25,11 @@ listed in [the Phase 3 checkpoint](blr_phase3_execution_checkpoint.md). A
 qualification-only Phase 4a route now composes those shared contracts with the
 corrected two-trait common-sample packed-BED Cheng MT-BayesC$\Pi$ policy and a
 fixed full $V_e$; see
-[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). It does
-not replace or alter a public legacy MT route. A capability described only as
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). Phase 4b
+adds a qualification policy with one authoritative sampled full
+inverse-Wishart $V_e$; see
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+Neither policy replaces or alters a public legacy MT route. A capability described only as
 proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.

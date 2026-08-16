@@ -1608,8 +1608,11 @@ $\boldsymbol{\Pi}$, and one authoritative sampled $V_b$. Its exact scope and
 evidence are recorded in
 [the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
 
-This does not promote the route as the maintained MTBLR replacement. Phase 4b
-must add and qualify sampled full $V_e$ first. Public migration, genomic-
+Phase 4b now adds and qualifies sampled full inverse-Wishart $V_e$ within the
+same internal route; see
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+This still does not promote the route as the maintained MTBLR replacement.
+Public migration, genomic-
 covariance output identification, heterogeneous summary providers, regional
 covariance, and mash-like templates remain separately gated. The full-latent
 standalone Cheng sampler remains the independent scientific oracle.

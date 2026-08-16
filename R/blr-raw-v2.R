@@ -209,6 +209,85 @@ is_blr_raw_v2 <- function(x) {
   invisible(TRUE)
 }
 
+.blr_validate_residual_covariance_contract <- function(raw,
+                                                       tolerance = 1e-12) {
+  policy <- raw$input$model$residual_policy
+  cheng_joint <- identical(raw$input$data$analysis_mode,
+                           "joint_multitrait") &&
+    identical(raw$input$model$probability_policy,
+              "joint_activity_dirichlet")
+  if (!cheng_joint || !policy %in% c("fixed_full", "sampled_full")) {
+    return(invisible(TRUE))
+  }
+  prior <- raw$input$prior$residual_covariance
+  updated <- isTRUE(raw$input$mcmc$update_flags$residual_covariance)
+  if (identical(policy, "fixed_full")) {
+    if (updated || is.null(prior$fixed_value) ||
+        !is.null(raw$posterior$residual_covariance_mean) ||
+        !is.null(raw$draws$residual_covariance) ||
+        is.null(raw$final$residual_covariance)) {
+      stop("fixed_full residual covariance requires one fixed final state and no sampled summaries or draws.",
+           call. = FALSE)
+    }
+    for (chain in seq_len(dim(raw$final$residual_covariance)[1L])) {
+      current <- raw$final$residual_covariance[chain, , , drop = TRUE]
+      if (!isTRUE(all.equal(current, prior$fixed_value,
+                            tolerance = tolerance,
+                            check.attributes = FALSE))) {
+        stop("fixed_full final residual covariance disagrees with its resolved fixed value.",
+             call. = FALSE)
+      }
+    }
+    return(invisible(TRUE))
+  }
+
+  if (!updated || !isTRUE(prior$sampled) || is.null(prior$initial_value) ||
+      is.null(raw$posterior$residual_covariance_mean) ||
+      is.null(raw$draws$residual_covariance) ||
+      is.null(raw$final$residual_covariance)) {
+    stop("sampled_full residual covariance requires an initial state, retained draws, a posterior mean, and final states.",
+         call. = FALSE)
+  }
+  expected_mean <- apply(raw$draws$residual_covariance, c(3L, 4L), mean)
+  if (!isTRUE(all.equal(raw$posterior$residual_covariance_mean,
+                        expected_mean, tolerance = tolerance,
+                        check.attributes = FALSE))) {
+    stop("posterior$residual_covariance_mean must equal the retained sampled residual-covariance mean.",
+         call. = FALSE)
+  }
+  convergence <- raw$draws$convergence
+  if (!is.null(convergence)) {
+    value <- convergence$residual_covariance %||% NULL
+    if (is.null(value)) {
+      stop("sampled_full convergence capture must include residual covariance.",
+           call. = FALSE)
+    }
+    .blr_validate_axis_array(
+      value, c("iteration", "chain", "trait_row", "trait_col"),
+      "draws$convergence$residual_covariance")
+    expected_ids <- list(
+      paste0("iteration", seq_len(raw$input$mcmc$sampling_iterations)),
+      paste0("chain", seq_len(raw$input$mcmc$chains)),
+      raw$input$data$trait_ids, raw$input$data$trait_ids)
+    if (!identical(dimnames(value), expected_ids)) {
+      stop("draws$convergence$residual_covariance axis IDs disagree with the resolved specification.",
+           call. = FALSE)
+    }
+    .blr_validate_covariance_array(
+      value, "draws$convergence$residual_covariance")
+    for (chain in seq_len(raw$input$mcmc$chains)) {
+      last <- value[dim(value)[1L], chain, , , drop = TRUE]
+      final <- raw$final$residual_covariance[chain, , , drop = TRUE]
+      if (!isTRUE(all.equal(last, final, tolerance = tolerance,
+                            check.attributes = FALSE))) {
+        stop("Final residual covariance must equal the last completed convergence state.",
+             call. = FALSE)
+      }
+    }
+  }
+  invisible(TRUE)
+}
+
 .blr_validate_trait_summary <- function(x, traits, field,
                                         strictly_positive = FALSE) {
   if (is.null(x)) return(invisible(TRUE))
@@ -681,6 +760,7 @@ validate_blr_raw_v2 <- function(raw) {
     for (field in c("marker_covariance", "residual_covariance")) {
       .blr_validate_covariance_array(raw$final[[field]], paste0("final$", field))
     }
+    .blr_validate_residual_covariance_contract(raw)
   }
   .blr_validate_raw_provenance(raw)
   invisible(TRUE)

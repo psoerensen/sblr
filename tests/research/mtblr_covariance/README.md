@@ -26,6 +26,11 @@ Files:
   completion, exact configuration enumeration, and fixed regional references;
 - `mtblr_pattern_samplers.R`: Cheng full-latent and null-collapsed,
   conditionally completed samplers with joint or coordinate state updates;
+- `mtblr_sampled_residual.R`: independent degrees-of-freedom/scale residual
+  inverse-Wishart conditional and completed-active Cheng sampler with sampled
+  $\boldsymbol{\Pi}$, $V_b$, and $V_e$;
+- `test_sampled_residual.R`: Phase 4b conditional, posterior-mean, residual-
+  reconstruction, and sampled-chain reference checks;
 - `mtblr_regional.R`: persistent regional covariance prototypes and a
   source-faithful reconstruction of the current set-loop hybrid;
 - `compare_pattern_samplers.R`: learned-pattern and joint/coordinate mixing
@@ -47,6 +52,7 @@ Rscript tests/research/mtblr_covariance/compare_samplers.R
 Rscript tests/research/mtblr_covariance/test_pattern_reference_cases.R
 Rscript tests/research/mtblr_covariance/compare_pattern_samplers.R
 Rscript tests/research/mtblr_covariance/test_provider_operators.R
+Rscript tests/research/mtblr_covariance/test_sampled_residual.R
 ```
 
 Only base R is required. Seeds are explicit. The inverse-Wishart convention is

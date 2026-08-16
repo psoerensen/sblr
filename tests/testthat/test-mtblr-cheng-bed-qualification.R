@@ -8,11 +8,30 @@ phase4a_fixture <- function() {
   rownames(phenotype) <- rownames(fixture$y)
   list(
     bed = fixture$bed,
+    dosage = fixture$dosage,
     Glist = fixture$Glist,
     phenotype = phenotype,
     Ve = matrix(c(1.00, 0.25, 0.25, 0.80), 2L),
     Vb = matrix(c(0.35, 0.10, 0.10, 0.30), 2L),
     Psi = matrix(c(0.50, 0.08, 0.08, 0.45), 2L))
+}
+
+phase4b_fit <- function(fixture, ..., cores = 1L, chains = 1L,
+                        keep_traces = TRUE) {
+  sblr:::.blr_phase4a_cheng_mt_bed(
+    y = fixture$phenotype, Glist = fixture$Glist,
+    fixed_residual_covariance = NULL,
+    initial_marker_covariance = fixture$Vb,
+    marker_covariance_prior_df = 4.5,
+    marker_covariance_prior_scale = fixture$Psi,
+    burn_in_iterations = 2L, sampling_iterations = 4L,
+    thin_interval = 2L, chains = chains, cores = cores,
+    seed = 17, keep_traces = keep_traces,
+    residual_covariance_policy = "sampled_full",
+    initial_residual_covariance = fixture$Ve,
+    residual_covariance_prior_df = 1.5,
+    residual_covariance_prior_scale =
+      matrix(c(.60, .12, .12, .55), 2L), ...)
 }
 
 phase4a_fit <- function(fixture, ..., cores = 1L, chains = 1L,
@@ -473,4 +492,279 @@ test_that("Phase 4a validates its narrow fixed-residual boundary", {
   expect_error(
     do.call(sblr:::.blr_phase4a_cheng_mt_bed, invalid_probability),
     "declared trait order")
+})
+
+test_that("Phase 4b residual inverse-Wishart conditional uses N and E crossproduct", {
+  residual <- cbind(
+    c(-.8, .2, .5, -.1, .4, -.3),
+    c(.3, -.4, .6, .2, -.2, .5))
+  prior_df <- 1.5
+  prior_scale <- matrix(c(.7, .14, .14, .6), 2L)
+  expected_statistic <- crossprod(residual)
+  expected_df <- prior_df + nrow(residual)
+  expected_scale <- prior_scale + expected_statistic
+  observed <- sblr:::mtblr_phase4b_residual_covariance_contract_internal(
+    residual, prior_df, prior_scale, 6000L, 4294967295)
+
+  expect_equal(observed$statistic, expected_statistic, tolerance = 1e-15)
+  expect_equal(observed$degrees_of_freedom, expected_df, tolerance = 0)
+  expect_equal(observed$scale, expected_scale, tolerance = 1e-15)
+  expect_identical(dim(observed$draws), c(6000L, 2L, 2L))
+  expected_mean <- expected_scale / (expected_df - 3)
+  expect_equal(apply(observed$draws, c(2L, 3L), mean), expected_mean,
+               tolerance = 0.04)
+  for (draw in c(1L, 100L, 6000L)) {
+    value <- observed$draws[draw, , ]
+    expect_equal(value, t(value), tolerance = 0)
+    expect_silent(chol(value))
+  }
+})
+
+test_that("Phase 4b sampled residual covariance is one authoritative raw-v2 state", {
+  fixture <- phase4a_fixture()
+  on.exit(unlink(fixture$bed), add = TRUE)
+  fit <- phase4b_fit(fixture, chains = 2L)
+
+  expect_true(sblr:::validate_blr_raw_v2(fit))
+  expect_identical(fit$model$residual_policy, "sampled_full")
+  expect_identical(fit$model$update_order_version, 2L)
+  expect_true(fit$input$prior$residual_covariance$sampled)
+  expect_null(fit$input$prior$residual_covariance$fixed_value)
+  expect_equal(fit$input$prior$residual_covariance$initial_value,
+               fixture$Ve, ignore_attr = TRUE)
+  expect_identical(
+    fit$input$prior$residual_covariance$parameterization,
+    "degrees_of_freedom_scale")
+  expect_true(fit$input$prior$residual_covariance$proper)
+  expect_false(fit$input$prior$residual_covariance$finite_mean)
+  expect_true(fit$input$mcmc$update_flags$residual_covariance)
+  expect_identical(dim(fit$draws$residual_covariance), c(2L, 2L, 2L, 2L))
+  expect_identical(dim(fit$posterior$residual_covariance_mean), c(2L, 2L))
+  expect_identical(dim(fit$final$residual_covariance), c(2L, 2L, 2L))
+  expect_identical(
+    dim(fit$draws$convergence$residual_covariance), c(4L, 2L, 2L, 2L))
+  expect_equal(
+    fit$posterior$residual_covariance_mean,
+    apply(fit$draws$residual_covariance, c(3L, 4L), mean),
+    tolerance = 1e-15, ignore_attr = TRUE)
+
+  frequency <- rowMeans(fixture$dosage) / 2
+  genotype <- t((fixture$dosage - 2 * frequency) /
+                  sqrt(2 * frequency * (1 - frequency)))
+  for (chain in 1:2) {
+    realised <- fit$final$realised_effects[chain, , ]
+    residual <- fixture$phenotype - genotype %*% realised
+    update <- fit$diagnostics$qualification$
+      residual_covariance_updates[[chain]]
+    expect_equal(update$statistic, crossprod(residual), tolerance = 1e-12,
+                 ignore_attr = TRUE)
+    expect_equal(update$degrees_of_freedom, 1.5 + nrow(residual),
+                 tolerance = 0)
+    expect_equal(update$posterior_scale,
+                 matrix(c(.60, .12, .12, .55), 2L) + crossprod(residual),
+                 tolerance = 1e-12, ignore_attr = TRUE)
+    expect_identical(update$update_count, 6L)
+    expect_equal(
+      fit$final$residual_covariance[chain, , ],
+      fit$draws$convergence$residual_covariance[4L, chain, , ],
+      tolerance = 0, ignore_attr = TRUE)
+  }
+  for (draw in 1:2) for (chain in 1:2) {
+    expect_silent(chol(fit$draws$residual_covariance[draw, chain, , ]))
+  }
+})
+
+test_that("Phase 4b scheduling and observational capture consume no RNG", {
+  fixture <- phase4a_fixture()
+  on.exit(unlink(fixture$bed), add = TRUE)
+  serial <- phase4b_fit(fixture, chains = 2L, cores = 1L)
+  repeated <- phase4b_fit(fixture, chains = 2L, cores = 1L)
+  parallel <- phase4b_fit(fixture, chains = 2L, cores = 2L)
+  without_trace <- phase4b_fit(
+    fixture, chains = 2L, cores = 1L, keep_traces = FALSE)
+  scientific <- c(
+    "realised_effects", "latent_effects", "joint_states",
+    "activity_pattern_parameters", "marker_covariance",
+    "residual_covariance")
+  for (field in scientific) {
+    expect_identical(serial$draws[[field]], repeated$draws[[field]])
+    expect_identical(serial$draws[[field]], parallel$draws[[field]])
+    expect_identical(serial$draws[[field]], without_trace$draws[[field]])
+  }
+  expect_identical(serial$final, parallel$final)
+  expect_identical(serial$final, without_trace$final)
+  expect_null(without_trace$draws$convergence)
+  expect_identical(parallel$diagnostics$workers$diagnostics_rng_draws, 0L)
+  capability <- sblr:::sparseLD_thread_info(2L)
+  if (isTRUE(capability$openmp) &&
+      capability$actual_threads_requested_region > 1L) {
+    expect_gt(parallel$diagnostics$workers$actual_team_size, 1L)
+    expect_gt(length(unique(
+      parallel$diagnostics$workers$task_worker_ids)), 1L)
+  }
+})
+
+test_that("Phase 4b thinning selects draws without changing the chain", {
+  fixture <- phase4a_fixture()
+  on.exit(unlink(fixture$bed), add = TRUE)
+  common <- list(
+    y = fixture$phenotype, Glist = fixture$Glist,
+    fixed_residual_covariance = NULL,
+    initial_marker_covariance = fixture$Vb,
+    marker_covariance_prior_df = 4.5,
+    marker_covariance_prior_scale = fixture$Psi,
+    burn_in_iterations = 2L, sampling_iterations = 6L,
+    chains = 1L, cores = 1L, seed = 23, keep_traces = TRUE,
+    residual_covariance_policy = "sampled_full",
+    initial_residual_covariance = fixture$Ve,
+    residual_covariance_prior_df = 1.5,
+    residual_covariance_prior_scale = diag(c(.6, .55)))
+  all_draws <- do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                       c(common, list(thin_interval = 1L)))
+  thinned <- do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                     c(common, list(thin_interval = 2L)))
+  expect_identical(all_draws$final, thinned$final)
+  expect_identical(all_draws$draws$convergence,
+                   thinned$draws$convergence)
+  for (field in c("realised_effects", "latent_effects", "joint_states",
+                  "activity_pattern_parameters", "marker_covariance",
+                  "residual_covariance")) {
+    value <- all_draws$draws[[field]]
+    subscripts <- rep(list(TRUE), length(dim(value)))
+    subscripts[[1L]] <- c(2L, 4L, 6L)
+    selected <- do.call(`[`, c(list(value), subscripts, list(drop = FALSE)))
+    expect_equal(selected, thinned$draws[[field]], tolerance = 0,
+                 ignore_attr = TRUE)
+  }
+  expect_identical(thinned$input$mcmc$retained_transition_indices,
+                   c(2L, 4L, 6L))
+})
+
+test_that("Phase 4b validates residual policy, prior, and raw presence rules", {
+  fixture <- phase4a_fixture()
+  on.exit(unlink(fixture$bed), add = TRUE)
+  common <- list(
+    y = fixture$phenotype, Glist = fixture$Glist,
+    fixed_residual_covariance = NULL,
+    initial_marker_covariance = fixture$Vb,
+    marker_covariance_prior_df = 4.5,
+    marker_covariance_prior_scale = fixture$Psi,
+    burn_in_iterations = 0L, sampling_iterations = 2L,
+    thin_interval = 1L, chains = 1L, cores = 1L, seed = 4,
+    residual_covariance_policy = "sampled_full",
+    initial_residual_covariance = fixture$Ve,
+    residual_covariance_prior_df = 1.5,
+    residual_covariance_prior_scale = diag(2))
+  mutate_argument <- function(name, value) {
+    candidate <- common
+    candidate[name] <- list(value)
+    candidate
+  }
+  expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                       mutate_argument("residual_covariance_prior_df", NULL)),
+               "residual_covariance_prior_df")
+  expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                       mutate_argument("residual_covariance_prior_df", 1)),
+               "exceed T - 1")
+  expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                       mutate_argument("residual_covariance_prior_scale",
+                                       matrix(1, 2L, 3L))),
+               "2 x 2")
+  expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                       mutate_argument("residual_covariance_prior_scale",
+                                       matrix(c(1, 2, 2, 1), 2L))),
+               "strictly positive definite")
+  expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
+                       mutate_argument("initial_residual_covariance",
+                                       matrix(c(1, 2, 2, 1), 2L))),
+               "strictly positive definite")
+  fixed_with_prior <- common
+  fixed_with_prior$residual_covariance_policy <- "fixed_full"
+  fixed_with_prior$fixed_residual_covariance <- fixture$Ve
+  expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed, fixed_with_prior),
+               "cannot carry sampled")
+
+  fit <- do.call(sblr:::.blr_phase4a_cheng_mt_bed, common)
+  invalid <- fit
+  invalid$draws["residual_covariance"] <- list(NULL)
+  expect_error(sblr:::validate_blr_raw_v2(invalid),
+               "requires an initial state, retained draws")
+  invalid <- fit
+  invalid$posterior$residual_covariance_mean[1L, 1L] <- Inf
+  expect_error(sblr:::validate_blr_raw_v2(invalid), "finite numeric")
+  invalid <- fit
+  invalid$final$residual_covariance[1L, 1L, 2L] <- 9
+  expect_error(sblr:::validate_blr_raw_v2(invalid),
+               "asymmetric|non-positive-definite")
+  invalid <- fit
+  dimnames(invalid$draws$residual_covariance)[[3L]] <- rev(
+    dimnames(invalid$draws$residual_covariance)[[3L]])
+  expect_error(sblr:::validate_blr_raw_v2(invalid), "Raw axis IDs")
+  invalid <- fit
+  invalid$schema$compatibility_id <- "phase0-v2"
+  invalid$draws["residual_covariance"] <- list(NULL)
+  expect_error(sblr:::validate_blr_raw_v2(invalid),
+               "requires an initial state, retained draws")
+})
+
+test_that("Phase 4b leaves explicit fixed mode on the Phase 4a trajectory", {
+  fixture <- phase4a_fixture()
+  on.exit(unlink(fixture$bed), add = TRUE)
+  default <- phase4a_fit(fixture)
+  explicit <- phase4a_fit(fixture, residual_covariance_policy = "fixed_full")
+  expect_identical(default, explicit)
+  expect_identical(default$model$residual_policy, "fixed_full")
+  expect_false(default$input$mcmc$update_flags$residual_covariance)
+  expect_null(default$draws$residual_covariance)
+  expect_null(default$posterior$residual_covariance_mean)
+})
+
+test_that("Phase 4b sampled chain agrees with the independent completed-active reference", {
+  fixture <- phase4a_fixture()
+  on.exit(unlink(fixture$bed), add = TRUE)
+  research <- test_path("..", "research", "mtblr_covariance")
+  reference <- new.env(parent = globalenv())
+  for (file in c("mtblr_reference_model.R", "mtblr_pattern_reference.R",
+                 "mtblr_pattern_samplers.R", "mtblr_sampled_residual.R")) {
+    sys.source(file.path(research, file), envir = reference)
+  }
+  frequency <- rowMeans(fixture$dosage) / 2
+  genotype <- t((fixture$dosage - 2 * frequency) /
+                  sqrt(2 * frequency * (1 - frequency)))
+  residual_scale <- matrix(c(.60, .12, .12, .55), 2L)
+  native <- sblr:::.blr_phase4a_cheng_mt_bed(
+    fixture$phenotype, fixture$Glist, NULL, fixture$Vb, 4.5, fixture$Psi,
+    burn_in_iterations = 500L, sampling_iterations = 2500L,
+    thin_interval = 1L, chains = 1L, cores = 1L, seed = 909,
+    residual_covariance_policy = "sampled_full",
+    initial_residual_covariance = fixture$Ve,
+    residual_covariance_prior_df = 1.5,
+    residual_covariance_prior_scale = residual_scale)
+  completed <- reference$mtblr_pattern_sampler_sampled_residual(
+    genotype, fixture$phenotype, reference$mt_pattern_space(), rep(1, 4L),
+    4.5, fixture$Psi, 1.5, residual_scale, fixture$Vb, fixture$Ve,
+    n_iter = 3000L, burn = 500L, seed = 1909L)
+  summary <- reference$mt_pattern_summary(completed)
+
+  # These tolerances were fixed from the scale of independent-chain Monte
+  # Carlo uncertainty before comparing the two implementations.
+  expect_equal(unname(native$posterior$pips),
+               unname(summary$trait_pip), tolerance = .15,
+               ignore_attr = TRUE)
+  expect_equal(unname(native$posterior$realised_effect_mean),
+               unname(summary$alpha_mean), tolerance = .14,
+               ignore_attr = TRUE)
+  expect_equal(unname(native$posterior$marker_covariance_mean),
+               unname(summary$Vb_mean), tolerance = .20,
+               ignore_attr = TRUE)
+  expect_equal(
+    unname(native$posterior$residual_covariance_mean),
+    unname(apply(completed$Ve, c(1L, 2L), mean)), tolerance = .20,
+    ignore_attr = TRUE)
+  expect_equal(
+    unname(colMeans(native$draws$activity_pattern_parameters[, 1L, ])),
+    unname(summary$Pi_mean), tolerance = .12)
+  expect_equal(
+    unname(apply(native$derived$predictions[, 1L, , ], c(2L, 3L), mean)),
+    unname(summary$fitted_mean), tolerance = .16)
 })

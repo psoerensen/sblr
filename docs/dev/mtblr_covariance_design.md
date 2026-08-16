@@ -1475,9 +1475,13 @@ raw-v2 contracts. It does not call or repair the legacy public MT route. Exact
 four-pattern algebra, a one-marker enumeration comparison, covariance-
 sufficient-statistic reconstruction, and serial/parallel reproducibility are
 recorded in
-[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). The
-full-latent R sampler remains the independent reference. Sampled full $V_e$,
-summary-statistic MT likelihoods, MT-BayesR, regional covariance, and
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). Phase 4b
+extends the same internal sampler with an optional authoritative
+$\operatorname{IW}_2(\nu_{e0}+N,\Psi_{e0}+E^\top E)$ residual-covariance
+transition and preserves fixed mode as a zero-RNG branch; see
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+The completed-active R sampler remains the independent reference. Public
+promotion, summary-statistic MT likelihoods, MT-BayesR, regional covariance, and
 covariance templates remain deferred.
 
 ## 29. Additional references

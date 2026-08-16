@@ -169,8 +169,13 @@
 
 .blr_validate_covariance_prior <- function(x, trait_ids, what) {
   if (is.null(x)) return(invisible(TRUE))
-  .blr_exact_fields(x, what, c(
-    "degrees_of_freedom", "scale", "fixed_value", "sampled"))
+  required <- c("degrees_of_freedom", "scale", "fixed_value", "sampled")
+  allowed <- c(required, "initial_value", "parameterization", "proper",
+               "finite_mean")
+  .blr_exact_names(x, what)
+  if (!all(required %in% names(x)) || any(!names(x) %in% allowed)) {
+    stop(what, " has invalid covariance-prior fields.", call. = FALSE)
+  }
   if (!is.logical(x$sampled) || length(x$sampled) != 1L ||
       is.na(x$sampled)) {
     stop(what, "$sampled must be one nonmissing logical value.", call. = FALSE)
@@ -184,6 +189,10 @@
            call. = FALSE)
     }
     .blr_validate_spd_matrix(x$scale, trait_ids, paste0(what, "$scale"))
+    if (!is.null(x$fixed_value)) {
+      stop(what, "$fixed_value must be NULL when sampled is TRUE.",
+           call. = FALSE)
+    }
   } else if (!is.null(x$degrees_of_freedom) || !is.null(x$scale)) {
     stop(what, " cannot carry inverse-Wishart parameters when sampled is FALSE.",
          call. = FALSE)
@@ -191,6 +200,30 @@
   if (!is.null(x$fixed_value)) {
     .blr_validate_spd_matrix(x$fixed_value, trait_ids,
                              paste0(what, "$fixed_value"))
+  }
+  if ("initial_value" %in% names(x) && !is.null(x$initial_value)) {
+    .blr_validate_spd_matrix(x$initial_value, trait_ids,
+                             paste0(what, "$initial_value"))
+  }
+  if ("parameterization" %in% names(x) && !is.null(x$parameterization) &&
+      !identical(x$parameterization, "degrees_of_freedom_scale")) {
+    stop(what, "$parameterization must be 'degrees_of_freedom_scale'.",
+         call. = FALSE)
+  }
+  if ("proper" %in% names(x) && !is.null(x$proper) &&
+      (!is.logical(x$proper) || length(x$proper) != 1L || is.na(x$proper) ||
+       !identical(x$proper, isTRUE(x$sampled) &&
+         x$degrees_of_freedom > length(trait_ids) - 1L))) {
+    stop(what, "$proper disagrees with its inverse-Wishart parameters.",
+         call. = FALSE)
+  }
+  if ("finite_mean" %in% names(x) && !is.null(x$finite_mean) &&
+      (!is.logical(x$finite_mean) || length(x$finite_mean) != 1L ||
+       is.na(x$finite_mean) ||
+       !identical(x$finite_mean, isTRUE(x$sampled) &&
+         x$degrees_of_freedom > length(trait_ids) + 1L))) {
+    stop(what, "$finite_mean disagrees with its inverse-Wishart parameters.",
+         call. = FALSE)
   }
   invisible(TRUE)
 }
@@ -518,7 +551,7 @@ validate_blr_resolved_spec <- function(spec) {
                           "fixed_block", "fixed_full", "sampled_full",
                           "diagonal", "overlap_aware"))
   .blr_scalar_whole(spec$model$update_order_version,
-                    "model$update_order_version", 1L, 1L)
+                    "model$update_order_version", 1L, 2L)
   if (!is.character(spec$model$state_space) ||
       !length(spec$model$state_space) || anyNA(spec$model$state_space) ||
       any(!nzchar(spec$model$state_space)) ||
@@ -634,6 +667,21 @@ validate_blr_resolved_spec <- function(spec) {
       (is.null(spec$prior$residual_covariance) ||
        !isTRUE(spec$prior$residual_covariance$sampled))) {
     stop("sampled_full residual policy requires a sampled covariance prior.",
+         call. = FALSE)
+  }
+  phase4b_residual <- identical(spec$data$analysis_mode, "joint_multitrait") &&
+    identical(spec$model$probability_policy, "joint_activity_dirichlet") &&
+    identical(as.integer(spec$model$update_order_version), 2L)
+  if (phase4b_residual &&
+      (!"initial_value" %in% names(spec$prior$residual_covariance) ||
+       is.null(spec$prior$residual_covariance$initial_value))) {
+    stop("Phase 4b sampled_full residual policy requires an explicit initial covariance.",
+         call. = FALSE)
+  }
+  if (identical(spec$model$residual_policy, "fixed_full") &&
+      "initial_value" %in% names(spec$prior$residual_covariance) &&
+      !is.null(spec$prior$residual_covariance$initial_value)) {
+    stop("fixed_full residual policy cannot carry a sampled initial covariance.",
          call. = FALSE)
   }
   .blr_validate_declared_prior(spec$prior$annotation, "prior$annotation")

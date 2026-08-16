@@ -212,12 +212,16 @@ Rcpp::List phase4a_chain_to_list(const sblr::phase4a::ChainResult& chain) {
     Rcpp::_ ["joint_states"] = phase4a_state_draws(chain.state_draws),
     Rcpp::_ ["marker_covariance"] = phase4a_matrix_draws(
       chain.covariance_draws, 2, 2),
+    Rcpp::_ ["residual_covariance"] = phase4a_matrix_draws(
+      chain.residual_covariance_draws, 2, 2),
     Rcpp::_ ["activity_pattern_parameters"] = phase4a_probability_draws(
       chain.probability_draws),
     Rcpp::_ ["predictions"] = phase4a_matrix_draws(
       chain.prediction_draws, static_cast<int>(chain.final_prediction.n_rows), 2),
     Rcpp::_ ["convergence_marker_covariance"] = phase4a_matrix_draws(
       chain.convergence_covariance, 2, 2),
+    Rcpp::_ ["convergence_residual_covariance"] = phase4a_matrix_draws(
+      chain.convergence_residual_covariance, 2, 2),
     Rcpp::_ ["convergence_activity_pattern_parameters"] =
       phase4a_probability_draws(chain.convergence_probability),
     Rcpp::_ ["convergence_active_marker_count"] =
@@ -228,6 +232,8 @@ Rcpp::List phase4a_chain_to_list(const sblr::phase4a::ChainResult& chain) {
       chain.final_latent),
     Rcpp::_ ["final_joint_states"] = Rcpp::wrap(chain.final_state),
     Rcpp::_ ["final_marker_covariance"] = Rcpp::wrap(chain.final_covariance),
+    Rcpp::_ ["final_residual_covariance"] = Rcpp::wrap(
+      chain.final_residual_covariance),
     Rcpp::_ ["final_activity_pattern_parameters"] =
       Rcpp::wrap(chain.final_probability),
     Rcpp::_ ["final_predictions"] = Rcpp::wrap(chain.final_prediction),
@@ -238,6 +244,14 @@ Rcpp::List phase4a_chain_to_list(const sblr::phase4a::ChainResult& chain) {
     Rcpp::_ ["last_covariance_degrees_of_freedom"] =
       chain.last_covariance_df,
     Rcpp::_ ["last_active_marker_count"] = chain.last_active_count,
+    Rcpp::_ ["last_residual_covariance_statistic"] = Rcpp::wrap(
+      chain.last_residual_statistic),
+    Rcpp::_ ["last_residual_covariance_scale"] = Rcpp::wrap(
+      chain.last_residual_scale),
+    Rcpp::_ ["last_residual_covariance_degrees_of_freedom"] =
+      chain.last_residual_df,
+    Rcpp::_ ["residual_covariance_update_count"] =
+      chain.residual_covariance_update_count,
     Rcpp::_ ["transition_counts"] = transitions);
 }
 
@@ -296,6 +310,50 @@ Rcpp::List mtblr_phase4a_pattern_contract_internal(
       Vb(0, 0) - Vb(0, 1) * Vb(1, 0) / Vb(1, 1)));
 }
 
+// Qualification-only residual inverse-Wishart conditional. This exposes the
+// exact Phase 4b degrees-of-freedom/scale transition for deterministic and
+// Monte Carlo contract tests without constructing a sampler state.
+// [[Rcpp::export]]
+Rcpp::List mtblr_phase4b_residual_covariance_contract_internal(
+    Rcpp::NumericMatrix residual,
+    double prior_df,
+    arma::mat prior_scale,
+    int draws,
+    double seed) {
+  if (residual.nrow() < 1 || residual.ncol() != 2 || draws < 1 ||
+      !std::isfinite(prior_df) || prior_df <= 1.0 ||
+      !std::isfinite(seed) || seed < 0.0 || seed > 4294967295.0 ||
+      seed != std::floor(seed)) {
+    throw std::invalid_argument(
+      "Phase 4b residual conditional inputs are invalid.");
+  }
+  for (double value : residual) {
+    if (!std::isfinite(value)) {
+      throw std::invalid_argument("Phase 4b residuals must be finite.");
+    }
+  }
+  const arma::mat scale = sblr::phase4a::require_spd(
+    prior_scale, "residual-covariance prior scale");
+  const arma::mat residual_matrix = Rcpp::as<arma::mat>(residual);
+  arma::mat statistic = residual_matrix.t() * residual_matrix;
+  statistic = 0.5 * (statistic + statistic.t());
+  const double posterior_df = prior_df + residual.nrow();
+  const arma::mat posterior_scale = scale + statistic;
+  std::mt19937 rng(static_cast<std::uint32_t>(seed));
+  std::vector<arma::mat> covariance_draws(static_cast<std::size_t>(draws));
+  for (int draw = 0; draw < draws; ++draw) {
+    covariance_draws[static_cast<std::size_t>(draw)] =
+      sblr::phase4a::require_spd(
+        sblr::mt::draw_inverse_wishart(posterior_df, posterior_scale, rng),
+        "sampled residual covariance");
+  }
+  return Rcpp::List::create(
+    Rcpp::_ ["degrees_of_freedom"] = posterior_df,
+    Rcpp::_ ["scale"] = posterior_scale,
+    Rcpp::_ ["statistic"] = statistic,
+    Rcpp::_ ["draws"] = phase4a_matrix_draws(covariance_draws, 2, 2));
+}
+
 // Qualification-only two-trait common-sample Cheng MT-BayesC-Pi route.
 // It is deliberately not namespace-exported and does not call the legacy MT
 // covariance implementation.
@@ -307,7 +365,7 @@ Rcpp::List mtblr_phase4a_cheng_bed_internal(
     Rcpp::Nullable<Rcpp::IntegerVector> selected_rows,
     Rcpp::NumericVector allele_frequency,
     Rcpp::NumericMatrix phenotype,
-    arma::mat fixed_residual_covariance,
+    arma::mat initial_residual_covariance,
     arma::mat initial_marker_covariance,
     Rcpp::NumericVector initial_activity_pattern_probability,
     Rcpp::NumericVector activity_pattern_dirichlet_prior,
@@ -315,6 +373,9 @@ Rcpp::List mtblr_phase4a_cheng_bed_internal(
     arma::mat marker_covariance_prior_scale,
     bool update_marker_covariance,
     bool update_activity_pattern_probability,
+    bool update_residual_covariance,
+    double residual_covariance_prior_df,
+    arma::mat residual_covariance_prior_scale,
     int burn_in_iterations,
     int sampling_iterations,
     int chains,
@@ -382,10 +443,12 @@ Rcpp::List mtblr_phase4a_cheng_bed_internal(
     try {
       results[static_cast<std::size_t>(chain)] = sblr::phase4a::run_chain(
         genotype, prepared.marker_maps, prepared.phenotype,
-        fixed_residual_covariance, initial_marker_covariance,
+        initial_residual_covariance, initial_marker_covariance,
         initial_probability, dirichlet_prior, marker_covariance_prior_df,
         marker_covariance_prior_scale, update_marker_covariance,
-        update_activity_pattern_probability, burn_in_iterations,
+        update_activity_pattern_probability, update_residual_covariance,
+        residual_covariance_prior_df, residual_covariance_prior_scale,
+        burn_in_iterations,
         sampling_iterations, phase3.retained_transition_indices,
         phase3.task_seeds[static_cast<std::size_t>(chain)]);
     } catch (const std::exception& error) {

@@ -41,7 +41,8 @@
   stats::setNames(as.numeric(x) / if (simplex) sum(x) else 1, pattern_ids)
 }
 
-.blr_phase4a_bed_collection <- function(dat, Glist, phenotype, trait_ids) {
+.blr_phase4a_bed_collection <- function(dat, Glist, phenotype, trait_ids,
+                                        residual_contract) {
   marker_ids <- as.character(dat$variable_names)
   marker_metadata <- .mtblr_bed_marker_metadata(dat, Glist)
   effect <- marker_metadata$effect_allele %||% rep(NA_character_, dat$m)
@@ -84,7 +85,7 @@
     sufficient_statistics = list(phenotype = phenotype),
     sample_size = stats::setNames(rep(nrow(phenotype), 2L), trait_ids),
     likelihood_regime = "common_sample",
-    residual_contract = "fixed_full_residual_covariance",
+    residual_contract = residual_contract,
     population = NULL, effect_scale = "phenotype_native",
     overlap_group = NULL,
     provenance = list(phase = "4a", status = "qualification_only"))
@@ -99,7 +100,9 @@
 
 .blr_phase4a_resolved_spec <- function(
     collection, observation_ids, trait_ids, marker_ids,
-    fixed_residual_covariance, initial_marker_covariance,
+    residual_covariance_policy, fixed_residual_covariance,
+    initial_residual_covariance, residual_covariance_prior_df,
+    residual_covariance_prior_scale, initial_marker_covariance,
     initial_probability, dirichlet_prior, prior_df, prior_scale,
     update_marker_covariance, update_probability,
     burn_in_iterations, sampling_iterations, thin_interval,
@@ -134,7 +137,9 @@
       probability_policy = "joint_activity_dirichlet",
       marker_scale_policy = "unit",
       marker_covariance_policy = "global_matrix",
-      residual_policy = "fixed_full", update_order_version = 1L),
+      residual_policy = residual_covariance_policy,
+      update_order_version = if (identical(
+        residual_covariance_policy, "sampled_full")) 2L else 1L),
     prior = list(
       probability = list(
         activity_pattern_dirichlet = dirichlet_prior,
@@ -150,9 +155,18 @@
         fixed_value = if (update_marker_covariance) NULL else
           initial_marker_covariance,
         sampled = update_marker_covariance),
-      residual_covariance = list(
-        degrees_of_freedom = NULL, scale = NULL,
-        fixed_value = fixed_residual_covariance, sampled = FALSE),
+      residual_covariance = if (identical(
+        residual_covariance_policy, "sampled_full")) list(
+          degrees_of_freedom = residual_covariance_prior_df,
+          scale = residual_covariance_prior_scale,
+          fixed_value = NULL, sampled = TRUE,
+          initial_value = initial_residual_covariance,
+          parameterization = "degrees_of_freedom_scale",
+          proper = TRUE,
+          finite_mean = residual_covariance_prior_df >
+            length(trait_ids) + 1L) else list(
+          degrees_of_freedom = NULL, scale = NULL,
+          fixed_value = fixed_residual_covariance, sampled = FALSE),
       annotation = NULL),
     mcmc = list(
       burn_in_iterations = as.integer(burn_in_iterations),
@@ -165,7 +179,8 @@
       update_flags = list(
         marker_covariance = update_marker_covariance,
         activity_pattern_probability = update_probability,
-        residual_covariance = FALSE)),
+        residual_covariance = identical(
+          residual_covariance_policy, "sampled_full"))),
     compute = list(
       execution_mode = if (cores == 1L) "serial" else "parallel",
       parallelization = if (cores == 1L) "none" else "chains",
@@ -177,13 +192,19 @@
       posterior_summaries = TRUE,
       retained_parameters = c(
         "realised_effects", "latent_effects", "joint_states",
-        "activity_pattern_parameters", "marker_covariance", "predictions"),
+        "activity_pattern_parameters", "marker_covariance", "predictions",
+        if (identical(residual_covariance_policy, "sampled_full")) {
+          "residual_covariance"
+        } else character()),
       effect_draw_policy = "full_qualification_draws",
       state_draw_policy = "joint_activity_pattern_draws",
       convergence_policy = list(
         mode = "core", quantities = c(
           "marker_covariance", "activity_pattern_parameters",
-          "active_marker_count")),
+          "active_marker_count",
+          if (identical(residual_covariance_policy, "sampled_full")) {
+            "residual_covariance"
+          } else character())),
       derived_quantities = "retained_predictions",
       preserve_chains = TRUE, memory_estimate_bytes = NA_real_))
 }
@@ -219,7 +240,11 @@
   out
 }
 
-.blr_phase4a_raw <- function(native, spec, fixed_residual_covariance,
+.blr_phase4a_raw <- function(native, spec, residual_covariance_policy,
+                             fixed_residual_covariance,
+                             initial_residual_covariance,
+                             residual_covariance_prior_df,
+                             residual_covariance_prior_scale,
                              initial_marker_covariance,
                              prior_df, prior_scale, dirichlet_prior,
                              keep_traces) {
@@ -240,6 +265,13 @@
   marker_covariance <- .blr_phase4a_bind_draws(
     native$chains, "marker_covariance", list(
       draw = draws, chain = chains, trait_row = traits, trait_col = traits))
+  sampled_residual <- identical(residual_covariance_policy, "sampled_full")
+  residual_covariance <- if (sampled_residual) {
+    .blr_phase4a_bind_draws(
+      native$chains, "residual_covariance", list(
+        draw = draws, chain = chains,
+        trait_row = traits, trait_col = traits))
+  } else NULL
   pattern_parameter <- .blr_phase4a_bind_draws(
     native$chains, "activity_pattern_parameters", list(
       draw = draws, chain = chains, activity_pattern = state_ids))
@@ -274,6 +306,12 @@
   covariance_mean <- apply(marker_covariance, c(3L, 4L), mean)
   dimnames(covariance_mean) <- list(traits, traits)
   attr(covariance_mean, "dim_axis_names") <- c("trait_row", "trait_col")
+  residual_covariance_mean <- if (sampled_residual) {
+    value <- apply(residual_covariance, c(3L, 4L), mean)
+    dimnames(value) <- list(traits, traits)
+    attr(value, "dim_axis_names") <- c("trait_row", "trait_col")
+    value
+  } else NULL
 
   final_realised <- .blr_phase4a_bind_final(
     native$chains, "final_realised_effects",
@@ -291,8 +329,9 @@
   final_probability <- .blr_phase4a_bind_final(
     native$chains, "final_activity_pattern_parameters",
     list(chain = chains, activity_pattern = state_ids))
-  residual_chains <- lapply(seq_along(chains), function(index) list(
-    final_residual_covariance = fixed_residual_covariance))
+  residual_chains <- if (sampled_residual) native$chains else
+    lapply(seq_along(chains), function(index) list(
+      final_residual_covariance = fixed_residual_covariance))
   final_residual <- .blr_phase4a_bind_final(
     residual_chains, "final_residual_covariance",
     list(chain = chains, trait_row = traits, trait_col = traits))
@@ -313,11 +352,27 @@
         iteration = iterations, chain = chains)),
     checkpoint = "completed_post_burn_iteration",
     thinning = "unthinned", rng_draws = 0L) else NULL
+  if (isTRUE(keep_traces) && sampled_residual) {
+    convergence <- append(convergence, list(
+      residual_covariance = .blr_phase4a_bind_draws(
+        native$chains, "convergence_residual_covariance", list(
+          iteration = iterations, chain = chains,
+          trait_row = traits, trait_col = traits))), after = 2L)
+  }
   covariance_updates <- lapply(native$chains, function(chain) list(
     degrees_of_freedom = chain$last_covariance_degrees_of_freedom,
     active_marker_count = chain$last_active_marker_count,
     statistic = chain$last_covariance_statistic,
     posterior_scale = chain$last_covariance_scale))
+  residual_covariance_updates <- if (sampled_residual) {
+    lapply(native$chains, function(chain) list(
+      degrees_of_freedom =
+        chain$last_residual_covariance_degrees_of_freedom,
+      observation_count = length(observations),
+      statistic = chain$last_residual_covariance_statistic,
+      posterior_scale = chain$last_residual_covariance_scale,
+      update_count = chain$residual_covariance_update_count))
+  } else NULL
 
   provenance <- c(.blr_cached_provenance(), list(
     operator_resources = spec$data$operator_resources,
@@ -337,7 +392,7 @@
       joint_component_assignment_probabilities = NULL,
       marker_covariance_mean = covariance_mean,
       marker_variance_mean = NULL,
-      residual_covariance_mean = NULL,
+      residual_covariance_mean = residual_covariance_mean,
       residual_variance_mean = NULL, uncertainty = NULL,
       pleiotropic_probabilities = pleiotropic),
     draws = list(
@@ -350,7 +405,7 @@
       traitwise_component_probability_parameters = NULL,
       joint_component_probability_parameters = NULL,
       marker_covariance = marker_covariance,
-      residual_covariance = NULL, marker_variance = NULL,
+      residual_covariance = residual_covariance, marker_variance = NULL,
       residual_variance = NULL, regional_marker_covariance = NULL,
       convergence = convergence),
     final = list(
@@ -379,20 +434,37 @@
       approximation_warnings = NULL,
       qualification = list(
         status = "qualification_only", pattern_order = state_ids,
-        update_order = c("marker_sweep", "dirichlet", "inverse_wishart"),
+        update_order = if (sampled_residual) c(
+          "marker_sweep", "dirichlet", "marker_inverse_wishart",
+          "residual_inverse_wishart", "convergence_capture",
+          "retained_capture") else
+          c("marker_sweep", "dirichlet", "inverse_wishart"),
+        residual_covariance_policy = residual_covariance_policy,
         fixed_residual_covariance = fixed_residual_covariance,
+        initial_residual_covariance = initial_residual_covariance,
+        residual_covariance_prior = if (sampled_residual) list(
+          degrees_of_freedom = residual_covariance_prior_df,
+          scale = residual_covariance_prior_scale,
+          parameterization = "degrees_of_freedom_scale",
+          proper = TRUE,
+          finite_mean = residual_covariance_prior_df > length(traits) + 1L
+        ) else NULL,
         initial_marker_covariance = initial_marker_covariance,
         marker_covariance_prior = list(
           degrees_of_freedom = prior_df, scale = prior_scale),
         activity_pattern_dirichlet_prior = dirichlet_prior,
         covariance_updates = covariance_updates,
+        residual_covariance_updates = residual_covariance_updates,
         transition_counts = lapply(native$chains, `[[`, "transition_counts"),
         genotype_contract = native$genotype_contract,
         current_legacy_mt_route_used = FALSE)),
     provenance = provenance,
     compatibility_id = "phase1-r-v2",
     source_schema = list(
-      name = "phase4a_cheng_mt_bayesc_qualification", version = 1L),
+      name = if (sampled_residual) {
+        "phase4b_cheng_mt_bayesc_qualification"
+      } else "phase4a_cheng_mt_bayesc_qualification",
+      version = 1L),
     migration = list(
       status = "qualification_only", legacy_mt_conversion = FALSE))
 }
@@ -407,7 +479,11 @@
     burn_in_iterations = 100L, sampling_iterations = 200L,
     thin_interval = 1L, chains = 1L, cores = 1L, seed = 1,
     keep_traces = TRUE, chr = NULL, cls = NULL, rows = NULL,
-    block_size = 1000L) {
+    block_size = 1000L,
+    residual_covariance_policy = "fixed_full",
+    initial_residual_covariance = NULL,
+    residual_covariance_prior_df = NULL,
+    residual_covariance_prior_scale = NULL) {
   if (!is.list(Glist) || is.null(Glist$bedfiles)) {
     stop("Phase 4a requires one packed-BED Glist.", call. = FALSE)
   }
@@ -424,8 +500,44 @@
   if (is.null(trait_ids)) trait_ids <- c("trait1", "trait2")
   trait_ids <- .blr_ids(trait_ids, "Phase 4a trait IDs")
   colnames(phenotype) <- trait_ids
-  fixed_residual_covariance <- .blr_phase4a_symmetric_spd(
-    fixed_residual_covariance, trait_ids, "fixed_residual_covariance")
+  if (!is.character(residual_covariance_policy) ||
+      length(residual_covariance_policy) != 1L ||
+      is.na(residual_covariance_policy) ||
+      !residual_covariance_policy %in% c("fixed_full", "sampled_full")) {
+    stop("residual_covariance_policy must be exactly 'fixed_full' or 'sampled_full'.",
+         call. = FALSE)
+  }
+  sampled_residual <- identical(residual_covariance_policy, "sampled_full")
+  if (sampled_residual) {
+    if (!is.null(fixed_residual_covariance)) {
+      stop("sampled_full residual covariance requires fixed_residual_covariance = NULL.",
+           call. = FALSE)
+    }
+    initial_residual_covariance <- .blr_phase4a_symmetric_spd(
+      initial_residual_covariance, trait_ids,
+      "initial_residual_covariance")
+    residual_covariance_prior_scale <- .blr_phase4a_symmetric_spd(
+      residual_covariance_prior_scale, trait_ids,
+      "residual_covariance_prior_scale")
+    if (!is.numeric(residual_covariance_prior_df) ||
+        length(residual_covariance_prior_df) != 1L ||
+        is.na(residual_covariance_prior_df) ||
+        !is.finite(residual_covariance_prior_df) ||
+        residual_covariance_prior_df <= 1) {
+      stop("residual_covariance_prior_df must exceed T - 1 for a proper inverse-Wishart prior.",
+           call. = FALSE)
+    }
+  } else {
+    if (!is.null(initial_residual_covariance) ||
+        !is.null(residual_covariance_prior_df) ||
+        !is.null(residual_covariance_prior_scale)) {
+      stop("fixed_full residual covariance cannot carry sampled residual-covariance initial or prior fields.",
+           call. = FALSE)
+    }
+    fixed_residual_covariance <- .blr_phase4a_symmetric_spd(
+      fixed_residual_covariance, trait_ids, "fixed_residual_covariance")
+    initial_residual_covariance <- fixed_residual_covariance
+  }
   initial_marker_covariance <- .blr_phase4a_symmetric_spd(
     initial_marker_covariance, trait_ids, "initial_marker_covariance")
   marker_covariance_prior_scale <- .blr_phase4a_symmetric_spd(
@@ -472,10 +584,15 @@
   }
 
   prepared <- .blr_phase4a_bed_collection(
-    dat, Glist, phenotype, trait_ids)
+    dat, Glist, phenotype, trait_ids,
+    if (sampled_residual) {
+      "sampled_full_inverse_wishart_residual_covariance"
+    } else "fixed_full_residual_covariance")
   spec <- .blr_phase4a_resolved_spec(
     prepared$collection, prepared$observation_ids, trait_ids,
-    dat$variable_names, fixed_residual_covariance,
+    dat$variable_names, residual_covariance_policy,
+    fixed_residual_covariance, initial_residual_covariance,
+    residual_covariance_prior_df, residual_covariance_prior_scale,
     initial_marker_covariance, initial_probability, dirichlet_prior,
     marker_covariance_prior_df, marker_covariance_prior_scale,
     update_marker_covariance, update_activity_pattern_probability,
@@ -488,7 +605,7 @@
     selected_columns = lapply(dat$cls, as.integer),
     selected_rows = if (is.null(dat$rows)) NULL else as.integer(dat$rows),
     allele_frequency = as.numeric(frequency), phenotype = phenotype,
-    fixed_residual_covariance = fixed_residual_covariance,
+    initial_residual_covariance = initial_residual_covariance,
     initial_marker_covariance = initial_marker_covariance,
     initial_activity_pattern_probability = as.numeric(initial_probability),
     activity_pattern_dirichlet_prior = as.numeric(dirichlet_prior),
@@ -497,12 +614,21 @@
     update_marker_covariance = update_marker_covariance,
     update_activity_pattern_probability =
       update_activity_pattern_probability,
+    update_residual_covariance = sampled_residual,
+    residual_covariance_prior_df = if (sampled_residual) {
+      residual_covariance_prior_df
+    } else 0,
+    residual_covariance_prior_scale = if (sampled_residual) {
+      residual_covariance_prior_scale
+    } else matrix(numeric(), 0L, 0L),
     burn_in_iterations = burn_in_iterations,
     sampling_iterations = sampling_iterations,
     chains = chains, cores = cores,
     execution_contract = execution_contract)
   .blr_phase4a_raw(
-    native, spec, fixed_residual_covariance, initial_marker_covariance,
+    native, spec, residual_covariance_policy, fixed_residual_covariance,
+    initial_residual_covariance, residual_covariance_prior_df,
+    residual_covariance_prior_scale, initial_marker_covariance,
     marker_covariance_prior_df, marker_covariance_prior_scale,
     dirichlet_prior, keep_traces)
 }

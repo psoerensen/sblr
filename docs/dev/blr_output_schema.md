@@ -66,6 +66,16 @@ input and final state; no residual-covariance draws or posterior mean are
 manufactured. See
 [the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
 
+The Phase 4b sampled policy adds explicit
+`draws$residual_covariance` (`draw × chain × trait_row × trait_col`),
+unthinned convergence covariance, `posterior$residual_covariance_mean`, and
+`final$residual_covariance` (`chain × trait_row × trait_col`). All are finite,
+symmetric, and positive definite; the posterior mean is the retained-draw mean,
+and the final state equals the last completed convergence state when traces are
+kept. Fixed mode continues to require sampled draws and the posterior mean to be
+present as `NULL`. See
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+
 `posterior$pleiotropic_probabilities` has one finite value in $[0,1]$ per
 declared marker, in global marker order. It is conditionally required when the
 resolved model declares a joint activity-pattern probability policy with an

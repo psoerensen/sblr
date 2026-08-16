@@ -54,9 +54,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mtblr_phase4b_residual_covariance_contract_internal
+Rcpp::List mtblr_phase4b_residual_covariance_contract_internal(Rcpp::NumericMatrix residual, double prior_df, arma::mat prior_scale, int draws, double seed);
+RcppExport SEXP _sblr_mtblr_phase4b_residual_covariance_contract_internal(SEXP residualSEXP, SEXP prior_dfSEXP, SEXP prior_scaleSEXP, SEXP drawsSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type residual(residualSEXP);
+    Rcpp::traits::input_parameter< double >::type prior_df(prior_dfSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type prior_scale(prior_scaleSEXP);
+    Rcpp::traits::input_parameter< int >::type draws(drawsSEXP);
+    Rcpp::traits::input_parameter< double >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_phase4b_residual_covariance_contract_internal(residual, prior_df, prior_scale, draws, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mtblr_phase4a_cheng_bed_internal
-Rcpp::List mtblr_phase4a_cheng_bed_internal(Rcpp::CharacterVector bed_files, int source_sample_count, Rcpp::List selected_columns, Rcpp::Nullable<Rcpp::IntegerVector> selected_rows, Rcpp::NumericVector allele_frequency, Rcpp::NumericMatrix phenotype, arma::mat fixed_residual_covariance, arma::mat initial_marker_covariance, Rcpp::NumericVector initial_activity_pattern_probability, Rcpp::NumericVector activity_pattern_dirichlet_prior, double marker_covariance_prior_df, arma::mat marker_covariance_prior_scale, bool update_marker_covariance, bool update_activity_pattern_probability, int burn_in_iterations, int sampling_iterations, int chains, int cores, Rcpp::Nullable<Rcpp::List> execution_contract);
-RcppExport SEXP _sblr_mtblr_phase4a_cheng_bed_internal(SEXP bed_filesSEXP, SEXP source_sample_countSEXP, SEXP selected_columnsSEXP, SEXP selected_rowsSEXP, SEXP allele_frequencySEXP, SEXP phenotypeSEXP, SEXP fixed_residual_covarianceSEXP, SEXP initial_marker_covarianceSEXP, SEXP initial_activity_pattern_probabilitySEXP, SEXP activity_pattern_dirichlet_priorSEXP, SEXP marker_covariance_prior_dfSEXP, SEXP marker_covariance_prior_scaleSEXP, SEXP update_marker_covarianceSEXP, SEXP update_activity_pattern_probabilitySEXP, SEXP burn_in_iterationsSEXP, SEXP sampling_iterationsSEXP, SEXP chainsSEXP, SEXP coresSEXP, SEXP execution_contractSEXP) {
+Rcpp::List mtblr_phase4a_cheng_bed_internal(Rcpp::CharacterVector bed_files, int source_sample_count, Rcpp::List selected_columns, Rcpp::Nullable<Rcpp::IntegerVector> selected_rows, Rcpp::NumericVector allele_frequency, Rcpp::NumericMatrix phenotype, arma::mat initial_residual_covariance, arma::mat initial_marker_covariance, Rcpp::NumericVector initial_activity_pattern_probability, Rcpp::NumericVector activity_pattern_dirichlet_prior, double marker_covariance_prior_df, arma::mat marker_covariance_prior_scale, bool update_marker_covariance, bool update_activity_pattern_probability, bool update_residual_covariance, double residual_covariance_prior_df, arma::mat residual_covariance_prior_scale, int burn_in_iterations, int sampling_iterations, int chains, int cores, Rcpp::Nullable<Rcpp::List> execution_contract);
+RcppExport SEXP _sblr_mtblr_phase4a_cheng_bed_internal(SEXP bed_filesSEXP, SEXP source_sample_countSEXP, SEXP selected_columnsSEXP, SEXP selected_rowsSEXP, SEXP allele_frequencySEXP, SEXP phenotypeSEXP, SEXP initial_residual_covarianceSEXP, SEXP initial_marker_covarianceSEXP, SEXP initial_activity_pattern_probabilitySEXP, SEXP activity_pattern_dirichlet_priorSEXP, SEXP marker_covariance_prior_dfSEXP, SEXP marker_covariance_prior_scaleSEXP, SEXP update_marker_covarianceSEXP, SEXP update_activity_pattern_probabilitySEXP, SEXP update_residual_covarianceSEXP, SEXP residual_covariance_prior_dfSEXP, SEXP residual_covariance_prior_scaleSEXP, SEXP burn_in_iterationsSEXP, SEXP sampling_iterationsSEXP, SEXP chainsSEXP, SEXP coresSEXP, SEXP execution_contractSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -66,7 +81,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type selected_rows(selected_rowsSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type allele_frequency(allele_frequencySEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type phenotype(phenotypeSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type fixed_residual_covariance(fixed_residual_covarianceSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type initial_residual_covariance(initial_residual_covarianceSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type initial_marker_covariance(initial_marker_covarianceSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type initial_activity_pattern_probability(initial_activity_pattern_probabilitySEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type activity_pattern_dirichlet_prior(activity_pattern_dirichlet_priorSEXP);
@@ -74,12 +89,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::mat >::type marker_covariance_prior_scale(marker_covariance_prior_scaleSEXP);
     Rcpp::traits::input_parameter< bool >::type update_marker_covariance(update_marker_covarianceSEXP);
     Rcpp::traits::input_parameter< bool >::type update_activity_pattern_probability(update_activity_pattern_probabilitySEXP);
+    Rcpp::traits::input_parameter< bool >::type update_residual_covariance(update_residual_covarianceSEXP);
+    Rcpp::traits::input_parameter< double >::type residual_covariance_prior_df(residual_covariance_prior_dfSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type residual_covariance_prior_scale(residual_covariance_prior_scaleSEXP);
     Rcpp::traits::input_parameter< int >::type burn_in_iterations(burn_in_iterationsSEXP);
     Rcpp::traits::input_parameter< int >::type sampling_iterations(sampling_iterationsSEXP);
     Rcpp::traits::input_parameter< int >::type chains(chainsSEXP);
     Rcpp::traits::input_parameter< int >::type cores(coresSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::List> >::type execution_contract(execution_contractSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_phase4a_cheng_bed_internal(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, fixed_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract));
+    rcpp_result_gen = Rcpp::wrap(mtblr_phase4a_cheng_bed_internal(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2489,7 +2507,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_blr_phase3_seed_v1_internal", (DL_FUNC) &_sblr_blr_phase3_seed_v1_internal, 4},
     {"_sblr_blr_scalar_seeds_cpp", (DL_FUNC) &_sblr_blr_scalar_seeds_cpp, 4},
     {"_sblr_mtblr_phase4a_pattern_contract_internal", (DL_FUNC) &_sblr_mtblr_phase4a_pattern_contract_internal, 5},
-    {"_sblr_mtblr_phase4a_cheng_bed_internal", (DL_FUNC) &_sblr_mtblr_phase4a_cheng_bed_internal, 19},
+    {"_sblr_mtblr_phase4b_residual_covariance_contract_internal", (DL_FUNC) &_sblr_mtblr_phase4b_residual_covariance_contract_internal, 5},
+    {"_sblr_mtblr_phase4a_cheng_bed_internal", (DL_FUNC) &_sblr_mtblr_phase4a_cheng_bed_internal, 22},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_mtblr_cpg_omp_csr", (DL_FUNC) &_sblr_mtblr_cpg_omp_csr, 23},
     {"_sblr_bed_xtx_xty", (DL_FUNC) &_sblr_bed_xtx_xty, 11},

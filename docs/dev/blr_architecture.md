@@ -69,11 +69,14 @@ one R logical-task plan and one native execution contract around the qualified
 existing ST schedulers. It does not replace representation-specific hot loops
 or their arithmetic. Phase 4a adds one internal qualification-only joint-MT
 policy: two common-sample traits, one packed-BED resource/provider, Cheng
-MT-BayesC$\Pi$, fixed full $V_e$, and an authoritative sampled $V_b$. It
+MT-BayesC$\Pi$, fixed full $V_e$, and an authoritative sampled $V_b$. Phase 4b
+extends that same route with an optional authoritative sampled full
+inverse-Wishart $V_e$; fixed mode remains the Phase 4a zero-RNG policy. It
 composes the shared Phase 1--3 infrastructure and existing immutable BED view
 rather than creating a second MT stack. Public legacy MT routes remain
 unchanged. See
-[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md).
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md) and
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then

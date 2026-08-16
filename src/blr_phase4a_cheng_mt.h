@@ -244,21 +244,28 @@ struct ChainResult {
   std::vector<arma::mat> latent_draws;
   std::vector<std::vector<int>> state_draws;
   std::vector<arma::mat> covariance_draws;
+  std::vector<arma::mat> residual_covariance_draws;
   std::vector<std::array<double, pattern_count>> probability_draws;
   std::vector<arma::mat> prediction_draws;
   std::vector<arma::mat> convergence_covariance;
+  std::vector<arma::mat> convergence_residual_covariance;
   std::vector<std::array<double, pattern_count>> convergence_probability;
   std::vector<int> convergence_active_count;
   arma::mat final_realised;
   arma::mat final_latent;
   std::vector<int> final_state;
   arma::mat final_covariance;
+  arma::mat final_residual_covariance;
   std::array<double, pattern_count> final_probability{{0.0, 0.0, 0.0, 0.0}};
   arma::mat final_prediction;
   arma::mat last_covariance_statistic;
   arma::mat last_covariance_scale;
   double last_covariance_df = 0.0;
   int last_active_count = 0;
+  arma::mat last_residual_statistic;
+  arma::mat last_residual_scale;
+  double last_residual_df = 0.0;
+  int residual_covariance_update_count = 0;
   std::array<std::array<std::uint64_t, pattern_count>, pattern_count>
     transition_count{};
 };
@@ -268,7 +275,7 @@ ChainResult run_chain(
     const sblr::core::BedPackedGenotypeView<PackedGenotype>& genotype,
     const std::vector<sblr::mt::MtBedMarkerMap>& marker_maps,
     const arma::mat& phenotype,
-    const arma::mat& fixed_residual_covariance,
+    const arma::mat& initial_residual_covariance,
     const arma::mat& initial_marker_covariance,
     const std::array<double, pattern_count>& initial_probability,
     const std::array<double, pattern_count>& dirichlet_prior,
@@ -276,6 +283,9 @@ ChainResult run_chain(
     const arma::mat& prior_scale,
     bool update_covariance,
     bool update_probability,
+    bool update_residual_covariance,
+    double residual_prior_df,
+    const arma::mat& residual_prior_scale,
     int burn_in_iterations,
     int sampling_iterations,
     const std::vector<int>& retained_transition_indices,
@@ -289,13 +299,22 @@ ChainResult run_chain(
     throw std::invalid_argument(
       "Phase 4a inverse-Wishart degrees of freedom must exceed T - 1.");
   }
-  const arma::mat residual_covariance =
-    require_spd(fixed_residual_covariance, "fixed residual covariance");
+  arma::mat residual_covariance =
+    require_spd(initial_residual_covariance, "initial residual covariance");
   arma::mat marker_covariance =
     require_spd(initial_marker_covariance, "initial marker covariance");
   const arma::mat covariance_prior_scale =
     require_spd(prior_scale, "marker-covariance prior scale");
-  const arma::mat residual_precision = inverse_spd(residual_covariance);
+  arma::mat residual_precision = inverse_spd(residual_covariance);
+  arma::mat residual_covariance_prior_scale;
+  if (update_residual_covariance) {
+    if (!std::isfinite(residual_prior_df) || residual_prior_df <= 1.0) {
+      throw std::invalid_argument(
+        "Phase 4b residual inverse-Wishart degrees of freedom must exceed T - 1.");
+    }
+    residual_covariance_prior_scale = require_spd(
+      residual_prior_scale, "residual-covariance prior scale");
+  }
 
   const std::size_t marker_count = genotype.marker_count;
   arma::mat realised(marker_count, trait_count, arma::fill::zeros);
@@ -323,9 +342,16 @@ ChainResult run_chain(
   out.latent_draws.resize(retained_transition_indices.size());
   out.state_draws.resize(retained_transition_indices.size());
   out.covariance_draws.resize(retained_transition_indices.size());
+  if (update_residual_covariance) {
+    out.residual_covariance_draws.resize(retained_transition_indices.size());
+  }
   out.probability_draws.resize(retained_transition_indices.size());
   out.prediction_draws.resize(retained_transition_indices.size());
   out.convergence_covariance.reserve(static_cast<std::size_t>(sampling_iterations));
+  if (update_residual_covariance) {
+    out.convergence_residual_covariance.reserve(
+      static_cast<std::size_t>(sampling_iterations));
+  }
   out.convergence_probability.reserve(static_cast<std::size_t>(sampling_iterations));
   out.convergence_active_count.reserve(static_cast<std::size_t>(sampling_iterations));
 
@@ -411,9 +437,33 @@ ChainResult run_chain(
     out.last_covariance_df = posterior_df;
     out.last_active_count = active_count;
 
+    // The marker loop leaves residual = Y - X A for the complete current
+    // realised-effect state. Sample the one authoritative residual covariance
+    // only at this completed-sweep boundary.
+    if (update_residual_covariance) {
+      arma::mat residual_statistic = residual.t() * residual;
+      residual_statistic = 0.5 * (residual_statistic + residual_statistic.t());
+      const arma::mat residual_posterior_scale =
+        residual_covariance_prior_scale + residual_statistic;
+      const double residual_posterior_df = residual_prior_df +
+        static_cast<double>(genotype.sample_count);
+      residual_covariance = sblr::mt::draw_inverse_wishart(
+        residual_posterior_df, residual_posterior_scale, rng);
+      residual_covariance = require_spd(
+        residual_covariance, "sampled residual covariance");
+      residual_precision = inverse_spd(residual_covariance);
+      out.last_residual_statistic = residual_statistic;
+      out.last_residual_scale = residual_posterior_scale;
+      out.last_residual_df = residual_posterior_df;
+      ++out.residual_covariance_update_count;
+    }
+
     if (iteration >= burn_in_iterations) {
       const int post_burn = iteration - burn_in_iterations + 1;
       out.convergence_covariance.push_back(marker_covariance);
+      if (update_residual_covariance) {
+        out.convergence_residual_covariance.push_back(residual_covariance);
+      }
       out.convergence_probability.push_back(probability);
       out.convergence_active_count.push_back(active_count);
       const int retained = retained_position[static_cast<std::size_t>(post_burn)];
@@ -423,6 +473,9 @@ ChainResult run_chain(
         out.latent_draws[index] = latent;
         out.state_draws[index] = state;
         out.covariance_draws[index] = marker_covariance;
+        if (update_residual_covariance) {
+          out.residual_covariance_draws[index] = residual_covariance;
+        }
         out.probability_draws[index] = probability;
         out.prediction_draws[index] = phenotype - residual;
       }
@@ -433,6 +486,7 @@ ChainResult run_chain(
   out.final_latent = latent;
   out.final_state = state;
   out.final_covariance = marker_covariance;
+  out.final_residual_covariance = residual_covariance;
   out.final_probability = probability;
   out.final_prediction = phenotype - residual;
   return out;

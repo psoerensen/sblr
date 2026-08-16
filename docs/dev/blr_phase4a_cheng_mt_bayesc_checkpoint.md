@@ -279,8 +279,11 @@ contract.
 
 ## Deferred work
 
-Phase 4b must add and qualify sampled full inverse-Wishart $V_e$ before this
-new MT route can be considered for maintained public replacement. Summary
+Phase 4b has added sampled full inverse-Wishart $V_e$ as a separate
+qualification policy; see
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+Independent verification and later public-promotion gates still precede any
+maintained replacement. Summary
 operators, heterogeneous or overlapping providers, MT-BayesR/MT-BayesRC,
 regional covariance, covariance-template mixtures, structured large-trait
 states, and public migration remain separately gated.

@@ -98,7 +98,12 @@ qualification route uses a `joint_multitrait` chain task with seed, retention,
 and scheduler contract version 1. Its post-burn convergence capture is
 unthinned, completed-iteration, task-private, and zero-RNG; keeping or
 discarding the trace does not change its scientific state. See
-[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). The
+[the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md). Phase 4b
+adds the authoritative sampled residual covariance to that completed-iteration
+capture after the residual inverse-Wishart update; the capture itself remains
+zero-RNG. See
+[the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+The
 version change is a deterministic
 trajectory migration, not a posterior-target change.
 
