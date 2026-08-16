@@ -83,6 +83,24 @@ identifiable all-traits-active pattern. Its values must equal the corresponding
 column of `posterior$activity_pattern_probabilities`, aligned by the declared
 activity-pattern ID rather than by column position, using a raw-object
 consistency tolerance of $10^{-12}$. Phase 4a declares $(1,1)$ with ID `1_1`.
+The Phase 5A general-$T$ qualification route declares the complete binary
+matrix in `input$prior$probability$activity_patterns`; the unique
+$(1,\ldots,1)$ row defines the required column without assuming a fixed ID or
+column position. Trait and activity-pattern axes grow dynamically while
+size-one draw and chain axes remain present. See
+[the Phase 5A checkpoint](blr_phase5a_general_t_cheng_mt_checkpoint.md).
+The mandatory markerwise activity-pattern posterior has marker by
+activity-pattern axes and therefore requires $M2^T$ numeric values. The current
+qualification object also retains the scientifically equivalent joint-state
+view with its separately declared axis, and preflight counts both material R
+matrices conservatively. Activity-transition diagnostics are not posterior
+fields: the dense $2^T\times2^T$ matrix is absent, `transition_counts` is
+present with value `NULL`, and compact per-chain occupancy vectors use the
+declared activity-pattern IDs. Under `compact_occupancy_v1`, occupancy uses
+exact chain and pattern axes and contains finite nonnegative integer counts;
+`pattern_change_counts` contains one finite nonnegative integer per named
+chain. Occupancy totals equal the number of marker updates across all completed
+burn-in and sampling sweeps, and changes cannot exceed that total.
 The field is not required for single-trait, independent-trait, or other models
 for which pleiotropy is scientifically undefined.
 

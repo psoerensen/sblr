@@ -317,16 +317,15 @@ is_blr_raw_v2 <- function(x) {
     return(NULL)
   }
   state_ids <- input$model$state_space
-  trait_count <- length(input$data$trait_ids)
-  encoded <- gsub("_", "", state_ids, fixed = TRUE)
-  valid <- nchar(encoded) == trait_count & grepl("^[01]+$", encoded)
-  if (!all(valid)) {
+  trait_ids <- input$data$trait_ids
+  patterns <- input$prior$probability$activity_patterns %||% NULL
+  if (is.null(patterns)) {
     stop(paste0(
-      "A joint activity-pattern model must declare identifiable binary ",
-      "activity-pattern IDs with one coordinate per trait."), call. = FALSE)
+      "A joint activity-pattern model must declare explicit binary ",
+      "activity-pattern metadata."), call. = FALSE)
   }
-  pleiotropic <- which(encoded == paste(rep("1", trait_count),
-                                        collapse = ""))
+  .blr_validate_activity_patterns(patterns, trait_ids, state_ids)
+  pleiotropic <- which(rowSums(patterns) == length(trait_ids))
   if (length(pleiotropic) != 1L) {
     stop(paste0(
       "A joint activity-pattern model must declare exactly one identifiable ",
@@ -376,6 +375,107 @@ is_blr_raw_v2 <- function(x) {
       "posterior$pleiotropic_probabilities must equal the markerwise ",
       "probability of declared pleiotropic activity pattern ", pattern_id,
       "."), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+.blr_validate_compact_transition_diagnostics <- function(raw) {
+  input <- raw$input
+  required <- identical(input$data$analysis_mode, "joint_multitrait") &&
+    identical(input$model$probability_policy,
+              "joint_activity_dirichlet") &&
+    identical(input$model$effect_storage_convention, "base_latent") &&
+    identical(input$output$effect_draw_policy,
+              "full_qualification_draws") &&
+    identical(input$output$state_draw_policy,
+              "joint_activity_pattern_draws")
+  if (!required) return(invisible(TRUE))
+
+  controls <- input$compute$operator_numerical_controls
+  if (!"transition_diagnostic_policy" %in% names(controls) ||
+      !identical(controls$transition_diagnostic_policy,
+                 "compact_occupancy_v1")) {
+    stop(paste0(
+      "The general-T Cheng execution contract requires ",
+      "transition_diagnostic_policy = 'compact_occupancy_v1'."),
+      call. = FALSE)
+  }
+  qualification <- raw$diagnostics$qualification %||% NULL
+  if (!is.list(qualification) || is.data.frame(qualification)) {
+    stop("diagnostics$qualification must contain compact transition diagnostics.",
+         call. = FALSE)
+  }
+  required_fields <- c(
+    "transition_counts", "pattern_occupancy_counts",
+    "pattern_change_counts")
+  qualification_names <- names(qualification)
+  if (is.null(qualification_names) || anyNA(qualification_names) ||
+      any(!nzchar(qualification_names))) {
+    stop("diagnostics$qualification compact transition fields require exact nonempty names.",
+         call. = FALSE)
+  }
+  required_counts <- vapply(
+    required_fields,
+    function(field) sum(qualification_names == field),
+    integer(1))
+  if (any(required_counts == 0L)) {
+    stop("diagnostics$qualification is missing required compact transition fields.",
+         call. = FALSE)
+  }
+  if (any(required_counts != 1L)) {
+    stop("Each required diagnostics$qualification compact transition field must occur exactly once.",
+         call. = FALSE)
+  }
+  if (!is.null(qualification[["transition_counts"]])) {
+    stop("diagnostics$qualification$transition_counts must be present with value NULL under compact_occupancy_v1.",
+         call. = FALSE)
+  }
+
+  pattern_ids <- input$model$state_space
+  chain_ids <- paste0("chain", seq_len(input$mcmc$chains))
+  occupancy <- qualification$pattern_occupancy_counts
+  if (!is.list(occupancy) || is.data.frame(occupancy) ||
+      length(occupancy) != length(chain_ids) ||
+      !identical(names(occupancy), chain_ids)) {
+    stop("diagnostics$qualification$pattern_occupancy_counts must have the exact declared chain axis.",
+         call. = FALSE)
+  }
+  validate_counts <- function(x, expected_ids, what) {
+    if (!is.numeric(x) || is.object(x) || length(x) != length(expected_ids) ||
+        !identical(names(x), expected_ids) || any(!is.finite(x)) ||
+        any(x < 0) || any(x != floor(x))) {
+      stop(what, " must be finite nonnegative integer-valued counts with exact declared IDs.",
+           call. = FALSE)
+    }
+    invisible(TRUE)
+  }
+  for (chain in seq_along(occupancy)) {
+    validate_counts(
+      occupancy[[chain]], pattern_ids,
+      paste0("diagnostics$qualification$pattern_occupancy_counts[[",
+             chain_ids[[chain]], "]]"))
+  }
+  changes <- qualification$pattern_change_counts
+  validate_counts(
+    changes, chain_ids,
+    "diagnostics$qualification$pattern_change_counts")
+
+  total_iterations <- input$mcmc$burn_in_iterations +
+    input$mcmc$sampling_iterations
+  expected_events <- length(input$data$global_markers) * total_iterations
+  if (!is.finite(expected_events) ||
+      expected_events > 2^53) {
+    stop("Compact transition event totals exceed exact raw-v2 validation range.",
+         call. = FALSE)
+  }
+  totals <- vapply(occupancy, sum, numeric(1))
+  if (any(totals != expected_events)) {
+    stop("Pattern occupancy totals must equal one event per marker update in every completed sweep.",
+         call. = FALSE)
+  }
+  if (any(changes > expected_events)) {
+    stop("Pattern-change counts cannot exceed the number of marker-update events.",
+         call. = FALSE)
   }
   invisible(TRUE)
 }
@@ -578,6 +678,7 @@ validate_blr_raw_v2 <- function(raw) {
     }
   }
   .blr_validate_pleiotropic_probabilities(raw, pleiotropic_pattern_id)
+  .blr_validate_compact_transition_diagnostics(raw)
   for (field in intersect(names(.blr_raw_axis_contract), names(raw$draws))) {
     if (!is.null(raw$draws[[field]])) {
       allow_collapsed_latent <- field == "latent_effects" &&
@@ -661,7 +762,7 @@ validate_blr_raw_v2 <- function(raw) {
         stop("Joint activity latent draws require realised-effect draws.",
              call. = FALSE)
       }
-      patterns <- rbind(c(0L, 0L), c(1L, 0L), c(0L, 1L), c(1L, 1L))
+      patterns <- raw$input$prior$probability$activity_patterns
       latent <- raw$draws$latent_effects
       realised <- raw$draws$realised_effects
       state <- raw$draws$joint_states
@@ -696,7 +797,7 @@ validate_blr_raw_v2 <- function(raw) {
         stop("Joint activity final latent effects require realised effects.",
              call. = FALSE)
       }
-      patterns <- rbind(c(0L, 0L), c(1L, 0L), c(0L, 1L), c(1L, 1L))
+      patterns <- raw$input$prior$probability$activity_patterns
       for (chain in seq_len(dim(raw$final$joint_states)[1L])) {
         for (marker in seq_len(dim(raw$final$joint_states)[2L])) {
           current <- raw$final$joint_states[chain, marker] + 1L

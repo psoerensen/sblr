@@ -296,12 +296,12 @@ test_that("Phase 4a pleiotropic probabilities obey the joint-pattern contract", 
   invalid_pattern <- phase4a_relabel_pattern_axes(
     fit, c("0_0", "1_0", "0_1", "1_x"))
   expect_error(validate(invalid_pattern),
-               "identifiable binary activity-pattern IDs")
+               "complete unique binary pattern matrix")
   missing_pattern <- fit
   missing_pattern$input$model$state_space <- c("0_0", "1_0", "0_1")
   missing_pattern$model$state_space <- c("0_0", "1_0", "0_1")
   expect_error(validate(missing_pattern),
-               "exactly one identifiable pleiotropic")
+               "complete unique binary pattern matrix")
 
   bad_labels <- fit
   dimnames(bad_labels$posterior$activity_pattern_probabilities)[[2L]] <-
@@ -464,7 +464,7 @@ test_that("Phase 4a validates its narrow fixed-residual boundary", {
     sblr:::.blr_phase4a_cheng_mt_bed(
       fixture$phenotype[, 1L, drop = FALSE], fixture$Glist,
       fixture$Ve, fixture$Vb, 4.5, fixture$Psi),
-    "exactly two traits|N x 2")
+    "N x T.*T >= 2")
   invalid_df <- invalid_ve
   invalid_df$fixed_residual_covariance <- fixture$Ve
   invalid_df$marker_covariance_prior_df <- 1
@@ -669,7 +669,7 @@ test_that("Phase 4b validates residual policy, prior, and raw presence rules", {
   expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
                        mutate_argument("residual_covariance_prior_scale",
                                        matrix(1, 2L, 3L))),
-               "2 x 2")
+               "T x T")
   expect_error(do.call(sblr:::.blr_phase4a_cheng_mt_bed,
                        mutate_argument("residual_covariance_prior_scale",
                                        matrix(c(1, 2, 2, 1), 2L))),

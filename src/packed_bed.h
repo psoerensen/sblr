@@ -15,13 +15,60 @@
 #include <omp.h>
 #endif
 
-static inline std::size_t round_up(std::size_t x, std::size_t a) {
- return ((x + a - 1) / a) * a;
+static inline std::size_t packed_bed_checked_add(
+  std::size_t x, std::size_t y, const char* component) {
+ if (y > std::numeric_limits<std::size_t>::max() - x) {
+  throw std::overflow_error(
+    std::string("Packed BED allocation overflowed component '") +
+    component + "'.");
+ }
+ return x + y;
+}
+
+static inline std::size_t packed_bed_checked_product(
+  std::size_t x, std::size_t y, const char* component) {
+ if (x != 0u && y > std::numeric_limits<std::size_t>::max() / x) {
+  throw std::overflow_error(
+    std::string("Packed BED allocation overflowed component '") +
+    component + "'.");
+ }
+ return x * y;
+}
+
+static inline std::size_t packed_bed_row_bytes(std::size_t sample_count) {
+ return packed_bed_checked_add(
+   sample_count / 4u, sample_count % 4u == 0u ? 0u : 1u,
+   "packed_bed_row_bytes");
+}
+
+static inline std::size_t packed_bed_round_up(
+  std::size_t x, std::size_t alignment, const char* component) {
+ if (alignment == 0u) {
+  throw std::invalid_argument("Packed BED alignment must be positive.");
+ }
+ const std::size_t blocks = packed_bed_checked_add(
+   x / alignment, x % alignment == 0u ? 0u : 1u, component);
+ return packed_bed_checked_product(blocks, alignment, component);
+}
+
+static inline std::size_t packed_bed_aligned_stride(
+  std::size_t sample_count) {
+ return packed_bed_round_up(
+   packed_bed_row_bytes(sample_count), static_cast<std::size_t>(64),
+   "packed_bed_aligned_stride");
+}
+
+static inline std::size_t packed_bed_owner_bytes(
+  std::size_t sample_count, std::size_t marker_count) {
+ return packed_bed_checked_product(
+   marker_count, packed_bed_aligned_stride(sample_count),
+   "packed_bed_owner");
 }
 
 static inline void* aligned_malloc64(std::size_t nbytes) {
  const std::size_t nbytes_aligned =
-  round_up(nbytes, static_cast<std::size_t>(64));
+  packed_bed_round_up(
+    nbytes, static_cast<std::size_t>(64), "aligned_allocation");
 
 #if defined(_MSC_VER)
  return _aligned_malloc(nbytes_aligned, 64);
@@ -66,10 +113,16 @@ struct PackedBedMatrix {
  PackedBedMatrix() = default;
 
  PackedBedMatrix(int n_, int m_) : n(n_), m(m_) {
-  nbytes = static_cast<std::size_t>((n + 3) / 4);
-  stride = round_up(nbytes, static_cast<std::size_t>(64));
+  if (n < 0 || m < 0) {
+   throw std::invalid_argument(
+     "Packed BED sample and marker counts must be nonnegative.");
+  }
+  const std::size_t samples = static_cast<std::size_t>(n);
+  const std::size_t markers = static_cast<std::size_t>(m);
+  nbytes = packed_bed_row_bytes(samples);
+  stride = packed_bed_aligned_stride(samples);
 
-  const std::size_t total = static_cast<std::size_t>(m) * stride;
+  const std::size_t total = packed_bed_owner_bytes(samples, markers);
   data = static_cast<uint8_t*>(aligned_malloc64(total));
   if (!data) throw std::runtime_error("Failed to allocate packed BED matrix.");
 
@@ -133,13 +186,24 @@ static PackedBedMatrix read_bedfiles_to_packed_matrix(
 ) {
  const bool use_rows = rows0 != nullptr;
  const int n_used = use_rows ? n_rows : n_bed;
- const std::size_t nbytes_bed =
-  static_cast<std::size_t>((n_bed + 3) / 4);
-
- int m_total = 0;
- for (const auto& x : cls_by_file) {
-  m_total += static_cast<int>(x.size());
+ if (n_bed < 0 || n_used < 0) {
+  throw std::invalid_argument(
+    "Packed BED source and selected sample counts must be nonnegative.");
  }
+ const std::size_t nbytes_bed = packed_bed_row_bytes(
+   static_cast<std::size_t>(n_bed));
+
+ std::size_t m_total_checked = 0u;
+ for (const auto& x : cls_by_file) {
+  m_total_checked = packed_bed_checked_add(
+    m_total_checked, x.size(), "packed_bed_marker_count");
+ }
+ if (m_total_checked > static_cast<std::size_t>(
+       std::numeric_limits<int>::max())) {
+  throw std::overflow_error(
+    "Packed BED marker count exceeds the native integer boundary.");
+ }
+ const int m_total = static_cast<int>(m_total_checked);
 
  PackedBedMatrix G(n_used, m_total);
  std::vector<uint8_t> src_row(use_rows ? nbytes_bed : 0);

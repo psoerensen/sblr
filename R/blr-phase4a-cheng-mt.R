@@ -1,16 +1,403 @@
-.blr_phase4a_patterns <- function() {
-  out <- rbind(`0_0` = c(0L, 0L), `1_0` = c(1L, 0L),
-               `0_1` = c(0L, 1L), `1_1` = c(1L, 1L))
-  colnames(out) <- c("trait1", "trait2")
+.blr_phase4a_patterns <- function(trait_ids = c("trait1", "trait2"),
+                                  maximum_traits = 12L) {
+  trait_ids <- .blr_ids(trait_ids, "Cheng MT trait IDs")
+  trait_count <- length(trait_ids)
+  if (trait_count < 2L || trait_count > maximum_traits) {
+    requested <- if (trait_count < 31L) 2^trait_count else Inf
+    stop("Complete Cheng activity-pattern enumeration requires T in [2, ",
+         maximum_traits, "]; requested T = ", trait_count,
+         " (", format(requested, scientific = FALSE), " patterns).",
+         call. = FALSE)
+  }
+  pattern_count <- bitwShiftL(1L, trait_count)
+  state <- seq.int(0L, pattern_count - 1L)
+  out <- vapply(seq_len(trait_count), function(trait) {
+    bitwAnd(bitwShiftR(state, trait - 1L), 1L)
+  }, integer(pattern_count))
+  dimnames(out) <- list(
+    apply(out, 1L, paste, collapse = "_"), trait_ids)
+  storage.mode(out) <- "integer"
   out
+}
+
+.blr_phase5a_exact_integer_limit <- 2^53
+
+.blr_phase5a_checked_product <- function(values, component, trait_count,
+                                          pattern_count) {
+  if (!is.numeric(values) || anyNA(values) || any(!is.finite(values)) ||
+      any(values < 0) || any(values != floor(values)) ||
+      any(values > .blr_phase5a_exact_integer_limit)) {
+    stop("Phase 5A memory preflight cannot represent component '", component,
+         "' exactly before sampling for T = ", trait_count, ", K = ",
+         pattern_count, ".", call. = FALSE)
+  }
+  value <- 1
+  for (factor in values) {
+    if (value != 0 && factor > .blr_phase5a_exact_integer_limit / value) {
+      stop("Phase 5A memory preflight overflowed component '", component,
+           "' before sampling for T = ", trait_count, ", K = ",
+           pattern_count, ".", call. = FALSE)
+    }
+    value <- value * factor
+  }
+  value
+}
+
+.blr_phase5a_checked_sum <- function(values, component, trait_count,
+                                      pattern_count) {
+  total <- 0
+  for (value in values) {
+    if (!is.numeric(value) || length(value) != 1L || is.na(value) ||
+        !is.finite(value) || value < 0 || value != floor(value) ||
+        value > .blr_phase5a_exact_integer_limit - total) {
+      stop("Phase 5A memory preflight overflowed component '", component,
+           "' before sampling for T = ", trait_count, ", K = ",
+           pattern_count, ".", call. = FALSE)
+    }
+    total <- total + value
+  }
+  total
+}
+
+.blr_phase5a_packed_bed_allocation <- function(
+    marker_count, selected_sample_count, source_sample_count,
+    selected_rows_used, trait_count = 2L, pattern_count = 2^trait_count) {
+  counts <- c(
+    marker_count = marker_count,
+    selected_sample_count = selected_sample_count,
+    source_sample_count = source_sample_count)
+  if (!is.numeric(counts) || anyNA(counts) || any(!is.finite(counts)) ||
+      any(counts < 0) || any(counts != floor(counts)) ||
+      any(counts > .blr_phase5a_exact_integer_limit) ||
+      !is.logical(selected_rows_used) || length(selected_rows_used) != 1L ||
+      is.na(selected_rows_used)) {
+    stop("Phase 5A packed-BED dimensions and selection policy are invalid before sampling.",
+         call. = FALSE)
+  }
+  if (isTRUE(selected_rows_used)) {
+    if (source_sample_count < selected_sample_count) {
+      stop("Phase 5A packed-BED source sample count cannot be smaller than the selected sample count.",
+           call. = FALSE)
+    }
+  } else if (source_sample_count != selected_sample_count) {
+    stop("Phase 5A all-sample packed-BED preparation requires equal source and selected sample counts.",
+         call. = FALSE)
+  }
+  product <- function(..., component) {
+    .blr_phase5a_checked_product(
+      c(...), component, trait_count, pattern_count)
+  }
+  row_bytes <- floor(selected_sample_count / 4) +
+    as.numeric(selected_sample_count %% 4 != 0)
+  stride_blocks <- floor(row_bytes / 64) + as.numeric(row_bytes %% 64 != 0)
+  aligned_stride <- product(
+    stride_blocks, 64, component = "packed_bed_aligned_stride")
+  owner_bytes <- product(
+    marker_count, aligned_stride, component = "packed_bed_owner")
+  source_row_bytes <- if (isTRUE(selected_rows_used)) {
+    floor(source_sample_count / 4) +
+      as.numeric(source_sample_count %% 4 != 0)
+  } else 0
+  list(
+    selected_row_bytes = row_bytes,
+    aligned_stride_bytes = aligned_stride,
+    owner_bytes = owner_bytes,
+    source_row_buffer_bytes = source_row_bytes,
+    selected_rows_used = selected_rows_used)
+}
+
+.blr_phase5a_memory_estimate <- function(
+    marker_count, trait_count, observation_count, chains, retained_draws,
+    convergence_count, sampled_residual, keep_traces,
+    source_sample_count = observation_count, selected_rows_used = FALSE,
+    memory_limit_bytes = 256 * 1024^2, enforce = TRUE) {
+  counts <- c(
+    marker_count = marker_count, trait_count = trait_count,
+    observation_count = observation_count,
+    source_sample_count = source_sample_count, chains = chains,
+    retained_draws = retained_draws, convergence_count = convergence_count)
+  if (!is.numeric(counts) || anyNA(counts) || any(!is.finite(counts)) ||
+      any(counts < 0) || any(counts != floor(counts)) ||
+      trait_count < 2L || trait_count > 12L || chains < 1L) {
+    stop("Phase 5A memory dimensions must be finite nonnegative whole values with T in [2, 12] and at least one chain.",
+         call. = FALSE)
+  }
+  if (!is.logical(sampled_residual) || length(sampled_residual) != 1L ||
+      is.na(sampled_residual) || !is.logical(keep_traces) ||
+      length(keep_traces) != 1L || is.na(keep_traces) ||
+      !is.logical(selected_rows_used) || length(selected_rows_used) != 1L ||
+      is.na(selected_rows_used) ||
+      !is.logical(enforce) || length(enforce) != 1L || is.na(enforce)) {
+    stop("Phase 5A memory output-policy flags must be TRUE or FALSE.",
+         call. = FALSE)
+  }
+  valid_limit <- is.null(memory_limit_bytes) || (
+    is.numeric(memory_limit_bytes) && length(memory_limit_bytes) == 1L &&
+    !is.na(memory_limit_bytes) && !is.nan(memory_limit_bytes) &&
+    ((is.finite(memory_limit_bytes) && memory_limit_bytes >= 0) ||
+       (is.infinite(memory_limit_bytes) && memory_limit_bytes > 0)))
+  if (!valid_limit) {
+    stop("memory_limit_bytes must be NULL, one finite nonnegative value, or positive Inf.",
+         call. = FALSE)
+  }
+
+  pattern_count <- bitwShiftL(1L, as.integer(trait_count))
+  packed_bed <- .blr_phase5a_packed_bed_allocation(
+    marker_count = marker_count,
+    selected_sample_count = observation_count,
+    source_sample_count = source_sample_count,
+    selected_rows_used = selected_rows_used,
+    trait_count = trait_count, pattern_count = pattern_count)
+  product <- function(..., component) {
+    .blr_phase5a_checked_product(
+      c(...), component, trait_count, pattern_count)
+  }
+  sum_checked <- function(..., component) {
+    .blr_phase5a_checked_sum(
+      c(...), component, trait_count, pattern_count)
+  }
+  bytes <- function(count, width, component) {
+    product(count, width, component = component)
+  }
+
+  mt <- product(marker_count, trait_count, component = "marker_trait_count")
+  nt <- product(observation_count, trait_count,
+                component = "observation_trait_count")
+  tt <- product(trait_count, trait_count,
+                component = "trait_covariance_count")
+  mk <- product(marker_count, pattern_count,
+                component = "marker_pattern_count")
+  cd <- product(chains, retained_draws,
+                component = "chain_retained_count")
+  cs <- product(chains, convergence_count,
+                component = "chain_convergence_count")
+
+  retained_effect_one <- bytes(product(cd, mt,
+    component = "retained_effect_count"), 8,
+    "retained_effect_bytes")
+  retained_state <- bytes(product(cd, marker_count,
+    component = "retained_state_count"), 4,
+    "retained_state_bytes")
+  retained_covariance <- bytes(product(cd, tt,
+    1 + as.integer(sampled_residual),
+    component = "retained_covariance_count"), 8,
+    "retained_covariance_bytes")
+  retained_probability <- bytes(product(cd, pattern_count,
+    component = "retained_probability_count"), 8,
+    "retained_probability_bytes")
+  retained_prediction <- bytes(product(cd, nt,
+    component = "retained_prediction_count"), 8,
+    "retained_prediction_bytes")
+  native_retained <- sum_checked(
+    product(2, retained_effect_one,
+      component = "two_native_retained_effect_arrays"),
+    retained_state, retained_covariance,
+    retained_probability, retained_prediction,
+    component = "native_retained_output")
+
+  convergence_covariance <- bytes(product(cs, tt,
+    1 + as.integer(sampled_residual),
+    component = "convergence_covariance_count"), 8,
+    "convergence_covariance_bytes")
+  convergence_probability <- bytes(product(cs, pattern_count,
+    component = "convergence_probability_count"), 8,
+    "convergence_probability_bytes")
+  convergence_active <- bytes(cs, 4, "convergence_active_count_bytes")
+  native_convergence <- sum_checked(
+    convergence_covariance, convergence_probability, convergence_active,
+    component = "native_convergence_output")
+
+  final_effect_one <- bytes(product(chains, mt,
+    component = "final_effect_count"), 8, "final_effect_bytes")
+  final_state <- bytes(product(chains, marker_count,
+    component = "final_state_count"), 4, "final_state_bytes")
+  final_covariance <- bytes(product(chains, tt, 2,
+    component = "final_covariance_count"), 8,
+    "final_covariance_bytes")
+  final_probability <- bytes(product(chains, pattern_count,
+    component = "final_probability_count"), 8,
+    "final_probability_bytes")
+  final_prediction <- bytes(product(chains, nt,
+    component = "final_prediction_count"), 8,
+    "final_prediction_bytes")
+  native_final <- sum_checked(
+    product(2, final_effect_one,
+      component = "two_native_final_effect_arrays"),
+    final_state, final_covariance, final_probability,
+    final_prediction, component = "native_final_output")
+
+  components <- c(
+    packed_bed_owner = packed_bed$owner_bytes,
+    packed_bed_source_row_buffer = packed_bed$source_row_buffer_bytes,
+    pattern_activity_metadata = sum_checked(
+      bytes(product(pattern_count, trait_count,
+        component = "pattern_activity_count"), 4,
+        "pattern_activity_bytes"),
+      bytes(pattern_count, 64, "pattern_id_bytes"),
+      component = "pattern_activity_metadata"),
+    pattern_parameters_and_counts = bytes(product(
+      chains, pattern_count, 28,
+      component = "pattern_parameters_and_counts"), 1,
+      "pattern_parameters_and_counts_bytes"),
+    pattern_conditional_workspace = bytes(product(
+      chains, pattern_count,
+      16 + 8 * trait_count + 8 * trait_count^2,
+      component = "pattern_conditional_workspace"), 1,
+      "pattern_conditional_workspace_bytes"),
+    compact_transition_diagnostics = sum_checked(
+      bytes(product(chains, pattern_count,
+        component = "compact_occupancy_count"), 8,
+        "compact_occupancy_bytes"),
+      bytes(chains, 8, "compact_change_count_bytes"),
+      component = "compact_transition_diagnostics"),
+    dense_transition_diagnostics = 0,
+    chain_mutable_effects = bytes(product(chains, mt, 2,
+      component = "chain_mutable_effect_count"), 8,
+      "chain_mutable_effect_bytes"),
+    chain_mutable_states = bytes(product(chains, marker_count,
+      component = "chain_mutable_state_count"), 4,
+      "chain_mutable_state_bytes"),
+    chain_residuals_and_marker_workspace = sum_checked(
+      bytes(product(chains, nt,
+        component = "chain_residual_count"), 8,
+        "chain_residual_bytes"),
+      bytes(product(chains, observation_count,
+        component = "chain_marker_workspace_count"), 8,
+        "chain_marker_workspace_bytes"),
+      component = "chain_residuals_and_marker_workspace"),
+    chain_iteration_indexing = bytes(product(
+      chains, sum_checked(convergence_count, 1,
+        component = "convergence_index_count"),
+      component = "chain_iteration_index_count"), 4,
+      "chain_iteration_index_bytes"),
+    native_retained_output = native_retained,
+    native_convergence_output = native_convergence,
+    native_final_output = native_final,
+    native_covariance_diagnostics = bytes(product(
+      chains, tt, 4 + 2 * as.integer(sampled_residual),
+      component = "native_covariance_diagnostic_count"), 8,
+      "native_covariance_diagnostic_bytes"),
+    native_marker_pattern_accumulator = 0,
+    native_marker_pattern_return = 0,
+    native_input_and_provider_copy = sum_checked(
+      bytes(nt, 8, "native_phenotype_copy_bytes"),
+      bytes(marker_count, 72, "native_marker_map_bytes"),
+      component = "native_input_and_provider_copy"))
+
+  rcpp_copy <- sum_checked(
+    native_retained, native_convergence, native_final,
+    components[["native_covariance_diagnostics"]],
+    components[["compact_transition_diagnostics"]],
+    component = "rcpp_native_return_copies")
+  raw_retained <- sum_checked(
+    native_retained,
+    bytes(product(cd, mt,
+      component = "retained_activity_count"), 4,
+      "retained_activity_bytes"),
+    component = "raw_retained_arrays")
+  raw_convergence <- if (isTRUE(keep_traces)) native_convergence else 0
+  raw_final <- native_final
+  components <- c(components,
+    rcpp_native_return_copies = rcpp_copy,
+    raw_retained_arrays = raw_retained,
+    raw_retained_binding_temporary = retained_effect_one,
+    raw_convergence_arrays = raw_convergence,
+    raw_convergence_binding_temporary = if (isTRUE(keep_traces)) {
+      max(convergence_covariance, convergence_probability)
+    } else 0,
+    raw_final_arrays = raw_final,
+    raw_final_binding_temporary = final_effect_one,
+    marker_pattern_activity_probability_matrix = bytes(
+      mk, 8, "marker_pattern_activity_probability_bytes"),
+    marker_pattern_joint_state_probability_matrix = bytes(
+      mk, 8, "marker_pattern_joint_state_probability_bytes"),
+    marker_pattern_summary_outputs = sum_checked(
+      bytes(mt, 8, "marker_pip_bytes"),
+      bytes(marker_count, 8, "marker_pleiotropic_bytes"),
+      component = "marker_pattern_summary_outputs"),
+    posterior_effect_and_covariance_summaries = sum_checked(
+      bytes(mt, 8, "posterior_effect_mean_bytes"),
+      bytes(product(tt, 1 + as.integer(sampled_residual),
+        component = "posterior_covariance_summary_count"), 8,
+        "posterior_covariance_summary_bytes"),
+      component = "posterior_effect_and_covariance_summaries"),
+    resolved_spec_and_provider_metadata = sum_checked(
+      bytes(marker_count, 96, "resolved_marker_metadata_bytes"),
+      bytes(observation_count, 32, "resolved_observation_metadata_bytes"),
+      bytes(nt, 8, "resolved_phenotype_bytes"),
+      component = "resolved_spec_and_provider_metadata"))
+
+  subtotal <- .blr_phase5a_checked_sum(
+    unname(components), "estimated_peak_incremental_subtotal",
+    trait_count, pattern_count)
+  components <- c(components,
+    allocator_and_validation_headroom = sum_checked(
+      ceiling(subtotal / 10), 1024^2,
+      component = "allocator_and_validation_headroom"))
+  estimate <- .blr_phase5a_checked_sum(
+    unname(components), "estimated_peak_incremental_bytes",
+    trait_count, pattern_count)
+
+  limit_exceeded <- !is.null(memory_limit_bytes) &&
+    is.finite(memory_limit_bytes) && estimate > memory_limit_bytes
+  if (isTRUE(enforce) && limit_exceeded) {
+    largest <- head(sort(components, decreasing = TRUE), 5L)
+    detail <- paste0(names(largest), "=", format(
+      largest, scientific = FALSE, trim = TRUE), collapse = ", ")
+    stop(
+      "Phase 5A memory preflight failed before sampling: estimated peak ",
+      "incremental bytes ", format(estimate, scientific = FALSE),
+      " exceed configured limit ",
+      format(memory_limit_bytes, scientific = FALSE), "; M = ",
+      format(marker_count, scientific = FALSE, trim = TRUE), ", T = ",
+      trait_count, ", K = ", pattern_count, ", chains = ",
+      format(chains, scientific = FALSE, trim = TRUE), ", retained = ",
+      format(retained_draws, scientific = FALSE, trim = TRUE),
+      ", convergence = ",
+      format(convergence_count, scientific = FALSE, trim = TRUE),
+      ", selected N = ",
+      format(observation_count, scientific = FALSE, trim = TRUE),
+      ", source N = ",
+      format(source_sample_count, scientific = FALSE, trim = TRUE),
+      ", selected rows used = ", selected_rows_used,
+      ", dense transition diagnostics requested = FALSE. Largest ",
+      "components: ", detail, ". Complete enumeration and mandatory ",
+      "markerwise pattern output scale as M * 2^T.", call. = FALSE)
+  }
+
+  list(
+    contract = "phase5a_peak_incremental_fit_allocation_v1",
+    scope = "estimated_peak_incremental_bytes_for_this_fit",
+    estimated_peak_incremental_bytes = estimate,
+    limit_bytes = memory_limit_bytes,
+    limit_exceeded = limit_exceeded,
+    dimensions = list(
+      markers = as.numeric(marker_count), traits = as.integer(trait_count),
+      patterns = as.integer(pattern_count),
+      observations = as.numeric(observation_count),
+      source_observations = as.numeric(source_sample_count),
+      chains = as.numeric(chains), retained_draws = as.numeric(retained_draws),
+      convergence_iterations = as.numeric(convergence_count)),
+    packed_bed = packed_bed,
+    output_policy = list(
+      effect_draws = "full_qualification_draws",
+      states = "joint_and_traitwise_activity",
+      predictions = "retained_predictions",
+      marker_pattern_probabilities = "mandatory_marker_by_pattern",
+      convergence_traces_retained = keep_traces,
+      sampled_residual_covariance = sampled_residual),
+    dense_transition_diagnostics = FALSE,
+    components = components)
 }
 
 .blr_phase4a_symmetric_spd <- function(x, trait_ids, what,
                                        tolerance = 1e-12) {
   if (!is.matrix(x) || !is.numeric(x) ||
-      !identical(dim(x), c(2L, 2L)) || any(!is.finite(x)) ||
+      !identical(dim(x), rep.int(length(trait_ids), 2L)) ||
+      any(!is.finite(x)) ||
       max(abs(x - t(x))) > tolerance) {
-    stop(what, " must be a finite symmetric 2 x 2 matrix.", call. = FALSE)
+    stop(what, " must be a finite symmetric T x T matrix in declared trait order.",
+         call. = FALSE)
   }
   if (!is.null(dimnames(x)) &&
       !identical(dimnames(x), list(trait_ids, trait_ids))) {
@@ -29,7 +416,8 @@
                                      simplex = FALSE) {
   if (!is.numeric(x) || length(x) != length(pattern_ids) || anyNA(x) ||
       any(!is.finite(x)) || any(x <= 0)) {
-    stop(what, " must contain four finite positive values.", call. = FALSE)
+    stop(what, " must contain one finite positive value per activity pattern.",
+         call. = FALSE)
   }
   if (!is.null(names(x)) && !identical(names(x), pattern_ids)) {
     stop(what, " names must follow the canonical activity-pattern order.",
@@ -77,18 +465,19 @@
         selected_columns = lapply(dat$cls, as.integer))),
     block_eigen = NULL, approximation = "exact_selected_genotypes",
     provenance = list(
-      phase = "4a", ownership = "shared_immutable_packed_bed_reference"))
+      phase = "5a", ownership = "shared_immutable_packed_bed_reference"))
   provider <- .blr_new_likelihood_provider(
     provider_id = "phase4a_common_sample", trait_ids = trait_ids,
     operator_resource_id = resource$resource_id,
     local_to_global = stats::setNames(seq_along(marker_ids), marker_ids),
     sufficient_statistics = list(phenotype = phenotype),
-    sample_size = stats::setNames(rep(nrow(phenotype), 2L), trait_ids),
+    sample_size = stats::setNames(rep(nrow(phenotype), length(trait_ids)),
+                                 trait_ids),
     likelihood_regime = "common_sample",
     residual_contract = residual_contract,
     population = NULL, effect_scale = "phenotype_native",
     overlap_group = NULL,
-    provenance = list(phase = "4a", status = "qualification_only"))
+    provenance = list(phase = "5a", status = "qualification_only"))
   collection <- .blr_new_provider_collection(
     global_map, stats::setNames(list(resource), resource$resource_id),
     stats::setNames(list(provider), provider$provider_id),
@@ -104,15 +493,15 @@
     initial_residual_covariance, residual_covariance_prior_df,
     residual_covariance_prior_scale, initial_marker_covariance,
     initial_probability, dirichlet_prior, prior_df, prior_scale,
-    update_marker_covariance, update_probability,
+    update_marker_covariance, update_probability, activity_patterns,
     burn_in_iterations, sampling_iterations, thin_interval,
-    chains, cores, seed, keep_traces) {
+    chains, cores, seed, keep_traces, memory_estimate) {
   retained <- .blr_retention_plan(
     burn_in_iterations, sampling_iterations, thin_interval,
     contract_version = 1L, retained_requested = TRUE)
   task_seeds <- .blr_task_seeds_v1(
     seed, "joint_multitrait", trait_ids, chains)
-  state_ids <- rownames(.blr_phase4a_patterns())
+  state_ids <- rownames(activity_patterns)
   data <- list(
     analysis_mode = "joint_multitrait", trait_ids = trait_ids,
     global_markers = marker_ids,
@@ -126,7 +515,7 @@
     schema = list(
       name = "blr_resolved_spec", version = 1L,
       compatibility_id = paste0(
-        "phase4a-qualification;seed=unified_fnv_splitmix_v1;",
+        "phase5a-general-t-qualification;seed=unified_fnv_splitmix_v1;",
         "retention=postburn_divisible_v1"),
       seed_contract_version = 1L, retention_contract_version = 1L,
       dimension_contract_version = 1L),
@@ -142,6 +531,7 @@
         residual_covariance_policy, "sampled_full")) 2L else 1L),
     prior = list(
       probability = list(
+        activity_patterns = activity_patterns,
         activity_pattern_dirichlet = dirichlet_prior,
         initial_activity_pattern_probability = initial_probability,
         sampled = update_probability),
@@ -185,9 +575,13 @@
       execution_mode = if (cores == 1L) "serial" else "parallel",
       parallelization = if (cores == 1L) "none" else "chains",
       cores = as.integer(cores), scheduler_version = 1L,
-      memory_limit_bytes = NULL,
+      memory_limit_bytes = memory_estimate$limit_bytes,
       operator_numerical_controls = list(
-        symmetry_tolerance = 1e-12, genotype_materialization = FALSE)),
+        symmetry_tolerance = 1e-12, genotype_materialization = FALSE,
+        activity_pattern_count = memory_estimate$dimensions$patterns,
+        dense_transition_diagnostics = FALSE,
+        transition_diagnostic_policy = "compact_occupancy_v1",
+        fit_memory_estimate = memory_estimate)),
     output = list(
       posterior_summaries = TRUE,
       retained_parameters = c(
@@ -206,7 +600,9 @@
             "residual_covariance"
           } else character())),
       derived_quantities = "retained_predictions",
-      preserve_chains = TRUE, memory_estimate_bytes = NA_real_))
+      preserve_chains = TRUE,
+      memory_estimate_bytes =
+        memory_estimate$estimated_peak_incremental_bytes))
 }
 
 .blr_phase4a_bind_draws <- function(chains, field, axes) {
@@ -251,7 +647,7 @@
   markers <- spec$data$global_markers
   traits <- spec$data$trait_ids
   observations <- spec$data$observation_ids
-  patterns <- .blr_phase4a_patterns()
+  patterns <- spec$prior$probability$activity_patterns
   state_ids <- rownames(patterns)
   draws <- paste0("draw", seq_len(spec$mcmc$retained_draws))
   chains <- paste0("chain", seq_len(spec$mcmc$chains))
@@ -279,7 +675,7 @@
     draw = draws, chain = chains, observation = observations, trait = traits))
   activity <- .blr_make_array(integer(length(realised)), list(
     draw = draws, chain = chains, marker = markers, trait = traits))
-  for (trait in seq_len(2L)) {
+  for (trait in seq_along(traits)) {
     activity[, , , trait] <- patterns[joint_state + 1L, trait]
   }
 
@@ -298,7 +694,8 @@
   pips <- pattern_probability %*% patterns
   dimnames(pips) <- list(markers, traits)
   attr(pips, "dim_axis_names") <- c("marker", "trait")
-  pleiotropic <- .blr_make_array(pattern_probability[, "1_1"],
+  all_active <- which(rowSums(patterns) == length(traits))
+  pleiotropic <- .blr_make_array(pattern_probability[, all_active],
                                  list(marker = markers))
   effect_mean <- apply(realised, c(3L, 4L), mean)
   dimnames(effect_mean) <- list(markers, traits)
@@ -427,13 +824,17 @@
       descriptive_bilinear_forms = NULL),
     diagnostics = list(
       convergence = convergence, acceptance = NULL, runtime = NULL,
-      memory = NULL, workers = native$workers,
+      memory = spec$compute$operator_numerical_controls$fit_memory_estimate,
+      workers = native$workers,
       numerical_safeguards = list(
         symmetry_tolerance = 1e-12, covariance_jitter = FALSE,
         log_weight_normalization = "log_sum_exp"),
       approximation_warnings = NULL,
       qualification = list(
-        status = "qualification_only", pattern_order = state_ids,
+        status = "qualification_only",
+        implementation = "phase5a_general_t_cheng_mt_bayesc",
+        trait_count = length(traits), pattern_count = length(state_ids),
+        pattern_order = state_ids,
         update_order = if (sampled_residual) c(
           "marker_sweep", "dirichlet", "marker_inverse_wishart",
           "residual_inverse_wishart", "convergence_capture",
@@ -455,15 +856,19 @@
         activity_pattern_dirichlet_prior = dirichlet_prior,
         covariance_updates = covariance_updates,
         residual_covariance_updates = residual_covariance_updates,
-        transition_counts = lapply(native$chains, `[[`, "transition_counts"),
+        transition_counts = NULL,
+        pattern_occupancy_counts = stats::setNames(
+          lapply(native$chains, function(chain) {
+            stats::setNames(chain$pattern_occupancy_counts, state_ids)
+          }), chains),
+        pattern_change_counts = stats::setNames(vapply(
+          native$chains, `[[`, numeric(1), "pattern_change_count"), chains),
         genotype_contract = native$genotype_contract,
         current_legacy_mt_route_used = FALSE)),
     provenance = provenance,
     compatibility_id = "phase1-r-v2",
     source_schema = list(
-      name = if (sampled_residual) {
-        "phase4b_cheng_mt_bayesc_qualification"
-      } else "phase4a_cheng_mt_bayesc_qualification",
+      name = "phase5a_general_t_cheng_mt_bayesc_qualification",
       version = 1L),
     migration = list(
       status = "qualification_only", legacy_mt_conversion = FALSE))
@@ -472,8 +877,8 @@
 .blr_phase4a_cheng_mt_bed <- function(
     y, Glist, fixed_residual_covariance, initial_marker_covariance,
     marker_covariance_prior_df, marker_covariance_prior_scale,
-    initial_activity_pattern_probability = rep(0.25, 4L),
-    activity_pattern_dirichlet_prior = rep(1, 4L),
+    initial_activity_pattern_probability = NULL,
+    activity_pattern_dirichlet_prior = NULL,
     update_marker_covariance = TRUE,
     update_activity_pattern_probability = TRUE,
     burn_in_iterations = 100L, sampling_iterations = 200L,
@@ -483,7 +888,8 @@
     residual_covariance_policy = "fixed_full",
     initial_residual_covariance = NULL,
     residual_covariance_prior_df = NULL,
-    residual_covariance_prior_scale = NULL) {
+    residual_covariance_prior_scale = NULL,
+    memory_limit_bytes = 256 * 1024^2) {
   if (!is.list(Glist) || is.null(Glist$bedfiles)) {
     stop("Phase 4a requires one packed-BED Glist.", call. = FALSE)
   }
@@ -491,15 +897,17 @@
     Glist = Glist, y = y, chr = chr, cls = cls,
     block_size = block_size, rows = rows)
   phenotype <- as.matrix(dat$y)
-  if (!is.numeric(phenotype) || ncol(phenotype) != 2L ||
+  if (!is.numeric(phenotype) || ncol(phenotype) < 2L ||
       nrow(phenotype) <= 1L || any(!is.finite(phenotype))) {
-    stop("Phase 4a phenotype must be a complete finite N x 2 matrix.",
+    stop("The Cheng MT phenotype must be a complete finite N x T matrix with T >= 2.",
          call. = FALSE)
   }
   trait_ids <- colnames(phenotype)
-  if (is.null(trait_ids)) trait_ids <- c("trait1", "trait2")
+  if (is.null(trait_ids)) trait_ids <- paste0("trait", seq_len(ncol(phenotype)))
   trait_ids <- .blr_ids(trait_ids, "Phase 4a trait IDs")
   colnames(phenotype) <- trait_ids
+  patterns <- .blr_phase4a_patterns(trait_ids)
+  pattern_count <- nrow(patterns)
   if (!is.character(residual_covariance_policy) ||
       length(residual_covariance_policy) != 1L ||
       is.na(residual_covariance_policy) ||
@@ -523,7 +931,7 @@
         length(residual_covariance_prior_df) != 1L ||
         is.na(residual_covariance_prior_df) ||
         !is.finite(residual_covariance_prior_df) ||
-        residual_covariance_prior_df <= 1) {
+        residual_covariance_prior_df <= length(trait_ids) - 1L) {
       stop("residual_covariance_prior_df must exceed T - 1 for a proper inverse-Wishart prior.",
            call. = FALSE)
     }
@@ -547,11 +955,18 @@
       length(marker_covariance_prior_df) != 1L ||
       is.na(marker_covariance_prior_df) ||
       !is.finite(marker_covariance_prior_df) ||
-      marker_covariance_prior_df <= 1) {
+      marker_covariance_prior_df <= length(trait_ids) - 1L) {
     stop("marker_covariance_prior_df must exceed T - 1 for a proper inverse-Wishart prior.",
          call. = FALSE)
   }
-  pattern_ids <- rownames(.blr_phase4a_patterns())
+  pattern_ids <- rownames(patterns)
+  if (is.null(initial_activity_pattern_probability)) {
+    initial_activity_pattern_probability <- rep(1 / pattern_count,
+                                                pattern_count)
+  }
+  if (is.null(activity_pattern_dirichlet_prior)) {
+    activity_pattern_dirichlet_prior <- rep(1, pattern_count)
+  }
   initial_probability <- .blr_phase4a_probability(
     initial_activity_pattern_probability, pattern_ids,
     "initial_activity_pattern_probability", simplex = TRUE)
@@ -583,6 +998,19 @@
          call. = FALSE)
   }
 
+  retained <- .blr_retention_plan(
+    burn_in_iterations, sampling_iterations, thin_interval,
+    contract_version = 1L, retained_requested = TRUE)
+  memory_estimate <- .blr_phase5a_memory_estimate(
+    marker_count = dat$m, trait_count = length(trait_ids),
+    observation_count = nrow(phenotype), chains = chains,
+    retained_draws = retained$retained_draws,
+    convergence_count = sampling_iterations,
+    sampled_residual = sampled_residual, keep_traces = keep_traces,
+    source_sample_count = dat$n,
+    selected_rows_used = !is.null(dat$rows),
+    memory_limit_bytes = memory_limit_bytes, enforce = TRUE)
+
   prepared <- .blr_phase4a_bed_collection(
     dat, Glist, phenotype, trait_ids,
     if (sampled_residual) {
@@ -595,9 +1023,9 @@
     residual_covariance_prior_df, residual_covariance_prior_scale,
     initial_marker_covariance, initial_probability, dirichlet_prior,
     marker_covariance_prior_df, marker_covariance_prior_scale,
-    update_marker_covariance, update_activity_pattern_probability,
+    update_marker_covariance, update_activity_pattern_probability, patterns,
     burn_in_iterations, sampling_iterations, thin_interval,
-    chains, cores, seed, keep_traces)
+    chains, cores, seed, keep_traces, memory_estimate)
   execution_contract <- .blr_native_execution_contract(spec)
   native <- mtblr_phase4a_cheng_bed_internal(
     bed_files = as.character(dat$bed_files),
@@ -607,6 +1035,7 @@
     allele_frequency = as.numeric(frequency), phenotype = phenotype,
     initial_residual_covariance = initial_residual_covariance,
     initial_marker_covariance = initial_marker_covariance,
+    activity_patterns = patterns,
     initial_activity_pattern_probability = as.numeric(initial_probability),
     activity_pattern_dirichlet_prior = as.numeric(dirichlet_prior),
     marker_covariance_prior_df = marker_covariance_prior_df,
@@ -624,11 +1053,21 @@
     burn_in_iterations = burn_in_iterations,
     sampling_iterations = sampling_iterations,
     chains = chains, cores = cores,
-    execution_contract = execution_contract)
+    execution_contract = execution_contract,
+    native_memory_limit_bytes = if (is.null(memory_estimate$limit_bytes)) {
+      Inf
+    } else memory_estimate$limit_bytes)
   .blr_phase4a_raw(
     native, spec, residual_covariance_policy, fixed_residual_covariance,
     initial_residual_covariance, residual_covariance_prior_df,
     residual_covariance_prior_scale, initial_marker_covariance,
     marker_covariance_prior_df, marker_covariance_prior_scale,
     dirichlet_prior, keep_traces)
+}
+
+# Maintained qualification spelling for the generalized Cheng implementation.
+# The historical Phase 4 name remains as the implementation boundary so the
+# approved two-trait checkpoint can be compared without a duplicate sampler.
+.blr_cheng_mt_bayesc_bed_qualification <- function(...) {
+  .blr_phase4a_cheng_mt_bed(...)
 }

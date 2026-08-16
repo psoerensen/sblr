@@ -9,16 +9,20 @@ blr_scalar_seeds_cpp <- function(seed, ntraits, nchains, chain_seeds) {
     .Call(`_sblr_blr_scalar_seeds_cpp`, seed, ntraits, nchains, chain_seeds)
 }
 
-mtblr_phase4a_pattern_contract_internal <- function(score, marker_sum_squares, marker_covariance, residual_covariance, activity_pattern_probability) {
-    .Call(`_sblr_mtblr_phase4a_pattern_contract_internal`, score, marker_sum_squares, marker_covariance, residual_covariance, activity_pattern_probability)
+mtblr_phase5a_packed_bed_allocation_internal <- function(selected_sample_count, marker_count, source_sample_count, selected_rows_used) {
+    .Call(`_sblr_mtblr_phase5a_packed_bed_allocation_internal`, selected_sample_count, marker_count, source_sample_count, selected_rows_used)
+}
+
+mtblr_phase4a_pattern_contract_internal <- function(score, marker_sum_squares, marker_covariance, residual_covariance, activity_pattern_probability, activity_patterns = NULL) {
+    .Call(`_sblr_mtblr_phase4a_pattern_contract_internal`, score, marker_sum_squares, marker_covariance, residual_covariance, activity_pattern_probability, activity_patterns)
 }
 
 mtblr_phase4b_residual_covariance_contract_internal <- function(residual, prior_df, prior_scale, draws, seed) {
     .Call(`_sblr_mtblr_phase4b_residual_covariance_contract_internal`, residual, prior_df, prior_scale, draws, seed)
 }
 
-mtblr_phase4a_cheng_bed_internal <- function(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract) {
-    .Call(`_sblr_mtblr_phase4a_cheng_bed_internal`, bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract)
+mtblr_phase4a_cheng_bed_internal <- function(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, activity_patterns, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes) {
+    .Call(`_sblr_mtblr_phase4a_cheng_bed_internal`, bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, activity_patterns, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes)
 }
 
 readLD_to_CSR_R <- function(filenameSEXP, mchrSEXP, msizeSEXP, thresholdSEXP, onebasedSEXP) {

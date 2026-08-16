@@ -29,7 +29,20 @@ fixed full $V_e$; see
 adds a qualification policy with one authoritative sampled full
 inverse-Wishart $V_e$; see
 [the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
-Neither policy replaces or alters a public legacy MT route. A capability described only as
+Phase 5A generalizes that corrected internal route to computationally feasible
+complete $2^T$ pattern spaces for modest dynamic $T$ without changing public
+MT dispatch; see
+[the Phase 5A checkpoint](blr_phase5a_general_t_cheng_mt_checkpoint.md).
+Feasibility is resolved from $M$, $T$, chains, retained and convergence counts,
+and output policy before native sampling. Mandatory markerwise pattern output
+scales as $M2^T$; dense diagnostic transition matrices scaling as $4^T$ are not
+allocated. The memory limit describes estimated peak incremental allocation by
+this fit rather than total process memory. For packed BED, the estimate also
+includes the one shared aligned owner,
+$M\operatorname{round\_up}(\lceil N/4\rceil,64)$ bytes, and the conditional
+$\lceil N_{\mathrm{source}}/4\rceil$ selected-row decoding buffer before
+provider construction.
+None of these policies replaces or alters a public legacy MT route. A capability described only as
 proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
@@ -1429,6 +1442,16 @@ sub-checkpoint adds a sampled full inverse-Wishart $V_e$ under the explicitly
 declared parameterization; a diagonal policy is retained as a separate
 reduction and for likelihood regimes that do not identify off-diagonals. It
 does not reuse the obsolete MT covariance hybrid.
+
+Phase 5A retains this posterior and update schedule while replacing fixed
+two-trait containers with one dynamic implementation. Pattern bit $t$ belongs
+to declared trait $t$, the first trait changes fastest, and explicit binary
+metadata owns pattern identity. Complete enumeration is guarded by documented
+trait and memory boundaries. Public replacement remains Phase 5B work.
+
+The historical numbered roadmap below predates the lettered Cheng
+qualification checkpoints. Its "Phase 5" heterogeneous-summary work remains a
+later deferred capability and is not Phase 5A or Phase 5B.
 
 ### Phase 5: heterogeneous summary-statistic MTBLR
 

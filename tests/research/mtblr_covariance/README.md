@@ -31,6 +31,9 @@ Files:
   $\boldsymbol{\Pi}$, $V_b$, and $V_e$;
 - `test_sampled_residual.R`: Phase 4b conditional, posterior-mean, residual-
   reconstruction, and sampled-chain reference checks;
+- `mtblr_general_t_reference.R`: independent complete $2^T$ pattern
+  enumeration, arbitrary active-subset marker conditionals, Schur completion,
+  and $V_b$/$V_e$ sufficient-statistic calculations for Phase 5A tests;
 - `mtblr_regional.R`: persistent regional covariance prototypes and a
   source-faithful reconstruction of the current set-loop hybrid;
 - `compare_pattern_samplers.R`: learned-pattern and joint/coordinate mixing

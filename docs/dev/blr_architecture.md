@@ -77,6 +77,17 @@ rather than creating a second MT stack. Public legacy MT routes remain
 unchanged. See
 [the Phase 4a checkpoint](blr_phase4a_cheng_mt_bayesc_checkpoint.md) and
 [the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+Phase 5A generalizes that one internal sampler to feasible complete pattern
+spaces for modest dynamic $T$, while retaining the same provider, scheduler,
+covariance, and raw-v2 boundaries. It does not alter public MT dispatch; see
+[the Phase 5A checkpoint](blr_phase5a_general_t_cheng_mt_checkpoint.md).
+Its R preflight estimates peak incremental fit allocation before native entry,
+including mandatory $M2^T$ markerwise pattern output and live native/R raw
+copies. It also counts the single shared 64-byte-aligned packed-BED owner and,
+when source rows are selected or reordered, the temporary source-row decode
+buffer using the source rather than selected sample count. Dense $4^T$
+transition matrices are not part of the execution path;
+compact per-pattern occupancy and total-change diagnostics are used instead.
 
 Phase 1 public wrappers inspect original call spellings before R partial
 matching can accept a scientific-control prefix. Resolved specifications then

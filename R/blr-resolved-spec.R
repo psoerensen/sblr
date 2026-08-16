@@ -258,6 +258,46 @@
   invisible(TRUE)
 }
 
+.blr_validate_activity_patterns <- function(patterns, trait_ids, state_ids,
+                                             maximum_traits = 12L) {
+  trait_count <- length(trait_ids)
+  if (trait_count < 2L || trait_count > maximum_traits) {
+    stop("Complete joint activity-pattern metadata requires T in [2, ",
+         maximum_traits, "].", call. = FALSE)
+  }
+  pattern_count <- bitwShiftL(1L, trait_count)
+  if (!is.matrix(patterns) || !is.numeric(patterns) ||
+      !identical(dim(patterns), c(pattern_count, trait_count)) ||
+      anyNA(patterns) || any(!patterns %in% 0:1) ||
+      !identical(rownames(patterns), state_ids) ||
+      !identical(colnames(patterns), trait_ids) ||
+      anyDuplicated(as.data.frame(patterns))) {
+    stop(paste0(
+      "prior$probability$activity_patterns must be the complete unique ",
+      "binary pattern matrix in declared state and trait order."),
+      call. = FALSE)
+  }
+  state <- seq.int(0L, pattern_count - 1L)
+  expected <- vapply(seq_len(trait_count), function(trait) {
+    bitwAnd(bitwShiftR(state, trait - 1L), 1L)
+  }, integer(pattern_count))
+  dimnames(expected) <- list(
+    apply(expected, 1L, paste, collapse = "_"), trait_ids)
+  storage.mode(expected) <- storage.mode(patterns)
+  if (!identical(patterns, expected)) {
+    stop(paste0(
+      "prior$probability$activity_patterns must enumerate all 2^T ",
+      "patterns canonically with the first declared trait changing fastest."),
+      call. = FALSE)
+  }
+  if (sum(rowSums(patterns) == 0L) != 1L ||
+      sum(rowSums(patterns) == trait_count) != 1L) {
+    stop("Joint activity patterns require exactly one null and one all-active pattern.",
+         call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
 .blr_legacy_retained_indices <- function(nit, nthin) {
   nit <- as.integer(.blr_scalar_whole(nit, "sampling_iterations", 1,
                                       .Machine$integer.max))
@@ -577,6 +617,37 @@ validate_blr_resolved_spec <- function(spec) {
   if (any(c("pi", "pis", "pim") %in% probability_names)) {
     stop("prior$probability contains an ambiguous probability name.",
          call. = FALSE)
+  }
+  if (identical(spec$model$probability_policy,
+                "joint_activity_dirichlet")) {
+    patterns <- spec$prior$probability$activity_patterns %||% NULL
+    if (is.null(patterns)) {
+      stop("joint_activity_dirichlet requires explicit activity-pattern metadata.",
+           call. = FALSE)
+    }
+    .blr_validate_activity_patterns(
+      patterns, spec$data$trait_ids, spec$model$state_space)
+    for (field in c("activity_pattern_dirichlet",
+                    "initial_activity_pattern_probability")) {
+      value <- spec$prior$probability[[field]] %||% NULL
+      if (!is.numeric(value) || length(value) != nrow(patterns) ||
+          anyNA(value) || any(!is.finite(value)) || any(value <= 0) ||
+          !identical(names(value), rownames(patterns))) {
+        stop("prior$probability$", field,
+             " must be a finite positive vector in declared activity-pattern order.",
+             call. = FALSE)
+      }
+      if (identical(field, "initial_activity_pattern_probability") &&
+          abs(sum(value) - 1) > 1e-10) {
+        stop("prior$probability$initial_activity_pattern_probability must sum to one.",
+             call. = FALSE)
+      }
+    }
+    sampled <- spec$prior$probability$sampled %||% NULL
+    if (!is.logical(sampled) || length(sampled) != 1L || is.na(sampled)) {
+      stop("prior$probability$sampled must be one nonmissing logical value.",
+           call. = FALSE)
+    }
   }
   for (field in intersect(c("alpha", "beta", "shape", "strength"),
                           names(spec$prior$probability))) {

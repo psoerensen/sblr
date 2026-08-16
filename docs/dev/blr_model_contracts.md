@@ -156,6 +156,23 @@ sweep, and the resulting matrix is the sole next-sweep, convergence, retained,
 posterior-summary, and final residual-covariance state. The fixed policy skips
 the update with zero residual-covariance RNG. See
 [the Phase 4b checkpoint](blr_phase4b_sampled_residual_covariance_checkpoint.md).
+Phase 5A generalizes the same qualification target to dynamic modest $T$. All
+$2^T$ binary patterns are declared explicitly with the first trait changing
+fastest, and arbitrary inactive coordinates are completed from the Gaussian
+Schur conditional. The unique $(1,\ldots,1)$ row defines pleiotropic
+probability from binary metadata rather than a two-trait string. General
+inverse-Wishart propriety and finite-mean conditions are respectively
+$\nu_0>T-1$ and $\nu_0>T+1$. See
+[the Phase 5A checkpoint](blr_phase5a_general_t_cheng_mt_checkpoint.md).
+Both computation and mandatory markerwise pattern probabilities scale as
+$M2^T$. A checked preflight covers chain state, retained/convergence output,
+native-to-R coexistence, raw construction, material copies, the shared aligned
+packed-BED owner, and any conditional source-row decode buffer before provider
+construction. Packed ownership contributes
+$M\operatorname{round\_up}(\lceil N/4\rceil,64)$ bytes and is not multiplied by
+chain count.
+Dense $2^T\times2^T$ transition diagnostics are not scientifically required
+and are not allocated or represented as posterior quantities.
 Public promotion remains gated. Diagonal $V_e$ remains an explicit reduction;
 independent no-overlap summaries do not identify off-diagonal residual
 covariance. The current MT covariance hybrid is not the target and cannot be
