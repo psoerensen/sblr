@@ -14,28 +14,6 @@ test_that("extended controls fail closed and memory guards do not truncate", {
     "allow_large_traces")
 })
 
-test_that("MT BayesRC annotation diagnostics retain column-major identities", {
-  x <- .mt_bayesrc_fixture(); on.exit(.mt_bayesrc_cleanup(x), add = TRUE)
-  common <- .mt_bayesrc_common(); common$annotations <- x$annotations
-  common$updateAlpha <- TRUE; common$nchains <- 2L; common$ncores <- 1L
-  common$convergence <- "extended"
-  common$convergence_control <- list(
-    warn = FALSE, extended_groups = "annotations", keep_traces = TRUE)
-  fit <- do.call(mtblr_csr, c(list(
-    stats = x$stats, ld_prefix = x$prefix, ld_metadata = x$ld_metadata),
-    common))
-  annotations <- fit$convergence$summary[
-    fit$convergence$summary$tier == 2L, , drop = FALSE]
-  expected <- as.vector(outer(
-    fit$model_parameters$annotations$processed_annotation_names,
-    fit$model_parameters$annotations$stick_names,
-    function(annotation, stick) paste0("alpha[", annotation, ",", stick, "]")))
-  expect_identical(annotations$quantity[seq_along(expected)], expected)
-  expect_true(any(annotations$is_intercept))
-  expect_true(all(grepl("^sigmaSqAlpha", tail(
-    annotations$quantity, length(fit$model_parameters$annotations$stick_names)))))
-})
-
 test_that("sampled ST selection-S uses chain-private unthinned states", {
   chains <- list(T1 = list(
     chain1 = list(maf_effect_s = seq(-1, 0, length.out = 10)),

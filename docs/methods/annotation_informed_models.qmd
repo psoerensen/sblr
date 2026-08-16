@@ -27,11 +27,11 @@ Functions whose names end in `_conceptually` are mathematical pseudocode, not
 package APIs. Sections explicitly labelled **Conceptual** or **Research
 extension** should not be read as current `sblr` functionality.
 
-In particular, current ordinary MT BayesR uses one `joint_pi` simplex, current
-MT BayesRC uses the $P\times H$ factorization described in
-[MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd), and learned MT-LV,
-annotation-dependent $H$, and annotation-dependent $V_b$ are not current
-production models.
+In particular, the deferred ordinary MT BayesR design uses one joint simplex,
+while the deferred MT BayesRC design uses the $P\times H$ factorization
+described in [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd). None of those
+models, learned MT-LV, annotation-dependent $H$, or annotation-dependent $V_b$
+is current public functionality.
 :::
 
 # Motivation
@@ -782,7 +782,7 @@ $$
 A conceptual MT prior can place annotation $k$ into trait-sharing patterns and
 learn whether its posterior association is trait specific or shared.
 
-This is distinct from the current genomic MT BayesR/BayesRC state models:
+This is distinct from the deferred genomic MT BayesR/BayesRC state models:
 here the **observations are marker-level summaries** and the **predictors are
 annotations**.
 
@@ -1298,8 +1298,8 @@ The following sections describe **research-stage** extensions for using
 first-stage posterior summaries to inform multi-trait sharing or covariance
 priors.
 
-They are not descriptions of current ordinary MT BayesR or MT BayesRC
-parameterization.
+They are not descriptions of the deferred ordinary MT BayesR or MT BayesRC
+parameterizations.
 
 ## Empirical sharing-pattern responsibilities
 
@@ -1344,8 +1344,9 @@ a_p^{(0)}
 }.
 $$
 
-This is a conceptual empirical-Bayes summary, not a current MT BayesR `joint_pi`
-update and not the current MT BayesRC global $H$ update.
+This is a conceptual empirical-Bayes summary, not the joint-simplex update in
+the deferred MT BayesR design and not the global $H$ update in the deferred MT
+BayesRC design.
 
 ## Annotation-dependent sharing as a research extension
 
@@ -1374,8 +1375,8 @@ This would make trait sharing annotation dependent.
 Such a model is **not currently implemented** in `sblr`. It belongs to future
 research on annotation-dependent $H$ and must not be confused with:
 
-- ordinary MT BayesR's full `joint_pi` simplex; or
-- current MT BayesRC's global conditional $H$.
+- the deferred ordinary MT BayesR full joint simplex; or
+- the deferred MT BayesRC global conditional $H$.
 
 # Conceptual annotation-informed MT covariance
 
@@ -1786,9 +1787,9 @@ When reporting an empirical-Bayes annotation analysis, record:
   residual-score identities used for LD-aware marker contributions.
 - [Fine-Mapping and Credible Sets](fine_mapping.qmd) explains marginal PIPs,
   LD-aware post-processing, and local conditional refitting.
-- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) defines the current ordinary MT
-  `joint_pi` model.
-- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) defines the current
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) defines the deferred ordinary MT
+  joint-simplex model.
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) defines the deferred
   annotation-dependent $P\times H$ model.
 - [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) gives the
   detailed continuation-probit construction.

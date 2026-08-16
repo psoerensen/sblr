@@ -7,9 +7,9 @@ The package has two statistical families and three operator families:
 | `stblr` | trait × chain | `csr`, `block_eigen`, `packed_bed` |
 | `mtblr` | one complete joint chain | `csr`, `block_eigen`, `packed_bed` |
 
-The seven canonical fitting functions are `stblr_csr()`,
-`stblr_csr_annot()`, `stblr_block_eigen()`, `stblr_bed()`, `mtblr_csr()`,
-`mtblr_block_eigen()`, and `mtblr_bed()`.
+The currently exported canonical fitting functions are `stblr_csr()`,
+`stblr_csr_annot()`, `stblr_block_eigen()`, `stblr_bed()`, and `mtblr_bed()`.
+Corrected MT CSR and block-eigen likelihoods are not currently available.
 
 Current annotation-informed effect-variance LV backends are available only for
 ST CSR and retained block eigen through `annotation_model = "log_variance"`
@@ -81,6 +81,10 @@ Phase 5A generalizes that one internal sampler to feasible complete pattern
 spaces for modest dynamic $T$, while retaining the same provider, scheduler,
 covariance, and raw-v2 boundaries. It does not alter public MT dispatch; see
 [the Phase 5A checkpoint](blr_phase5a_general_t_cheng_mt_checkpoint.md).
+Phase 5B promotes that exact sampler through `mtblr_bed()` and retires every
+public path to the covariance hybrid. CSR and block-eigen MT exports are
+removed pending corrected likelihoods; see
+[the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 Its R preflight estimates peak incremental fit allocation before native entry,
 including mandatory $M2^T$ markerwise pattern output and live native/R raw
 copies. It also counts the single shared 64-byte-aligned packed-BED owner and,

@@ -23,18 +23,12 @@ fit_st_block_dense_reference <- do.call(stblr_block_eigen, c(
 fit_st_bed <- do.call(stblr_bed, c(
   list(y = y, Glist = Glist, method = "bayesc"), common))
 
-# Joint small-T family: one logical task is one complete joint chain.
-fit_mt_csr <- do.call(mtblr_csr, c(
-  list(stats = stats, ld_prefix = ld_prefix, method = "sbayesc"), common))
-fit_mt_block <- do.call(mtblr_block_eigen, c(
-  list(stats = stats, Glist = Glist, block_start = block_start,
-       method = "sbayesc"), common))
-fit_mt_bed <- do.call(mtblr_bed, c(
-  list(y = y, Glist = Glist, method = "bayesc"), common))
+# Corrected MT CSR and block-eigen likelihoods are not currently public. The
+# supported MT packed-BED route has its own explicit covariance-prior contract;
+# see mt_models_workflow.R.
 
-# Every canonical fit shares these top-level contracts.
-lapply(list(fit_st_csr, fit_st_block, fit_st_bed,
-            fit_mt_csr, fit_mt_block, fit_mt_bed), function(fit) {
+# Every supported scalar fit shares these top-level contracts.
+lapply(list(fit_st_csr, fit_st_block, fit_st_bed), function(fit) {
   fit[c("family", "model", "operator", "input", "data", "diagnostics",
         "convergence", "convergence_traces", "chains", "memory_estimate")]
 })

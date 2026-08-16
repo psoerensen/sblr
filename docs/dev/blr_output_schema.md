@@ -89,6 +89,11 @@ $(1,\ldots,1)$ row defines the required column without assuming a fixed ID or
 column position. Trait and activity-pattern axes grow dynamically while
 size-one draw and chain axes remain present. See
 [the Phase 5A checkpoint](blr_phase5a_general_t_cheng_mt_checkpoint.md).
+Phase 5B preserves this raw-v2 contract unchanged as the scientific output of
+public `mtblr_bed()`. The formatted fit is constructed from these fields, and
+the validated raw object is retained as `attr(fit, "blr_raw")`. Fixed $V_e$
+does not manufacture covariance draws or a posterior covariance mean. See
+[the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 The mandatory markerwise activity-pattern posterior has marker by
 activity-pattern axes and therefore requires $M2^T$ numeric values. The current
 qualification object also retains the scientifically equivalent joint-state

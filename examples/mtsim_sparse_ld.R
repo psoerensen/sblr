@@ -2759,8 +2759,8 @@ rownames(sse_prior) <- colnames(sse_prior) <- trait_names
 
 
 
-# The former direct low-level MT CSR experiment is retired; use mtblr_csr().
-# That native-only route remains unsupported research evidence, not an example.
+# The former direct low-level MT CSR experiment is retired. There is currently
+# no public corrected MT CSR replacement; this remains research evidence only.
 
 m <- length(cls)
 n <- Glist$n

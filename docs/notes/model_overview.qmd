@@ -3,19 +3,22 @@ title: "Model overview"
 format: html
 ---
 
-STBLR fits traits independently; MTBLR jointly models a small trait set.
+STBLR fits traits independently. The current public MTBLR implementation
+jointly models a modest trait set with complete common-sample packed-BED data.
 
-| Data level | BayesC | BayesR | Annotation-informed BayesR |
-|---|---|---|---|
-| Individual packed BED | `bayesc` | `bayesr` | `bayesrc` |
-| Summary statistics | `sbayesc` | `sbayesr` | `sbayesrc` |
+| Analysis | Data level | Currently supported public models |
+|---|---|---|
+| STBLR | Individual packed BED | `bayesc`, `bayesr` |
+| STBLR | Summary statistics | `sbayesc`, `sbayesr`, and supported annotation-informed variants |
+| MTBLR | Individual packed BED | corrected Cheng MT-BayesC-Pi (`bayesc`) |
+| MTBLR | Summary statistics | Not currently available |
 
 The `s` prefix means summary statistics, not MAF scaling. Optional
 `maf_effect_s` controls MAF-dependent effect-variance scaling independently.
 
 Public fitters are `stblr_csr()`, `stblr_csr_annot()`,
-`stblr_block_eigen()`, `stblr_bed()`, `mtblr_csr()`,
-`mtblr_block_eigen()`, and `mtblr_bed()`.
+`stblr_block_eigen()`, `stblr_bed()`, and `mtblr_bed()`. Corrected MT CSR and
+MT block-eigen likelihoods are deferred.
 
 See the [single-trait](single_trait_models.qmd) and
 [multi-trait](multi_trait_models.qmd) practical pages, or the
@@ -32,7 +35,6 @@ BayesRC annotation coefficients, the inverse-chi-square scale uses the explicitl
 recorded resolved-initial-probability policy because no exact closed-form prior
 expectation over the coefficients is available.
 
-MT automatic calibration is diagonal and uses each trait's joint-pattern
-weight. Supply `vb` explicitly for a full marker-effect covariance; automatic
-elementwise conversion of a full genetic covariance is rejected when it cannot
-be guaranteed positive definite.
+The public MTBLR route requires explicit initial covariance matrices and
+inverse-Wishart degrees-of-freedom/scale parameters for $V_b$ and for sampled
+$V_e$. It does not recycle scalar ST variance calibration into matrix priors.

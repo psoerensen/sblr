@@ -67,12 +67,12 @@ theory notation.
 | Statistical quantity | Theory notation | Current input/object | Qualification |
 |---|---|---|---|
 | Marker-phenotype cross-products | $X^\top y$ | commonly `stats$wy` | Trait-specific vectors in ST-style summary objects. |
-| Marker-trait cross-products | $X^\top Y$ | trait-wise `wy` or route-specific `Xy` in lower-level MT interfaces | There is no single universal field across all MT routes. |
+| Marker-trait cross-products | $X^\top Y$ | historical or research lower-level MT interfaces | Corrected public MT summary-statistics likelihoods are not currently available. |
 | Marker diagonal cross-products | $\operatorname{diag}(X^\top X)$ | commonly `stats$ww` | Must use the same marker order and genotype scale as the LD operator. |
 | Phenotype sum of squares | $y^\top y$ | commonly `stats$yy` | For parallel ST fits this is marginal by trait. |
-| Pairwise phenotype cross-products | $S_Y$ | often called `SSY`; current joint MT contracts may carry the full matrix through a `yy`/`YY`-style argument | A full matrix is required for residual covariance; marginal sums of squares are insufficient. |
-| Pairwise overlap counts | $N_{\mathrm{overlap}}$ | commonly `Nmat` at analysis/workflow level | The current native MT CSR likelihood does not consume `Nmat` directly; it helps construct or justify $S_Y$. |
-| Sample sizes | $N$ or $N_t$ | `n` | Current shared-LD MT CSR restrictions require compatible/equal sample-size structure. |
+| Pairwise phenotype cross-products | $S_Y$ | often called `SSY` in theoretical or research MT summary workflows | A full matrix is required for a future summary-statistics residual-covariance likelihood; the public packed-BED route uses individual-level residuals. |
+| Pairwise overlap counts | $N_{\mathrm{overlap}}$ | commonly `Nmat` at research workflow level | Overlap-aware corrected MT summary-statistics likelihoods are deferred. |
+| Sample sizes | $N$ or $N_t$ | `n` | The public MT packed-BED route requires one common sample set and therefore one $N$; trait-specific summary-statistics sample sizes are deferred. |
 | Marker-scale residual score | $r=X^\top y-X^\top Xb$ or $R=X^\top Y-X^\top XB$ | `r` where exposed | This is not the observation-level residual $y-Xb$ or $Y-XB$. |
 
 ## Distinctions to preserve

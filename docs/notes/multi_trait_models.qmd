@@ -3,19 +3,26 @@ title: "Multi-trait models"
 format: html
 ---
 
-MTBLR samples a complete joint model per logical chain. Trait-sharing patterns
-combine with BayesR components through one unique null state and deterministic
-pattern/component ordering.
+The public `mtblr_bed()` route samples one complete corrected Cheng
+MT-BayesC-Pi model per logical chain. It uses all binary trait-activity
+patterns, including one unique null state, with stable deterministic ordering.
+Input is a complete $N\times T$ phenotype matrix and one common-sample packed
+BED genotype resource.
 
-`mtblr_bed()` supports `bayesc`, `bayesr`, and `bayesrc` with diagonal or full
-residual covariance. `mtblr_csr()` and `mtblr_block_eigen()` support
-`sbayesc`, `sbayesr`, and `sbayesrc`; summary routes use their identified
-residual-covariance contract.
+The residual covariance may be fixed full SPD or sampled from its declared
+inverse-Wishart prior. The marker covariance $V_b$ and Dirichlet
+activity-pattern probabilities are sampled authoritatively. Feasible trait
+count depends on complete-pattern and memory limits.
+
+MT-BayesR, MT-BayesRC, annotation-informed MTBLR, MT CSR, and MT block-eigen
+likelihoods are not currently public. Their Methods pages describe theoretical
+or planned models rather than executable package capabilities.
 
 Full covariance summaries are distinct from the five iteration × trait
 variance traces. Multichain seeds and results are deterministic and independent
 of worker assignment.
 
 The [MT BayesR/SBayesR](../methods/mt_bayesr_sbayesr.qmd) and
-[MT BayesRC/SBayesRC](../methods/mt_bayesrc_sbayesrc.qmd) pages define the
-joint state space, probability outputs, and annotation factorization.
+[MT BayesRC/SBayesRC](../methods/mt_bayesrc_sbayesrc.qmd) pages retain their
+theoretical state-space and annotation-factorization definitions for future
+implementation work.

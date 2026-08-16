@@ -132,13 +132,9 @@ trait.
 The resulting annotation architectures are trait specific rather than one
 joint multi-trait architecture.
 
-This is distinct from the genuine joint
-
-- `mtblr_bed()`;
-- `mtblr_csr()`; and
-- `mtblr_block_eigen()`
-
-BayesRC/SBayesRC models.
+This is distinct from the theoretical joint MT-BayesRC/SBayesRC model. No
+public MT-BayesRC, MT-SBayesRC, annotation-informed MT, MT CSR, or MT
+block-eigen fitter currently implements that model.
 
 The joint MT model samples complete marker states with shared cross-trait
 covariance and the factorized
@@ -1187,9 +1183,9 @@ $$
 where $V_{b,p}$ is the active-trait submatrix of the global marker-effect
 covariance $V_b$.
 
-According to the maintained MT model contract, pending source verification in
-phase 2, SBayesRC annotations modify $P$ but do not make $H$ or $V_b$
-annotation dependent.
+In the deferred MT-SBayesRC design, annotations modify $P$ but do not make $H$
+or $V_b$ annotation dependent. No public MT-SBayesRC route currently implements
+this design.
 
 See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for the complete joint MT
 state model and output semantics.
@@ -1198,7 +1194,7 @@ state model and output semantics.
 
 - [Annotation-Informed Priors](annotation_priors.qmd) is the canonical general
   prior-architecture page.
-- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) defines the current joint MT
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) defines the deferred joint MT
   $P\times H$ model.
 - [Empirical-Bayes Construction of Annotation-Informed Priors](annotation_informed_models.qmd)
   covers posterior-to-prior construction workflows.

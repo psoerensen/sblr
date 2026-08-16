@@ -119,18 +119,19 @@ separate from the canonical current-model definitions in
 
 ### [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd)
 
-Defines the current ordinary multi-trait BayesR/SBayesR model: one unique null
+Defines the deferred ordinary multi-trait BayesR/SBayesR model: one unique null
 state plus non-null trait-pattern by positive-component states, represented by
 one full `joint_pi` simplex. Pattern and component probabilities are marginals
 of this joint simplex.
 
 ### [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd)
 
-Defines the current annotation-dependent multi-trait BayesRC/SBayesRC model.
+Defines the deferred annotation-dependent multi-trait BayesRC/SBayesRC model.
 Its probability architecture is factorized as marker-specific component
 probabilities $P$ times global conditional non-null sharing probabilities $H$.
 
-The distinction between these two current MT probability models is fundamental:
+The distinction between these two theoretical MT probability models is
+fundamental:
 
 $$
 \text{ordinary MT BayesR}
@@ -141,7 +142,7 @@ $$
 whereas
 
 $$
-\text{current MT BayesRC}
+\text{deferred MT BayesRC}
 =
 P\times H.
 $$

@@ -85,8 +85,11 @@ A typical preparation flow is:
 BED + phenotype
   -> make_summary_stats() -> X^T y, diag(X^T X), y^T y, N
   -> make_sparse_ld()     -> Glist$sparseLD
-  -> stblr_csr(...) / stblr_csr_annot(...) / mtblr_csr(...)
+  -> stblr_csr(...) / stblr_csr_annot(...)
 ```
+
+Corrected MT CSR likelihoods are not currently public. This does not affect
+the supported STBLR CSR routes above.
 
 See [Summary Statistics](summary_statistics.qmd) for the complete
 cross-product derivation.
@@ -818,9 +821,9 @@ Their differences concern the prior, not the CSR artifact.
 
 ## Multi-trait CSR use
 
-The current MT CSR route uses the same principle: aligned marker-trait
-cross-products and marker diagonals are combined with one shared sparse-LD
-representation.
+A future corrected MT CSR route could use the same principle: aligned
+marker-trait cross-products and marker diagonals combined with one shared
+sparse-LD representation. No public MT CSR likelihood currently exists.
 
 Mathematically, the marker-trait quantity is
 
@@ -828,9 +831,9 @@ $$
 X^\top Y.
 $$
 
-The present MT CSR likelihood requires shared LD scaling and matching marker
-diagonal cross-products across traits. It does not infer arbitrary pairwise
-sample overlap merely from the sparse-LD prefix.
+Such a likelihood would require shared LD scaling and matching marker diagonal
+cross-products across traits. It could not infer arbitrary pairwise sample
+overlap merely from the sparse-LD prefix.
 
 Cross-trait phenotype products and overlap assumptions required for full
 residual covariance are separate likelihood inputs; see

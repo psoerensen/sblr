@@ -203,31 +203,6 @@ test_that("BED and summary BayesC execute a valid null-state reduction", {
   }
 })
 
-test_that("one-trait MT and ST BayesC execute matched null-state reduction", {
-  fixture <- blr_unified_fixture()
-  on.exit(blr_unified_cleanup(fixture), add = TRUE)
-  prefix <- blr_unified_exact_ld_prefix(fixture$dosage)
-  on.exit(blr_unified_cleanup_prefix(prefix), add = TRUE)
-  st <- stblr_csr(
-    fixture$stats, ld_prefix = prefix, method = "sbayesc", pi_init = .001,
-    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
-    nit = 8L, nburn = 2L, seed = 42L, convergence = "none")
-  inputs <- .blr_reduction_mt_inputs(fixture, prefix)
-  mt <- mtblr_csr(
-    inputs$stats, ld_prefix = prefix, ld_metadata = inputs$metadata,
-    vb = st$cov_b_final, ve = st$cov_e_final,
-    models = matrix(c(0L, 1L), 2L, 1L), pimodels = c(.999, .001),
-    updateB = FALSE, updateE = FALSE, updatePi = FALSE,
-    nit = 8L, nburn = 2L, seed = 42L, convergence = "none")
-  for (field in c("bm", "dm", "vgs", "vle", "vld")) {
-    expect_equal(mt[[field]], st[[field]], tolerance = 1e-12,
-                 info = field)
-  }
-  expect_equal(unname(mt$pi_final), unname(st$pi_final), tolerance = 0)
-  expect_false(isTRUE(all.equal(mt$vbs, st$vbs)))
-  expect_false(isTRUE(all.equal(mt$ves, st$ves)))
-})
-
 test_that("S models reuse BayesC and BayesR kernels across exact operators", {
   fixture <- blr_unified_fixture()
   on.exit(blr_unified_cleanup(fixture), add = TRUE)

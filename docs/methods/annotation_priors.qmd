@@ -740,9 +740,9 @@ $$
 \operatorname{Cov}(\beta_j)=\gamma_kD_jV_bD_j.
 $$
 
-That model needs stronger identification between $D_j$ and $V_b$. Annotation-dependent
-trait sharing and annotation-dependent $V_b$ are later research models, not implied
-by current MT BayesRC.
+That model needs stronger identification between $D_j$ and $V_b$.
+Annotation-dependent trait sharing and annotation-dependent $V_b$ are later
+research models, not implied by the deferred MT BayesRC design.
 
 ## Probability plus variance annotations
 
@@ -877,13 +877,8 @@ stblr_csr(
   )
 )
 
-# I. Proposed MT BayesR-LV with shared q
-mtblr_csr(
-  stats, Glist, model = "bayesr",
-  prior = prior_spec(
-    variance = annotation_log_variance(annotations = A, trait_scope = "shared")
-  )
-)
+# I. Proposed MT BayesR-LV with shared q (concept only; no executable public
+# MT CSR or annotation-informed MT route currently implements this design)
 
 # J. No annotation object and no annotation overhead
 stblr_bed(y, bed_prefix, model = "bayesc")
@@ -946,7 +941,7 @@ scientifically stable.
 - [SBayesRC Annotation Probabilities](sbayesrc_annotations.qmd) gives the
   detailed continuation-probit construction and alpha hierarchy.
 - [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) and
-  [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describe the current MT
+  [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describe deferred MT
   joint-state and factorized probability architectures.
 - [Empirical-Bayes Construction](annotation_informed_models.qmd) is retained as
   a focused posterior-to-prior construction note; its conceptual workflows are

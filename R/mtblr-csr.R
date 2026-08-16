@@ -634,8 +634,8 @@
 #' @param memory_warning_gb Analytical memory-warning threshold in GiB.
 #' @param verbose Print resolved execution metadata.
 #' @return An object of class `mtblr_fit`.
-#' @export
-mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
+#' @noRd
+.mtblr_csr_legacy_covariance_hybrid <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
   trait_metadata = NULL, marker_policy = c("strict", "reorder_stats"),
   sample_overlap = "not_modeled", method = "sbayesc", n = NULL, sets = NULL,
   beta = NULL, b = NULL, state = NULL, h2 = 0.5, pi = 0.001,
@@ -853,4 +853,12 @@ mtblr_csr <- function(stats, Glist = NULL, ld_prefix = NULL, ld_metadata = NULL,
     fit,
     "mtblr", method, "csr", data = raw$data,
     diagnostics = raw$diagnostics, memory_estimate = memory)
+}
+
+#' @noRd
+mtblr_csr <- function(...) {
+  stop(paste0(
+    "Corrected multi-trait CSR likelihoods are not currently available. ",
+    "Use mtblr_bed() with common-sample packed BED data; the obsolete MT ",
+    "covariance-hybrid CSR sampler is not reachable."), call. = FALSE)
 }

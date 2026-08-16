@@ -111,10 +111,10 @@ MAF.
 
 ## Multi-trait routes
 
-Use `mtblr_bed()` with `bayesc`, `bayesr`, or `bayesrc` for individual-level
-data. Use `mtblr_csr()` or `mtblr_block_eigen()` with `sbayesc`, `sbayesr`, or
-`sbayesrc` for summary statistics. Summary routes do not infer missing
-cross-trait information that is absent from their input contract.
+The public multi-trait route is `mtblr_bed(method = "bayesc")` for complete
+common-sample packed-BED data. Corrected MT CSR and MT block-eigen
+summary-statistics likelihoods are not currently available. The sparse-LD
+workflows on this page therefore apply to supported STBLR analyses only.
 
 ## Maintained executable workflows
 
@@ -122,6 +122,7 @@ cross-trait information that is absent from their input contract.
 - [ST individual-level workflow](../../examples/workflows/st_individual_workflow.R)
 - [Operator comparison workflow](../../examples/workflows/operator_comparison_workflow.R)
 - [ST annotation workflow](../../examples/workflows/st_annotation_workflow.R)
+- [Corrected Cheng MT-BayesC-Pi packed-BED workflow](../../examples/workflows/mt_models_workflow.R)
 
 The scripts use small demonstration settings. Real analyses need scientifically
 appropriate chain lengths, memory review, convergence diagnostics, and

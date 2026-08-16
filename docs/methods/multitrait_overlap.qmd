@@ -732,11 +732,10 @@ observations do not exist.
 
 ## Current operator restrictions
 
-The canonical multi-trait fitters are:
-
-- `mtblr_bed()`;
-- `mtblr_csr()`; and
-- `mtblr_block_eigen()`.
+The current public multi-trait fitter is `mtblr_bed()` for complete
+common-sample packed-BED data under the corrected Cheng MT-BayesC-Pi model.
+Corrected MT CSR and MT block-eigen summary-statistics likelihoods are not
+currently available.
 
 The underlying likelihood objects are:
 
@@ -748,7 +747,7 @@ X^\top Y,
 S_Y.
 $$
 
-Conceptually, the current MT CSR likelihood requires:
+Conceptually, a future MT CSR likelihood would require:
 
 - marker-trait cross-products corresponding to $X^\top Y$;
 - marker diagonal cross-products corresponding to
@@ -905,9 +904,9 @@ covariance estimates.
   model and distinguishes $B$/$E_Y$ from $V_b$/$V_e$.
 - [Summary Statistics](summary_statistics.qmd) derives the general
   cross-product, residual-score, and sparse-summary representation.
-- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) describes the current ordinary MT
-  joint-state probability model.
-- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describes the current
+- [MT BayesR/SBayesR](mt_bayesr_sbayesr.qmd) describes the deferred ordinary
+  MT joint-state probability model.
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describes the deferred
   factorized component/sharing probability architecture.
 - [Multi-trait models](../notes/multi_trait_models.qmd) provides practical model
   guidance.

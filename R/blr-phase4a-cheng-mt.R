@@ -495,12 +495,12 @@
     initial_probability, dirichlet_prior, prior_df, prior_scale,
     update_marker_covariance, update_probability, activity_patterns,
     burn_in_iterations, sampling_iterations, thin_interval,
-    chains, cores, seed, keep_traces, memory_estimate) {
+    chains, cores, seed, chain_seeds, keep_traces, memory_estimate) {
   retained <- .blr_retention_plan(
     burn_in_iterations, sampling_iterations, thin_interval,
     contract_version = 1L, retained_requested = TRUE)
   task_seeds <- .blr_task_seeds_v1(
-    seed, "joint_multitrait", trait_ids, chains)
+    seed, "joint_multitrait", trait_ids, chains, chain_seeds)
   state_ids <- rownames(activity_patterns)
   data <- list(
     analysis_mode = "joint_multitrait", trait_ids = trait_ids,
@@ -883,6 +883,7 @@
     update_activity_pattern_probability = TRUE,
     burn_in_iterations = 100L, sampling_iterations = 200L,
     thin_interval = 1L, chains = 1L, cores = 1L, seed = 1,
+    chain_seeds = NULL,
     keep_traces = TRUE, chr = NULL, cls = NULL, rows = NULL,
     block_size = 1000L,
     residual_covariance_policy = "fixed_full",
@@ -991,6 +992,7 @@
   cores <- as.integer(.blr_scalar_whole(
     cores, "cores", 1, .Machine$integer.max))
   seed <- .blr_scalar_whole(seed, "seed", 0, 4294967295)
+  .blr_chain_seed_base_uint32(chain_seeds, chains)
   frequency <- unlist(dat$af, use.names = FALSE)
   if (length(frequency) != dat$m || any(!is.finite(frequency)) ||
       any(frequency <= 0 | frequency >= 1)) {
@@ -1025,7 +1027,7 @@
     marker_covariance_prior_df, marker_covariance_prior_scale,
     update_marker_covariance, update_activity_pattern_probability, patterns,
     burn_in_iterations, sampling_iterations, thin_interval,
-    chains, cores, seed, keep_traces, memory_estimate)
+    chains, cores, seed, chain_seeds, keep_traces, memory_estimate)
   execution_contract <- .blr_native_execution_contract(spec)
   native <- mtblr_phase4a_cheng_bed_internal(
     bed_files = as.character(dat$bed_files),
@@ -1070,4 +1072,174 @@
 # approved two-trait checkpoint can be compared without a duplicate sampler.
 .blr_cheng_mt_bayesc_bed_qualification <- function(...) {
   .blr_phase4a_cheng_mt_bed(...)
+}
+
+.blr_phase5b_promote_raw <- function(raw) {
+  validate_blr_raw_v2(raw)
+  raw$input$schema$compatibility_id <- paste0(
+    "phase5b-public-cheng-mt;seed=unified_fnv_splitmix_v1;",
+    "retention=postburn_divisible_v1")
+  raw$diagnostics$qualification$status <- "publicly_supported"
+  raw$diagnostics$qualification$implementation <-
+    "general_t_cheng_mt_bayesc_bed"
+  raw$diagnostics$qualification$public_interface <- "mtblr_bed"
+  raw$schema$source_schema$name <- "general_t_cheng_mt_bayesc_bed"
+  raw$schema$migration$status <- "public_phase5b"
+  raw$schema$migration$legacy_mt_conversion <- FALSE
+  validate_blr_raw_v2(raw)
+  raw
+}
+
+.blr_format_cheng_mt_raw_v2 <- function(raw, keep_chains = FALSE) {
+  validate_blr_raw_v2(raw)
+  keep_chains <- .blr_logical_scalar(keep_chains, "keep_chains")
+  spec <- raw$input
+  markers <- spec$data$global_markers
+  traits <- spec$data$trait_ids
+  chains <- dimnames(raw$final$realised_effects)[[1L]]
+  patterns <- spec$prior$probability$activity_patterns
+  state <- raw$final$joint_states
+  primary_state <- as.integer(state[1L, , drop = TRUE])
+  primary_activity <- patterns[primary_state + 1L, , drop = FALSE]
+  dimnames(primary_activity) <- list(markers, traits)
+  primary_effect <- matrix(
+    raw$final$realised_effects[1L, , , drop = TRUE],
+    nrow = length(markers), ncol = length(traits),
+    dimnames = list(markers, traits))
+
+  covariance_diagonal_draws <- function(value) {
+    if (is.null(value)) return(NULL)
+    out <- array(NA_real_, c(dim(value)[1L], dim(value)[2L], length(traits)),
+                 dimnames = list(
+                   draw = dimnames(value)[[1L]],
+                   chain = dimnames(value)[[2L]], trait = traits))
+    for (trait in seq_along(traits)) {
+      out[, , trait] <- value[, , trait, trait]
+    }
+    attr(out, "dim_axis_names") <- c("draw", "chain", "trait")
+    out
+  }
+  chain_summary <- function(value) {
+    chain_mean <- apply(value, c(2L, 3L, 4L), mean)
+    if (length(chains) == 1L) {
+      mean_value <- chain_mean[1L, , , drop = TRUE]
+      if (is.null(dim(mean_value))) {
+        mean_value <- matrix(mean_value, nrow = length(markers),
+                             ncol = length(traits))
+      }
+      dimnames(mean_value) <- list(markers, traits)
+      return(list(sd = mean_value * 0, min = mean_value, max = mean_value))
+    }
+    reduce <- function(fun) {
+      value <- apply(chain_mean, c(2L, 3L), fun)
+      dimnames(value) <- list(markers, traits)
+      value
+    }
+    list(sd = reduce(stats::sd), min = reduce(min), max = reduce(max))
+  }
+  effect_chain <- chain_summary(raw$draws$realised_effects)
+  activity_chain <- chain_summary(raw$draws$traitwise_activity)
+  probability_mean <- apply(
+    raw$draws$activity_pattern_parameters, 3L, mean)
+  probability_mean <- stats::setNames(
+    as.numeric(probability_mean), rownames(patterns))
+
+  chain_records <- lapply(seq_along(chains), function(chain) list(
+    task_id = paste0("chain:", chain - 1L),
+    task_seed = unname(spec$mcmc$task_seeds[[chain]]),
+    final_realised_effects = raw$final$realised_effects[chain, , , drop = FALSE],
+    final_latent_effects = raw$final$latent_effects[chain, , , drop = FALSE],
+    final_joint_states = raw$final$joint_states[chain, , drop = FALSE],
+    final_marker_covariance =
+      raw$final$marker_covariance[chain, , , drop = FALSE],
+    final_residual_covariance =
+      raw$final$residual_covariance[chain, , , drop = FALSE],
+    final_activity_pattern_parameters =
+      raw$final$activity_pattern_parameters[chain, , drop = FALSE]))
+  names(chain_records) <- chains
+
+  fit <- list(
+    bm = raw$posterior$realised_effect_mean,
+    dm = raw$posterior$pips,
+    wy = NULL, r = NULL,
+    b = primary_effect,
+    d = primary_activity,
+    vbs = covariance_diagonal_draws(raw$draws$marker_covariance),
+    vgs = NULL,
+    ves = covariance_diagonal_draws(raw$draws$residual_covariance),
+    vle = NULL, vld = NULL,
+    pi_trace = raw$draws$activity_pattern_parameters,
+    pi_final = raw$final$activity_pattern_parameters,
+    pi_mean = probability_mean,
+    cov_b_mean = raw$posterior$marker_covariance_mean,
+    cov_g_mean = NULL,
+    cov_e_mean = raw$posterior$residual_covariance_mean,
+    cov_b_final = raw$final$marker_covariance[1L, , , drop = TRUE],
+    cov_g_final = NULL,
+    cov_e_final = raw$final$residual_covariance[1L, , , drop = TRUE],
+    bm_chain_mean_sd = effect_chain$sd,
+    bm_chain_mean_min = effect_chain$min,
+    bm_chain_mean_max = effect_chain$max,
+    dm_chain_mean_sd = activity_chain$sd,
+    dm_chain_mean_min = activity_chain$min,
+    dm_chain_mean_max = activity_chain$max,
+    activity_patterns = patterns,
+    activity_pattern_probabilities =
+      raw$posterior$activity_pattern_probabilities,
+    activity_pattern_parameter_draws =
+      raw$draws$activity_pattern_parameters,
+    pleiotropic_probabilities = raw$posterior$pleiotropic_probabilities,
+    realised_effect_draws = raw$draws$realised_effects,
+    latent_effect_draws = raw$draws$latent_effects,
+    joint_activity_state_draws = raw$draws$joint_states,
+    trait_activity_draws = raw$draws$traitwise_activity,
+    marker_covariance_draws = raw$draws$marker_covariance,
+    residual_covariance_draws = raw$draws$residual_covariance,
+    predictions = raw$derived$predictions,
+    final_marker_covariance = raw$final$marker_covariance,
+    final_residual_covariance = raw$final$residual_covariance,
+    final_activity_pattern_parameters =
+      raw$final$activity_pattern_parameters,
+    retained_transition_indices =
+      spec$mcmc$retained_transition_indices,
+    convergence_iteration_indices = if (is.null(raw$draws$convergence)) {
+      integer()
+    } else raw$draws$convergence$transition_indices,
+    convergence = raw$draws$convergence,
+    convergence_traces = raw$draws$convergence,
+    chains = if (keep_chains) chain_records else NULL,
+    raw_schema_version = 2L,
+    input = list(
+      resolved_spec = spec, analysis_mode = "joint_multitrait",
+      nt = length(traits), n = length(spec$data$observation_ids),
+      n_used = length(spec$data$observation_ids),
+      n_total = length(spec$data$observation_ids),
+      residual_covariance_policy = spec$model$residual_policy,
+      probability_policy = spec$model$probability_policy,
+      task_seeds_resolved = spec$mcmc$task_seeds,
+      retained_transition_indices =
+        spec$mcmc$retained_transition_indices,
+      convergence_iteration_indices = if (is.null(
+        raw$draws$convergence)) integer() else
+          raw$draws$convergence$transition_indices),
+    data = list(
+      marker_ids = markers, trait_names = traits,
+      observation_ids = spec$data$observation_ids,
+      n_by_trait = stats::setNames(
+        rep(length(spec$data$observation_ids), length(traits)), traits),
+      n_total = length(spec$data$observation_ids),
+      n_used = length(spec$data$observation_ids),
+      data_level = "individual",
+      genotype_scale = "standardized_genotype",
+      phenotype_scale = "centred_or_residualized_unscaled",
+      operator_resources = spec$data$operator_resources,
+      providers = spec$data$providers),
+    diagnostics = raw$diagnostics,
+    memory_estimate = raw$diagnostics$memory)
+  fit <- .blr_finalize_fit(
+    fit, "mtblr", "bayesc", "packed_bed", data = fit$data,
+    diagnostics = raw$diagnostics, memory_estimate = raw$diagnostics$memory)
+  attr(fit, "blr_raw") <- raw
+  attr(fit, "blr_resolved_spec") <- spec
+  fit
 }

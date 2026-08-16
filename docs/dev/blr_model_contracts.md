@@ -178,6 +178,15 @@ independent no-overlap summaries do not identify off-diagonal residual
 covariance. The current MT covariance hybrid is not the target and cannot be
 migrated as authoritative covariance draws.
 
+Phase 5B promotes the corrected complete-pattern Cheng policy through
+`mtblr_bed()` for common-sample packed BED only. Public $V_b$ and sampled
+$V_e$ priors use explicit inverse-Wishart degrees-of-freedom/scale arguments;
+fixed $V_e$ remains a zero-update, zero-residual-covariance-RNG policy. The
+legacy covariance hybrid is unreachable from public dispatch. Corrected MT
+CSR, block-eigen, BayesR, BayesRC, annotation, overlap, and missing-phenotype
+policies remain unavailable. See
+[the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
+
 Resolved Phase 1 objects accept only registered exact model-policy values and
 declared descriptor structures. Compatibility identifiers do not relax model,
 prior, state, covariance, probability, or axis validation. Scalar-variance and

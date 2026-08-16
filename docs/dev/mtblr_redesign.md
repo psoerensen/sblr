@@ -1596,7 +1596,17 @@ The design phase is complete only when:
 11. computational eigenblocks and statistical covariance regions are distinct;
 12. current and proposed capabilities are not conflated.
 
-## 23. Immediate next design task
+## 23. Phase 5B public status
+
+The corrected general-$T$ common-sample packed-BED Cheng MT-BayesC$\Pi$
+implementation is promoted through public `mtblr_bed()` in Phase 5B. The
+public route accepts explicit inverse-Wishart degrees-of-freedom/scale priors,
+uses the validated raw-v2 and formatted-result boundaries, and cannot dispatch
+to the covariance hybrid. Corrected MT CSR and block-eigen likelihoods remain
+unavailable and are no longer exported. See
+[`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md).
+
+## 24. Immediate next design task
 
 The covariance research-design checkpoint is complete for shared and complete
 $T=2$ Cheng patterns and for the heterogeneous independent-provider operator

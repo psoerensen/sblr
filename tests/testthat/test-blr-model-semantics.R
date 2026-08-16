@@ -28,8 +28,6 @@ test_that("operator model matrices are failure-closed before preparation", {
                    c("sbayesc", "sbayesr", "sbayesrc"))
   expect_identical(eval(formals(stblr_bed)$method),
                    c("bayesc", "bayesr", "bayesrc"))
-  expect_identical(formals(mtblr_csr)$method, "sbayesc")
-  expect_identical(formals(mtblr_block_eigen)$method, "sbayesc")
   expect_identical(formals(mtblr_bed)$method, "bayesc")
   expect_error(stblr_csr(list(), method = "bayesr"),
                "s.*prefix denotes summary statistics")
@@ -37,12 +35,10 @@ test_that("operator model matrices are failure-closed before preparation", {
                "s.*prefix denotes summary statistics")
   expect_error(stblr_bed(numeric(), list(), method = "sbayesr"),
                "s.*prefix denotes summary statistics")
-  expect_error(mtblr_csr(list(), method = "bayesr"),
-               "s.*prefix denotes summary statistics")
-  expect_error(mtblr_block_eigen(list(), NULL, 1L, method = "bayesr"),
-               "s.*prefix denotes summary statistics")
+  expect_error(sblr:::mtblr_csr(), "not currently available")
+  expect_error(sblr:::mtblr_block_eigen(), "not currently available")
   expect_error(mtblr_bed(numeric(), list(bedfiles = "x"), method = "sbayesr"),
-               "s.*prefix denotes summary statistics")
+               "supports only method = 'bayesc'")
 })
 
 test_that("maf_effect_s NULL and minus one are numerically equal but semantic distinct", {

@@ -1437,7 +1437,16 @@ global covariance or a shared library of fixed/pre-estimated covariance
 templates with region-specific weights. The global-covariance and fixed-region
 reductions remain mandatory test cases.
 
-## 27. Closeout decisions
+## 27. Phase 5B public status
+
+Phase 5B promotes the independently qualified general-$T$ Cheng transition
+through public `mtblr_bed()` without changing this covariance target. The
+legacy heuristic covariance hybrid is unreachable from public dispatch and
+cannot be converted into corrected $V_b$ or $V_e$ fields. Corrected summary-
+statistic MT likelihoods remain deferred. See
+[`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md).
+
+## 28. Closeout decisions
 
 1. The authoritative Cheng target and null-collapsed, conditionally completed
    transition are independently verified.
@@ -1457,7 +1466,7 @@ reductions remain mandatory test cases.
    pooling or shared covariance-template libraries are the likely production
    model for low-information regions.
 
-## 28. Phase 4a qualification implementation status
+## 29. Phase 4a qualification implementation status
 
 The validated null-collapsed, conditionally completed transition is now
 implemented in one internal qualification-only vertical slice for exactly two
@@ -1484,7 +1493,7 @@ The completed-active R sampler remains the independent reference. Public
 promotion, summary-statistic MT likelihoods, MT-BayesR, regional covariance, and
 covariance templates remain deferred.
 
-## 29. Additional references
+## 30. Additional references
 
 - Cheng H, Kizilkaya K, Zeng J, Garrick D, Fernando R. Genomic prediction from
   multiple-trait Bayesian regression methods using mixture priors. *Genetics*.

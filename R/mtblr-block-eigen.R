@@ -268,8 +268,8 @@
 #' @param summary_reference Must be `"same_bed_by_construction"`.
 #' @return An object of class `mtblr_fit` with block diagnostics and operator
 #'   metadata.
-#' @export
-mtblr_block_eigen <- function(
+#' @noRd
+.mtblr_block_eigen_legacy_covariance_hybrid <- function(
   stats, Glist, block_start,
   operator_sharing = c("auto", "shared", "trait_specific"),
   eigen_filter = "hard_truncate", eigen_tau = 0.01, eigen_eta = 0,
@@ -641,4 +641,13 @@ mtblr_block_eigen <- function(
       block_eigen_public = diagnostics,
       operator_metadata = fit$operator_metadata)),
     memory_estimate = memory)
+}
+
+#' @noRd
+mtblr_block_eigen <- function(...) {
+  stop(paste0(
+    "Corrected multi-trait block-eigen likelihoods are not currently ",
+    "available. Use mtblr_bed() with common-sample packed BED data; the ",
+    "obsolete MT covariance-hybrid block-eigen sampler is not reachable."),
+    call. = FALSE)
 }

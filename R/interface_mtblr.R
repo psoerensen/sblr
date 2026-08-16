@@ -26,7 +26,7 @@
 #' @return A list containing posterior summaries and fitted model components.
 #' @noRd
 #' @useDynLib sblr, .registration = TRUE
-sblr <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
+.mtblr_legacy_dense_covariance_hybrid <- function(yy=NULL, Xy=NULL, XX=NULL, n=NULL, sets=NULL,
                   b=NULL,h2=NULL, pi=0.001, models=NULL, pimodels=NULL,
                   vg=NULL, vb=NULL, ve=NULL,
                   ssb_prior=NULL, sse_prior=NULL,

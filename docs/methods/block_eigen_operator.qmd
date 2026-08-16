@@ -634,8 +634,8 @@ CSR or other LD representations.
 
 ## Public support
 
-According to the current maintained model and block-eigen contracts, pending
-source verification in phase 2, public block-eigen fitting includes:
+According to the current maintained model and block-eigen contracts, public
+block-eigen fitting is available for single-trait analyses.
 
 ### Single trait
 
@@ -654,16 +654,10 @@ reference and explicit use.
 
 ### Multi trait
 
-`mtblr_block_eigen()` supports:
-
-- `sbayesc`;
-- `sbayesr`; and
-- `sbayesrc`.
-
-The current MT block-eigen runtime is reconstructed dense. A retained-factor MT
-runtime is not currently implemented.
-
-MT-LV is also not currently implemented.
+No corrected MT block-eigen likelihood is currently public. MT-SBayesC,
+MT-SBayesR, MT-SBayesRC, and MT-LV block-eigen models remain deferred. This
+restriction does not affect the supported `stblr_block_eigen()` implementation
+described above.
 
 These capability distinctions are model/operator facts; they should not be
 inferred merely from the presence of similarly named arguments on another
@@ -768,8 +762,7 @@ Important limitations of the current block-eigen operator include:
 - reconstructed dense blocks can become expensive for large blocks;
 - current arbitrary external-GWAS/reference-LD projection is not supported by
   the public block-eigen contract;
-- current MT block-eigen fitting remains reconstructed dense rather than
-  retained-factor;
+- corrected MT block-eigen fitting is not currently public;
 - reference sample, marker order, allele orientation, missing-value handling,
   allele frequencies, block boundaries, and filter settings are required
   provenance.

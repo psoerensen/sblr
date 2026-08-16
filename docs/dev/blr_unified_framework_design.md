@@ -42,8 +42,11 @@ includes the one shared aligned owner,
 $M\operatorname{round\_up}(\lceil N/4\rceil,64)$ bytes, and the conditional
 $\lceil N_{\mathrm{source}}/4\rceil$ selected-row decoding buffer before
 provider construction.
-None of these policies replaces or alters a public legacy MT route. A capability described only as
-proposed remains unimplemented; current support
+Phase 5B promotes this exact corrected route through public `mtblr_bed()` and
+removes public access to the legacy MT covariance hybrid. Corrected MT CSR and
+block-eigen likelihoods remain unavailable. See
+[the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
+A capability described only as proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
 

@@ -11,9 +11,10 @@ if (!setequal(calls, registered)) stop("R/native generated wrapper mismatch", ca
 exports <- sub("^export[(]([^)]*)[)]$", "\\1",
   grep("^export[(]", readLines("NAMESPACE", warn = FALSE), value = TRUE))
 canonical <- c("stblr_csr", "stblr_csr_annot", "stblr_block_eigen", "stblr_bed",
-               "mtblr_csr", "mtblr_block_eigen", "mtblr_bed")
+               "mtblr_bed")
 if (!all(canonical %in% exports)) stop("canonical fitter export missing", call. = FALSE)
-if (any(c("sblr", "stblr_bed_marker", "check_stblr_convergence") %in% exports))
+if (any(c("sblr", "stblr_bed_marker", "check_stblr_convergence",
+          "mtblr_csr", "mtblr_block_eigen") %in% exports))
   stop("obsolete public export", call. = FALSE)
 cat(sprintf("generated_interfaces=PASS wrappers=%d registrations=%d exports=%d\n",
             length(calls), length(registered), length(exports)))

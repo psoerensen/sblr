@@ -6,23 +6,30 @@ format:
     number-sections: true
 ---
 
-This page describes the current ordinary multi-trait BayesR/SBayesR prior and
-state space in `sblr`. The important feature of this model is that trait-sharing
+This page describes the theoretical ordinary multi-trait BayesR/SBayesR prior
+and state space retained for future implementation in `sblr`. The important
+feature of this model is that trait-sharing
 patterns and BayesR variance components are represented by **one joint
 probability simplex**. They are not currently parameterized as independent
 probability and sharing architectures.
 
-The individual-level and summary-statistics routes use the same core
-multi-trait prior. They differ in how the likelihood information is represented.
+Potential individual-level and summary-statistics routes would use the same
+core multi-trait prior while differing in their likelihood representation.
+
+MT-BayesR and MT-SBayesR are not currently available through a public fitter.
+The public `mtblr_bed()` route implements corrected Cheng MT-BayesC-Pi only;
+corrected MT CSR and MT block-eigen likelihoods are deferred.
 
 ## BayesR and SBayesR
 
-The public model name identifies the likelihood context:
+In the planned naming convention, the model name identifies the likelihood
+context:
 
 - `bayesr` is the individual-level packed-BED model;
 - `sbayesr` is the summary-statistics model used with CSR or block-eigen LD.
 
-Both use the same ordinary multi-trait BayesR state model described below.
+Both would use the same ordinary multi-trait BayesR state model described
+below.
 
 The `S` prefix does **not** activate MAF-dependent effect scaling. Optional
 BayesS-style MAF scaling is controlled separately by `maf_effect_s`.
@@ -411,7 +418,7 @@ $$
 P_{jk}H_p.
 $$
 
-Thus MT BayesRC/SBayesRC has the current factorization
+Thus the deferred MT BayesRC/SBayesRC design has the factorization
 
 $$
 P\times H.
@@ -420,7 +427,7 @@ $$
 Ordinary MT BayesR/SBayesR does **not**.
 
 The conceptual $P$ and $H$ axes are useful for the long-term prior
-architecture, but they must not be projected backward onto the current ordinary
+architecture, but they must not be projected backward onto the ordinary
 MT BayesR implementation.
 
 See [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) for that model.
@@ -528,14 +535,15 @@ information required for $V_e$ are developed in
 ## Likelihood Operators
 
 The joint state descriptor, BayesR prior, joint probability update, base-$V_b$
-update, logical chain structure, and scientific interpretation are shared
-across the current MT BayesR/SBayesR routes.
+update, logical chain structure, and scientific interpretation would be shared
+across future MT BayesR/SBayesR routes.
 
 The likelihood representation differs.
 
 ### Packed BED
 
-`mtblr_bed(method = "bayesr")` uses selected individual-level genotypes.
+A future individual-level MT-BayesR route would use selected individual-level
+genotypes. The current public `mtblr_bed()` does not implement this model.
 
 The individual-level model is
 
@@ -548,8 +556,8 @@ a full or restricted structure.
 
 ### CSR summary-statistics likelihood
 
-`mtblr_csr(method = "sbayesr")` uses aligned marker-trait cross-products,
-marker diagonal cross-products, and sparse LD.
+A future MT-SBayesR CSR likelihood would use aligned marker-trait
+cross-products, marker diagonal cross-products, and sparse LD.
 
 Mathematically, the central marker-trait quantity is
 
@@ -557,17 +565,15 @@ $$
 X^\top Y.
 $$
 
-The current MT CSR route uses shared LD scaling and does not infer arbitrary
-unmodeled cross-trait sample overlap.
+Such a route would require an explicit sample-overlap contract rather than
+inferring unmodeled cross-trait overlap.
 
 ### Block-eigen summary-statistics likelihood
 
-`mtblr_block_eigen(method = "sbayesr")` uses the current multi-trait
-block-eigen representation.
-
-Importantly, the current MT block-eigen route is based on reconstructed
-filtered within-block operators. It should not be conflated with the canonical
-retained-factor low-rank operator used by current scalar block-eigen fits.
+A future MT-SBayesR block-eigen likelihood would require separate scientific
+qualification. No public MT block-eigen route currently exists. This does not
+affect the canonical retained-factor low-rank operator used by current scalar
+block-eigen fits.
 
 The prior state model remains ordinary MT BayesR in either case; only the
 likelihood representation changes.
@@ -581,32 +587,32 @@ are marginals over trait patterns and therefore do not recover the full
 marker-by-joint-state posterior distribution. Likewise, a final sampled latent
 or effective state is not a posterior mean or posterior probability.
 
-## Current Limitations
+## Implementation limitations
 
-Current ordinary MT BayesR/SBayesR has several important limitations:
+The deferred ordinary MT BayesR/SBayesR design has several important
+limitations:
 
-- MT `maf_effect_s` may be fixed but cannot currently be sampled.
+- The proposed MT `maf_effect_s` extension is not publicly implemented.
 - The joint state count is guarded for memory and practical numerical size.
 - Ordinary MT BayesR has no annotation-dependent component-probability model.
 - Ordinary MT BayesR has no learned annotation-dependent log-variance
   multiplier.
-- Shared learned-$q$ MT BayesR-LV is a proposed extension, not current
-  functionality.
+- Shared learned-$q$ MT BayesR-LV is a proposed extension.
 - Annotation-dependent sharing $H$ is not implemented for ordinary MT BayesR.
 - Annotation-dependent $V_b$ is not implemented.
 - Full marker-by-joint-state posterior probabilities are not retained by
   default.
-- Current summary-statistics routes do not infer arbitrary cross-trait sample
-  overlap that was not supplied through the model's likelihood information.
+- A future summary-statistics route cannot infer arbitrary cross-trait sample
+  overlap absent from its likelihood information.
 
-These limitations define the current model; they should not be silently filled
-in by the future provider architecture.
+These limitations define the deferred design; they should not be silently
+filled in by a future provider architecture.
 
 ## Related Pages
 
 - [Core BLR Model Theory](model_theory.qmd) defines the common ST/MT regression
   notation, BayesR component ladder, and covariance quantities.
-- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describes the current
+- [MT BayesRC/SBayesRC](mt_bayesrc_sbayesrc.qmd) describes the deferred
   annotation-dependent $P\times H$ probability factorization.
 - [Annotation-Informed Priors](annotation_priors.qmd) defines the broader
   $P/Q/H/V_b$ architecture and the proposed shared-$q$ MT-LV extension.

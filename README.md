@@ -6,7 +6,7 @@ small-trait-count BLR (MTBLR) samplers in R/C++ with deterministic multichain
 execution and optional OpenMP chain dispatch.
 
 The package is a research implementation and is not yet CRAN-ready. Its model
-semantics, operator contracts, fit schema, and seven fitting interfaces are,
+semantics, operator contracts, fit schema, and five fitting interfaces are,
 however, deliberately stabilized and tested.
 
 ## Installation
@@ -31,9 +31,7 @@ stblr_csr_annot()    # scalar-trait annotation-aware sparse-LD models
 stblr_block_eigen()  # scalar summary statistics + retained low-rank block eigen
 stblr_bed()          # scalar-trait individual-level packed BED
 
-mtblr_csr()          # joint multi-trait summary statistics + sparse LD
-mtblr_block_eigen()  # joint multi-trait summary statistics + block-eigen LD
-mtblr_bed()          # joint multi-trait individual-level packed BED
+mtblr_bed()          # corrected Cheng joint multi-trait packed-BED model
 ```
 
 Public model names encode data level:
@@ -59,13 +57,12 @@ scale.
 | `stblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr` |
 | `stblr_block_eigen()` | retained low-rank block eigen (default); reconstructed dense by request | ordinary `sbayesc`, `sbayesr`, `sbayesrc`; `sbayesc`/`sbayesr` with `annotation_model = "log_variance"` |
 | `stblr_csr_annot()` | CSR sparse LD | `sbayesc` with `fixed_marker`, `group`, `learned_logistic`, or `log_variance`; `sbayesr` with `log_variance`; `sbayesrc` with `annotation_probit_stick` |
-| `mtblr_bed()` | packed BED | `bayesc`, `bayesr`, `bayesrc` |
-| `mtblr_csr()` | CSR sparse LD | `sbayesc`, `sbayesr`, `sbayesrc` |
-| `mtblr_block_eigen()` | block eigen | `sbayesc`, `sbayesr`, `sbayesrc` |
+| `mtblr_bed()` | common-sample packed BED | corrected general-$T$ Cheng `bayesc` with fixed or sampled full residual covariance |
 
 Unsupported combinations fail before numerical execution.
 Current log-variance models are ST CSR/block-eigen only; BED-LV and MT-LV are
-not implemented.
+not implemented. Corrected MT CSR and block-eigen likelihoods are not currently
+publicly available.
 
 The retained low-rank operator follows the GCTB/SBayesRC eigenspace likelihood
 strategy, represented in `sblr` cross-product units with a global projected
@@ -86,6 +83,9 @@ a pre-execution memory guard.
 
 Diagnostics assess MCMC mixing; they do not establish model correctness or
 absolute convergence.
+The corrected public MT route supports the contracted observational `"core"`
+capture or `"none"`; extended legacy MT diagnostics are not part of its public
+contract.
 
 ## Documentation
 

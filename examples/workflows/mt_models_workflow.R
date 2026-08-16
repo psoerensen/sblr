@@ -1,24 +1,43 @@
-# Small iterations below illustrate the interface; they are not convergence
-# recommendations.
-fit_csr <- mtblr_csr(stats, ld_prefix = ld_prefix,
-  ld_metadata = ld_metadata, method = "sbayesr",
-  mixture_var = c(0, 0.01, 0.1, 1), nchains = 2, ncores = 2,
-  nit = 100, nburn = 50,
-  convergence_control = list(warn = FALSE))
+# Corrected Cheng MT-BayesC-Pi workflow for complete common-sample packed-BED
+# data. The small iteration counts illustrate the public interface; they are
+# not convergence recommendations. Phenotypes must already be centred or
+# residualized and must have stable row and column names.
+stopifnot(
+  is.matrix(y), is.numeric(y), ncol(y) >= 2L,
+  !is.null(rownames(y)), !is.null(colnames(y)), all(is.finite(y))
+)
 
-fit_s <- mtblr_csr(stats, ld_prefix = ld_prefix,
-  ld_metadata = ld_metadata, method = "sbayesr", maf_effect_s = -1,
-  mixture_var = c(0, 0.01, 0.1, 1), nit = 100, nburn = 50)
+trait_ids <- colnames(y)
+trait_count <- ncol(y)
+residual_variances <- pmax(apply(y, 2L, stats::var), .Machine$double.eps)
+fixed_residual_covariance <- diag(residual_variances, trait_count)
+dimnames(fixed_residual_covariance) <- list(trait_ids, trait_ids)
 
-fit_block <- mtblr_block_eigen(stats, Glist, block_start = 1L,
-  method = "sbayesr", mixture_var = c(0, 0.01, 0.1, 1),
-  nit = 100, nburn = 50)
+initial_marker_covariance <- 0.05 * fixed_residual_covariance
+marker_covariance_prior_scale <- initial_marker_covariance
 
-fit_bed <- mtblr_bed(y, Glist, method = "bayesr",
-  mixture_var = c(0, 0.01, 0.1, 1), nit = 100, nburn = 50)
+fit_bed <- mtblr_bed(
+  y = y,
+  Glist = Glist,
+  trait_ids = trait_ids,
+  sample_ids = rownames(y),
+  method = "bayesc",
+  residual_covariance_policy = "fixed_full",
+  fixed_residual_covariance = fixed_residual_covariance,
+  initial_marker_covariance = initial_marker_covariance,
+  marker_covariance_prior_degrees_of_freedom = trait_count + 2,
+  marker_covariance_prior_scale = marker_covariance_prior_scale,
+  nit = 20L,
+  nburn = 10L,
+  nthin = 2L,
+  nchains = 1L,
+  ncores = 1L,
+  seed = 17
+)
 
-fit_csr$component_probabilities
-fit_csr$pi_mean
-fit_csr$model_parameters$mixture
-fit_csr[c("vbs", "vgs", "ves", "vle", "vld")]
-fit_csr$convergence
+fit_bed$dm
+fit_bed$bm
+fit_bed$activity_pattern_probabilities
+fit_bed$pleiotropic_probabilities
+fit_bed$cov_b_mean
+fit_bed$cov_e_final

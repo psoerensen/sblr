@@ -19,9 +19,9 @@
 | `stblr_csr()` | `sbayesc`, `sbayesr` | global | supported | supported by validated scalar routes |
 | `stblr_csr_annot()` | `sbayesc`, `sbayesrc` | fixed-marker, group, learned-logistic, probit-stick | supported where validated | supported only where implemented |
 | `stblr_block_eigen()` | `sbayesc`, `sbayesr`, `sbayesrc` | global or probit-stick | supported; retained low rank is default and keeps priors in marker space | supported where the shared scalar kernel implements it |
-| `mtblr_bed()` | `bayesc`, `bayesr`, `bayesrc` | global or probit-stick BayesRC | supported for mixture models | unsupported |
-| `mtblr_csr()` | `sbayesc`, `sbayesr`, `sbayesrc` | global or probit-stick BayesRC | supported for mixture models | unsupported |
-| `mtblr_block_eigen()` | `sbayesc`, `sbayesr`, `sbayesrc` | global or probit-stick BayesRC | supported for mixture models | unsupported |
+| `mtblr_bed()` | `bayesc` (corrected Cheng complete-pattern model) | sampled Dirichlet activity-pattern mass | not implemented | unsupported |
+| MT CSR | unavailable pending a corrected MT summary likelihood | unavailable | unavailable | unavailable |
+| MT block eigen | unavailable pending a corrected MT summary likelihood | unavailable | unavailable | unavailable |
 
 At this historical checkpoint, unsupported combinations were intended to fail
 before native execution and `.blr_model_capability_matrix()` was intended

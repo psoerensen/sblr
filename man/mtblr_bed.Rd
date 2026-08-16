@@ -2,264 +2,121 @@
 % Please edit documentation in R/mtblr-bed.R
 \name{mtblr_bed}
 \alias{mtblr_bed}
-\title{Fit joint multivariate BayesC, BayesR, and BayesRC models from PLINK BED}
+\title{Fit corrected Cheng multi-trait BayesC from packed BED genotypes}
 \usage{
 mtblr_bed(
   y,
   Glist,
-  covar = NULL,
+  trait_ids = colnames(as.matrix(y)),
+  sample_ids = rownames(as.matrix(y)),
+  method = "bayesc",
+  residual_covariance_policy = "fixed_full",
+  fixed_residual_covariance = NULL,
+  initial_marker_covariance,
+  marker_covariance_prior_degrees_of_freedom,
+  marker_covariance_prior_scale,
+  initial_activity_pattern_probability = NULL,
+  activity_pattern_dirichlet_prior = NULL,
+  initial_residual_covariance = NULL,
+  residual_covariance_prior_degrees_of_freedom = NULL,
+  residual_covariance_prior_scale = NULL,
   chr = NULL,
   cls = NULL,
   rows = NULL,
-  scale = TRUE,
-  center = TRUE,
-  residual_covariance = c("full", "diagonal"),
-  method = "bayesc",
-  trait_metadata = NULL,
-  sets = NULL,
-  block_size = 1000,
-  beta = NULL,
-  b = NULL,
-  state = NULL,
-  h2 = 0.5,
-  pi = 0.001,
-  models = NULL,
-  pimodels = NULL,
-  mixture_var = NULL,
-  joint_pi = NULL,
-  joint_pi_prior = NULL,
-  component = NULL,
-  annotations = NULL,
-  add_intercept = TRUE,
-  standardize_annotations = TRUE,
-  center_binary_annotations = FALSE,
-  alpha_init = NULL,
-  sigmaSqAlpha_init = NULL,
-  annotation_intercept_prior = NULL,
-  intercept_flat = NULL,
-  sigmaSqAlpha_a = 2,
-  sigmaSqAlpha_b = 2,
-  pi_floor = 1e-12,
-  alpha_update_every = 1L,
-  updateAlpha = TRUE,
-  maf_effect_s = NULL,
-  effect_maf = NULL,
-  allow_reference_maf_for_maf_effect_s = FALSE,
-  estimate_maf_effect_s = FALSE,
-  maf_effect_s_init = NULL,
-  maf_effect_s_prior = NULL,
-  maf_effect_s_proposal_sd = NULL,
-  vg = NULL,
-  vb = NULL,
-  ve = NULL,
-  ssb_prior = NULL,
-  sse_prior = NULL,
-  updateB = TRUE,
-  updateE = TRUE,
-  updatePi = TRUE,
-  nub = 4,
-  nue = 4,
-  nit = 1000,
-  nburn = 500,
-  nthin = 1,
+  block_size = 1000L,
+  nit = 1000L,
+  nburn = 500L,
+  nthin = 1L,
   seed = 1,
   nchains = 1L,
   ncores = 1L,
   chain_seeds = NULL,
   keep_chains = FALSE,
-  convergence = c("auto", "none", "core", "extended"),
+  convergence = c("core", "none"),
   convergence_control = NULL,
-  memory_warning_gb = 8,
-  verbose = FALSE
+  keep_traces = TRUE,
+  memory_limit_bytes = 256 * 1024^2
 )
 }
 \arguments{
-\item{y}{Numeric phenotype vector, matrix, or numeric data frame.}
+\item{y}{Complete numeric phenotype matrix with one column per trait.}
 
-\item{Glist}{One BED-backed genotype list.}
+\item{Glist}{One packed-BED genotype list shared by all traits.}
 
-\item{covar}{Must be `NULL`; pass pre-adjusted phenotypes when required.}
+\item{trait_ids}{Unique stable trait IDs in phenotype-column order.}
 
-\item{chr}{Optional BED file/chromosome indices.}
+\item{sample_ids}{Unique stable sample IDs in phenotype-row order.}
 
-\item{cls}{Optional one-based marker columns, one vector per selected file.}
+\item{method}{Must be exactly `"bayesc"`.}
 
-\item{rows}{Optional one-based BED rows in phenotype order.}
+\item{residual_covariance_policy}{Either `"fixed_full"` or
+`"sampled_full"`.}
 
-\item{scale}{Must be `TRUE`; genotypes are standardized with supplied
-selected allele frequencies.}
+\item{fixed_residual_covariance}{Fixed full residual covariance for
+`fixed_full`; otherwise `NULL`.}
 
-\item{center}{Center aligned phenotype columns in R. If `FALSE`, columns
-must already satisfy the native centering tolerance.}
+\item{initial_marker_covariance}{Initial full marker-effect covariance.}
 
-\item{residual_covariance}{Either `"full"` or `"diagonal"`.}
+\item{marker_covariance_prior_degrees_of_freedom}{Inverse-Wishart degrees
+of freedom for the marker covariance.}
 
-\item{method}{One of `"bayesc"`, `"bayesr"`, or `"bayesrc"`; packed BED is individual
-level and therefore rejects summary-statistics `s` model names.}
+\item{marker_covariance_prior_scale}{Inverse-Wishart scale matrix for the
+marker covariance.}
 
-\item{trait_metadata}{Optional data frame with one row per trait.}
+\item{initial_activity_pattern_probability}{Optional initial simplex over
+the canonical complete binary activity-pattern order.}
 
-\item{sets}{Optional disjoint complete list of one-based marker sets.}
+\item{activity_pattern_dirichlet_prior}{Optional positive Dirichlet prior
+in the same activity-pattern order.}
 
-\item{block_size}{Block size used for default sets within one BED file.}
+\item{initial_residual_covariance}{Initial full residual covariance for
+`sampled_full`; otherwise `NULL`.}
 
-\item{beta, b, state}{Optional latent effects, effective effects, and binary
-inclusion states as marker-by-trait matrices or trait lists.}
+\item{residual_covariance_prior_degrees_of_freedom}{Inverse-Wishart degrees
+of freedom for sampled residual covariance.}
 
-\item{h2}{Requested initial expected genetic-variance fraction, scalar or
-one value per trait strictly in `(0,1)`, under resolved joint
-trait-pattern, component, annotation, and fixed MAF-S weights.}
+\item{residual_covariance_prior_scale}{Inverse-Wishart scale matrix for
+sampled residual covariance.}
 
-\item{pi}{Initial non-null probability or full pattern-probability vector.}
+\item{chr, cls, rows, block_size}{Packed-BED marker and sample selection
+controls, following [stblr_bed()].}
 
-\item{models, pimodels}{Joint model patterns and probabilities.}
+\item{nit, nburn, nthin}{Post-burn iterations, burn-in iterations, and
+thinning interval.}
 
-\item{mixture_var}{Fixed BayesR component-variance multipliers: one leading
-zero followed by unique, strictly increasing positive values.}
+\item{seed}{User uint32 seed resolved through seed-contract version 1.}
 
-\item{joint_pi}{Optional initial probability vector over the deterministic
-joint pattern-by-component states.}
+\item{nchains}{Number of complete joint chains.}
 
-\item{joint_pi_prior}{Optional positive Dirichlet prior over joint states.}
+\item{ncores}{Requested chain workers.}
 
-\item{component}{Optional zero-based component initialization, one value per
-marker and consistent with `state`.}
+\item{chain_seeds}{Optional signed-int32 or uint32-compatible base seed for
+each chain. These bases are resolved by seed-contract version 1.}
 
-\item{annotations}{Required marker-by-annotation numeric matrix or data
-frame for `"bayesrc"`. Explicit unique marker IDs are matched to selected
-BED markers.}
+\item{keep_chains}{Retain compact chain-final records in the formatted fit.
+Raw v2 always preserves its explicit chain axes.}
 
-\item{add_intercept}{Add one intercept when none is supplied.}
+\item{convergence}{Either `"core"` for the contracted observational capture
+or `"none"`. Disabling capture is zero-RNG.}
 
-\item{standardize_annotations}{Standardize eligible non-intercept columns.}
+\item{convergence_control}{Reserved shared control. Phase 5B accepts only
+`NULL`; trace retention is controlled by `keep_traces`.}
 
-\item{center_binary_annotations}{Center and scale binary annotations when
-standardization is enabled.}
+\item{keep_traces}{Retain unthinned observational convergence traces.}
 
-\item{alpha_init}{Optional processed-annotation-by-stick coefficient matrix.}
-
-\item{sigmaSqAlpha_init}{Optional positive variance initialization per stick.}
-
-\item{annotation_intercept_prior}{Proper normal probit-stick intercept prior.}
-
-\item{intercept_flat}{Deprecated opt-in legacy flat prior.}
-
-\item{sigmaSqAlpha_a, sigmaSqAlpha_b}{Positive annotation-variance prior
-hyperparameters.}
-
-\item{pi_floor}{Probability floor used by probit stick-breaking.}
-
-\item{alpha_update_every}{Positive iteration interval for coefficient updates.}
-
-\item{updateAlpha}{Update annotation coefficients and their variances.}
-
-\item{maf_effect_s}{Optional fixed scalar MAF-S exponent for BayesR; the BED
-model name remains `bayesr` because the data are individual-level.}
-
-\item{effect_maf}{Optional allele frequencies aligned to the selected
-marker order for the independent `maf_effect_s` scale policy.}
-
-\item{allow_reference_maf_for_maf_effect_s}{Logical fallback control. Packed
-BED uses analysis-genotype frequencies by construction when this is NULL.}
-
-\item{estimate_maf_effect_s}{Logical; sampled MT S is currently unsupported.}
-
-\item{maf_effect_s_init, maf_effect_s_prior, maf_effect_s_proposal_sd}{Reserved
-sampled-S controls, rejected while `estimate_maf_effect_s` is unsupported.}
-
-\item{vg, vb, ve}{Initial genetic, marker-effect, and residual covariance.}
-
-\item{ssb_prior, sse_prior}{Covariance prior scale matrices.}
-
-\item{updateB, updateE, updatePi}{Scalar logical update controls.}
-
-\item{nub, nue}{Covariance prior degrees of freedom.}
-
-\item{nit, nburn, nthin}{MCMC controls applied identically to every chain.}
-
-\item{seed}{Base fit-local native RNG seed when `chain_seeds` is `NULL`.}
-
-\item{nchains}{Number of complete joint-MT chains.}
-
-\item{ncores}{Requested package OpenMP chain workers. Used workers are capped
-by `nchains`; this does not control BLAS threads.}
-
-\item{chain_seeds}{Optional signed 32-bit integer-compatible seed vector of
-length `nchains`, retained in supplied order. Negative values represent
-unsigned 32-bit seeds above the signed integer maximum.}
-
-\item{keep_chains}{Retain compact per-chain posterior records.}
-
-\item{convergence}{Convergence-diagnostic mode: `"auto"` preserves core-only
-automatic behavior, `"none"` disables capture, `"core"` explicitly requests
-the five core quantities, and `"extended"` adds applicable Tier 2 groups.}
-
-\item{convergence_control}{Optional uniquely named list controlling warnings,
-thresholds, retention, extended groups, explicit selected-marker quantities,
-full probability-state opt-in, and hard diagnostic trace-memory guards.}
-
-\item{memory_warning_gb}{Positive warning threshold in GiB, or `Inf`.}
-
-\item{verbose}{Print resolved execution metadata.}
+\item{memory_limit_bytes}{Incremental fit-allocation limit used by the
+pre-provider Phase 5A memory preflight. `NULL` or positive `Inf` disables
+the finite limit.}
 }
 \value{
-An object of class `mtblr_fit` with BED diagnostics, phenotype
-  preprocessing, alignment provenance, and an analytical memory estimate.
+An `mtblr_fit` and `blr_fit`. The validated `blr_raw` version 2
+  object is available as `attr(fit, "blr_raw")`.
 }
 \description{
-Fits one joint individual-level multivariate BayesC likelihood using a
-shared set of individuals and standardized genotypes from one BED-backed
-genotype list. Unlike [stblr_bed()], which currently fits traits as separate
-scalar likelihoods, `mtblr_bed()` uses joint inclusion patterns and a joint
-marker-effect covariance. Full residual covariance is the default;
-diagonal covariance is an explicit reduction model.
+Fits the publicly supported common-sample Cheng MT-BayesC-Pi model using
+complete binary activity patterns, one authoritative marker covariance,
+and either a fixed or sampled full residual covariance. Phenotypes must be
+complete and already centred or residualized as appropriate for the
+intended analysis. Corrected summary-statistic MT likelihoods are not yet
+available.
 }
-\details{
-Phenotypes are centered by default but never scaled. Covariates are not
-fitted, and the complete aligned phenotype matrix must be finite. The
-returned memory estimate is analytical working memory, not measured RSS or
-measured peak RSS.
-}
-\section{Multichain execution}{
-
-Each chain fits one complete joint multivariate model. Chain-level OpenMP
-dispatch is static, and `ncores` is capped by `nchains`. If OpenMP is not
-available, a multi-core request warns once and runs serially. With
-`chain_seeds = NULL`, chain zero uses `seed` and later chains use the native
-modulo-2^32 `seed + 9176*c` policy; explicit signed seeds are used in their
-supplied order.
-
-Posterior marker means, covariance means, and model-probability means pool
-retained samples across chains. Traces are iterationwise chain means, while
-final effects, states, residual scores, covariance matrices, and final model
-probabilities come from primary chain 1. The `*_sd`, `*_min`, and `*_max`
-fields summarize per-chain posterior means; they are not posterior standard
-deviations, credible intervals, R-hat, ESS, or MCSE. Multiple chains alone
-do not establish convergence.
-
-Compact retained chains omit shared BED data, phenotypes, marker order,
-marker residuals, sample residuals, and genetic values. Timing is diagnostic
-and nondeterministic. The package never changes global BLAS settings; users
-should normally configure BLAS to one thread when running concurrent chain
-workers to avoid oversubscription.
-}
-
-\section{Convergence diagnostics}{
-
-Core diagnostics use post-burn, unthinned per-chain `vbs`, `vgs`, `ves`,
-`vle`, and `vld` traces. They report rank-normalized split and folded R-hat (using
-their maximum), bulk and two-tail ESS, mean ESS, posterior SD, and mean
-MCSE. R-hat requires at least two chains and four post-burn draws; ESS and
-MCSE require at least six draws. Two or three chains carry an advisory that
-four chains are generally recommended. Fixed `B` or `E` quantities are
-marked `not_updated` rather than diagnosed.
-
-Diagnostics are independent of `keep_chains`. Optional convergence traces
-contain only these post-burn trait-level traces, use no extra thinning, and increase
-the analytical memory estimate. Threshold warnings are advisory and are
-aggregated at most once per fit; multiple chains or passing thresholds do
-not prove convergence. Extended mode adds applicable low-dimensional and
-explicitly selected-marker scalar diagnostics. Matrix/simplex convergence,
-ESS-for-SD, and quantile/median MCSE remain outside the formal engine.
-}
-
