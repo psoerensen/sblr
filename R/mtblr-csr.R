@@ -585,7 +585,8 @@
 #' @param global_alleles Global allele metadata aligned to
 #'   `global_marker_ids`.
 #' @param trait_ids Ordered unique trait identifiers.
-#' @param method Model identifier. Phase 6B supports only `"bayesc"`.
+#' @param method Model identifier, either `"bayesc"` or the factorized
+#'   pattern-by-scale `"bayesr"` target.
 #' @param initial_marker_covariance Initial finite SPD marker covariance
 #'   matrix, ordered by `trait_ids`.
 #' @param marker_covariance_prior_degrees_of_freedom Inverse-Wishart prior
@@ -596,6 +597,15 @@
 #'   vector over the complete binary activity patterns.
 #' @param activity_pattern_dirichlet_prior Optional positive Dirichlet prior
 #'   vector over the complete binary activity patterns.
+#' @param component_scales Positive, unique, strictly increasing BayesR
+#'   variance multipliers. The single null state is represented by the null
+#'   activity pattern and must not be included here.
+#' @param initial_scale_probability Optional initial simplex over positive
+#'   `component_scales`, conditional on a non-null activity pattern.
+#' @param scale_dirichlet_prior Optional positive Dirichlet prior over the
+#'   positive scales.
+#' @param marker_multipliers Optional positive marker-specific variance
+#'   multipliers $q_j$ in global marker order.
 #' @param nit Number of post-burn-in sampling iterations.
 #' @param nburn Number of burn-in iterations.
 #' @param nthin Positive retention interval.
@@ -619,6 +629,8 @@ mtblr_csr <- function(
     marker_covariance_prior_scale,
     initial_activity_pattern_probability = NULL,
     activity_pattern_dirichlet_prior = NULL,
+    component_scales = NULL, initial_scale_probability = NULL,
+    scale_dirichlet_prior = NULL, marker_multipliers = NULL,
     nit = 1000L, nburn = 500L, nthin = 1L, seed = 1,
     nchains = 1L, ncores = 1L, chain_seeds = NULL,
     keep_chains = FALSE, convergence = c("core", "none"),
@@ -626,14 +638,23 @@ mtblr_csr <- function(
     memory_limit_bytes = 256 * 1024^2) {
   .blr_validate_exact_public_call(sys.call(), sys.function(), "mtblr_csr()")
   .mtblr_summary_public_fit(
-    providers, operator_resources, global_marker_ids, global_alleles,
-    trait_ids, "csr", "mtblr_csr", method,
-    initial_marker_covariance,
-    marker_covariance_prior_degrees_of_freedom,
-    marker_covariance_prior_scale,
-    initial_activity_pattern_probability,
-    activity_pattern_dirichlet_prior,
-    nit, nburn, nthin, seed, nchains, ncores, chain_seeds,
-    keep_chains, convergence, convergence_control, keep_traces,
-    memory_limit_bytes)
+    providers = providers, operator_resources = operator_resources,
+    global_marker_ids = global_marker_ids, global_alleles = global_alleles,
+    trait_ids = trait_ids, representation = "csr", interface = "mtblr_csr",
+    method = method, initial_marker_covariance = initial_marker_covariance,
+    marker_covariance_prior_degrees_of_freedom =
+      marker_covariance_prior_degrees_of_freedom,
+    marker_covariance_prior_scale = marker_covariance_prior_scale,
+    initial_activity_pattern_probability =
+      initial_activity_pattern_probability,
+    activity_pattern_dirichlet_prior = activity_pattern_dirichlet_prior,
+    component_scales = component_scales,
+    initial_scale_probability = initial_scale_probability,
+    scale_dirichlet_prior = scale_dirichlet_prior,
+    marker_multipliers = marker_multipliers,
+    nit = nit, nburn = nburn, nthin = nthin, seed = seed,
+    nchains = nchains, ncores = ncores, chain_seeds = chain_seeds,
+    keep_chains = keep_chains, convergence = convergence,
+    convergence_control = convergence_control, keep_traces = keep_traces,
+    memory_limit_bytes = memory_limit_bytes)
 }

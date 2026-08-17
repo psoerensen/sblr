@@ -17,6 +17,10 @@ mtblr_bed(
   marker_covariance_prior_scale,
   initial_activity_pattern_probability = NULL,
   activity_pattern_dirichlet_prior = NULL,
+  component_scales = NULL,
+  initial_scale_probability = NULL,
+  scale_dirichlet_prior = NULL,
+  marker_multipliers = NULL,
   initial_residual_covariance = NULL,
   residual_covariance_prior_degrees_of_freedom = NULL,
   residual_covariance_prior_scale = NULL,
@@ -47,7 +51,8 @@ mtblr_bed(
 
 \item{sample_ids}{Unique stable sample IDs in phenotype-row order.}
 
-\item{method}{Must be exactly `"bayesc"`.}
+\item{method}{Either `"bayesc"` or the factorized pattern-by-scale
+`"bayesr"` target.}
 
 \item{residual_covariance_policy}{Either `"fixed_full"` or
 `"sampled_full"`.}
@@ -68,6 +73,11 @@ the canonical complete binary activity-pattern order.}
 
 \item{activity_pattern_dirichlet_prior}{Optional positive Dirichlet prior
 in the same activity-pattern order.}
+
+\item{component_scales, initial_scale_probability, scale_dirichlet_prior, marker_multipliers}{BayesR positive variance multipliers, their optional initial and
+Dirichlet probability vectors, and positive marker-specific $q_j$
+multipliers. The null state is represented only by the null activity
+pattern. These arguments must be `NULL` for `method = "bayesc"`.}
 
 \item{initial_residual_covariance}{Initial full residual covariance for
 `sampled_full`; otherwise `NULL`.}

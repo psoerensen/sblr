@@ -579,7 +579,7 @@ validate_blr_resolved_spec <- function(spec) {
                           "joint_activity_dirichlet"))
   .blr_character_scalar(spec$model$marker_scale_policy,
                         "model$marker_scale_policy",
-                        c("unit", "component", "maf_s",
+                        c("unit", "component", "component_marker", "maf_s",
                           "component_maf_s", "annotation_log_variance"))
   .blr_character_scalar(spec$model$marker_covariance_policy,
                         "model$marker_covariance_policy",
@@ -686,11 +686,42 @@ validate_blr_resolved_spec <- function(spec) {
   }
   if (!is.null(spec$prior$component_multipliers)) {
     gamma <- spec$prior$component_multipliers
-    if (!is.numeric(gamma) || length(gamma) != length(spec$model$state_space) ||
-        anyNA(gamma) || any(!is.finite(gamma)) || any(gamma < 0) ||
-        gamma[[null_index]] != 0 ||
-        !identical(names(gamma), spec$model$state_space)) {
+    factorized_scale <- identical(spec$model$family, "bayesr") &&
+      identical(spec$model$probability_policy, "joint_activity_dirichlet") &&
+      !is.null(spec$prior$probability$scale_ids)
+    valid <- if (factorized_scale) {
+      is.numeric(gamma) && length(gamma) > 0L && !anyNA(gamma) &&
+        all(is.finite(gamma)) && all(gamma > 0) &&
+        !is.unsorted(gamma, strictly = TRUE) &&
+        identical(names(gamma), spec$prior$probability$scale_ids)
+    } else {
+      is.numeric(gamma) && length(gamma) == length(spec$model$state_space) &&
+        !anyNA(gamma) && all(is.finite(gamma)) && all(gamma >= 0) &&
+        gamma[[null_index]] == 0 &&
+        identical(names(gamma), spec$model$state_space)
+    }
+    if (!valid) {
       stop("prior$component_multipliers must be a state-named finite nonnegative vector with zero at the null state.",
+           call. = FALSE)
+    }
+  }
+  if (identical(spec$model$family, "bayesr") &&
+      identical(spec$model$probability_policy, "joint_activity_dirichlet")) {
+    ids <- spec$prior$probability$scale_ids %||% NULL
+    initial <- spec$prior$probability$initial_scale_probability %||% NULL
+    prior <- spec$prior$probability$scale_dirichlet %||% NULL
+    sampled <- spec$prior$probability$scale_sampled %||% NULL
+    if (!is.character(ids) || !length(ids) || anyNA(ids) ||
+        any(!nzchar(ids)) || anyDuplicated(ids) ||
+        !is.numeric(initial) || !is.numeric(prior) ||
+        length(initial) != length(ids) || length(prior) != length(ids) ||
+        any(!is.finite(initial)) || any(initial <= 0) ||
+        abs(sum(initial) - 1) > 1e-10 || any(!is.finite(prior)) ||
+        any(prior <= 0) || !identical(names(initial), ids) ||
+        !identical(names(prior), ids) || !is.logical(sampled) ||
+        length(sampled) != 1L || is.na(sampled) ||
+        !identical(sampled, length(ids) > 1L)) {
+      stop("Factorized pattern-by-scale BayesR requires a uniquely named positive-scale simplex and Dirichlet prior.",
            call. = FALSE)
     }
   }

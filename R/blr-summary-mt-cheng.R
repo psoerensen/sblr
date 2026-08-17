@@ -546,7 +546,10 @@
     burn_in_iterations = 100L, sampling_iterations = 200L,
     thin_interval = 1L, chains = 1L, cores = 1L, seed = 1,
     chain_seeds = NULL, keep_traces = TRUE,
-    memory_limit_bytes = 256 * 1024^2) {
+    memory_limit_bytes = 256 * 1024^2,
+    method = "bayesc", component_scales = NULL,
+    initial_scale_probability = NULL, scale_dirichlet_prior = NULL,
+    marker_multipliers = NULL) {
   trait_ids <- .blr_ids(trait_ids, "Phase 6A trait IDs")
   collection <- .blr_phase6a_validate_collection(collection, trait_ids)
   patterns <- .blr_phase4a_patterns(trait_ids)
@@ -597,9 +600,22 @@
   retained <- .blr_retention_plan(
     burn_in_iterations, sampling_iterations, thin_interval,
     contract_version = 1L, retained_requested = TRUE)
+  scale <- .blr_phase7_scale_spec(
+    method, collection$global_marker_map$marker_ids, component_scales,
+    initial_scale_probability, scale_dirichlet_prior, marker_multipliers)
   memory_estimate <- .blr_phase6a_memory_estimate(
     collection, length(trait_ids), chains, retained$retained_draws,
-    sampling_iterations, keep_traces, memory_limit_bytes, enforce = TRUE)
+    sampling_iterations, keep_traces, memory_limit_bytes,
+    enforce = !scale$enabled)
+  memory_estimate <- .blr_phase7_memory_adjust(
+    memory_estimate, length(collection$global_marker_map$marker_ids),
+    length(trait_ids), length(scale$scales), chains,
+    retained$retained_draws, sampling_iterations, keep_traces,
+    memory_limit_bytes, enforce = TRUE, activity_patterns = patterns,
+    concurrent_chains = min(chains, cores),
+    workspace_enabled = scale$enabled && !(
+      length(scale$scales) == 1L && scale$scales[[1L]] == 1 &&
+      all(scale$marker_multipliers == 1)))
   spec <- .blr_phase6a_resolved_spec(
     collection, trait_ids, patterns, initial_marker_covariance,
     initial_probability, dirichlet_prior, marker_covariance_prior_df,
@@ -627,11 +643,23 @@
     execution_contract = .blr_native_execution_contract(spec),
     native_memory_limit_bytes = if (is.null(memory_estimate$limit_bytes)) {
       Inf
-    } else memory_estimate$limit_bytes)
+    } else memory_estimate$limit_bytes,
+    component_scales = unname(scale$scales),
+    initial_scale_probability = unname(scale$initial),
+    scale_dirichlet_prior = unname(scale$prior),
+    marker_multipliers = unname(scale$marker_multipliers))
   raw <- .blr_phase6a_raw(
     native, spec, initial_marker_covariance,
     marker_covariance_prior_df, marker_covariance_prior_scale,
     dirichlet_prior, keep_traces)
+  if (scale$enabled) {
+    raw$input <- .blr_phase7_enrich_spec(raw$input, scale)
+    raw <- .blr_phase7_enrich_raw(raw, native, scale, keep_traces)
+  }
   validate_blr_raw_v2(raw)
   raw
+}
+
+.blr_pattern_scale_mt_bayesr_summary_qualification <- function(...) {
+  .blr_cheng_mt_bayesc_summary_qualification(..., method = "bayesr")
 }

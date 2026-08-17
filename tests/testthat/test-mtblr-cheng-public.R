@@ -29,12 +29,20 @@ phase5b_public_fixture <- function(trait_count) {
 
 phase5b_public_fit <- function(fixture, sampled = FALSE, chains = 1L,
                                cores = 1L, seed = 51,
-                               chain_seeds = NULL) {
+                               chain_seeds = NULL, method = "bayesc",
+                               component_scales = NULL) {
   trait_count <- ncol(fixture$phenotype)
   mtblr_bed(
     y = fixture$phenotype, Glist = fixture$Glist,
     trait_ids = colnames(fixture$phenotype),
     sample_ids = rownames(fixture$phenotype),
+    method = method, component_scales = component_scales,
+    initial_scale_probability = if (identical(method, "bayesr"))
+      rep(1 / length(component_scales), length(component_scales)) else NULL,
+    scale_dirichlet_prior = if (identical(method, "bayesr"))
+      rep(1, length(component_scales)) else NULL,
+    marker_multipliers = if (identical(method, "bayesr"))
+      rep(1, length(fixture$Glist$rsids[[1L]])) else NULL,
     residual_covariance_policy = if (sampled) "sampled_full" else
       "fixed_full",
     fixed_residual_covariance = if (sampled) NULL else fixture$Ve,
@@ -54,7 +62,8 @@ phase5b_public_fit <- function(fixture, sampled = FALSE, chains = 1L,
 
 phase5b_internal_raw <- function(fixture, sampled = FALSE, chains = 1L,
                                  cores = 1L, seed = 51,
-                                 chain_seeds = NULL) {
+                                 chain_seeds = NULL, method = "bayesc",
+                                 component_scales = NULL) {
   trait_count <- ncol(fixture$phenotype)
   sblr:::.blr_cheng_mt_bayesc_bed_qualification(
     y = fixture$phenotype, Glist = fixture$Glist,
@@ -62,6 +71,13 @@ phase5b_internal_raw <- function(fixture, sampled = FALSE, chains = 1L,
     initial_marker_covariance = fixture$Vb,
     marker_covariance_prior_df = trait_count + 0.5,
     marker_covariance_prior_scale = fixture$Psi_b,
+    method = method, component_scales = component_scales,
+    initial_scale_probability = if (identical(method, "bayesr"))
+      rep(1 / length(component_scales), length(component_scales)) else NULL,
+    scale_dirichlet_prior = if (identical(method, "bayesr"))
+      rep(1, length(component_scales)) else NULL,
+    marker_multipliers = if (identical(method, "bayesr"))
+      rep(1, length(fixture$Glist$rsids[[1L]])) else NULL,
     burn_in_iterations = 1L, sampling_iterations = 3L,
     thin_interval = 1L, chains = chains, cores = cores, seed = seed,
     chain_seeds = chain_seeds, keep_traces = TRUE,
@@ -72,6 +88,23 @@ phase5b_internal_raw <- function(fixture, sampled = FALSE, chains = 1L,
     residual_covariance_prior_scale = if (sampled) fixture$Psi_e else NULL,
     memory_limit_bytes = Inf)
 }
+
+test_that("public BED pattern-by-scale BayesR is neutral to qualification", {
+  fixture <- phase5b_public_fixture(2L)
+  on.exit(blr_unified_cleanup(fixture), add = TRUE)
+  scales <- c(.1, .5, 1)
+  public <- attr(phase5b_public_fit(
+    fixture, seed = 2751L, method = "bayesr", component_scales = scales),
+    "blr_raw", exact = TRUE)
+  internal <- phase5b_internal_raw(
+    fixture, seed = 2751L, method = "bayesr", component_scales = scales)
+  expect_identical(public$posterior, internal$posterior)
+  expect_identical(public$draws, internal$draws)
+  expect_identical(public$final, internal$final)
+  expect_identical(public$input$mcmc$task_seeds,
+                   internal$input$mcmc$task_seeds)
+  expect_silent(sblr:::validate_blr_raw_v2(public))
+})
 
 test_that("public corrected BED route is neutral to the qualified sampler", {
   for (case in list(c(2L, FALSE), c(3L, TRUE))) {

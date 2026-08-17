@@ -19,9 +19,9 @@
 | `stblr_csr()` | `sbayesc`, `sbayesr` | global | supported | supported by validated scalar routes |
 | `stblr_csr_annot()` | `sbayesc`, `sbayesrc` | fixed-marker, group, learned-logistic, probit-stick | supported where validated | supported only where implemented |
 | `stblr_block_eigen()` | `sbayesc`, `sbayesr`, `sbayesrc` | global or probit-stick | supported; retained low rank is default and keeps priors in marker space | supported where the shared scalar kernel implements it |
-| `mtblr_bed()` | `bayesc` (corrected Cheng complete-pattern model) | sampled Dirichlet activity-pattern mass | not implemented | unsupported |
-| `mtblr_csr()` | `bayesc` (corrected Cheng complete-pattern model) | sampled Dirichlet activity-pattern mass | not implemented | unsupported |
-| `mtblr_block_eigen()` | `bayesc` (corrected Cheng complete-pattern model) | sampled Dirichlet activity-pattern mass | not implemented | unsupported |
+| `mtblr_bed()` | `bayesc`, factorized pattern-by-scale `bayesr` | sampled Dirichlet activity and conditional positive-scale masses | fixed marker multiplier only | unsupported |
+| `mtblr_csr()` | `bayesc`, factorized pattern-by-scale `bayesr` | sampled Dirichlet activity and conditional positive-scale masses | fixed marker multiplier only | unsupported |
+| `mtblr_block_eigen()` | `bayesc`, factorized pattern-by-scale `bayesr` | sampled Dirichlet activity and conditional positive-scale masses | fixed marker multiplier only | unsupported |
 
 Unsupported combinations are required to fail
 before native execution and `.blr_model_capability_matrix()` was intended

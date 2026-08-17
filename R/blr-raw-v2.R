@@ -4,6 +4,7 @@
   scaled_effects = c("draw", "chain", "marker", "trait"),
   independent_trait_states = c("draw", "chain", "marker", "trait"),
   joint_states = c("draw", "chain", "marker"),
+  component_assignments = c("draw", "chain", "marker"),
   traitwise_activity = c("draw", "chain", "marker", "trait"),
   realised_effect_mean = c("marker", "trait"),
   latent_effect_mean = c("marker", "trait"),
@@ -15,6 +16,7 @@
   pleiotropic_probabilities = c("marker"),
   traitwise_component_assignment_probabilities = c("marker", "trait", "component"),
   joint_component_assignment_probabilities = c("marker", "component"),
+  joint_component_probability_parameter_mean = c("component"),
   traitwise_probability_parameter_mean = c("trait", "state"),
   traitwise_component_probability_parameter_mean = c("trait", "component"),
   traitwise_probability_parameters = c("draw", "chain", "trait", "state"),
@@ -94,12 +96,14 @@
     "traitwise_state_probabilities", "joint_state_probabilities",
     "activity_pattern_probabilities",
     "traitwise_component_assignment_probabilities",
-    "joint_component_assignment_probabilities", "marker_covariance_mean",
+    "joint_component_assignment_probabilities",
+    "joint_component_probability_parameter_mean", "marker_covariance_mean",
     "marker_variance_mean", "residual_covariance_mean",
     "residual_variance_mean", "uncertainty"),
   draws = c(
     "realised_effects", "latent_effects", "scaled_effects",
-    "independent_trait_states", "joint_states", "traitwise_activity",
+    "independent_trait_states", "joint_states", "component_assignments",
+    "traitwise_activity",
     "traitwise_probability_parameters", "joint_probability_parameters",
     "activity_pattern_parameters",
     "traitwise_component_probability_parameters",
@@ -108,7 +112,7 @@
     "regional_marker_covariance", "convergence"),
   final = c(
     "realised_effects", "latent_effects", "scaled_effects",
-    "independent_trait_states", "joint_states",
+    "independent_trait_states", "joint_states", "component_assignments",
     "traitwise_probability_parameters", "joint_probability_parameters",
     "activity_pattern_parameters",
     "traitwise_component_probability_parameters",
@@ -172,14 +176,22 @@ is_blr_raw_v2 <- function(x) {
     identical(as.integer(x$schema$version), 2L)
 }
 
-.blr_probability_array <- function(x, field, axis) {
+.blr_probability_array <- function(x, field, axis, subsimplex = FALSE) {
   if (is.null(x)) return(invisible(TRUE))
   if (any(x < -1e-12 | x > 1 + 1e-12)) {
     stop(field, " must lie in [0, 1].", call. = FALSE)
   }
   sums <- apply(x, setdiff(seq_along(dim(x)), axis), sum)
-  if (any(abs(sums - 1) > 1e-8)) {
-    stop(field, " must normalize over its probability axis.", call. = FALSE)
+  invalid_sum <- if (isTRUE(subsimplex)) {
+    sums < -1e-8 | sums > 1 + 1e-8
+  } else {
+    abs(sums - 1) > 1e-8
+  }
+  if (any(invalid_sum)) {
+    requirement <- if (isTRUE(subsimplex))
+      " must sum to a value in [0, 1] over its probability axis." else
+      " must normalize over its probability axis."
+    stop(field, requirement, call. = FALSE)
   }
   invisible(TRUE)
 }
@@ -379,16 +391,84 @@ is_blr_raw_v2 <- function(x) {
   invisible(TRUE)
 }
 
-.blr_validate_compact_transition_diagnostics <- function(raw) {
-  input <- raw$input
-  required <- identical(input$data$analysis_mode, "joint_multitrait") &&
+.blr_is_phase7_pattern_scale_policy <- function(input) {
+  identical(input$data$analysis_mode, "joint_multitrait") &&
+    identical(input$model$family, "bayesr") &&
     identical(input$model$probability_policy,
               "joint_activity_dirichlet") &&
-    identical(input$model$effect_storage_convention, "base_latent") &&
+    identical(input$model$effect_storage_convention, "scaled_latent") &&
+    identical(input$model$marker_scale_policy, "component_marker") &&
     identical(input$output$effect_draw_policy,
               "full_qualification_draws") &&
     identical(input$output$state_draw_policy,
+              "activity_pattern_and_positive_scale_draws")
+}
+
+.blr_validate_pattern_scale_component_probabilities <- function(
+    raw, tolerance = 1e-12) {
+  if (!.blr_is_phase7_pattern_scale_policy(raw$input)) {
+    return(invisible(TRUE))
+  }
+  patterns <- raw$input$prior$probability$activity_patterns
+  trait_ids <- raw$input$data$trait_ids
+  pattern_ids <- raw$input$model$state_space
+  .blr_validate_activity_patterns(patterns, trait_ids, pattern_ids)
+  null_pattern <- which(rowSums(patterns) == 0L)
+  if (length(null_pattern) != 1L) {
+    stop("Phase 7 component probabilities require exactly one declared all-zero activity pattern.",
+         call. = FALSE)
+  }
+  null_id <- pattern_ids[[null_pattern]]
+  pattern_probability <- raw$posterior$activity_pattern_probabilities
+  component_probability <-
+    raw$posterior$joint_component_assignment_probabilities
+  pattern_axis <- match(
+    "activity_pattern", attr(pattern_probability, "dim_axis_names"))
+  component_axis <- match(
+    "component", attr(component_probability, "dim_axis_names"))
+  if (is.na(pattern_axis) || is.na(component_axis)) {
+    stop("Phase 7 component-probability validation requires declared activity-pattern and component axes.",
+         call. = FALSE)
+  }
+  null_column <- match(
+    null_id, dimnames(pattern_probability)[[pattern_axis]])
+  component_ids <- raw$input$prior$probability$scale_ids
+  if (is.na(null_column) ||
+      !identical(dimnames(component_probability)[[component_axis]],
+                 component_ids)) {
+    stop("Phase 7 component-probability axes must align with the declared null pattern and positive-scale IDs.",
+         call. = FALSE)
+  }
+  if (!is.numeric(component_probability) ||
+      any(!is.finite(component_probability)) ||
+      any(component_probability < 0 | component_probability > 1)) {
+    stop("Phase 7 marker-by-component sub-probabilities must be finite numeric values in [0, 1].",
+         call. = FALSE)
+  }
+  expected_nonnull <- 1 - pattern_probability[, null_column, drop = TRUE]
+  observed_nonnull <- rowSums(component_probability)
+  if (any(abs(observed_nonnull - expected_nonnull) > tolerance)) {
+    stop(paste0(
+      "Phase 7 marker-by-component sub-probabilities must sum to one minus ",
+      "the declared null-pattern probability for every marker."),
+      call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+.blr_validate_compact_transition_diagnostics <- function(raw) {
+  input <- raw$input
+  common <- identical(input$data$analysis_mode, "joint_multitrait") &&
+    identical(input$model$probability_policy,
+              "joint_activity_dirichlet") &&
+    identical(input$output$effect_draw_policy,
+              "full_qualification_draws")
+  cheng_policy <- common &&
+    identical(input$model$effect_storage_convention, "base_latent") &&
+    identical(input$output$state_draw_policy,
               "joint_activity_pattern_draws")
+  phase7_policy <- .blr_is_phase7_pattern_scale_policy(input)
+  required <- cheng_policy || phase7_policy
   if (!required) return(invisible(TRUE))
 
   controls <- input$compute$operator_numerical_controls
@@ -407,7 +487,9 @@ is_blr_raw_v2 <- function(x) {
   }
   required_fields <- c(
     "transition_counts", "pattern_occupancy_counts",
-    "pattern_change_counts")
+    "pattern_change_counts",
+    if (phase7_policy) c(
+      "scale_occupancy_counts", "scale_change_counts") else character())
   qualification_names <- names(qualification)
   if (is.null(qualification_names) || anyNA(qualification_names) ||
       any(!nzchar(qualification_names))) {
@@ -477,6 +559,48 @@ is_blr_raw_v2 <- function(x) {
     stop("Pattern-change counts cannot exceed the number of marker-update events.",
          call. = FALSE)
   }
+  if (phase7_policy) {
+    component_ids <- input$prior$probability$scale_ids
+    scale_occupancy <- qualification[["scale_occupancy_counts"]]
+    if (!is.list(scale_occupancy) || is.data.frame(scale_occupancy) ||
+        length(scale_occupancy) != length(chain_ids) ||
+        !identical(names(scale_occupancy), chain_ids)) {
+      stop("diagnostics$qualification$scale_occupancy_counts must have the exact declared chain axis.",
+           call. = FALSE)
+    }
+    for (chain in seq_along(scale_occupancy)) {
+      validate_counts(
+        scale_occupancy[[chain]], component_ids,
+        paste0("diagnostics$qualification$scale_occupancy_counts[[",
+               chain_ids[[chain]], "]]"))
+    }
+    scale_changes <- qualification[["scale_change_counts"]]
+    validate_counts(
+      scale_changes, chain_ids,
+      "diagnostics$qualification$scale_change_counts")
+    patterns <- input$prior$probability$activity_patterns
+    .blr_validate_activity_patterns(
+      patterns, input$data$trait_ids, pattern_ids)
+    null_pattern <- which(rowSums(patterns) == 0L)
+    if (length(null_pattern) != 1L) {
+      stop("Phase 7 compact diagnostics require exactly one declared null activity pattern.",
+           call. = FALSE)
+    }
+    null_id <- pattern_ids[[null_pattern]]
+    expected_nonnull_events <- vapply(
+      occupancy,
+      function(value) expected_events - unname(value[[null_id]]),
+      numeric(1))
+    scale_totals <- vapply(scale_occupancy, sum, numeric(1))
+    if (any(scale_totals != expected_nonnull_events)) {
+      stop("Scale occupancy totals must equal the non-null marker-update events implied by pattern occupancy.",
+           call. = FALSE)
+    }
+    if (any(scale_changes > expected_events)) {
+      stop("Scale-change counts cannot exceed the number of marker-update events.",
+           call. = FALSE)
+    }
+  }
   invisible(TRUE)
 }
 
@@ -485,8 +609,15 @@ is_blr_raw_v2 <- function(x) {
   regions <- input$data$statistical_regions
   region_ids <- if (is.null(regions)) character() else unique(as.character(regions))
   state_ids <- input$model$state_space
-  component_ids <- if (input$model$family %in% c("bayesr", "bayesrc"))
-    state_ids else character()
+  component_ids <- if (identical(input$model$family, "bayesr") &&
+                       identical(input$model$probability_policy,
+                                 "joint_activity_dirichlet")) {
+    input$prior$probability$scale_ids
+  } else if (input$model$family %in% c("bayesr", "bayesrc")) {
+    state_ids
+  } else {
+    character()
+  }
   joint_ids <- if (identical(input$data$analysis_mode, "joint_multitrait"))
     state_ids else character()
   ids <- list(
@@ -705,6 +836,7 @@ validate_blr_raw_v2 <- function(raw) {
     scaled_effects = c("chain", "marker", "trait"),
     independent_trait_states = c("chain", "marker", "trait"),
     joint_states = c("chain", "marker"),
+    component_assignments = c("chain", "marker"),
     traitwise_probability_parameters = c("chain", "trait", "state"),
     joint_probability_parameters = c("chain", "joint_state"),
     activity_pattern_parameters = c("chain", "activity_pattern"),
@@ -752,6 +884,44 @@ validate_blr_raw_v2 <- function(raw) {
                                   maximum_state)
     .blr_validate_discrete_states(raw$final$joint_states,
                                   "final$joint_states", maximum_state)
+    if (identical(raw$input$model$family, "bayesr") &&
+        identical(raw$input$model$probability_policy,
+                  "joint_activity_dirichlet")) {
+      components <- raw$input$prior$probability$scale_ids
+      if (is.null(raw$draws$component_assignments) ||
+          is.null(raw$final$component_assignments) ||
+          is.null(raw$draws$joint_component_probability_parameters) ||
+          is.null(raw$final$joint_component_probability_parameters) ||
+          is.null(raw$posterior$joint_component_assignment_probabilities) ||
+          is.null(raw$posterior$joint_component_probability_parameter_mean)) {
+        stop("Pattern-by-scale BayesR requires component assignments, probabilities, and scale-simplex states.",
+             call. = FALSE)
+      }
+      for (entry in list(
+          list(raw$draws$component_assignments, raw$draws$joint_states,
+               "draws$component_assignments"),
+          list(raw$final$component_assignments, raw$final$joint_states,
+               "final$component_assignments"))) {
+        value <- entry[[1L]]; pattern <- entry[[2L]]
+        if (!is.numeric(value) || anyNA(value) || any(!is.finite(value)) ||
+            any(value != as.integer(value)) ||
+            any(value < -1L | value >= length(components)) ||
+            any((pattern == 0L) != (value == -1L))) {
+          stop(entry[[3L]],
+               " must use -1 exactly for null markers and a valid zero-based positive-scale index otherwise.",
+               call. = FALSE)
+        }
+      }
+      for (value in list(
+          raw$draws$joint_component_probability_parameters,
+          raw$final$joint_component_probability_parameters)) {
+        margin <- apply(value, seq_len(length(dim(value)) - 1L), sum)
+        if (any(abs(margin - 1) > 1e-12)) {
+          stop("Scale probability parameters must sum to one on the component axis.",
+               call. = FALSE)
+        }
+      }
+    }
     .blr_validate_discrete_states(raw$draws$traitwise_activity,
                                   "draws$traitwise_activity", 1L)
     if (identical(raw$input$model$probability_policy,
@@ -829,7 +999,11 @@ validate_blr_raw_v2 <- function(raw) {
       "posterior$traitwise_component_assignment_probabilities", 3L)
     .blr_probability_array(
       raw$posterior$joint_component_assignment_probabilities,
-      "posterior$joint_component_assignment_probabilities", 2L)
+      "posterior$joint_component_assignment_probabilities", 2L,
+      subsimplex = identical(raw$input$model$family, "bayesr") &&
+        identical(raw$input$model$probability_policy,
+                  "joint_activity_dirichlet"))
+    .blr_validate_pattern_scale_component_probabilities(raw)
     .blr_probability_array(raw$draws$traitwise_probability_parameters,
                            "draws$traitwise_probability_parameters", 4L)
     .blr_probability_array(raw$draws$joint_probability_parameters,

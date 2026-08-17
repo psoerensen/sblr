@@ -649,13 +649,13 @@ test_that("general-T compact transition diagnostics are validated exactly", {
   }, "requires transition_diagnostic_policy")
 })
 
-test_that("general-T kernel remains internal behind the Phase 5B public route", {
+test_that("general-T qualification kernel stays internal behind public MT routes", {
   expect_false(".blr_cheng_mt_bayesc_bed_qualification" %in%
                  getNamespaceExports("sblr"))
   expect_true(any(grepl("cheng_mt_bayesc_bed_qualification",
                         deparse(body(sblr::mtblr_bed)), fixed = TRUE)))
-  expect_false("mtblr_csr" %in% getNamespaceExports("sblr"))
-  expect_false("mtblr_block_eigen" %in% getNamespaceExports("sblr"))
+  expect_true("mtblr_csr" %in% getNamespaceExports("sblr"))
+  expect_true("mtblr_block_eigen" %in% getNamespaceExports("sblr"))
   expect_false(any(grepl("phase4a|cheng_mt_bayesc_bed_qualification",
                          deparse(body(sblr:::mtblr_csr)), fixed = FALSE)))
   expect_false(any(grepl("phase4a|cheng_mt_bayesc_bed_qualification",

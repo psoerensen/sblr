@@ -258,16 +258,22 @@
 
 .blr_phase6b_promote_summary_raw <- function(raw, interface, operator) {
   validate_blr_raw_v2(raw)
-  raw$input$schema$compatibility_id <- paste0(
-    "phase6b-public-summary-cheng-mt-", operator,
-    ";seed=unified_fnv_splitmix_v1;retention=postburn_divisible_v1")
+  family <- raw$input$model$family
+  raw$input$schema$compatibility_id <- if (identical(family, "bayesr")) {
+    paste0("phase7-public-summary-bayesr-mt-", operator,
+           ";seed=unified_fnv_splitmix_v1;retention=postburn_divisible_v1")
+  } else {
+    paste0("phase6b-public-summary-cheng-mt-", operator,
+           ";seed=unified_fnv_splitmix_v1;retention=postburn_divisible_v1")
+  }
   raw$diagnostics$qualification$status <- "publicly_supported"
   raw$diagnostics$qualification$implementation <-
-    "general_t_independent_summary_cheng_mt_bayesc"
+    paste0("general_t_independent_summary_cheng_mt_", family)
   raw$diagnostics$qualification$public_interface <- interface
   raw$schema$source_schema$name <- paste0(
-    "general_t_summary_cheng_mt_bayesc_", operator)
-  raw$schema$migration$status <- "public_phase6b"
+    "general_t_summary_cheng_mt_", family, "_", operator)
+  raw$schema$migration$status <- if (identical(family, "bayesr"))
+    "public_phase7c" else "public_phase6b"
   raw$schema$migration$legacy_mt_conversion <- FALSE
   validate_blr_raw_v2(raw)
   raw
@@ -281,13 +287,12 @@
     marker_covariance_prior_scale,
     initial_activity_pattern_probability,
     activity_pattern_dirichlet_prior,
+    component_scales, initial_scale_probability, scale_dirichlet_prior,
+    marker_multipliers,
     nit, nburn, nthin, seed, nchains, ncores, chain_seeds,
     keep_chains, convergence, convergence_control, keep_traces,
     memory_limit_bytes) {
-  if (!identical(method, "bayesc")) {
-    stop(interface, " supports only method = 'bayesc' under the corrected Cheng model.",
-         call. = FALSE)
-  }
+  method <- .blr_character_scalar(method, "method", c("bayesc", "bayesr"))
   convergence <- match.arg(convergence, c("core", "none"))
   if (!is.null(convergence_control)) {
     stop(interface, " requires convergence_control = NULL.", call. = FALSE)
@@ -309,6 +314,10 @@
     initial_activity_pattern_probability =
       initial_activity_pattern_probability,
     activity_pattern_dirichlet_prior = activity_pattern_dirichlet_prior,
+    method = method, component_scales = component_scales,
+    initial_scale_probability = initial_scale_probability,
+    scale_dirichlet_prior = scale_dirichlet_prior,
+    marker_multipliers = marker_multipliers,
     update_marker_covariance = TRUE,
     update_activity_pattern_probability = TRUE,
     burn_in_iterations = nburn, sampling_iterations = nit,

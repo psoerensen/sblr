@@ -994,7 +994,8 @@
 #' @param Glist One packed-BED genotype list shared by all traits.
 #' @param trait_ids Unique stable trait IDs in phenotype-column order.
 #' @param sample_ids Unique stable sample IDs in phenotype-row order.
-#' @param method Must be exactly `"bayesc"`.
+#' @param method Either `"bayesc"` or the factorized pattern-by-scale
+#'   `"bayesr"` target.
 #' @param residual_covariance_policy Either `"fixed_full"` or
 #'   `"sampled_full"`.
 #' @param fixed_residual_covariance Fixed full residual covariance for
@@ -1008,6 +1009,11 @@
 #'   the canonical complete binary activity-pattern order.
 #' @param activity_pattern_dirichlet_prior Optional positive Dirichlet prior
 #'   in the same activity-pattern order.
+#' @param component_scales,initial_scale_probability,scale_dirichlet_prior,marker_multipliers
+#'   BayesR positive variance multipliers, their optional initial and
+#'   Dirichlet probability vectors, and positive marker-specific $q_j$
+#'   multipliers. The null state is represented only by the null activity
+#'   pattern. These arguments must be `NULL` for `method = "bayesc"`.
 #' @param initial_residual_covariance Initial full residual covariance for
 #'   `sampled_full`; otherwise `NULL`.
 #' @param residual_covariance_prior_degrees_of_freedom Inverse-Wishart degrees
@@ -1046,6 +1052,8 @@ mtblr_bed <- function(
     marker_covariance_prior_scale,
     initial_activity_pattern_probability = NULL,
     activity_pattern_dirichlet_prior = NULL,
+    component_scales = NULL, initial_scale_probability = NULL,
+    scale_dirichlet_prior = NULL, marker_multipliers = NULL,
     initial_residual_covariance = NULL,
     residual_covariance_prior_degrees_of_freedom = NULL,
     residual_covariance_prior_scale = NULL,
@@ -1056,10 +1064,7 @@ mtblr_bed <- function(
     convergence_control = NULL, keep_traces = TRUE,
     memory_limit_bytes = 256 * 1024^2) {
   .blr_validate_exact_public_call(sys.call(), sys.function(), "mtblr_bed()")
-  if (!identical(method, "bayesc")) {
-    stop("mtblr_bed() supports only method = 'bayesc' under the corrected Cheng model.",
-         call. = FALSE)
-  }
+  method <- .blr_character_scalar(method, "method", c("bayesc", "bayesr"))
   residual_covariance_policy <- .blr_character_scalar(
     residual_covariance_policy, "residual_covariance_policy",
     c("fixed_full", "sampled_full"))
@@ -1103,6 +1108,10 @@ mtblr_bed <- function(
     initial_activity_pattern_probability =
       initial_activity_pattern_probability,
     activity_pattern_dirichlet_prior = activity_pattern_dirichlet_prior,
+    method = method, component_scales = component_scales,
+    initial_scale_probability = initial_scale_probability,
+    scale_dirichlet_prior = scale_dirichlet_prior,
+    marker_multipliers = marker_multipliers,
     update_marker_covariance = TRUE,
     update_activity_pattern_probability = TRUE,
     burn_in_iterations = nburn, sampling_iterations = nit,

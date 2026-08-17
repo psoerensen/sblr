@@ -49,6 +49,11 @@ Files:
 - `mtblr_summary_provider_reference.R`: independent dense Phase 6A marker
   conditional, residual-score, provider aggregation, and additive-likelihood
   calculations used by focused qualification tests.
+- `mtblr_pattern_scale_reference.R`: independent Phase 7 factorized
+  pattern-by-scale enumeration, Gaussian conditional, Schur completion, and
+  scale-removed covariance statistic;
+- `test_pattern_scale_reference.R`: deterministic single-null, one-scale
+  Cheng, univariate BayesR, and covariance-statistic gates.
 
 From the repository root, run:
 
@@ -59,6 +64,7 @@ Rscript tests/research/mtblr_covariance/test_pattern_reference_cases.R
 Rscript tests/research/mtblr_covariance/compare_pattern_samplers.R
 Rscript tests/research/mtblr_covariance/test_provider_operators.R
 Rscript tests/research/mtblr_covariance/test_sampled_residual.R
+Rscript tests/research/mtblr_covariance/test_pattern_scale_reference.R
 ```
 
 Only base R is required. Seeds are explicit. The inverse-Wishart convention is

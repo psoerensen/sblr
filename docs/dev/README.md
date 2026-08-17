@@ -50,6 +50,7 @@ These are the normal starting set before changing the BLR framework.
 | [`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md) | public promotion of corrected general-$T$ Cheng MT-BayesC$\Pi$ through `mtblr_bed()`, with legacy hybrid public dispatch retired |
 | [`blr_phase6a_summary_mt_checkpoint.md`](blr_phase6a_summary_mt_checkpoint.md) | qualification-only general-$T$ independent-summary Cheng likelihood with heterogeneous CSR/block-eigen providers and fixed provider residual scales |
 | [`blr_phase6b_public_summary_mt_checkpoint.md`](blr_phase6b_public_summary_mt_checkpoint.md) | public `mtblr_csr()`/`mtblr_block_eigen()` promotion through the single corrected Phase 6A kernel and removal of legacy summary-hybrid registrations |
+| [`blr_phase7_pattern_scale_mt_checkpoint.md`](blr_phase7_pattern_scale_mt_checkpoint.md) | factorized pattern-by-scale MT-BayesR design, qualification, and public BED/CSR/block-eigen promotion |
 | [`blr_test_ownership.md`](blr_test_ownership.md) | permanent tests and validation tiers |
 | [`blr_block_eigen_contract.md`](blr_block_eigen_contract.md) | current scalar retained/dense block-eigen route contract |
 | [`stblr_low_rank_operator_design.md`](stblr_low_rank_operator_design.md) | retained low-rank scalar operator mathematics |

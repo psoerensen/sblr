@@ -16,6 +16,10 @@ mtblr_block_eigen(
   marker_covariance_prior_scale,
   initial_activity_pattern_probability = NULL,
   activity_pattern_dirichlet_prior = NULL,
+  component_scales = NULL,
+  initial_scale_probability = NULL,
+  scale_dirichlet_prior = NULL,
+  marker_multipliers = NULL,
   nit = 1000L,
   nburn = 500L,
   nthin = 1L,
@@ -49,7 +53,8 @@ declaration, provenance, and `blocks`. Each block contains `marker_ids`,
 
 \item{trait_ids}{Ordered unique trait identifiers.}
 
-\item{method}{Model identifier. Phase 6B supports only `"bayesc"`.}
+\item{method}{Model identifier, either `"bayesc"` or the factorized
+pattern-by-scale `"bayesr"` target.}
 
 \item{initial_marker_covariance}{Initial finite SPD marker covariance
 matrix, ordered by `trait_ids`.}
@@ -65,6 +70,19 @@ vector over the complete binary activity patterns.}
 
 \item{activity_pattern_dirichlet_prior}{Optional positive Dirichlet prior
 vector over the complete binary activity patterns.}
+
+\item{component_scales}{Positive, unique, strictly increasing BayesR
+variance multipliers. The single null state is represented by the null
+activity pattern and must not be included here.}
+
+\item{initial_scale_probability}{Optional initial simplex over positive
+`component_scales`, conditional on a non-null activity pattern.}
+
+\item{scale_dirichlet_prior}{Optional positive Dirichlet prior over the
+positive scales.}
+
+\item{marker_multipliers}{Optional positive marker-specific variance
+multipliers $q_j$ in global marker order.}
 
 \item{nit}{Number of post-burn-in sampling iterations.}
 

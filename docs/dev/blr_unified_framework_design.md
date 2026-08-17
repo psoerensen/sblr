@@ -52,6 +52,9 @@ deferred. See
 [the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 See also [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
 See also [the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
+Phase 7 adds a factorized pattern-by-scale BayesR policy to the same BED and
+summary kernels; see
+[the Phase 7 checkpoint](blr_phase7_pattern_scale_mt_checkpoint.md).
 A capability described only as proposed remains unimplemented; current support
 is determined by executable public dispatch, source, schemas, tests, and
 maintained current contracts.
@@ -1593,9 +1596,9 @@ The route-level boundary trace is:
 | ST block eigen | `stblr_block_eigen()` | block-eigen adapters ending in scalar CSR/BayesR/SBayesRC cores | same scalar shapes plus block diagnostics | Retention follows the dispatched scalar kernel | Preserve kernel-specific legacy descriptor |
 | ST BED | `stblr_bed()` | scheduled chain BayesC/BayesR/BayesRC boundaries and BED cores | marker × trait summaries; full scientific traces; unthinned post-burn convergence | Same first-post-burn summary rule, separate BED seed implementation | Preserve `st_bed_v1` and compare backend reductions |
 | ST annotation | `stblr_csr_annot()` plus registered annotation routes | `stblr_cpg_omp_csr_annot()`, group/prior/log-variance/SBayesRC boundaries | common marker shapes plus provider-specific low-dimensional traces | Common convergence contract, heterogeneous provider trace retention | Record each provider trace descriptor explicitly |
-| MT CSR | `mtblr_csr()` | `mtblr_phase6a_summary_cheng_internal()`, shared summary Cheng kernel | raw-v2 general-$T$ effects, patterns, $V_b$, provider diagnostics; prediction/$V_e$ fields `NULL` | Phase 3 seed and retention contracts | Public Phase 6B corrected Cheng route |
-| MT block eigen | `mtblr_block_eigen()` | same Phase 6A summary Cheng kernel with factorized adapter | same raw-v2 axes plus provider-local block/rank metadata | Same chain transition as CSR for its declared operator | Public Phase 6B corrected Cheng route |
-| MT BED | `mtblr_bed()` | `mtblr_phase4a_cheng_bed_internal()`, corrected general-$T$ Cheng kernel | raw-v2 general-$T$ effects, patterns, $V_b$, fixed or sampled $V_e$, predictions | Phase 3 seed and retention contracts | Public Phase 5B corrected Cheng route |
+| MT CSR | `mtblr_csr()` | shared summary Cheng/pattern-by-scale kernel | raw-v2 general-$T$ effects, patterns, optional scales, $V_b$, provider diagnostics; prediction/$V_e$ fields `NULL` | Phase 3 seed and retention contracts | Public BayesC and Phase 7 BayesR |
+| MT block eigen | `mtblr_block_eigen()` | same shared summary kernel with block-eigen adapter | same raw-v2 axes plus provider-local block/rank metadata | Same chain transition as CSR for its declared operator | Public BayesC and Phase 7 BayesR |
+| MT BED | `mtblr_bed()` | corrected general-$T$ Cheng/pattern-by-scale kernel | raw-v2 general-$T$ effects, patterns, optional scales, $V_b$, fixed or sampled $V_e$, predictions | Phase 3 seed and retention contracts | Public BayesC and Phase 7 BayesR |
 
 Current raw marker matrices are $M\times T$. Current full scientific traces are
 stored as iteration-by-trait objects, often including burn-in; formal

@@ -890,7 +890,10 @@
     initial_residual_covariance = NULL,
     residual_covariance_prior_df = NULL,
     residual_covariance_prior_scale = NULL,
-    memory_limit_bytes = 256 * 1024^2) {
+    memory_limit_bytes = 256 * 1024^2,
+    method = "bayesc", component_scales = NULL,
+    initial_scale_probability = NULL, scale_dirichlet_prior = NULL,
+    marker_multipliers = NULL) {
   if (!is.list(Glist) || is.null(Glist$bedfiles)) {
     stop("Phase 4a requires one packed-BED Glist.", call. = FALSE)
   }
@@ -999,6 +1002,9 @@
     stop("Phase 4a selected allele frequencies must lie inside (0, 1).",
          call. = FALSE)
   }
+  scale <- .blr_phase7_scale_spec(
+    method, dat$variable_names, component_scales,
+    initial_scale_probability, scale_dirichlet_prior, marker_multipliers)
 
   retained <- .blr_retention_plan(
     burn_in_iterations, sampling_iterations, thin_interval,
@@ -1011,7 +1017,15 @@
     sampled_residual = sampled_residual, keep_traces = keep_traces,
     source_sample_count = dat$n,
     selected_rows_used = !is.null(dat$rows),
-    memory_limit_bytes = memory_limit_bytes, enforce = TRUE)
+    memory_limit_bytes = memory_limit_bytes, enforce = !scale$enabled)
+  memory_estimate <- .blr_phase7_memory_adjust(
+    memory_estimate, dat$m, length(trait_ids), length(scale$scales),
+    chains, retained$retained_draws, sampling_iterations, keep_traces,
+    memory_limit_bytes, enforce = TRUE, activity_patterns = patterns,
+    concurrent_chains = min(chains, cores),
+    workspace_enabled = scale$enabled && !(
+      length(scale$scales) == 1L && scale$scales[[1L]] == 1 &&
+      all(scale$marker_multipliers == 1)))
 
   prepared <- .blr_phase4a_bed_collection(
     dat, Glist, phenotype, trait_ids,
@@ -1058,13 +1072,22 @@
     execution_contract = execution_contract,
     native_memory_limit_bytes = if (is.null(memory_estimate$limit_bytes)) {
       Inf
-    } else memory_estimate$limit_bytes)
-  .blr_phase4a_raw(
+    } else memory_estimate$limit_bytes,
+    component_scales = unname(scale$scales),
+    initial_scale_probability = unname(scale$initial),
+    scale_dirichlet_prior = unname(scale$prior),
+    marker_multipliers = unname(scale$marker_multipliers))
+  raw <- .blr_phase4a_raw(
     native, spec, residual_covariance_policy, fixed_residual_covariance,
     initial_residual_covariance, residual_covariance_prior_df,
     residual_covariance_prior_scale, initial_marker_covariance,
     marker_covariance_prior_df, marker_covariance_prior_scale,
     dirichlet_prior, keep_traces)
+  if (scale$enabled) {
+    raw$input <- .blr_phase7_enrich_spec(raw$input, scale)
+    raw <- .blr_phase7_enrich_raw(raw, native, scale, keep_traces)
+  }
+  raw
 }
 
 # Maintained qualification spelling for the generalized Cheng implementation.
@@ -1074,17 +1097,28 @@
   .blr_phase4a_cheng_mt_bed(...)
 }
 
+.blr_pattern_scale_mt_bayesr_bed_qualification <- function(...) {
+  .blr_phase4a_cheng_mt_bed(..., method = "bayesr")
+}
+
 .blr_phase5b_promote_raw <- function(raw) {
   validate_blr_raw_v2(raw)
-  raw$input$schema$compatibility_id <- paste0(
-    "phase5b-public-cheng-mt;seed=unified_fnv_splitmix_v1;",
-    "retention=postburn_divisible_v1")
+  family <- raw$input$model$family
+  raw$input$schema$compatibility_id <- if (identical(family, "bayesr")) {
+    paste0("phase7-public-bayesr-cheng-mt;seed=unified_fnv_splitmix_v1;",
+           "retention=postburn_divisible_v1")
+  } else {
+    paste0("phase5b-public-cheng-mt;seed=unified_fnv_splitmix_v1;",
+           "retention=postburn_divisible_v1")
+  }
   raw$diagnostics$qualification$status <- "publicly_supported"
   raw$diagnostics$qualification$implementation <-
-    "general_t_cheng_mt_bayesc_bed"
+    paste0("general_t_cheng_mt_", family, "_bed")
   raw$diagnostics$qualification$public_interface <- "mtblr_bed"
-  raw$schema$source_schema$name <- "general_t_cheng_mt_bayesc_bed"
-  raw$schema$migration$status <- "public_phase5b"
+  raw$schema$source_schema$name <- paste0(
+    "general_t_cheng_mt_", family, "_bed")
+  raw$schema$migration$status <- if (identical(family, "bayesr"))
+    "public_phase7c" else "public_phase5b"
   raw$schema$migration$legacy_mt_conversion <- FALSE
   validate_blr_raw_v2(raw)
   raw
@@ -1264,8 +1298,19 @@
       providers = spec$data$providers),
     diagnostics = raw$diagnostics,
     memory_estimate = raw$diagnostics$memory)
+  if (identical(spec$model$family, "bayesr")) {
+    fit[c("component_assignments", "component_probabilities",
+          "component_scales", "omega_trace", "omega_final", "omega_mean")] <-
+      list(
+        raw$draws$component_assignments,
+        raw$posterior$joint_component_assignment_probabilities,
+        raw$input$prior$component_multipliers,
+        raw$draws$joint_component_probability_parameters,
+        raw$final$joint_component_probability_parameters,
+        raw$posterior$joint_component_probability_parameter_mean)
+  }
   fit <- .blr_finalize_fit(
-    fit, "mtblr", "bayesc", operator, data = fit$data,
+    fit, "mtblr", spec$model$family, operator, data = fit$data,
     diagnostics = raw$diagnostics, memory_estimate = raw$diagnostics$memory)
   attr(fit, "blr_raw") <- raw
   attr(fit, "blr_resolved_spec") <- spec

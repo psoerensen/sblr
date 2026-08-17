@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <numeric>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -216,14 +217,19 @@ struct ChainResult {
   std::vector<std::vector<int>> state_draws;
   std::vector<arma::mat> covariance_draws;
   std::vector<sblr::phase4a::ProbabilityVector> probability_draws;
+  std::vector<std::vector<int>> component_draws;
+  std::vector<sblr::phase4a::ProbabilityVector> scale_probability_draws;
   std::vector<arma::mat> convergence_covariance;
   std::vector<sblr::phase4a::ProbabilityVector> convergence_probability;
+  std::vector<sblr::phase4a::ProbabilityVector> convergence_scale_probability;
   std::vector<int> convergence_active_count;
   arma::mat final_realised;
   arma::mat final_latent;
   std::vector<int> final_state;
   arma::mat final_covariance;
   sblr::phase4a::ProbabilityVector final_probability;
+  std::vector<int> final_component;
+  sblr::phase4a::ProbabilityVector final_scale_probability;
   std::vector<std::vector<double>> final_provider_residual_score;
   arma::mat last_covariance_statistic;
   arma::mat last_covariance_scale;
@@ -231,6 +237,8 @@ struct ChainResult {
   int last_active_count = 0;
   std::vector<std::uint64_t> pattern_occupancy_count;
   std::uint64_t pattern_change_count = 0u;
+  std::vector<std::uint64_t> scale_occupancy_count;
+  std::uint64_t scale_change_count = 0u;
 };
 
 inline ChainResult run_chain(
@@ -250,7 +258,9 @@ inline ChainResult run_chain(
     int burn_in_iterations,
     int sampling_iterations,
     const std::vector<int>& retained_transition_indices,
-    std::uint32_t seed) {
+    std::uint32_t seed,
+    const sblr::phase4a::ScaleMixture& scale_mixture =
+      sblr::phase4a::ScaleMixture()) {
   sblr::phase4a::validate_activity_patterns(patterns, trait_count);
   if (marker_count == 0u || marker_providers.size() != marker_count ||
       providers.empty() || initial_probability.size() != patterns.size() ||
@@ -266,11 +276,32 @@ inline ChainResult run_chain(
     initial_marker_covariance, trait_count, "initial marker covariance");
   const arma::mat covariance_prior_scale = sblr::phase4a::require_spd(
     prior_scale, trait_count, "marker-covariance prior scale");
+  sblr::phase4a::validate_scale_mixture(scale_mixture, marker_count);
+  const bool scaled = scale_mixture.enabled;
+  const bool cheng_reduction =
+      scaled && scale_mixture.scales.size() == 1u &&
+      scale_mixture.scales[0] == 1.0 &&
+      std::all_of(scale_mixture.marker_multiplier.begin(),
+                  scale_mixture.marker_multiplier.end(),
+                  [](double value) { return value == 1.0; });
   arma::mat realised(marker_count, trait_count, arma::fill::zeros);
   arma::mat latent(marker_count, trait_count);
   latent.fill(std::numeric_limits<double>::quiet_NaN());
+  arma::mat base;
+  if (scaled) {
+    base.set_size(marker_count, trait_count);
+    base.fill(std::numeric_limits<double>::quiet_NaN());
+  }
   std::vector<int> state(marker_count, 0);
+  std::vector<int> component(marker_count, -1);
   sblr::phase4a::ProbabilityVector probability = initial_probability;
+  sblr::phase4a::ProbabilityVector scale_probability =
+    scale_mixture.probability;
+  if (scaled) {
+    const double total = std::accumulate(
+      scale_probability.begin(), scale_probability.end(), 0.0);
+    for (double& value : scale_probability) value /= total;
+  }
   std::vector<std::vector<double>> residual(providers.size());
   for (std::size_t provider = 0u; provider < providers.size(); ++provider) {
     residual[provider] = providers[provider].score;
@@ -295,10 +326,18 @@ inline ChainResult run_chain(
   out.state_draws.resize(retained_transition_indices.size());
   out.covariance_draws.resize(retained_transition_indices.size());
   out.probability_draws.resize(retained_transition_indices.size());
+  if (scaled) {
+    out.component_draws.resize(retained_transition_indices.size());
+    out.scale_probability_draws.resize(retained_transition_indices.size());
+  }
   out.convergence_covariance.reserve(static_cast<std::size_t>(sampling_iterations));
   out.convergence_probability.reserve(static_cast<std::size_t>(sampling_iterations));
+  if (scaled) out.convergence_scale_probability.reserve(
+    static_cast<std::size_t>(sampling_iterations));
   out.convergence_active_count.reserve(static_cast<std::size_t>(sampling_iterations));
   out.pattern_occupancy_count.assign(patterns.size(), 0u);
+  if (scaled) out.scale_occupancy_count.assign(
+    scale_mixture.scales.size(), 0u);
 
   const int total_iterations = burn_in_iterations + sampling_iterations;
   for (int iteration = 0; iteration < total_iterations; ++iteration) {
@@ -320,30 +359,69 @@ inline ChainResult run_chain(
         diagonal(static_cast<arma::uword>(provider.trait)) +=
           resource.diag(reference.local_marker) / provider.residual_scale;
       }
-      const sblr::phase4a::PatternKernel conditional = pattern_kernel(
-        score, diagonal, marker_covariance, probability, patterns);
-      const std::size_t new_state = sblr::phase4a::draw_pattern(
-        conditional.probability, rng);
+      std::size_t new_state = 0u;
+      int new_component = -1;
+      arma::vec active;
+      if (!scaled || cheng_reduction) {
+        const sblr::phase4a::PatternKernel conditional = pattern_kernel(
+          score, diagonal, marker_covariance, probability, patterns);
+        new_state = sblr::phase4a::draw_pattern(conditional.probability, rng);
+        if (new_state != 0u) {
+          active = sblr::phase4a::draw_active(
+            conditional.active_mean[new_state],
+            conditional.active_covariance[new_state], rng);
+        }
+      } else {
+        arma::mat likelihood_precision(trait_count, trait_count,
+                                       arma::fill::zeros);
+        likelihood_precision.diag() = diagonal;
+        const sblr::phase4a::PatternScaleKernel conditional =
+          sblr::phase4a::pattern_scale_kernel_information(
+            score, likelihood_precision, marker_covariance, probability,
+            scale_probability, scale_mixture.scales,
+            scale_mixture.marker_multiplier[marker], patterns);
+        const std::size_t joint = sblr::phase4a::draw_pattern(
+          conditional.probability, rng);
+        new_state = conditional.pattern[joint];
+        new_component = conditional.scale[joint];
+        if (new_state != 0u) {
+          active = sblr::phase4a::draw_active(
+            conditional.active_mean[joint],
+            conditional.active_covariance[joint], rng);
+        }
+      }
       state[marker] = static_cast<int>(new_state);
+      const int previous_component = component[marker];
+      if (cheng_reduction && new_state != 0u) new_component = 0;
+      component[marker] = new_component;
       ++out.pattern_occupancy_count[new_state];
+      if (new_component >= 0) {
+        ++out.scale_occupancy_count[static_cast<std::size_t>(new_component)];
+      }
       if (static_cast<std::size_t>(previous_state) != new_state) {
         ++out.pattern_change_count;
       }
+      if (previous_component != new_component) ++out.scale_change_count;
       if (new_state == 0u) {
         realised.row(static_cast<arma::uword>(marker)).zeros();
         latent.row(static_cast<arma::uword>(marker)).fill(
           std::numeric_limits<double>::quiet_NaN());
+        if (scaled) {
+          base.row(static_cast<arma::uword>(marker)).fill(
+            std::numeric_limits<double>::quiet_NaN());
+        }
       } else {
-        const arma::vec active = sblr::phase4a::draw_active(
-          conditional.active_mean[new_state],
-          conditional.active_covariance[new_state], rng);
         const arma::rowvec completed = sblr::phase4a::complete_latent(
           patterns[new_state], active, marker_covariance, rng);
-        latent.row(static_cast<arma::uword>(marker)) = completed;
+        if (scaled) base.row(static_cast<arma::uword>(marker)) = completed;
+        const double root = scaled ? std::sqrt(
+          scale_mixture.scales[static_cast<std::size_t>(new_component)] *
+          scale_mixture.marker_multiplier[marker]) : 1.0;
+        latent.row(static_cast<arma::uword>(marker)) = root * completed;
         for (std::size_t trait = 0u; trait < trait_count; ++trait) {
           realised(static_cast<arma::uword>(marker),
                    static_cast<arma::uword>(trait)) =
-            patterns[new_state][trait] * completed(trait);
+            patterns[new_state][trait] * root * completed(trait);
         }
       }
       for (const ProviderMarkerReference& reference : marker_providers[marker]) {
@@ -365,12 +443,25 @@ inline ChainResult run_chain(
       }
       probability = sblr::phase4a::draw_dirichlet(shape, rng);
     }
+    if (scaled && scale_mixture.scales.size() > 1u) {
+      sblr::phase4a::ProbabilityVector shape(
+        scale_mixture.scales.size(), 0.0);
+      for (std::size_t index = 0u; index < shape.size(); ++index) {
+        shape[index] = scale_mixture.dirichlet_prior[index];
+      }
+      for (int value : component) {
+        if (value >= 0) ++shape[static_cast<std::size_t>(value)];
+      }
+      scale_probability = sblr::phase4a::draw_dirichlet(shape, rng);
+    }
 
     arma::mat statistic(trait_count, trait_count, arma::fill::zeros);
     int active_count = 0;
     for (std::size_t marker = 0u; marker < marker_count; ++marker) {
       if (state[marker] == 0) continue;
-      const arma::rowvec value = latent.row(static_cast<arma::uword>(marker));
+      const arma::rowvec value = scaled ?
+        base.row(static_cast<arma::uword>(marker)) :
+        latent.row(static_cast<arma::uword>(marker));
       statistic += value.t() * value;
       ++active_count;
     }
@@ -390,6 +481,8 @@ inline ChainResult run_chain(
       const int post_burn = iteration - burn_in_iterations + 1;
       out.convergence_covariance.push_back(marker_covariance);
       out.convergence_probability.push_back(probability);
+      if (scaled) out.convergence_scale_probability.push_back(
+        scale_probability);
       out.convergence_active_count.push_back(active_count);
       const int retained = retained_position[static_cast<std::size_t>(post_burn)];
       if (retained >= 0) {
@@ -399,6 +492,10 @@ inline ChainResult run_chain(
         out.state_draws[index] = state;
         out.covariance_draws[index] = marker_covariance;
         out.probability_draws[index] = probability;
+        if (scaled) {
+          out.component_draws[index] = component;
+          out.scale_probability_draws[index] = scale_probability;
+        }
       }
     }
   }
@@ -407,6 +504,8 @@ inline ChainResult run_chain(
   out.final_state = state;
   out.final_covariance = marker_covariance;
   out.final_probability = probability;
+  out.final_component = component;
+  out.final_scale_probability = scale_probability;
   out.final_provider_residual_score = std::move(residual);
   return out;
 }

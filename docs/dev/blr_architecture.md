@@ -16,7 +16,9 @@ unreachable.
 
 Current annotation-informed effect-variance LV backends are available only for
 ST CSR and retained block eigen through `annotation_model = "log_variance"`
-with BayesC or BayesR. BED-LV and MT-LV are proposed work, not current routes.
+with BayesC or BayesR. Phase 7 adds factorized pattern-by-scale MT-BayesR to
+all three public MT operators through the same corrected kernels. BED-LV and
+MT-LV are proposed work, not current routes.
 Current and proposed annotation-provider ownership is audited in
 [the architecture audit](annotation_prior_architecture_audit.md),
 [capability matrix](annotation_prior_architecture_matrix.md), and

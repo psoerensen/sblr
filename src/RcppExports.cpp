@@ -85,8 +85,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // mtblr_phase4a_cheng_bed_internal
-Rcpp::List mtblr_phase4a_cheng_bed_internal(Rcpp::CharacterVector bed_files, int source_sample_count, Rcpp::List selected_columns, Rcpp::Nullable<Rcpp::IntegerVector> selected_rows, Rcpp::NumericVector allele_frequency, Rcpp::NumericMatrix phenotype, Rcpp::IntegerMatrix activity_patterns, arma::mat initial_residual_covariance, arma::mat initial_marker_covariance, Rcpp::NumericVector initial_activity_pattern_probability, Rcpp::NumericVector activity_pattern_dirichlet_prior, double marker_covariance_prior_df, arma::mat marker_covariance_prior_scale, bool update_marker_covariance, bool update_activity_pattern_probability, bool update_residual_covariance, double residual_covariance_prior_df, arma::mat residual_covariance_prior_scale, int burn_in_iterations, int sampling_iterations, int chains, int cores, Rcpp::Nullable<Rcpp::List> execution_contract, double native_memory_limit_bytes);
-RcppExport SEXP _sblr_mtblr_phase4a_cheng_bed_internal(SEXP bed_filesSEXP, SEXP source_sample_countSEXP, SEXP selected_columnsSEXP, SEXP selected_rowsSEXP, SEXP allele_frequencySEXP, SEXP phenotypeSEXP, SEXP activity_patternsSEXP, SEXP initial_residual_covarianceSEXP, SEXP initial_marker_covarianceSEXP, SEXP initial_activity_pattern_probabilitySEXP, SEXP activity_pattern_dirichlet_priorSEXP, SEXP marker_covariance_prior_dfSEXP, SEXP marker_covariance_prior_scaleSEXP, SEXP update_marker_covarianceSEXP, SEXP update_activity_pattern_probabilitySEXP, SEXP update_residual_covarianceSEXP, SEXP residual_covariance_prior_dfSEXP, SEXP residual_covariance_prior_scaleSEXP, SEXP burn_in_iterationsSEXP, SEXP sampling_iterationsSEXP, SEXP chainsSEXP, SEXP coresSEXP, SEXP execution_contractSEXP, SEXP native_memory_limit_bytesSEXP) {
+Rcpp::List mtblr_phase4a_cheng_bed_internal(Rcpp::CharacterVector bed_files, int source_sample_count, Rcpp::List selected_columns, Rcpp::Nullable<Rcpp::IntegerVector> selected_rows, Rcpp::NumericVector allele_frequency, Rcpp::NumericMatrix phenotype, Rcpp::IntegerMatrix activity_patterns, arma::mat initial_residual_covariance, arma::mat initial_marker_covariance, Rcpp::NumericVector initial_activity_pattern_probability, Rcpp::NumericVector activity_pattern_dirichlet_prior, double marker_covariance_prior_df, arma::mat marker_covariance_prior_scale, bool update_marker_covariance, bool update_activity_pattern_probability, bool update_residual_covariance, double residual_covariance_prior_df, arma::mat residual_covariance_prior_scale, int burn_in_iterations, int sampling_iterations, int chains, int cores, Rcpp::Nullable<Rcpp::List> execution_contract, double native_memory_limit_bytes, Rcpp::Nullable<Rcpp::NumericVector> component_scales, Rcpp::Nullable<Rcpp::NumericVector> initial_scale_probability, Rcpp::Nullable<Rcpp::NumericVector> scale_dirichlet_prior, Rcpp::Nullable<Rcpp::NumericVector> marker_multipliers);
+RcppExport SEXP _sblr_mtblr_phase4a_cheng_bed_internal(SEXP bed_filesSEXP, SEXP source_sample_countSEXP, SEXP selected_columnsSEXP, SEXP selected_rowsSEXP, SEXP allele_frequencySEXP, SEXP phenotypeSEXP, SEXP activity_patternsSEXP, SEXP initial_residual_covarianceSEXP, SEXP initial_marker_covarianceSEXP, SEXP initial_activity_pattern_probabilitySEXP, SEXP activity_pattern_dirichlet_priorSEXP, SEXP marker_covariance_prior_dfSEXP, SEXP marker_covariance_prior_scaleSEXP, SEXP update_marker_covarianceSEXP, SEXP update_activity_pattern_probabilitySEXP, SEXP update_residual_covarianceSEXP, SEXP residual_covariance_prior_dfSEXP, SEXP residual_covariance_prior_scaleSEXP, SEXP burn_in_iterationsSEXP, SEXP sampling_iterationsSEXP, SEXP chainsSEXP, SEXP coresSEXP, SEXP execution_contractSEXP, SEXP native_memory_limit_bytesSEXP, SEXP component_scalesSEXP, SEXP initial_scale_probabilitySEXP, SEXP scale_dirichlet_priorSEXP, SEXP marker_multipliersSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -114,7 +114,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type cores(coresSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::List> >::type execution_contract(execution_contractSEXP);
     Rcpp::traits::input_parameter< double >::type native_memory_limit_bytes(native_memory_limit_bytesSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_phase4a_cheng_bed_internal(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, activity_patterns, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type component_scales(component_scalesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type initial_scale_probability(initial_scale_probabilitySEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type scale_dirichlet_prior(scale_dirichlet_priorSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type marker_multipliers(marker_multipliersSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_phase4a_cheng_bed_internal(bed_files, source_sample_count, selected_columns, selected_rows, allele_frequency, phenotype, activity_patterns, initial_residual_covariance, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, update_residual_covariance, residual_covariance_prior_df, residual_covariance_prior_scale, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes, component_scales, initial_scale_probability, scale_dirichlet_prior, marker_multipliers));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -133,9 +137,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mtblr_phase7_pattern_scale_contract_internal
+Rcpp::List mtblr_phase7_pattern_scale_contract_internal(Rcpp::NumericVector information_score, arma::mat likelihood_precision, arma::mat marker_covariance, Rcpp::NumericVector activity_pattern_probability, Rcpp::IntegerMatrix activity_patterns, Rcpp::NumericVector component_scales, Rcpp::NumericVector scale_probability, double marker_multiplier);
+RcppExport SEXP _sblr_mtblr_phase7_pattern_scale_contract_internal(SEXP information_scoreSEXP, SEXP likelihood_precisionSEXP, SEXP marker_covarianceSEXP, SEXP activity_pattern_probabilitySEXP, SEXP activity_patternsSEXP, SEXP component_scalesSEXP, SEXP scale_probabilitySEXP, SEXP marker_multiplierSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type information_score(information_scoreSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type likelihood_precision(likelihood_precisionSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type marker_covariance(marker_covarianceSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type activity_pattern_probability(activity_pattern_probabilitySEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerMatrix >::type activity_patterns(activity_patternsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type component_scales(component_scalesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type scale_probability(scale_probabilitySEXP);
+    Rcpp::traits::input_parameter< double >::type marker_multiplier(marker_multiplierSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_phase7_pattern_scale_contract_internal(information_score, likelihood_precision, marker_covariance, activity_pattern_probability, activity_patterns, component_scales, scale_probability, marker_multiplier));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mtblr_phase6a_summary_cheng_internal
-Rcpp::List mtblr_phase6a_summary_cheng_internal(Rcpp::List operator_resources, Rcpp::List likelihood_providers, int global_marker_count, int trait_count, Rcpp::IntegerMatrix activity_patterns, arma::mat initial_marker_covariance, Rcpp::NumericVector initial_activity_pattern_probability, Rcpp::NumericVector activity_pattern_dirichlet_prior, double marker_covariance_prior_df, arma::mat marker_covariance_prior_scale, bool update_marker_covariance, bool update_activity_pattern_probability, int burn_in_iterations, int sampling_iterations, int chains, int cores, Rcpp::Nullable<Rcpp::List> execution_contract, double native_memory_limit_bytes);
-RcppExport SEXP _sblr_mtblr_phase6a_summary_cheng_internal(SEXP operator_resourcesSEXP, SEXP likelihood_providersSEXP, SEXP global_marker_countSEXP, SEXP trait_countSEXP, SEXP activity_patternsSEXP, SEXP initial_marker_covarianceSEXP, SEXP initial_activity_pattern_probabilitySEXP, SEXP activity_pattern_dirichlet_priorSEXP, SEXP marker_covariance_prior_dfSEXP, SEXP marker_covariance_prior_scaleSEXP, SEXP update_marker_covarianceSEXP, SEXP update_activity_pattern_probabilitySEXP, SEXP burn_in_iterationsSEXP, SEXP sampling_iterationsSEXP, SEXP chainsSEXP, SEXP coresSEXP, SEXP execution_contractSEXP, SEXP native_memory_limit_bytesSEXP) {
+Rcpp::List mtblr_phase6a_summary_cheng_internal(Rcpp::List operator_resources, Rcpp::List likelihood_providers, int global_marker_count, int trait_count, Rcpp::IntegerMatrix activity_patterns, arma::mat initial_marker_covariance, Rcpp::NumericVector initial_activity_pattern_probability, Rcpp::NumericVector activity_pattern_dirichlet_prior, double marker_covariance_prior_df, arma::mat marker_covariance_prior_scale, bool update_marker_covariance, bool update_activity_pattern_probability, int burn_in_iterations, int sampling_iterations, int chains, int cores, Rcpp::Nullable<Rcpp::List> execution_contract, double native_memory_limit_bytes, Rcpp::Nullable<Rcpp::NumericVector> component_scales, Rcpp::Nullable<Rcpp::NumericVector> initial_scale_probability, Rcpp::Nullable<Rcpp::NumericVector> scale_dirichlet_prior, Rcpp::Nullable<Rcpp::NumericVector> marker_multipliers);
+RcppExport SEXP _sblr_mtblr_phase6a_summary_cheng_internal(SEXP operator_resourcesSEXP, SEXP likelihood_providersSEXP, SEXP global_marker_countSEXP, SEXP trait_countSEXP, SEXP activity_patternsSEXP, SEXP initial_marker_covarianceSEXP, SEXP initial_activity_pattern_probabilitySEXP, SEXP activity_pattern_dirichlet_priorSEXP, SEXP marker_covariance_prior_dfSEXP, SEXP marker_covariance_prior_scaleSEXP, SEXP update_marker_covarianceSEXP, SEXP update_activity_pattern_probabilitySEXP, SEXP burn_in_iterationsSEXP, SEXP sampling_iterationsSEXP, SEXP chainsSEXP, SEXP coresSEXP, SEXP execution_contractSEXP, SEXP native_memory_limit_bytesSEXP, SEXP component_scalesSEXP, SEXP initial_scale_probabilitySEXP, SEXP scale_dirichlet_priorSEXP, SEXP marker_multipliersSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -157,7 +179,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type cores(coresSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::List> >::type execution_contract(execution_contractSEXP);
     Rcpp::traits::input_parameter< double >::type native_memory_limit_bytes(native_memory_limit_bytesSEXP);
-    rcpp_result_gen = Rcpp::wrap(mtblr_phase6a_summary_cheng_internal(operator_resources, likelihood_providers, global_marker_count, trait_count, activity_patterns, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type component_scales(component_scalesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type initial_scale_probability(initial_scale_probabilitySEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type scale_dirichlet_prior(scale_dirichlet_priorSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type marker_multipliers(marker_multipliersSEXP);
+    rcpp_result_gen = Rcpp::wrap(mtblr_phase6a_summary_cheng_internal(operator_resources, likelihood_providers, global_marker_count, trait_count, activity_patterns, initial_marker_covariance, initial_activity_pattern_probability, activity_pattern_dirichlet_prior, marker_covariance_prior_df, marker_covariance_prior_scale, update_marker_covariance, update_activity_pattern_probability, burn_in_iterations, sampling_iterations, chains, cores, execution_contract, native_memory_limit_bytes, component_scales, initial_scale_probability, scale_dirichlet_prior, marker_multipliers));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -2211,9 +2237,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_sblr_mtblr_phase5a_packed_bed_allocation_internal", (DL_FUNC) &_sblr_mtblr_phase5a_packed_bed_allocation_internal, 4},
     {"_sblr_mtblr_phase4a_pattern_contract_internal", (DL_FUNC) &_sblr_mtblr_phase4a_pattern_contract_internal, 6},
     {"_sblr_mtblr_phase4b_residual_covariance_contract_internal", (DL_FUNC) &_sblr_mtblr_phase4b_residual_covariance_contract_internal, 5},
-    {"_sblr_mtblr_phase4a_cheng_bed_internal", (DL_FUNC) &_sblr_mtblr_phase4a_cheng_bed_internal, 24},
+    {"_sblr_mtblr_phase4a_cheng_bed_internal", (DL_FUNC) &_sblr_mtblr_phase4a_cheng_bed_internal, 28},
     {"_sblr_mtblr_phase6a_summary_pattern_contract_internal", (DL_FUNC) &_sblr_mtblr_phase6a_summary_pattern_contract_internal, 5},
-    {"_sblr_mtblr_phase6a_summary_cheng_internal", (DL_FUNC) &_sblr_mtblr_phase6a_summary_cheng_internal, 18},
+    {"_sblr_mtblr_phase7_pattern_scale_contract_internal", (DL_FUNC) &_sblr_mtblr_phase7_pattern_scale_contract_internal, 8},
+    {"_sblr_mtblr_phase6a_summary_cheng_internal", (DL_FUNC) &_sblr_mtblr_phase6a_summary_cheng_internal, 22},
     {"_sblr_readLD_to_CSR_R", (DL_FUNC) &_sblr_readLD_to_CSR_R, 5},
     {"_sblr_bed_xtx_xty", (DL_FUNC) &_sblr_bed_xtx_xty, 11},
     {"_sblr_mtblr_bed_marker_contract_internal", (DL_FUNC) &_sblr_mtblr_bed_marker_contract_internal, 6},

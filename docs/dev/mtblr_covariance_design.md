@@ -1504,3 +1504,53 @@ covariance templates remain deferred.
   2018;209:89--103. <https://pmc.ncbi.nlm.nih.gov/articles/PMC5937171/>.
 - JWAS implementation associated with the Cheng framework:
   <https://github.com/reworkhow/JWAS.jl>.
+
+## 31. Phase 7 pattern-by-scale design
+
+Phase 7 uses a factorized extension of the corrected Cheng activity model. It
+is a synthesis of complete Cheng activity patterns and a BayesR-style positive
+variance grid; it is not claimed as a novel model and is not the published
+BayesR3 parameterization or a covariance-template mixture such as mr.mash.
+
+There is one null state. For non-null activity pattern $\delta$ and positive
+scale $k$,
+
+$$
+\theta_j\mid k,V_b\sim N_T(0,\gamma_kq_jV_b),
+\qquad
+\alpha_j=\operatorname{diag}(\delta_j)\theta_j.
+$$
+
+The prior factorizes as
+
+$$
+\Pr(\delta_j=0)=\Pi_0,
+\qquad
+\Pr(\delta_j=\delta,k_j=k)=\Pi_\delta\omega_k
+$$
+
+for $\delta\ne0$. Thus $\Pi$ describes trait sharing, including the single
+null pattern, while $\omega$ describes magnitude conditional on a non-null
+marker. Both use explicit Dirichlet priors. An unrestricted joint
+pattern-by-scale weight matrix is deferred.
+
+The authoritative native chain state is the base completed effect
+$\beta_j=\theta_j/\sqrt{\gamma_kq_j}$ with covariance $V_b$. The raw-v2
+latent-effect field reports the scaled scientific effect $\theta_j$. For active
+subset $A$, the latter has marginal prior $\gamma_kq_jV_{b,AA}$. Inactive base
+coordinates are completed under $V_b$ and scaled once afterward. The
+authoritative marker-covariance statistic is equivalently
+
+$$
+S_b=\sum_{j:\delta_j\ne0}
+\frac{\theta_j\theta_j^\top}{\gamma_{k_j}q_j}.
+$$
+
+Native base-vector outer products therefore remove scale exactly once in the
+inverse-Wishart statistic. A single positive scale with
+$\gamma_1=q_j=\omega_1=1$ is the Cheng reduction and must consume no scale-
+simplex RNG. For $T=1$ the conditional algebra is the ordinary null-plus-
+positive-normal-scale BayesR mixture. Restricting patterns to null and
+all-active yields a multivariate BayesR scale mixture. Trait-specific scale
+assignments, unrestricted joint weights, and covariance templates remain
+deferred.

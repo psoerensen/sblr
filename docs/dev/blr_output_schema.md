@@ -49,7 +49,7 @@ values when unavailable or inapplicable.
 | `d_final` | marker × trait | primary-chain final binary activity, never a mixture component code |
 | `beta_final` | marker × trait | final latent effect where the kernel exposes latent/effective separation |
 | `component_final` | marker for MT, model-specific ST structure | final ordered mixture component; zero is null |
-| `component_probabilities` | marker × component (or documented trait-specific ST collection) | posterior component-state probabilities, including null, with rows summing to one |
+| `component_probabilities` | marker × component (or documented trait-specific ST collection) | posterior component allocation; ordinary mixtures include null and sum to one, whereas factorized Phase 7 MT-BayesR reports positive-scale sub-probabilities that sum to the marker non-null probability |
 
 Posterior means and final mutable states are not interchangeable. Primary
 chain 1 owns final state; posterior means pool retained draws across chains.
@@ -123,6 +123,19 @@ or genomic covariance. See
 Public promotion does not change these fields; see
 [the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
 
+Phase 7 factorized MT-BayesR preserves activity-pattern assignments and
+probabilities and adds separate positive-scale component assignments,
+marker-by-component sub-probabilities
+$\Pr(\boldsymbol\delta_j\ne\mathbf 0,k_j=k\mid D)$, and sampled
+$\boldsymbol\omega$ states. The unique null pattern uses component assignment
+`-1`; positive scales use zero-based indices in declared scale order. No
+marker-by-pattern-by-scale posterior array is required. Raw-v2 validation uses
+the declared binary activity metadata to require each marker's component
+sub-probabilities to sum to one minus its unique null-pattern probability. It
+also validates compact pattern and scale occupancy/change diagnostics under the
+Phase 7 policy, while the named dense transition diagnostic remains `NULL`. See
+[the Phase 7 checkpoint](blr_phase7_pattern_scale_mt_checkpoint.md).
+
 ## Variance and covariance fields
 
 `vbs`, `vgs`, `ves`, `vle`, and `vld` are iteration × trait traces of marker
@@ -140,15 +153,18 @@ matrices are not trace arrays.
 
 `pi_final`, `pi_mean`, and `pi_trace` are respectively the final global/model
 probability state, posterior mean state, and per-iteration global/model trace.
-For BayesR/SBayesR MT fits they are the named joint pattern × component
-simplex. For BayesC they represent the applicable global inclusion or pattern
-state. BayesRC/SBayesRC has marker-dependent component priors, so these common
+For factorized Phase 7 MT-BayesR, `pi_*` describes the activity-pattern
+simplex and `omega_*` separately describes the positive-scale simplex
+conditional on a non-null pattern. For BayesC, `pi_*` represents the applicable
+global inclusion or pattern state. BayesRC/SBayesRC has marker-dependent
+component priors, so these common
 fields remain `NULL`; explicit `pattern_pi_*` and annotation parameters live
 under `model_parameters$annotations`.
 
 `prior_component_probabilities` are annotation-driven prior probabilities;
 `component_probabilities` are posterior allocation probabilities. They must
-not be conflated.
+not be conflated. Factorized MT-BayesR positive-scale entries are joint
+sub-probabilities with non-null activity, rather than a null-inclusive simplex.
 
 ## Current log-variance annotation fields
 

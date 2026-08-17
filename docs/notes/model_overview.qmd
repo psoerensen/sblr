@@ -11,8 +11,8 @@ summary providers.
 |---|---|---|
 | STBLR | Individual packed BED | `bayesc`, `bayesr` |
 | STBLR | Summary statistics | `sbayesc`, `sbayesr`, and supported annotation-informed variants |
-| MTBLR | Individual packed BED | corrected Cheng MT-BayesC-Pi (`bayesc`) |
-| MTBLR | Independent summary statistics | corrected Cheng MT-BayesC-Pi (`bayesc`) with CSR or block-eigen operators |
+| MTBLR | Individual packed BED | corrected Cheng MT-BayesC-Pi (`bayesc`) or factorized pattern-by-scale MT-BayesR (`bayesr`) |
+| MTBLR | Independent summary statistics | the same two MT priors with CSR or block-eigen operators and fixed provider residual scales |
 
 The `s` prefix means summary statistics, not MAF scaling. Optional
 `maf_effect_s` controls MAF-dependent effect-variance scaling independently.

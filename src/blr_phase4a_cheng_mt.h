@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
+#include <numeric>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -64,11 +65,24 @@ inline std::size_t checked_size_product(
   return value;
 }
 
+inline std::size_t checked_size_sum(
+    std::initializer_list<std::size_t> values, const char* component) {
+  std::size_t total = 0u;
+  for (const std::size_t value : values) {
+    if (value > std::numeric_limits<std::size_t>::max() - total) {
+      throw std::overflow_error(std::string(
+        "Cheng native allocation overflow before sampling in ") + component + ".");
+    }
+    total += value;
+  }
+  return total;
+}
+
 inline void validate_native_allocation_dimensions(
     std::size_t trait_count, std::size_t pattern_count,
     std::size_t marker_count, std::size_t observation_count,
     std::size_t chain_count, std::size_t retained_count,
-    std::size_t convergence_count) {
+    std::size_t convergence_count, std::size_t scale_count = 0u) {
   checked_size_product({pattern_count, trait_count}, "pattern metadata");
   checked_size_product({marker_count, trait_count}, "marker-trait state");
   checked_size_product({observation_count, trait_count},
@@ -83,6 +97,24 @@ inline void validate_native_allocation_dimensions(
     trait_count}, "convergence covariance output");
   checked_size_product({chain_count, pattern_count},
     "compact pattern occupancy diagnostics");
+  if (scale_count > 0u) {
+    const std::size_t nonnull_states = checked_size_product(
+      {pattern_count - 1u, scale_count}, "pattern-by-scale state workspace");
+    if (nonnull_states == std::numeric_limits<std::size_t>::max()) {
+      throw std::overflow_error(
+        "Cheng native allocation overflow before sampling in pattern-by-scale state workspace.");
+    }
+    checked_size_product({marker_count, scale_count},
+      "marker-component posterior output");
+    checked_size_product({chain_count, retained_count, marker_count},
+      "retained component assignments");
+    checked_size_product({chain_count, retained_count, scale_count},
+      "retained scale probability output");
+    checked_size_product({chain_count, convergence_count, scale_count},
+      "convergence scale probability output");
+    checked_size_product({chain_count, scale_count},
+      "compact scale occupancy diagnostics");
+  }
 }
 
 inline arma::mat require_spd(
@@ -185,6 +217,250 @@ struct PatternKernel {
         active_mean(pattern_count),
         active_covariance(pattern_count) {}
 };
+
+// Phase 7 factorized activity-pattern by positive-scale mixture. The native
+// Markov state stores base effects beta ~ N(0, Vb). The likelihood-facing
+// completed effect is theta = sqrt(gamma_k * q_j) * beta.
+struct ScaleMixture {
+  bool enabled = false;
+  ProbabilityVector scales;
+  ProbabilityVector probability;
+  ProbabilityVector dirichlet_prior;
+  ProbabilityVector marker_multiplier;
+};
+
+inline void validate_scale_mixture(
+    const ScaleMixture& mixture, std::size_t marker_count) {
+  if (!mixture.enabled) return;
+  const std::size_t scale_count = mixture.scales.size();
+  if (scale_count == 0u || mixture.probability.size() != scale_count ||
+      mixture.dirichlet_prior.size() != scale_count ||
+      mixture.marker_multiplier.size() != marker_count) {
+    throw std::invalid_argument(
+      "Pattern-by-scale mixture dimensions are inconsistent.");
+  }
+  double total = 0.0;
+  for (std::size_t scale = 0u; scale < scale_count; ++scale) {
+    if (!std::isfinite(mixture.scales[scale]) || mixture.scales[scale] <= 0.0 ||
+        (scale > 0u && mixture.scales[scale] <= mixture.scales[scale - 1u]) ||
+        !std::isfinite(mixture.probability[scale]) ||
+        mixture.probability[scale] <= 0.0 ||
+        !std::isfinite(mixture.dirichlet_prior[scale]) ||
+        mixture.dirichlet_prior[scale] <= 0.0) {
+      throw std::invalid_argument(
+        "Positive scales must be finite and strictly ordered, with positive scale probabilities and Dirichlet shapes.");
+    }
+    total += mixture.probability[scale];
+  }
+  for (double value : mixture.marker_multiplier) {
+    if (!std::isfinite(value) || value <= 0.0) {
+      throw std::invalid_argument(
+        "Marker variance multipliers must be finite and positive.");
+    }
+  }
+  if (!std::isfinite(total) || total <= 0.0) {
+    throw std::invalid_argument("Scale probabilities do not normalize.");
+  }
+}
+
+struct PatternScaleKernel {
+  ProbabilityVector probability;
+  ProbabilityVector log_weight;
+  std::vector<std::size_t> pattern;
+  std::vector<int> scale;
+  std::vector<arma::vec> active_mean;
+  std::vector<arma::mat> active_covariance;
+};
+
+constexpr std::size_t pattern_scale_armadillo_container_slot_bytes = 256u;
+constexpr std::size_t pattern_scale_kernel_container_bytes = 256u;
+static_assert(sizeof(arma::vec) <= pattern_scale_armadillo_container_slot_bytes,
+  "The Phase 7 memory contract must cover an Armadillo vector container.");
+static_assert(sizeof(arma::mat) <= pattern_scale_armadillo_container_slot_bytes,
+  "The Phase 7 memory contract must cover an Armadillo matrix container.");
+static_assert(sizeof(PatternScaleKernel) <= pattern_scale_kernel_container_bytes,
+  "The Phase 7 memory contract must cover the pattern-scale kernel object.");
+
+struct PatternScaleWorkspaceAllocation {
+  std::size_t nonnull_states = 0u;
+  std::size_t state_count = 0u;
+  std::size_t state_table_bytes = 0u;
+  std::size_t active_container_bytes = 0u;
+  std::size_t active_numeric_bytes = 0u;
+  std::size_t kernel_container_bytes = 0u;
+  std::size_t total_bytes = 0u;
+};
+
+inline bool uses_pattern_scale_workspace(const ScaleMixture& mixture) {
+  return mixture.enabled && !(mixture.scales.size() == 1u &&
+    mixture.scales[0u] == 1.0 &&
+    std::all_of(mixture.marker_multiplier.begin(),
+                mixture.marker_multiplier.end(),
+                [](double value) { return value == 1.0; }));
+}
+
+inline PatternScaleWorkspaceAllocation pattern_scale_workspace_allocation(
+    const ActivityPatterns& patterns, std::size_t scale_count,
+    std::size_t concurrent_chains) {
+  if (patterns.empty() || scale_count == 0u || concurrent_chains == 0u) {
+    throw std::invalid_argument(
+      "Pattern-scale workspace dimensions must be positive before sampling.");
+  }
+  validate_activity_patterns(patterns, patterns.front().size());
+  PatternScaleWorkspaceAllocation out;
+  out.nonnull_states = checked_size_product(
+    {patterns.size() - 1u, scale_count},
+    "pattern-scale non-null state count");
+  out.state_count = checked_size_sum(
+    {out.nonnull_states, 1u}, "pattern-scale state count");
+  std::size_t active_moment_elements = 0u;
+  for (const ActivityPattern& pattern : patterns) {
+    const std::size_t active = static_cast<std::size_t>(
+      std::accumulate(pattern.begin(), pattern.end(), 0));
+    if (active == 0u) continue;
+    active_moment_elements = checked_size_sum(
+      {active_moment_elements, active,
+       checked_size_product({active, active},
+         "pattern-scale active covariance elements")},
+      "pattern-scale active moment elements");
+  }
+  const std::size_t concurrent_states = checked_size_product(
+    {concurrent_chains, out.state_count},
+    "pattern-scale concurrent state count");
+  out.state_table_bytes = checked_size_product(
+    {concurrent_states, 28u}, "pattern-scale state tables");
+  out.active_container_bytes = checked_size_product(
+    {concurrent_states, 2u, pattern_scale_armadillo_container_slot_bytes},
+    "pattern-scale active containers");
+  out.active_numeric_bytes = checked_size_product(
+    {concurrent_chains, scale_count, active_moment_elements, sizeof(double)},
+    "pattern-scale active numeric payloads");
+  out.kernel_container_bytes = checked_size_product(
+    {concurrent_chains, pattern_scale_kernel_container_bytes},
+    "pattern-scale kernel containers");
+  out.total_bytes = checked_size_sum(
+    {out.state_table_bytes, out.active_container_bytes,
+     out.active_numeric_bytes, out.kernel_container_bytes},
+    "pattern-scale conditional workspace total");
+  return out;
+}
+
+inline void guard_pattern_scale_workspace_allocation(
+    const ActivityPatterns& patterns, std::size_t scale_count,
+    std::size_t concurrent_chains, double native_memory_limit_bytes) {
+  if (std::isnan(native_memory_limit_bytes) || native_memory_limit_bytes < 0.0 ||
+      (std::isinf(native_memory_limit_bytes) && native_memory_limit_bytes < 0.0)) {
+    throw std::invalid_argument(
+      "Pattern-scale native memory limit must be nonnegative or positive Inf.");
+  }
+  const PatternScaleWorkspaceAllocation allocation =
+    pattern_scale_workspace_allocation(patterns, scale_count, concurrent_chains);
+  if (std::isfinite(native_memory_limit_bytes) &&
+      static_cast<long double>(allocation.total_bytes) >
+        static_cast<long double>(native_memory_limit_bytes)) {
+    throw std::runtime_error(
+      "Pattern-scale conditional workspace allocation guard failed before sampling: "
+      "T=" + std::to_string(patterns.front().size()) +
+      ", K=" + std::to_string(scale_count) +
+      ", nonnull_states=" + std::to_string(allocation.nonnull_states) +
+      ", state_count=" + std::to_string(allocation.state_count) +
+      ", concurrent_chains=" + std::to_string(concurrent_chains) +
+      ", pattern_scale_conditional_workspace=" +
+        std::to_string(allocation.total_bytes) +
+      ", native_memory_limit_bytes=" +
+        std::to_string(native_memory_limit_bytes) + ".");
+  }
+}
+
+inline PatternScaleKernel pattern_scale_kernel_information(
+    const arma::vec& score,
+    const arma::mat& likelihood_precision,
+    const arma::mat& marker_covariance,
+    const ProbabilityVector& pattern_probability,
+    const ProbabilityVector& scale_probability,
+    const ProbabilityVector& scales,
+    double marker_multiplier,
+    const ActivityPatterns& patterns) {
+  const std::size_t trait_count = score.n_elem;
+  validate_activity_patterns(patterns, trait_count);
+  if (!score.is_finite() || !likelihood_precision.is_finite() ||
+      likelihood_precision.n_rows != trait_count ||
+      likelihood_precision.n_cols != trait_count ||
+      marker_covariance.n_rows != trait_count ||
+      marker_covariance.n_cols != trait_count ||
+      pattern_probability.size() != patterns.size() || scales.empty() ||
+      scale_probability.size() != scales.size() ||
+      !std::isfinite(marker_multiplier) || marker_multiplier <= 0.0) {
+    throw std::invalid_argument(
+      "Pattern-by-scale marker information has inconsistent dimensions.");
+  }
+  const std::size_t nonnull_states = checked_size_product(
+    {patterns.size() - 1u, scales.size()}, "pattern-by-scale state workspace");
+  if (nonnull_states == std::numeric_limits<std::size_t>::max()) {
+    throw std::overflow_error(
+      "Cheng native allocation overflow before sampling in pattern-by-scale state workspace.");
+  }
+  const std::size_t state_count = nonnull_states + 1u;
+  PatternScaleKernel out;
+  out.probability.assign(state_count, 0.0);
+  out.log_weight.assign(state_count, 0.0);
+  out.pattern.assign(state_count, 0u);
+  out.scale.assign(state_count, -1);
+  out.active_mean.resize(state_count);
+  out.active_covariance.resize(state_count);
+  if (!std::isfinite(pattern_probability[0u]) ||
+      pattern_probability[0u] <= 0.0) {
+    throw std::invalid_argument("The null pattern probability must be positive.");
+  }
+  out.log_weight[0u] = std::log(pattern_probability[0u]);
+  std::size_t state = 1u;
+  for (std::size_t pattern = 1u; pattern < patterns.size(); ++pattern) {
+    if (!std::isfinite(pattern_probability[pattern]) ||
+        pattern_probability[pattern] <= 0.0) {
+      throw std::invalid_argument("Activity-pattern probabilities must be positive.");
+    }
+    const arma::uvec active = active_indices(patterns[pattern]);
+    const arma::mat prior = marker_covariance.submat(active, active);
+    const arma::mat prior_precision = inverse_spd(prior);
+    const arma::mat active_likelihood =
+      likelihood_precision.submat(active, active);
+    const arma::vec active_score = score.elem(active);
+    for (std::size_t scale = 0u; scale < scales.size(); ++scale, ++state) {
+      if (!std::isfinite(scales[scale]) || scales[scale] <= 0.0 ||
+          !std::isfinite(scale_probability[scale]) ||
+          scale_probability[scale] <= 0.0) {
+        throw std::invalid_argument(
+          "Scale values and probabilities must be finite and positive.");
+      }
+      const double multiplier = scales[scale] * marker_multiplier;
+      const double root = std::sqrt(multiplier);
+      const arma::mat precision = prior_precision +
+        multiplier * active_likelihood;
+      const arma::vec scaled_score = root * active_score;
+      const arma::vec mean = solve_spd(precision, scaled_score);
+      out.pattern[state] = pattern;
+      out.scale[state] = static_cast<int>(scale);
+      out.active_mean[state] = mean;
+      out.active_covariance[state] = inverse_spd(precision);
+      out.log_weight[state] = std::log(pattern_probability[pattern]) +
+        std::log(scale_probability[scale]) - 0.5 * logdet_spd(prior) -
+        0.5 * logdet_spd(precision) +
+        0.5 * arma::dot(scaled_score, mean);
+    }
+  }
+  const double maximum = *std::max_element(
+    out.log_weight.begin(), out.log_weight.end());
+  double total = 0.0;
+  for (std::size_t index = 0u; index < state_count; ++index) {
+    out.probability[index] = std::exp(out.log_weight[index] - maximum);
+    total += out.probability[index];
+  }
+  if (!std::isfinite(total) || total <= 0.0) {
+    throw std::runtime_error("Pattern-by-scale weights did not normalize.");
+  }
+  for (double& value : out.probability) value /= total;
+  return out;
+}
 
 inline PatternKernel pattern_kernel(
     const arma::vec& score,
@@ -394,10 +670,13 @@ struct ChainResult {
   std::vector<arma::mat> covariance_draws;
   std::vector<arma::mat> residual_covariance_draws;
   std::vector<ProbabilityVector> probability_draws;
+  std::vector<std::vector<int>> component_draws;
+  std::vector<ProbabilityVector> scale_probability_draws;
   std::vector<arma::mat> prediction_draws;
   std::vector<arma::mat> convergence_covariance;
   std::vector<arma::mat> convergence_residual_covariance;
   std::vector<ProbabilityVector> convergence_probability;
+  std::vector<ProbabilityVector> convergence_scale_probability;
   std::vector<int> convergence_active_count;
   arma::mat final_realised;
   arma::mat final_latent;
@@ -405,6 +684,8 @@ struct ChainResult {
   arma::mat final_covariance;
   arma::mat final_residual_covariance;
   ProbabilityVector final_probability;
+  std::vector<int> final_component;
+  ProbabilityVector final_scale_probability;
   arma::mat final_prediction;
   arma::mat last_covariance_statistic;
   arma::mat last_covariance_scale;
@@ -416,6 +697,8 @@ struct ChainResult {
   int residual_covariance_update_count = 0;
   std::vector<std::uint64_t> pattern_occupancy_count;
   std::uint64_t pattern_change_count = 0u;
+  std::vector<std::uint64_t> scale_occupancy_count;
+  std::uint64_t scale_change_count = 0u;
 };
 
 template <class PackedGenotype>
@@ -438,7 +721,8 @@ ChainResult run_chain(
     int burn_in_iterations,
     int sampling_iterations,
     const std::vector<int>& retained_transition_indices,
-    std::uint32_t seed) {
+    std::uint32_t seed,
+    const ScaleMixture& scale_mixture = ScaleMixture()) {
   const std::size_t trait_count = phenotype.n_cols;
   validate_activity_patterns(patterns, trait_count);
   const std::size_t pattern_count = patterns.size();
@@ -477,13 +761,33 @@ ChainResult run_chain(
   }
 
   const std::size_t marker_count = genotype.marker_count;
+  validate_scale_mixture(scale_mixture, marker_count);
+  const bool scaled = scale_mixture.enabled;
+  const bool cheng_reduction =
+      scaled && scale_mixture.scales.size() == 1u &&
+      scale_mixture.scales[0] == 1.0 &&
+      std::all_of(scale_mixture.marker_multiplier.begin(),
+                  scale_mixture.marker_multiplier.end(),
+                  [](double value) { return value == 1.0; });
   arma::mat realised(marker_count, trait_count, arma::fill::zeros);
   arma::mat latent(marker_count, trait_count);
   latent.fill(std::numeric_limits<double>::quiet_NaN());
+  arma::mat base;
+  if (scaled) {
+    base.set_size(marker_count, trait_count);
+    base.fill(std::numeric_limits<double>::quiet_NaN());
+  }
   std::vector<int> state(marker_count, 0);
+  std::vector<int> component(marker_count, -1);
   arma::mat residual = phenotype;
   arma::vec marker_workspace(genotype.sample_count, arma::fill::zeros);
   ProbabilityVector probability = initial_probability;
+  ProbabilityVector scale_probability = scale_mixture.probability;
+  if (scaled) {
+    const double total = std::accumulate(
+      scale_probability.begin(), scale_probability.end(), 0.0);
+    for (double& value : scale_probability) value /= total;
+  }
   std::mt19937 rng(seed);
 
   std::vector<int> retained_position(
@@ -506,6 +810,10 @@ ChainResult run_chain(
     out.residual_covariance_draws.resize(retained_transition_indices.size());
   }
   out.probability_draws.resize(retained_transition_indices.size());
+  if (scaled) {
+    out.component_draws.resize(retained_transition_indices.size());
+    out.scale_probability_draws.resize(retained_transition_indices.size());
+  }
   out.prediction_draws.resize(retained_transition_indices.size());
   out.convergence_covariance.reserve(static_cast<std::size_t>(sampling_iterations));
   if (update_residual_covariance) {
@@ -513,8 +821,12 @@ ChainResult run_chain(
       static_cast<std::size_t>(sampling_iterations));
   }
   out.convergence_probability.reserve(static_cast<std::size_t>(sampling_iterations));
+  if (scaled) out.convergence_scale_probability.reserve(
+    static_cast<std::size_t>(sampling_iterations));
   out.convergence_active_count.reserve(static_cast<std::size_t>(sampling_iterations));
   out.pattern_occupancy_count.assign(pattern_count, 0u);
+  if (scaled) out.scale_occupancy_count.assign(
+    scale_mixture.scales.size(), 0u);
 
   const int total_iterations = burn_in_iterations + sampling_iterations;
   for (int iteration = 0; iteration < total_iterations; ++iteration) {
@@ -536,29 +848,66 @@ ChainResult run_chain(
           score(trait) += x * residual(static_cast<arma::uword>(sample), trait);
         }
       }
-      const PatternKernel conditional = pattern_kernel(
-        score, marker_maps[marker].xx, marker_covariance,
-        residual_precision, probability, patterns);
-      const std::size_t new_state = draw_pattern(conditional.probability, rng);
+      std::size_t new_state = 0u;
+      int new_component = -1;
+      arma::vec active;
+      if (!scaled || cheng_reduction) {
+        const PatternKernel conditional = pattern_kernel(
+          score, marker_maps[marker].xx, marker_covariance,
+          residual_precision, probability, patterns);
+        new_state = draw_pattern(conditional.probability, rng);
+        if (new_state != 0u) {
+          active = draw_active(conditional.active_mean[new_state],
+                               conditional.active_covariance[new_state], rng);
+        }
+      } else {
+        const arma::vec information_score = residual_precision * score;
+        const arma::mat information_precision =
+          marker_maps[marker].xx * residual_precision;
+        const PatternScaleKernel conditional =
+          pattern_scale_kernel_information(
+            information_score, information_precision, marker_covariance,
+            probability, scale_probability, scale_mixture.scales,
+            scale_mixture.marker_multiplier[marker], patterns);
+        const std::size_t joint = draw_pattern(conditional.probability, rng);
+        new_state = conditional.pattern[joint];
+        new_component = conditional.scale[joint];
+        if (new_state != 0u) {
+          active = draw_active(conditional.active_mean[joint],
+                               conditional.active_covariance[joint], rng);
+        }
+      }
       state[marker] = static_cast<int>(new_state);
+      const int previous_component = component[marker];
+      if (cheng_reduction && new_state != 0u) new_component = 0;
+      component[marker] = new_component;
       ++out.pattern_occupancy_count[new_state];
+      if (new_component >= 0) {
+        ++out.scale_occupancy_count[static_cast<std::size_t>(new_component)];
+      }
       if (static_cast<std::size_t>(previous_state) != new_state) {
         ++out.pattern_change_count;
       }
+      if (previous_component != new_component) ++out.scale_change_count;
       if (new_state == 0u) {
         realised.row(static_cast<arma::uword>(marker)).zeros();
         latent.row(static_cast<arma::uword>(marker)).fill(
           std::numeric_limits<double>::quiet_NaN());
+        if (scaled) {
+          base.row(static_cast<arma::uword>(marker)).fill(
+            std::numeric_limits<double>::quiet_NaN());
+        }
       } else {
-        const arma::vec active = draw_active(
-          conditional.active_mean[new_state],
-          conditional.active_covariance[new_state], rng);
         const arma::rowvec completed = complete_latent(
           patterns[new_state], active, marker_covariance, rng);
-        latent.row(static_cast<arma::uword>(marker)) = completed;
+        if (scaled) base.row(static_cast<arma::uword>(marker)) = completed;
+        const double root = scaled ? std::sqrt(
+          scale_mixture.scales[static_cast<std::size_t>(new_component)] *
+          scale_mixture.marker_multiplier[marker]) : 1.0;
+        latent.row(static_cast<arma::uword>(marker)) = root * completed;
         for (std::size_t trait = 0u; trait < trait_count; ++trait) {
           realised(static_cast<arma::uword>(marker), trait) =
-            patterns[new_state][trait] * completed(trait);
+            patterns[new_state][trait] * root * completed(trait);
         }
       }
       for (std::size_t sample = 0u; sample < genotype.sample_count; ++sample) {
@@ -579,12 +928,24 @@ ChainResult run_chain(
       }
       probability = draw_dirichlet(shape, rng);
     }
+    if (scaled && scale_mixture.scales.size() > 1u) {
+      ProbabilityVector shape(scale_mixture.scales.size(), 0.0);
+      for (std::size_t index = 0u; index < shape.size(); ++index) {
+        shape[index] = scale_mixture.dirichlet_prior[index];
+      }
+      for (int value : component) {
+        if (value >= 0) ++shape[static_cast<std::size_t>(value)];
+      }
+      scale_probability = draw_dirichlet(shape, rng);
+    }
 
     arma::mat statistic(trait_count, trait_count, arma::fill::zeros);
     int active_count = 0;
     for (std::size_t marker = 0u; marker < marker_count; ++marker) {
       if (state[marker] == 0) continue;
-      const arma::rowvec value = latent.row(static_cast<arma::uword>(marker));
+      const arma::rowvec value = scaled ?
+        base.row(static_cast<arma::uword>(marker)) :
+        latent.row(static_cast<arma::uword>(marker));
       statistic += value.t() * value;
       ++active_count;
     }
@@ -626,6 +987,8 @@ ChainResult run_chain(
         out.convergence_residual_covariance.push_back(residual_covariance);
       }
       out.convergence_probability.push_back(probability);
+      if (scaled) out.convergence_scale_probability.push_back(
+        scale_probability);
       out.convergence_active_count.push_back(active_count);
       const int retained = retained_position[static_cast<std::size_t>(post_burn)];
       if (retained >= 0) {
@@ -638,6 +1001,10 @@ ChainResult run_chain(
           out.residual_covariance_draws[index] = residual_covariance;
         }
         out.probability_draws[index] = probability;
+        if (scaled) {
+          out.component_draws[index] = component;
+          out.scale_probability_draws[index] = scale_probability;
+        }
         out.prediction_draws[index] = phenotype - residual;
       }
     }
@@ -649,6 +1016,8 @@ ChainResult run_chain(
   out.final_covariance = marker_covariance;
   out.final_residual_covariance = residual_covariance;
   out.final_probability = probability;
+  out.final_component = component;
+  out.final_scale_probability = scale_probability;
   out.final_prediction = phenotype - residual;
   return out;
 }

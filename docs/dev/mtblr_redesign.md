@@ -1609,6 +1609,10 @@ promotes the unchanged kernel through public `mtblr_csr()` and
 [`blr_phase5b_public_cheng_mt_checkpoint.md`](blr_phase5b_public_cheng_mt_checkpoint.md).
 See also [`blr_phase6a_summary_mt_checkpoint.md`](blr_phase6a_summary_mt_checkpoint.md).
 See also [`blr_phase6b_public_summary_mt_checkpoint.md`](blr_phase6b_public_summary_mt_checkpoint.md).
+Phase 7 adds the factorized pattern-by-scale `bayesr` state policy to these
+same three public likelihood routes without changing their operator or
+covariance contracts. See
+[`blr_phase7_pattern_scale_mt_checkpoint.md`](blr_phase7_pattern_scale_mt_checkpoint.md).
 
 ## 24. Immediate next design task
 

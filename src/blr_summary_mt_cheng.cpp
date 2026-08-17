@@ -289,6 +289,45 @@ Provider parse_provider(Rcpp::List value) {
   return out;
 }
 
+sblr::phase4a::ScaleMixture parse_scale_mixture(
+    Rcpp::Nullable<Rcpp::NumericVector> scales,
+    Rcpp::Nullable<Rcpp::NumericVector> probability,
+    Rcpp::Nullable<Rcpp::NumericVector> dirichlet_prior,
+    Rcpp::Nullable<Rcpp::NumericVector> marker_multiplier,
+    std::size_t marker_count) {
+  sblr::phase4a::ScaleMixture out;
+  if (scales.isNull()) {
+    if (probability.isNotNull() || dirichlet_prior.isNotNull() ||
+        marker_multiplier.isNotNull()) {
+      throw std::invalid_argument(
+        "Pattern-by-scale native arguments must be supplied together.");
+    }
+    return out;
+  }
+  if (probability.isNull() || dirichlet_prior.isNull() ||
+      marker_multiplier.isNull()) {
+    throw std::invalid_argument(
+      "Pattern-by-scale native arguments must be supplied together.");
+  }
+  const Rcpp::NumericVector scale_values(scales);
+  if (scale_values.size() == 0) return out;
+  out.enabled = true;
+  out.scales = Rcpp::as<sblr::phase4a::ProbabilityVector>(scale_values);
+  out.probability = Rcpp::as<sblr::phase4a::ProbabilityVector>(
+    Rcpp::NumericVector(probability));
+  out.dirichlet_prior =
+    Rcpp::as<sblr::phase4a::ProbabilityVector>(
+      Rcpp::NumericVector(dirichlet_prior));
+  out.marker_multiplier =
+    Rcpp::as<sblr::phase4a::ProbabilityVector>(
+      Rcpp::NumericVector(marker_multiplier));
+  sblr::phase4a::validate_scale_mixture(out, marker_count);
+  const double total = std::accumulate(
+    out.probability.begin(), out.probability.end(), 0.0);
+  for (double& value : out.probability) value /= total;
+  return out;
+}
+
 Rcpp::NumericVector effect_draws(
     const std::vector<arma::mat>& draws, int markers, int traits) {
   const int ndraw = static_cast<int>(draws.size());
@@ -370,6 +409,28 @@ Rcpp::List chain_to_list(const sblr::summary_mt::ChainResult& chain) {
     provider_residual[static_cast<R_xlen_t>(provider)] =
       Rcpp::wrap(chain.final_provider_residual_score[provider]);
   }
+  const int scales = static_cast<int>(chain.final_scale_probability.size());
+  Rcpp::RObject component_draw = R_NilValue;
+  Rcpp::RObject scale_probability_draw = R_NilValue;
+  Rcpp::RObject convergence_scale_probability = R_NilValue;
+  Rcpp::RObject final_component = R_NilValue;
+  Rcpp::RObject final_scale_probability = R_NilValue;
+  Rcpp::RObject scale_occupancy = R_NilValue;
+  if (scales > 0) {
+    component_draw = state_draws(chain.component_draws, markers);
+    scale_probability_draw = probability_draws(
+      chain.scale_probability_draws, scales);
+    convergence_scale_probability = probability_draws(
+      chain.convergence_scale_probability, scales);
+    final_component = Rcpp::wrap(chain.final_component);
+    final_scale_probability = Rcpp::wrap(chain.final_scale_probability);
+    Rcpp::NumericVector occupancy_scale(scales);
+    for (int scale = 0; scale < scales; ++scale) {
+      occupancy_scale[scale] = static_cast<double>(
+        chain.scale_occupancy_count[static_cast<std::size_t>(scale)]);
+    }
+    scale_occupancy = occupancy_scale;
+  }
   return Rcpp::List::create(
     Rcpp::_ ["realised_effects"] = effect_draws(
       chain.realised_draws, markers, traits),
@@ -380,10 +441,14 @@ Rcpp::List chain_to_list(const sblr::summary_mt::ChainResult& chain) {
       chain.covariance_draws, traits, traits),
     Rcpp::_ ["activity_pattern_parameters"] = probability_draws(
       chain.probability_draws, patterns),
+    Rcpp::_ ["component_assignments"] = component_draw,
+    Rcpp::_ ["scale_probability_parameters"] = scale_probability_draw,
     Rcpp::_ ["convergence_marker_covariance"] = matrix_draws(
       chain.convergence_covariance, traits, traits),
     Rcpp::_ ["convergence_activity_pattern_parameters"] = probability_draws(
       chain.convergence_probability, patterns),
+    Rcpp::_ ["convergence_scale_probability_parameters"] =
+      convergence_scale_probability,
     Rcpp::_ ["convergence_active_marker_count"] =
       Rcpp::wrap(chain.convergence_active_count),
     Rcpp::_ ["final_realised_effects"] = effect_matrix(chain.final_realised),
@@ -392,6 +457,9 @@ Rcpp::List chain_to_list(const sblr::summary_mt::ChainResult& chain) {
     Rcpp::_ ["final_marker_covariance"] = Rcpp::wrap(chain.final_covariance),
     Rcpp::_ ["final_activity_pattern_parameters"] =
       Rcpp::wrap(chain.final_probability),
+    Rcpp::_ ["final_component_assignments"] = final_component,
+    Rcpp::_ ["final_scale_probability_parameters"] =
+      final_scale_probability,
     Rcpp::_ ["final_provider_residual_score"] = provider_residual,
     Rcpp::_ ["last_covariance_statistic"] =
       Rcpp::wrap(chain.last_covariance_statistic),
@@ -400,7 +468,10 @@ Rcpp::List chain_to_list(const sblr::summary_mt::ChainResult& chain) {
     Rcpp::_ ["last_active_marker_count"] = chain.last_active_count,
     Rcpp::_ ["pattern_occupancy_counts"] = occupancy,
     Rcpp::_ ["pattern_change_count"] =
-      static_cast<double>(chain.pattern_change_count));
+      static_cast<double>(chain.pattern_change_count),
+    Rcpp::_ ["scale_occupancy_counts"] = scale_occupancy,
+    Rcpp::_ ["scale_change_count"] =
+      static_cast<double>(chain.scale_change_count));
 }
 
 }  // namespace
@@ -455,6 +526,52 @@ Rcpp::List mtblr_phase6a_summary_pattern_contract_internal(
     Rcpp::_ ["active_covariance"] = covariances);
 }
 
+// Deterministic Phase 7 pattern-by-scale conditional. Base-effect moments are
+// returned; no sampler RNG is consumed.
+// [[Rcpp::export]]
+Rcpp::List mtblr_phase7_pattern_scale_contract_internal(
+    Rcpp::NumericVector information_score,
+    arma::mat likelihood_precision,
+    arma::mat marker_covariance,
+    Rcpp::NumericVector activity_pattern_probability,
+    Rcpp::IntegerMatrix activity_patterns,
+    Rcpp::NumericVector component_scales,
+    Rcpp::NumericVector scale_probability,
+    double marker_multiplier) {
+  const std::size_t traits = static_cast<std::size_t>(information_score.size());
+  const auto patterns = parse_patterns(activity_patterns, traits);
+  sblr::phase4a::ProbabilityVector pi =
+    Rcpp::as<sblr::phase4a::ProbabilityVector>(
+      activity_pattern_probability);
+  sblr::phase4a::ProbabilityVector omega =
+    Rcpp::as<sblr::phase4a::ProbabilityVector>(scale_probability);
+  sblr::phase4a::ProbabilityVector scales =
+    Rcpp::as<sblr::phase4a::ProbabilityVector>(component_scales);
+  double pi_total = std::accumulate(pi.begin(), pi.end(), 0.0);
+  double omega_total = std::accumulate(omega.begin(), omega.end(), 0.0);
+  for (double& value : pi) value /= pi_total;
+  for (double& value : omega) value /= omega_total;
+  const auto kernel = sblr::phase4a::pattern_scale_kernel_information(
+    Rcpp::as<arma::vec>(information_score), likelihood_precision,
+    sblr::phase4a::require_spd(marker_covariance, traits,
+                              "marker covariance"),
+    pi, omega, scales, marker_multiplier, patterns);
+  Rcpp::List means(static_cast<R_xlen_t>(kernel.probability.size()));
+  Rcpp::List covariances(static_cast<R_xlen_t>(kernel.probability.size()));
+  for (std::size_t state = 1u; state < kernel.probability.size(); ++state) {
+    means[static_cast<R_xlen_t>(state)] = Rcpp::wrap(kernel.active_mean[state]);
+    covariances[static_cast<R_xlen_t>(state)] =
+      Rcpp::wrap(kernel.active_covariance[state]);
+  }
+  return Rcpp::List::create(
+    Rcpp::_ ["probability"] = Rcpp::wrap(kernel.probability),
+    Rcpp::_ ["log_weight"] = Rcpp::wrap(kernel.log_weight),
+    Rcpp::_ ["pattern_index"] = Rcpp::wrap(kernel.pattern),
+    Rcpp::_ ["scale_index"] = Rcpp::wrap(kernel.scale),
+    Rcpp::_ ["base_active_mean"] = means,
+    Rcpp::_ ["base_active_covariance"] = covariances);
+}
+
 // Qualification-only general-T independent-summary Cheng MT-BayesC-Pi route.
 // Operator resources are parsed once and shared immutably by all chain tasks.
 // [[Rcpp::export]]
@@ -476,7 +593,11 @@ Rcpp::List mtblr_phase6a_summary_cheng_internal(
     int chains,
     int cores,
     Rcpp::Nullable<Rcpp::List> execution_contract,
-    double native_memory_limit_bytes) {
+    double native_memory_limit_bytes,
+    Rcpp::Nullable<Rcpp::NumericVector> component_scales = R_NilValue,
+    Rcpp::Nullable<Rcpp::NumericVector> initial_scale_probability = R_NilValue,
+    Rcpp::Nullable<Rcpp::NumericVector> scale_dirichlet_prior = R_NilValue,
+    Rcpp::Nullable<Rcpp::NumericVector> marker_multipliers = R_NilValue) {
   if (global_marker_count <= 0 || trait_count < 2 || chains <= 0 || cores <= 0) {
     throw std::invalid_argument(
       "Summary Cheng dimensions and execution controls must be positive.");
@@ -484,6 +605,9 @@ Rcpp::List mtblr_phase6a_summary_cheng_internal(
   const std::size_t markers = static_cast<std::size_t>(global_marker_count);
   const std::size_t traits = static_cast<std::size_t>(trait_count);
   const auto patterns = parse_patterns(activity_patterns, traits);
+  const sblr::phase4a::ScaleMixture scale_mixture = parse_scale_mixture(
+    component_scales, initial_scale_probability, scale_dirichlet_prior,
+    marker_multipliers, markers);
   const BlrPhase3ExecutionContract phase3 =
     parse_blr_phase3_execution_contract(
       execution_contract, chains, sampling_iterations);
@@ -501,7 +625,14 @@ Rcpp::List mtblr_phase6a_summary_cheng_internal(
   sblr::phase4a::validate_native_allocation_dimensions(
     traits, patterns.size(), markers, 0u, static_cast<std::size_t>(chains),
     phase3.retained_transition_indices.size(),
-    static_cast<std::size_t>(sampling_iterations));
+    static_cast<std::size_t>(sampling_iterations),
+    scale_mixture.enabled ? scale_mixture.scales.size() : 0u);
+  if (sblr::phase4a::uses_pattern_scale_workspace(scale_mixture)) {
+    sblr::phase4a::guard_pattern_scale_workspace_allocation(
+      patterns, scale_mixture.scales.size(),
+      static_cast<std::size_t>(std::min(chains, cores)),
+      native_memory_limit_bytes);
+  }
   guard_native_dimensions(
     operator_resources, likelihood_providers, markers, traits,
     patterns.size(), static_cast<std::size_t>(chains),
@@ -585,7 +716,7 @@ Rcpp::List mtblr_phase6a_summary_cheng_internal(
         update_marker_covariance, update_activity_pattern_probability,
         burn_in_iterations, sampling_iterations,
         phase3.retained_transition_indices,
-        phase3.task_seeds[static_cast<std::size_t>(chain)]);
+        phase3.task_seeds[static_cast<std::size_t>(chain)], scale_mixture);
     } catch (const std::exception& error) {
       failed[static_cast<std::size_t>(chain)] = 1;
       errors[static_cast<std::size_t>(chain)] = error.what();

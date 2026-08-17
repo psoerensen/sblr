@@ -1,7 +1,9 @@
-# Public Phase 6B independent-summary Cheng MT-BayesC-Pi workflow.
+# Public independent-summary pattern-by-scale MT-BayesR workflow.
 # The tiny example is wrapped in a function so sourcing this file is cheap.
-run_mtblr_summary_workflow <- function(operator = c("csr", "block_eigen")) {
+run_mtblr_summary_workflow <- function(
+    operator = c("csr", "block_eigen"), method = c("bayesr", "bayesc")) {
   operator <- match.arg(operator)
+  method <- match.arg(method)
   markers <- paste0("m", 1:4)
   traits <- c("trait1", "trait2")
   alleles <- data.frame(
@@ -56,10 +58,16 @@ run_mtblr_summary_workflow <- function(operator = c("csr", "block_eigen")) {
     trait_ids = traits, initial_marker_covariance = marker_covariance,
     marker_covariance_prior_degrees_of_freedom = 2.5,
     marker_covariance_prior_scale = marker_covariance,
+    method = method,
+    component_scales = if (method == "bayesr") c(.01, .1, 1) else NULL,
+    initial_scale_probability = if (method == "bayesr") c(.25, .5, .25) else NULL,
+    scale_dirichlet_prior = if (method == "bayesr") c(1, 1, 1) else NULL,
+    marker_multipliers = if (method == "bayesr") rep(1, length(markers)) else NULL,
     nburn = 5L, nit = 10L, nthin = 2L, seed = 2606L)
 }
 
 # The returned mtblr_fit exposes PIPs in dm, marker-pattern probabilities in
-# activity_pattern_probabilities, Dirichlet summaries in pi_mean, and the
-# authoritative marker covariance in cov_b_mean. predictions is NULL because
+# activity_pattern_probabilities, scale marginals in component_probabilities,
+# scale-simplex summaries in omega_mean, and the authoritative marker
+# covariance in cov_b_mean. predictions is NULL because
 # independent summary providers do not contain individual-level observations.

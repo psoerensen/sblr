@@ -18,7 +18,7 @@ and some mathematical quantities have no universal formatted field.
 |---|---|---|---|
 | Posterior mean effective marker effect | $\mathbb E(b_j\mid\mathcal D)$ or $\mathbb E(b_{jt}\mid\mathcal D)$ | `bm` | Marker by trait. It averages over null states, mixture components, sharing patterns, and retained effect draws where applicable. |
 | Posterior inclusion probability | $\Pr(d_j=1\mid\mathcal D)$ or $\Pr([b_j]_t\ne0\mid\mathcal D)$ | `dm` | Marker by trait. In mixture models it is the posterior non-null/activity probability marginalized over relevant positive components and MT patterns. |
-| Posterior component allocation probability | $\Pr(c_j=k\mid\mathcal D)$ | `component_probabilities` | ST commonly uses a named list of marker-by-component matrices by trait; MT uses a marker-by-component matrix. Rows include the null component and sum to one. It is not a prior component probability. |
+| Posterior component allocation probability | $\Pr(c_j=k\mid\mathcal D)$ | `component_probabilities` | Ordinary component mixtures include null and sum to one. Factorized MT-BayesR instead reports $\Pr(\boldsymbol\delta_j\ne\mathbf0,k_j=k\mid\mathcal D)$ over positive scales, whose row sum is the marker non-null probability. It is not a prior component probability. |
 | Final effective effect/activity state | one retained $b_j,d_j$ state | ST commonly retains `b` and `d`; MT uses `b_final` and `d_final` | A primary-chain final state, not a posterior mean or probability. Final-state naming is not currently universal across ST and MT. |
 | Final component state | one retained $c_j$ state | ST may retain `component`; MT uses `component_final` | A sampled state, not `component_probabilities`. It is present only for component-mixture routes. |
 
@@ -30,10 +30,10 @@ the null state, effect-size uncertainty, and possibly sign uncertainty.
 
 | Statistical quantity | Theory notation | Current `sblr` field or location | Interpretation and qualification |
 |---|---|---|---|
-| Global/model probability state | $\pi$ or a global state simplex | `pi_final`, `pi_mean`, `pi_trace` | For ordinary MT BayesR these are the full `joint_pi` state simplex, not separate $P$ and $H$ parameters. BayesRC marker priors are not averaged into these fields. |
+| Global/model probability state | $\boldsymbol\Pi$ and, for factorized MT-BayesR, $\boldsymbol\omega$ | `pi_final`, `pi_mean`, `pi_trace`; MT-BayesR also has `omega_final`, `omega_mean`, `omega_trace` | Phase 7 separates activity-pattern mass, including one null, from positive scale mass conditional on non-null activity. BayesRC marker priors are not averaged into these fields. |
 | BayesRC marker prior component probabilities | $P_{jk}$ | ST SBayesRC may expose `annotation_prior`; MT BayesRC stores `model_parameters$annotations$prior_component_probabilities` | Model-specific. ST `annotation_pi` is instead a plug-in annotation-row diagnostic and must not be mistaken for the complete marker prior matrix. |
 | BayesRC marker prior active probability | $1-P_{j0}$ | MT: `model_parameters$annotations$prior_active_probabilities`; no universal ST field | Derived from the marker prior null probability, not from posterior allocations. |
-| Conditional non-null MT sharing architecture | $H_p$ | MT BayesRC: `model_parameters$annotations$pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace`; ordinary MT BayesR marginals live under `model_parameters$mixture` | In MT BayesRC, $H$ is a sampled conditional sharing simplex. In ordinary MT BayesR, reported pattern probabilities are marginals of `joint_pi`, not an independently parameterized $H$. |
+| Conditional non-null MT sharing architecture | $H_p$ | MT BayesRC: `model_parameters$annotations$pattern_pi_final`, `pattern_pi_mean`, `pattern_pi_trace` | Phase 7 MT-BayesR instead samples the complete activity-pattern simplex $\boldsymbol\Pi$ directly. |
 | Probit-stick coefficients | $\alpha$ | ST: `alpha`, with `alpha_final` where exposed; MT: `model_parameters$annotations$annotation_coefficients_mean` and `annotation_coefficients_final` | Posterior coefficient summaries. Nonlinear transformations of posterior mean coefficients are plug-in summaries, not posterior means of transformed probabilities. |
 | Probit-stick coefficient variances | $\sigma_{\alpha,k}^2$ | ST: `sigmaSqAlpha`, with `sigmaSqAlpha_final` where exposed; MT: annotation variance fields under `model_parameters$annotations` | Step-specific hierarchical variance parameters. |
 | Group probability and variance architecture | group-specific $\pi_g,q_g$ | `group_pi`, `group_vb_multiplier`, with `annotation_pi`/`annotation_variance` aliases and `annotation_summary` | Available only for the group annotation route. |
@@ -80,13 +80,16 @@ theory notation.
 - `bm` is a posterior mean effect; `dm` is a posterior activity probability.
 - `component_probabilities` contains posterior allocations; BayesRC prior
   component probabilities describe $P_{jk}$ before marker likelihood evidence.
+  Factorized MT-BayesR keeps its one null state in the activity-pattern field,
+  so its positive-scale entries form a sub-simplex.
 - A posterior mean is not a final sampled state.
 - $v_b,v_g,v_e$ are scalar ST quantities; $V_b,V_g,V_e$ are MT covariance
   matrices. Current R names deliberately do not differ only by capitalization.
 - $X^\top y$, $X^\top Y$, $S_Y$, and $N_{\mathrm{overlap}}$ are mathematical
   objects; `wy`, `Xy`, `SSY`, and `Nmat` are historical or route-specific code
   names.
-- Ordinary MT BayesR uses one full `joint_pi` simplex. Current MT BayesRC uses
+- Phase 7 MT-BayesR uses factorized activity and positive-scale simplexes.
+  The deferred unrestricted alternative uses one full joint simplex. MT BayesRC uses
   marker/component architecture $P$ multiplied by conditional non-null sharing
   architecture $H$.
 

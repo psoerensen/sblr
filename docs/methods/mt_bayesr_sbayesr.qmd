@@ -6,19 +6,22 @@ format:
     number-sections: true
 ---
 
-This page describes the theoretical ordinary multi-trait BayesR/SBayesR prior
-and state space retained for future implementation in `sblr`. The important
-feature of this model is that trait-sharing
-patterns and BayesR variance components are represented by **one joint
-probability simplex**. They are not currently parameterized as independent
-probability and sharing architectures.
+The public Phase 7 implementation is a parsimonious factorized
+pattern-by-scale extension of Cheng MT-BayesC$\Pi$. Trait-sharing patterns use
+one simplex including a unique null state, and positive BayesR scales use a
+second simplex conditional on non-null activity. `mtblr_bed()`, `mtblr_csr()`,
+and `mtblr_block_eigen()` select it with `method = "bayesr"`.
+
+The unrestricted ordinary MT-BayesR construction discussed later on this page,
+where pattern and component occupy one joint probability simplex, remains a
+distinct theoretical extension and is not the Phase 7 production target.
 
 Potential individual-level and summary-statistics routes would use the same
 core multi-trait prior while differing in their likelihood representation.
 
-MT-BayesR and MT-SBayesR are not currently available through a public fitter.
-The public `mtblr_bed()` route implements corrected Cheng MT-BayesC-Pi only;
-corrected MT CSR and MT block-eigen likelihoods are deferred.
+The public BED route supports fixed or sampled full residual covariance. The
+public independent-summary CSR and block-eigen routes retain fixed provider
+residual scales and do not identify a full residual covariance.
 
 ## BayesR and SBayesR
 
@@ -288,13 +291,16 @@ The $S+1$ exponent reflects the standardized-genotype effect scale used by the
 current summary-statistics parameterization. MAF-S is a variance architecture;
 it is not part of the `S` prefix in SBayesR.
 
-Current MT BayesR/SBayesR supports fixed `maf_effect_s`, but MT sampling of
-$S$ is not implemented.
+Phase 7 accepts explicit fixed positive marker multipliers $q_j$. Public MT
+sampling of a MAF exponent $S$ is not implemented.
 
 See [Annotation-Informed Priors](annotation_priors.qmd) for the general
 relationship among MAF-S, $q_j$, $\gamma_k$, and $V_b$.
 
 ## Joint-State Probability Simplex
+
+This section records the deferred unrestricted alternative, not the Phase 7
+factorized production weights $\Pi_p\omega_k$.
 
 Let
 
@@ -536,14 +542,14 @@ information required for $V_e$ are developed in
 
 The joint state descriptor, BayesR prior, joint probability update, base-$V_b$
 update, logical chain structure, and scientific interpretation would be shared
-across future MT BayesR/SBayesR routes.
+across MT BayesR likelihood routes.
 
 The likelihood representation differs.
 
 ### Packed BED
 
-A future individual-level MT-BayesR route would use selected individual-level
-genotypes. The current public `mtblr_bed()` does not implement this model.
+The public factorized individual-level MT-BayesR route uses selected
+individual-level packed-BED genotypes.
 
 The individual-level model is
 
@@ -556,8 +562,8 @@ a full or restricted structure.
 
 ### CSR summary-statistics likelihood
 
-A future MT-SBayesR CSR likelihood would use aligned marker-trait
-cross-products, marker diagonal cross-products, and sparse LD.
+The public factorized summary MT-BayesR CSR likelihood uses aligned
+marker-trait cross-products, marker diagonal cross-products, and sparse LD.
 
 Mathematically, the central marker-trait quantity is
 
@@ -565,14 +571,12 @@ $$
 X^\top Y.
 $$
 
-Such a route would require an explicit sample-overlap contract rather than
-inferring unmodeled cross-trait overlap.
+Providers must declare independence; overlap-aware likelihoods remain deferred.
 
 ### Block-eigen summary-statistics likelihood
 
-A future MT-SBayesR block-eigen likelihood requires separate scientific
-qualification. Public `mtblr_block_eigen()` currently implements only the
-corrected Cheng BayesC-Pi prior. This does not affect the canonical
+The public factorized MT-BayesR block-eigen likelihood targets the declared
+full-rank block-diagonal or retained-rank reconstructed operator. This does not affect the canonical
 retained-factor low-rank operator used by current scalar block-eigen fits.
 
 The prior state model remains ordinary MT BayesR in either case; only the
@@ -589,8 +593,8 @@ or effective state is not a posterior mean or posterior probability.
 
 ## Implementation limitations
 
-The deferred ordinary MT BayesR/SBayesR design has several important
-limitations:
+The public factorized target and deferred unrestricted joint-weight design have
+several important limitations:
 
 - The proposed MT `maf_effect_s` extension is not publicly implemented.
 - The joint state count is guarded for memory and practical numerical size.

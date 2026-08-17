@@ -182,8 +182,8 @@ Phase 5B promotes the corrected complete-pattern Cheng policy through
 `mtblr_bed()` for common-sample packed BED only. Public $V_b$ and sampled
 $V_e$ priors use explicit inverse-Wishart degrees-of-freedom/scale arguments;
 fixed $V_e$ remains a zero-update, zero-residual-covariance-RNG policy. The
-legacy covariance hybrid is unreachable from public dispatch. MT BayesR,
-BayesRC, annotation, overlap, and missing-phenotype policies remain
+legacy covariance hybrid is unreachable from public dispatch. MT BayesRC,
+annotation, overlap, and missing-phenotype policies remain
 unavailable. See
 [the Phase 5B checkpoint](blr_phase5b_public_cheng_mt_checkpoint.md).
 
@@ -199,6 +199,13 @@ contracts are unchanged. See
 [the Phase 6A checkpoint](blr_phase6a_summary_mt_checkpoint.md).
 The public boundary is recorded in
 [the Phase 6B checkpoint](blr_phase6b_public_summary_mt_checkpoint.md).
+
+Phase 7 publicly supports a factorized pattern-by-scale `bayesr` policy for
+BED, CSR, and block-eigen MT routes. It retains the activity-pattern simplex
+including one null state and adds a positive-scale simplex conditional on
+non-null activity. Component assignments use `-1` only for collapsed null
+markers. The base covariance statistic removes $\gamma_kq_j$ exactly once.
+See [the Phase 7 checkpoint](blr_phase7_pattern_scale_mt_checkpoint.md).
 
 Resolved Phase 1 objects accept only registered exact model-policy values and
 declared descriptor structures. Compatibility identifiers do not relax model,

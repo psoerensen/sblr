@@ -210,8 +210,8 @@ test_that("public summary output follows raw-v2 and formatted contracts", {
 test_that("unsupported targets and the historical hybrid are unreachable", {
   fixture <- phase6b_fixture()
   args <- phase6b_public_args(fixture)
-  expect_error(do.call(mtblr_csr, c(args, method = "bayesr")),
-               "only method = 'bayesc'", fixed = TRUE)
+  expect_error(do.call(mtblr_csr, c(args, method = "bayesrc")),
+               "method", fixed = TRUE)
   fixture$providers[[1L]]$overlap_group <- "shared_samples"
   expect_error(do.call(mtblr_csr, phase6b_public_args(fixture)),
                "overlap-aware likelihood", fixed = TRUE)
@@ -221,4 +221,35 @@ test_that("unsupported targets and the historical hybrid are unreachable", {
                       envir = asNamespace("sblr"), inherits = FALSE))
   expect_false(exists(".mtblr_csr_legacy_covariance_hybrid",
                       envir = asNamespace("sblr"), inherits = FALSE))
+})
+
+test_that("public summary BayesR routes equal the qualified Phase 7 kernel", {
+  for (representation in c("csr", "block")) {
+    fixture <- phase6b_fixture(
+      3L, representation, retained_rank = if (representation == "block") 1L)
+    args <- c(phase6b_public_args(fixture, seed = 2752L), list(
+      method = "bayesr", component_scales = c(.1, .5, 1),
+      initial_scale_probability = c(.2, .5, .3),
+      scale_dirichlet_prior = c(1, 2, 1),
+      marker_multipliers = c(.8, 1, 1.2, .9)))
+    public_fun <- if (representation == "csr") mtblr_csr else
+      mtblr_block_eigen
+    public <- attr(do.call(public_fun, args), "blr_raw", exact = TRUE)
+    collection <- sblr:::.mtblr_summary_public_collection(
+      fixture$providers, fixture$resources, fixture$markers, fixture$alleles,
+      fixture$traits, if (representation == "csr") "csr" else "block_eigen")
+    internal <- sblr:::.blr_cheng_mt_bayesc_summary_qualification(
+      collection, fixture$traits, fixture$covariance,
+      length(fixture$traits) + .5, fixture$covariance,
+      burn_in_iterations = 3L, sampling_iterations = 6L,
+      thin_interval = 2L, seed = 2752L, keep_traces = TRUE,
+      memory_limit_bytes = Inf, method = "bayesr",
+      component_scales = c(.1, .5, 1),
+      initial_scale_probability = c(.2, .5, .3),
+      scale_dirichlet_prior = c(1, 2, 1),
+      marker_multipliers = c(.8, 1, 1.2, .9))
+    expect_identical(phase6b_scientific(public), phase6b_scientific(internal))
+    expect_silent(sblr:::validate_blr_raw_v2(public))
+    expect_identical(public$input$model$family, "bayesr")
+  }
 })
