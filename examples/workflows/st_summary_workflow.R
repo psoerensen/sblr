@@ -139,7 +139,7 @@ architecture_bayesr
 ## 5. Credible sets from fitted PIPs and LD
 ## -------------------------------------------------------------------------
 
-trait <- colnames(fit_csr_bayesr$dm)[1] %||% 1L
+trait <- colnames(extract_posterior(fit_csr_bayesr, "pips"))[1] %||% 1L
 
 credible_sets_bayesr <- run_credible_sets(
   fit = fit_csr_bayesr,

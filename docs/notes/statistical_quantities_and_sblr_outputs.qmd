@@ -16,8 +16,8 @@ and some mathematical quantities have no universal formatted field.
 
 | Statistical quantity | Theory notation | Current `sblr` field | Interpretation and qualification |
 |---|---|---|---|
-| Posterior mean effective marker effect | $\mathbb E(b_j\mid\mathcal D)$ or $\mathbb E(b_{jt}\mid\mathcal D)$ | `bm` | Marker by trait. It averages over null states, mixture components, sharing patterns, and retained effect draws where applicable. |
-| Posterior inclusion probability | $\Pr(d_j=1\mid\mathcal D)$ or $\Pr([b_j]_t\ne0\mid\mathcal D)$ | `dm` | Marker by trait. In mixture models it is the posterior non-null/activity probability marginalized over relevant positive components and MT patterns. |
+| Posterior mean effective marker effect | $\mathbb E(b_j\mid\mathcal D)$ or $\mathbb E(b_{jt}\mid\mathcal D)$ | `bm`; `extract_posterior(fit, "realised_effects")` | Marker by trait. It averages over null states, mixture components, sharing patterns, and retained effect draws where applicable. |
+| Posterior inclusion probability | $\Pr(d_j=1\mid\mathcal D)$ or $\Pr([b_j]_t\ne0\mid\mathcal D)$ | `dm`; `extract_posterior(fit, "pips")` | Marker by trait. In mixture models it is the posterior non-null/activity probability marginalized over relevant positive components and MT patterns. |
 | Posterior component allocation probability | $\Pr(c_j=k\mid\mathcal D)$ | `component_probabilities` | Ordinary component mixtures include null and sum to one. Factorized MT-BayesR instead reports $\Pr(\boldsymbol\delta_j\ne\mathbf0,k_j=k\mid\mathcal D)$ over positive scales, whose row sum is the marker non-null probability. It is not a prior component probability. |
 | Final effective effect/activity state | one retained $b_j,d_j$ state | ST commonly retains `b` and `d`; MT uses `b_final` and `d_final` | A primary-chain final state, not a posterior mean or probability. Final-state naming is not currently universal across ST and MT. |
 | Final component state | one retained $c_j$ state | ST may retain `component`; MT uses `component_final` | A sampled state, not `component_probabilities`. It is present only for component-mixture routes. |

@@ -1,5 +1,12 @@
 # BLR model contracts
 
+Phase 8A is behavior-preserving. Shared public execution concepts use the
+maintained `nit`, `nburn`, `nthin`, `seed`, `nchains`, `ncores`,
+`chain_seeds`, `keep_chains`, `convergence`, and `convergence_control`
+vocabulary. Model-specific probability and covariance namespaces remain
+distinct. Executable dispatch and resolved specifications, rather than the
+removed stale standalone capability matrix, own current capability claims.
+
 ## Model semantics
 
 The public model name combines prior kernel and data level:

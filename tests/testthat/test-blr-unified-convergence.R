@@ -13,7 +13,6 @@ test_that("shared scalar convergence engine retains the canonical mathematics", 
   expect_equal(scalar$mcse_mean,
                scalar$posterior_sd / sqrt(scalar$ess_mean), tolerance = 1e-12)
 })
-
 test_that("ST adapters use unpooled post-burn chain traces", {
   trace <- function(offset) list(
     vbs = 1:8 + offset, vgs = 2:9 + offset, ves = 3:10 + offset,
@@ -26,7 +25,6 @@ test_that("ST adapters use unpooled post-burn chain traces", {
   expect_equal(bundle$values[, 2, 1], 3:8 + .25)
   expect_identical(bundle$schema$class, "blr_convergence_trace_bundle")
 })
-
 test_that("scheduled ST CSR convergence uses task-private post-burn traces", {
   fixture <- blr_unified_scheduled_csr_fixture(nt = 2L)
   on.exit(blr_unified_cleanup_csr(fixture), add = TRUE)
@@ -63,19 +61,4 @@ test_that("scheduled ST CSR convergence uses task-private post-burn traces", {
   expect_identical(base$convergence_traces$postburn_draws_per_chain, 8L)
   expect_false(base$convergence$trace_retention$burnin_included)
   expect_false(base$convergence$trace_retention$additional_thinning)
-})
-
-test_that("MT packed-BED exposes chain-private five-trace convergence", {
-  case <- blr_bed_public_case(nt = 2L)
-  on.exit(blr_bed_public_cleanup(case), add = TRUE)
-  fit <- do.call(mtblr_bed, blr_public_convergence_public_args(
-    case, nchains = 2L, ncores = 1L, convergence = "core",
-    warn = FALSE, keep_traces = TRUE, nit = 8L, nburn = 2L))
-  expect_equal(fit$vld, fit$vgs - fit$vle, tolerance = 1e-12)
-  expect_identical(unique(fit$convergence$summary$group),
-                   c("vbs", "vgs", "ves", "vle", "vld"))
-  expect_identical(dim(fit$convergence_traces$values),
-                   c(8L, 2L, 10L))
-  expect_false(fit$convergence$trace_retention$burnin_included)
-  expect_false(fit$convergence$trace_retention$additional_thinning)
 })

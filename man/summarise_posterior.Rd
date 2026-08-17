@@ -2,7 +2,7 @@
 % Please edit documentation in R/stblr_summarize.R
 \name{summarise_posterior}
 \alias{summarise_posterior}
-\title{Summarise ST-BLR Posterior Traces}
+\title{Summarise BLR posterior draws or ST-BLR global traces}
 \usage{
 summarise_posterior(
   fit,
@@ -11,11 +11,19 @@ summarise_posterior(
   prob = 0.95,
   derived = TRUE,
   include_m_included = TRUE,
-  include_diagnostics = TRUE
+  include_diagnostics = TRUE,
+  quantity = NULL,
+  markers = NULL,
+  traits = NULL,
+  chains = NULL,
+  draws = NULL,
+  components = NULL,
+  activity_patterns = NULL
 )
 }
 \arguments{
-\item{fit}{Fitted ST-BLR object.}
+\item{fit}{A formatted STBLR or MTBLR fit. The legacy global-trace mode
+accepts its established list-like STBLR input.}
 
 \item{nburn}{Number of initial iterations to discard. If `NULL`, uses
 `fit$input$nburn` when available and otherwise zero.}
@@ -32,6 +40,13 @@ traces are available.}
 
 \item{include_diagnostics}{Logical; include effective sample size and lag-1
 autocorrelation diagnostics when possible.}
+
+\item{quantity}{Optional canonical retained quantity. When supplied, the
+function summarizes the retained raw-v2 draw and chain axes without any
+additional burn-in removal.}
+
+\item{markers, traits, chains, draws, components, activity_patterns}{Optional
+exact axis selections passed to [extract_posterior()] in quantity mode.}
 }
 \value{
 A data frame with columns `parameter`, `label`, `trait`, `n`,

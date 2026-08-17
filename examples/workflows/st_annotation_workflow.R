@@ -221,7 +221,7 @@ if (!is.null(sim$causal)) {
   names(causal_by_trait) <- names(causal_specific)
 
   causal_topn_summary <- function(fit, model_name, causal_by_trait, top_n = c(20, 50, 100)) {
-    dm <- as.matrix(fit$dm)
+    dm <- extract_posterior(fit, "pips")
     marker <- rownames(dm)
     trait_names <- colnames(dm) %||% names(causal_by_trait)
     out <- list()

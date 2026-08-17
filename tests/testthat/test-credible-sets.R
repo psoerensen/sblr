@@ -204,6 +204,7 @@ test_that("make_credible_sets works with predefined sets and dense LD", {
     ncol = 1,
     dimnames = list(paste0("m", 1:5), "trait1")
   ))
+  class(fit) <- c("stblr_fit", "blr_fit", "list")
   LD <- diag(5)
   LD[1, 2] <- LD[2, 1] <- sqrt(0.7)
   LD[2, 3] <- LD[3, 2] <- sqrt(0.6)

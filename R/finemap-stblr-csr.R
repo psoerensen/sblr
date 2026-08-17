@@ -469,10 +469,6 @@ finemap_stblr_csr <- function(
   )
 }
 
-.stblr_extract_trait_pip <- function(fit, trait) {
-  .stblr_extract_pip(fit, trait = trait)
-}
-
 .stblr_resolve_trait_names <- function(fit, stats) {
   if (!is.null(stats$trait_names)) {
     return(as.character(stats$trait_names))
@@ -708,7 +704,8 @@ finemap_stblr_csr <- function(
 
 .stblr_residualize_wy_csr <- function(stats, fit, Glist, idx, trait, csr = NULL) {
   wy <- .stblr_extract_stat_vector(stats$wy, trait)
-  bm <- .stblr_extract_bm(fit, trait)
+  bm <- as.numeric(extract_posterior(
+    fit, "realised_effects", traits = trait))
   if (length(wy) != length(bm)) {
     stop("stats$wy and fit$bm have different marker counts; cannot residualize.")
   }
@@ -716,15 +713,6 @@ finemap_stblr_csr <- function(
   ld_b <- .stblr_csr_matvec(csr, bm)
   LD_LL <- .extract_sparseLD_region_dense(csr, idx)
   as.numeric(wy[idx] - ld_b[idx] + as.numeric(LD_LL %*% bm[idx]))
-}
-
-.stblr_extract_bm <- function(fit, trait) {
-  if (is.null(fit$bm)) stop("fit$bm is required for residualized fine mapping.")
-  bm <- fit$bm
-  if (is.matrix(bm) || is.data.frame(bm)) {
-    return(as.numeric(as.matrix(bm)[, trait]))
-  }
-  as.numeric(bm)
 }
 
 .stblr_csr_matvec <- function(csr, x) {

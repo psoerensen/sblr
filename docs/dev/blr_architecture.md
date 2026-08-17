@@ -1,5 +1,14 @@
 # BLR architecture
 
+Phase 8A adds one common R access boundary after the established formatter:
+`extract_posterior()` retrieves stored scientific quantities without dropping
+axes, quantity-mode `summarise_posterior()` summarizes retained raw-v2 draws,
+and `extract_diagnostics()` organizes the existing raw-v2 sampler, execution,
+convergence, provider, and provenance namespaces. Public MT wrappers share
+execution-control normalization. The unreachable pre-Phase-5
+MT covariance-hybrid R stack and stale standalone capability matrix are no
+longer active repository paths.
+
 The package has two statistical families and three operator families:
 
 | Family | Logical task | Operators |

@@ -67,8 +67,8 @@ fit_metadata_table <- function(fits) {
         updateLDswap = fit$input$updateLDswap %||% FALSE,
         nchains = fit$input$nchains %||% 1L,
         keep_chains = fit$input$keep_chains %||% FALSE,
-        n_markers = nrow(fit$dm),
-        n_traits = ncol(fit$dm),
+        n_markers = nrow(extract_posterior(fit, "pips")),
+        n_traits = ncol(extract_posterior(fit, "pips")),
         stringsAsFactors = FALSE
       )
     })
@@ -105,8 +105,8 @@ fit_field_inventory <- function(fits) {
 }
 
 posterior_signal_summary <- function(fit, model_name) {
-  dm <- as.matrix(fit$dm)
-  bm <- as.matrix(fit$bm)
+  dm <- extract_posterior(fit, "pips")
+  bm <- extract_posterior(fit, "realised_effects")
   trait_names <- colnames(dm) %||% paste0("T", seq_len(ncol(dm)))
 
   data.frame(
@@ -154,8 +154,8 @@ ld_swap_summary_table <- function(fits) {
 }
 
 top_markers <- function(fit, model_name = fit$model %||% "model", trait = 1, n = 20) {
-  dm <- as.matrix(fit$dm)
-  bm <- as.matrix(fit$bm)
+  dm <- extract_posterior(fit, "pips")
+  bm <- extract_posterior(fit, "realised_effects")
   trait_index <- if (is.character(trait)) match(trait, colnames(dm)) else trait
   if (length(trait_index) != 1L || is.na(trait_index)) {
     stop("trait must be a valid column name or column index.")

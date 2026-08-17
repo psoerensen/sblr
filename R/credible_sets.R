@@ -678,38 +678,12 @@ make_credible_sets <- function(
 }
 
 .stblr_extract_pip <- function(fit, trait = 1) {
-  if (is.null(fit$dm)) stop("fit must contain marker PIPs in fit$dm.")
-  dm <- fit$dm
-
-  if (is.matrix(dm) || is.data.frame(dm)) {
-    dm <- as.matrix(dm)
-    if (is.character(trait)) {
-      if (is.null(colnames(dm)) || !(trait %in% colnames(dm))) {
-        stop("trait was not found in colnames(fit$dm).")
-      }
-      trait_index <- match(trait, colnames(dm))
-      trait_name <- trait
-    } else {
-      trait_index <- as.integer(trait)
-      if (length(trait_index) != 1L || is.na(trait_index) ||
-          trait_index < 1L || trait_index > ncol(dm)) {
-        stop("trait must be a valid fit$dm column index.")
-      }
-      trait_name <- colnames(dm)[trait_index]
-      if (is.null(trait_name) || is.na(trait_name)) trait_name <- trait_index
-    }
-    pip <- dm[, trait_index]
-    names(pip) <- rownames(dm)
-  } else {
-    pip <- as.numeric(dm)
-    names(pip) <- names(dm)
-    trait_name <- if (is.character(trait)) trait else 1L
-  }
-
-  if (is.null(names(pip))) {
-    names(pip) <- paste0("marker", seq_along(pip))
-  }
-
+  dm <- extract_posterior(fit, "pips", traits = trait)
+  if (is.null(dm)) stop("fit must contain marker PIPs.")
+  trait_name <- dimnames(dm)[[2L]][1L]
+  if (is.null(trait_name) || is.na(trait_name)) trait_name <- trait
+  pip <- as.numeric(dm[, 1L, drop = TRUE])
+  names(pip) <- dimnames(dm)[[1L]] %||% paste0("marker", seq_along(pip))
   list(pip = pip, trait = trait_name)
 }
 

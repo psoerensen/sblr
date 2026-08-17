@@ -56,22 +56,31 @@ summarise_components <- function(
     stop("fit must be a list-like ST-BLR BayesR fit object.")
   }
 
-  dm <- .stblr_bayesr_summary_as_matrix(fit$dm, "fit$dm", required = TRUE)
-  bm <- .stblr_bayesr_summary_as_matrix(fit$bm, "fit$bm", required = FALSE)
-  dm_chain_mean_sd <- .stblr_bayesr_summary_as_matrix(fit$dm_chain_mean_sd, "fit$dm_chain_mean_sd", required = FALSE)
-  bm_chain_mean_sd <- .stblr_bayesr_summary_as_matrix(fit$bm_chain_mean_sd, "fit$bm_chain_mean_sd", required = FALSE)
+  dm <- .stblr_bayesr_summary_as_matrix(
+    extract_posterior(fit, "pips"), "pips", required = TRUE)
+  bm <- .stblr_bayesr_summary_as_matrix(
+    extract_posterior(fit, "realised_effects"),
+    "realised_effects", required = FALSE)
+  dm_chain_mean_sd <- .stblr_bayesr_summary_as_matrix(
+    extract_posterior(fit, "pip_chain_mean_sd"),
+    "pip_chain_mean_sd", required = FALSE)
+  bm_chain_mean_sd <- .stblr_bayesr_summary_as_matrix(
+    extract_posterior(fit, "effect_chain_mean_sd"),
+    "effect_chain_mean_sd", required = FALSE)
   dm_component_mean <- .stblr_bayesr_summary_as_matrix(
-    fit$dm_component_mean,
-    "fit$dm_component_mean",
+    extract_posterior(fit, "mean_component_assignment"),
+    "mean_component_assignment",
     required = FALSE
   )
-
-  if (is.null(fit$component_probabilities)) {
-    stop("fit$component_probabilities must be present.")
+  component_probabilities <- extract_posterior(
+    fit, "component_probabilities")
+  if (is.null(component_probabilities)) {
+    stop("component probabilities must be present.")
   }
-  if (!is.list(fit$component_probabilities) || is.null(names(fit$component_probabilities)) ||
-      any(!nzchar(names(fit$component_probabilities)))) {
-    stop("fit$component_probabilities must be a named list.")
+  if (!is.list(component_probabilities) ||
+      is.null(names(component_probabilities)) ||
+      any(!nzchar(names(component_probabilities)))) {
+    stop("component probabilities must be a named list.")
   }
 
   if (!is.numeric(pip_thresholds) || any(!is.finite(pip_thresholds))) {
@@ -140,7 +149,7 @@ summarise_components <- function(
       row$max_component_index <- max(dm_component_mean[, j], na.rm = TRUE)
     }
 
-    cp <- fit$component_probabilities[[trait]]
+    cp <- component_probabilities[[trait]]
     if (is.null(cp)) {
       stop("fit$component_probabilities is missing trait '", trait, "'.")
     }

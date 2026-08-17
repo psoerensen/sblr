@@ -432,7 +432,7 @@
 .blr_phase4a_bed_collection <- function(dat, Glist, phenotype, trait_ids,
                                         residual_contract) {
   marker_ids <- as.character(dat$variable_names)
-  marker_metadata <- .mtblr_bed_marker_metadata(dat, Glist)
+  marker_metadata <- .blr_mt_bed_marker_metadata(dat, Glist)
   effect <- marker_metadata$effect_allele %||% rep(NA_character_, dat$m)
   other <- marker_metadata$other_allele %||% rep(NA_character_, dat$m)
   alleles <- data.frame(
@@ -1315,4 +1315,45 @@
   attr(fit, "blr_raw") <- raw
   attr(fit, "blr_resolved_spec") <- spec
   fit
+}
+.blr_mt_marker_metadata <- function(marker_ids, metadata = NULL) {
+  marker_ids <- as.character(marker_ids)
+  if (!length(marker_ids) || anyNA(marker_ids) || any(!nzchar(marker_ids)) ||
+      anyDuplicated(marker_ids)) {
+    stop("Marker IDs must be unique, nonempty, and non-missing.", call. = FALSE)
+  }
+  if (is.null(metadata)) metadata <- data.frame(marker_id = marker_ids)
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+  if (is.null(metadata$marker_id)) metadata$marker_id <- marker_ids
+  if (nrow(metadata) != length(marker_ids) ||
+      !identical(as.character(metadata$marker_id), marker_ids)) {
+    stop("marker_metadata must have one row per marker in marker order.",
+         call. = FALSE)
+  }
+  metadata
+}
+
+.blr_mt_bed_marker_metadata <- function(dat, Glist) {
+  marker_ids <- as.character(dat$variable_names)
+  metadata <- data.frame(
+    marker_id = marker_ids,
+    chromosome_or_file = rep(dat$chr, lengths(dat$cls)),
+    bed_column = unlist(dat$cls, use.names = FALSE),
+    allele_frequency = unlist(dat$af, use.names = FALSE),
+    stringsAsFactors = FALSE)
+  explicit <- Glist$marker_metadata
+  if (is.list(explicit) && length(explicit) >= max(dat$chr) &&
+      all(vapply(dat$chr, function(cc) is.data.frame(explicit[[cc]]),
+                 logical(1)))) {
+    selected <- do.call(rbind, Map(function(cc, cl) {
+      explicit[[cc]][cl, , drop = FALSE]
+    }, dat$chr, dat$cls))
+    if (!is.null(selected$marker_id) &&
+        identical(as.character(selected$marker_id), marker_ids)) {
+      for (field in c("effect_allele", "other_allele")) {
+        if (!is.null(selected[[field]])) metadata[[field]] <- selected[[field]]
+      }
+    }
+  }
+  .blr_mt_marker_metadata(marker_ids, metadata)
 }

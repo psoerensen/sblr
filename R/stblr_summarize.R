@@ -1,13 +1,6 @@
 # Convergence diagnostics are owned by the shared rank-normalized engine.
 # This internal convenience returns the validated modern result already owned
 # by the fit and never calculates a competing statistic.
-check_stblr_convergence <- function(fit) {
-  if (!inherits(fit, "stblr_fit") || is.null(fit$convergence)) {
-    stop("fit must be an stblr_fit with modern convergence diagnostics.",
-         call. = FALSE)
-  }
-  fit$convergence
-}
 #' Plot ST-BLR Posterior Summaries
 #'
 #' Plots posterior means or medians with HPD intervals, equal-tail intervals,
@@ -327,7 +320,7 @@ plot_posterior <- function(
 }
 
 
-#' Summarise ST-BLR Posterior Traces
+#' Summarise BLR posterior draws or ST-BLR global traces
 #'
 #' Computes posterior summaries for global ST-BLR trace parameters. The
 #' function summarizes traces such as `vbs`, `vgs`, `ves`, `pi_trace`, `vle`, and
@@ -347,7 +340,13 @@ plot_posterior <- function(
 #' `m_included` is the expected number of included markers and is derived from
 #' `pi` and `fit$input$m`.
 #'
-#' @param fit Fitted ST-BLR object.
+#' @param fit A formatted STBLR or MTBLR fit. The legacy global-trace mode
+#'   accepts its established list-like STBLR input.
+#' @param quantity Optional canonical retained quantity. When supplied, the
+#'   function summarizes the retained raw-v2 draw and chain axes without any
+#'   additional burn-in removal.
+#' @param markers,traits,chains,draws,components,activity_patterns Optional
+#'   exact axis selections passed to [extract_posterior()] in quantity mode.
 #' @param nburn Number of initial iterations to discard. If `NULL`, uses
 #'   `fit$input$nburn` when available and otherwise zero.
 #' @param traces Character vector of trace components to summarize.
@@ -391,8 +390,17 @@ summarise_posterior <- function(
     prob = 0.95,
     derived = TRUE,
     include_m_included = TRUE,
-    include_diagnostics = TRUE
+    include_diagnostics = TRUE,
+    quantity = NULL,
+    markers = NULL, traits = NULL, chains = NULL, draws = NULL,
+    components = NULL, activity_patterns = NULL
 ) {
+  if (!is.null(quantity)) {
+    return(.blr_summarise_retained(
+      fit, quantity, prob, markers = markers, traits = traits,
+      chains = chains, draws = draws, components = components,
+      activity_patterns = activity_patterns))
+  }
   if (is.null(nburn)) {
     nburn <- if (!is.null(fit$input$nburn)) fit$input$nburn else 0L
   }

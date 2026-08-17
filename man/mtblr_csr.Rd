@@ -2,7 +2,7 @@
 % Please edit documentation in R/mtblr-csr.R
 \name{mtblr_csr}
 \alias{mtblr_csr}
-\title{Fit Cheng Multi-Trait BayesC-Pi with Sparse LD}
+\title{Fit Cheng multi-trait BayesC or BayesR with sparse LD}
 \usage{
 mtblr_csr(
   providers,
@@ -35,15 +35,13 @@ mtblr_csr(
 )
 }
 \arguments{
-\item{providers}{A nonempty list of named provider descriptors. Each must
-contain `provider_id`, `trait_id`, `operator_resource_id`, a named `score`
-vector, `sample_size`, positive fixed `residual_scale`,
-`likelihood_regime = "independent_summary"`, and `effect_scale`.}
+\item{providers}{Named provider descriptors containing provider and trait
+IDs, operator resource ID, named score, sample size, positive fixed
+residual scale, independent-summary regime, and effect scale.}
 
-\item{operator_resources}{A nonempty list of CSR resource descriptors. Each
-must contain `resource_id`, `marker_ids`, `alleles`, genotype coding and
-scaling metadata, an approximation declaration, provenance, `csr`, and
-the cross-product `diagonal`.}
+\item{operator_resources}{CSR resource descriptors with stable IDs, marker
+and allele metadata, coding/scaling metadata, approximation declaration,
+provenance, CSR storage, and cross-product diagonal.}
 
 \item{global_marker_ids}{Ordered unique global marker identifiers.}
 
@@ -52,50 +50,41 @@ the cross-product `diagonal`.}
 
 \item{trait_ids}{Ordered unique trait identifiers.}
 
-\item{method}{Model identifier, either `"bayesc"` or the factorized
-pattern-by-scale `"bayesr"` target.}
+\item{method}{Either `"bayesc"` or `"bayesr"`.}
 
-\item{initial_marker_covariance}{Initial finite SPD marker covariance
-matrix, ordered by `trait_ids`.}
+\item{initial_marker_covariance}{Initial finite SPD marker covariance.}
 
-\item{marker_covariance_prior_degrees_of_freedom}{Inverse-Wishart prior
-degrees of freedom for the marker covariance.}
+\item{marker_covariance_prior_degrees_of_freedom}{Inverse-Wishart degrees
+of freedom for the marker covariance.}
 
-\item{marker_covariance_prior_scale}{Finite SPD inverse-Wishart prior scale
-matrix, ordered by `trait_ids`.}
+\item{marker_covariance_prior_scale}{Finite SPD inverse-Wishart scale matrix.}
 
-\item{initial_activity_pattern_probability}{Optional initial probability
-vector over the complete binary activity patterns.}
+\item{initial_activity_pattern_probability}{Optional initial activity-
+pattern simplex.}
 
-\item{activity_pattern_dirichlet_prior}{Optional positive Dirichlet prior
-vector over the complete binary activity patterns.}
+\item{activity_pattern_dirichlet_prior}{Optional positive activity-pattern
+Dirichlet prior.}
 
-\item{component_scales}{Positive, unique, strictly increasing BayesR
-variance multipliers. The single null state is represented by the null
-activity pattern and must not be included here.}
+\item{component_scales}{Positive, unique, increasing BayesR variance
+multipliers. The null state is not included.}
 
-\item{initial_scale_probability}{Optional initial simplex over positive
-`component_scales`, conditional on a non-null activity pattern.}
+\item{initial_scale_probability}{Optional conditional simplex over positive
+component scales.}
 
-\item{scale_dirichlet_prior}{Optional positive Dirichlet prior over the
-positive scales.}
+\item{scale_dirichlet_prior}{Optional positive scale Dirichlet prior.}
 
-\item{marker_multipliers}{Optional positive marker-specific variance
-multipliers $q_j$ in global marker order.}
+\item{marker_multipliers}{Optional positive marker-specific multipliers.}
 
-\item{nit}{Number of post-burn-in sampling iterations.}
-
-\item{nburn}{Number of burn-in iterations.}
-
-\item{nthin}{Positive retention interval.}
+\item{nit, nburn, nthin}{Post-burn iterations, burn-in iterations, and
+thinning interval.}
 
 \item{seed}{Master seed used by the Phase 3 seed contract.}
 
 \item{nchains}{Number of complete joint chains.}
 
-\item{ncores}{Number of requested chain workers.}
+\item{ncores}{Requested chain workers.}
 
-\item{chain_seeds}{Optional exact task seed per chain.}
+\item{chain_seeds}{Optional exact base seed per chain.}
 
 \item{keep_chains}{Retain compact chain records in the formatted fit.}
 
@@ -109,21 +98,13 @@ multipliers $q_j$ in global marker order.}
 sampling.}
 }
 \value{
-An object of class `mtblr_fit`. The validated `blr_raw` version 2
-  object is available according to the standard output contract.
+An `mtblr_fit`; validated raw-v2 is available as
+  `attr(fit, "blr_raw")`.
 }
 \description{
-Fits the corrected Cheng MT-BayesC-Pi model from independent summary-
-statistic providers backed by sparse CSR cross-product operators. Each
-provider contributes to exactly one declared trait and may have its own
-marker subset, order, sample size, residual scale, and LD population.
-Multiple providers for one trait are allowed only when their likelihoods
-are declared independent. Missing provider markers contribute no likelihood
-information.
-}
-\details{
-CSR resources may describe an exact declared operator or an approximation.
-The sampler does not densify or combine provider operators. Individual-level
-predictions and full residual-covariance draws are unavailable for this
-likelihood.
+Fits the supported independent-provider summary-statistic Cheng
+MT-BayesC-Pi or factorized pattern-by-scale MT-BayesR model using CSR
+cross-product operators. Providers may have distinct marker subsets,
+orders, sample sizes, residual scales, and LD populations. Missing provider
+markers contribute no likelihood information.
 }

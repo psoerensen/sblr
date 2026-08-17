@@ -54,6 +54,7 @@ make_bayesr_component_summary_fit <- function(optional = TRUE) {
       dimnames = dimnames(dm)
     )
   }
+  class(fit) <- c("stblr_fit", "blr_fit", "list")
   fit
 }
 
@@ -122,14 +123,14 @@ test_that("summarise_components validates required fields", {
   fit_no_dm$dm <- NULL
   expect_error(
     summarise_components(fit_no_dm),
-    "fit\\$dm must be present"
+    "pips must be present"
   )
 
   fit_no_comp <- fit
   fit_no_comp$component_probabilities <- NULL
   expect_error(
     summarise_components(fit_no_comp),
-    "fit\\$component_probabilities must be present"
+    "component probabilities must be present"
   )
 })
 

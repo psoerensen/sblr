@@ -2,7 +2,7 @@
 % Please edit documentation in R/mtblr-bed.R
 \name{mtblr_bed}
 \alias{mtblr_bed}
-\title{Fit corrected Cheng multi-trait BayesC from packed BED genotypes}
+\title{Fit Cheng multi-trait BayesC or BayesR from packed BED genotypes}
 \usage{
 mtblr_bed(
   y,
@@ -51,8 +51,7 @@ mtblr_bed(
 
 \item{sample_ids}{Unique stable sample IDs in phenotype-row order.}
 
-\item{method}{Either `"bayesc"` or the factorized pattern-by-scale
-`"bayesr"` target.}
+\item{method}{Either `"bayesc"` or `"bayesr"`.}
 
 \item{residual_covariance_policy}{Either `"fixed_full"` or
 `"sampled_full"`.}
@@ -75,9 +74,8 @@ the canonical complete binary activity-pattern order.}
 in the same activity-pattern order.}
 
 \item{component_scales, initial_scale_probability, scale_dirichlet_prior, marker_multipliers}{BayesR positive variance multipliers, their optional initial and
-Dirichlet probability vectors, and positive marker-specific $q_j$
-multipliers. The null state is represented only by the null activity
-pattern. These arguments must be `NULL` for `method = "bayesc"`.}
+Dirichlet probability vectors, and positive marker-specific multipliers.
+These arguments must be `NULL` for `method = "bayesc"`.}
 
 \item{initial_residual_covariance}{Initial full residual covariance for
 `sampled_full`; otherwise `NULL`.}
@@ -94,39 +92,34 @@ controls, following [stblr_bed()].}
 \item{nit, nburn, nthin}{Post-burn iterations, burn-in iterations, and
 thinning interval.}
 
-\item{seed}{User uint32 seed resolved through seed-contract version 1.}
+\item{seed}{Master seed resolved through seed-contract version 1.}
 
 \item{nchains}{Number of complete joint chains.}
 
 \item{ncores}{Requested chain workers.}
 
-\item{chain_seeds}{Optional signed-int32 or uint32-compatible base seed for
-each chain. These bases are resolved by seed-contract version 1.}
+\item{chain_seeds}{Optional signed-int32 or uint32-compatible base seed per
+chain.}
 
-\item{keep_chains}{Retain compact chain-final records in the formatted fit.
-Raw v2 always preserves its explicit chain axes.}
+\item{keep_chains}{Retain compact chain-final records in the formatted fit.}
 
-\item{convergence}{Either `"core"` for the contracted observational capture
-or `"none"`. Disabling capture is zero-RNG.}
+\item{convergence}{Either `"core"` or `"none"`.}
 
-\item{convergence_control}{Reserved shared control. Phase 5B accepts only
-`NULL`; trace retention is controlled by `keep_traces`.}
+\item{convergence_control}{Reserved; must be `NULL`.}
 
 \item{keep_traces}{Retain unthinned observational convergence traces.}
 
-\item{memory_limit_bytes}{Incremental fit-allocation limit used by the
-pre-provider Phase 5A memory preflight. `NULL` or positive `Inf` disables
-the finite limit.}
+\item{memory_limit_bytes}{Incremental fit-allocation limit checked before
+provider construction and native sampling. `NULL` or positive `Inf`
+disables the finite limit.}
 }
 \value{
 An `mtblr_fit` and `blr_fit`. The validated `blr_raw` version 2
   object is available as `attr(fit, "blr_raw")`.
 }
 \description{
-Fits the publicly supported common-sample Cheng MT-BayesC-Pi model using
-complete binary activity patterns, one authoritative marker covariance,
-and either a fixed or sampled full residual covariance. Phenotypes must be
-complete and already centred or residualized as appropriate for the
-intended analysis. Independent-provider summary-statistic analyses use
-[mtblr_csr()] or [mtblr_block_eigen()] instead.
+Fits the supported common-sample Cheng MT-BayesC-Pi or factorized
+pattern-by-scale MT-BayesR model. Phenotypes must be complete and centred
+or residualized as appropriate for the analysis. Independent-provider
+summary-statistic analyses use [mtblr_csr()] or [mtblr_block_eigen()].
 }

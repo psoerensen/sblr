@@ -3,6 +3,8 @@
 S3method(print,stblr_backend_check)
 export(bed_xtx_xty)
 export(check_stblr_consistency)
+export(extract_diagnostics)
+export(extract_posterior)
 export(extract_stblr_finemap_loci)
 export(finemap_stblr_csr)
 export(make_credible_sets)

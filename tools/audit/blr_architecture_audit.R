@@ -17,11 +17,18 @@ record("seven canonical fitting exports", all(fitters %in% exports))
 record("obsolete fitting exports absent", !any(c("sblr", "stblr_bed_marker",
   "check_stblr_convergence", "stblr_csr_bayesr", "stblr_csr_prior_annot",
   "stblr_csr_group_annot", "stblr_csr_learn_annot") %in% exports))
-matrix <- sblr:::.blr_model_capability_matrix()
-record("six canonical model semantics", setequal(unique(matrix$model),
+semantics <- vapply(
+  c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc", "sbayesrc"),
+  function(model) sblr:::.blr_model_semantics(
+    model, if (startsWith(model, "s")) "csr" else "packed_bed")$model,
+  character(1))
+record("six canonical model semantics", setequal(semantics,
   c("bayesc", "sbayesc", "bayesr", "sbayesr", "bayesrc", "sbayesrc")))
-record("three canonical operators", setequal(unique(matrix$operator),
-  c("packed_bed", "csr", "block_eigen")))
+public_adapters <- c(
+  "stblr_csr", "stblr_block_eigen", "stblr_bed",
+  "mtblr_csr", "mtblr_block_eigen", "mtblr_bed")
+record("three public operator adapters", all(vapply(
+  public_adapters, exists, logical(1), mode = "function")))
 record("maf_effect_s independent", !grepl("sbayes.*maf_effect_s = 0",
   text(list.files("R", full.names = TRUE)), ignore.case = TRUE))
 

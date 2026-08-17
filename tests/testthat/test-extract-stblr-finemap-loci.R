@@ -1,6 +1,6 @@
 make_extract_finemap_fit <- function() {
   markers <- paste0("m", 1:4)
-  list(
+  fit <- list(
     dm = matrix(
       c(0.10, 0.60, 0.35, 0.02),
       ncol = 1,
@@ -42,6 +42,8 @@ make_extract_finemap_fit <- function() {
       dimnames = list(markers, "D1")
     )
   )
+  class(fit) <- c("stblr_fit", "blr_fit", "list")
+  fit
 }
 
 make_extract_finemap_glist <- function(prefix = NULL) {

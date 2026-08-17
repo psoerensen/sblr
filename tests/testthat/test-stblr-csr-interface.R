@@ -434,6 +434,18 @@ test_that("stblr_csr fits BayesC through public method interface", {
   expect_equal(fit$input$nchains, 1L)
   expect_null(fit$chains)
   expect_null(fit$diagnostics$ld_swap_chains)
+  diagnostic_view <- extract_diagnostics(fit)
+  raw <- attr(fit, "blr_raw", exact = TRUE)
+  expect_identical(diagnostic_view$execution$task_seeds,
+                   raw$input$mcmc$task_seeds)
+  expect_identical(diagnostic_view$execution$retained_transition_indices,
+                   raw$input$mcmc$retained_transition_indices)
+  expect_identical(diagnostic_view$execution$scheduler_version,
+                   raw$input$compute$scheduler_version)
+  expect_identical(diagnostic_view$providers$providers,
+                   raw$input$data$providers)
+  expect_identical(diagnostic_view$provenance$marker_alignment,
+                   raw$provenance$marker_alignment)
 })
 
 test_that("stblr_csr BayesC no-chain formatting keeps LD-swap diagnostics", {

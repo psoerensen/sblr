@@ -191,6 +191,26 @@ test_that("public summary chains are scheduler neutral", {
   expect_identical(
     phase6b_scientific(attr(serial, "blr_raw")),
     phase6b_scientific(attr(parallel, "blr_raw")))
+  raw <- attr(serial, "blr_raw", exact = TRUE)
+  diagnostic_view <- extract_diagnostics(serial)
+  expect_identical(diagnostic_view$execution$task_seeds,
+                   raw$input$mcmc$task_seeds)
+  expect_identical(diagnostic_view$execution$logical_task_ids,
+                   raw$diagnostics$workers$logical_task_order)
+  expect_identical(diagnostic_view$execution$retained_transition_indices,
+                   raw$input$mcmc$retained_transition_indices)
+  expect_identical(diagnostic_view$execution$convergence_iteration_indices,
+                   serial$convergence_iteration_indices)
+  expect_identical(diagnostic_view$execution$workers,
+                   raw$diagnostics$workers)
+  expect_identical(diagnostic_view$providers$providers,
+                   raw$input$data$providers)
+  expect_identical(diagnostic_view$providers$operator_resources,
+                   raw$input$data$operator_resources)
+  expect_identical(diagnostic_view$providers$provider_maps,
+                   raw$input$data$provider_maps)
+  expect_identical(diagnostic_view$provenance$marker_alignment,
+                   raw$provenance$marker_alignment)
 })
 
 test_that("public summary output follows raw-v2 and formatted contracts", {

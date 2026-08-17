@@ -28,7 +28,8 @@ already placed in the credible set. Multiple sets can be returned.
 
 ## Credible sets from fitted models
 
-`make_credible_sets()` reads PIPs from `fit$dm` in current STBLR fit objects.
+`make_credible_sets()` uses the canonical PIP quantity returned by
+`extract_posterior(fit, "pips")`.
 Select a trait by name or one-based column index. Supply either:
 
 - predefined marker `sets` plus dense regional `LD`; or
@@ -68,7 +69,8 @@ model.
 A recommended default is to fit the genome-wide summary model once and then
 extract loci:
 
-- `extract_stblr_finemap_loci()` summarizes `fit$dm` and `fit$bm` within
+- `extract_stblr_finemap_loci()` summarizes the canonical `"pips"` and
+  `"realised_effects"` quantities within
   supplied loci and optionally constructs single- or multi-signal sets. It does
   not rerun MCMC.
 - `finemap_stblr_csr()` performs explicit local CSR sensitivity/reference

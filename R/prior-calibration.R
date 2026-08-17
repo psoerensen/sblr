@@ -125,7 +125,7 @@
 }
 
 .mtblr_prior_weight_matrix <- function(patterns, probability, gamma,
-                                       marker_scale, name) {
+                                        marker_scale, name) {
  patterns <- as.matrix(patterns)
  nt <- ncol(patterns)
  ns <- nrow(patterns)
@@ -152,6 +152,19 @@
   W <- W + state_weight * tcrossprod(patterns[s, ])
  }
  W
+}
+
+.mtblr_prior_covariance <- function(x, default, name, nt) {
+ x <- as.matrix(x %||% default)
+ if (!identical(dim(x), c(nt, nt)) || any(!is.finite(x)) ||
+     !isTRUE(all.equal(unname(x), unname(t(x)), tolerance = 0))) {
+  stop(name, " must be a finite symmetric nt by nt matrix.", call. = FALSE)
+ }
+ if (any(diag(x) <= 0) ||
+     min(eigen(x, symmetric = TRUE, only.values = TRUE)$values) <= 0) {
+  stop(name, " must be positive definite.", call. = FALSE)
+ }
+ x
 }
 
 .mtblr_prior_calibration <- function(
@@ -195,11 +208,12 @@
  }
  vb_default <- diag(target / diag(W0), nt)
  ssb_default <- diag(((nub - 2) / nub) * target / diag(Wp), nt)
- vg <- .mtblr_cov(vg, vg_default, "vg", nt)
- vb <- .mtblr_cov(vb, vb_default, "vb", nt)
- ve <- .mtblr_cov(ve, ve_default, "ve", nt)
- ssb_prior <- .mtblr_cov(ssb_prior, ssb_default, "ssb_prior", nt)
- sse_prior <- .mtblr_cov(
+ vg <- .mtblr_prior_covariance(vg, vg_default, "vg", nt)
+ vb <- .mtblr_prior_covariance(vb, vb_default, "vb", nt)
+ ve <- .mtblr_prior_covariance(ve, ve_default, "ve", nt)
+ ssb_prior <- .mtblr_prior_covariance(
+  ssb_prior, ssb_default, "ssb_prior", nt)
+ sse_prior <- .mtblr_prior_covariance(
   sse_prior, ((nue - 2) / nue) * ve, "sse_prior", nt)
  metadata <- list(
   prior_calibration_policy = "joint_state_expected_covariance_diagonal_default",

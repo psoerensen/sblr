@@ -35,9 +35,9 @@ fit_bed <- mtblr_bed(
   seed = 17
 )
 
-fit_bed$dm
-fit_bed$bm
-fit_bed$activity_pattern_probabilities
-fit_bed$pleiotropic_probabilities
-fit_bed$cov_b_mean
-fit_bed$cov_e_final
+extract_posterior(fit_bed, "pips")
+extract_posterior(fit_bed, "realised_effects")
+extract_posterior(fit_bed, "activity_pattern_probabilities")
+extract_posterior(fit_bed, "pleiotropic_probabilities")
+extract_posterior(fit_bed, "effect_covariance")
+extract_posterior(fit_bed, "residual_covariance", state = "final")

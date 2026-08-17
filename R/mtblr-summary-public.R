@@ -293,15 +293,9 @@
     keep_chains, convergence, convergence_control, keep_traces,
     memory_limit_bytes) {
   method <- .blr_character_scalar(method, "method", c("bayesc", "bayesr"))
-  convergence <- match.arg(convergence, c("core", "none"))
-  if (!is.null(convergence_control)) {
-    stop(interface, " requires convergence_control = NULL.", call. = FALSE)
-  }
-  keep_chains <- .blr_logical_scalar(keep_chains, "keep_chains")
-  keep_traces <- .blr_logical_scalar(keep_traces, "keep_traces")
-  if (identical(convergence, "none") && keep_traces) {
-    stop("convergence = 'none' requires keep_traces = FALSE.", call. = FALSE)
-  }
+  controls <- .blr_joint_mt_controls(
+    nit, nburn, nthin, seed, nchains, ncores, chain_seeds,
+    keep_chains, convergence, convergence_control, keep_traces, interface)
   collection <- .mtblr_summary_public_collection(
     providers, operator_resources, global_marker_ids, global_alleles,
     trait_ids, representation)
@@ -320,14 +314,18 @@
     marker_multipliers = marker_multipliers,
     update_marker_covariance = TRUE,
     update_activity_pattern_probability = TRUE,
-    burn_in_iterations = nburn, sampling_iterations = nit,
-    thin_interval = nthin, chains = nchains, cores = ncores, seed = seed,
-    chain_seeds = chain_seeds,
-    keep_traces = keep_traces && identical(convergence, "core"),
+    burn_in_iterations = controls$chain$nburn,
+    sampling_iterations = controls$chain$nit,
+    thin_interval = controls$chain$nthin,
+    chains = controls$chain$nchains, cores = controls$chain$ncores,
+    seed = controls$chain$seed,
+    chain_seeds = controls$chain$chain_seeds_requested,
+    keep_traces = controls$keep_traces &&
+      identical(controls$convergence, "core"),
     memory_limit_bytes = memory_limit_bytes)
   operator <- if (identical(representation, "csr")) "csr" else
     "block_eigen"
   raw <- .blr_phase6b_promote_summary_raw(raw, interface, operator)
   .blr_format_cheng_mt_raw_v2(
-    raw, keep_chains = keep_chains, operator = operator)
+    raw, keep_chains = controls$chain$keep_chains, operator = operator)
 }

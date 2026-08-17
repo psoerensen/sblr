@@ -1,5 +1,16 @@
 # BLR output and raw schemas
 
+Phase 8A does not change raw-v2. The canonical formatted access route is
+`extract_posterior(fit, quantity, state)`, which maps stored raw/formatted
+quantities without recomputation and preserves size-one axes. Scientifically
+unavailable formatted quantities return `NULL`; required raw-v2 fields retain
+their established present-but-`NULL` contract. Diagnostic access is separate
+through `extract_diagnostics()`. Its stable view has `sampler`, `execution`,
+`convergence`, `providers`, and `provenance` namespaces. These organize the
+existing raw-v2 diagnostics, task seeds and IDs, retained/convergence indices,
+worker/scheduler state, provider/resource maps, and provenance without
+recomputing scientific quantities or copying posterior arrays.
+
 ## Formatted fit structure
 
 Every canonical fit contains the common structural fields below. Structural

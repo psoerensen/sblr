@@ -223,13 +223,6 @@ blr_convergence_engine_native_call <- function(case, nchains = 2L, ncores = 1L,
           blr_convergence_engine_args(case, nchains, ncores, chain_seeds, keep_chains))
 }
 
-blr_convergence_engine_diagnose <- function(native, trait_names, updateB = TRUE,
-                              updateE = TRUE, control = NULL,
-                              keep_traces = FALSE) {
-  sblr:::.mtblr_bed_convergence_internal(
-    native, trait_names, updateB, updateE, control, keep_traces)
-}
-
 blr_convergence_engine_without_timing <- function(x) {
   if (!is.null(x$raw)) x$raw <- blr_bed_chains_without_timing(x$raw)
   x
@@ -279,19 +272,6 @@ blr_public_convergence_without_additions <- function(fit) {
     "convergence_thresholds", "convergence_status",
     "convergence_computed", "convergence_memory_estimate")] <- NULL
   fit
-}
-
-blr_public_convergence_internal_diagnostic <- function(args, trait_names,
-                                         updateB = FALSE,
-                                         updateE = FALSE,
-                                         keep_traces = FALSE) {
-  native <- do.call(
-    sblr:::mtblr_bed_convergence_trace_internal,
-    blr_bed_public_chains_internal_args(args))
-  sblr:::.mtblr_bed_convergence_internal(
-    native, trait_names, updateB, updateE,
-    control = sblr:::.blr_convergence_control(),
-    keep_traces = keep_traces)
 }
 
 blr_public_convergence_warning_fixture <- function(status = "computed", flagged = FALSE,

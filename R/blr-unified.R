@@ -46,6 +46,25 @@
        keep_chains = keep_chains)
 }
 
+.blr_joint_mt_controls <- function(
+    nit, nburn, nthin, seed, nchains, ncores, chain_seeds,
+    keep_chains, convergence, convergence_control, keep_traces,
+    interface) {
+  chain <- .blr_chain_controls(
+    nit = nit, nburn = nburn, nthin = nthin, seed = seed,
+    nchains = nchains, ncores = ncores, chain_seeds = chain_seeds,
+    keep_chains = keep_chains)
+  convergence <- match.arg(convergence, c("core", "none"))
+  if (!is.null(convergence_control)) {
+    stop(interface, " requires convergence_control = NULL.", call. = FALSE)
+  }
+  keep_traces <- .blr_logical_scalar(keep_traces, "keep_traces")
+  if (identical(convergence, "none") && keep_traces) {
+    stop("convergence = 'none' requires keep_traces = FALSE.", call. = FALSE)
+  }
+  list(chain = chain, convergence = convergence, keep_traces = keep_traces)
+}
+
 .blr_convergence_controls <- function(convergence = c("auto", "none", "core", "extended"),
                                       convergence_control = NULL,
                                       nchains = 1L) {
@@ -275,56 +294,6 @@
   result$Glist <- apply_to_glist(value)
   result$effect_maf_alignment_status <- "aligned_to_final_marker_order"
   result
-}
-
-.blr_validate_fit_model_semantics <- function(fit) {
-  if (!identical(fit$input$model_semantics_version, 2L) ||
-      !identical(fit$input$model_semantics,
-                 "s_prefix_means_summary_statistics")) {
-    stop("The fit lacks model-semantics version 2 and cannot be silently reinterpreted.",
-         call. = FALSE)
-  }
-  invisible(fit)
-}
-
-.blr_model_capability_matrix <- function() {
-  models <- c("bayesc", "sbayesc", "bayesr", "sbayesr",
-              "bayesrc", "sbayesrc")
-  operators <- c("csr", "block_eigen", "packed_bed")
-  base <- expand.grid(
-    family = c("stblr", "mtblr"), model = models,
-    operator = operators, stringsAsFactors = FALSE)
-  base$annotation_policy <- ifelse(
-    base$model %in% c("bayesrc", "sbayesrc"),
-    "annotation_probit_stick", "global")
-  base$status <- "unsupported"
-  supported <- list(
-    stblr = list(
-      csr = c("sbayesc", "sbayesr"),
-      block_eigen = c("sbayesc", "sbayesr", "sbayesrc"),
-      packed_bed = c("bayesc", "bayesr", "bayesrc")),
-    mtblr = list(
-      csr = c("sbayesc", "sbayesr"),
-      block_eigen = c("sbayesc", "sbayesr"),
-      packed_bed = c("bayesc", "bayesr")))
-  for (family in names(supported)) {
-    for (operator in names(supported[[family]])) {
-      hit <- base$family == family & base$operator == operator &
-        base$model %in% supported[[family]][[operator]]
-      base$status[hit] <- "public_canonical"
-    }
-  }
-  annotation <- expand.grid(
-    family = "stblr", model = "sbayesc", operator = operators,
-    annotation_policy = c("fixed_marker", "group", "learned_logistic"),
-    stringsAsFactors = FALSE)
-  annotation$status <- ifelse(
-    annotation$operator == "csr", "public_supported", "unsupported")
-  annotation_rc <- data.frame(
-    family = "stblr", model = "sbayesrc", operator = "csr",
-    annotation_policy = "annotation_probit_stick",
-    status = "public_canonical", stringsAsFactors = FALSE)
-  rbind(base, annotation, annotation_rc)
 }
 
 .blr_memory_estimate <- function(family, operator, m, nt, nchains, ncores,

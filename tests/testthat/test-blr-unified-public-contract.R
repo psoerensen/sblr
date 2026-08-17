@@ -2,7 +2,8 @@ test_that("unified public fitting routes and identifiers are canonical", {
   exports <- getNamespaceExports("sblr")
   expect_true(all(c(
     "stblr_csr", "stblr_block_eigen", "stblr_bed", "stblr_csr_annot",
-    "mtblr_bed", "mtblr_csr", "mtblr_block_eigen") %in% exports))
+    "mtblr_bed", "mtblr_csr", "mtblr_block_eigen",
+    "extract_posterior", "extract_diagnostics") %in% exports))
   expect_false(any(c(
     "sblr", "stblr_bed_marker", "stblr_csr_bayesr",
     "stblr_csr_prior_annot", "stblr_csr_learn_annot",
@@ -38,24 +39,6 @@ test_that("unified public fitting routes and identifiers are canonical", {
 })
 
 test_that("scientific models are compositional and capability-checked", {
-  models <- c("bayesc", "sbayesc", "bayesr", "sbayesr",
-              "bayesrc", "sbayesrc")
-  matrix <- sblr:::.blr_model_capability_matrix()
-  expect_setequal(unique(matrix$model), models)
-  expect_setequal(unique(matrix$annotation_policy), c(
-    "global", "fixed_marker", "group", "learned_logistic",
-    "annotation_probit_stick"))
-  expect_identical(nrow(matrix), 46L)
-  expect_true(all(matrix$status %in% c(
-    "public_canonical", "public_supported", "unsupported")))
-  expect_true(all(matrix$status[
-    matrix$family == "mtblr" & matrix$model %in% c("bayesrc", "sbayesrc")] ==
-      "unsupported"))
-  expect_true(all(matrix$status[
-    matrix$annotation_policy %in% c(
-      "fixed_marker", "group", "learned_logistic") &
-      matrix$operator != "csr"] == "unsupported"))
-
   sbayesc <- sblr:::.blr_resolve_st_model(
     "sbayesc", list(), "sbayesc", operator = "csr")
   sbayesr <- sblr:::.blr_resolve_st_model(
@@ -79,7 +62,7 @@ test_that("unsupported scientific model/operator combinations fail early", {
     fixture$y, fixture$Glist, method = "sbayesc",
     nit = 1L, nburn = 0L, convergence = "none"),
     "s.*prefix denotes summary statistics")
-  expect_error(mtblr_csr(method = "bayesr"), "only method = 'bayesc'")
+  expect_error(mtblr_csr(method = "bayesrc"), "method")
 })
 
 test_that("unified fit finalizer owns explicit names without aliases", {

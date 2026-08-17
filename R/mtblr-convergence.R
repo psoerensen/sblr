@@ -812,46 +812,6 @@
     if (isTRUE(overview$fewer_than_four_chains)) "yes" else "no")
 }
 
-.mtblr_bed_convergence_internal <- function(native_result, trait_names,
-                                             updateB, updateE,
-                                             control = NULL,
-                                             keep_traces = FALSE,
-                                             extended_plan = NULL,
-                                             model = "bayesc") {
-  if (!is.list(native_result) ||
-      !identical(names(native_result), c("raw", "trace_bundle"))) {
-    stop("Expected an MT BED native convergence-trace result.",
-         call. = FALSE)
-  }
-  raw <- .validate_mtblr_raw(native_result$raw)
-  bundle <- .blr_mtblr_convert_native_bundle(
-    native_result$trace_bundle, extended_plan %||% list(
-      selected = data.frame(marker_index = integer(), marker_id = character()),
-      component_names = character(), pattern_names = character(),
-      joint_names = character(), annotation_names = character(),
-      stick_names = character()), model)
-  bundle <- .blr_validate_convergence_trace_bundle(
-    bundle, nt = length(trait_names),
-    updateB = updateB, updateE = updateE)
-  convergence <- .blr_convergence_tier1(
-    bundle, trait_names, control = control, keep_traces = keep_traces)
-  raw$diagnostics$convergence <- convergence
-  traces <- NULL
-  if (isTRUE(keep_traces)) {
-    values <- bundle$values
-    quantity_names <- convergence$summary$quantity
-    dimnames(values) <- list(
-      paste0("Iter", seq_len(dim(values)[1L])),
-      paste0("chain", seq_len(dim(values)[2L])),
-      quantity_names)
-    traces <- bundle
-    traces$quantities <- transform(
-      bundle$quantities, quantity = quantity_names)
-    traces$values <- values
-  }
-  list(raw = raw, convergence_traces = traces)
-}
-
 .blr_convergence_memory_estimate <- function(nchains, nit, nt,
                                                 keep_traces = FALSE) {
   values <- c(nchains = nchains, nit = nit, nt = nt)

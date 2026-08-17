@@ -77,6 +77,11 @@ BED-LV, and arbitrary P/Q composition are not current implementation claims.
 
 ## Current qualification and reference records
 
+- [Phase 8A public R alignment checkpoint](blr_phase8a_public_r_alignment_checkpoint.md)
+  records the canonical ST/MT argument and output crosswalk, shared fit-access
+  responsibilities, removal of the unreachable MT R stack, and the Phase 8B
+  `sblrbench` handoff.
+
 These records provide evidence for implemented features. They are not general
 architecture owners.
 

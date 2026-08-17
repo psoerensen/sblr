@@ -366,95 +366,6 @@ blr_bed_public_public_args <- function(case, residual_covariance = "full",
   args
 }
 
-blr_bed_public_native_args <- function(public_args) {
-  y <- public_args$y
-  dat <- sblr:::.make_bed_marker_data(
-    public_args$Glist, y, blr_bed_public_or(public_args$chr, NULL),
-    blr_bed_public_or(public_args$cls, NULL),
-    blr_bed_public_or(public_args$block_size, 1000L),
-    blr_bed_public_or(public_args$rows, NULL))
-  Y <- as.matrix(dat$y)
-  if (isTRUE(blr_bed_public_or(public_args$center, TRUE))) {
-    Y <- sweep(Y, 2L, colMeans(Y), "-")
-  }
-  nt <- ncol(Y); m <- dat$m
-  mod <- sblr:::.mtblr_models(
-    blr_bed_public_or(public_args$models, NULL),
-    blr_bed_public_or(public_args$pimodels, NULL),
-    blr_bed_public_or(public_args$pi, .001), nt)
-  null <- which(rowSums(mod$matrix) == 0L)
-  p_active <- 1 - sum(mod$probabilities[null])
-  labels <- unique(dat$sets)
-  defaults <- lapply(labels, function(label) which(dat$sets == label))
-  sets <- sblr:::.mtblr_sets(blr_bed_public_or(public_args$sets, defaults), m)
-  h2 <- blr_bed_public_or(public_args$h2, .5)
-  if (length(h2) == 1L) h2 <- rep(h2, nt)
-  vy <- colSums(Y^2) / (nrow(Y) - 1)
-  vg <- blr_bed_public_or(public_args$vg, diag(vy * h2, nt))
-  ve <- blr_bed_public_or(public_args$ve, diag(vy * (1 - h2), nt))
-  vb <- blr_bed_public_or(public_args$vb, vg / (m * p_active))
-  nub <- blr_bed_public_or(public_args$nub, 4)
-  nue <- blr_bed_public_or(public_args$nue, 4)
-  ssb <- blr_bed_public_or(public_args$ssb_prior,
-                     ((nub - 2) / nub) * vg / (m * p_active))
-  sse <- blr_bed_public_or(public_args$sse_prior,
-                     ((nue - 2) / nue) * ve)
-  init <- sblr:::.mtblr_bed_initialization(
-    blr_bed_public_or(public_args$beta, NULL),
-    blr_bed_public_or(public_args$b, NULL),
-    blr_bed_public_or(public_args$state, NULL), mod$matrix, m, nt)
-  list(
-    bed_files = dat$bed_files, n_bed = dat$n_total, cls = dat$cls,
-    rows = dat$rows, af = unlist(dat$af, use.names = FALSE), Y = Y,
-    beta_init = lapply(seq_len(nt), function(t) init$beta[, t]),
-    b_init = lapply(seq_len(nt), function(t) init$b[, t]),
-    state_init = lapply(seq_len(nt), function(t) init$state[, t]),
-    sets = sets$native, B = vb, E = ve,
-    ssb_prior = lapply(seq_len(nt), function(t) ssb[t, ]),
-    sse_prior = lapply(seq_len(nt), function(t) sse[t, ]),
-    models = mod$native, pi = mod$probabilities, nub = nub, nue = nue,
-    updateB = blr_bed_public_or(public_args$updateB, TRUE),
-    updateE = blr_bed_public_or(public_args$updateE, TRUE),
-    updatePi = blr_bed_public_or(public_args$updatePi, TRUE),
-    residual_covariance = blr_bed_public_or(public_args$residual_covariance, "full"),
-    nit = blr_bed_public_or(public_args$nit, 1000L),
-    nburn = blr_bed_public_or(public_args$nburn, 500L),
-    nthin = blr_bed_public_or(public_args$nthin, 1L),
-    seed = blr_bed_public_or(public_args$seed, 1L),
-    method = 4L)
-}
-
-blr_bed_public_compare_public_internal <- function(args, tolerance = 1e-12) {
-  fit <- do.call(mtblr_bed, args)
-  raw <- do.call(sblr:::mtblr_bed_internal, blr_bed_public_native_args(args))
-  marker_fields <- c("bm", "dm", "wy", "r", "b")
-  trace_fields <- c("vbs", "vgs", "ves")
-  variance_fields <- c(
-    covb = "cov_b_mean", covg = "cov_g_mean", cove = "cov_e_mean",
-    vb = "cov_b_final", vg = "cov_g_final", ve = "cov_e_final")
-  actual <- c(
-    lapply(marker_fields, function(field) unname(fit[[field]])),
-    lapply(trace_fields, function(field) unname(fit[[field]])),
-    lapply(unname(variance_fields), function(field) unname(fit[[field]])),
-    list(pi = unname(fit$pi_final), pim = unname(fit$pi_mean)))
-  names(actual) <- c(marker_fields, trace_fields, names(variance_fields),
-                     "pi", "pim")
-  expected <- c(
-    raw$marker[marker_fields], raw$trace[trace_fields],
-    raw$variance[names(variance_fields)],
-    list(pi = raw$pi$final, pim = raw$pi$mean))
-  testthat::expect_equal(actual, expected, tolerance = tolerance)
-  testthat::expect_identical(unname(fit$d), raw$marker$state)
-  testthat::expect_identical(fit$marker_order, raw$marker$order)
-  testthat::expect_equal(
-    list(fit$raw_schema_version, fit$input$backend, fit$input$data_level),
-    list(1L, "mt_bed_bayesc", "individual"))
-  serial_diagnostics <- names(raw$diagnostics$mt_bed)
-  testthat::expect_equal(fit$diagnostics$mt_bed[serial_diagnostics],
-                         raw$diagnostics$mt_bed)
-  invisible(fit)
-}
-
 # ---- consolidated from tests/testthat/helper-mtblr-bed-chains-internal.R ----
 blr_bed_chains_seed_oracle <- function(seed, nchains) {
   base <- as.double(seed) %% 2^32
@@ -523,39 +434,6 @@ blr_bed_public_chains_public_args <- function(case, nchains = 1L, ncores = 1L,
   args
 }
 
-blr_bed_public_chains_internal_args <- function(public_args) {
-  args <- blr_bed_public_native_args(public_args)
-  args$nchains <- as.integer(blr_bed_public_or(public_args$nchains, 1L))
-  args$ncores <- as.integer(blr_bed_public_or(public_args$ncores, 1L))
-  seeds <- blr_bed_public_or(public_args$chain_seeds, NULL)
-  args$chain_seeds <- if (is.null(seeds)) integer() else seeds
-  args$keep_chains <- blr_bed_public_or(public_args$keep_chains, FALSE)
-  args$joint_component <- integer()
-  args$joint_multiplier <- numeric()
-  args$joint_names <- character()
-  args$component_count <- 0L
-  args$marker_scale <- numeric()
-  args$pi_prior <- numeric()
-  args$component_init <- integer()
-  args$annotations <- matrix(numeric(), 0L, 0L)
-  args$alpha_init <- matrix(numeric(), 0L, 0L)
-  args$sigma_alpha_init <- numeric()
-  args$pattern_pi_init <- numeric()
-  args$pattern_pi_prior <- numeric()
-  args$updateAlpha <- FALSE
-  args$intercept_prior_resolved <- matrix(numeric(), 0L, 0L)
-  args$sigma_alpha_a <- 2
-  args$sigma_alpha_b <- 2
-  args$pi_floor <- 1e-12
-  args$alpha_update_every <- 1L
-  args
-}
-
-blr_bed_public_chains_internal <- function(public_args) {
-  do.call(sblr:::mtblr_bed_chains_internal,
-          blr_bed_public_chains_internal_args(public_args))
-}
-
 blr_bed_public_chains_fit_numerics <- function(fit) {
   mapping <- c(
     bm = "bm", dm = "dm", wy = "wy", r = "r", b = "b", d = "d",
@@ -584,23 +462,6 @@ blr_bed_public_chains_raw_numerics <- function(raw) {
     bm_max = raw$marker$bm_max, dm_sd = raw$marker$dm_sd,
     dm_min = raw$marker$dm_min, dm_max = raw$marker$dm_max)
   lapply(values, unname)
-}
-
-blr_bed_public_chains_compare_public_internal <- function(args, tolerance = 1e-12) {
-  fit <- do.call(mtblr_bed, args)
-  raw <- blr_bed_public_chains_internal(args)
-  testthat::expect_equal(blr_bed_public_chains_fit_numerics(fit),
-                         blr_bed_public_chains_raw_numerics(raw), tolerance = tolerance)
-  testthat::expect_identical(fit$nchains, raw$meta$nchains)
-  testthat::expect_identical(fit$chain_seeds,
-                             raw$diagnostics$mt_bed$chain_seeds)
-  testthat::expect_identical(fit$chain_diagnostics$used_workers,
-                             raw$diagnostics$mt_bed$used_workers)
-  testthat::expect_identical(is.null(fit$chains), is.null(raw$chains))
-  if (!is.null(fit$chains)) {
-    testthat::expect_identical(names(fit$chains), names(raw$chains))
-  }
-  invisible(list(fit = fit, raw = raw))
 }
 
 blr_bed_public_chains_without_timing <- function(fit) {

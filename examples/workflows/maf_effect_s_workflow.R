@@ -65,8 +65,10 @@ fit_c_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effec
 fit_c_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effect_s = -1)))
 
 ## maf_effect_s = -1 should reproduce the ordinary model because exponent = 0.
-max(abs(fit_c_null$dm - fit_c_minus1$dm))
-max(abs(fit_c_null$bm - fit_c_minus1$bm))
+max(abs(extract_posterior(fit_c_null, "pips") -
+        extract_posterior(fit_c_minus1, "pips")))
+max(abs(extract_posterior(fit_c_null, "realised_effects") -
+        extract_posterior(fit_c_minus1, "realised_effects")))
 max(abs(fit_c_null$vle - fit_c_minus1$vle))
 max(abs(fit_c_null$vld - fit_c_minus1$vld))
 
@@ -81,12 +83,14 @@ fit_c_spos1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesc", maf_effe
 fit_r_null <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = NULL)))
 fit_r_minus1 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = -1)))
 
-max(abs(fit_r_null$dm - fit_r_minus1$dm))
-max(abs(fit_r_null$bm - fit_r_minus1$bm))
+max(abs(extract_posterior(fit_r_null, "pips") -
+        extract_posterior(fit_r_minus1, "pips")))
+max(abs(extract_posterior(fit_r_null, "realised_effects") -
+        extract_posterior(fit_r_minus1, "realised_effects")))
 max(abs(fit_r_null$vle - fit_r_minus1$vle))
 max(abs(fit_r_null$vld - fit_r_minus1$vld))
-max(abs(fit_r_null$component_probabilities[[1]] -
-        fit_r_minus1$component_probabilities[[1]]))
+max(abs(extract_posterior(fit_r_null, "component_probabilities")[[1]] -
+        extract_posterior(fit_r_minus1, "component_probabilities")[[1]]))
 
 fit_r_s0 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = 0)))
 fit_r_sneg05 <- do.call(stblr_csr, c(base_args, list(method = "sbayesr", maf_effect_s = -0.5)))

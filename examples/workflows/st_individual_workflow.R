@@ -126,8 +126,12 @@ summarise_fit_list(fits)
 ## 4. Compare PIP summaries across data levels
 ## -------------------------------------------------------------------------
 
-mean_pip <- do.call(rbind, lapply(fits, function(fit) colMeans(as.matrix(fit$dm))))
-max_pip <- do.call(rbind, lapply(fits, function(fit) apply(as.matrix(fit$dm), 2, max)))
+mean_pip <- do.call(rbind, lapply(fits, function(fit) {
+  colMeans(extract_posterior(fit, "pips"))
+}))
+max_pip <- do.call(rbind, lapply(fits, function(fit) {
+  apply(extract_posterior(fit, "pips"), 2, max)
+}))
 
 mean_pip
 max_pip
