@@ -3,93 +3,194 @@ title: "sblr"
 subtitle: "Scalable Bayesian Linear Regression"
 ---
 
-`sblr` is an experimental R package for Bayesian genomic prediction and
-variable selection. It supports individual-level PLINK BED genotypes, GWAS
-summary statistics, sparse LD matrices, retained low-rank block-eigen LD operators, multi-trait
-models, and annotation-informed priors.
+`sblr` is an open-source R package for scalable Bayesian linear regression in
+genomic prediction, parameter estimation, variable selection, and fine-mapping.
 
-::: {.callout-note title="Research software"}
-The package is a research implementation and is not yet CRAN-ready. Its public
-model names, operator contracts, fit schema, and seven canonical fitting
-interfaces are stabilized and documented, but scientific analyses still need
-appropriate chain lengths, sensitivity checks, and external validation.
+It provides a common framework for:
+
+- scalar-trait and joint multi-trait inference;
+- individual-level PLINK BED genotypes;
+- GWAS summary statistics and sparse LD;
+- retained block-eigen LD representations;
+- BayesC, BayesR, and annotation-informed model families;
+- deterministic multichain execution;
+- canonical posterior, summary, and diagnostic access.
+
+## What `sblr` provides
+
+| Capability | Description |
+|---|---|
+| Scalar-trait inference | BayesC, BayesR, BayesRC, SBayesC, SBayesR, and SBayesRC-family models |
+| Multi-trait inference | General-\(T\) MT-BayesC and factorized pattern-by-scale MT-BayesR |
+| Individual-level analysis | Native packed-BED likelihoods without constructing a complete dense cross-product |
+| Summary-statistics analysis | Sparse CSR and block-eigen LD operators with explicit approximation semantics |
+| Annotation-informed priors | Fixed-marker, grouped, learned-logistic, probit-stick, and log-variance formulations on supported routes |
+| MAF-dependent scaling | Explicit `maf_effect_s` control on supported scalar-trait models |
+| Reproducible execution | Deterministic logical-task seeds, static scheduling, retention contracts, and worker diagnostics |
+| Standardized output | Validated raw results, formatted fits, canonical extractors, posterior summaries, and diagnostics |
+
+::: {.callout-note title="Scientifically specified and validated"}
+The public models have explicit likelihood, prior, covariance, state-space,
+operator, RNG, retention, and output contracts.
+
+Implementations are exercised using independent numerical references,
+analytical reductions, representation comparisons, serial/parallel identity
+checks, covariance validation, and focused scientific benchmarks. Validation
+establishes the declared implementation contracts; individual analyses still
+require suitable chain lengths, diagnostics, sensitivity analysis, and
+scientific interpretation.
 :::
+
+## Public fitting interfaces
+
+| Interface | Data representation | Model families |
+|---|---|---|
+| `stblr_bed()` | Individual-level packed BED | BayesC, BayesR, and supported BayesRC models |
+| `stblr_csr()` | Summary statistics and sparse CSR LD | SBayesC and SBayesR |
+| `stblr_csr_annot()` | Annotation-aware summary statistics and sparse CSR LD | Supported annotation-informed BayesC, BayesR, and BayesRC formulations |
+| `stblr_block_eigen()` | Summary statistics and block-eigen LD | Supported SBayesC, SBayesR, SBayesRC, and log-variance models |
+| `mtblr_bed()` | Common-sample packed BED | MT-BayesC and factorized pattern-by-scale MT-BayesR |
+| `mtblr_csr()` | Independent summary providers with CSR LD | MT-BayesC and factorized pattern-by-scale MT-BayesR |
+| `mtblr_block_eigen()` | Independent summary providers with block-eigen LD | MT-BayesC and factorized pattern-by-scale MT-BayesR |
+
+Unsupported model, operator, covariance, or provider combinations fail before
+numerical sampling.
+
+## Scalar-trait and multi-trait analysis
+
+The `stblr_*()` interfaces fit scalar-trait models. Multiple scalar traits can
+be fitted independently and scheduled in parallel when scientifically
+appropriate.
+
+The `mtblr_*()` interfaces fit one joint multi-trait model per logical chain.
+They represent shared marker activity, trait-specific activity patterns,
+cross-trait effect covariance, and—where supported—full residual covariance.
+
+Analysis mode and execution mode remain distinct:
+
+- independent traits are separate scalar models;
+- joint multi-trait analysis is one coupled posterior model;
+- traits are not incorrectly treated as independent workers inside a joint
+  multi-trait chain.
+
+## Model naming
+
+For scalar-trait model families, the `s` prefix denotes a
+summary-statistics likelihood:
+
+| Model | Interpretation |
+|---|---|
+| `bayesc` | Individual-level BayesC |
+| `sbayesc` | Summary-statistics BayesC |
+| `bayesr` | Individual-level BayesR |
+| `sbayesr` | Summary-statistics BayesR |
+| `bayesrc` | Individual-level annotation-informed BayesR |
+| `sbayesrc` | Summary-statistics annotation-informed BayesR |
+
+Multi-trait interfaces retain the scientific method names `bayesc` and
+`bayesr`. Their data representation is determined by the selected
+`mtblr_*()` interface.
+
+The `s` prefix is unrelated to `maf_effect_s`. The latter is a separate,
+optional MAF-dependent effect-variance scaling control whose value and MAF
+provenance are recorded explicitly.
+
+## Shared computational framework
+
+The package reuses common infrastructure across scalar-trait and multi-trait
+models:
+
+```text
+public fitting interface
+→ validated and resolved specification
+→ global marker and allele map
+→ immutable operator resources and likelihood providers
+→ deterministic logical tasks
+→ native sampler
+→ validated raw result
+→ formatted fit
+→ canonical extraction, summarization, and diagnostics
+```
+
+This separates scientific model semantics from:
+
+- BED decoding;
+- CSR and block-eigen operator access;
+- provider ownership;
+- task scheduling;
+- random-number streams;
+- retention and convergence capture;
+- output formatting.
+
+## LD representations
+
+`sblr` supports three principal data representations:
+
+- packed BED for individual-level analysis;
+- sparse CSR LD for summary-statistics analysis;
+- block-eigen LD for exact declared block operators and retained-rank
+  approximations.
+
+Every operator records its marker order, scale, diagonal, completeness or
+approximation status, and provenance. Approximate operators are interpreted
+relative to the operator they actually represent; they are not silently
+treated as globally exact LD.
+
+See [Data representations](notes/data_representations.qmd) for preparation,
+alignment, scaling, and approximation contracts.
+
+## Posterior results and diagnostics
+
+All maintained fits use a common result architecture. Canonical access is
+provided through:
+
+```r
+extract_posterior()
+summarise_posterior()
+extract_diagnostics()
+```
+
+These functions preserve named trait, chain, marker, component, pattern, and
+covariance axes where applicable.
+
+Convergence diagnostics can include:
+
+- rank-normalized R-hat;
+- bulk and tail effective sample size;
+- Monte Carlo standard error;
+- variance and covariance traces;
+- probability and annotation parameters;
+- selected marker activity and component states.
+
+Diagnostic capture is post-burn-in, unthinned, chain-private, and RNG-neutral.
+Diagnostics assess MCMC behavior; they do not by themselves prove model
+correctness or universal convergence.
 
 ## Start here
 
-- [Practical Notes](notes/index.qmd) explain model choice, data preparation,
+- [Practical Notes](notes/index.qmd) explain data preparation, model choice,
   fitting, outputs, credible sets, and diagnostic interpretation.
-- [Statistical Methods](methods/index.qmd) describe the implemented
-  likelihoods, priors, state spaces, annotation models, and LD operators.
+- [Statistical Methods](methods/index.qmd) describe likelihoods, priors,
+  state spaces, covariance models, annotations, and LD operators.
+- [Model overview](notes/model_overview.qmd) summarizes supported capabilities
+  and current boundaries.
 - [Maintained workflows](https://github.com/psoerensen/sblr/tree/master/examples/workflows)
   provide small canonical examples and identify external-data requirements.
-- [The GitHub repository](https://github.com/psoerensen/sblr) contains the
-  package source, generated R help, tests, and development contracts.
+- [The GitHub repository](https://github.com/psoerensen/sblr) contains package
+  source, generated R help, tests, and implementation contracts.
 
-For downstream interpretation, see [Credible sets and fine-mapping](notes/credible_sets_and_finemapping.qmd).
-For chain-mixing assessment, see [Convergence diagnostics](notes/convergence_diagnostics.qmd).
+For downstream interpretation, see
+[Credible sets and fine-mapping](notes/credible_sets_and_finemapping.qmd).
 
-## Canonical fitting functions
+For MCMC assessment, see
+[Convergence diagnostics](notes/convergence_diagnostics.qmd).
 
-```r
-stblr_csr()
-stblr_csr_annot()
-stblr_block_eigen()
-stblr_bed()
+## Project status
 
-mtblr_csr()
-mtblr_block_eigen()
-mtblr_bed()
-```
+`sblr` is actively developed and currently distributed from GitHub. Its public
+model semantics, seven fitting interfaces, operator contracts, fit schema, and
+canonical access functions are stabilized and tested.
 
-The STBLR functions fit scalar-trait models. The MTBLR functions fit one joint
-multi-trait model per logical chain. Operators are prepared once per fit and
-shared across deterministic logical chains.
-
-The scalar block-eigen API defaults to retained low rank with
-`eigen_prop = 0.995`; request `representation = "dense_reconstructed"` for the
-historical packed reconstructed operator. The retained route is currently
-single-trait only and preserves all priors and states in marker space.
-
-Current log-variance BayesC-LV and BayesR-LV models are available for ST CSR
-and retained block eigen only. BED-LV and MT-LV are not implemented. See
-[Annotation-Informed Priors](methods/annotation_priors.qmd) for the current
-capability table and clearly labelled proposed extensions.
-
-## Model names
-
-| Model | Prior kernel | Data level |
-|---|---|---|
-| `bayesc` | BayesC | individual level |
-| `sbayesc` | BayesC | summary statistics |
-| `bayesr` | BayesR | individual level |
-| `sbayesr` | BayesR | summary statistics |
-| `bayesrc` | annotation-informed BayesR | individual level |
-| `sbayesrc` | annotation-informed BayesR | summary statistics |
-
-The `s` prefix means **summary statistics**. It does not activate MAF-dependent
-effect scaling.
-
-`maf_effect_s` is a separate, optional MAF-dependent effect-variance control.
-It can be used only on routes that explicitly support it; its value and MAF
-provenance are recorded independently of the public model name. See the
-[`maf_effect_s` guide](notes/maf_effect_s.qmd) for the scale definition and
-support limits.
-
-## Data representations and diagnostics
-
-The canonical operators are packed BED for individual-level analysis, sparse
-CSR LD for summary-statistics analysis, and block-eigen LD. Current scalar
-block eigen uses retained factors by default, with reconstructed dense blocks
-as an explicit historical/reference representation; current MT block eigen
-uses reconstructed dense blocks. The [data-representation guide](notes/data_representations.qmd)
-explains their scales, alignment requirements, and provenance.
-
-Core convergence diagnostics cover the five trait-level variance traces.
-Extended diagnostics cover applicable low-dimensional covariance,
-probability, annotation, and sampled `maf_effect_s` parameters. Explicitly
-selected markers can additionally retain effective-effect, binary-activity,
-and mixture-component mixing diagnostics under a pre-execution memory guard.
-
-Diagnostics assess MCMC mixing; they do not prove model correctness or
-absolute convergence.
+New model families and computational representations are introduced through
+explicit design, qualification, and validation checkpoints before public
+promotion.
