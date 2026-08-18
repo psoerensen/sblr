@@ -217,7 +217,7 @@ Native backends still return the current version-1 objects described above.
 Phase 1 implements `blr_raw` schema version 2 in R, following Sections 26 and
 28 of
 [the unified framework design](blr_unified_framework_design.md), backed by
-`tests/research/blr_framework_contract/`. Eligible one-chain maintained ST
+`research/blr_framework_contract/`. Eligible one-chain maintained ST
 fits now follow the explicit path `stblr_raw` v1 to validated `blr_raw` v2 to
 formatted fit. The validated v2 object is retained as the `blr_raw` attribute
 of the formatted fit. Native output and trajectories are unchanged.

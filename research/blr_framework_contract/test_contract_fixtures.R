@@ -1,7 +1,7 @@
 args <- commandArgs(trailingOnly = FALSE)
 file_arg <- grep("^--file=", args, value = TRUE)
 script <- if (length(file_arg)) sub("^--file=", "", file_arg[[1]]) else
-  "tests/research/blr_framework_contract/test_contract_fixtures.R"
+  "research/blr_framework_contract/test_contract_fixtures.R"
 source(file.path(dirname(normalizePath(script)), "blr_contract_fixtures.R"))
 
 expectations <- 0L

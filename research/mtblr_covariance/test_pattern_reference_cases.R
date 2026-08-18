@@ -1,7 +1,7 @@
 script_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)
 research_dir <- if (length(script_arg)) {
   dirname(normalizePath(sub("^--file=", "", script_arg[1L]), mustWork = TRUE))
-} else normalizePath("tests/research/mtblr_covariance", mustWork = TRUE)
+} else normalizePath("research/mtblr_covariance", mustWork = TRUE)
 for (file in c("mtblr_reference_model.R", "mtblr_exact_reference.R",
                "mtblr_pattern_reference.R", "mtblr_pattern_samplers.R",
                "mtblr_regional.R", "compare_samplers.R")) {

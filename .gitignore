@@ -8,6 +8,8 @@
 /.quarto/
 /results/local/
 /examples/tutorials/
+/research/local_reference/
+/research/**/output/
 *.Rcheck/
 ..Rcheck/
 

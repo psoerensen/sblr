@@ -10,7 +10,7 @@ model, or introduce a blocked production sampler.
 ## Reference provenance
 
 The first available reference directory in the required search order was the
-ignored repository-local `local_reference/` directory. The files read were:
+ignored repository-local `research/local_reference/` directory. The files read were:
 
 | Role | File | SHA-256 |
 |---|---|---|

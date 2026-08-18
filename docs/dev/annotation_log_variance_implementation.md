@@ -8,7 +8,7 @@
 ## Frozen version-1 model
 
 This implementation follows
-`local_reference/annotation_log_variance_blr_development_plan_v1.md` and the
+`research/local_reference/annotation_log_variance_blr_development_plan_v1.md` and the
 two executable `validate_bayesc_bayesr_logvar_*.R` references. The version-1
 prior is fixed by default at
 

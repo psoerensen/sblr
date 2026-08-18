@@ -368,7 +368,7 @@ be designed. Subsequent scientific behavior belongs in `sblrbench`; no Study
 
 ## Reference provenance
 
-All five ignored files under `local_reference/` were read completely. The
+All five ignored files under `research/local_reference/` were read completely. The
 continuous-alpha and recovery files establish the standard SBayesRC baseline;
 the Jian Zeng 2024 script supplies external implementation provenance and the
 known total-marker intercept detail; the two SBayesRC-S files are provisional

@@ -426,7 +426,7 @@ a numerical reference, not an exact covariance posterior.
 
 ## 11. Prototype implementation
 
-The standalone prototype is under `tests/research/mtblr_covariance/`:
+The standalone prototype is under `research/mtblr_covariance/`:
 
 | File | Purpose |
 |---|---|

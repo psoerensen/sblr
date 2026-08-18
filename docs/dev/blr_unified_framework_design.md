@@ -217,7 +217,7 @@ partially matched arguments must never reach a scientific backend.
 | Current MT CSR data view | `src/blr_mt_default_core_impl.h` data-view templates | Generalize | Split immutable provider data from MT state policy |
 | Current MT block eigen | reconstructed-dense MT dispatch | Replace as primary design | Use the same provider-specific retained/full-rank operator abstraction as ST |
 | Marker alignment | ST/MT R preparation and `marker_policy` checks | Generalize behind a common interface | One global marker universe and explicit local maps |
-| Multiple providers | research prototype under `tests/research/mtblr_covariance/` | Validated design, not current production | First-class provider collection |
+| Multiple providers | research prototype under `research/mtblr_covariance/` | Validated design, not current production | First-class provider collection |
 
 `CsrOperator` and `BlockEigenDispatchOperator` already expose the beginnings of
 a useful representation-neutral method set: diagonal access, corrected marker
@@ -265,7 +265,7 @@ authoritative sampled covariance state and must not preserve this hybrid.
 | Public contract tests | `test-blr-unified-public-contract.R`, model/interface tests | Reusable test ownership | Add resolved-spec and migration assertions |
 | Operator reductions | `test-blr-operator-reductions.R` and block-eigen tests | Reusable oracle | Extend across providers and analysis modes |
 | RNG/reproducibility | `test-blr-unified-reproducibility.R` and MT chain tests | Reusable oracle | Key by logical task rather than backend traversal |
-| Research MT covariance tests | `tests/research/mtblr_covariance/` | Scientific oracle only | Keep independent from production kernels |
+| Research MT covariance tests | `research/mtblr_covariance/` | Scientific oracle only | Keep independent from production kernels |
 
 ## 5. Confirmed reuse opportunities
 
@@ -678,7 +678,7 @@ native_seed = uint32((x xor (x >> 32)) & 0xffffffff)
 All multiplication and addition are modulo $2^{64}$. The final seed is passed
 unchanged to `std::mt19937::result_type`; zero is valid and is never replaced.
 The fixed vectors in
-`tests/research/blr_framework_contract/blr_contract_fixtures.R` are part of the
+`research/blr_framework_contract/blr_contract_fixtures.R` are part of the
 contract.
 
 An explicit resolved `task_seeds` table bypasses derivation and supplies the
@@ -1919,7 +1919,7 @@ with the exact missing semantic requirement.
 
 ## 29. Phase 0 fixture evidence
 
-The base-R files under `tests/research/blr_framework_contract/` are independent
+The base-R files under `research/blr_framework_contract/` are independent
 contract fixtures, not production validators. They cover one-chain/one-axis
 single-trait raw arrays, two-trait/two-chain independent and joint modes, one
 BED resource shared by several providers, one joint multi-trait provider,

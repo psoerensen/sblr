@@ -1,12 +1,12 @@
 # Development qualification for internal Phase-5A/5B SBayesRC-EM paths.
 # Not part of the supported public API.
 
-if (!file.exists("local_reference/sbayesrc_mcem_exact_validation.R")) {
-  stop("Run from the sblr repository root with local_reference available.")
+if (!file.exists("research/local_reference/sbayesrc_mcem_exact_validation.R")) {
+  stop("Run from the sblr repository root with research/local_reference available.")
 }
 
 devtools::load_all(".", quiet = TRUE)
-source("local_reference/sbayesrc_mcem_exact_validation.R", local = FALSE)
+source("research/local_reference/sbayesrc_mcem_exact_validation.R", local = FALSE)
 source("tests/testthat/helper-sbayesrc-mcem-reference.R", local = FALSE)
 
 write_csr <- function(correlation) {

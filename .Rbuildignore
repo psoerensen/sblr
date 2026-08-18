@@ -5,7 +5,7 @@
 ^docs$
 ^examples$
 ^tools$
-^local_reference$
+^research$
 ^local_rereference$
 ^results/local$
 ^\.agents$

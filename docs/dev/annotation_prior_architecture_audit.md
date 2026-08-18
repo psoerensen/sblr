@@ -8,7 +8,7 @@
 - Starting tracked worktree status: clean (`git status --short` produced no
   entries)
 - Authoritative brief supplied for this audit:
-  `local_reference/sblr_annotation_prior_architecture_audit_brief_v2.md`
+  `research/local_reference/sblr_annotation_prior_architecture_audit_brief_v2.md`
 - Audit date: 2026-08-10
 
 The supplied v2 file is authoritative for this task. Its internal title and one
@@ -83,7 +83,7 @@ The audit included, in full or in the relevant implementation sections:
   development/qualification records;
 - practical notes and examples under `docs/notes/`, including model overview,
   annotation, ST/MT, and MAF-S pages;
-- frozen LV theory and executable reference scripts under `local_reference/`,
+- frozen LV theory and executable reference scripts under `research/local_reference/`,
   plus relevant BayesRC/SBayesRC design/reference material;
 - relevant tests under `tests/testthat/` covering annotation preparation,
   native math, fixed/group/logistic policies, BayesRC/SBayesRC, LV, MAF-S,
@@ -978,7 +978,7 @@ stable coefficient means with unstable occupancy, PIP, or prediction are not.
 - `docs/notes/`: practical selection/workflows only;
 - `docs/dev/`: architecture, schemas, audits, qualification, migration, and
   historical decisions;
-- `local_reference/`: frozen local oracles and design material, not assumed to
+- `research/local_reference/`: frozen local oracles and design material, not assumed to
   be rendered package documentation.
 
 ### Stale, duplicated, or ambiguous material found

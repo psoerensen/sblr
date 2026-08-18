@@ -58,13 +58,13 @@ Files:
 From the repository root, run:
 
 ```powershell
-Rscript tests/research/mtblr_covariance/test_reference_cases.R
-Rscript tests/research/mtblr_covariance/compare_samplers.R
-Rscript tests/research/mtblr_covariance/test_pattern_reference_cases.R
-Rscript tests/research/mtblr_covariance/compare_pattern_samplers.R
-Rscript tests/research/mtblr_covariance/test_provider_operators.R
-Rscript tests/research/mtblr_covariance/test_sampled_residual.R
-Rscript tests/research/mtblr_covariance/test_pattern_scale_reference.R
+Rscript research/mtblr_covariance/test_reference_cases.R
+Rscript research/mtblr_covariance/compare_samplers.R
+Rscript research/mtblr_covariance/test_pattern_reference_cases.R
+Rscript research/mtblr_covariance/compare_pattern_samplers.R
+Rscript research/mtblr_covariance/test_provider_operators.R
+Rscript research/mtblr_covariance/test_sampled_residual.R
+Rscript research/mtblr_covariance/test_pattern_scale_reference.R
 ```
 
 Only base R is required. Seeds are explicit. The inverse-Wishart convention is

@@ -19,7 +19,7 @@ The fixtures freeze:
 Run from the repository root:
 
 ```powershell
-Rscript tests/research/blr_framework_contract/test_contract_fixtures.R
+Rscript research/blr_framework_contract/test_contract_fixtures.R
 ```
 
 The fixtures deliberately do not emulate current raw schema version 1. Current
