@@ -21,7 +21,10 @@ extract_posterior(
 
 \item{quantity}{Scientific quantity name. Common posterior quantities are
 `"realised_effects"`, `"pips"`, `"component_probabilities"`,
-`"effect_covariance"`, `"residual_covariance"`, and `"predictions"`.}
+`"effect_covariance"`, `"genetic_covariance"`,
+`"residual_covariance"`, and `"predictions"`. Genetic covariance is a
+posterior-only stored quantity: it is `NULL` when the fitted model does
+not define or retain `cov_g_mean` and is never reconstructed from effects.}
 
 \item{state}{One of `"posterior"`, `"retained"`, or `"final"`.}
 

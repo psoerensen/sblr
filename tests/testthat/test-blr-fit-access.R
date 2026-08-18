@@ -52,11 +52,13 @@ fit_access_fixture <- function(family = c("st", "mt")) {
     class = c("blr_raw", "list"))
   covariance_mean <- diag(length(traits))
   dimnames(covariance_mean) <- list(traits, traits)
+  genetic_covariance_mean <- covariance_mean * 2
   fit <- structure(list(
     bm = apply(realised, c(3L, 4L), mean),
     dm = matrix(.5, length(markers), length(traits),
                 dimnames = list(markers, traits)),
     cov_b_mean = covariance_mean,
+    cov_g_mean = genetic_covariance_mean,
     cov_e_mean = NULL, predictions = NULL,
     diagnostics = raw$diagnostics,
     input = list(
@@ -87,6 +89,22 @@ test_that("canonical extraction preserves ST and MT axes", {
                           traits = "trait2", chains = "chain1")),
     c(2L, 1L, 3L, 1L))
   expect_null(extract_posterior(mt, "residual_covariance"))
+})
+
+test_that("genetic covariance uses the stored posterior quantity", {
+  st <- fit_access_fixture("st")
+  mt <- fit_access_fixture("mt")
+  expect_identical(dim(extract_posterior(st, "genetic_covariance")),
+                   c(1L, 1L))
+  expect_identical(extract_posterior(mt, "genetic_covariance"),
+                   mt$cov_g_mean)
+  expect_identical(
+    dim(extract_posterior(mt, "genetic_covariance", traits = "trait2")),
+    c(1L, 1L))
+  mt$cov_g_mean <- NULL
+  expect_null(extract_posterior(mt, "genetic_covariance"))
+  expect_error(summarise_posterior(mt, quantity = "genetic_covariance"),
+               "unavailable for state = 'retained'")
 })
 
 test_that("canonical retained summaries use stored post-burn draws", {

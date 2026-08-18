@@ -15,6 +15,7 @@
     activity_pattern_probabilities = "activity_pattern_probabilities",
     pleiotropic_probabilities = "pleiotropic_probabilities",
     effect_covariance = "cov_b_mean",
+    genetic_covariance = "cov_g_mean",
     residual_covariance = "cov_e_mean",
     predictions = "predictions",
     pip_chain_mean_sd = "dm_chain_mean_sd",
@@ -72,6 +73,7 @@
       activity_pattern_probabilities = c("marker", "activity_pattern"),
       pleiotropic_probabilities = "marker",
       effect_covariance = c("trait_row", "trait_col"),
+      genetic_covariance = c("trait_row", "trait_col"),
       residual_covariance = c("trait_row", "trait_col"),
       predictions = c("observation", "trait"),
       pip_chain_mean_sd = c("marker", "trait"),
@@ -128,7 +130,10 @@
 #' @param fit A formatted `stblr_fit` or `mtblr_fit`.
 #' @param quantity Scientific quantity name. Common posterior quantities are
 #'   `"realised_effects"`, `"pips"`, `"component_probabilities"`,
-#'   `"effect_covariance"`, `"residual_covariance"`, and `"predictions"`.
+#'   `"effect_covariance"`, `"genetic_covariance"`,
+#'   `"residual_covariance"`, and `"predictions"`. Genetic covariance is a
+#'   posterior-only stored quantity: it is `NULL` when the fitted model does
+#'   not define or retain `cov_g_mean` and is never reconstructed from effects.
 #' @param state One of `"posterior"`, `"retained"`, or `"final"`.
 #' @param markers,traits,chains,draws,components,activity_patterns Optional
 #'   integer positions or exact IDs on the corresponding axis.

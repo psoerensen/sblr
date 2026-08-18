@@ -52,7 +52,7 @@ the null state, effect-size uncertainty, and possibly sign uncertainty.
 | ST genomic variance trace | $v_g$ | `vgs` | Iteration-by-trait trace of the fitted genomic variance. |
 | ST residual variance trace | $v_e$ | `ves` | Iteration-by-trait trace. |
 | MT posterior mean marker-effect covariance | $V_b$ | `cov_b_mean` | Trait-by-trait posterior mean matrix. |
-| MT posterior mean genomic covariance | $V_g$ | `cov_g_mean` | Trait-by-trait posterior mean matrix. |
+| Posterior mean genomic covariance | $V_g$ | `cov_g_mean`; `extract_posterior(fit, "genetic_covariance")` | Trait-by-trait stored posterior matrix, including the 1 x 1 ST case; `NULL` when undefined or unavailable. No retained-draw reconstruction is performed. |
 | MT posterior mean residual covariance | $V_e$ | `cov_e_mean` | Trait-by-trait posterior mean matrix. |
 | MT final covariance states | $V_b,V_g,V_e$ in one final retained state | `cov_b_final`, `cov_g_final`, `cov_e_final` | Primary-chain final matrices, not posterior means. |
 

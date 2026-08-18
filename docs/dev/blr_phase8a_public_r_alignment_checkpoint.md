@@ -76,6 +76,7 @@ deliberately distinct.
 | activity-pattern probabilities | `posterior$activity_pattern_probabilities` | same | unavailable | marker x pattern | `"activity_pattern_probabilities"` |
 | all-active probability | `posterior$pleiotropic_probabilities` | same | unavailable | marker | `"pleiotropic_probabilities"` |
 | effect covariance | `posterior$marker_covariance_mean` and `draws$marker_covariance` | `cov_b_mean` and retained raw | scalar/size-one trait convention where applicable | trait x trait | `"effect_covariance"` |
+| genetic covariance | authoritative stored posterior-derived value where defined | `cov_g_mean` | `NULL` for models that do not define or retain it | trait x trait, including 1 x 1 | `"genetic_covariance"` (posterior only) |
 | residual covariance | `posterior$residual_covariance_mean` and `draws$residual_covariance` | `cov_e_mean` and retained raw | scalar/size-one trait convention where applicable | trait x trait or `NULL` | `"residual_covariance"` |
 | predictions | `draws$predictions` where available | `predictions` | observation x trait | observation x trait or `NULL` | `"predictions"` |
 | execution diagnostics | `diagnostics` | `diagnostics` | named namespace | named namespace | `extract_diagnostics()` |
