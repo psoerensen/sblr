@@ -9,6 +9,7 @@
 /results/local/
 /examples/tutorials/
 /research/local_reference/
+/research/cache/ld/
 /research/**/output/
 *.Rcheck/
 ..Rcheck/
