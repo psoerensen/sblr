@@ -240,8 +240,8 @@ main <- function(root = ".") {
     "docs/dev/study06_bed_coupling_tempering_decision.json",
     "docs/dev/study06_bed_coupling_tempering_screen.md",
     "tests/testthat/test-bayesrc-coupling-tempering.R",
-    "tools/coupling_tempering_tiny_reference.R",
-    "tools/study06_bed_coupling_tempering_screen.R")
+    "research/sbayesrc/tools/coupling_tempering_tiny_reference.R",
+    "research/sbayesrc/tools/study06_bed_coupling_tempering_screen.R")
   evidence_files <- file.path("results", "local",
     "study06_bed_coupling_tempering_screen", c(
       "pre_partial_exchange_audit.patch", "provenance.csv",

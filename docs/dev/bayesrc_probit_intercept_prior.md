@@ -56,7 +56,7 @@ practically-degenerate region for every representative stick. The calibration
 also reports 95% prior-predictive probability widths. Mixed-outcome synthetic
 checks require that 50 or more balanced observations overwhelm the prior;
 complete-separation checks require finite posterior moments without coefficient
-caps. Run `Rscript tools/calibrate_bayesrc_intercept_prior.R` to reproduce the
+caps. Run `Rscript research/sbayesrc/tools/calibrate_bayesrc_intercept_prior.R` to reproduce the
 table. The selected value is recorded below only after running that script.
 
 The maximum degenerate mass over the four architectures was approximately

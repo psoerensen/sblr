@@ -317,7 +317,7 @@ Additional guards passed:
 - duplicated annotations had exact symmetry error
   (5.55\times10^{-17}), with sampled PIP difference 0.0171.
 
-The standalone reference is `tools/sbayesrc_s_reference.R`. It writes only a
+The standalone reference is `research/sbayesrc/tools/sbayesrc_s_reference.R`. It writes only a
 compact ignored summary under `results/local/sbayesrc_s_reference/`. Installed
 package tests use the separate independent helper
 `tests/testthat/helper-sbayesrc-s-reference.R` and never source `tools/`.

@@ -97,10 +97,10 @@ qualification evidence.
 
 ## Diagnostics and tooling
 
-`tools/pilot_study06_proper_intercept_prior.R` now accepts configurable burn-in
+`research/sbayesrc/tools/pilot_study06_proper_intercept_prior.R` now accepts configurable burn-in
 and output locations and writes compact convergence, per-chain autocorrelation,
 cross-parameter correlation, and final-occupancy CSV summaries outside the
-benchmark repository. `tools/diagnose_study06_sbayesrc_operators.R` provides the
+benchmark repository. `research/sbayesrc/tools/diagnose_study06_sbayesrc_operators.R` provides the
 retained-eigen stability control and now reports its actual diagnostic history
 length.
 

@@ -1,0 +1,124 @@
+---
+title: "Study 06E — SBayesRC implementation concordance"
+format: html
+execute:
+  echo: false
+---
+
+## Question and registered amendment
+
+Study 11 asks whether `sblr` reproduces the annotation, SNP, and alpha
+behavior of the original official `zhilizheng/SBayesRC` v0.2.6 implementation
+on the exact frozen Study 10 data. Production GCTB 2.5.5 remains optional
+Phase B. This is a posterior-geometry and implementation-concordance study,
+not a method ranking.
+
+The four registered arms are O (official `a=4,b=4`, flat intercept), M
+(`sblr` matched flat intercept), P (`sblr` `a=4,b=4`, proper intercept), and
+S10 (`sblr` `a=2,b=2`, proper intercept). The induced-stability addendum was
+registered after P/S10 checkpoints existed but before their scientific
+outputs were inspected or summary tables were emitted.
+
+## Contracts
+
+All frozen Study 10 identities passed. The source-audited official update is
+`(sum(alpha_nonintercept^2)+4)/chisq(p+4)`; current `sblr` implements
+`(sum(alpha_nonintercept^2)+b)/chisq(p+a)`, proving the `a=4,b=4` mapping.
+Annotation order, continuation-stick orientation, eligible sets, latent signs,
+and unstandardized annotation values match.
+
+Both routes use the same 35 block correlation matrices. Both retained 984 of
+1,000 modes in every block under the 0.995 positive-eigenvalue-mass rule, and
+the retained rule-level LD reconstructions had zero normalized Frobenius
+difference. Byte-identical independently exposed eigenvectors are not claimed.
+
+## Arm M separation result
+
+O completed its registered 9,000/3,000 single native trajectory. M stopped at
+the supported legacy-flat safety guard when an annotation regression became
+completely separated (complete separation). The guard was preserved.
+
+The exact exception-local iteration, stick, eligible count, continuation
+count, alpha state, `sigmaSqAlpha`, expected probabilities/counts, and realized
+occupancy cannot be recovered: current `sblr` serializes failure state only for
+residual-scale exceptions, not this annotation exception. A deterministic
+same-seed one-iteration replay passed, bounding the event to iterations
+2–9,000. After iteration 1 its sigma values were 0.415/0.930/0.507, expected
+component counts were 33,982.7/503.8/293.6/219.8, and realized occupancies were
+33,939/547/330/184. Further replay would not expose the missing exception-local
+state without a package diagnostic capability and was not used to bypass the
+guard.
+
+## P versus S10: alpha-prior sensitivity
+
+P and S10 completed four independent chains at the registered 9,000 total,
+3,000 burn-in schedule. P did not improve alpha convergence:
+
+| endpoint | P: `a=4,b=4` | S10: `a=2,b=2` |
+|---|---:|---:|
+| worst nonintercept alpha R-hat | 1.937 | 1.566 |
+| median nonintercept bulk ESS | 11.8 | 20.5 |
+| minimum nonintercept bulk ESS | 5.70 | 7.26 |
+| expected-active R-hat | 1.561 | 1.447 |
+| expected active count | 2,154 | 804 |
+| minimum chain active-prior Pearson | 0.702 | 0.915 |
+| minimum chain active-prior Spearman | -0.072 | 0.910 |
+
+The `a=4,b=4` hierarchy therefore does **not** resolve joint alpha/allocation
+mixing under the proper intercept. It was worse on the registered worst-R-hat
+and median-ESS summaries, so the Study 10 `a=2,b=2` prior is not supported as
+the explanation for the mixing problem. This does not isolate an intercept
+effect because both P and S10 intentionally share the same proper intercept.
+
+## Raw alpha versus induced quantities
+
+All low-dimensional induced quantities were reconstructed per retained draw
+and chain: component and active expected counts, enriched-versus-unenriched and
+continuous top-versus-bottom-quartile probability contrasts, AnnoCondProb and
+AnnoJointProb equivalents, and realized allocation counts. Marker-level
+component and active priors were summarized by correlations, rank
+correlations, RMSE, top-k overlap, and aggregate agreement between chain means.
+
+For both P and S10, poor raw-alpha convergence materially propagated into the
+induced prior. P expected-active chain means ranged from 1,445 to 2,559 and its
+enriched active-prior contrast from 0.188 to 0.423. S10 expected-active chain
+means ranged from 487 to 967 and its enriched contrast from 0.073 to 0.160.
+Expected-active and contrast R-hats remained 1.35–1.64. This is not the pattern
+of a stable effective prior hidden beneath ridge-like raw alpha; induced
+annotation inference itself remains chain-sensitive, particularly for P.
+
+Instability was progressively attenuated downstream. P/S10 posterior mean beta
+Pearson was 0.9996 (RMSE 0.00011), with 100% top-100 effect overlap. Their
+validation genetic-value correlations were 0.8101 and 0.8095 and phenotype
+prediction correlations 0.5703 and 0.5696. PIP Pearson was lower at 0.883
+(RMSE 0.075), although top-100 PIP overlap was 0.97. Per-iteration marker beta,
+PIP, and prediction histories are not retained by the current block-eigen
+result, so these downstream comparisons use posterior endpoints and are not
+presented as draw-wise convergence diagnostics.
+
+## Official descriptive comparison
+
+Official alpha lag-1 autocorrelation ranged from 0.975 to 0.9999 and
+single-trajectory ESS from about 1.35 to 39.5; several coefficients drifted by
+more than one posterior SD between the first and final thirds. This is
+descriptive within-trajectory instability, not multichain convergence.
+
+O/P posterior mean beta was highly concordant (Pearson 0.9974; top-100 overlap
+0.97), but PIP concordance was only 0.767 and expected active counts were 606
+versus 2,152. AnnoCondProb-equivalent quantities also differed. Because O is
+flat-intercept and P is proper-intercept, these differences are explicitly
+descriptive and cannot be attributed solely to implementation.
+
+## Decision
+
+**A4B4-DOES-NOT-RESOLVE-MIXING.** Changing from the Study 10 `a=2,b=2`
+alpha-variance hierarchy to the original `a=4,b=4` hierarchy does not resolve
+joint alpha/allocation mixing under the proper intercept. Both raw alpha and
+induced annotation-prior quantities remain unstable; beta and prediction are
+much more stable downstream, while PIP retains a visible prior sensitivity.
+
+The official trajectory shows similarly difficult alpha exploration, which is
+consistent with shared posterior geometry, but exact O-versus-M implementation
+concordance remains contract-blocked by M's flat-intercept separation result.
+No `sblr` change is made or implied by this benchmark, and no reference capsule
+is promoted.

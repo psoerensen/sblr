@@ -184,7 +184,7 @@ and coupling burden.
   examples, R/Rd checks, and static checks passed, but the overall check ended
   with the pre-existing installed-package test error in
   `test-coupling-tempering-offline-ratios.R`, which sources the intentionally
-  unshipped `tools/study06_partial_exchange_feasibility.R`; status was 1 error
+  unshipped `research/sbayesrc/tools/study06_partial_exchange_feasibility.R`; status was 1 error
   and 5 notes;
 - `git diff --check`: passed;
 - modified native sampler or Rcpp files: none;

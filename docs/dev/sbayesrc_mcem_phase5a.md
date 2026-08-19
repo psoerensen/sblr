@@ -99,7 +99,7 @@ neutrality of RB accumulation. They also run compact orthogonal and
 correlated-LD end-to-end fixtures.
 
 The development qualification tool
-`tools/sbayesrc_mcem_qualification.R` reruns the full local gold-standard cases.
+`research/sbayesrc/tools/sbayesrc_mcem_qualification.R` reruns the full local gold-standard cases.
 Against their independently optimized exact targets it produced:
 
 | case | outer iterations | converged | alpha RMSE | max alpha error | SNP-prior RMSE | RB responsibility RMSE |

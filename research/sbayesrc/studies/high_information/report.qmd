@@ -1,0 +1,99 @@
+---
+title: "Study 06C: High-information SBayesRC annotation positive control"
+description: "One-replicate positive-control contrast with the Study 07 stress case."
+toc: true
+toc-depth: 3
+---
+
+::: {.callout-important}
+## Status
+
+**STUDY08-R2 — genomic inference successful but annotation inference remains
+weak.** The one pre-specified replicate is complete. Evidence remains a local,
+review-pending result; no reference capsule is claimed.
+:::
+
+## Why?
+
+Studies 06 and 07 found difficult annotation-parameter inference in a
+relatively low-information benchmark despite useful genomic inference. Study
+08 asks whether that behavior improves in a deliberately high-information
+positive control.
+
+## What changed?
+
+```text
+N_train: 1400 -> 4500
+M:       1500 -> 35000
+```
+
+The nonintercept annotation coefficients, total heritability, mixture effect
+multipliers, and approximate absolute non-null architecture are preserved.
+The larger panel therefore adds primarily null/background markers rather than
+turning the design into a dramatically more polygenic phenotype.
+
+Null markers are informative because annotation coefficients are learned from
+differences in genomic-component probability across annotation values. They
+therefore contribute marker-level null/non-null contrasts, although LD reduces
+the effective number of independent observations.
+
+## Methods
+
+The only methods are SBayesR, ordinary joint SBayesRC, and ordinary joint
+SBayesRC-S. All use the same training summary statistics, marker order,
+sparse-LD CSR operator, and fixed-E residual contract. A qualification attempt
+with residual updating failed at SBayesR iteration zero because the projected
+CSR residual scale became negative; before any successful fit or method-output
+inspection, all methods were therefore aligned to the already specified
+`fixVe` contract. No EM or experimental sampler is included.
+
+## Frozen design
+
+The deterministic split contains 4,500 training and 500 validation samples.
+The marker set is the first 35 complete, source-order, 1,000-marker blocks from
+the 37,991 QC-qualified markers: 35,000 markers in total. The annotation matrix
+has enriched-binary prevalence 0.15 and absolute pairwise correlations below
+0.009. Sequential continuation-stick calibration gives intercepts -3.5264,
+-0.3808, and -0.5213, with expected component counts 34,820 / 90 / 54 / 36.
+The realized counts are 34,847 / 73 / 48 / 32 and realized heritability is
+0.50.
+
+## Results
+
+Genomic inference was sensible for all methods. Beta correlations were 0.937
+(SBayesR), 0.951 (SBayesRC), and 0.951 (SBayesRC-S); validation genetic-value
+correlations were 0.931, 0.948, and 0.949. Thus annotation modeling did not
+degrade genomic recovery.
+
+The primary continuous-annotation result was negative. Joint SBayesRC had a
+worst nonintercept alpha R-hat of 2.227 and minimum bulk ESS of 5.13. Its
+nonintercept alpha RMSE was 0.369. Component priors were accurate in aggregate
+(correlation 0.9997), but active-prior recovery was only 0.912 and was strongly
+chain-sensitive: minimum chain-to-chain Pearson 0.514 and Spearman 0.190. This
+is worse mixing than the frozen Study 07 stress case, not the hypothesized
+positive-control improvement.
+
+SBayesRC-S assigned pooled PIP 1.000 to `enriched_binary` and 0.997 to
+`continuous_signal`, but 0.240 to `null_annotation`. The null PIP ranged from
+0.016 to 0.742 across chains. Selection alpha mixing was also poor (worst
+nonintercept R-hat 1.982; minimum bulk ESS 5.48), while `pi_A` had R-hat 1.071
+and stick-specific `tau2` R-hats were 1.067, 1.032, and 1.005.
+
+Wall-clock runtimes were 374 seconds for SBayesR, 677 seconds for SBayesRC, and
+765 seconds for SBayesRC-S. Compact CSV tables and four figures are under the
+ignored local Study 08 result directory for scientific review.
+
+## Decision
+
+The substantially larger N and M did not resolve ordinary joint annotation
+mixing under this one-replicate design and final chain schedule. Because the
+failure is large rather than borderline, this positive-control result is clear
+enough to stop: no follow-up grid or additional replicate is proposed. This
+does not isolate the causal contribution of N or M and does not establish a
+general power relationship.
+
+## Scope
+
+This is one positive-control replicate. It cannot establish universal
+annotation-PIP calibration or identify separate causal effects of sample size
+and marker count, because both change together.

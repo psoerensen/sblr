@@ -1,0 +1,62 @@
+---
+title: "Study 12 — cross-aspect synthesis"
+subtitle: "SBayesRC truth versus SBayesR-LV truth"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+---
+
+```{r}
+root_candidate <- if (file.exists(file.path(getwd(), "DESCRIPTION")))
+  getwd() else file.path(getwd(), "..", "..")
+root <- normalizePath(root_candidate, winslash = "/", mustWork = TRUE)
+tables <- file.path(root, "results", "local",
+  "12_logvar_annotation_evaluation", "aspect2", "tables")
+performance <- utils::read.csv(file.path(tables,
+  "cross_aspect_performance.csv"))
+convergence <- utils::read.csv(file.path(tables,
+  "cross_aspect_convergence.csv"))
+decision <- utils::read.csv(file.path(tables, "aspect2_decision.csv"))
+```
+
+## Reciprocal design
+
+Aspect 1 fits R/LV/RC to the canonical SBayesRC-generated truth. Aspect 2 fits
+the same three implementations to SBayesR-LV-generated truth while holding
+the genotype, people, marker order, annotations, LD blocks, retained-rank rule,
+h2, chain schedule, and validation framework fixed.
+
+```{r}
+knitr::kable(performance, digits = 4)
+knitr::kable(convergence, digits = 3)
+```
+
+## Interpretation
+
+```{r}
+knitr::kable(decision)
+```
+
+The synthesis asks whether model ranking changes with the generating
+annotation mechanism and where differences attenuate from annotation
+architecture through PIP/components, beta, and prediction. Two single
+simulation scenarios cannot support a universal model ranking.
+
+Model ranking is architecture-dependent in only one direction in these two
+single realizations. Under RC truth, RC clearly has the best beta recovery and
+validation genetic-value correlation, with LV between RC and R. Under LV
+truth, however, LV and R are effectively tied, and RC remains within the
+registered downstream equivalence margin. Aspect 2 therefore does not produce
+the symmetric own-model advantage that Outcome B anticipated.
+
+The attenuation hierarchy is consistent across aspects. Annotation and
+component architectures differ strongly; PIP rankings differ more than beta;
+posterior beta and validation prediction are much closer. LV theta sampling is
+substantially better behaved than RC alpha sampling in both aspects, but in
+Aspect 2 the stable LV q posterior still falls short of the preregistered q
+truth-recovery screen. These two scenarios support mechanism-sensitive
+inference, not a general model-superiority claim.

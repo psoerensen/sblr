@@ -109,7 +109,7 @@ No public model switch or export is introduced in Phase 5B.
 ## Gate results
 
 The consolidated qualification tool is
-`tools/sbayesrc_mcem_qualification.R`.
+`research/sbayesrc/tools/sbayesrc_mcem_qualification.R`.
 
 ### Gate 1: fixed-parameter block parity
 

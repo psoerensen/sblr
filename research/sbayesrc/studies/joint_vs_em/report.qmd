@@ -1,0 +1,178 @@
+---
+title: "Study 06B: SBayesRC joint versus EM inference"
+description: "One-replicate demonstration on the frozen Study 06 learned-alpha mixing benchmark."
+toc: true
+toc-depth: 3
+---
+
+::: {.callout-important}
+## Decision
+
+**STUDY07-R5 — EM demonstration failed.** Under the qualified `sblr` 0.2.0
+defaults, neither SBayesRC-EM nor SBayesRC-S-EM reached its registered outer
+convergence tolerances in 50 iterations, and both retained material dependence
+on dispersed annotation starts. Downstream genomic inference was often useful,
+but that does not satisfy the prespecified EM stability gate.
+
+This is a controlled result on one frozen simulation replicate. It is not a
+general calibration, scaling, or superiority claim.
+:::
+
+## Motivation
+
+Study 06 found difficult joint exploration of learned annotation effects and
+SNP allocations even when SNP-level summaries were substantially more stable.
+Study 07 asks whether the separately derived MCEM inference lines remove that
+practical instability on exactly the benchmark that exposed it. MCEM/MAP is
+not a replacement transition for the joint posterior, and its endpoint need
+not equal any individual joint chain.
+
+## Frozen data and provenance
+
+Exactly one pre-existing Study 06 dataset was reused: scenario
+`informative_annotations`, replicate 1, with 2,000 individuals (1,400 training,
+600 validation), 1,500 markers in 15 registered 100-marker blocks, and seeds
+105412/105424/105438/3101/5201 for component/effect/residual/split/annotation
+construction. It was selected from pre-existing evidence because it most
+clearly combined learned-alpha/allocation mixing difficulty with stable useful
+SNP inference; no Study 07 result informed selection.
+
+```text
+Study 06 specification: 241c15afab8fefc571e38e625130de6e4ab58b958c30cff369e26998ee30fa56
+Study 06 truth:         169d52bef390022a9106d7e61b200493869b40cbb76f1c8d911eebbc80fea1eb
+sblrbench source:       710047c5b53a5cb64d9bf2201c7634ac6f71bcd1
+sblr source:            a85b749dfb903364c5cdb17ef8b8efc1583e347d
+sblr version:           0.2.0
+installed-tree SHA-256: a22927d8d1b6f7c8af3a5b18db5e7a827865832ea1f5bb47f6a4fd21ebb32b65
+```
+
+The historical repository implementation map describes `sblr` 0.1.2 and is
+not authoritative here. The former Study 07 implementation was retired after
+its compact scientific result and registered specification were preserved.
+Gate 7 added the
+registered Study 06 SBayesR mixture prior after the first infrastructure-only
+baseline attempt exposed its omission. Before any selection fit, Gate 10 also
+removed an accidental truth-derived delta initialization and registered the
+neutral all-included start. Neither correction followed annotation-method
+results.
+
+## Methods and inference replication
+
+The five prespecified methods were SBayesR, joint SBayesRC, SBayesRC-EM, joint
+SBayesRC-S, and SBayesRC-S-EM. Joint methods used four 6,000-draw retained
+chains after 3,000 burn-in iterations. EM methods used independent baseline,
+positive, negative, and mixed annotation starts with their qualified defaults:
+1,000 inner sweeps, 300 burn-in, damping 0.5, tolerances 0.001, and at most 50
+outer iterations; S-EM additionally used 2,000/500 selection sweeps/burn-in.
+These are inference diagnostics on one dataset, not new simulation replicates.
+
+SBayesRC-EM fixed `sigmaSqAlpha`, made no independent global Pi update, learned
+B/E during the outer fit, and ran a separate frozen-prior genomic block.
+SBayesRC-S-EM fixed `pi_A` and `tau2`; `annotation_pip_eb` is conditional on its
+final Rao-Blackwell responsibilities and is not the full joint
+`annotation_pip`.
+
+## Joint reference behavior
+
+The Study 06 phenomenon was reproduced. Ordinary joint SBayesRC had worst raw
+alpha R-hat 1.100 (minimum bulk ESS 45.8), and active occupancy had R-hat 1.038
+(bulk ESS 87.3). Nevertheless, chain-mean annotation priors reconstructed from
+genuine retained alpha histories were much more stable: minimum pairwise
+Pearson correlation was 0.996 for full component priors and 0.969 for active
+priors. Joint SBayesRC-S was similarly difficult in its weakest directions
+(worst alpha R-hat 1.124; null-delta R-hat 1.051), while informative annotation
+PIPs were 1.00 in every chain.
+
+## Continuous annotation inference
+
+| Method/start | Alpha RMSE | Alpha correlation | Prior RMSE | Prior correlation | Active-prior correlation |
+|---|---:|---:|---:|---:|---:|
+| Joint SBayesRC | 0.468 | 0.917 | 0.048 | 0.993 | 0.908 |
+| EM baseline | 0.326 | 0.895 | 0.053 | 0.990 | 0.914 |
+| EM positive | 0.248 | 0.936 | 0.049 | 0.992 | 0.916 |
+| EM negative | 0.375 | 0.869 | 0.062 | 0.987 | 0.847 |
+| EM mixed | 0.412 | 0.824 | 0.050 | 0.992 | 0.973 |
+
+All four SBayesRC-EM starts reached the 50-outer cap without the `converged`
+flag. Their largest terminal alpha/prior deltas were 0.0156/0.0101. Endpoint
+differences were material: maximum absolute between-start differences were
+0.837 for `alpha_map`, 0.463 for component priors, 0.412 for active priors,
+and 0.419 for final SNP PIPs. Expected active counts ranged from 141 to 208.
+Minimum pairwise Pearson correlations were 0.714 for active priors and 0.838
+for genomic PIPs, although posterior mean beta remained much more stable
+(minimum Pearson 0.997).
+High truth correlations therefore coexist with failure of the requested
+start-invariance gate.
+
+## Annotation selection
+
+| Annotation | Truth | Joint PIP (chain range) | S-EM EB-PIP range | S-EM delta patterns (baseline/positive/negative/mixed) |
+|---|---:|---:|---:|---|
+| enriched binary | 1 | 1.000 (1.000–1.000) | 0.955–1.000 | 1/1/1/1 |
+| continuous signal | 1 | 1.000 (1.000–1.000) | 0.007–1.000 | 0/1/1/0 |
+| null annotation | 0 | 0.524 (0.327–0.687) | 0.000–1.000 | 0/0/1/1 |
+
+All SBayesRC-S-EM starts also hit the outer cap. The maximum terminal
+alpha/prior deltas were 0.181/0.0159, and `delta_map` differed by start. The
+baseline selected enriched only, the positive start selected both true signals,
+the negative start selected all annotations, and the mixed start selected
+enriched plus null. Consequently conditional EB-PIP behavior is not stable on
+this benchmark, despite one start recovering the binary truth pattern.
+Across S-EM starts, active-prior and genomic-PIP minimum Pearson correlations
+were 0.528 and 0.759, whereas posterior mean beta again compressed much of the
+difference (minimum Pearson 0.983).
+
+## Genomic inference
+
+| Method | Beta correlation | Beta RMSE | PIP Brier | Expected active | Validation prediction correlation |
+|---|---:|---:|---:|---:|---:|
+| SBayesR | 0.860 | 0.0133 | 0.0900 | 176.8 | 0.603 |
+| Joint SBayesRC | 0.886 | 0.0121 | 0.0729 | 125.1 | 0.632 |
+| SBayesRC-EM starts | 0.885–0.888 | 0.0120–0.0121 | 0.0732–0.0768 | 140.9–207.7 | 0.630–0.633 |
+| Joint SBayesRC-S | 0.886 | 0.0121 | 0.0726 | 122.5 | 0.632 |
+| SBayesRC-S-EM starts | 0.871–0.889 | 0.0119–0.0128 | 0.0731–0.0875 | 128.9–162.0 | 0.612–0.631 |
+
+Annotation methods generally improved beta/PIP recovery over SBayesR, and most
+EM endpoints retained useful genomic inference. This downstream utility does
+not erase the start dependence: maximum between-start genomic-PIP differences
+were 0.419 for continuous EM and 0.645 for S-EM.
+
+The true global B/E values are approximately 0.0255/1.000. Block-route B
+summaries were on the expected scale (SBayesR 0.0231, joint SBayesRC 0.0283;
+continuous-EM final genomic summaries 0.0225–0.0239). Their reported E was
+about 1.988 and derived h2 about 0.33, reproducing the known retained-block
+variance context rather than resolving it. The qualified CSR joint-selection
+route has a different global residual contract and gave B/E 0.0287/0.982 with
+h2 0.504; these values are not evidence that its posterior is identical to the
+block methods. Outer-fit B endpoints varied by start (0.0190–0.0295 for
+continuous EM; 0.0177–0.0356 for S-EM), while E remained 1.9879.
+
+## Runtime and figures
+
+Joint wall times were 33.5 seconds (SBayesR), 25.4 seconds (SBayesRC), and 32.7
+seconds (SBayesRC-S). Continuous-EM starts took 186–286 seconds and S-EM starts
+took 182–238 seconds. Local deterministic outputs include seven compact CSVs
+and four figures:
+
+```text
+results/local/07_joint_em_sbayesrc/tables/
+results/local/07_joint_em_sbayesrc/figures/annotation_stability.png
+results/local/07_joint_em_sbayesrc/figures/active_prior_truth.png
+results/local/07_joint_em_sbayesrc/figures/genomic_beta_truth.png
+results/local/07_joint_em_sbayesrc/figures/annotation_selection.png
+```
+
+They remain ignored working evidence. No capsule was promoted before scientific
+review.
+
+## Conclusion and stop decision
+
+The one-replicate result is clear enough to stop: under current qualified
+defaults, the EM lines did **not** demonstrate stable annotation inference from
+dispersed starts on the Study 06 benchmark. Useful genomic inference survived
+in many endpoints, echoing Study 06's separation between hierarchy-level and
+SNP-level stability, but the primary EM gate failed. No additional simulation
+replicate, retuning grid, or model-development run is warranted inside this
+study. Any follow-up should first be a focused `sblr` method-development audit
+of outer convergence/start dependence on this frozen case, outside
+`sblrbench` Study 07.

@@ -2,8 +2,8 @@
 #
 # This script reads ../sblrbench but writes only below sblr/results/local.
 # It does not alter MCEM scientific settings. Usage examples:
-#   Rscript tools/sbayesrc_mcem_study07_diagnosis.R continuous baseline 200
-#   Rscript tools/sbayesrc_mcem_study07_diagnosis.R selection baseline 200
+#   Rscript research/sbayesrc/tools/sbayesrc_mcem_study07_diagnosis.R continuous baseline 200
+#   Rscript research/sbayesrc/tools/sbayesrc_mcem_study07_diagnosis.R selection baseline 200
 
 args <- commandArgs(trailingOnly = TRUE)
 mode <- if (length(args)) args[[1L]] else "continuous"

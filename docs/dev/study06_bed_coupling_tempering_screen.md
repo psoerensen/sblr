@@ -186,8 +186,8 @@ model contract should change from this screen.
 ## Reproducibility and limitations
 
 The implementation and tiny reference are in
-`tools/coupling_tempering_tiny_reference.R`; the Study 06 harness is
-`tools/study06_bed_coupling_tempering_screen.R`. Large local evidence is ignored.
+`research/sbayesrc/tools/coupling_tempering_tiny_reference.R`; the Study 06 harness is
+`research/sbayesrc/tools/study06_bed_coupling_tempering_screen.R`. Large local evidence is ignored.
 This screen is intentionally too short for qualification, tests one fixed ladder,
 and says nothing about CSR, block eigen, substantial eigen truncation, or the
 separate BED/block heritability calibration issue.

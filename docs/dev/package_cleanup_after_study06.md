@@ -34,14 +34,14 @@ common role; detailed Study 06 evidence remains in the individual documents.
 | Development reference | `R/bayesrc-coordinated-transition-reference.R`, `R/sbayesrc-block-px-reference.R`, `R/sbayesrc-block-particle-reference.R`, `R/sbayesrc-particle-marginal-reference.R` | Retained as non-exported, non-production mathematical references with explicit file headers |
 | Mathematical reference/oracle tests | coordinated, PX, particle-Gibbs, particle-marginal, coupling-ratio and pairwise tests under `tests/testthat/` | Retained to protect exact posterior identities; names and helpers identify reference status |
 | Production contract tests | BayesRC annotation, block residual, trace, schema, formatter, LD-swap and ordinary RNG tests | Preserved |
-| Study 06-specific tooling | `tools/study06_*`, `tools/assess_sbayesrc_*`, `tools/screen_sbayesrc_*`, cache and validation scripts | Retained in the repository as historical/development tooling, excluded from source builds, and never required by installed-package tests |
+| Study 06-specific tooling | `research/sbayesrc/tools/` | Retained as historical/development tooling, excluded from source builds, and never required by installed-package tests |
 | Development documentation | Study 06 decision records and method derivations under `docs/dev/` | Preserved and linked from the endpoint navigation page |
 | Obsolete/dead | None demonstrated | Nothing deleted |
 
 ## Installed-package test dependency
 
 `tests/testthat/test-coupling-tempering-offline-ratios.R` sourced
-`tools/study06_partial_exchange_feasibility.R`. The `tools/` script is a large,
+`research/sbayesrc/tools/study06_partial_exchange_feasibility.R`. The research script is a large,
 historical Study 06 audit and is intentionally not installed with the package,
 so installed-package testing failed before any assertions ran.
 

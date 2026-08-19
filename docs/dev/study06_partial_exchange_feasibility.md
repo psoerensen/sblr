@@ -227,7 +227,7 @@ decision.
 
 ## Offline outputs
 
-The reproducible analysis is `tools/study06_partial_exchange_feasibility.R`.
+The reproducible analysis is `research/sbayesrc/tools/study06_partial_exchange_feasibility.R`.
 Ignored outputs under `partial_exchange_feasibility/` include the checkpoint
 inventory, retained count compatibility, count summaries/correlations, proposal
 feasibility table, SHA-256 manifest, and local machine-readable decision.

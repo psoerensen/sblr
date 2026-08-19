@@ -1,0 +1,544 @@
+---
+title: "Study 06A: Annotation-model estimability"
+description: "Closed at EST-R2: stable probability rankings and SNP inference with uncertain annotation-contrast magnitudes."
+---
+
+```{r}
+#| echo: false
+source("R/benchmark-reporting.R")
+capsule <- "results/reference/06_annotation_models/current-stop"
+rcsv <- function(name) read.csv(file.path(capsule, name), check.names = FALSE)
+design <- rcsv("annotation_design_summary.csv")
+fit_status <- rcsv("fit_status.csv")
+computation <- rcsv("computational_summary.csv")
+```
+
+::: {.callout-important}
+## Current status
+
+**CLOSED — EST-R2.** Probability/ranking functions are stable, but
+annotation-contrast magnitudes remain uncertain.
+
+```text
+Study 06 status: CLOSED
+Primary final decision: EST-R2
+Official qualifier: EST-R5
+Standard unrestricted continuous-alpha sampler development: closed at PMA-R3
+Additional final benchmark / scientific fit: not required
+Next methodology: separate Bayesian annotation-selection / annotation-PIP study
+```
+
+The pinned official trajectory provides descriptive evidence, but formal
+independently seeded multichain replication remains unavailable under the
+v0.2.6 native RNG contract. Historical failed qualifications and intermediate
+decisions below remain part of the audit trail; they are not the current study
+status.
+:::
+
+## Final authoritative scientific result
+
+Functional annotations produce reproducible SNP-prior rankings and stable
+SNP-level inference, while the unrestricted continuous-alpha decomposition and
+exact annotation-effect magnitudes are substantially less reliable. Enriched
+and continuous effects are directionally stable; the null annotation is
+compatible with zero; magnitude is quantitatively uncertain and route-sensitive.
+This is **EST-R2**. The authoritative synthesis is the
+[final conclusion](../../../docs/studies/study06_final_conclusion.md), with detailed
+evidence in the
+[estimability analysis](../../../docs/studies/study06_estimability_and_contrasts.md)
+and identity in
+[`final_decision.json`](../../../results/reference/06_annotation_models/final_decision.json).
+
+## What Study 06 tests
+
+Study 06 asks whether correctly specified annotations improve causal-marker
+prioritization and genetic-signal recovery in BayesRC/SBayesRC relative to
+matched BayesR/SBayesR, and whether the learned annotation hierarchy, marker
+allocation, and BED versus summary-statistic likelihood routes are reliable.
+
+The main scientific comparison is individual-level BED BayesRC versus retained
+block-eigen SBayesRC. The latter uses the prespecified block factorization and
+all 100 positive modes in every block at `eigen_prop = 0.995`; this tests the
+retained-factor route, block ordering, summary-model semantics, and blockwise
+likelihood factorization, not substantial eigenspace truncation.
+
+The immutable v2 identities are:
+
+```text
+Specification:      241c15afab8fefc571e38e625130de6e4ab58b958c30cff369e26998ee30fa56
+Informative truth:  169d52bef390022a9106d7e61b200493869b40cbb76f1c8d911eebbc80fea1eb
+```
+
+## Designs and formal decisions
+
+### V1 sparse design — failed and preserved
+
+V1 used about 37,991 chromosome-1 markers, 1,400 training people, and about 50
+expected non-null markers with active weights 0.60/0.30/0.10. That implies only
+about 30/15/5 expected markers in the three active components. BED histories
+failed convergence and approximate sparse CSR failed its residual-scale
+contract. The tracked `current-stop` capsule is immutable failed-development
+evidence, not a completed benchmark or a method-performance comparison.
+
+```{r}
+#| echo: false
+knitr::kable(fit_status, caption = "Historical v1 fit status (historical evidence).")
+knitr::kable(computation, digits = 3,
+  caption = "Historical v1 recorded computation (descriptive).")
+```
+
+V1 remains useful conceptually as `v1_sparse_stress`: a late-stick, prediction,
+PIP, active-count, variance, and numerical-integrity stress scenario. It is not
+the qualification of precise late-stick annotation recovery.
+
+### V2 identifiable design — formal qualification failed
+
+V2 uses 2,000 people (1,400 training, 600 validation), 1,500 markers in 15
+separated 100-marker blocks, heritability 0.50, and
+`gamma = c(0, 0.01, 0.1, 1)`. The informative truth has component counts
+1,329/84/50/37, hence 171 non-null markers. Informative and marginally matched
+uninformative annotation scenarios use intercept, enriched binary, continuous
+signal, and null columns. Deterministic truth, annotation-rank, stick-cell,
+marker-order, and block audits all passed.
+
+All four registered learned BayesRC/SBayesRC qualification entries completed,
+but every entry failed the multichain convergence contract. Informative
+later-stick directions and BED/block heritability agreement also failed. At
+that historical gate this was a formal qualification failure and the then-
+envisioned final benchmark was not authorized. The later estimability analysis,
+not an additional fit, supplied the final EST-R2 endpoint.
+
+### Large information-scale feasibility — completed, learned joint mixing failed
+
+The separate one-replicate profile froze all 5,000 canonical individuals and
+37,991 QC markers. Its annotation, truth, stick-identifiability, GWAS, and 76
+full-positive-mode block audits passed; realized counts were
+36,791/618/392/190 and realized heritability was exactly 0.50. The historical
+phase stopped as `LARGE-F6`, which remains documented. After compact aggregate
+traces and the GCTB-compatible block residual contract were validated, all six
+frozen fits completed. E0/B0 and fixed-alpha E2/B2 pass aggregate latent and
+variance diagnostics; learned E1/B1 fail joint alpha, occupancy, and active-
+count convergence. SNP ranking remains useful, and the BED/block h2 offset
+persists. The primary decision is `LARGE-G2`, with `LARGE-G3/G4` secondary. See
+the [final hierarchy of evidence](../../../results/reference/06_annotation_models/final_hierarchy_of_evidence.csv)
+and [final decision](../../../results/reference/06_annotation_models/final_decision.json).
+
+| Fit | Core convergence | AUPRC | realized active | Vg | route h2 | g-truth cor. |
+|---|---|---:|---:|---:|---:|---:|
+| E0 BED baseline | pass | .151 | 1,072 | .713 | .349 | .835 |
+| B0 block baseline | pass | .134 | 1,143 | 1.054 | .515 | .838 |
+| E2 fixed-alpha BED | pass | .304 | 1,088 | .761 | .372 | .866 |
+| B2 fixed-alpha block | pass | .305 | 1,142 | 1.049 | .513 | .859 |
+| E1 learned BED | fail; descriptive | .312 | 144 | .719 | .352 | .834 |
+| B1 learned block | fail; descriptive | .254 | 1,093 | 1.048 | .512 | .855 |
+
+Block `ves` is retained mean block residual variance, whereas BED `ves` is
+global individual-level residual variance. Route h2 uses each registered route
+definition; direct residual-variance equality is neither expected nor tested.
+
+## Evidence levels
+
+The rest of this report uses three levels:
+
+- **Established** — supported by converged comparisons, exact tests, or a
+  clearly delimited validated descriptive comparison whose scope is stated.
+- **Descriptive but useful** — pooled nonconverged summaries, one official
+  deterministic trajectory, within-path drift, uncontrolled runtime, or final
+  values without histories.
+- **Unresolved** — competing explanations cannot yet be separated or required
+  diagnostics are unavailable.
+
+“Expected active count” means the sum of marker-specific prior non-null
+probabilities. “Realized active count” or “component occupancy” means sampled
+marker allocations. They are not interchangeable.
+
+## Current conclusions
+
+### Established
+
+- BayesR/SBayesR baselines converge.
+- Fixed-true-alpha BayesRC/SBayesRC converges for the retained quantities, with
+  strong cross-chain allocation agreement where complete occupancy histories
+  were unavailable.
+- Audited stick eligibility, Albert–Chib latent variables, alpha conditionals,
+  intercept handling, `sigmaSqAlpha` conditional, and component-probability
+  transformation are mathematically and computationally correct.
+- The alpha hierarchy converges rapidly when allocations are frozen.
+- Fixing `sigmaSqAlpha` and replacing the teaching prior by the
+  production-equivalent annotation-variance prior do not restore dynamic joint
+  convergence.
+- Repeating hierarchy updates improves BED alpha marginal diagnostics, but the
+  full occupancy/variance posterior still fails. Repeating allocation sweeps is
+  unfavorable.
+- The tested complete-state coupling ladder passes exact tiny-state checks but
+  has effectively zero Study 06 overlap. Retained lower-replica state is
+  insufficient to evaluate exact partial exchange.
+- The roughly 0.09–0.10 BED/block heritability offset persists without
+  annotation learning, with true alpha fixed, and with every block mode
+  retained. It is distinct from learned-alpha feedback and eigen truncation.
+- Informative annotations improve causal-marker ranking. The official SBayesRC
+  trajectory shows the same prioritization benefit descriptively on this truth.
+- Matched official SBayesRC and `sblr` strongly agree for SNP effects, PIPs,
+  ranking, and validation genetic values on the delimited single trajectory.
+- In the registered 5,000-person/37,991-marker replicate, baseline and
+  fixed-true-alpha aggregate quantities converge, but both ordinary learned-
+  alpha routes fail joint alpha/allocation convergence. Increasing information
+  scale alone did not resolve the bottleneck in this replicate.
+
+### Descriptive but useful
+
+The learned-alpha AUPRC and prediction summaries below are descriptive under
+non-convergence. Official alpha/architecture summaries, native five-component
+results, visible drift, and runtime are single-trajectory descriptive. Pooled
+learned BED/block summaries and per-chain implementation comparisons are not
+formal posterior validation.
+
+| Fit | Evidence | AUPRC | AUROC | expected active | h2 | effect–truth cor. | validation-g cor. | prediction cor. |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| BayesR BED baseline | formally converged | .3975 | .6943 | 167.8 | .4036 | .8922 | .8932 | .6314 |
+| SBayesR block baseline | formally converged | .3270 | .6679 | 178.9 | .5050 | .8602 | .8698 | .6033 |
+| learned informative BED | descriptive under non-convergence | .5948 | .8528 | 58.7 | .4162 | .9138 | .9178 | .6545 |
+| learned informative block | descriptive under non-convergence | .5407 | .8300 | 131.7 | .5093 | .8847 | .8956 | .6316 |
+| fixed-alpha BED | fixed-alpha, converged available contract | .6075 | .8628 | 171.0 | .4273 | .9242 | .9267 | .6616 |
+| fixed-alpha block | fixed-alpha, converged available contract | .5993 | .8551 | 179.5 | .5134 | .8909 | .8994 | .6350 |
+| BED H20 | nonconverged joint state | .5945 | .8520 | about 55.6 | .4164 | .9138 | .9178 | .6546 |
+| block H20 | nonconverged joint state | .5419 | .8309 | about 133.6 | .5090 | .8850 | .8958 | .6320 |
+
+### Difficult or delimited at closure
+
+- Official SBayesRC multichain convergence and quantitative alpha parity.
+- Quantitative parity of official `sigma_anno` and `sblr` `sigmaSqAlpha`.
+- Latent architecture, component occupancy, and active/component-count
+  semantics across implementations.
+- Residual-variance and effect/`nbsq` scale contracts.
+- BED versus block-eigen variance and heritability calibration.
+- Unrestricted continuous-alpha joint learning, global alpha/allocation
+  coupling, and later-stick quantitative interpretation. The same-posterior
+  development line is closed at PMA-R3 rather than left as a current roadmap.
+
+## Post-closure isolated alpha recovery
+
+The **ALPHA-R1 — isolated standard SBayesRC alpha hierarchy validated** addendum
+does not reopen Study 06 or change EST-R2. With fixed latent `z`, scalar Gibbs
+reproduced the exact Gaussian posterior (maximum mean error 0.00428; maximum
+covariance error 0.00084). With known continuation outcomes, blocked and scalar
+chains agreed closely (maximum mean difference 0.00936; maximum R-hat 1.00127).
+
+Across 20 independent simulated hierarchies and four blocked-update chains per
+fit, maximum mean R-hat was 1.00074, maximum individual R-hat was 1.00199, and
+95% coverage ranged from .90 to 1.00. Enriched-slope posterior SD increased from
+.118 to .198 to .279 over the three sticks, but its repeated biases were only
+-.017, -.002, and -.012. This is increasing finite-sample uncertainty, not
+systematic conditional alpha failure.
+
+Eligible counts averaged 1,500, 170.7, and 84.2; enriched eligible counts
+averaged 149.1, 77.2, and 42.3. Informative enriched SNPs therefore became about
+45% and 50% of later eligible sets rather than remaining 10%. Total information
+declines, while selective continuation partly preserves information about the
+informative slope.
+
+```text
+fixed z: exact alpha conditional
+known outcomes: calibrated, well-mixed alpha inference
+full SBayesRC: difficult joint alpha <-> allocation/occupancy exploration
+```
+
+PMA-R3 is consistent with this diagnosis: it supplied an exact coordinated
+global move under the same posterior, but was computationally impractical. The
+2024 Jian Zeng R-reference total-`m` versus eligible-`n` intercept detail changed
+the isolated stick-2/stick-3 enriched means only modestly (.505/.508 and
+-.475/-.442); it is a source-contract note, not an explanation of the full
+problem or a claim about production GCTB. Compact evidence and the standalone,
+non-production reproduction script are registered in
+[`alpha_recovery_metadata.json`](../../../results/reference/06_annotation_models/alpha_recovery_metadata.json).
+- Exact annotation-contrast magnitudes and some hierarchy-scale quantities,
+  despite stable directions and downstream SNP outputs.
+
+## Implementation and sampler lessons
+
+Package-side experiments are clearly separated from benchmark-side experiments.
+Low-level detail remains authoritative in the linked `sblr` documents.
+
+| Implementation question | Finding | Scientific implication | Status | Authoritative evidence |
+|---|---|---|---|---|
+| Shared annotation implementation | Scalar BED, CSR, and block-eigen routes call the shared annotation-prior kernel; route adapters were audited directly. | Similar route behavior is not merely assumed from output. | correctness established | [`sblr` hierarchy audit](https://github.com/psoerensen/sblr/blob/master/docs/dev/study06_alpha_hierarchy_joint_sampling_audit.md) |
+| Stick eligibility/orientation | Stick 1 uses all markers; later sticks use continuers. Truth eligible/continue/stop counts are 1500/171/1329, 171/87/84, 87/37/50. Native and independent references agree. | The observed late-stick sample sizes and continuation convention are known exactly. | correctness established | same |
+| Albert–Chib and alpha conditionals | Latent truncation, residualized Gaussian means/variances, and proper intercept handling agree to numerical precision. | No audited conditional-formula defect explains mixing. | correctness established | same |
+| `sigmaSqAlpha` conditional | The intercept is excluded; three non-intercepts enter the inverse-chi-square conditional. Current and production-equivalent priors were mapped and exactly checked. | Conditional correctness does not establish joint convergence. | correctness established | same |
+| Component probabilities | Sequential stick transformation, flooring, normalization, and orientation passed numerical checks; ordinary states were not floor-controlled. | Numerical flooring is not the Study 06 cause. | correctness established | same |
+| BED component traces | Trace markers were resolved in the full-Glist index domain instead of the fitted subset. Boundary resolution/validation was corrected without changing transitions or RNG order. | Retained traces are now reliable; the defect did not cause learned-alpha mixing. | defect corrected | same |
+| Frozen allocations | Current prior, production prior, fixed variance, and fixed-alpha reference all pass when allocations are fixed to truth. | Isolated hierarchy conditionals are not the primary failure. | candidate explanation ruled out | same; decision C |
+| Fixed `sigmaSqAlpha` | Dynamic fits still fail on both routes. | A centred annotation-variance funnel is not the primary bottleneck. | candidate explanation ruled out | same |
+| Production-prior ablation | The production-equivalent prior does not restore dynamic convergence. | Prior-tail choice alone is insufficient. | candidate explanation ruled out | same |
+| S1/H5/H20/A5/A20 | H20 improves BED alpha marginals, but joint occupancy/variance still fails; allocation repetition worsens behavior. | More conditional work alone is not the missing global transition. | candidate explanation ruled out | [`sblr` K4 audit](https://github.com/psoerensen/sblr/blob/master/docs/dev/study06_allocation_hierarchy_kernel_composition.md) |
+| Coupling tempering | Tiny detailed balance/endpoints pass, but Study 06 accepts 0/2,400 exchanges with replicas hundreds of log-density units apart. | Algebraically correct tempering is an ineffective bridge for this posterior. | candidate explanation ruled out | [`sblr` T4 screen](https://github.com/psoerensen/sblr/blob/master/docs/dev/study06_bed_coupling_tempering_screen.md) |
+| Partial exchange | Exact formulas exist, but lower-replica complete states were not retained; no proposal was validated or rejected. Aggregate active-count mismatch is not the sole explanation. | The candidate could not be evaluated from existing state. | unresolved contract difference | [`sblr` F6 audit](https://github.com/psoerensen/sblr/blob/master/docs/dev/study06_partial_exchange_feasibility.md) |
+| BED/block variance calibration | The h2 offset persists without annotation, with fixed alpha, and with 100/100 modes. | Route calibration is distinct from alpha feedback and eigen truncation. | unresolved contract difference | paired isolation; package audits |
+| Block runtime/storage | Operators are constructed before MCMC, BED is not reread during MCMC, and immutable block operators are shared. Recorded block runs were faster; analytical and observed process memory differ. | The retained block route is computationally attractive, but recorded times are not controlled benchmarks. | performance observation | [`sblr` block contract](https://github.com/psoerensen/sblr/blob/master/docs/dev/blr_block_eigen_contract.md) |
+| Official/`sblr` contracts | Residual variance, effect/`nbsq` scale, p1 orientation, pi updates, active-count definitions, component counts, `sigma_anno`/`sigmaSqAlpha`, and wrapper labels differ or remain unmapped. | Strong SNP agreement does not validate latent architecture. | unresolved contract difference | [final decision](../../../results/reference/06_annotation_models/final_decision.json) |
+
+## Official SBayesRC comparison
+
+The external implementation is **official SBayesRC R implementation v0.2.6,
+source SHA `b95d3fcbad8ff358290922a58fff893439296138`**. “Official SBayesRC” below
+means that implementation; it is not used as a generic synonym for GCTB.
+
+### Strongest matched comparisons
+
+| Comparison | PIP Pearson/Spearman | effect Pearson | validation-g correlation | top-50/top-100 | AUPRC |
+|---|---:|---:|---:|---:|---:|
+| Official D1 vs learned block `sblr` | .957/.964 | .998 | .998 | 46/86 | .557 vs .541 |
+| Official D1 vs learned BED `sblr` | .933/.953 | .956 | .960 | 39/77 | .557 vs .595 |
+
+Official D1 resembled every saved learned `sblr` chain, rather than one isolated
+occupancy regime: block PIP correlations were .946–.965 and BED correlations
+.925–.936; effect correlations were .99831–.99833 and .95483–.95664.
+
+Official annotation benefit was large on the identical truth: D0 versus D1
+AUPRC was .320 versus .557, AUROC .664 versus .842, validation genetic-value
+correlation .869 versus .896, and phenotype prediction .604 versus .634.
+
+> The `sblr` SBayesRC implementation compares well with official SBayesRC for
+> SNP effects, PIPs, causal prioritization, validation prediction, and practical
+> runtime. Agreement is weaker or unresolved for latent architecture,
+> later-stick alpha coefficients, component occupancy, and annotation-variance
+> parameters.
+
+Official SBayesRC v0.2.6 does not connect its public seed argument to the native
+RNG streams, so multichain convergence parity remains unavailable. The official
+results are single-trajectory descriptive and must not be called converged.
+
+## Alpha and annotation variance
+
+Only unambiguously mapped values are compared. The v2 non-intercept truth for
+stick 1 is enriched 1.60, continuous .30, null 0. The calibrated truth
+intercept is retained in the simulation object but is not duplicated in the
+compact result documents; no value is inferred here.
+
+| Quantity, stick 1 | Truth | Official D1 single trajectory | `sblr` learned BED pooled | `sblr` learned block pooled | Fixed-alpha |
+|---|---:|---:|---:|---:|---:|
+| intercept | available in truth object | -2.406 | not compactly reported here | not compactly reported here | fixed to registered truth |
+| enriched | 1.600 | 1.507 | 1.897 | 1.642 | 1.600 |
+| continuous | .300 | .586 | .638 | .622 | .300 |
+| null | 0 | -.156 | -.042 | -.371 | 0 |
+| evidence label | truth | single-trajectory descriptive | pooled nonconverged | pooled nonconverged | fixed-alpha |
+
+Official first-stick enriched and continuous directions agree with truth and
+every saved learned `sblr` chain; its null coefficient is comparatively small.
+Quantitative coefficient equality is not established. BED H20 put all 12 alpha
+marginals within the diagnostic contract, but it remained a nonconverged joint
+state; the compact package evidence reports diagnostics rather than a complete
+mapped mean table.
+
+Later-stick values are not quantitatively interpretable. Official p3 intercept
+drifted about 1.85 posterior SD and p3 continuous about -1.06 SD; `sblr`
+later-stick alpha and occupancy also mixed poorly.
+
+Official final `sigma_anno` values were 1.976/1.043/4.803 for D1 and
+3.480/.384/.413/.605 for D2. `sblr` informative selected-window
+`sigmaSqAlpha` means were about 2.14/1.90/3.14 BED and 2.04/1.54/1.79 block;
+these are pooled nonconverged posterior summaries. In production-prior dynamic
+fits, BED stick-specific `sigmaSqAlpha` diagnostics passed while block sticks
+1/2 failed; this did not rescue the joint posterior. Fixed-variance conditions
+set `sigmaSqAlpha = 1` and are ablations, not posterior estimates.
+
+Official retained `sigmaSqAlpha` histories are not exposed. Official
+`sigma_anno` and `sblr` `sigmaSqAlpha` must not be assumed identical without a
+source-contract audit, and final official values cannot establish posterior
+mean, uncertainty, drift, ESS, or chain parity.
+
+## Derived annotation functions and final estimability result
+
+### Why stick 1 is scientifically central
+
+With four components, stick 1 is the active-versus-null decision:
+
+\[
+P(c_i>0\mid A_i)=q_{i1}=\Phi(A_i\alpha_1).
+\]
+
+Later sticks redistribute already-active SNPs among nonzero components. The
+frozen truth has 1,500/171/87 eligible SNPs across sticks 1/2/3. The enriched
+column occurs in exactly 225/1,500 SNPs (15%), and in 107/171 and 62/87 of the
+later eligible sets. The information loss is therefore the sharp reduction in
+eligible latent continuation outcomes; no claim that only a handful of enriched
+eligible SNPs remain is needed. This helps explain why first-stick informative
+directions can be useful while later-stick decomposition remains weak.
+
+### Counterfactual active/non-null contrasts
+
+| Annotation | Truth | `sblr` BED | `sblr` block | Official D1 descriptive |
+|---|---:|---:|---:|---:|
+| enriched binary | .423 | .192 [.081, .397] | .299 [.119, .642] | .204 [.117, .302] |
+| continuous signal | .0886 | .0555 [.0239, .104] | .112 [.0383, .236] | .077 [.042, .118] |
+| null annotation | 0 | -.007 [-.068, .046] | -.068 [-.268, .060] | -.024 [-.096, .024] |
+
+The shared ordering is enriched much greater than continuous, with null near
+zero. Directions and rankings are convincing; exact magnitudes are biased,
+route-sensitive, and incompletely covered. The continuous example makes the
+distinction concrete: raw first-stick values are truth .300, official .586,
+BED .638, and block .622, while the induced active contrasts are .0886, .077,
+.0555, and .112. The probability-level functional is more biologically useful
+and closer to truth, but not perfectly calibrated. The raw null values similarly
+map to smaller contrasts whose intervals include zero.
+
+## Why SBayesRC can work despite difficult alpha parameters
+
+The isolated-alpha addendum establishes that alpha estimation works when the
+hierarchy is known. The full learned model is harder because alpha changes SNP
+mixture probabilities and the resulting allocations/effects determine the next
+alpha regression. Local conditionals can be correct while this coupled joint
+state is traversed slowly. Later sticks are less precise, but are not shown to
+be intrinsically unidentified.
+
+For stick \(k\),
+
+\[
+\eta_{ik}=A_i\alpha_k,\qquad q_{ik}=\Phi(\eta_{ik}),
+\]
+
+and the four mixture probabilities are
+
+\[
+\pi_{i0}=1-q_{i1},\quad
+\pi_{i1}=q_{i1}(1-q_{i2}),\quad
+\pi_{i2}=q_{i1}q_{i2}(1-q_{i3}),\quad
+\pi_{i3}=q_{i1}q_{i2}q_{i3}.
+\]
+
+```text
+alpha
+→ A alpha
+→ q
+→ SNP-specific pi
+→ latent components/effects
+→ SNP PIP / posterior beta
+→ genetic values / prediction
+```
+
+Raw alpha is an upstream latent parameterization. Correlated coefficient
+configurations—such as lower intercept plus larger enriched slope—can behave
+similarly over the realized annotation profiles. The full-rank annotation
+matrix (rank 4, condition number about 2.23) rules out a simple design null
+space, so the supported language is weak practical determination and strong
+posterior dependence, not formal non-identifiability.
+
+The probit map can compress latent differences in saturated regions:
+`Phi(4)` is about .99997 and `Phi(7)` is effectively 1. Official D1 provides a
+striking descriptive example: half-specific `A alpha` vector correlation is as
+low as -.975 while the minimum nonconstant induced probability-vector Pearson
+correlation is at least .999. Its raw-alpha ESS range is about 1.4–86.2 and the
+largest half shift about 1.25 posterior SD. These are halves of one native
+trajectory, not independent chains.
+
+Posterior inference also averages over the hierarchy:
+
+\[
+P(c_i>0\mid y)=E_{\alpha,\theta}
+\left[P(c_i>0\mid y,\alpha,\theta)\right].
+\]
+
+Thus no single plug-in alpha value is the ordinary SNP endpoint. There is no
+contradiction between difficult alpha inference and useful SBayesRC SNP
+inference: the induced probability functions can be substantially more stable,
+and posterior averaging can yield reproducible marginal PIPs and effects. Poor
+MCMC exploration is not harmless in general; this is the empirical hierarchy
+observed on the frozen fixture.
+
+### Three levels of estimability and reporting
+
+| Level | Study 06 behavior | Reporting role |
+|---|---|---|
+| Latent alpha / `sigmaSqAlpha` | weak or correlated in some directions, especially later sticks | secondary plus R-hat, ESS, MCSE, intervals, covariance |
+| `A alpha`, q/pi, contrasts, rankings | substantially more stable; direction strong, magnitude uncertain | primary annotation-derived functions; `A alpha` secondary |
+| SNP PIP, beta, genetic value, prediction | highly stable | primary SNP and downstream outputs |
+
+Probability ranking is reproducible: active-prior Spearman is at least
+.986/.950 and largest-component-prior Spearman at least .999/.995 for BED/block.
+PIP Pearson is at least .994/.969, signed-beta Pearson .9999/.9991, and
+genetic-value chain correlation .99994/.99925. BED chain ranges are AUPRC
+.591–.597, AUROC .849–.856, genetic-value truth correlation .917–.918, and
+prediction .654–.655; block ranges are .514–.560, .818–.840, .896–.897, and
+.631–.633.
+
+R-hat near one is agreement, not truth recovery. Expected active count averages
+about 351.8 BED and 807.4 block versus truth 180 despite R-hat near one and very
+large variability. Therefore convergence is not calibration, and stable ranking
+is not exact probability-magnitude recovery.
+
+Future SBayesRC reports should emphasize SNP PIPs/effects and downstream
+performance; annotation-induced active/component probabilities, rankings, and
+counterfactual contrasts with uncertainty; and retain raw alpha, `A alpha`,
+hierarchy scales, covariance, R-hat, ESS, and MCSE as secondary diagnostics.
+Raw alpha can inform first-stick direction but should not be the sole biological
+summary.
+
+## Runtime observations
+
+| Method | Trajectories/chains | Iterations | Wall time |
+|---|---:|---:|---:|
+| Official D0 SBayesR | 1 | 9,000 | 4.61 s |
+| Official D1 matched SBayesRC | 1 | 9,000 | 39.28 s |
+| Official D2 native SBayesRC | 1 | 9,000 plus tuning | 82.03 s |
+| `sblr` informative block SBayesRC | 4 | 9,000 each | 54.74 s |
+| `sblr` informative BED BayesRC | 4 | 9,000 each | 129.24 s |
+
+Official runs used one OpenMP and one BLAS thread. `sblr` used four registered
+chains and may use parallel execution; retained tracing, diagnostics, package
+builds, and process overhead differ. This is descriptive, not a controlled
+performance benchmark.
+
+> The `sblr` block-eigen route is computationally competitive. Four `sblr`
+> block chains required only about 1.4 times the wall time of one official
+> matched trajectory in the recorded runs.
+
+## Experiment timeline
+
+| Phase | Question and route/repository | Result | Implication | Evidence |
+|---|---|---|---|---|
+| 1. v1 sparse qualification | Sparse BED/CSR annotation qualification | Failed; preserved | Too sparse for primary late-stick qualification; CSR fidelity confounded | formal qualification |
+| 2. v2 identifiable design | Increase active/stick information | Deterministic gates passed | Accidental empty truth cells ruled out | design/protocol |
+| 3. v2 qualification | Learned BED/block BayesRC/SBayesRC | All fits completed; all failed convergence | Final benchmark historically blocked at this gate | formal qualification |
+| 4. paired power isolation | Baseline, learned, shuffled, fixed-alpha | Baselines/fixed pass; learned fails; ranking benefit large | Alpha/allocation feedback isolated | diagnostic experiment |
+| 5. mathematical audit | Shared conditionals in `sblr` | Exact checks pass | Formula defect ruled out | correctness established |
+| 6. frozen allocations | Hierarchy with truth allocations | Converges rapidly | Isolated hierarchy ruled out | exact/converged diagnostic |
+| 7. variance ablations | Fixed variance and production prior | Dynamic failure persists | Variance funnel/prior not primary | diagnostic experiment |
+| 8. trace correction | BED selected-marker index domain | Defect corrected; RNG/transitions unchanged | Reporting defect not mixing cause | defect corrected |
+| 9. kernel schedules | S1/H5/H20/A5/A20 | H20 helps alpha; joint fails; A repeats worsen | Recomposition alone insufficient | K4 diagnostic |
+| 10. tempering | Tiny exact plus Study 06 BED | Algebra passes; 0 exchanges | Tested ladder ineffective | T4 diagnostic |
+| 11. partial exchange | Offline retained-state audit | Exact assessment unavailable | Candidate neither validated nor rejected | F6 unresolved |
+| 12. official export/API | Exact Study 06 official input and seed test | Export valid; independent chains blocked | GCTB-P5 remains | formal decision |
+| 13. official single path | D0/D1/D2, 9,000 iterations | Strong SNP agreement/benefit; architecture drift | Descriptive parity completed | single-trajectory descriptive |
+| 14. documentation consolidation | This task | Evidence hierarchy normalized | One authoritative reading path | documentation decision |
+| 15. block contract validation | small official D0/D1 vs new S0/S1 | SNP/residual gates passed | `gctb_block` semantics validated without relabeling history | SMALL-G1 |
+| 16. larger feasibility | `n=5000`, `m=37,991` | controls pass; learned joint mixing fails; SNP utility strong | information scale does not remove alpha/allocation bottleneck; route offset persists | LARGE-G2/G3/G4 |
+| 17. exact transition audits | pair, coordinated subset, PX, particle Gibbs, particle-marginal alpha | exact references; no scalable qualification solution | standard same-posterior development endpoint reached | AA-R5 / PMA-R3 |
+| 18. estimability and contrasts | frozen 1,500-marker retained chains and official D1 | rankings/SNP outputs stable; contrast magnitude uncertain | final scientific closure | EST-R2; EST-R5 qualifier |
+
+## Closure and next model
+
+Study 06 is complete. No further unrestricted continuous-alpha sampler
+engineering or additional Study 06 scientific fit is recommended. The
+same-posterior development line ended at PMA-R3: exact but computationally
+impractical. On this controlled benchmark, `sblr` reproduces the main behavior
+of official SBayesRC—similar first-stick directions, broadly comparable active
+contrasts, highly concordant SNP inference, and a qualitative separation
+between difficult alpha and stable induced probabilities—without claiming
+universal posterior or implementation equivalence.
+
+The next methodology is Bayesian annotation selection / annotation PIPs as a
+distinct statistical model and study. It targets annotation relevance rather
+than acting as a sampler fix for standard SBayesRC.
+
+## Navigation and reproducibility
+
+Start with the [final conclusion](../../../docs/studies/study06_final_conclusion.md),
+then the [estimability evidence](../../../docs/studies/study06_estimability_and_contrasts.md)
+and this report. Historical experiment-specific ledgers remain available in
+Git history; their current scientific content is retained here and in those
+two authoritative documents. The final closure identity is
+[`final_decision.json`](../../../results/reference/06_annotation_models/final_decision.json).
+This report reads only the unchanged v1 capsule and never launches a sampler.
+
+The 06A analysis entry point validates compact accepted evidence only. It
+invokes no sampler, regenerates no truth, and requires no retained fit object.

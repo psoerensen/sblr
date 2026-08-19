@@ -239,7 +239,7 @@ The 24-page Quarto documentation render succeeded. `git diff --check` passed.
 
 ## Local evidence and limitations
 
-The reproducible harness is `tools/study06_kernel_composition_audit.R`. Raw fit
+The reproducible harness is `research/sbayesrc/tools/study06_kernel_composition_audit.R`. Raw fit
 objects, complete component traces, stick-prior draws, convergence tables,
 regime summaries and transitions, allocation-change summaries, representative
 marker traces, power metrics, residual drift, and runtime tables are under the

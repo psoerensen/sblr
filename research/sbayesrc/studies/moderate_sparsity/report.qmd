@@ -1,0 +1,92 @@
+---
+title: "Study 06D: Moderate-sparsity SBayesRC annotation positive control"
+description: "Matched one-replicate active-count contrast with frozen Study 08."
+toc: true
+toc-depth: 3
+---
+
+::: {.callout-important}
+## Status
+
+**STUDY10-R2 — genomic inference remains strong but annotation inference
+remains weak.** The one pre-specified replicate is complete. Evidence remains
+local and review-pending; no reference capsule is claimed.
+:::
+
+## Why?
+
+Study 08 retained useful genomic inference but showed poor joint-alpha mixing
+and chain-sensitive annotation priors in an extremely sparse architecture.
+Study 10 asks whether substantially more non-null allocation events improve
+annotation identification under otherwise matched conditions.
+
+## Matched contrast
+
+Both studies use 4,500 training samples, 500 validation samples, 35,000
+markers, 35 blocks, the same annotation matrix and nonintercept alpha, the same
+fixed-E CSR contract, and the same MCMC schedule. Expected active component
+counts change from 90 / 54 / 36 to 500 / 300 / 200.
+
+Total heritability remains 0.5. Individual active-SNP effects are therefore
+smaller on average in Study 10, so the contrast does not isolate active count
+perfectly.
+
+## Methods and scope
+
+The only methods are SBayesR, ordinary joint SBayesRC, and ordinary joint
+SBayesRC-S. This is one targeted positive-control replicate—not an EM study,
+factorial benchmark, grid, calibration study, or formal sparsity-power study.
+
+## Frozen realization
+
+Deterministic continuation-stick calibration produced intercepts -2.64152,
+-0.32327, and -0.48572 and achieved expected counts 34,000 / 500 / 300 / 200.
+The realized counts were 33,989 / 502 / 305 / 204: 1,011 active markers, or
+2.889%. Genetic and residual variances were both 1 and realized heritability
+was 0.5. Active markers had enriched-binary prevalence 0.824 versus 0.130 among
+null markers, while the realized null-annotation mean among active markers was
+approximately zero.
+
+## Genomic inference
+
+Beta correlations were 0.755 for SBayesR and 0.811 for both annotation
+methods. Validation genetic-value correlations were 0.761, 0.814, and 0.813;
+phenotype-prediction correlations were 0.528, 0.566, and 0.565. The lower
+values than Study 08 are expected context for the more polygenic architecture
+with smaller individual effects at fixed heritability. Annotation modeling did
+not materially degrade genomic recovery relative to the matched SBayesR
+baseline.
+
+## Continuous annotation inference
+
+Joint SBayesRC did not meet the registered continuous-annotation screen. Its
+worst nonintercept alpha R-hat was 1.876, minimum bulk ESS 5.70, and minimum
+tail ESS 12.53. Nonintercept alpha RMSE was 0.318 and correlation was 0.773.
+Pooled active-prior truth correlation improved from 0.912 in Study 08 to 0.975,
+and minimum chain-to-chain active-prior Pearson/Spearman improved from
+0.514/0.190 to 0.805/0.581. Those are meaningful improvements, but they remain
+well short of stable joint inference.
+
+## Annotation selection
+
+SBayesRC-S assigned PIP 1.000 to both `enriched_binary` and
+`continuous_signal`, and 0.0079 to `null_annotation`. The signal PIPs were 1 in
+every chain; null PIP ranged from 0.0005 to 0.0297. Thus the selection behavior
+was low-PIP and chain-stable for the null annotation. Selection alpha itself
+remained poorly mixed (worst nonintercept R-hat 1.675; minimum bulk ESS 6.37).
+`pi_A` mixed well (R-hat 1.0004), while first-stick `tau2` remained weak
+(R-hat 1.118; bulk ESS 21.1).
+
+## Decision
+
+The result is **STUDY10-R2** because continuous alpha and induced-prior chain
+stability remain weak despite approximately 1,000 expected active markers.
+This substantially weakens the hypothesis that Study 08's failure was mainly
+caused by extreme scarcity of non-null events. It does not establish active
+count as causally irrelevant: per-active effect sizes also changed at fixed
+heritability. The strong SBayesRC-S separation shows that the moderate-sparsity
+architecture did improve the selection endpoint.
+
+The evidence is sufficiently clear to stop after this one targeted scenario.
+No additional active-count level, replicate, prior change, or chain extension
+is proposed.

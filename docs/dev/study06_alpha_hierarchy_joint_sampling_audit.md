@@ -114,7 +114,7 @@ contracts already exercised by the operator tests.
 
 ## Independent conditional validation
 
-`tools/study06_alpha_hierarchy_reference.R` independently constructs stick
+`research/sbayesrc/tools/study06_alpha_hierarchy_reference.R` independently constructs stick
 eligibility, residualized Gaussian conditionals, the inverse-chi-square
 conditional, and the stick-to-component transform. Native results agreed with:
 

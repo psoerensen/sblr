@@ -724,7 +724,8 @@ write_analysis_summary <- function(path, decision, python, deterministic, smoke,
 
 run_annotation_alpha_analysis <- function(project_root = ".") {
   project_root <- normalizePath(project_root, mustWork = TRUE)
-  research_root <- file.path(project_root, "research", "annotation_alpha")
+  research_root <- file.path(project_root, "research", "sbayesrc",
+    "continuous_alpha_hmc")
   output_dir <- file.path(research_root, "output")
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   output_normalized <- normalizePath(output_dir, mustWork = TRUE)
