@@ -46,6 +46,54 @@
   x
 }
 
+.gsim_prepare_marker_multipliers <- function(marker_multipliers, marker_ids) {
+  supplied <- !is.null(marker_multipliers)
+  if (!supplied) {
+    value <- stats::setNames(rep(1, length(marker_ids)), marker_ids)
+  } else {
+    if (!is.numeric(marker_multipliers) || !is.null(dim(marker_multipliers)) ||
+        length(marker_multipliers) != length(marker_ids)) {
+      .gsim_stop(
+        "marker_multipliers must be a numeric vector with one value per marker."
+      )
+    }
+    marker_names <- names(marker_multipliers)
+    if (is.null(marker_names) || length(marker_names) != length(marker_ids) ||
+        anyNA(marker_names) || any(!nzchar(marker_names))) {
+      .gsim_stop(
+        "marker_multipliers must have nonempty names for every marker."
+      )
+    }
+    if (anyDuplicated(marker_names)) {
+      .gsim_stop("marker_multipliers marker names must be unique.")
+    }
+    if (!setequal(marker_names, marker_ids)) {
+      .gsim_stop(
+        "marker_multipliers names must exactly match the simulation markers."
+      )
+    }
+    value <- marker_multipliers[match(marker_ids, marker_names)]
+    storage.mode(value) <- "double"
+    names(value) <- marker_ids
+    if (any(!is.finite(value)) || any(value <= 0)) {
+      .gsim_stop("marker_multipliers values must be finite and strictly positive.")
+    }
+  }
+
+  list(
+    value = value,
+    settings = list(
+      policy = if (supplied) "supplied" else "unit",
+      alignment = "canonical_marker_order",
+      n_markers = length(marker_ids),
+      minimum = min(value),
+      maximum = max(value),
+      geometric_mean = exp(mean(log(value))),
+      all_ones = all(value == 1)
+    )
+  )
+}
+
 .gsim_marker_ids_from_glist <- function(Glist, rsids = NULL) {
   if (!is.null(rsids)) {
     marker_ids <- as.character(unlist(rsids, use.names = FALSE))
@@ -413,6 +461,7 @@
 }
 
 .gsim_draw_beta <- function(component, mixture_variances, nt, rg,
+                            marker_multipliers,
                             maf = NULL, maf_exponent = -0.5) {
   m <- length(component)
   B <- matrix(0, m, nt)
@@ -422,7 +471,8 @@
     idx <- which(component == k)
     if (!length(idx)) next
     z <- matrix(stats::rnorm(length(idx) * nt), length(idx), nt) %*% L
-    B[idx, ] <- z * sqrt(mixture_variances[k])
+    B[idx, ] <- z * sqrt(mixture_variances[k]) *
+      sqrt(marker_multipliers[idx])
   }
 
   if (!is.null(maf)) {

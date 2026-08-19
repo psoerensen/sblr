@@ -24,6 +24,17 @@
 #' @param pi Mixture probabilities, with the null component first.
 #' @param mixture_variances Relative mixture-component variances, with zero
 #'   first.
+#' @param marker_multipliers Optional positive marker-specific relative
+#'   active-effect variance multipliers, \eqn{q_j}. A supplied vector must have
+#'   unique nonempty names exactly matching the simulation markers and is
+#'   aligned once to canonical marker order. The multiplier is applied only to
+#'   non-null effect draws, separately from component probabilities and the
+#'   component multiplier. `NULL` gives unit multipliers. Values are not
+#'   clipped or normalized. The aligned vector and compact provenance are
+#'   returned. SBayesRV is one possible research motivation for supplying this
+#'   generic fixed variance truth; `gsim()` does not implement SBayesRV
+#'   inference. Non-unit multipliers are not defined for
+#'   `architecture = "fixed"`, where `beta` supplies realized effects directly.
 #' @param n_causal Optional exact number of non-null markers. If supplied,
 #'   markers are sampled without replacement using their annotation-informed
 #'   non-null probabilities.
@@ -57,8 +68,9 @@
 #' @param getG_fun Optional replacement for `qgg::getG`, primarily for tests.
 #'
 #' @return A list containing phenotypes, genetic values, residuals, exact marker
-#'   effects and states, annotation truth, probability surfaces, settings, and
-#'   optional summary statistics.
+#'   effects and states, annotation truth, probability surfaces, the complete
+#'   canonical `marker_multipliers` vector, compact multiplier provenance under
+#'   `settings$marker_multipliers`, and optional summary statistics.
 #' @export
 gsim <- function(
   Glist = NULL,
@@ -73,6 +85,7 @@ gsim <- function(
   vg = 1,
   pi = NULL,
   mixture_variances = NULL,
+  marker_multipliers = NULL,
   n_causal = NULL,
   beta = NULL,
   alpha = NULL,
@@ -178,6 +191,15 @@ gsim <- function(
   }
 
   m_total <- length(marker_ids)
+  multiplier <- .gsim_prepare_marker_multipliers(
+    marker_multipliers, marker_ids
+  )
+  marker_multipliers <- multiplier$value
+  if (architecture == "fixed" && !multiplier$settings$all_ones) {
+    .gsim_stop(
+      "non-unit marker_multipliers are not defined for architecture = 'fixed'."
+    )
+  }
   annotation <- .gsim_prepare_annotations(
     A, marker_ids, n_annotations, annotation_types, annotation_prob
   )
@@ -284,6 +306,7 @@ gsim <- function(
     beta_maf <- if (architecture == "maf_dependent") maf_all else NULL
     B <- .gsim_draw_beta(
       component, mixture_variances, nt, rg,
+      marker_multipliers = marker_multipliers,
       maf = beta_maf,
       maf_exponent = maf_exponent
     )
@@ -362,6 +385,7 @@ gsim <- function(
     alpha = alpha,
     pi = pi,
     mixture_variances = mixture_variances,
+    marker_multipliers = marker_multipliers,
     marker_probabilities = if (return_marker_probabilities) probability else NULL,
     continuation_probabilities = if (return_marker_probabilities) continuation else NULL,
     stick_order = stick_order,
@@ -392,6 +416,7 @@ gsim <- function(
       standardize_W = standardize_W,
       scale_effects = scale_effects,
       effect_scale = effect_scale,
+      marker_multipliers = multiplier$settings,
       chunk_size = chunk_size,
       compute_sumstats = compute_sumstats
     )
